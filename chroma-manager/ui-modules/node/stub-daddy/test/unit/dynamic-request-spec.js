@@ -1,4 +1,3 @@
-/*jshint node: true*/
 'use strict';
 
 var dynamicRequest, mockState, requestStore, mockRequest, searchRequest, searchResponse, entry, logger;
@@ -11,15 +10,16 @@ var config = {
 var url = require('url');
 var querystring = require('querystring');
 var models = require('../../models').wiretree(config, url, querystring);
+var _ = require('lodash-mixins');
 
 describe('test dynamic-request module', function () {
 
   beforeEach(function () {
     mockState = jasmine.createSpyObj('mockState', ['recordRequest']);
-    requestStore = jasmine.createSpyObj('requestStore', ['findEntryByRequest']);
-    logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn', 'fatal']);
+    requestStore = jasmine.createSpyObj('requestStore', ['findEntriesByRequest']);
+    logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn', 'fatal', 'trace']);
 
-    dynamicRequest = require('../../dynamic-request').wiretree(mockState, requestStore, models, logger);
+    dynamicRequest = require('../../dynamic-request').wiretree(mockState, requestStore, models, logger, _);
   });
 
   var bodies = [{name: 'will'}, undefined];
@@ -28,13 +28,13 @@ describe('test dynamic-request module', function () {
       var myResponse;
       beforeEach(function() {
         generateDependencies(body);
-        requestStore.findEntryByRequest.and.returnValue(entry);
+        requestStore.findEntriesByRequest.and.returnValue([entry]);
 
         myResponse = dynamicRequest(mockRequest, body);
       });
 
-      it('should call findEntryByRequest with searchRequest', function () {
-        expect(requestStore.findEntryByRequest).toHaveBeenCalledWith(searchRequest);
+      it('should call findEntriesByRequest with searchRequest', function () {
+        expect(requestStore.findEntriesByRequest).toHaveBeenCalledWith(searchRequest);
       });
 
       it('should call recordRequest with searchRequest', function() {

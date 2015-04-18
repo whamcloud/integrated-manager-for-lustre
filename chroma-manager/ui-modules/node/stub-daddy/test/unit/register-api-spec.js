@@ -11,7 +11,7 @@ var querystring = require('querystring');
 describe('register api module', function () {
 
   var registerResponse, registerApiValidator, registerAPI, entryRequest, entryResponse, request, body, requestStore,
-    config;
+    config, entryDependencies;
   beforeEach(function() {
     config = configModule(configulator);
     var models = modelsModule(config, url, querystring);
@@ -29,6 +29,14 @@ describe('register api module', function () {
         data: {dataKey: 'data value'},
         headers: {headerKey: 'header value'}
       },
+      dependencies: [
+        {
+          method: config.methods.PUT,
+          url: '/put/path',
+          data: {key: 'value'},
+          headers: {headerKey: 'header value'}
+        }
+      ],
       expires: 0
     };
     request = {
@@ -48,9 +56,18 @@ describe('register api module', function () {
       body.response.data
     );
 
+    entryDependencies = [
+      new models.Request(
+        body.dependencies[0].method,
+        body.dependencies[0].url,
+        body.dependencies[0].data,
+        body.dependencies[0].headers
+      )
+    ];
+
     requestStore = jasmine.createSpyObj('requestStore', ['addEntry']);
 
-    logger = jasmine.createSpyObj('logger', ['info', 'debug']);
+    logger = jasmine.createSpyObj('logger', ['info', 'debug', 'trace']);
     registerApiValidator = jasmine.createSpy('registerApiValidator');
     registerAPI = registerAPIModule(requestStore, models, config, registerApiValidator, logger);
   });
@@ -70,7 +87,7 @@ describe('register api module', function () {
     });
 
     it('should call requestStore.addEntry with entryRequest, entryResponse, and body.expires', function() {
-      expect(requestStore.addEntry).toHaveBeenCalledWith(entryRequest, entryResponse, body.expires);
+      expect(requestStore.addEntry).toHaveBeenCalledWith(entryRequest, entryResponse, body.expires, entryDependencies);
     });
 
     it('should call registerApiValidator with body', function() {

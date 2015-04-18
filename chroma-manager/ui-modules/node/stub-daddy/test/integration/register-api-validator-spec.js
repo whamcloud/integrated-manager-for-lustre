@@ -39,7 +39,13 @@ describe('test register api body against validator', function() {
           authorization: 'BEARER token55'
         }
       },
-      expires: 0
+      expires: 0,
+      dependencies: [{
+        method: 'PUT',
+        url: '/api/filesystem/',
+        data: {},
+        headers: {}
+      }]
     };
 
 
@@ -53,7 +59,7 @@ describe('test register api body against validator', function() {
 
   it('should validate a string with a failed response', function() {
     var result = registerApiValidator('some string');
-    expect(result.errors.length).toEqual(4);
+    expect(result.errors.length).toEqual(5);
   });
 
   it('should validate an undefined body with a failed response', function() {

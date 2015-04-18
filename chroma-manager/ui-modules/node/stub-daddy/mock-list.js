@@ -22,11 +22,27 @@
 'use strict';
 
 /**
- * A wrapper that denodeify's the filesystem fs.readFile call
- * @param {Object} fs
- * @param {Promise} Promise
- * @returns {Object}
+ * Returns the mock state
+ * @param {Object} requestStore
+ * @param {Object} config
+ * @param {Object} models
+ * @returns {Function}
  */
-exports.wiretree = function fsThenModule(fs, Promise) {
-  return Promise.denodeify(fs.readFile);
+exports.wiretree = function mockListModule(requestStore, config, models) {
+  /**
+   * Returns any error information contained in an object.
+   * @returns {Object}
+   */
+  return function execute(request) {
+    if (request.method === config.methods.GET) {
+
+      return {
+        status: config.status.SUCCESS,
+        data: requestStore.getEntries(),
+        headers: config.standardHeaders
+      };
+    }
+
+    return new models.Response(config.status.BAD_REQUEST, config.standardHeaders);
+  };
 };

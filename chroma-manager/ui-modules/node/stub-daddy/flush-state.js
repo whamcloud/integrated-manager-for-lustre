@@ -22,11 +22,31 @@
 'use strict';
 
 /**
- * A wrapper that denodeify's the filesystem fs.readFile call
- * @param {Object} fs
- * @param {Promise} Promise
- * @returns {Object}
+ * Flushes the request store and mock status such that stub daddy is in a clean state.
+ * @param {Object} requestStore
+ * @param {Object} mockStatus
+ * @param {Object} models
+ * @param {Object} config
+ * @returns {Function}
  */
-exports.wiretree = function fsThenModule(fs, Promise) {
-  return Promise.denodeify(fs.readFile);
+exports.wiretree = function flushState (requestStore, mockStatus, models, config) {
+
+  /**
+   * Flushes both the request store and the mock status.
+   * @param {Object} request
+   * @returns {Number}
+   */
+  return function execute (request) {
+    var registerResponse = new models.Response(config.status.BAD_REQUEST, config.standardHeaders);
+
+    if (request.method === config.methods.DELETE) {
+      // Flush all entries
+      requestStore.flushEntries();
+      mockStatus.flushRequests();
+
+      registerResponse.status = config.status.SUCCESS;
+    }
+
+    return registerResponse;
+  };
 };

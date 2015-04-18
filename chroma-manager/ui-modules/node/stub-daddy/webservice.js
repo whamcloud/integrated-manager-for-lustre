@@ -1,4 +1,24 @@
-/*jshint node: true*/
+//
+// INTEL CONFIDENTIAL
+//
+// Copyright 2013-2015 Intel Corporation All Rights Reserved.
+//
+// The source code contained or described herein and all documents related
+// to the source code ("Material") are owned by Intel Corporation or its
+// suppliers or licensors. Title to the Material remains with Intel Corporation
+// or its suppliers and licensors. The Material contains trade secrets and
+// proprietary and confidential information of Intel or its suppliers and
+// licensors. The Material is protected by worldwide copyright and trade secret
+// laws and treaty provisions. No part of the Material may be used, copied,
+// reproduced, modified, published, uploaded, posted, transmitted, distributed,
+// or disclosed in any way without Intel's prior express written permission.
+//
+// No license under any patent, copyright, trade secret or other intellectual
+// property right is granted to or conferred upon you by disclosure or delivery
+// of the Materials, either expressly, by implication, inducement, estoppel or
+// otherwise. Any license under such intellectual property rights must be
+// express and approved by Intel in writing.
+
 'use strict';
 
 var server;
@@ -29,11 +49,15 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
    * @param {Object} body
    */
   function handleRequest(parsedUrl, request, response, body) {
-    logger.debug({
-      pathname: parsedUrl.pathname,
-      body: (body) ? body.toString() : undefined
-    }, 'Request received');
-    logger.info('Request received');
+    logger.logByLevel({
+      DEBUG: [parsedUrl.pathname, 'Request received:'],
+      TRACE: [{
+        pathname: parsedUrl.pathname,
+        body: (
+          body
+        ) ? body.toString() : undefined
+      }, 'Request received']
+    });
 
     if (body) {
       var jsonErrorMessage = 'JSON is not properly formed.';
@@ -62,11 +86,10 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
    */
   function handleResponse(response, evaluatedResponse) {
     if (evaluatedResponse) {
-      logger.debug({
+      logger.trace({
         status: evaluatedResponse.status.toString(),
         response: evaluatedResponse.data
       }, 'Response received.');
-      logger.info('Response received.');
 
       response.writeHead(evaluatedResponse.status.toString(), evaluatedResponse.headers);
       if (evaluatedResponse.data) {
@@ -77,11 +100,10 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
     } else {
       var status = config.status.NOT_FOUND;
 
-      logger.debug({
+      logger.warn({
         status: config.status.NOT_FOUND,
         response: (status) ? status.toString() : undefined
-      }, 'Request not found, no status');
-      logger.info('Request not found, no status');
+      }, 'Request not found; no status');
 
       response.writeHead(status.toString(), config.standardHeaders);
       response.write(status.toString());
@@ -155,21 +177,18 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
 
     /**
      * Starts the service.
-     * @param {Array} args Args passed to the program
      * @returns {Promise} A promise with the server as the first argument
      */
-    startService: function startService(args) {
+    startService: function startService() {
       sockets = [];
-
-      var port = (args && args.port) ? args.port : config.port;
 
       var promise;
       if (config.requestProtocol === 'https') {
         promise = getCertificateFiles().then(function createServiceWithProperBound(options) {
-          return executeService(request.createServer.bind(request, options), port);
+          return executeService(request.createServer.bind(request, options), config.port);
         });
       } else {
-        promise = Promise.resolve(executeService(request.createServer, port));
+        promise = Promise.resolve(executeService(request.createServer, config.port));
       }
 
       return promise;
@@ -185,7 +204,7 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
         logger.info('Service stopping...');
 
         if (sockets.length > 0)
-          logger.debug('Destroying ' + sockets.length + ' remaining socket connections.');
+          logger.trace('Destroying ' + sockets.length + ' remaining socket connections.');
 
         // Make sure all sockets have been closed
         while (sockets.length > 0) {

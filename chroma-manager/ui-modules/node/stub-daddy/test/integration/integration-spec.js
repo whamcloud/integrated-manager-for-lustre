@@ -1,9 +1,9 @@
 'use strict';
 
-var _ = require('lodash');
 var request = require('request-then');
 var format = require('util').format;
 var fixtures = require('../fixtures/standard-fixtures');
+var _ = require('lodash-mixins');
 var wireTreeModule = require('../../index');
 
 ['http', 'https'].forEach(function testIntegrationTestsWithSecureAndNonSecureUrls (protocol) {
@@ -19,7 +19,7 @@ var wireTreeModule = require('../../index');
       config = wireTree.config;
       webService = wireTree.webService;
 
-      var url = format.bind(null, '%s://localhost:%s/%s', config.requestProtocol, config.port);
+      var url = format.bind(null, '%s://localhost:%s%s', config.requestProtocol, config.port);
       makeRequestAndExpect = makeRequestAndExpectWrap(url);
       webService.startService().done(done);
     });
@@ -35,7 +35,7 @@ var wireTreeModule = require('../../index');
 
     describe('register mock api by calling /api/mock', function () {
       it('should receive a 400 when calling /api/mock with a GET', function (done) {
-        makeRequestAndExpect({ path: 'api/mock' }, 400).done(done);
+        makeRequestAndExpect({path: '/api/mock'}, 400).done(done);
       });
 
       fixtures.integration.registerMockRequests.forEach(function (data) {
@@ -52,7 +52,7 @@ var wireTreeModule = require('../../index');
         var requestOptions = _.merge({}, fixtures.integration.registerMockRequests
           [fixtures.integration.registerMockRequests.length - 1].json);
 
-        requestOptions.body = JSON.stringify(requestOptions.json) + '}[';
+        requestOptions.body = JSON.stringify(requestOptions) + '}[';
         delete requestOptions.json;
 
         makeRequestAndExpect(requestOptions, 400, 'JSON is not properly formed.').done(done);
@@ -60,28 +60,28 @@ var wireTreeModule = require('../../index');
     });
 
     describe('register a GET mock API and verify response', function () {
-      var requestOptions = _.merge({}, fixtures.integration.registerSuccessfulMockRequest.json);
+      var requestOptions = _.merge({}, fixtures.integration.registerSuccessfulMockRequest.json.json);
       var shouldMessage = format.bind(null, 'should call mocked API from mock service %s');
       var options = [
         {
           options: {
-            path: 'user/profile?user=johndoe&key=abc123',
-            headers: requestOptions.json.request.headers
+            path: '/user/profile?user=johndoe&key=abc123',
+            headers: requestOptions.request.headers
           },
           status: 200,
           title: 'with all required parameters and verify response'
         },
         {
           options: {
-            path: 'user/profile?key=abc123&user=johndoe',
-            headers: requestOptions.json.request.headers
+            path: '/user/profile?key=abc123&user=johndoe',
+            headers: requestOptions.request.headers
           },
           status: 200,
           title: 'with all required parameters and query parameters reversed'
         },
         {
           options: {
-            path: 'user/profile?key=abc123',
+            path: '/user/profile?key=abc123',
             headers: {
               authorization: 'BEARER token55'
             }
@@ -91,7 +91,7 @@ var wireTreeModule = require('../../index');
         },
         {
           options: {
-            path: 'user/profile?key=abc123&user=johndoe',
+            path: '/user/profile?key=abc123&user=johndoe',
             headers: {
               authorization: 'BEARER token5'
             }
@@ -109,6 +109,7 @@ var wireTreeModule = require('../../index');
         }
       ];
 
+      requestOptions = _.merge({}, fixtures.integration.registerSuccessfulMockRequest.json);
       options.forEach(function (option) {
         it(shouldMessage(option.title), function (done) {
           makeRequestAndExpect(requestOptions, 201)
@@ -132,7 +133,7 @@ var wireTreeModule = require('../../index');
         {
           options: {
             method: requestOptions.json.request.method,
-            path: requestOptions.json.request.url.substr(1), // skip the first /
+            path: requestOptions.json.request.url,
             body: JSON.stringify(requestOptions.json.request.data),
             headers: requestOptions.json.request.headers
           },
@@ -142,7 +143,7 @@ var wireTreeModule = require('../../index');
         {
           options: {
             method: requestOptions.json.request.method,
-            path: requestOptions.json.request.url.substr(1), // skip the first /
+            path: requestOptions.json.request.url,
             body: JSON.stringify({key: 'abc123'}),
             headers: requestOptions.json.request.headers
           },
@@ -152,7 +153,7 @@ var wireTreeModule = require('../../index');
         {
           options: {
             method: requestOptions.json.request.method,
-            path: requestOptions.json.request.url.substr(1), // skip the first /
+            path: requestOptions.json.request.url,
             body: JSON.stringify(requestOptions.json.request.data),
             headers: {
               authorization: 'BEARER token5'
@@ -164,7 +165,7 @@ var wireTreeModule = require('../../index');
         {
           options: {
             method: requestOptions.json.request.method,
-            path: requestOptions.json.request.url.substr(1), // skip the first /
+            path: requestOptions.json.request.url,
             body: JSON.stringify(requestOptions.json.request.data),
             headers: {}
           },
@@ -200,7 +201,7 @@ var wireTreeModule = require('../../index');
           .then(function afterInitialRequest () {
             var callOptions = {
               method: 'PUT',
-              path: requestOptions.json.request.url.substr(1), // skip the first /
+              path: requestOptions.json.request.url,
               body: JSON.stringify(requestOptions.json.request.data),
               headers: requestOptions.json.request.headers
             };
@@ -217,7 +218,7 @@ var wireTreeModule = require('../../index');
       beforeEach(function () {
         requestOptions = _.merge({}, fixtures.integration.registerRequestForExpireFunctionality.json);
         callOptions = {
-          path: requestOptions.json.request.url.substr(1),
+          path: requestOptions.json.request.url,
           headers: requestOptions.json.request.headers,
           method: requestOptions.json.request.method,
           body: JSON.stringify(requestOptions.json.request.data)
@@ -243,7 +244,7 @@ var wireTreeModule = require('../../index');
 
       it('should successfully request the first, second, and third call because expires is 0', function (done) {
         // Register an API in the mock service
-        requestOptions.json.expires = 3;
+        requestOptions.expires = 3;
 
         makeRequestAndExpect(requestOptions, 201)
           .then(function afterInitialRequest () {
@@ -265,7 +266,7 @@ var wireTreeModule = require('../../index');
       beforeEach(function () {
         requestOptions = _.merge({}, fixtures.integration.registerRequestForMockState.json);
         callOptions = {
-          path: requestOptions.json.request.url.substr(1),
+          path: requestOptions.json.request.url,
           headers: requestOptions.json.request.headers,
           method: requestOptions.json.request.method,
           body: JSON.stringify(requestOptions.json.request.data)
@@ -279,11 +280,10 @@ var wireTreeModule = require('../../index');
           })
           .then(function afterCallingTheMock () {
             var stateOptions = {
-              path: 'api/mockstate',
+              path: '/api/mockstate',
               method: config.methods.GET
             };
             var expectedResponse = [];
-
             return makeRequestAndExpect(stateOptions, 200, expectedResponse);
           })
           .done(done);
@@ -298,7 +298,7 @@ var wireTreeModule = require('../../index');
         makeRequestAndExpect(requestOptions, 201)
           .then(function afterInitialRequest () {
             var stateOptions = {
-              path: 'api/mockstate',
+              path: '/api/mockstate',
               method: config.methods.GET
             };
             return makeRequestAndExpect(stateOptions, 200, []);
@@ -306,9 +306,9 @@ var wireTreeModule = require('../../index');
           .then(function expect404 () {
             return makeRequestAndExpect(callOptions, 404);
           })
-          .then(function afterCallingTheMock() {
+          .then(function afterCallingTheMock () {
             var stateOptions = {
-              path: 'api/mockstate',
+              path: '/api/mockstate',
               method: config.methods.GET
             };
             var expectedResponse = [
@@ -342,7 +342,7 @@ var wireTreeModule = require('../../index');
           })
           .then(function afterCallingTheMock () {
             var stateOptions = {
-              path: 'api/mockstate'
+              path: '/api/mockstate'
             };
             var expectedResponse = [
               {
@@ -375,7 +375,8 @@ var wireTreeModule = require('../../index');
                     }
                   },
                   expires: 2,
-                  remainingCalls: 1
+                  remainingCalls: 1,
+                  dependencies: []
                 }
               }
             ];
@@ -395,7 +396,7 @@ var wireTreeModule = require('../../index');
             return makeRequestAndExpect(callOptions, 404);
           })
           .then(function afterCallingTheMockTwice () {
-            var stateOptions = { path: 'api/mockstate' };
+            var stateOptions = {path: '/api/mockstate'};
             var expectedResponse = [
               {
                 state: 'ERROR',
@@ -407,7 +408,8 @@ var wireTreeModule = require('../../index');
                     data: {
                       user: 'janedoe',
                       key: 'abc123'
-                    }, headers: {
+                    },
+                    headers: {
                       authorization: 'BEARER token55'
                     }
                   },
@@ -426,36 +428,38 @@ var wireTreeModule = require('../../index');
                     }
                   },
                   expires: 1,
-                  remainingCalls: -1
+                  remainingCalls: -1,
+                  dependencies: []
                 }
               }
             ];
+
             return makeRequestAndExpect(stateOptions, 400, expectedResponse);
           })
           .done(done);
-        });
+      });
 
       it('should fail due to making an unregistered call and also not satisfying the requirements of a ' +
-        'registered call', function (done) {
+      'registered call', function (done) {
 
         requestOptions.json.expires = 1;
 
         makeRequestAndExpect(requestOptions, 201)
-          .then(function afterFirstRequest() {
+          .then(function afterFirstRequest () {
             return makeRequestAndExpect(callOptions, 200);
           })
-          .then(function afterCallingTheMockOnce() {
+          .then(function afterCallingTheMockOnce () {
             return makeRequestAndExpect(callOptions, 404);
           })
-          .then(function afterCallingTheMockTwice() {
+          .then(function afterCallingTheMockTwice () {
             var unregisteredCallOptions = _.merge({}, callOptions, {
-              path: 'user/unregistered/method'
+              path: '/user/unregistered/method'
             });
             return makeRequestAndExpect(unregisteredCallOptions, 404);
           })
-          .then(function afterCallingAnUnregisteredAPI() {
+          .then(function afterCallingAnUnregisteredAPI () {
             var stateOptions = {
-              path: 'api/mockstate'
+              path: '/api/mockstate'
             };
             var expectedResponse = [
               {
@@ -506,7 +510,8 @@ var wireTreeModule = require('../../index');
                     }
                   },
                   expires: 1,
-                  remainingCalls: -1
+                  remainingCalls: -1,
+                  dependencies: []
                 }
               }
             ];
@@ -515,9 +520,128 @@ var wireTreeModule = require('../../index');
           .done(done);
       });
     });
+
+    describe('integration - testing request with dynamic response', function () {
+      var requestOptions1, requestOptions2, callOptions1, callOptions2;
+
+      beforeEach(function () {
+        requestOptions1 = _.merge({}, fixtures.integration.registerRequestWithDynamicResponse.json);
+        requestOptions1.json.response.data = {
+          state: 'green'
+        };
+        requestOptions1.json.expires = 1;
+
+        requestOptions2 = _.merge({}, fixtures.integration.registerRequestWithDynamicResponse.json);
+        requestOptions2.json.response.data = {
+          state: 'yellow'
+        };
+
+        callOptions1 = {
+          path: requestOptions1.json.request.url,
+          headers: requestOptions1.json.request.headers,
+          method: requestOptions1.json.request.method,
+          body: JSON.stringify(requestOptions1.json.request.data)
+        };
+
+        callOptions2 = {
+          path: requestOptions1.json.request.url,
+          headers: requestOptions1.json.request.headers,
+          method: requestOptions1.json.request.method,
+          body: JSON.stringify(requestOptions2.json.request.data)
+        };
+      });
+
+      it('should request the post twice', function (done) {
+        makeRequestAndExpect(requestOptions1, 201).then(function makeSecondRequest () {
+          return makeRequestAndExpect(requestOptions2, 201);
+        }).then(function postFirstRequest () {
+          var expectedResponse = {
+            state: 'green'
+          };
+
+          return makeRequestAndExpect(callOptions1, 200, expectedResponse);
+        }).then(function postSecondRequest () {
+          var expectedResponse = {
+            state: 'yellow'
+          };
+
+          return makeRequestAndExpect(callOptions2, 200, expectedResponse);
+        }).done(done);
+      });
+    });
+
+    describe('testing entry dependencies', function () {
+      var standardAlertRequest, alertRequest, filesystemRequest, alertCall, filesystemCall;
+
+      beforeEach(function () {
+        filesystemRequest = _.merge({}, fixtures.integration.registerSuccessfulMockPOSTRequest.json, {
+          json: {
+            request: {
+              method: 'PUT',
+              url: '/api/filesystem/'
+            },
+            expires: 1
+          }
+        });
+        filesystemRequest.json.request.data = {id: 1};
+        filesystemRequest.json.response.data = {};
+        standardAlertRequest = _.merge({}, fixtures.integration.registerRequestWithDependencies.json, {
+          json: {
+            response: {
+              data: {
+                status: 'invalid'
+              }
+            }
+          }
+        });
+        standardAlertRequest.json.dependencies = [];
+        alertRequest = _.merge({}, fixtures.integration.registerRequestWithDependencies.json);
+
+        alertCall = {
+          path: alertRequest.json.request.url,
+          headers: alertRequest.json.request.headers,
+          method: alertRequest.json.request.method,
+          body: JSON.stringify(alertRequest.json.request.data)
+        };
+
+        filesystemCall = {
+          path: filesystemRequest.json.request.url,
+          headers: filesystemRequest.json.request.headers,
+          method: filesystemRequest.json.request.method,
+          body: JSON.stringify(filesystemRequest.json.request.data)
+        };
+      });
+
+      it('should retrieve standard alert until filesystem PUT request is made', function (done) {
+        makeRequestAndExpect(alertRequest, 201).then(function mockStandardAlertRequest () {
+          return makeRequestAndExpect(standardAlertRequest, 201);
+        }).then(function mockFilesystemPutRequest () {
+          return makeRequestAndExpect(filesystemRequest, 201);
+        }).then(function getAlert () {
+          var expectedResponse = {
+            status: 'invalid'
+          };
+
+          return makeRequestAndExpect(alertCall, 200, expectedResponse);
+        }).then(function putFilesystemRequest () {
+          return makeRequestAndExpect(filesystemCall, 200, {});
+        }).then(function getAlertAgain () {
+          var expectedResponse = {
+            status: 'OK'
+          };
+
+          return makeRequestAndExpect(alertCall, 200, expectedResponse);
+        }).done(done);
+      });
+    });
   });
 });
 
+/**
+ * HOF returns a function that will make a request and verify the expectation passed in.
+ * @param {Function} url
+ * @returns {Function}
+ */
 function makeRequestAndExpectWrap (url) {
   /**
    * Starts the service and then makes a POST request attempting to register an api mock.

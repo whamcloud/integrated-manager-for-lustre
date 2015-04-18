@@ -32,6 +32,22 @@ exports.wiretree = function registerApiValidatorModule(Validator) {
     }
   };
 
+  // Optional Dependencies
+  var dependenciesSchema = {
+    id: '/RegisterDependencies',
+    type: 'array',
+    required: true,
+    items: {
+      type: 'object',
+      properties: {
+        method: {type: 'string', required: true},
+        url: {type: 'string', required: true},
+        data: {type: 'object', required: true},
+        headers: {type: 'object', required: true}
+      }
+    }
+  };
+
   // body schema
   var bodySchema = {
     id: '/RegisterApi',
@@ -40,6 +56,7 @@ exports.wiretree = function registerApiValidatorModule(Validator) {
     properties: {
       request: { $ref: '/RegisterRequest'},
       response: { $ref: '/RegisterResponse'},
+      dependencies: { $ref: '/RegisterDependencies'},
       expires: {type: 'integer', 'minimum': 0, required: true}
     }
   };
@@ -59,6 +76,7 @@ exports.wiretree = function registerApiValidatorModule(Validator) {
 
     v.addSchema(requestSchema, '/RegisterRequest');
     v.addSchema(responseSchema, '/RegisterResponse');
+    v.addSchema(dependenciesSchema, '/RegisterDependencies');
     return v.validate(body, bodySchema);
   };
 

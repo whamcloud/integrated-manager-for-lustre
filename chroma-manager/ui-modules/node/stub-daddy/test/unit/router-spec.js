@@ -14,7 +14,7 @@ describe('router module test', function () {
     dynamicRequest = jasmine.createSpy('dynamicRequest');
     registerApi = jasmine.createSpy('registerApi');
     mockState = jasmine.createSpy('mockState');
-    logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn']);
+    logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn', 'trace']);
     routes = {
       restRoutes: {
         '/api/mock': registerApi,

@@ -30,13 +30,18 @@ var mockRequest = {
 
 var searchRequest = new models.Request(config.methods.GET, mockRequest.url, body, mockRequest.headers);
 
-var searchResponse = new models.Response(config.methods.GET, body, mockRequest.headers);
+var searchResponse = new models.Response(config.methods.GET, mockRequest.headers, body);
 
-var requestEntry = new models.RequestEntry(searchRequest, searchResponse, 0);
+var searchDependencies = [
+  new models.Response(config.methods.PUT, mockRequest.url, body, mockRequest.headers)
+];
+
+var requestEntry = new models.RequestEntry(searchRequest, searchResponse, 0, searchDependencies);
 
 module.exports = {
   mockRequest: mockRequest,
   searchRequest: searchRequest,
   searchResponse: searchResponse,
+  searchDependencies: searchDependencies,
   requestEntry: requestEntry
 };

@@ -5,7 +5,7 @@ var fixtures = {
     registerMockRequests: [
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             request: {
@@ -20,7 +20,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             response: {
@@ -38,7 +38,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             expires: 0
@@ -48,7 +48,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             request: {
@@ -72,7 +72,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             request: {
@@ -88,7 +88,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             response: {
@@ -107,7 +107,7 @@ var fixtures = {
       },
       {
         json: {
-          path: 'api/mock',
+          path: '/api/mock',
           method: 'POST',
           json: {
             request: {
@@ -125,7 +125,8 @@ var fixtures = {
                 'content-type': 'application/json'
               }
             },
-            expires: 0
+            expires: 0,
+            dependencies: []
           }
         },
         status: 201
@@ -133,7 +134,7 @@ var fixtures = {
     ],
     registerSuccessfulMockRequest: {
       json: {
-        path: 'api/mock',
+        path: '/api/mock',
         method: 'POST',
         json: {
           request: {
@@ -158,14 +159,15 @@ var fixtures = {
               'content-type': 'application/json'
             }
           },
-          expires: 0
+          expires: 0,
+          dependencies: []
         }
       },
       status: 201
     },
     registerSuccessfulMockPOSTRequest: {
       json: {
-        path: 'api/mock',
+        path: '/api/mock',
         method: 'POST',
         json: {
           request: {
@@ -193,14 +195,15 @@ var fixtures = {
               'content-type': 'application/json'
             }
           },
-          expires: 0
+          expires: 0,
+          dependencies: []
         }
       },
       status: 201
     },
     registerRequestForExpireFunctionality: {
       json: {
-        path: 'api/mock',
+        path: '/api/mock',
         method: 'POST',
         json: {
           request: {
@@ -228,14 +231,44 @@ var fixtures = {
               'content-type': 'application/json'
             }
           },
-          expires: 0
+          expires: 0,
+          dependencies: []
+        }
+      },
+      status: 201
+    },
+    registerRequestWithDynamicResponse: {
+      json: {
+        path: '/api/mock',
+        method: 'POST',
+        json: {
+          request: {
+            method: 'POST',
+            url: '/system/status',
+            data: {
+              type: 'thorough'
+            },
+            headers: {
+              authorization: 'BEARER token55'
+            }
+          },
+          response: {
+            status: 200,
+            data: {}, // To be filled out by test
+            headers: {
+              authorization: 'BEARER token55',
+              'content-type': 'application/json'
+            }
+          },
+          expires: 0,
+          dependencies: []
         }
       },
       status: 201
     },
     registerRequestForMockState: {
       json: {
-        path: 'api/mock',
+        path: '/api/mock',
         method: 'POST',
         json: {
           request: {
@@ -263,10 +296,48 @@ var fixtures = {
               'content-type': 'application/json'
             }
           },
-          expires: 0
+          expires: 0,
+          dependencies: []
         }
       },
       status: 201
+    },
+    registerRequestWithDependencies: {
+      json: {
+        path: '/api/mock',
+        method: 'POST',
+        json: {
+          request: {
+            method: 'GET',
+            url: '/api/alert/',
+            data: {},
+            headers: {
+              authorization: 'BEARER token55'
+            }
+          },
+          response: {
+            status: 200,
+            data: {
+              status: 'OK'
+            },
+            headers: {
+              authorization: 'BEARER token55',
+              'content-type': 'application/json'
+            }
+          },
+          expires: 0,
+          dependencies: [
+            {
+              method: 'PUT',
+              url: '/api/filesystem/',
+              data: {id: 1},
+              headers: {
+                authorization: 'BEARER token55'
+              }
+            }
+          ]
+        }
+      }
     }
   }
 };

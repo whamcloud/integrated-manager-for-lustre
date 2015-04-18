@@ -7,7 +7,7 @@ var configulator = require('configulator');
 var requestMatcherModule = require('../../matcher').wiretree;
 var configModule =  require('../../config').wiretree;
 var modelsModule = require('../../models').wiretree;
-var _ = require('lodash');
+var _ = require('lodash-mixins');
 
 describe('test matcher module', function () {
 

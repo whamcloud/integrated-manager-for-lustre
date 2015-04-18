@@ -5,8 +5,8 @@ var url = require('url');
 var webserviceModule = require('../../webservice').wiretree;
 var configulator = require('configulator');
 var configModule = require('../../config').wiretree;
-var _ = require('lodash');
 var Promise = require('promise');
+var _ = require('lodash-mixins');
 
 describe('webservice module', function () {
 
@@ -88,13 +88,14 @@ describe('webservice module', function () {
 
     assignments.response = jasmine.createSpyObj('response', ['writeHead', 'write', 'end']);
 
-    assignments.logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn', 'error', 'fatal']);
+    assignments.logger = jasmine.createSpyObj('logger', ['info', 'debug', 'warn', 'error', 'fatal', 'trace',
+      'logByLevel']);
 
     initializeModule(assignments);
   });
 
   afterEach(function() {
-    var clone = _.merge({}, assignments);
+    var clone = _.cloneDeep(assignments);
     Object.keys(clone).forEach(function clearAssignments(key) {
       delete assignments[key];
     });
@@ -107,6 +108,7 @@ describe('webservice module', function () {
   });
 
   it('should listen on port 8888', function(done) {
+    assignments.config.port = 8888;
     assignments.webservice.startService()
       .then(function setService() {
         expect(assignments.createServerResponse.listen).toHaveBeenCalledWith(8888);
@@ -124,8 +126,9 @@ describe('webservice module', function () {
     methods.forEach(function (method) {
       beforeEach(function setTestDataForEachMethod(done) {
         assignments.requestData.method = method;
+        assignments.config.port = 8000;
         // Test starting the service on port 8000 by passing the argument --port 8000
-        assignments.webservice.startService({port: 8000}).then(function serviceStarted() {
+        assignments.webservice.startService().then(function serviceStarted() {
           // Call the callback being passed into createServer
           assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
@@ -155,6 +158,7 @@ describe('webservice module', function () {
         beforeEach(function setTestDataForEachMethod(done) {
           assignments.requestData.method = method;
           assignments.router.and.returnValue(null);
+          assignments.config.port = 8888;
 
           assignments.webservice.startService().then(function serviceStarted() {
             // Call the callback being passed into createServer

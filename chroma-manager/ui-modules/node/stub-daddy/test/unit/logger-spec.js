@@ -19,7 +19,8 @@ describe('test logger', function() {
       createLogger: jasmine.createSpy('createLogger').and.returnValue(newLogger),
       stdSerializers: {
         err: jasmine.createSpy('err')
-      }
+      },
+      nameFromLevel: {10: 'TRACE', 20: 'DEBUG', 30: 'INFO', 40: 'WARN', 50: 'ERROR', 60: 'FATAL'}
     };
 
     createLoggerParameter = {
@@ -44,6 +45,6 @@ describe('test logger', function() {
   });
 
   it('should return the logger instance', function() {
-    expect(logger).toEqual(newLogger);
+    expect(logger).toEqual({logByLevel: jasmine.any(Function)});
   });
 });

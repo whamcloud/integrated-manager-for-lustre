@@ -76,6 +76,17 @@
         return func(val);
     }),
     /**
+     *
+     * @param {*} val
+     * @param {Function} pred
+     * @param {Function} func
+     * @returns {*}
+     */
+    ifChain: function ifTest (val, pred, func) {
+      if (pred(val))
+        return (typeof func === 'function') ? func(val) : func;
+    },
+    /**
      * Existence check.
      * @param {*} item
      * @returns {Boolean}
@@ -116,6 +127,15 @@
      */
     ffilter: _.curry(function filterer (func, coll) {
       return coll.filter(_.unary(func));
+    }),
+    /**
+     * Curried. A functional every.
+     * @param {Function} func
+     * @param {Array} coll
+     * @returns {Array}
+     */
+    fevery: _.curry(function every (func, coll) {
+      return coll.every(_.unary(func));
     }),
     /**
      * A functional map that pulls a property
@@ -162,9 +182,9 @@
      */
     checkObjForValue: _.curry(function checkObjForValue (properties, value, obj) {
       return _(obj)
-          .pick(properties)
-          .values()
-          .indexOf(value) !== -1;
+              .pick(properties)
+              .values()
+              .indexOf(value) !== -1;
     }),
     /**
      * Curried. Given properties iterates either objs or values
@@ -189,7 +209,7 @@
       }
 
       return arr
-        .some(check);
+          .some(check);
     }),
     /**
      * Inverts the item.
@@ -234,6 +254,26 @@
         return;
 
       return path.split(sep).slice(0, pointer + 1).join(sep);
+    }),
+    /**
+     * Curried. Looks at a given path and runs the provided function over it.
+     * @param {String|Array} path
+     * @param {Function} fn
+     * @param {*} item
+     */
+    pathForEach: _.curry(function operate (path, fn, item) {
+      var parts = Array.isArray(path) ? path : path.split('.');
+      var part = parts[0];
+      parts = parts.slice(1);
+
+      if (!part)
+        return fn(item);
+
+      var nextItem = item[part];
+
+      Array.isArray(nextItem) ? nextItem.forEach(function (x) {
+        operate(parts, fn, x);
+      }) : operate(parts, fn, nextItem);
     }),
     /**
      * Curried. Plucks the path from the given item.
@@ -334,7 +374,41 @@
      */
     apiToHuman: function apiToHuman (str) {
       return _.capitalize(str.split('_').join(' '));
-    }
+    },
+    /**
+     * Freezes an object and it's properties
+     * recursively.
+     * @param {Object|Array} obj
+     */
+    deepFreeze: function deepFreeze (obj) {
+      if (typeof obj !== 'object' || obj == null)
+        return;
+
+      Object.freeze(obj);
+
+      Object.keys(obj)
+        .filter(function removeNonObjects (key) {
+          return (obj[key] != null && typeof obj[key] === 'object');
+        })
+        .forEach(function freezeProps (key) {
+          deepFreeze(obj[key]);
+        });
+    },
+    /**
+     * Invokes the function with the arguments flipped
+     */
+    flip: _.curry(function flip (fn, a, b) {
+      return fn(b, a);
+    }),
+    /**
+     * Sets property on an object
+     * @param {String} propName
+     * @param {Object} obj
+     * @param {*} propValue
+     */
+    set: _.curry(function set (propName, obj, propValue) {
+      obj[propName] = propValue;
+    })
   };
 
   _.mixin(mixins);
