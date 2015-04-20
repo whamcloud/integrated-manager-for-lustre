@@ -41,7 +41,9 @@ exports.wiretree = function writeDependenciesModule (config, treeClimber, path, 
 
         log.write(resolvedPath, fullPath);
 
-        writePromise = fsThen.copy(resolvedPath, fullPath);
+        writePromise = fsThen.copy(resolvedPath, fullPath, function filter (path) {
+          return path.indexOf('node_modules') === -1;
+        });
       } else if (semver.validRange(value)) {
         var tgzPath = util.format('%s%s/-/%s-%s.tgz', config.registryUrl, dependencyName, dependencyName, value);
 

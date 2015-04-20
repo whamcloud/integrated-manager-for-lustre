@@ -139,7 +139,23 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
     pit('should copy files', function () {
       return promise.then(function assertCall () {
         expect(fsThen.copy).toHaveBeenCalledWith('/projects/chroma/chroma-manager/ui-modules/node/promise-it',
-          '/projects/chroma/chroma-externals/ziplocker/devDependencies/promise-it');
+          '/projects/chroma/chroma-externals/ziplocker/devDependencies/promise-it', jasmine.any(Function));
+      });
+    });
+
+    pit('should filter node_modules', function  () {
+      return promise.then(function assertFn () {
+        var filter = fsThen.copy.calls.mostRecent().args[2];
+
+        expect(filter('/foo/node_modules/bar')).toBe(false);
+      });
+    });
+
+    pit('should pass non node_modules', function  () {
+      return promise.then(function assertFn () {
+        var filter = fsThen.copy.calls.mostRecent().args[2];
+
+        expect(filter('/foo/bar')).toBe(true);
       });
     });
 
