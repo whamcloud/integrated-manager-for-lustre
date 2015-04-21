@@ -1,6 +1,4 @@
-/^Name:/c
-Name:          fence-agents-iml
-.
+/^Name:/s/$/-iml/
 /^Release:/s/^\(.*\)\(%{?alphatag:\.%{alphatag}}%{?dist}.*\)$/\1.wc1\2/
 ,s/%{name}/fence-agents/g
 /^ExclusiveArch:/i
@@ -25,7 +23,7 @@ Provides:      fence-agents = %{version}-%{release}
 
 .
 /^%changelog/a
-* Tue Feb 10 2015 Mathieu Drapeau <mathieu.drapeau@intel.com> - 3.1.5-48.wc1.el6
+* Tue Apr 21 2015 Brian J. Murrell <brian.murrell@intel.com> - 3.1.5-48.2.wc1.el6
 - Rebuild for Intel Manager for Lustre
 - Fix Provides: to be "quacks-like-a-duck" compatible with upstream package
 - Include patch to provide for APC 6.x firmware
