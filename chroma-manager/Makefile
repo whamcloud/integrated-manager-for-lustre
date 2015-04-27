@@ -75,8 +75,8 @@ $(NPM):
 ziplocker.stamp: ui-modules/node/ziplocker/ziplock.json $(NPM)
 	@echo "Setting up ziplocker module"; \
 	cd ui-modules/node/ziplocker && \
-	rm -rf ./node_modules && \
-	cp -r ../../../../chroma-externals/ziplocker/node_modules ./ && \
+	rm -rf ./node_modules/ && \
+	cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./ && \
 	./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 	touch $@
 
