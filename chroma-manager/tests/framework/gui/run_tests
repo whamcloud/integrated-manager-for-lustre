@@ -29,7 +29,8 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-new-ui.xml
 
 # Run gulp Test(s)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new/gulp
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=gulp
+JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=CI ./node_modules/.bin/jasmine
+mv gulp-results.xml \$HOME/test_reports/
 
 # Run ziplocker tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/ziplocker

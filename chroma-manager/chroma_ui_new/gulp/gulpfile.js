@@ -17,8 +17,12 @@ var stylish = require('jshint-stylish');
 var minimist = require('minimist');
 var streamqueue = require('streamqueue');
 
+var sourcemaps = require('gulp-sourcemaps');
+var concat = require('gulp-concat');
+var uglify = require('gulp-uglify');
 var gulpPrimus = require('./lib/gulp-primus');
-var srcmapCreate = require('./lib/srcmap-create');
+var iifeWrap = require('./lib/gulp-iife-wrap');
+
 var files = require('../gulp-src-globs.json');
 var qualityFiles = files.js.source.concat(
   'test/spec/**/*.js',
@@ -34,16 +38,12 @@ var isProduction = (options.env === 'production');
 gulp.task('default', ['static', 'clean-static'], function buildApp () {
   var scripts = getJavaScripts()
     .pipe(plumber())
-    .pipe(gulpIf(isProduction, srcmapCreate.minAndMap('built.js')))
+    .pipe(gulpIf(isProduction, iifeWrap))
+    .pipe(gulpIf(isProduction, sourcemaps.init()))
+    .pipe(gulpIf(isProduction, concat('built.js')))
+    .pipe(gulpIf(isProduction, uglify({ compress: true, screw_ie8: true, mangle: true })))
     .pipe(gulpIf(isProduction, rev()))
-    .pipe(gulpIf(isProduction, srcmapCreate.fixupRev({
-      transformSources: function transformSources (source) {
-        return source
-          .replace(/.+chroma-manager\//, '')
-          .replace(/chroma_ui_new\/source\//, '');
-      }
-    })))
-    .pipe(gulpIf(isProduction, srcmapCreate.transformFooter()))
+    .pipe(gulpIf(isProduction, sourcemaps.write('.')))
     .pipe(gulp.dest('static/chroma_ui', { cwd: '../../chroma_ui' }));
 
   var lessFile = compileLess()

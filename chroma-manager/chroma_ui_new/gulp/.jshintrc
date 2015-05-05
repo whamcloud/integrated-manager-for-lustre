@@ -4,6 +4,7 @@
   "globals": {
     "describe": false,
     "beforeEach": false,
+    "beforeAll": false,
     "afterEach": false,
     "jasmine": false,
     "spyOn": false,
