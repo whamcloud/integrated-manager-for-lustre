@@ -1,4 +1,5 @@
 import os
+import mock
 
 import chroma_agent.device_plugins.audit
 from chroma_agent.device_plugins.audit.local import LocalAudit
@@ -39,10 +40,27 @@ class TestLocalAuditProperties(CommandCaptureTestCase):
         super(TestLocalAuditProperties, self).setUp()
         self.node_audit = NodeAudit()
 
+        mock.patch('platform.linux_distribution', return_value = ('Smarty', '2.2')).start()
+        mock.patch('platform.python_version_tuple', return_value = (1, 2, 3)).start()
+        mock.patch('platform.release', return_value = 'Bazinga').start()
+
+        self.addCleanup(mock.patch.stopall)
+
     def test_zfs_property_installed(self):
         self.add_command(('which', 'zfs'), stdout="/sbin/zfs")
-        self.assertEqual(self.node_audit.properties(), {'zfs_installed': True})
+        self.assertEqual(self.node_audit.properties()['zfs_installed'], True)
 
     def test_zfs_property_not_installed(self):
         self.add_command(('which', 'zfs'), rc=1, stderr="which: no zfs in (/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin)")
-        self.assertEqual(self.node_audit.properties(), {'zfs_installed': False})
+        self.assertEqual(self.node_audit.properties()['zfs_installed'], False)
+
+    def test_platform_values(self):
+        self.add_command(('which', 'zfs'), rc=1, stderr="which: no zfs in (/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin)")
+
+        properties = self.node_audit.properties()
+
+        self.assertEqual(properties['distro'], 'Smarty')
+        self.assertEqual(properties['distro_version'], 2.2)
+        self.assertEqual(properties['python_version_major_minor'], 1.2)
+        self.assertEqual(properties['python_patchlevel'], 3)
+        self.assertEqual(properties['kernel_version'], 'Bazinga')
