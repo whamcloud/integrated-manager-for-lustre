@@ -38,6 +38,7 @@ clean_uncommitted_artifacts()
            # nuke these by hand
            rm -f chroma-manager/production_version.py*
            rm -f chroma-manager/scm_version.py*
+           rm -f chroma-manager/*.stamp
         else
             git clean -dfx $subdir
         fi
