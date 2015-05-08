@@ -14,3 +14,8 @@ while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
     (( RUNNING_TIME++ )) || true
     sleep 1
 done
+
+if [ -n "$nodes" ]; then
+    echo "Nodes: $nodes failed to come back after a reboot"
+    exit 1
+fi
