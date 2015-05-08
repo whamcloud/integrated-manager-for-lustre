@@ -50,7 +50,12 @@ def fixup_host_settings_during_create(**kwargs):
     host = kwargs['instance']
 
     # Give the thing some properties.
-    host.properties = json.dumps({'zfs_installed': False})
+    host.properties = json.dumps({'zfs_installed': False,
+                                  'distro': 'CentOS',
+                                  'distro_version': 6.6,
+                                  'python_version_major_minor': 2.6,
+                                  'python_patchlevel': 6,
+                                  'kernel_version': '2.6.32-504.8.1.el6_lustre.x86_64'})
 
     if host.id:
         for clustered_host in ManagedHost.objects.filter(~Q(id=host.id)):

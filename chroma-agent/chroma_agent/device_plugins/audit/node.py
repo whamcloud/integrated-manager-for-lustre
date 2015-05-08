@@ -22,6 +22,8 @@
 
 import re
 import socket
+import platform
+
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
@@ -72,7 +74,11 @@ class NodeAudit(BaseAudit, FileSystemMixin):
 
         If the fetched property is expensive to compute, it should be cached / updated less frequently.
         """
-        rc, stdout, stderr = shell.run(['which', 'zfs'])
-        return {
-            'zfs_installed': not rc,
-        }
+        zfs_not_installed, stdout, stderr = shell.run(['which', 'zfs'])
+
+        return {'zfs_installed': not zfs_not_installed,
+                'distro': platform.linux_distribution()[0],
+                'distro_version': float(platform.linux_distribution()[1]),
+                'python_version_major_minor': float("%s.%s" % (platform.python_version_tuple()[0], platform.python_version_tuple()[1])),
+                'python_patchlevel': int(platform.python_version_tuple()[2]),
+                'kernel_version': platform.release()}

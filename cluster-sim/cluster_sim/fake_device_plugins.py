@@ -176,7 +176,12 @@ class BaseFakeLustrePlugin(DevicePlugin):
             },
             'packages': packages,
             'mounts': mounts,
-            "properties": {'zfs_installed': False},
+            "properties": {'zfs_installed': False,
+                           'distro': 'CentOS',
+                           'distro_version': 6.6,
+                           'python_version_major_minor': 2.6,
+                           'python_patchlevel': 6,
+                           'kernel_version': '2.6.32-504.8.1.el6_lustre.x86_64'},
             'started_at': datetime.datetime.utcnow().isoformat() + 'Z',
             'agent_version': 'dummy'
         }
