@@ -8,6 +8,7 @@ import errno
 import os
 import re
 import sys
+import requests
 from jenkinsapi.utils.requester import Requester
 
 from jenkinsapi import api
@@ -38,6 +39,7 @@ if __name__ == '__main__':
     required_tests = set(sys.argv[7].split())
 
     # Fetch the downstream build info from jenkins
+    requests.packages.urllib3.disable_warnings()
     req = Requester(username, password, baseurl=jenkins_url, ssl_verify=False)
     jenkins = api.Jenkins(jenkins_url, username=username, password=password, requester=req)
     assert jenkins.get_jobs_list()  # A test we are logged in
