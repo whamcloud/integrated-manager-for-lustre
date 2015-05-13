@@ -110,12 +110,11 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.quiesce()
 
         detail_page = self._check_filesystem_creation([[self.mdt_dne_volume_name, self.mdt_dne_server_address]])
-        detail_page.mdt_set_state("%s-MDT0001" % self.filesystem_name, "removed")
-        self.assertEqual(detail_page.mdt_volumes, [[self.mdt_volume_name, self.mdt_server_address]])
 
         with self.assertRaises(NoSuchElementException):
             try:
                 detail_page.mdt_set_state("%s-MDT0000" % self.filesystem_name, "removed")
+                detail_page.mdt_set_state("%s-MDT0001" % self.filesystem_name, "removed")
             except NoSuchElementException as e:
                 self.assertEqual(e.msg, 'No action found with state removed')
                 raise

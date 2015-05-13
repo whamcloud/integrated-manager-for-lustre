@@ -109,7 +109,7 @@ class TestAvailableTransitions(TestCase):
             filesystem=fs, index=1)
 
         expected_transitions = ['formatted', 'registered',
-                                'unmounted', 'mounted', 'removed']
+                                'unmounted', 'mounted']
         received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
