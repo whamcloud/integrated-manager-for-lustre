@@ -562,10 +562,9 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         return True
 
     def get_confirmation_string(self):
-        if issubclass(self.target.downcast_class, ManagedOst):
-            return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
-        else:
-            return None
+        return select_description(self.target, {ManagedOst: help_text["remove_ost"],
+                                                ManagedMdt: help_text["remove_mdt"],
+                                                ManagedMgs: help_text["remove_mgt"]})
 
     class Meta:
         app_label = 'chroma_core'
@@ -623,11 +622,11 @@ class RemoveTargetJob(StateChangeJob):
         return "Remove target %s from configuration" % (self.target)
 
     def get_confirmation_string(self):
-        if issubclass(self.target.downcast_class, ManagedOst):
-            if self.target.state == 'registered':
-                return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
-            else:
-                return None
+        if self.target.state == 'registered':
+            return select_description(self.target, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMdt: help_text["remove_mdt"],
+                                                    ManagedMgs: help_text["remove_mgt"]})
+
         else:
             return None
 
