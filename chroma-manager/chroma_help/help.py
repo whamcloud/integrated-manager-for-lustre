@@ -124,7 +124,7 @@ help_text = {
 
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',
-    'remove_mdt': 'Remove the MDT from the file system. This MDT will no longer be seen in the manager GUI. <strong>Caution</strong>: When an MDT is removed, file metadate stored on the MDT will no longer be accessible.<b> To preserve data, manually create a copy of the data elsewhere before removing the MDT.</b>',
+    'remove_mdt': 'Remove the MDT from the file system. This MDT will no longer be seen in the manager GUI. <strong>Caution</strong>: When an MDT is removed, file metadata stored on the MDT will no longer be accessible.<b> To preserve data, manually create a copy of the data elsewhere before removing the MDT.</b>',
 
     'start_mgt': 'Start the management target (MGT).',
     'stop_mgt': 'Stop the MGT. When an MGT is stopped, clients are unable to make new connections to file systems using the MGT. However, MDT(s) and OST(s) stay up if they have been started and can be stopped and restarted while the MGT is stopped.',
