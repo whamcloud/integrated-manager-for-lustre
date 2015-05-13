@@ -404,9 +404,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(['forgotten']))
-            if self.index == 0:
-                available_states = list(set(available_states) - set(['removed', 'forgotten']))
+            available_states = list(set(available_states) - set(['removed', 'forgotten']))
 
             return available_states
 
