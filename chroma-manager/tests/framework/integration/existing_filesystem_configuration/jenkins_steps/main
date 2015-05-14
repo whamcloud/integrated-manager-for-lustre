@@ -78,7 +78,7 @@ chroma/chroma-manager/tests/framework/integration/existing_filesystem_configurat
 
 for dne in true false; do
     for test_ha in true false; do
-        if [ $test_ha == true ]; then
+        if $test_ha; then
             device_types_to_test=(linux)
         else
             #devices_to_test=(zfs lvm mdraid linux); do  <--- mdraid Coming soon.
@@ -95,7 +95,7 @@ for dne in true false; do
 
             # One Kind entry is defined as "kind": "OSTorMDT" set it to be an OST for !dne or an MDT for dne
             # The replace actually does a number of things such as the mount point etc.
-            if [ $dne == true]; then
+            if $dne; then
                 sed -i -e s/OSTorMDT/MDT/g $CLUSTER_CONFIG
                 sed -i -e s/ostORmdt/mdt/g $CLUSTER_CONFIG
             else
