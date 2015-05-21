@@ -28,37 +28,30 @@ from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
 import simplejson as json
 
 
-# Extra deps not expressed in lsmod's list of dependent modules
-RMMOD_EXTRA_DEPS = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
-
 IML_CONFIGURATION_FILE = '/etc/modprobe.d/iml_lnet_module_parameters.conf'
 IML_CONFIGURE_FILE_JSON_HEADER = '##  '
 
 
 class Module:
-    def __init__(self, lsmod_line):
-        parts = lsmod_line.split()
+    def __init__(self, module_line):
+        parts = module_line.split()
         self.name = parts[0]
-        try:
-            self.dependents = set(parts[3].split(","))
-        except IndexError:
+        # "-" is the placeholder for the absence of any depending modules. i.e.:
+        # video 24067 0 - Live 0xffffffffa000a000
+        # vs.
+        # pps_core 19130 1 ptp, Live 0xffffffffa0017000
+        if parts[3] != "-":
+            self.dependents = set(parts[3][:-1].split(","))
+        else:
             self.dependents = set([])
 
 
-def _load_lsmod():
+def _get_loaded_mods():
     modules = {}
 
-    stdout = shell.try_run(["/sbin/lsmod"])
-    lines = [i for i in stdout.split("\n")[1:] if len(i) > 0]
-    for line in lines:
+    for line in open("/proc/modules").readlines():
         m = Module(line.strip())
         modules[m.name] = m
-
-    for name, module in modules.items():
-        try:
-            module.dependents |= (RMMOD_EXTRA_DEPS[name] & set(modules.keys()))
-        except KeyError:
-            pass
 
     return modules
 
@@ -83,8 +76,13 @@ def _remove_module(name, modules):
 
 
 def _rmmod(module_name):
-    modules = _load_lsmod()
-    _remove_module(module_name, modules)
+    _remove_module(module_name, _get_loaded_mods())
+
+
+def _rmmod_deps(module_name, excpt=[]):
+    deps = [d for d in _get_loaded_mods()[module_name].dependents if d not in excpt]
+
+    [_rmmod(m) for m in deps]
 
 
 def start_lnet():
@@ -97,7 +95,7 @@ def start_lnet():
 
 def stop_lnet():
     console_log.info("Stopping LNet")
-    _rmmod('lvfs')
+    _rmmod_deps("lnet", excpt=["ksocklnd"])
     shell.try_run(["lctl", "net", "down"])
 
 

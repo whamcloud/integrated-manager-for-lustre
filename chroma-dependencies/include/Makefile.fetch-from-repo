@@ -65,7 +65,6 @@ $(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)%.rpm
 	ln $^ $(REPO)/
 
 $(CHROMA_EXTERNALS_DIR)%.rpm:
-	set -x; \
 	name=$(notdir $@); \
 	if [ x$(JENKINS_ROOT_URL) != x ]; then \
 	    arch=$${name%%.rpm}; \
@@ -84,3 +83,5 @@ $(CHROMA_EXTERNALS_DIR)%.rpm:
 	fi; \
 	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 $$rpmtype" $$src
+
+.PHONY: download

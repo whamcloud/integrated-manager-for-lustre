@@ -1,4 +1,7 @@
+DISTRO=el6.6
 include ../include/Makefile.lustre_build_meta
+
+KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
 
 VERSION=2.5.4
 LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/$(VERSION)/robinhood-$(VERSION).tar.gz
@@ -10,7 +13,7 @@ RELEASE_POSTFIX := .x86_64$(UNDERSCORE_RELEASE_POSTFIX)
 
 LUSTRE_INCLUDES = lustre/lustre/include/lustre/liblustreapi.h lustre/lustre/include/lustre/lustreapi.h lustre/lustre/include/lustre/lustre_idl.h
 
-LUSTRE_CLIENT_RPM := $(TOP)/../chroma-externals/lustre/lustre-client-$(LUSTRE_RELEASE)-$(EL_KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm
+LUSTRE_CLIENT_RPM := $(TOP)/../chroma-externals/lustre/lustre-client-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm
 
 rpms: $(LUSTRE_INCLUDES)
 
