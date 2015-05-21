@@ -19,5 +19,8 @@
       "robinhood-webgui",
       "robinhood-adm"
     ]
-  }
+  },
+  "validation": [
+    {"test": "distro_version < 7 and distro_version >= 6", "description": "Only version 6 of EL is supported by the Robinhood Policy Engine Server profile"}
+  ]
 }

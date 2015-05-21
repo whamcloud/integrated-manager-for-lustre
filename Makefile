@@ -27,7 +27,7 @@ $(SUBDIRS): dist agent
 	set -e; \
 	if $(BUILDER_IS_EL6); then \
 		$(MAKE) -C $@ $(TARGET); \
-		if [ -d $@/dist/ ]; then \
+		if [ $(TARGET) != download -a -d $@/dist/ ]; then \
 			cp -a $@/dist/* dist/; \
 		fi; \
 	fi

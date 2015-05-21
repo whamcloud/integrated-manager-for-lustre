@@ -1,0 +1,123 @@
+#!/usr/bin/python
+
+from __future__ import print_function
+
+import sys
+import glob
+import pickle
+
+
+sys.path.insert(0, glob.glob("../lib/jenkinsapi-[0-9]*")[0])
+from jenkinsapi.utils.requester import Requester
+from jenkinsapi import api
+
+def get_lustre_ver(runs, distro):
+
+    candidate = "lustre-client-modules"
+    candidate_project = "client,%s,inkernel" % distro
+    filename = None
+    for k in runs:
+        if k.find(candidate_project) < 0:
+            continue
+        if filename:
+            break
+        for a in runs[k]:
+            if a.startswith("%s-" % candidate):
+                filename = a
+                break
+
+    prefix_len = len(candidate) + 1
+    return filename[prefix_len:filename[prefix_len:].index('-')+prefix_len]
+
+def get_lustre_kernel_ver(runs, distro):
+
+    lustre_ver = get_lustre_ver(runs, distro)
+
+    candidate = "lustre-client-modules-%s" % lustre_ver
+    candidate_project = "client,%s,inkernel" % distro
+    filename = None
+    for k in runs:
+        if k.find(candidate_project) < 0:
+            continue
+        if filename:
+            break
+        for a in runs[k]:
+            if a.startswith("%s-" % candidate):
+                filename = a
+                break
+
+    prefix_len = len(candidate) + 1
+    return (filename[prefix_len:filename[prefix_len:].find(".x86_64")+prefix_len]).replace('_', '-')
+
+def get_zfs_ver(runs, distro):
+
+    filename = None
+    for k in runs:
+        if k.find("server,%s,inkernel" % distro) < 0:
+            continue
+        if filename:
+            break
+        for a in runs[k]:
+            if a.startswith("zfs-test-"):
+                filename = a
+                break
+
+    return filename[9:filename[9:].find(".el6")+9]
+
+def save_build(build, build_name, build_num):
+    with open("/var/tmp/build-%s-%s.pkl" % (build_name, build_num), "wb") as pf:
+        pickle.dump(build, pf, pickle.HIGHEST_PROTOCOL)
+
+def load_build(build_name, build_num):
+    with open("/var/tmp/build-%s-%s.pkl" % (build_name, build_num), "rb") as pf:
+        return pickle.load(pf)
+
+if __name__ == '__main__':
+
+    # Store the command line arguments
+    jenkins_url = sys.argv[1]
+    username = sys.argv[2]
+    password = sys.argv[3]
+    build_job_name = sys.argv[4]
+    build_job_build_number = int(sys.argv[5])
+    distro = sys.argv[6]
+    action = sys.argv[7]
+
+    try:
+        # use a cached value if available
+        runs = load_build(build_job_name, build_job_build_number)
+    except IOError:
+        # Fetch the downstream build info from jenkins
+        req = Requester(username, password, baseurl=jenkins_url, ssl_verify=True)
+        jenkins = api.Jenkins(jenkins_url, username=username, password=password, requester=req)
+        assert jenkins.get_jobs_list()  # A test we are logged in
+        job = jenkins.get_job(build_job_name)
+        build = job.get_build(build_job_build_number)
+        mybuild = {}
+        runs = {}
+        for b in build.get_matrix_runs():
+            artifacts = []
+            for a in b.get_artifacts():
+                artifacts.append(a.filename)
+            runs[b.__str__()] = artifacts
+        # cache it
+        save_build(runs, build_job_name, build_job_build_number)
+
+    if action == "get_lustre_ver":
+        try:
+            print(get_lustre_ver(runs, distro))
+        except:
+            print("couldn't get lustre version out of %s" % runs, file=sys.stderr)
+            sys.exit(1)
+    elif action == "get_lustre_kernel_ver":
+        try:
+            print(get_lustre_kernel_ver(runs, distro))
+        except:
+            print("couldn't get lustre version out of %s" % runs, file=sys.stderr)
+            sys.exit(1)
+    elif action == "get_zfs_ver":
+        try:
+            print(get_zfs_ver(runs, distro))
+        except:
+            print("couldn't get lustre version out of %s" % runs, file=sys.stderr)
+            sys.exit(1)

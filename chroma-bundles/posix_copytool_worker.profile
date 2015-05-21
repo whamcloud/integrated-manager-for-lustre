@@ -13,5 +13,8 @@
       "lustre-client-modules",
       "lustre-client"
     ]
-  }
+  },
+  "validation": [
+    {"test": "distro_version < 7 and distro_version >= 6", "description": "Only version 6 of EL is supported by the Copytool Worker profile"}
+  ]
 }
