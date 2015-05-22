@@ -26,11 +26,18 @@ class CreateLustreFilesystem(UtilityTestCase):
         self.fsname = config['filesystem']['name']
 
         self.mgts = self.get_targets_by_kind('MGT')
-        self.assertTrue(1, len(self.mgts))
+        self.assertEqual(len(self.mgts), 1)
         self.mgt = self.mgts[0]
 
         self.mdts = self.get_targets_by_kind('MDT')
-        self.assertTrue(1, len(self.mdts))
+        # would be nice to able do to this:
+        # if not dne:
+        #     self.assertEqual(len(self.mdts), 1)
+        # else:
+        #     ...
+        # but until we have that flag in the config, assert that we got
+        # at least one
+        self.assertGreaterEqual(len(self.mdts), 1)
 
         # If we have a combined mdt/mgt then find it and set mdt to it.
         self.combined_mgt_mdt = None
@@ -54,9 +61,22 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         if config['test_ha'] and not is_lvm:
             # Go through and find a secondary for each server, all storage is shared so any will do.
+            # # Try to assign secondary nodes using as fair a distribution as we can
+            # TODO: while this does provide an even distribution it seems  to
+            #       break this test.  figure out why
+            # assigned_secondaries = set()
+            # for target in config['filesystem']['targets'].values():
+            #     if len(assigned_secondaries) == len(config['lustre_servers']):
+            #         assigned_secondaries.clear()
+            #     for server in config['lustre_servers']:
+            #         if (server['nodename'] != target['primary_server']) and \
+            #            (server['nodename'] not in assigned_secondaries):
+            #             target['secondary_server'] = server['nodename']
+            #             assigned_secondaries.add(target['secondary_server'])
+            #             break
             # This loop gives a really bad distribution, but we only use a few servers so it achieves what we need today.
             for target in config['filesystem']['targets'].values():
-                target['secondary_server'] = next(server['fqdn'] for server in config['lustre_servers'] if server['fqdn'] != target['primary_server'])
+                target['secondary_server'] = next(server['nodename'] for server in config['lustre_servers'] if server['nodename'] != target['primary_server'])
         else:
             config['test_ha'] = False                           # Deals is is_lvm = True
 
@@ -72,13 +92,13 @@ class CreateLustreFilesystem(UtilityTestCase):
                 'umount -t lustre -a'
             )
 
-            self.umount_devices(server['address'])
+            self.umount_devices(server['nodename'])
 
             self._execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
                                    server['address'],
                                    'clear command')
 
-            self.dd_devices(server['address'])
+            self.dd_devices(server['nodename'])
 
             self.remote_command(server['address'],
                                 'reboot',
