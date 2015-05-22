@@ -187,7 +187,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
                 target_host_config['address'],
                 'mount'
             )
-            if re.search("on %s" % target_config['mount_path'], result.stdout):
+            if re.search("on %s type lustre" % target_config['mount_path'], result.stdout):
                 self.remote_command(
                     target_host_config['address'],
                     "umount %s" % target_config['mount_path'],
@@ -198,7 +198,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
                 )
                 self.assertNotRegexpMatches(
                     result.stdout,
-                    "on %s" % target_config['mount_path']
+                    "on %s type lustre" % target_config['mount_path']
                 )
 
         # Wait for audit
