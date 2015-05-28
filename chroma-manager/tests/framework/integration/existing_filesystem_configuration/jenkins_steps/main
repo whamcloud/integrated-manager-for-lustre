@@ -26,27 +26,26 @@ echo
 trap "set +e
 set -x
 # Gather logs from nodes
-python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs existing_filesystem_configuration_cluster_cfg.json
-
+python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs existing_filesystem_configuration_cluster_cfg.json || true
 sed -e 's/provision\": *true/provision\": false/g' < provisioner_output.json | $PROVISIONER" EXIT
 
 # Provision cluster to run tests on
 PROVISION_START_TIME=$SECONDS
-rc=0
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
+
+if ! cat provisioner_input.json | $PROVISIONER > provisioner_output.json ||
+   [ ! -s provisioner_output.json ] ||
+   grep '"success": false' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    exit 1
+else
+    cat provisioner_output.json
+    echo
+fi
 PROVISION_END_TIME=$SECONDS
 PROVISION_DURATION=$((PROVISION_END_TIME-PROVISION_START_TIME))
 echo "$PROVISION_DURATION" > $WORKSPACE/provision_duration.txt
 echo "Provision took $((PROVISION_DURATION/60)) minutes."
-
-cat provisioner_output.json
-echo
-
-if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
-    echo "Cluster provisioner failed"
-    cat provisioner_output.json
-    exit 1
-fi
 
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json existing_filesystem_configuration_cluster_cfg.json
 cat existing_filesystem_configuration_cluster_cfg.json

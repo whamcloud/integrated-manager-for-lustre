@@ -27,21 +27,19 @@ echo
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e
-python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py \"$WORKSPACE/test_logs\" shared_storage_configuration_cluster_cfg.json
-sed -i 's/provision\": *true/provision\":false/g' provisioner_output.json
-cat provisioner_output.json | $PROVISIONER" EXIT
+set -x
+python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py \"$WORKSPACE/test_logs\" shared_storage_configuration_cluster_cfg.json || true
+sed -e 's/provision\": *true/provision\":false/g' < provisioner_output.json | $PROVISIONER" EXIT
 
-rc=0
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
-
-cat provisioner_output.json
-echo
-
-if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
+if ! cat provisioner_input.json | $PROVISIONER > provisioner_output.json ||
+   [ ! -s provisioner_output.json ] ||
+   grep '"success": false' provisioner_output.json; then
     echo "Cluster provisioner failed"
     cat provisioner_output.json
-    echo
     exit 1
+else
+    cat provisioner_output.json
+    echo
 fi
 
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json

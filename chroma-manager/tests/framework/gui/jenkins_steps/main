@@ -29,13 +29,13 @@ python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 # Release the provisioned cluster (at the exit of this script)
 #-------------------------------------------------------------
 trap "set +e
-cd $WORKSPACE/chroma_test_env/
-WORKSPACE=$WORKSPACE \
+set -x
+cd $WORKSPACE/chroma_test_env/ && WORKSPACE=$WORKSPACE \
 CLUSTER_CONFIG=selenium_cluster_config.json \
 MEASURE_COVERAGE=$MEASURE_COVERAGE \
-chroma/chroma-manager/tests/framework/gui/collect_logs.sh
+chroma/chroma-manager/tests/framework/gui/collect_logs.sh || true
 
-cd $WORKSPACE/chroma_test_env
+cd $WORKSPACE/chroma_test_env && \
 sed -e 's/provision\": *true/provision\": false/g' < provisioner_output.json | $PROVISIONER" EXIT
 
 #--------------------------------

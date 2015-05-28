@@ -30,12 +30,12 @@ cleanup() {
         tmpfile=/tmp/abort.$$.debug
         exec 2>/tmp/tmpfile
     fi
-    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json | tee $WORKSPACE/log_collector_out 2>&1
-    sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER
+    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json | tee $WORKSPACE/log_collector_out 2>&1 || true
+    sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER || true
     echo "exit trap done"
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
         cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
-        rm $tmpfile
+        rm $tmpfile || true
     fi
 }
 
@@ -48,17 +48,15 @@ echo \"Got SIGTERM\"
 ps axf
 exit 1" TERM
 
-rc=0
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
-
-cat provisioner_output.json
-echo
-
-if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
+if ! cat provisioner_input.json | $PROVISIONER > provisioner_output.json ||
+   [ ! -s provisioner_output.json ] ||
+   grep '"success": false' provisioner_output.json; then
     echo "Cluster provisioner failed"
     cat provisioner_output.json
-    echo
     exit 1
+else
+    cat provisioner_output.json
+    echo
 fi
 
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json

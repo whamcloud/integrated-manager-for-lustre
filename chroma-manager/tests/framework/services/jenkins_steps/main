@@ -25,8 +25,7 @@ make requirements
 python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
 # Release the provisioned cluster (at the exit of this script)
-trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
-cat provisioner_output.json | $PROVISIONER" EXIT
+trap "sed -e 's/provision\":true/provision\":false/g' < provisioner_output.json | $PROVISIONER" EXIT
 
 cd $WORKSPACE/chroma_test_env
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
