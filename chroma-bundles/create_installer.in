@@ -41,7 +41,7 @@ EOF
 }
 
 zfs_installer() {
-    ZFS_VERSION=0.6.3-1.1
+    ZFS_VERSION=@ZFS_VERSION@
 
     tar -xzf ../zfs-*-bundle.tar.gz
 
