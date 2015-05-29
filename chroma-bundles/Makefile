@@ -1,5 +1,7 @@
+ZFS_DISTRO=el6.6
 TOP := $(CURDIR)
 include $(TOP)/../include/Makefile.version
+include $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(ZFS_DISTRO)
 REPO ?= $(TOP)/../chroma-dependencies/repo
 WORKDIR := $(notdir $(CURDIR))
 
@@ -21,7 +23,7 @@ $(SUBDIRS):
 
 clean install:: subdirs
 
-package: subdirs $(PROFILES) lesskey.out EULA.txt
+package: subdirs $(PROFILES) lesskey.out EULA.txt create_installer
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
 		--transform 's|$(HADOOPDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)/hadoop|' \
@@ -41,3 +43,7 @@ rpms:
 
 docs download:
 	@echo "Nothing to do here"
+
+create_installer: create_installer.in $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(ZFS_DISTRO)
+	sed -e "s/@ZFS_VERSION@/$(ZFS_RELEASE)/" < $< > $@
+	chmod 755 $@
