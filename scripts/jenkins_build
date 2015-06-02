@@ -99,6 +99,7 @@ post_build()
 {
     create_repository
     append_docs_to_distribution
+    . scripts/validate_chroma-externals.sh
 }
 
 pre_build

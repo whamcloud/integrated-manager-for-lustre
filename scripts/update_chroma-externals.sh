@@ -1,4 +1,11 @@
 git submodule init
+
+# Ensure that the submodules repository is absolutely pristine and unchanged. exit with 1 if changes have occured.
+pushd chroma-externals
+git reset --hard
+git clean -dfx
+popd
+
 if ! git submodule update; then
     commit_message=$(git log -n 1)
     ext_rev=$(echo "$commit_message" | sed -ne '/^    chroma-externals:/s/^ *chroma-externals: *//p')
@@ -19,9 +26,3 @@ Aborting."
     git checkout FETCH_HEAD
     popd
 fi
-pushd chroma-externals
-# for some strange reason, every now and then the repo gets left with a
-# whole bunch of files deleted at this point
-# this restores them
-git checkout .
-popd
