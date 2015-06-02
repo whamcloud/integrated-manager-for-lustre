@@ -468,4 +468,74 @@ describe('the fp module', function () {
       expect(fp.eqLens(aLens)(obj1, obj2)).toBe(true);
     });
   });
+
+  describe('has a safe method', function () {
+    var spy;
+
+    beforeEach(function () {
+      spy = jasmine.createSpy('spy');
+    });
+
+    it('should exist on fp', function () {
+      expect(fp.safe).toEqual(jasmine.any(Function));
+    });
+
+    it('should return the default if unsafe', function () {
+      expect(fp.safe(1, spy, {})(null))
+        .toEqual({});
+    });
+
+    it('should call the fn if safe', function () {
+      fp.safe(1, spy, {})('bar');
+
+      expect(spy)
+        .toHaveBeenCalledWith('bar');
+    });
+
+    it('should call the fn with multiple args', function () {
+      fp.safe(2, spy, {})('foo', 'bar');
+
+      expect(spy)
+        .toHaveBeenCalledWith('foo', 'bar');
+    });
+
+    it('should call the default if any args are unsafe', function () {
+      expect(fp.safe(2, spy, {})('foo', null))
+        .toEqual({});
+    });
+  });
+
+  describe('has a eqFn method', function () {
+    it('should exist on fp', function () {
+      expect(fp.eqFn).toEqual(jasmine.any(Function));
+    });
+
+    it('should allow for custom methods to determine equality', function () {
+      var objA = {
+        foo: {
+          bar: 'baz'
+        }
+      };
+
+      var objB = {
+        bar: 'baz'
+      };
+
+      var fooLens = fp.lensProp('foo');
+      var barLens = fp.lensProp('bar');
+
+      expect(fp.eqFn(fp.flowLens(fooLens, barLens), barLens, objA, objB))
+        .toBe(true);
+    });
+  });
+
+  describe('has a noop method', function () {
+    it('should exist on fp', function () {
+      expect(fp.noop).toEqual(jasmine.any(Function));
+    });
+
+    it('should return undefined', function () {
+      expect(fp.noop()).toBe(undefined);
+    });
+  });
 });

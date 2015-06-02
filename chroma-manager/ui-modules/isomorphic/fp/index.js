@@ -233,12 +233,34 @@
   });
   fp.eq = eq;
 
-  function eqLens (l) {
-    return curry(2, function isEq (a, b) {
-      return eq(l(a), l(b));
-    });
-  }
+  var eqLens = curry(3, function eqLens (l, a, b) {
+    return eq(l(a), l(b));
+  });
   fp.eqLens = eqLens;
+
+  var eqFn = curry(4, function eqFn (fnA, fnB, a, b) {
+    return eq(fnA(a), fnB(b));
+  });
+  fp.eqFn = eqFn;
+
+  var safe = curry(3, function safe (arity, fn, def) {
+    return curry(arity, function safeCheck () {
+      for (var i = 0, l = arguments.length; i < l; i++) {
+        if (arguments[i] == null)
+          return def;
+      }
+
+      try {
+        return fn.apply(null, arguments);
+      } catch (e) {
+        return def;
+      }
+    });
+  });
+  fp.safe = safe;
+
+  function noop () {}
+  fp.noop = noop;
 
   /* global angular */
 
