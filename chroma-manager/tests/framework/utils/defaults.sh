@@ -21,8 +21,20 @@ export IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
 
 export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
 
+if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
+    {
+        echo "Whoa!  We hit TEI-3576."
+        echo
+        env
+        echo
+        echo "At test run start, env was:"
+        cat /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
+    } | mail -s "TEI-3576" brian.murrell@intel.com
 
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+    # now set it to a sane value
+    MEASURE_COVERAGE="false"
+fi
+rm -f /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
 
 # Variables that we expect to be set upstream, no "default"
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
