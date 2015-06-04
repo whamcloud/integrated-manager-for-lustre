@@ -1,8 +1,8 @@
 requirements:
-	if [ -n "$(REQUIREMENT)" ]; then                          \
-		if [[ a$(REQUIREMENT) == ahttp://* ]]; then       \
-			echo "$(patsubst %==*,%,$(REQUIREMENT))"; \
-		else                                              \
-			echo "$(REQUIREMENT)";                    \
-		fi;                                               \
+	if [ -n "$(REQUIREMENT)" ]; then                                                   \
+		if [[ a$(REQUIREMENT) == ahttp://* ]]; then                                \
+			echo "$(patsubst %==*,%,$(REQUIREMENT))" >> ../../chroma-manager/requirements.tmp; \
+		else                                                                       \
+			echo "$(REQUIREMENT)" >> ../../chroma-manager/requirements.tmp;                    \
+		fi;                                                                        \
 	fi
