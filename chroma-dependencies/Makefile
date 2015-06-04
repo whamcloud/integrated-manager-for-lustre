@@ -20,14 +20,13 @@ cleanrepo: TARGET=cleanrepo
 
 requirements::
 	# these are the ones provided by EL
-	echo "https://dl.dropboxusercontent.com/s/0hk2e06aeujotx0/netaddr-0.7.5.zip"
-	echo "paramiko==1.7.5"
-	echo "pycrypto==2.0.1"
-	echo "psycopg2==2.0.14"
-	echo "simplejson==2.0.9"
-	sed -e '/^#/d' < ../chroma-manager/requirements.dev
-	# can't pip install the right versions for these dependencies:
-	# echo "python>=2.6.5"
+	{ echo "https://dl.dropboxusercontent.com/s/0hk2e06aeujotx0/netaddr-0.7.5.zip"; \
+	echo "paramiko==1.7.5";                                                         \
+	echo "pycrypto==2.0.1";                                                         \
+	echo "psycopg2==2.0.14";                                                        \
+	echo "simplejson==2.0.9";                                                       \
+	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >>                       \
+	    $(TOP)/../chroma-manager/requirements.tmp
 
 $(SUBDIRS): do_cleanrepo force
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)

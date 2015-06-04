@@ -220,13 +220,15 @@ rpms: cleandist tarball
 	rm -rf _topdir
 
 requirements:
-	(echo "# DO NOT UPDATE THIS FILE MANUALLY.";                \
-	echo "# This file is generated automatically.";             \
-	echo "# If you want to add a new requirement please see:";  \
-	echo "# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements"; \
-	$(MAKE) -s -C ../chroma-dependencies requirements | sort;   \
-	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file.")          \
-		> requirements.txt
+	rm -f requirements.tmp
+	$(MAKE) -C ../chroma-dependencies requirements
+	{ echo "# DO NOT UPDATE THIS FILE MANUALLY.";                                         \
+	echo "# This file is generated automatically.";                                       \
+	echo "# If you want to add a new requirement please see:";                            \
+	echo "# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements";  \
+	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file."; \
+	sort < requirements.tmp; } > requirements.txt
+	rm -f requirements.tmp
 	if grep ^make requirements.txt; then                      \
 		echo "why is this not quiet like it should be?";  \
 		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \

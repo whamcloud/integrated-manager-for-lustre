@@ -6,23 +6,25 @@ CHROMA_EXTERNALS_DIR := $(TOP)/../chroma-externals/$(CHROMA_EXTERNALS_SUBDIR)/
 rpms: $(addprefix $(CHROMA_EXTERNALS_DIR),$(ALL_RPMS))
 
 requirements:
-	for rpm in $(ALL_RPMS); do                \
-		base=$${rpm##*/};                 \
-		name=$${base%-*};                 \
-		version=$${name##*-};             \
-		name=$${name%-*};                 \
-		for p in $(NO_REQUIREMENT); do    \
-			if [ $$name = $$p ]; then \
-				continue 2;       \
-			fi;                       \
-		done;                             \
-		name=$${name#python-};            \
-		echo "$$name==$$version";         \
+	for rpm in $(ALL_RPMS); do                             \
+		base=$${rpm##*/};                              \
+		name=$${base%-*};                              \
+		version=$${name##*-};                          \
+		name=$${name%-*};                              \
+		for p in $(NO_REQUIREMENT); do                 \
+			if [ $$name = $$p ]; then              \
+				continue 2;                    \
+			fi;                                    \
+		done;                                          \
+		name=$${name#python-};                         \
+		echo "$$name==$$version" >>                    \
+		    $(TOP)/../chroma-manager/requirements.tmp; \
 	done
-	if [ -n "$(REQUIREMENTS)" ]; then           \
-		echo $(REQUIREMENTS) | tr ' ' '\n'; \
-	fi;                                         \
-		
+	if [ -n "$(REQUIREMENTS)" ]; then                      \
+		echo $(REQUIREMENTS) | tr ' ' '\n' >>          \
+		    $(TOP)/../chroma-manager/requirements.tmp; \
+	fi;                                                    \
+
 
 REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
 
