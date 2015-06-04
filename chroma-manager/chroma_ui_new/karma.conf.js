@@ -1,11 +1,8 @@
 /* jshint node: true */
 
-// Karma configuration
-// Generated on Tue Aug 06 2013 14:33:22 GMT-0400 (EDT)
-
 var util = require('util');
 
-module.exports = function(config) {
+module.exports = function setConfig (config) {
   'use strict';
 
   function bound(format) {
