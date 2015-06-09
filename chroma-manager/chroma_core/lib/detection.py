@@ -112,7 +112,7 @@ class DetectScan(object):
             self.log(help_text['discovered_no_new_target'] % ManagedMgs().target_type().upper())
         else:
             for mgt in self.created_mgts:
-                self.log(help_text['discovered_target'] % (mgt.target_type().upper(), mgt.name, mgt.primary_server()))
+                self.log(help_text['discovered_target'] % (mgt.target_type().upper(), mgt.name, mgt.primary_host))
                 ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
 
         # Bit of additional complication so we can print really cracking messages, and detailed messages.
@@ -121,7 +121,7 @@ class DetectScan(object):
                 self.log(help_text['discovered_no_new_target'] % target.target_type().upper())
 
         for target in self.created_targets:
-            self.log(help_text['discovered_target'] % (target.target_type().upper(), target.name, target.primary_server()))
+            self.log(help_text['discovered_target'] % (target.target_type().upper(), target.name, target.primary_host))
 
     def _nids_to_mgs(self, host, nid_strings):
         '''
@@ -217,7 +217,7 @@ class DetectScan(object):
                 target_nids.extend(failover_str.split(","))
 
         if mgs:
-            mgs_host = mgs.primary_server()
+            mgs_host = mgs.primary_host
             fs_name, target_name = local_info['name'].rsplit("-", 1)
             try:
                 mgs_target_info = None

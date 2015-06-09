@@ -77,7 +77,7 @@ class LearnEvent(Event):
         elif isinstance(self.learned_item, ManagedTarget):
             return "Discovered formatted target %s" % self.learned_item
         elif isinstance(self.learned_item, ManagedFilesystem):
-            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.primary_server())
+            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.primary_host)
         else:
             return "Discovered %s" % self.learned_item
 

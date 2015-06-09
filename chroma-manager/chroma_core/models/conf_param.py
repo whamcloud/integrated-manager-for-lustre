@@ -37,7 +37,7 @@ class ConfParamStep(Step):
     def run(self, kwargs):
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
 
-        self.invoke_agent(conf_param.mgs.primary_server(), "set_conf_param", {
+        self.invoke_agent(conf_param.mgs.primary_host, "set_conf_param", {
             'key': conf_param.get_key(), 'value': conf_param.value})
 
 
@@ -64,7 +64,7 @@ class ApplyConfParams(Job):
         return help_text['update_conf_params']
 
     def description(self):
-        return "Update conf_params on %s" % (self.mgs.primary_server())
+        return "Update conf_params on %s" % (self.mgs.primary_host)
 
     def get_steps(self):
         from chroma_core.models import ConfParam

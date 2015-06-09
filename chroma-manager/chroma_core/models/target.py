@@ -103,28 +103,9 @@ class ManagedTarget(StatefulObject):
     inode_count = models.BigIntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
                                          "backing store")
 
-    def get_hosts(self, primary=True):
-        """Getting all the hosts, and filtering in python is less db hits"""
-
-        mounts = self.managedtargetmount_set.all()
-
-        failovers = []
-        for mount in mounts:
-            if primary:
-                if mount.primary:
-                    return mount.host
-            else:
-                if not mount.primary:
-                    failovers.append(mount.host)
-
-        return failovers
-
     reformat = models.BooleanField(
         help_text = "Only used during formatting, indicates that when formatting this target \
         any existing filesystem on the Volume should be overwritten")
-
-    def primary_server(self):
-        return self.get_hosts(primary=True)
 
     @property
     def full_volume(self):
@@ -138,9 +119,6 @@ class ManagedTarget(StatefulObject):
             'storage_resource__resource_class',
             'storage_resource__resource_class__storage_plugin'
         ).prefetch_related('volumenode_set', 'volumenode_set__host').get(pk=self.volume.pk)
-
-    def secondary_servers(self):
-        return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
 
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
@@ -179,11 +157,18 @@ class ManagedTarget(StatefulObject):
 
     @property
     def primary_host(self):
-        return self.get_hosts(primary=True)
+        try:
+            """Getting all the hosts, and filtering in python is less db hits"""
+            return next(mount.host for mount in self.managedtargetmount_set.all() if mount.primary)
+        except StopIteration:
+            error = "No primary host found for ManagedTarget %s" % self.name
+            job_log.error(error)
+            raise RuntimeError(error)
 
     @property
     def failover_hosts(self):
-        return self.get_hosts(primary=False)
+        """Getting all the hosts, and filtering in python is less db hits"""
+        return [mount.host for mount in self.managedtargetmount_set.all() if not mount.primary]
 
     @property
     def active_host(self):
@@ -1376,7 +1361,7 @@ class TargetOfflineAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "%s started" % self.alert_item,
-            host = self.alert_item.primary_server(),
+            host = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)
 
@@ -1396,7 +1381,7 @@ class TargetFailoverAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "%s failover unmounted" % self.alert_item,
-            host = self.alert_item.primary_server(),
+            host = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)
 
@@ -1417,6 +1402,6 @@ class TargetRecoveryAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "Target '%s' completed recovery" % self.alert_item,
-            host = self.alert_item.primary_server(),
+            host = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)

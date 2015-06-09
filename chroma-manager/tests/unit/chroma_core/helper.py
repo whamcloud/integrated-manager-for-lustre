@@ -454,7 +454,7 @@ class MockAgentRpc(object):
         elif cmd == 'start_target':
             ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
-            return {'location': target.primary_server().nodename}
+            return {'location': target.primary_host.nodename}
         elif cmd == 'register_target':
             # Assume mount paths are "/mnt/testfs-OST0001" style
             mount_point = args['mount_point']
