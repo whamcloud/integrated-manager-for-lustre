@@ -73,19 +73,29 @@ sql_aggregates.BoolOr = SqlBoolOr
 # * constructor in command_run_jobs doesn't know how to deal with them
 # * assigning them requires model to be saved first, which means
 #   we can't e.g. check deps before saving job
-class HostListMixin(models.Model):
+class HostListMixin(Job):
     class Meta:
         abstract = True
         app_label = 'chroma_core'
 
     host_ids = models.CharField(max_length = 512)
 
+    def __init__(self, *args, **kwargs):
+        self._cached_host_ids = "None-Cached"
+        super(HostListMixin, self).__init__(*args, **kwargs)
+
     @property
     def hosts(self):
-        if not self.host_ids:
-            return ManagedHost.objects
-        else:
-            return ManagedHost.objects.filter(id__in = json.loads(self.host_ids))
+        if self._cached_host_ids != self.host_ids:
+            if not self.host_ids:
+                hosts = ManagedHost.objects.all()
+            else:
+                hosts = ManagedHost.objects.filter(id__in = json.loads(self.host_ids))
+
+            self._hosts = list(hosts)
+            self._cached_host_ids = self.host_ids
+
+        return self._hosts
 
 
 class DeletableStatefulObject(StatefulObject):
@@ -1115,7 +1125,7 @@ class DetectTargetsStep(Step):
             DetectScan(self).run(host_data)
 
 
-class DetectTargetsJob(Job, HostListMixin):
+class DetectTargetsJob(HostListMixin):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -1128,11 +1138,12 @@ class DetectTargetsJob(Job, HostListMixin):
         return "Scan for Lustre targets"
 
     def get_steps(self):
-        return [(DetectTargetsStep, {'host_ids': [h.id for h in self.hosts.all()]})]
+        return [(UpdateDevicesStep, {'host': host}) for host in self.hosts] + \
+               [(DetectTargetsStep, {'host_ids': [h.id for h in self.hosts]})]
 
     def get_deps(self):
         deps = []
-        for host in self.hosts.all():
+        for host in self.hosts:
             deps.append(DependOn(host, 'lnet_up'))
 
         return DependAll(deps)
@@ -1252,23 +1263,23 @@ class LoadLNetJob(StateChangeJob):
                 (UpdateDevicesStep, {'host': self.host})]
 
 
-class UpdateDevicesJob(Job, HostListMixin):
+class UpdateDevicesJob(HostListMixin):
     @classmethod
     def long_description(cls, stateful_object):
         return help_text['update_devices']
 
     def description(self):
-        return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts.all()])
+        return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts])
 
     def get_deps(self):
         deps = []
-        for host in self.hosts.all():
+        for host in self.hosts:
             deps.append(DependOn(host, "lnet_up"))
         return DependAll(deps)
 
     def get_steps(self):
         return [(UpdateDevicesStep, {'host': host})
-                for host in self.hosts.all()]
+                for host in self.hosts]
 
     class Meta:
         app_label = 'chroma_core'
@@ -1821,16 +1832,16 @@ class ResetConfParamsStep(Step):
         mgt.save()
 
 
-class UpdateNidsJob(Job, HostListMixin):
+class UpdateNidsJob(HostListMixin):
     @classmethod
     def long_description(cls, stateful_object):
         return help_text["update_nids"]
 
     def description(self):
-        if self.hosts.count() > 1:
-            return "Update NIDs on %d hosts" % self.hosts.count()
+        if len(self.hosts) > 1:
+            return "Update NIDs on %d hosts" % len(self.hosts)
         else:
-            return "Update NIDs on host %s" % self.hosts.all()[0]
+            return "Update NIDs on host %s" % self.hosts[0]
 
     def _targets_on_hosts(self):
         from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
@@ -1838,7 +1849,7 @@ class UpdateNidsJob(Job, HostListMixin):
 
         filesystems = set()
         targets = set()
-        for target in ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all()):
+        for target in ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts):
             targets.add(target)
             if issubclass(target.downcast_class, FilesystemMember):
                 # FIXME: N downcasts :-(

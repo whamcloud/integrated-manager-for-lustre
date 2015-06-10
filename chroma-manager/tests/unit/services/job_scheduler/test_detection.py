@@ -7,6 +7,7 @@ from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import Nid
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
+from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job, load_default_profile
 
 
@@ -45,13 +46,17 @@ class TestDetection(TestCase):
                         for host in host_data.keys():
                             VolumeNode.objects.create(volume = volume, path = d, host = host)
 
-        def _detect_scan(host, command, args = None):
-            self.assertEqual(command, 'detect_scan')
-            return host_data[host]
+        def _detect_scan_device_plugin(host, command, args = None):
+            self.assertIn(command, ['detect_scan', 'device_plugin'])
+
+            if command == 'detect_scan':
+                return host_data[host]
+
+            raise AgentException(host, command, args, "No device plugin data available in unit tests")
 
         job = DetectTargetsJob.objects.create()
 
-        with mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(side_effect = _detect_scan)):
+        with mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(side_effect = _detect_scan_device_plugin)):
             with mock.patch("chroma_core.models.Volume.storage_resource"):
                 synchronous_run_job(job)
 

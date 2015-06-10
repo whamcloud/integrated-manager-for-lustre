@@ -50,6 +50,7 @@ class ZfsDevices(DeviceHelper):
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
         try:
+            shell.run(["partprobe"])    # Before looking for zfs pools, ensure we are relooked at the partitions, might throw errors so ignore return
             self._search_for_active(block_devices)
             self._search_for_inactive(block_devices)
         except OSError:                 # OSError occurs when ZFS is not installed.
