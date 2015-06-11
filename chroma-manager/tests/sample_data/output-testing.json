@@ -40,20 +40,22 @@
       {
          "mgs": "exploration-mgs",
          "name": "firstfs",
-         "mdt": {
-            "mounts": [
-               {
-                  "host": "firstfs-mds",
-                  "primary": true,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
-               },
-               {
-                  "host": "firstfs-oss0",
-                  "primary": false,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
-               }
-            ]
-         },
+         "mdts": [
+            {
+               "mounts": [
+                  {
+                      "host": "firstfs-mds",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
+                  },
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
+                  }
+               ]
+            }
+         ],
          "osts": [
             {
                "mounts": [

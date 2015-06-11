@@ -44,6 +44,26 @@ Scenario: Add an OST
   Then the ost count should be 24
   And the target state on secondfs-OST0004 should be mounted
 
+Scenario: Add an MDT
+  Given the mdt count should be 2
+  When I run chroma mdt-add --reformat --filesystem secondfs secondfs-mds:/dev/disk/by-id/scsi-1IET_000b0002
+  Then the mdt count should be 3
+  And the target state on secondfs-MDT0001 should be mounted
+
+Scenario: Check an MDT0 cannot be removed
+  Given the mdt count should be 3
+  And the following commands will fail
+  When I run chroma mdt-remove secondfs-MDT0000
+  Then the mdt count should be 3
+  And the target state on secondfs-MDT0000 should be mounted
+
+Scenario: Check an MDT1 cannot be removed
+  Given the mdt count should be 3
+  And the following commands will fail
+  When I run chroma mdt-remove secondfs-MDT0001
+  Then the mdt count should be 3
+  And the target state on secondfs-MDT0001 should be mounted
+
 Scenario: Force a target failover
   Given the target active_host_name on MGS should be the same as primary_server_name
   When I run chroma target-failover MGS

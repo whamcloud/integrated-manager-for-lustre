@@ -17,7 +17,7 @@
     "filesystems": [
         {"name": "egfs",
          "mgs": "example01",
-         "mdt": {
+         "mdts": [{
              "mounts": [
                     {
                         "host": "example01",
@@ -30,7 +30,7 @@
                         "primary": false
                     }
              ]
-        },
+        }],
         "osts": [
             {"mounts": [
                 {"host": "example01",
