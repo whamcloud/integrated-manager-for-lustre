@@ -130,7 +130,7 @@
         }
       %>
         <% _.each(job.steps, function(step) { %>
-        <h3><a href='#'><img src='<%= step_icon(step) %>'/><%= step.step_index + 1 %>/<%= step.step_count %> <%= step.class_name %></a></h3>
+        <h3><a href='#'><img src='<%= step_icon(step) %>'/><%= step.step_index + 1 %>/<%= step.step_count %> <%= step.description.indexOf(step.class_name) === 0 ? step.class_name : step.description %></a></h3>
         <div>
           <h4>Arguments</h4>
 <pre class='console'>

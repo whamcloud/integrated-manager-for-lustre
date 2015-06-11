@@ -36,6 +36,28 @@ describe('step modal', function () {
       stepModal = $scope.stepModal;
     }));
 
+    it('should have a getDescription method', function () {
+      expect(stepModal.getDescription).toEqual(jasmine.any(Function));
+    });
+
+    it('should return class_name if description starts with it', function () {
+      var step = {
+        class_name: 'foo',
+        description: 'foo bar'
+      };
+
+      expect(stepModal.getDescription(step)).toEqual('foo');
+    });
+
+    it('should return description if it does not start with class_name', function () {
+      var step = {
+        class_name: 'baz',
+        description: 'foo bar'
+      };
+
+      expect(stepModal.getDescription(step)).toEqual('foo bar');
+    });
+
     it('should listen for destroy', function () {
       expect($scope.$on).toHaveBeenCalledOnceWith('$destroy', jasmine.any(Function));
     });

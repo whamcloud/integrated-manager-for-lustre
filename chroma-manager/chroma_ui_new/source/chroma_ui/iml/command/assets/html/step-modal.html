@@ -22,7 +22,7 @@
       <accordion-heading>
         <i class="fa" ng-class="{'fa-chevron-down': stepModal['accordion' + $index], 'fa-chevron-right': !stepModal['accordion' + $index]}"></i>
         <i class="fa header-status" ng-class="{'fa-exclamation': step.state === 'failed', 'fa-check': step.state === 'success', 'fa-refresh fa-spin': step.state === 'incomplete'}"></i>
-        <span bindonce="step" bo-bind=" (step.step_index + 1) + '/' + step.step_count + ' ' + step.class_name "></span>
+        <span bindonce="step" bo-bind=" (step.step_index + 1) + '/' + step.step_count + ' ' + stepModal.getDescription(step) "></span>
       </accordion-heading>
       <h4>Arguments</h4>
       <pre class="logs">{{ step.args|json }}</pre>
