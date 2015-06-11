@@ -129,8 +129,9 @@ Scenario: View a specific target
 
 Scenario: List usable volumes
   When I run chroma volume list
-  Then I should see output containing "Found 0 results"
-  And there should be 0 lines of output
+  Then I should see output containing "secondfs-mds.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_000b0002"
+  And I should see output containing "secondfs-oss1.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_000b0002"
+  And there should be 1 lines of output
 
 Scenario: List all volumes
   When I run chroma volume list --all
@@ -138,7 +139,7 @@ Scenario: List all volumes
   And I should see output containing "scsi-1IET_000f0001"
   And I should see output containing "firstfs-mds.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_00020001"
   And I should see output containing "firstfs-oss0.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_00020001"
-  And there should be 27 lines of output
+  And there should be 28 lines of output
 
 Scenario: List all volumes for a given filesystem
   When I run chroma filesystem secondfs volume-list

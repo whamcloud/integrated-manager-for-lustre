@@ -58,12 +58,18 @@ def load_filesystem_from_json(data):
         fs_bundle = {
                 'name': fs_info['name'],
                 'mgt': {'id': lookup['mgt'][fs_info['mgs']].id},
+                'mdts': [],
                 'osts': [],
                 'conf_params': {}
         }
 
-        volume = _create_volume_for_mounts(fs_info['mdt']['mounts'])
-        fs_bundle['mdts'] = [{'volume_id': volume.id, 'conf_params': {}}]
+        for mdt_info in fs_info['mdts']:
+            volume = _create_volume_for_mounts(mdt_info['mounts'])
+
+            # Although we create multiple volumes for the mdt, initially only add a single volume, once delete of MDT
+            # is possible we can add them all and then delete before adding. This code is structured for that fixed case.
+            if not fs_bundle['mdts']:
+                fs_bundle['mdts'].append({'volume_id': volume.id, 'conf_params': {}})
 
         for ost_info in fs_info['osts']:
             volume = _create_volume_for_mounts(ost_info['mounts'])

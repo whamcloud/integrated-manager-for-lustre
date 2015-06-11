@@ -69,20 +69,22 @@
       {
          "mgs": "exploration-mgs",
          "name": "firstfs",
-         "mdt": {
-            "mounts": [
-               {
-                  "host": "firstfs-mds",
-                  "primary": true,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
-               },
-               {
-                  "host": "firstfs-oss0",
-                  "primary": false,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
-               }
-            ]
-         },
+         "mdts": [
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-mds",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
+                  },
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00020001"
+                  }
+               ]
+            }
+         ],
          "osts": [
             {
                "mounts": [
@@ -369,20 +371,36 @@
       {
          "mgs": "exploration-mgs",
          "name": "secondfs",
-         "mdt": {
-            "mounts": [
-               {
-                  "host": "secondfs-mds",
-                  "primary": true,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_000b0001"
-               },
-               {
-                  "host": "secondfs-oss1",
-                  "primary": false,
-                  "device_node": "/dev/disk/by-id/scsi-1IET_000b0001"
-               }
-            ]
-         },
+         "mdts": [
+             {
+                "mounts": [
+                   {
+                      "host": "secondfs-mds",
+                      "primary": true,
+                      "device_node": "/dev/disk/by-id/scsi-1IET_000b0001"
+                   },
+                   {
+                      "host": "secondfs-oss1",
+                      "primary": false,
+                      "device_node": "/dev/disk/by-id/scsi-1IET_000b0001"
+                   }
+                ]
+             },
+             {
+                "mounts": [
+                   {
+                      "host": "secondfs-mds",
+                      "primary": true,
+                      "device_node": "/dev/disk/by-id/scsi-1IET_000b0002"
+                   },
+                   {
+                      "host": "secondfs-oss1",
+                      "primary": false,
+                      "device_node": "/dev/disk/by-id/scsi-1IET_000b0002"
+                   }
+                ]
+             }
+         ],
          "osts": [
             {
                "mounts": [
