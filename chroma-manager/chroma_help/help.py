@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -156,8 +156,7 @@ help_text = {
     'discovered_target': 'Discovered %s \'%s\' on server %s',
     'discovered_no_new_target': "Discovered no new %ss",
     'discovered_no_new_filesystem': 'Discovered no new filesystems',
-    'found_not_primary_mount_point_for_MGS_target': 'Found no primary mount point for MGS target %s',
-    'found_no_primary_mount_point_for_target': 'Found no primary mount point for target %s',
+    'found_no_primary_mount_point_for_target': 'Found no primary mount point for target %s %s',
     'found_not_TYPE_for_filesystem': 'Found no %ss for filesystem %s',
     'discovered_filesystem_with_n_MDTs_and_n_OSTs': 'Discovered filesystem %s with %s MDTs and %s OSTs',
     'update_devices': 'Update device info.',

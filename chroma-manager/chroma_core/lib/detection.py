@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -40,7 +40,7 @@ class DetectScan(object):
     def __init__(self, step):
         self.created_filesystems = []
         self.discovered_filesystems = set()
-        self.created_mgts = []
+        self.created_mgss = []
         self.created_targets = []
         self.step = step
 
@@ -72,19 +72,12 @@ class DetectScan(object):
         log.debug(">>learn_target_mounts")
         self.learn_target_mounts()
 
-        # Assign a valid primary mount point
-        # And remove any targets which don't have a primary mount point
-        for fs in self.discovered_filesystems:
-            for t in ManagedMgs.objects.filter(managedfilesystem = fs).all():
-                if not self.learn_primary_target(t):
-                    self.log(help_text["found_not_primary_mount_point_for_MGS_target"] % t)
-                    t.mark_deleted()
-
-            for klass in [ManagedMdt, ManagedOst]:
-                for t in klass.objects.filter(filesystem = fs).all():
-                    if not self.learn_primary_target(t):
-                        self.log(help_text["found_no_primary_mount_point_for_target"] % t)
-                        t.mark_deleted()
+        # Assign a valid primary mount point,
+        # and remove any targets which don't have a primary mount point
+        for target in self.created_mgss + self.created_targets:
+            if not self.learn_primary_target(target):
+                self.log(help_text["found_no_primary_mount_point_for_target"] % (target.target_type(), target))
+                target.mark_deleted()
 
         if not self.created_filesystems:
             self.log(help_text["discovered_no_new_filesystem"])
@@ -108,10 +101,10 @@ class DetectScan(object):
                         fs.state = 'available'
                     fs.save()
 
-        if not self.created_mgts:
+        if not self.created_mgss:
             self.log(help_text['discovered_no_new_target'] % ManagedMgs().target_type().upper())
         else:
-            for mgt in self.created_mgts:
+            for mgt in self.created_mgss:
                 self.log(help_text['discovered_target'] % (mgt.target_type().upper(), mgt.name, mgt.primary_host))
                 ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
 
@@ -397,4 +390,4 @@ class DetectScan(object):
                     state = "mounted", volume = volumenode.volume,
                     name = "MGS", immutable_state = True)
                 mgs.save()
-                self.created_mgts.append(mgs)
+                self.created_mgss.append(mgs)
