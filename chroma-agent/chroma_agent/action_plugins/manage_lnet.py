@@ -95,7 +95,7 @@ def start_lnet():
 
 def stop_lnet():
     console_log.info("Stopping LNet")
-    _rmmod_deps("lnet", excpt=["ksocklnd"])
+    _rmmod_deps("lnet", excpt=["ksocklnd", "ko2iblnd"])
     shell.try_run(["lctl", "net", "down"])
 
 
