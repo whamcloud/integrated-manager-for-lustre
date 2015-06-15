@@ -11,6 +11,7 @@
       "source/chroma_ui/bower_components*/angular-route/angular-route.js",
       "source/chroma_ui/bower_components*/angular-bindonce/bindonce.js",
       "source/chroma_ui/bower_components*/angular-animate/angular-animate.js",
+      "../ui-modules*/isomorphic/fp/index.js",
       "source/chroma_ui/bower_components*/momentjs/moment.js",
       "source/chroma_ui/bower_components*/twix/bin/twix.js",
       "source/chroma_ui/bower_components*/d3/d3.js",

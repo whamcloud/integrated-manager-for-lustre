@@ -243,6 +243,14 @@
   });
   fp.eqFn = eqFn;
 
+  var invoke = curry(2, function invoke(fn, args) {
+    if (!Array.isArray(args))
+      throw new Error('Error in fp.invoke - Cannot call invoke with non-array');
+
+    return fn.apply(null, args);
+  });
+  fp.invoke = invoke;
+
   var safe = curry(3, function safe (arity, fn, def) {
     return curry(arity, function safeCheck () {
       for (var i = 0, l = arguments.length; i < l; i++) {

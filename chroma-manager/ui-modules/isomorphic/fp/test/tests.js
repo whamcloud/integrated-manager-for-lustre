@@ -469,6 +469,50 @@ describe('the fp module', function () {
     });
   });
 
+  describe('has an invoke method', function () {
+    var spy, error;
+    beforeEach(function () {
+      spy = jasmine.createSpy('spy');
+      error = new Error('Error in fp.invoke - Cannot call invoke with non-array');
+    });
+
+    it('should exist on fp', function () {
+      expect(fp.invoke).toEqual(jasmine.any(Function));
+    });
+
+    it('should throw if args are null', function () {
+      expect(function () { fp.invoke(spy, null); }).toThrow(error);
+    });
+
+    it('should throw an error if a non array is passed in', function () {
+      expect(function () { fp.invoke(spy, 'some items'); }).toThrow(error);
+    });
+
+    it('should invoke the function with an array of items', function () {
+      var items = ['some', 'array', 'of', 'items', 7, {key: 'val'}];
+      fp.invoke(spy, items);
+
+      expect(spy).toHaveBeenCalledOnceWith('some', 'array', 'of', 'items', 7, {key: 'val'});
+    });
+
+    it('should invoke with a placeholder', function () {
+      var spy1 = jasmine.createSpy('spy1');
+      var spy2 = jasmine.createSpy('spy2');
+      var x = {
+        fn: spy1
+      };
+      var y = {
+        fn: spy2
+      };
+
+      fp.pluck('fn', [x, y])
+        .forEach(fp.invoke(_, ['arg1', 2]));
+
+      expect(spy1).toHaveBeenCalledOnceWith('arg1', 2);
+      expect(spy2).toHaveBeenCalledOnceWith('arg1', 2);
+    });
+  });
+
   describe('has a safe method', function () {
     var spy;
 

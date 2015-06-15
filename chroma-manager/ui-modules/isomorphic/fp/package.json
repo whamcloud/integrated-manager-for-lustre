@@ -12,6 +12,7 @@
   "license": "MIT",
   "devDependencies": {
     "jasmine": "2.3.1",
-    "krusty-jasmine-reporter": "1.0.0"
+    "krusty-jasmine-reporter": "1.0.0",
+    "jasmine-n-matchers": "2.0.2"
   }
 }

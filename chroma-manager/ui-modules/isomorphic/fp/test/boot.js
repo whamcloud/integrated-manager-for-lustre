@@ -1,5 +1,6 @@
 'use strict';
 
+require('jasmine-n-matchers');
 if (process.env.RUNNER === 'CI') {
   var krustyJasmineReporter = require('krusty-jasmine-reporter');
 
