@@ -32,7 +32,7 @@ Requires: python-uuid
 Requires: python-paramiko
 Requires: python-kombu >= 3.0.19
 Requires: python-daemon
-Requires: python-requests >= 1.0.0
+Requires: python-requests >= 2.6.0
 Requires: python-networkx
 Requires: python-httpagentparser
 Requires: python-gunicorn
@@ -108,7 +108,7 @@ This package contains libraries for Chroma CLI and Chroma Server.
 %package cli
 Summary: Command-Line Interface for Chroma Server
 Group: System/Utility
-Requires: chroma-manager-libs = %{version}-%{release} python-argparse python-requests >= 1.0.3 python-tablib python-dateutil python-prettytable
+Requires: chroma-manager-libs = %{version}-%{release} python-argparse python-requests >= 2.6.0 python-tablib python-dateutil python-prettytable
 %description cli
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
@@ -116,7 +116,7 @@ or on a separate node.
 %package integration-tests
 Summary: Chroma Manager Integration Tests
 Group: Development/Tools
-Requires: python-dateutil python-requests python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
+Requires: python-dateutil python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
 %description integration-tests
 This package contains the Chroma Manager integration tests and scripts and is intended
 to be used by the Chroma test framework.
