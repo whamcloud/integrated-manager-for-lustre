@@ -144,7 +144,7 @@ help_text = {
 
     'no_dismiss_message_alert': 'This alert relates to an active problem. When the problem is fixed you may dismiss.',
     'no_dismiss_message_command': 'This command is incomplete. When it has completed you may dismiss.',
-    'copyright_year': '2014',
+    'copyright_year': '2015',
     'dashboard_filter_type': 'Choose to view servers or file systems.',
     'dashboard_filter_fs': 'Choose a file system to view. To view a target for a file system, select a file system, and then a target.',
     'dashboard_filter_server': 'Choose a server to view. To view a target for a server, select a server, and then a target.',
