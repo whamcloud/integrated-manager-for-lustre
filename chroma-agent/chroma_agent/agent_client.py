@@ -31,7 +31,7 @@ import sys
 from chroma_agent.plugin_manager import DevicePluginMessageCollection, DevicePluginMessage, PRIO_HIGH
 import requests
 from chroma_agent import version
-from chroma_agent.log import daemon_log, console_log
+from chroma_agent.log import daemon_log, console_log, logging_in_debug_mode
 
 
 MAX_BYTES_PER_POST = 8 * 1024 ** 2  # 8MiB, should be <= SSLRenegBufferSize
@@ -64,14 +64,29 @@ class CryptoClient(object):
         if cert:
             kwargs['cert'] = (cert, key)
 
+        daemon_log.error("*************** Sending request %s" % method)
+
         try:
             response = requests.request(method, self.url,
                 # FIXME: set verify to true if we have a CA bundle
                 verify = False,
                 headers = {"Content-Type": "application/json"},
                 **kwargs)
-        except (socket.error, requests.exceptions.ConnectionError) as e:
+        except (socket.error,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.ReadTimeout,
+                requests.exceptions.SSLError) as e:
             daemon_log.error("Error connecting to %s: %s" % (self.url, e))
+            raise HttpError()
+        except Exception as e:
+            # If debugging is enabled meaning we are in test for example then raise the error again and the app
+            # will crash. If debugging not enabled then this is a user scenario and it is better that we attempt
+            # to carry on. No data will be transferred and so badness cannot happen.
+            daemon_log.error("requests returned an unexpected error %s" % e)
+
+            if logging_in_debug_mode:
+                raise
+
             raise HttpError()
 
         if not response.ok:
@@ -375,6 +390,7 @@ class HttpWriter(ExceptionCatchingThread):
             post_envelope['messages'] = [m.dump(self._client._fqdn) for m in messages]
             self._client.post(post_envelope)
         except HttpError:
+            daemon_log.warning("HttpWriter: request failed")
             # Terminate any sessions which we've just droppped messages for
             for message in messages:
                 if message.type == 'DATA':

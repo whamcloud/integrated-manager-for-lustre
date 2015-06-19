@@ -46,7 +46,9 @@ console_log = logging.getLogger('console')
 # but for today this achieves what we want, and has no debt.
 shell.set_logger(console_log)
 
-if os.path.exists("/tmp/chroma-agent-debug") or 'nosetests' in sys.argv[0]:
+logging_in_debug_mode = os.path.exists("/tmp/chroma-agent-debug")
+
+if  logging_in_debug_mode or 'nosetests' in sys.argv[0]:
     daemon_log.setLevel(logging.DEBUG)
     copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)
