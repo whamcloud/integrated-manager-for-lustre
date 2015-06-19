@@ -146,7 +146,8 @@ class TestFilesystemDNE(StatsTestCaseMixin):
         self.assertEqual(len(filesystem['osts']), 1)
         self._check_stats(filesystem)
 
-    def test_create_singled_filesystem_add_mdt(self):
+    @skip('Remove while we fix HYD-4520')
+    def test_create_single_filesystem_add_mdt(self):
         """
         Test that we can create a single MDT file system and then add MDTs
         """
