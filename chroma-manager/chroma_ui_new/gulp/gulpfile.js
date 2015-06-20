@@ -23,6 +23,7 @@ var uglify = require('gulp-uglify');
 var gulpPrimus = require('./lib/gulp-primus');
 var iifeWrap = require('./lib/gulp-iife-wrap');
 var annotate = require('./lib/gulp-annotate');
+var ngAnnotate = require('gulp-ng-annotate');
 
 var files = require('../gulp-src-globs.json');
 var qualityFiles = files.js.source.concat(
@@ -40,6 +41,7 @@ var isProduction = (options.env === 'production');
 gulp.task('default', ['static', 'clean-static'], function buildApp () {
   var scripts = getJavaScripts()
     .pipe(plumber())
+    .pipe(ngAnnotate({ add: true }))
     .pipe(gulpIf(isProduction, annotate))
     .pipe(gulpIf(isProduction, iifeWrap))
     .pipe(gulpIf(isProduction, sourcemaps.init()))
