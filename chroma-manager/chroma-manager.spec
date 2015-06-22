@@ -281,7 +281,7 @@ fi
 %files -f manager.files
 %defattr(-,root,root)
 %{_bindir}/chroma-host-discover
-%{_bindir}/chroma-config
+%attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 /etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
