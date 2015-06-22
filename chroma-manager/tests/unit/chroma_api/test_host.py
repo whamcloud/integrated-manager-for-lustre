@@ -302,13 +302,13 @@ class TestHostResource(ChromaApiTestCase):
         def _mock_jsc_set_host_profile(host_id, server_profile_id):
             ManagedHost.objects.filter(id = host_id).update(server_profile = server_profile_id)
 
-            return make_command(dismissed=False, complete=False, created_at=None, failed=True, message='test')
+            return make_command(complete=False, created_at=None, failed=True, message='test')
 
         def _mock_command_set_state(objects, message = None, **kwargs):
             for object, state in objects:
                 object.__class__.objects.filter(id = object.id).update(state = state)
 
-            return make_command(dismissed=False, complete=False, created_at=None, failed=True, message='test')
+            return make_command(complete=False, created_at=None, failed=True, message='test')
 
         # Place the host into the unconfigured state, this is typical of where it will be at this point.
         ManagedHost.objects.filter(id = hosts[0].id).update(state = 'unconfigured')

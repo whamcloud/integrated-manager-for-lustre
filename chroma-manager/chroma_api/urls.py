@@ -48,7 +48,6 @@ class ChromaApi(Api):
 api = ChromaApi(api_name = 'api')
 
 import chroma_api.alert
-import chroma_api.event
 import chroma_api.log
 import chroma_api.job
 import chroma_api.step
@@ -76,7 +75,6 @@ import chroma_api.filesystem
 import chroma_api.target
 import chroma_api.package
 import chroma_api.client_error
-import chroma_api.notification
 import chroma_api.copytool
 import chroma_api.nid
 import chroma_api.lnet_configuration
@@ -100,7 +98,6 @@ api.register(chroma_api.group.GroupResource())
 api.register(chroma_api.alert.AlertResource())
 api.register(chroma_api.alert.AlertTypeResource())
 api.register(chroma_api.alert.AlertSubscriptionResource())
-api.register(chroma_api.event.EventResource())
 api.register(chroma_api.job.JobResource())
 api.register(chroma_api.step.StepResource())
 api.register(chroma_api.log.LogResource())
@@ -113,7 +110,6 @@ api.register(chroma_api.power_control.PowerControlDeviceResource())
 api.register(chroma_api.power_control.PowerControlDeviceOutletResource())
 api.register(chroma_api.package.PackageResource())
 api.register(chroma_api.client_error.ClientErrorResource())
-api.register(chroma_api.notification.NotificationResource())
 api.register(chroma_api.copytool.CopytoolResource())
 api.register(chroma_api.copytool.CopytoolOperationResource())
 api.register(chroma_api.network_interface.NetworkInterfaceResource())

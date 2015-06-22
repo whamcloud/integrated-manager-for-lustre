@@ -1,4 +1,5 @@
 
+
 from testconfig import config
 from tests.utils import wait
 from tests.integration.core.constants import TEST_TIMEOUT
@@ -25,7 +26,7 @@ class TestEvents(ChromaIntegrationTestCase):
         self.remote_operations.await_server_boot(host['fqdn'])
 
         def reboot_event_was_seen():
-            events = self.get_list("/api/event/", {'created_at__gte': start_time})
+            events = self.get_list("/api/alert/", {'begin__gte': start_time})
 
             reboot_events = [e for e in events if e['message'].find("restarted") != -1]
             return len(reboot_events) == 1

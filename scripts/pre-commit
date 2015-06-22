@@ -89,8 +89,8 @@ CHECKS = [
         'print_filename': False
     },
     {
-        'output': 'Checking boilerplate...',
-        'command': 'scripts/boilerplate.py test %s',
+        'output': 'Updating boilerplates...',
+        'command': 'scripts/boilerplate.py freshen %s',
         'match_files': [
             '.*\.py$',
             '.*chroma_ui/static/js/.*\.js$'

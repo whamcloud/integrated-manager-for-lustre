@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,15 +22,16 @@
 
 import dateutil.parser
 import os
+import dse
+
+from django.db import transaction
 
 from chroma_core.services.syslog.parser import LogMessageParser
 from chroma_core.models.log import LogMessage
 from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
 
-from django.db import transaction
 import settings
-import dse
 
 
 log = log_register('syslog')

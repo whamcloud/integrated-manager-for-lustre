@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,51 +20,25 @@
 # express and approved by Intel in writing.
 
 
-from polymorphic.models import DowncastMetaclass
-
-from django.db import models
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.generic import GenericForeignKey
 
-from chroma_core.models import utils as conversion_util
+from chroma_core.models.alert import AlertStateBase, AlertState
+from chroma_core.models.sparse_model import VariantGenericForeignKey, VariantDescriptor
 
 
-class Event(models.Model):
-    __metaclass__ = DowncastMetaclass
+class LearnEvent(AlertStateBase):
+    variant_fields = [VariantDescriptor('learned_item_id', int, None, None, 0),
+                      VariantDescriptor('learned_item_type',
+                                        ContentType,
+                                        lambda self_: ContentType.objects.get(id=self_.get_variant('content_id', None, int)),
+                                        lambda self_, value: self_.set_variant('content_id', int, value.id),
+                                        None)]
 
-    created_at = models.DateTimeField(auto_now_add = True)
-    severity = models.IntegerField(help_text = ("String indicating the "
-                                                "severity of the event, "
-                                                "one of %s") %
-                                        conversion_util.STR_TO_SEVERITY.keys())
-
-    host = models.ForeignKey('chroma_core.ManagedHost', blank = True, null = True)
-    dismissed = models.BooleanField(default=False,
-                                    help_text = "``true`` denotes that the "
-                                                "user has acknowledged this "
-                                                "event.")
+    learned_item = VariantGenericForeignKey('learned_item_type', 'learned_item_id')
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
-
-    @staticmethod
-    def type_name():
-        raise NotImplementedError
-
-    def message(self):
-        raise NotImplementedError
-
-
-class LearnEvent(Event):
-    # Every environment at some point reinvents void* :-)
-    learned_item_type = models.ForeignKey(ContentType)
-    learned_item_id = models.PositiveIntegerField()
-    learned_item = GenericForeignKey('learned_item_type', 'learned_item_id')
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     @staticmethod
     def type_name():
@@ -82,13 +56,17 @@ class LearnEvent(Event):
             return "Discovered %s" % self.learned_item
 
 
-class AlertEvent(Event):
-    message_str = models.CharField(max_length = 512)
-    alert = models.ForeignKey('AlertState')
-
+class AlertEvent(AlertStateBase):
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
+
+    variant_fields = [VariantDescriptor('message_str', str, None, None, 0),
+                      VariantDescriptor('alert',
+                                        AlertState,
+                                        lambda self_: AlertState.objects.get(id=self_.get_variant('alert_id', None, int)),
+                                        lambda self_, value: self_.set_variant('alert_id', int, value.id),
+                                        None)]
 
     @staticmethod
     def type_name():
@@ -98,13 +76,12 @@ class AlertEvent(Event):
         return self.message_str
 
 
-class SyslogEvent(Event):
-    message_str = models.CharField(max_length = 512)
-    lustre_pid = models.IntegerField(null = True)
+class SyslogEvent(AlertStateBase):
+    variant_fields = [VariantDescriptor('message_str', str, None, None, 0)]
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     @staticmethod
     def type_name():
@@ -114,13 +91,12 @@ class SyslogEvent(Event):
         return self.message_str
 
 
-class ClientConnectEvent(Event):
-    message_str = models.CharField(max_length = 512)
-    lustre_pid = models.IntegerField(null = True)
-
+class ClientConnectEvent(AlertStateBase):
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
+
+    variant_fields = [VariantDescriptor('message_str', str, None, None, 0)]
 
     def message(self):
         return self.message_str

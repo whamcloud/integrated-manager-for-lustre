@@ -3,11 +3,10 @@ from datetime import timedelta
 
 from dateutil.parser import parse
 from django.utils import timezone
-
-from chroma_core.models import (Command, ManagedHost, Event, HostOfflineAlert)
+from chroma_core.models import ManagedHost
+from chroma_core.models import HostOfflineAlert
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
-from tests.unit.chroma_core.helpers import freshen, synthetic_host
-
+from tests.unit.chroma_core.helpers import freshen
 
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -29,26 +28,8 @@ class TestInitialLoadDismissables(NotificationTestCase):
         #  Make one of each kinds of dismissable object
         for dismissed in [True, False]:
             for level in [INFO, WARNING, ERROR]:
-                self.make_host_notification(HostOfflineAlert, dismissed=dismissed,
-                                      severity=level, date=timezone.now())
-                self.make_host_notification(Event, dismissed=dismissed,
-                                      severity=level)
-            for failed in [True, False]:
-                self.make_host_notification(Command, dismissed=dismissed,
-                                      failed=failed)
-
-    def test_fetch_not_dismissed_events(self):
-        data = {"dismissed": 'false',
-                "severity__in": ['WARNING', 'ERROR']}
-
-        response = self.api_client.get("/api/event/", data = data)
-
-        self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
-        self.assertEqual(len(objects), 2, self.dump_objects(objects))
-        for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
-            self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
+                self.make_alertstate(HostOfflineAlert, dismissed=dismissed,
+                                     severity=level, created_at=timezone.now())
 
     def test_fetch_not_dismissed_alerts(self):
         data = {"dismissed": 'false',
@@ -62,18 +43,6 @@ class TestInitialLoadDismissables(NotificationTestCase):
         for ev in objects:
             self.assertEqual(ev['dismissed'], False)
             self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
-
-    def test_fetch_not_dismissed_commands(self):
-        data = {"dismissed": 'false',
-                "errored": 'true'}
-
-        response = self.api_client.get("/api/command/", data=data)
-
-        self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
-        self.assertEqual(len(objects), 1, self.dump_objects(objects))
-        for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
 
 
 class TestSubsequentLoadDismissables(NotificationTestCase):
@@ -93,28 +62,8 @@ class TestSubsequentLoadDismissables(NotificationTestCase):
         for dismissed in [True, False]:
             for level in [INFO, WARNING, ERROR]:
                 for date in [previous_sample, current_sample]:
-                    self.make_host_notification(HostOfflineAlert, dismissed=dismissed,
-                                          severity=level, date=date)
-                    self.make_host_notification(Event, dismissed=dismissed,
-                                          severity=level, date=date)
-            for failed in [True, False]:
-                self.make_host_notification(Command, dismissed=dismissed,
-                                      failed=failed)
-
-    def test_fetch_not_dismissed_events_since_last_sample(self):
-
-        data = {"created_at__gte": str(self.sample_date),
-                "dismissed": 'false',
-                "severity__in": ['WARNING', 'ERROR']}
-
-        response = self.api_client.get("/api/event/", data=data)
-        self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
-        self.assertEqual(len(objects), 2, self.dump_objects(objects))
-        for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
-            self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
-            self.assertTrue(parse(ev['created_at']) >= self.sample_date)
+                    self.make_alertstate(HostOfflineAlert, dismissed=dismissed,
+                                         severity=level, created_at=date)
 
     def test_fetch_not_dismissed_alerts_since_last_sample(self):
 
@@ -131,20 +80,6 @@ class TestSubsequentLoadDismissables(NotificationTestCase):
             self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
             self.assertTrue(parse(ev['begin']) >= self.sample_date)
 
-    def test_fetch_not_dismissed_commands_since_last_sample(self):
-
-        data = {"created_at__gte": str(self.sample_date),
-                "dismissed": 'false',
-                "errored": 'true'}
-
-        response = self.api_client.get("/api/command/", data=data)
-        self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
-        self.assertEqual(len(objects), 1, self.dump_objects(objects))
-        for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
-            self.assertTrue(parse(ev['created_at']) >= self.sample_date)
-
 
 class TestPatchDismissables(NotificationTestCase):
     """After the first load the UI can request updates based on date
@@ -154,8 +89,8 @@ class TestPatchDismissables(NotificationTestCase):
     def test_dismissing_alert(self):
         """Send a API PATCH to update Alert.dismissed to True"""
 
-        alert = self.make_host_notification(HostOfflineAlert, dismissed=False,
-            severity=WARNING, date=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
+                                     severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         path = '/api/alert/%s/' % alert.pk
@@ -167,34 +102,6 @@ class TestPatchDismissables(NotificationTestCase):
 
         alert = freshen(alert)
         self.assertEqual(alert.dismissed, True)
-
-    def test_dismissing_command(self):
-        """Send a API PATCH to update Command.dismissed to True"""
-
-        command = self.make_host_notification(Command, dismissed=False, failed=True)
-        self.assertEqual(command.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/command/%s/" % command.pk,
-            data=data)
-        self.assertHttpAccepted(response)
-
-        command = freshen(command)
-        self.assertEqual(command.dismissed, True)
-
-    def test_dismissing_event(self):
-        """Send a API PATCH to update Event.dismissed to True"""
-
-        event = self.make_host_notification(Event, dismissed=False, severity=WARNING)
-        self.assertEqual(event.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/event/%s/" % event.pk,
-            data=data)
-        self.assertHttpAccepted(response)
-
-        event = freshen(event)
-        self.assertEqual(event.dismissed, True)
 
 
 class TestPatchDismissablesWithDeletedRelatedObject(NotificationTestCase):
@@ -209,8 +116,8 @@ class TestPatchDismissablesWithDeletedRelatedObject(NotificationTestCase):
         item being set, but deleted
         """
 
-        alert = self.make_host_notification(HostOfflineAlert, dismissed=False,
-            severity=WARNING, date=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
+                                     severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         self.assertEqual(type(alert.alert_item), ManagedHost)
@@ -229,28 +136,6 @@ class TestPatchDismissablesWithDeletedRelatedObject(NotificationTestCase):
         alert = freshen(alert)
         self.assertEqual(alert.dismissed, True)
 
-    def test_dismissing_event(self):
-        """Send a API PATCH to update Event.dismissed to True"""
-
-        host = synthetic_host()
-        event = self.make_host_notification(Event, host=host, dismissed=False, severity=WARNING)
-        self.assertEqual(event.dismissed, False)
-
-        event.host.mark_deleted()
-
-        #  Make sure it is deleted.
-        self.assertRaises(ManagedHost.DoesNotExist,
-                          ManagedHost.objects.get,
-                          pk=event.host.pk)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/event/%s/" % event.pk,
-            data=data)
-        self.assertHttpAccepted(response)
-
-        event = freshen(event)
-        self.assertEqual(event.dismissed, True)
-
 
 class TestNotLoggedInUsersCannotDismiss(NotificationTestCase):
     """Make sure non-logged in users cannot Dismiss or Dismiss all alerts
@@ -266,8 +151,8 @@ class TestNotLoggedInUsersCannotDismiss(NotificationTestCase):
     def test_dismissing_alert(self):
         """Test dismissing alert, not logged in is prevented"""
 
-        alert = self.make_host_notification(HostOfflineAlert, dismissed=False,
-            severity=WARNING, date=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
+                                     severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         self.api_client.client.logout()
@@ -281,44 +166,6 @@ class TestNotLoggedInUsersCannotDismiss(NotificationTestCase):
 
         alert = freshen(alert)
         self.assertEqual(alert.dismissed, False)
-
-    def test_dismissing_command(self):
-        """Test dismissing command, not logged in is prevented"""
-
-        command = self.make_host_notification(Command, dismissed=False, failed=True)
-        self.assertEqual(command.dismissed, False)
-
-        self.api_client.client.logout()
-
-        # ensure logged off
-        self.assertFalse(self.api_client.client.session)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/command/%s/" % command.pk,
-            data=data)
-        self.assertHttpUnauthorized(response)
-
-        command = freshen(command)
-        self.assertEqual(command.dismissed, False)
-
-    def test_dismissing_event(self):
-        """Test dismissing event, not logged in is prevented"""
-
-        event = self.make_host_notification(Event, dismissed=False, severity=WARNING)
-        self.assertEqual(event.dismissed, False)
-
-        self.api_client.client.logout()
-
-        # ensure logged off
-        self.assertFalse(self.api_client.client.session)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/event/%s/" % event.pk,
-            data=data)
-        self.assertHttpUnauthorized(response)
-
-        event = freshen(event)
-        self.assertEqual(event.dismissed, False)
 
 
 class TestFSAdminsCanDismiss(NotificationTestCase):
@@ -334,8 +181,8 @@ class TestFSAdminsCanDismiss(NotificationTestCase):
     def test_dismissing_alert(self):
         """Test dismissing alert by fs admins is allowed"""
 
-        alert = self.make_host_notification(HostOfflineAlert, dismissed=False,
-            severity=WARNING, date=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
+                                     severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         data = {"dismissed": 'true'}
@@ -344,34 +191,6 @@ class TestFSAdminsCanDismiss(NotificationTestCase):
 
         alert = freshen(alert)
         self.assertEqual(alert.dismissed, True)
-
-    def test_dismissing_command(self):
-        """Test dismissing command by fs admins is allowed"""
-
-        command = self.make_host_notification(Command, dismissed=False, failed=True)
-        self.assertEqual(command.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/command/%s/" % command.pk,
-            data=data)
-        self.assertHttpAccepted(response)
-
-        command = freshen(command)
-        self.assertEqual(command.dismissed, True)
-
-    def test_dismissing_event(self):
-        """Test dismissing event by fs admins is allowed"""
-
-        event = self.make_host_notification(Event, dismissed=False, severity=WARNING)
-        self.assertEqual(event.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/event/%s/" % event.pk,
-            data=data)
-        self.assertHttpAccepted(response)
-
-        event = freshen(event)
-        self.assertEqual(event.dismissed, True)
 
 
 class TestFSUsersCannotDismiss(NotificationTestCase):
@@ -392,8 +211,8 @@ class TestFSUsersCannotDismiss(NotificationTestCase):
     def test_dismissing_alert(self):
         """Test dismissing alert by fs users is prevented"""
 
-        alert = self.make_host_notification(HostOfflineAlert, dismissed=False,
-            severity=WARNING, date=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
+                                     severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         data = {"dismissed": 'true'}
@@ -402,31 +221,3 @@ class TestFSUsersCannotDismiss(NotificationTestCase):
 
         alert = freshen(alert)
         self.assertEqual(alert.dismissed, False)
-
-    def test_dismissing_command(self):
-        """Test dismissing command by fs users is prevented"""
-
-        command = self.make_host_notification(Command, dismissed=False, failed=True)
-        self.assertEqual(command.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/command/%s/" % command.pk,
-            data=data)
-        self.assertHttpUnauthorized(response)
-
-        command = freshen(command)
-        self.assertEqual(command.dismissed, False)
-
-    def test_dismissing_event(self):
-        """Test dismissing event by fs users is prevented"""
-
-        event = self.make_host_notification(Event, dismissed=False, severity=WARNING)
-        self.assertEqual(event.dismissed, False)
-
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/event/%s/" % event.pk,
-            data=data)
-        self.assertHttpUnauthorized(response)
-
-        event = freshen(event)
-        self.assertEqual(event.dismissed, False)

@@ -65,11 +65,6 @@ def setup_groups(app, **kwargs):
         for alert_klass in all_subclasses(chroma_core.models.AlertState):
             grant_write(fsadmin_group, alert_klass)
 
-        # Allow fs admins to dismiss events
-        grant_write(fsadmin_group, chroma_core.models.Event)
-        for alert_klass in all_subclasses(chroma_core.models.Event):
-            grant_write(fsadmin_group, alert_klass)
-
         fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")
         # For modifying his own account
         grant_write(fsusers_group, django.contrib.auth.models.User)

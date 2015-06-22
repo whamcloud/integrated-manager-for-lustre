@@ -28,8 +28,8 @@ from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
 from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
-from chroma_core.models import AlertState
 from chroma_core.models import AlertEvent
+from chroma_core.models import AlertStateBase
 from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models import StatefulObject
@@ -1367,7 +1367,7 @@ class ManagedTargetMount(models.Model):
         return "%s:%s:%s" % (self.host, kind_string, self.target)
 
 
-class TargetOfflineAlert(AlertState):
+class TargetOfflineAlert(AlertStateBase):
     # When a target is offline, some or all files in the filesystem are inaccessible,
     # therefore the filesystem is considered not fully available, therefore it's ERROR.
     default_severity = logging.ERROR
@@ -1377,17 +1377,20 @@ class TargetOfflineAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "%s started" % self.alert_item,
-            host = self.alert_item.primary_host,
+            alert_item = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)
 
+    def affected_targets(self, affect_target):
+        affect_target(self.alert_item)
 
-class TargetFailoverAlert(AlertState):
+
+class TargetFailoverAlert(AlertStateBase):
     # The filesystem should remain available while a target is failed over, but
     # performance may be degraded, therefore it's worse than INFO, but not as bad as ERROR.
     default_severity = logging.WARNING
@@ -1397,17 +1400,20 @@ class TargetFailoverAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "%s failover unmounted" % self.alert_item,
-            host = self.alert_item.primary_host,
+            alert_item = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)
 
+    def affected_targets(self, affect_target):
+        affect_target(self.alert_item)
 
-class TargetRecoveryAlert(AlertState):
+
+class TargetRecoveryAlert(AlertStateBase):
     # While a target is in recovery, the filesystem is still available, but I/O operations
     # from clients may block until recovery completes, effectively degrading performance.
     # Therefore it's WARNING.
@@ -1418,11 +1424,14 @@ class TargetRecoveryAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "Target '%s' completed recovery" % self.alert_item,
-            host = self.alert_item.primary_host,
+            alert_item = self.alert_item.primary_host,
             alert = self,
             severity = logging.INFO)
+
+    def affected_targets(self, affect_target):
+        affect_target(self.alert_item)

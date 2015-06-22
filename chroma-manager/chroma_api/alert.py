@@ -25,6 +25,8 @@ from chroma_api.utils import SeverityResource
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState, AlertSubscription
+from chroma_api.urls import api
+from tastypie.resources import ALL_WITH_RELATIONS
 
 from tastypie.utils import trailing_slash
 from tastypie.resources import Resource, ModelResource
@@ -35,7 +37,6 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PATCHSupportDjangoAuth
-from chroma_core.models.target import ManagedTargetMount
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from long_polling_api import LongPollingAPI
 
@@ -148,30 +149,13 @@ class AlertResource(LongPollingAPI, SeverityResource):
     Notification of a bad health state.  Alerts refer to particular objects (such as
     servers or targets), and can either be active (indicating this is a current
     problem) or inactive (indicating this is a historical record of a problem).
-
-    The ``alert_item_content_type_id`` and ``alert_item_id`` attributes
-    together provide a unique reference to the object to which the
-    alert refers.
     """
 
     message = fields.CharField(readonly = True,
         help_text = ("Human readable description "
                      "of the alert, about one sentence"))
 
-    alert_item_content_type_id = fields.IntegerField(attribute = 'alert_item_type_id',
-        help_text = "Content type ID of affected item")
-
-    alert_item_id = fields.IntegerField(attribute = 'alert_item_id',
-        help_text = "ID of affected item")
-
     alert_item = fields.CharField(help_text = "URI of affected item")
-
-    alert_type = fields.CharField(attribute = 'alert_type',
-        help_text = "The type of alert, which is the name of class for the alert. Ex: 'HostOfflineAlert'")
-
-    active = fields.BooleanField(attribute = 'active_bool', null = True,
-        help_text = "``true`` if the alert is a current issue, "
-                    "``false`` if it is historical")
 
     affected = fields.ListField(null = True,
         help_text = ("List of objects which are affected by the alert "
@@ -181,10 +165,6 @@ class AlertResource(LongPollingAPI, SeverityResource):
     alert_item_str = fields.CharField(readonly = True,
         help_text = ("A human readable noun describing the object "
                      "that is the subject of the alert"))
-
-    # This addition is because when we are querying notifications it is useful to be able query by created_at
-    # begin is clearly the best analogy
-    created_at = fields.DateTimeField(readonly = True, attribute = 'begin')
 
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [AlertState, LNetOfflineAlert]
@@ -206,7 +186,6 @@ class AlertResource(LongPollingAPI, SeverityResource):
         return http.HttpNoContent()
 
     def dehydrate_alert_item(self, bundle):
-        from chroma_api.urls import api
         return api.get_resource_uri(bundle.obj.alert_item)
 
     def dehydrate_alert_item_str(self, bundle):
@@ -218,48 +197,21 @@ class AlertResource(LongPollingAPI, SeverityResource):
     def dehydrate_affected(self, bundle):
         from chroma_api.urls import api
 
-        # FIXME: really don't want to call this every time someone gets a list of alerts
-        # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by
-        #    AlertState subclasses
-        # NB adding a 'what_do_i_affect' method to
-        alert = bundle.obj.downcast()
+        alert = bundle.obj
 
         affected_objects = []
 
-        from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
-        from chroma_core.models import Volume
-        from chroma_core.models import ManagedMgs
-        from chroma_core.models import FilesystemMember
-        from chroma_core.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
-
         def affect_target(target):
-            target = target.downcast()
             affected_objects.append(target)
-            if isinstance(target, FilesystemMember):
+            if target.filesystem_member:
                 affected_objects.append(target.filesystem)
-            elif isinstance(target, ManagedMgs):
+            elif target.target_type == "mgs":
                 for fs in target.managedfilesystem_set.all():
                     affected_objects.append(fs)
 
         affected_objects.extend(alert.affected_objects)
 
-        if isinstance(alert, StorageResourceAlert):
-            affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = alert).values('storage_resource_id')]
-            affected_srrs.append(alert.alert_item_id)
-            luns = Volume.objects.filter(storage_resource__in = affected_srrs)
-            for l in luns:
-                for ln in l.volumenode_set.all():
-                    tms = ManagedTargetMount.objects.filter(volume_node = ln)
-                    for tm in tms:
-                        affect_target(tm.target)
-        elif isinstance(alert, TargetFailoverAlert):
-            affect_target(alert.alert_item)
-        elif isinstance(alert, TargetOfflineAlert) or isinstance(alert, TargetRecoveryAlert):
-            affect_target(alert.alert_item)
-        elif isinstance(alert, HostContactAlert):
-            tms = ManagedTargetMount.objects.filter(host = alert.alert_item)
-            for tm in tms:
-                affect_target(tm.target)
+        alert.affected_targets(affect_target)
 
         affected_objects.append(alert.alert_item)
 
@@ -277,19 +229,13 @@ class AlertResource(LongPollingAPI, SeverityResource):
         return filters
 
     class Meta:
-        queryset = AlertState.objects.all()
+        queryset = AlertState.objects.order_by('-begin')
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'dismissed',
-                  'alert_item_id', 'alert_item_content_type_id', 'id',
-                  'severity', 'alert_type', 'created_at']
-        filtering = {'active': ['exact'],
-                     'dismissed': ['exact'],
-                     'severity': ['in', 'exact'],
-                     'begin': ['gte'],
-                     'alert_type': ['exact', 'in'],
-                     'alert_item_id': ['exact', 'in'],
-                     'alert_item_content_type_id': ['exact', 'in'],
-                     'created_at': ['gte', 'lte', 'gt', 'lt']}
+                  'id', 'severity', 'alert_type', 'created_at']
+        filtering = {}
+        for field in AlertState.__dict__['_meta'].fields:
+            filtering.update({field.name: ALL_WITH_RELATIONS})
         ordering = ['begin', 'end', 'active']
         authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()

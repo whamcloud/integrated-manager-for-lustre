@@ -88,12 +88,11 @@ def load_default_profile():
     default_sp.save()
 
 
-def make_command(dismissed=False, complete=False, created_at=None, failed=True, message='test'):
+def make_command(complete=False, created_at=None, failed=True, message='test'):
 
-    command = Command.objects.create(dismissed=dismissed,
-        message=message,
-        complete=complete,
-        errored=failed)
+    command = Command.objects.create(message=message,
+                                     complete=complete,
+                                     errored=failed)
 
     #  Command.created_at is auto_add_now - so have to update it
     if created_at is not None:

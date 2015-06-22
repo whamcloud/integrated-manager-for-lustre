@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,21 +20,24 @@
 # express and approved by Intel in writing.
 
 
+import json
 from collections import defaultdict
+
 from django.contrib.contenttypes.models import ContentType
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication, \
-    PATCHSupportDjangoAuth
-from chroma_api.utils import custom_response
-from chroma_api.host import HostResource
-
-from chroma_core.models import Command
 from tastypie.utils import trailing_slash
 from tastypie.api import url
 from tastypie.resources import ModelResource
 from tastypie import fields, http
+
+from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import PATCHSupportDjangoAuth
+from chroma_api.utils import custom_response
+from chroma_api.host import HostResource
+
+from chroma_core.models import Command
 from chroma_core.models.jobs import SchedulingError, StepResult
-import json
+from long_polling_api import LongPollingAPI
 
 
 class CommandValidation(Validation):
@@ -66,7 +69,7 @@ class CommandValidation(Validation):
         return errors
 
 
-class CommandResource(ModelResource):
+class CommandResource(ModelResource, LongPollingAPI):
     """
     Asynchronous user-initiated operations which create, remove or modify resources are
     represented by ``command`` objects.  When a PUT, POST, PATCH or DELETE to
@@ -82,6 +85,12 @@ class CommandResource(ModelResource):
 
     logs = fields.CharField(help_text = "String.  Concatentation of all user-visible logs from the"
                             "``job`` objects associated with this command.")
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Command]
+
+    def dispatch(self, request_type, request, **kwargs):
+        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def dehydrate_logs(self, bundle):
         command = bundle.obj

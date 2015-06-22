@@ -134,7 +134,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     The not_deleted attribute is logically a True/False 'deleted' attribute, but is
     implemented this (admittedly ugly) way in order to work with django's
     unique_together option.  When 'not_deleted' is included in the unique_together
-    tuple, the uniqeness constraint is applied only to objects which have not
+    tuple, the uniqueness constraint is applied only to objects which have not
     been deleted -- e.g. an MGS can only have one filesystem with a given name, but
     once you've deleted that filesystem you should be able to create more with the
     same name.

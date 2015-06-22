@@ -1,8 +1,12 @@
+import time
 import logging
 from threading import Thread
 
 logger = logging.getLogger('long_polling')
 logger.setLevel(logging.DEBUG)
+
+# Long poll timeout Seconds - be nice to get this from settings but they are not available to the integration tests
+LONG_POLL_TIMEOUT_SECONDS = (60 * 5)
 
 
 class LongPollingThread(Thread):
@@ -21,8 +25,7 @@ class LongPollingThread(Thread):
 
         self.test_uri = test_uri
         self.test_case = test_case
-        self.response_count = 0
-        self.last_response = None
+        self.responses = []
         self.error = None
         # for now use timestamp, should use the real mechanism, but to get running do the alternative.
         self.last_modified = 0
@@ -33,9 +36,24 @@ class LongPollingThread(Thread):
     def run(self):
         while not self.exit:
             try:
-                self.last_response = self.test_case.get_json_by_uri(self.test_uri, {'last_modified': self.last_modified})
-                self.last_modified = self.last_response['meta']['last_modified']
-                self.response_count += 1
+                request_time = time.time()
+                response = self.test_case.get_by_uri(self.test_uri,
+                                                     args={'last_modified': self.last_modified,
+                                                           'limit': 0},
+                                                     verify_successful = False)
+
+                if response.status_code == 200:
+                    self.last_modified = response.json['meta']['last_modified']
+                    self.responses.append(response)
+                elif response.status_code == 304:                    # 304 Not Modified
+                    assert (time.time() - request_time) >= LONG_POLL_TIMEOUT_SECONDS, 'Endpoint responded with 304 before long polling timeout'
+                else:
+                    raise 'Unexpected return code %s' % response.status_code
             except Exception as e:
                 self.error = e
+                logger.warning('LongPollingThread exited unexpectedly with %s' % e.message)
                 break
+
+    @property
+    def response_count(self):
+        return len(self.responses)

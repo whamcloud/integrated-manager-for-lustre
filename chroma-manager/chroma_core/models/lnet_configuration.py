@@ -27,7 +27,7 @@ from django.db import models
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from chroma_core.models import AlertState
+from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
@@ -73,7 +73,7 @@ class LNetConfiguration(DeletableStatefulObject):
     }
 
 
-class LNetOfflineAlert(AlertState):
+class LNetOfflineAlert(AlertStateBase):
     # LNET being offline is never solely responsible for a filesystem
     # being unavailable: if a target is offline we will get a separate
     # ERROR alert for that.  LNET being offline may indicate a configuration
@@ -85,12 +85,12 @@ class LNetOfflineAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "LNet started on server '%s'" % self.alert_item.host,
-            host = self.alert_item.host,
+            alert_item = self.alert_item.host,
             alert = self,
             severity = logging.WARNING)
 
@@ -102,7 +102,7 @@ class LNetOfflineAlert(AlertState):
         return [self.alert_item.host]
 
 
-class LNetNidsChangedAlert(AlertState):
+class LNetNidsChangedAlert(AlertStateBase):
     # This is WARNING because targets on this host will not work
     # correctly until it is addressed, but the filesystem may still
     # be available if a failover server is not in this condition.
@@ -114,12 +114,12 @@ class LNetNidsChangedAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "LNet NIDs updated for server %s" % self.alert_item,
-            host = self.alert_item,
+            alert_item = self.alert_item,
             alert = self,
             severity = logging.INFO)
 

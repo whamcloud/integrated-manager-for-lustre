@@ -22,6 +22,7 @@
 
 from collections import defaultdict, namedtuple
 import traceback
+import logging
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -34,6 +35,7 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.services.rpc import RpcError
+from chroma_core.models.alert import AlertStateBase
 
 MAX_STATE_STRING = 32
 
@@ -63,11 +65,6 @@ class Command(models.Model):
             the action being done by the command")
     created_at = models.DateTimeField(auto_now_add = True)
 
-    dismissed = models.BooleanField(default=False,
-                                    help_text = "``true``  denotes that the "
-                                                "user has acknowledged this "
-                                                "command's failure.")
-
     @classmethod
     def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples
@@ -75,38 +72,34 @@ class Command(models.Model):
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
-        dirty = False
         for object, state in objects:
             # Check if the state is modified
             if object.state != state:
-                dirty = True
-                break
+                if not message:
+                    old_state = object.state
+                    new_state = state
+                    route = object.get_route(old_state, new_state)
+                    from chroma_core.services.job_scheduler.command_plan import Transition
+                    job = Transition(object, route[-2], route[-1]).to_job()
+                    message = job.description()
 
-        if not dirty:
-            return None
+                object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
 
-        if not message:
-            old_state = object.state
-            new_state = state
-            route = object.get_route(old_state, new_state)
-            from chroma_core.services.job_scheduler.command_plan import Transition
-            job = Transition(object, route[-2], route[-1]).to_job()
-            message = job.description()
+                try:
+                    command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
+                except RpcError, e:
+                    job_log.error("Failed to set object state: " + traceback.format_exc())
+                    # FIXME: Would be better to have a generalized mechanism
+                    # for reconstituting remote exceptions, as this sort of thing
+                    # won't scale.
+                    if e.remote_exception_type == "SchedulingError":
+                        raise SchedulingError(e.description)
+                    else:
+                        raise
 
-        object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
-        try:
-            command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
-        except RpcError, e:
-            job_log.error("Failed to set object state: " + traceback.format_exc())
-            # FIXME: Would be better to have a generalized mechanism
-            # for reconstituting remote exceptions, as this sort of thing
-            # won't scale.
-            if e.remote_exception_type == "SchedulingError":
-                raise SchedulingError(e.description)
-            else:
-                raise
+                return Command.objects.get(pk = command_id)
 
-        return Command.objects.get(pk = command_id)
+        return None
 
     def __repr__(self):
         return "<Command %s: '%s'>" % (self.id, self.message)
@@ -114,6 +107,17 @@ class Command(models.Model):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+
+class CommandAlert(AlertStateBase):
+    default_severity = logging.INFO
+
+    class Meta:
+        app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
+
+    def message(self):
+        return "Command %s executing" % self.alert_item
 
 
 class StatefulObject(models.Model):

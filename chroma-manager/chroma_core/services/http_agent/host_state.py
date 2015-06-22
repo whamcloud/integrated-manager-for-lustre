@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -63,10 +63,9 @@ class HostState(object):
         self.last_contact = datetime.datetime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
             if self._boot_time is not None:
-                HostRebootEvent.objects.create(
-                    host = self._host,
-                    boot_time = boot_time,
-                    severity = logging.WARNING)
+                HostRebootEvent.register_event(alert_item = self._host,
+                                               boot_time=boot_time,
+                                               severity=logging.WARNING)
                 log.warning("Server %s rebooted at %s" % (self.fqdn, boot_time))
             self._boot_time = boot_time
             job_scheduler_notify.notify(self._host, self._boot_time, {'boot_time': boot_time})

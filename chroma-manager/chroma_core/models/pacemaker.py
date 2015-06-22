@@ -24,7 +24,7 @@ import logging
 
 from django.db import models
 
-from chroma_core.models import AlertState
+from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
@@ -82,7 +82,7 @@ class PacemakerConfiguration(DeletableStatefulObject):
         pass
 
 
-class PacemakerStoppedAlert(AlertState):
+class PacemakerStoppedAlert(AlertStateBase):
     # Pacemaker being down is never solely responsible for a filesystem
     # being unavailable: if a target is offline we will get a separate
     # ERROR alert for that.  Pacemaker being offline may indicate a configuration
@@ -94,12 +94,12 @@ class PacemakerStoppedAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "Pacemaker started on server '%s'" % self.alert_item.host,
-            host = self.alert_item.host,
+            alert_item = self.alert_item.host,
             alert = self,
             severity = logging.WARNING)
 

@@ -104,5 +104,4 @@ class TestHostLongPolling(ChromaIntegrationTestCase):
 
         long_polling_end_point.join()
 
-        if long_polling_end_point.error:
-            raise long_polling_end_point.error
+        self.assertEqual(long_polling_end_point.error, None, long_polling_end_point.error)

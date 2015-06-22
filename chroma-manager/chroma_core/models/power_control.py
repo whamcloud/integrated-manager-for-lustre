@@ -31,7 +31,7 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils.timezone import now as tznow
 
-from chroma_core.models.alert import AlertState
+from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import Job, AdvertisedJob, job_log
@@ -139,7 +139,7 @@ def delete_power_control_units(sender, instance, **kwargs):
     [d.mark_deleted() for d in instance.instances.all()]
 
 
-class PowerControlDeviceUnavailableAlert(AlertState):
+class PowerControlDeviceUnavailableAlert(AlertStateBase):
     # This is WARNING because if a power control device is out
     # of touch it may be behaving in an undefined way, therefore
     # may be unable to participate in a failover operation, resulting
@@ -148,6 +148,7 @@ class PowerControlDeviceUnavailableAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     def message(self):
         return "Unable to monitor power control device %s" % self.alert_item
@@ -155,11 +156,11 @@ class PowerControlDeviceUnavailableAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "Monitoring resumed for power control device %s" % self.alert_item,
-            alert = self,
+            alert_item = self,
             severity = logging.INFO)
 
 
-class IpmiBmcUnavailableAlert(AlertState):
+class IpmiBmcUnavailableAlert(AlertStateBase):
     # This is WARNING because if a power control device is out
     # of touch it may be behaving in an undefined way, therefore
     # may be unable to participate in a failover operation, resulting
@@ -168,6 +169,7 @@ class IpmiBmcUnavailableAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     def message(self):
         return "Unable to monitor BMC %s on server %s" % (self.alert_item, self.alert_item.host)
@@ -175,7 +177,7 @@ class IpmiBmcUnavailableAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "Monitoring resumed for BMC %s on server %s" % (self.alert_item, self.alert_item.host),
-            alert = self,
+            alert_item = self,
             severity = logging.INFO)
 
 

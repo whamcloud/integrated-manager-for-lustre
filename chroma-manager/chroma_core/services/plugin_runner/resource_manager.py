@@ -29,8 +29,10 @@ WARNING:
 import logging
 import json
 import threading
+
 from collections import defaultdict
 
+import dse
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from django.db import transaction
@@ -41,7 +43,6 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.dbutils import advisory_lock
 from chroma_core.lib.storage_plugin.api import attributes, relations
 
@@ -58,7 +59,6 @@ from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
-from chroma_core.models.event import Event
 from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
 
 from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized, StorageResourceLearnEvent, StorageResourceAttributeReference, StorageAlertPropagated
@@ -304,7 +304,6 @@ class ResourceManager(object):
 
         self._label_cache = {}
 
-        import dse
         dse.patch_models()
 
     def session_open(self,
@@ -1005,7 +1004,7 @@ class ResourceManager(object):
             self._persist_created_hosts(session, scannable_id, resources)
 
     @transaction.commit_on_success
-    @advisory_lock(Event, wait=False)
+    @advisory_lock(AlertState, wait=False)
     def session_remove_resources(self, scannable_id, resources):
         with self._instance_lock:
             session = self._sessions[scannable_id]
@@ -1059,22 +1058,18 @@ class ResourceManager(object):
     def _persist_alert_unpropagate(self, alert_state):
         StorageAlertPropagated.objects.filter(alert_state = alert_state).delete()
 
-    # FIXME: Couple of issues here:
-    # * The AlertState subclasses use Downcastable, they need to be in a transaction
-    #   for creations.
-    # * If we _persist_alert down, then lose power, we will forget all about the alert
-    #   before we remove the PropagatedAlerts for it: actually need to do a two step
-    #   removal where we check if there's something there, and if there is then we
-    #   remove the propagated alerts, and then finally mark inactive the alert itself.
-    @transaction.autocommit
+    # If we _persist_alert down, then lose power, we will forget all about the alert
+    # before we remove the PropagatedAlerts for it: actually need to do a two step
+    # removal where we check if there's something there, and if there is then we
+    # remove the propagated alerts, and then finally mark inactive the alert itself.
     def _persist_alert(self, record_pk, active, severity, alert_class, attribute):
         assert isinstance(alert_class, str)
-        record = StorageResourceRecord.objects.get(pk = record_pk)
-        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, severity=severity, alert_type = "StorageResourceAlert_%s" % alert_class)
+        record = StorageResourceRecord.objects.get(pk=record_pk)
+        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, severity=severity, alert_type="StorageResourceAlert_%s" % alert_class)
         return alert_state
 
     @transaction.commit_on_success
-    @advisory_lock(Event, wait=False)
+    @advisory_lock(AlertState, wait=False)
     def _cull_lost_resources(self, session, reported_resources):
         reported_scoped_resources = []
         reported_global_resources = []
@@ -1183,7 +1178,9 @@ class ResourceManager(object):
         for record_id in phase1_ordered_dependencies:
             collect_phase2(record_id)
 
-        StorageResourceLearnEvent._base_manager.filter(storage_resource__in = ordered_for_deletion).delete()
+        for storage_resource_record in StorageResourceLearnEvent.objects.all():
+            if storage_resource_record.storage_resource.id in ordered_for_deletion:
+                storage_resource_record.delete()
 
         # Delete any parent relations pointing to victim resources
         StorageResourceRecord.parents.through._default_manager.filter(
@@ -1294,7 +1291,7 @@ class ResourceManager(object):
                 deleter.delete(int(record_id))
         StorageResourceRecord.delayed.flush()
 
-    @advisory_lock(Event, wait=False)
+    @advisory_lock(AlertState, wait=False)
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             with transaction.commit_manually():
@@ -1438,11 +1435,10 @@ class ResourceManager(object):
                 # Record a user-visible event
                 log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
 
-                event = StorageResourceLearnEvent(severity = logging.INFO,
-                    storage_resource = record)
                 if hasattr(session, 'host_id'):
-                    event.host_id = session.host_id
-                event.save()
+                    StorageResourceLearnEvent.register_event(severity=logging.INFO,
+                                                             alert_item=ManagedHost.objects.get(id=getattr(session, 'host_id')),
+                                                             storage_resource = record)
 
             creations[resource] = (record, created)
 

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,17 +19,20 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-
+from collections import defaultdict
+import json
 import logging
+
 from django.db import models
 from django.db.models import Q
 
-from chroma_core.models.event import Event, AlertEvent
-from chroma_core.models.alert import AlertState
+from chroma_core.models import AlertEvent
+from chroma_core.models import AlertStateBase
+from chroma_core.models import Volume
+from chroma_core.models import ManagedTargetMount
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
+from chroma_core.models.sparse_model import VariantDescriptor
 
-from collections import defaultdict
-import json
 
 # Our limit on the length of python names where we put
 # them in CharFields -- python doesn't impose a limit, so this
@@ -356,38 +359,35 @@ class StorageResourceClassStatistic(models.Model):
         ordering = ['id']
 
 
-class StorageResourceOffline(AlertState):
+class StorageResourceOffline(AlertStateBase):
     # Inability to contact a storage controller
     # does not directly impact the availability of
     # a filesystem, but it might hide issues which reduce it's performance,
     # such as a RAID rebuild.  Be pessimistic, say WARNING.
     default_severity = logging.WARNING
 
+    class Meta:
+        app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
+
     def message(self):
         return "%s not contactable" % self.alert_item.alias_or_name()
 
     def end_event(self):
-        import logging
         return AlertEvent(
                 message_str = "Re-established contact with %s" % self.alert_item.alias_or_name(),
-                alert = self,
+                alert_item = self,
                 severity = logging.INFO)
 
+
+class StorageResourceAlert(AlertStateBase):
+    """Used by chroma_core.lib.storage_plugin"""
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
-
-class StorageResourceAlert(AlertState):
-    """Used by chroma_core.lib.storage_plugin"""
-
-    # NB not setting default_severity because severity is derived from
-    # the AlertConditions of the plugin
-
-    # Within the plugin referenced by the alert_item, what kind
-    # of alert is this?
-    alert_class = models.CharField(max_length = 512)
-    attribute = models.CharField(max_length = 128, blank = True, null = True)
+    variant_fields = [VariantDescriptor('alert_class', str, None, None, ""),
+                      VariantDescriptor('attribute', str, None, None, None)]
 
     def __str__(self):
         return "<%s:%s %s>" % (self.alert_class, self.attribute, self.pk)
@@ -398,15 +398,20 @@ class StorageResourceAlert(AlertState):
         return msg
 
     def end_event(self):
-        import logging
         return AlertEvent(
                 message_str = "Cleared storage alert: %s" % self.message(),
-                alert = self,
+                alert_item = self,
                 severity = logging.INFO)
 
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+    def affected_targets(self, affect_target):
+        affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = self).values('storage_resource_id')]
+        affected_srrs.append(self.alert_item_id)
+        luns = Volume.objects.filter(storage_resource__in = affected_srrs)
+        for l in luns:
+            for ln in l.volumenode_set.all():
+                tms = ManagedTargetMount.objects.filter(volume_node = ln)
+                for tm in tms:
+                    affect_target(tm.target)
 
 
 class StorageAlertPropagated(models.Model):
@@ -419,8 +424,12 @@ class StorageAlertPropagated(models.Model):
         ordering = ['id']
 
 
-class StorageResourceLearnEvent(Event):
-    storage_resource = models.ForeignKey(StorageResourceRecord, on_delete = models.PROTECT)
+class StorageResourceLearnEvent(AlertStateBase):
+    variant_fields = [VariantDescriptor('storage_resource',
+                                        StorageResourceRecord,
+                                        lambda self_: StorageResourceRecord.objects.get(id=self_.get_variant('storage_resource_id', None, int)),
+                                        lambda self_, value: self_.set_variant('storage_resource_id', int, value.id),
+                                        None)]
 
     @staticmethod
     def type_name():
@@ -433,4 +442,4 @@ class StorageResourceLearnEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name

@@ -25,7 +25,7 @@ import logging
 from django.utils.timezone import now
 from django.db import models
 
-from chroma_core.models import AlertState
+from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
@@ -96,7 +96,7 @@ class CorosyncConfiguration(DeletableStatefulObject):
             interface.save()
 
 
-class CorosyncUnknownPeersAlert(AlertState):
+class CorosyncUnknownPeersAlert(AlertStateBase):
     """Alert should be raised when a Host has an unknown Peer.
 
     When a corosync agent reports a peer that we do not know, we should raise an alert.
@@ -111,6 +111,7 @@ class CorosyncUnknownPeersAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     @property
     def affected_objects(self):
@@ -120,7 +121,7 @@ class CorosyncUnknownPeersAlert(AlertState):
         return [self.alert_item.host]
 
 
-class CorosyncToManyPeersAlert(AlertState):
+class CorosyncToManyPeersAlert(AlertStateBase):
     """Alert should be raised when a Host has an unknown Peer.
 
     When a corosync agent reports a peer that we do not know, we should raise an alert.
@@ -135,6 +136,7 @@ class CorosyncToManyPeersAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     @property
     def affected_objects(self):
@@ -144,7 +146,7 @@ class CorosyncToManyPeersAlert(AlertState):
         return [self.alert_item.host]
 
 
-class CorosyncNoPeersAlert(AlertState):
+class CorosyncNoPeersAlert(AlertStateBase):
     """Alert should be raised when a Host has an unknown Peer.
 
     When a corosync agent reports a peer that we do not know, we should raise an alert.
@@ -159,6 +161,7 @@ class CorosyncNoPeersAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     @property
     def affected_objects(self):
@@ -168,7 +171,7 @@ class CorosyncNoPeersAlert(AlertState):
         return [self.alert_item.host]
 
 
-class CorosyncStoppedAlert(AlertState):
+class CorosyncStoppedAlert(AlertStateBase):
     # Corosync being down is never solely responsible for a filesystem
     # being unavailable: if a target is offline we will get a separate
     # ERROR alert for that.  Corosync being offline may indicate a configuration
@@ -180,12 +183,12 @@ class CorosyncStoppedAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
 
     def end_event(self):
         return AlertEvent(
             message_str = "Corosync started on server '%s'" % self.alert_item.host,
-            host = self.alert_item.host,
+            alert_item = self.alert_item.host,
             alert = self,
             severity = logging.WARNING)
 

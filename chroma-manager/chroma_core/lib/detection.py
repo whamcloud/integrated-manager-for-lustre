@@ -363,7 +363,7 @@ class DetectScan(object):
 
     def _learn_event(self, host, learned_item):
         from logging import INFO
-        LearnEvent(severity = INFO, host = host, learned_item = learned_item).save()
+        LearnEvent.register_event(severity = INFO, alert_item = host, learned_item = learned_item)
 
     def learn_mgs_targets(self):
         for host, host_data in self.all_hosts_data.items():

@@ -24,6 +24,7 @@
 import json
 import logging
 from collections import defaultdict
+import datetime
 
 from django.db import models
 from django.db import transaction
@@ -36,23 +37,30 @@ from django.db.models.sql import aggregates as sql_aggregates
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import StateChangeJob, DeletableStatefulObject
+from chroma_core.models import StateChangeJob
+from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import NullStateChangeJob
-from chroma_core.models import Event
 from chroma_core.models import AlertState
-from chroma_core.models import AlertEvent
 from chroma_core.models import ServerProfile
+from chroma_core.models import AlertStateBase
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import RSyslogConfiguration
-from chroma_core.models import Job, AdvertisedJob, StateLock
+from chroma_core.models import Job
+from chroma_core.models import AdvertisedJob
+from chroma_core.models import StateLock
 from chroma_core.lib.job import job_log
-from chroma_core.lib.job import DependOn, DependAll, DependAny, Step
-from chroma_core.models.utils import MeasuredEntity, DeletableMetaclass
+from chroma_core.lib.job import DependOn
+from chroma_core.lib.job import DependAll
+from chroma_core.lib.job import DependAny
+from chroma_core.lib.job import Step
+from chroma_core.models.utils import MeasuredEntity
+from chroma_core.models.utils import DeletableMetaclass
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
+from chroma_core.models.sparse_model import VariantDescriptor
 
 import settings
 
@@ -1555,7 +1563,7 @@ class UpdateNidsJob(HostListMixin):
         ordering = ['id']
 
 
-class HostContactAlert(AlertState):
+class HostContactAlert(AlertStateBase):
     # This is worse than INFO because it *could* indicate that
     # a filesystem is unavailable, but it is not necessarily
     # so:
@@ -1564,22 +1572,21 @@ class HostContactAlert(AlertState):
     #   if failover servers are available.
     default_severity = logging.WARNING
 
+    class Meta:
+        app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
+
     def message(self):
         return "Lost contact with host %s" % self.alert_item
 
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    def end_event(self):
-        return AlertEvent(
-            message_str = "Re-established contact with host %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.INFO)
+    def affected_targets(self, affect_target):
+        from chroma_core.models.target import ManagedTargetMount
+        tms = ManagedTargetMount.objects.filter(host = self.alert_item)
+        for tm in tms:
+            affect_target(tm.target)
 
 
-class HostOfflineAlert(AlertState):
+class HostOfflineAlert(AlertStateBase):
     """Alert should be raised when a Host is known to be down.
 
     When a corosync agent reports a peer is down in a cluster, the corresponding
@@ -1593,45 +1600,44 @@ class HostOfflineAlert(AlertState):
     #   if failover servers are available.
     default_severity = logging.WARNING
 
+    class Meta:
+        app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
+
     def message(self):
         return "Host is offline %s" % self.alert_item
 
-    class Meta:
-        app_label = 'chroma_core'
 
-    def end_event(self):
-        return AlertEvent(
-            message_str = "Host is back online %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.INFO)
-
-
-class HostRebootEvent(Event):
-    boot_time = models.DateTimeField()
+class HostRebootEvent(AlertStateBase):
+    variant_fields = [VariantDescriptor('boot_time',
+                                        datetime.datetime,
+                                        lambda self_: datetime.datetime.strptime(self_.get_variant('boot_time', None, str), "%Y-%m-%d %H:%M:%S:%f"),
+                                        lambda self_, value: self_.set_variant('boot_time', str, value.strftime("%Y-%m-%d %H:%M:%S:%f")),
+                                        None)]
 
     class Meta:
         app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
 
     @staticmethod
     def type_name():
         return "Autodetection"
 
     def message(self):
-        return "%s restarted at %s" % (self.host, self.boot_time)
+        return "%s restarted at %s" % (self.alert_item, self.begin)
 
 
-class UpdatesAvailableAlert(AlertState):
+class UpdatesAvailableAlert(AlertStateBase):
     # This is INFO because the system is unlikely to be suffering as a consequence
     # of having an older software version installed.
     default_severity = logging.INFO
 
-    def message(self):
-        return "Updates are ready for server %s" % self.alert_item
-
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        db_table = AlertStateBase.table_name
+
+    def message(self):
+        return "Updates are ready for server %s" % self.alert_item
 
 
 class NoNidsPresent(Exception):
