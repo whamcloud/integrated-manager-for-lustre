@@ -1,7 +1,7 @@
-DISTRO			:= sles11sp3
+DISTRO			:= sles12
 include ../include/Makefile.lustre_build_meta
 
-override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-sles-client
+override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-lustre-client-sles12
 RELEASE_POSTFIX		:= $(UNDERSCORE_RELEASE_POSTFIX)
 KERNEL_RELEASE_MANGLED	 = $(subst -,_,$(KERNEL_RELEASE))
 CHROMA_EXTERNALS_SUBDIR := lustre
