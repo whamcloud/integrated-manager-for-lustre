@@ -73,7 +73,7 @@
   fp.curry = curry;
 
   var map = curry(2, function m (f, x) {
-    if (Array.isArray(x))
+    if (x && typeof x.map === 'function')
       return x.map(f);
     else
       return f(x);
@@ -269,6 +269,36 @@
 
   function noop () {}
   fp.noop = noop;
+
+  function and () {
+    var args = new Array(arguments.length);
+
+    for (var i = 0, l = arguments.length; i < l; i++) {
+      args[i] = arguments[i];
+    }
+
+    return function run (val) {
+      return args.reduce(function reducer (curr, fn) {
+        return curr && fn(val);
+      }, true);
+    };
+  }
+  fp.and = and;
+
+  function or () {
+    var args = new Array(arguments.length);
+
+    for (var i = 0, l = arguments.length; i < l; i++) {
+      args[i] = arguments[i];
+    }
+
+    return function run (val) {
+      return args.reduce(function reducer (curr, fn) {
+        return curr || fn(val);
+      }, false);
+    };
+  }
+  fp.or = or;
 
   /* global angular */
 

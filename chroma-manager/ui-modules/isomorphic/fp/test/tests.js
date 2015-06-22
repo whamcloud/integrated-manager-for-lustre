@@ -582,4 +582,53 @@ describe('the fp module', function () {
       expect(fp.noop()).toBe(undefined);
     });
   });
+  describe('has an or method', function () {
+    var is5Or6;
+
+    beforeEach(function () {
+      is5Or6 = fp.or(fp.eq(5), fp.eq(6));
+    });
+
+    it('should exist on fp', function () {
+      expect(fp.or).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a function after seeding', function () {
+      expect(is5Or6).toEqual(jasmine.any(Function));
+    });
+
+    [5,6].forEach(function (val) {
+      it('should return true for ' + val, function () {
+        expect(is5Or6(val)).toBe(true);
+      });
+    });
+
+    it('should return false if or is false', function () {
+      expect(is5Or6(7)).toBe(false);
+    });
+  });
+
+  describe('has an and method', function () {
+    var isFooAnd3Chars;
+
+    beforeEach(function () {
+      isFooAnd3Chars = fp.and(fp.eq('foo'), fp.eqFn(fp.identity, fp.lensProp('length'), 3));
+    });
+
+    it('should exist on fp', function () {
+      expect(fp.and).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a function after seeding', function () {
+      expect(isFooAnd3Chars).toEqual(jasmine.any(Function));
+    });
+
+    it('should return true if all true', function () {
+      expect(isFooAnd3Chars('foo')).toBe(true);
+    });
+
+    it('should return false if any false', function () {
+      expect(isFooAnd3Chars('zoo')).toBe(false);
+    });
+  });
 });
