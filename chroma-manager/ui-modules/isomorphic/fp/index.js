@@ -300,6 +300,16 @@
   }
   fp.or = or;
 
+  var bindMethod = fp.curry(2, function bindMethod (meth, obj) {
+    return obj[meth].bind(obj);
+  });
+  fp.bindMethod = bindMethod;
+
+  var invokeMethod = fp.curry(3, function invokeMethod (meth, args, obj) {
+    return fp.flow(bindMethod(meth), invoke(__, args))(obj);
+  });
+  fp.invokeMethod = invokeMethod;
+
   /* global angular */
 
   if (typeof module !== 'undefined')

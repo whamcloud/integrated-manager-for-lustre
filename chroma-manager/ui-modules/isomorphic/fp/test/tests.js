@@ -631,4 +631,40 @@ describe('the fp module', function () {
       expect(isFooAnd3Chars('zoo')).toBe(false);
     });
   });
+
+  describe('has a bindMethod method', function () {
+    var indexOf, indexOfABC;
+
+    it('should exist on fp', function () {
+      expect(fp.bindMethod).toEqual(jasmine.any(Function));
+    });
+
+    it('should be curried', function () {
+      expect(fp.bindMethod(fp.identity)).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a bound method as a free floating function', function () {
+      indexOf = fp.bindMethod('indexOf');
+      indexOfABC = indexOf('abc');
+
+      expect(indexOfABC('b')).toBe(1);
+    });
+  });
+
+  describe('has a invokeMethod method', function () {
+    var indexOfB;
+
+    it('should exist on fp', function () {
+      expect(fp.invokeMethod).toEqual(jasmine.any(Function));
+    });
+
+    it('should be curried', function () {
+      expect(fp.invokeMethod(fp.identity)).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a function that is bound and invoke that function', function () {
+      indexOfB = fp.invokeMethod('indexOf', ['b']);
+      expect(indexOfB('abc')).toBe(1);
+    });
+  });
 });
