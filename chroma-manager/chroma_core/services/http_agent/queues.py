@@ -88,7 +88,8 @@ class AmqpRxForwarder(object):
                 else:
                     plugin_name = msg['plugin']
                     rx_queue_name = "agent_%s_rx" % plugin_name
-                    q = conn.SimpleQueue(rx_queue_name, serializer = 'json')
+                    q = conn.SimpleQueue(rx_queue_name, serializer = 'json',
+                                         exchange_opts={'durable': False}, queue_opts={'durable': False})
                     q.put(msg)
 
     def stop(self):

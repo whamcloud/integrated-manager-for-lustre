@@ -55,12 +55,14 @@ class ServiceQueue(object):
 
     def put(self, body):
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.name, serializer = 'json')
+            q = conn.SimpleQueue(self.name, serializer = 'json',
+                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
             q.put(body)
 
     def purge(self):
         with _amqp_connection() as conn:
-            purged = conn.SimpleQueue(self.name).consumer.purge()
+            purged = conn.SimpleQueue(self.name,
+                                      exchange_opts={'durable': False}, queue_opts={'durable': False}).consumer.purge()
             log.info("Purged %s messages from '%s' queue" % (purged, self.name))
 
     def __init__(self):
@@ -73,7 +75,8 @@ class ServiceQueue(object):
     def serve(self, callback):
         from Queue import Empty as QueueEmpty
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.name, serializer = 'json')
+            q = conn.SimpleQueue(self.name, serializer = 'json',
+                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
             # FIXME: it would be preferable to avoid waking up so often: really what is wanted
             # here is to sleep on messages or a stop event.
             while not self._stopping.is_set():

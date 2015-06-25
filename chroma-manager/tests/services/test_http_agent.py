@@ -125,13 +125,17 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
 
     def _flush_queue(self, queue):
         with _amqp_connection() as conn:
-            conn.SimpleQueue(queue).consumer.purge()
+            conn.SimpleQueue(queue,
+                                 exchange_opts={'durable': False},
+                                 queue_opts={'durable': False}
+                             ).consumer.purge()
 
     def _receive_one_amqp(self):
         TIMEOUT = RABBITMQ_GRACE_PERIOD
         # Data message should be forwarded to AMQP
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.RX_QUEUE_NAME, serializer = 'json')
+            q = conn.SimpleQueue(self.RX_QUEUE_NAME, serializer = 'json',
+                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
             try:
                 message = q.get(timeout = TIMEOUT)
                 message.ack()
@@ -142,7 +146,8 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
 
     def _send_one_amqp(self, message):
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.TX_QUEUE_NAME, serializer = 'json')
+            q = conn.SimpleQueue(self.TX_QUEUE_NAME, serializer = 'json',
+                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
             q.put(message)
 
     def setUp(self):

@@ -412,17 +412,15 @@ num  target     prot opt source               destination
         if 'linux' in sys.platform and os.geteuid() != 0:
             sudo = ['sudo']
 
-        rc, out, err = self.try_shell(sudo + ["rabbitmqctl", "-q", "list_users"])
-        users = [line.split()[0] for line in out.split("\n") if len(line)]
-        if not RABBITMQ_USER in users:
-            log.info("Creating RabbitMQ user...")
-            self.try_shell(sudo + ["rabbitmqctl", "add_user", RABBITMQ_USER, RABBITMQ_PASSWORD])
+        self.try_shell(sudo + ["rabbitmqctl", "stop_app"])
+        self.try_shell(sudo + ["rabbitmqctl", "reset"])
+        self.try_shell(sudo + ["rabbitmqctl", "start_app"])
 
-        rc, out, err = self.try_shell(sudo + ["rabbitmqctl", "-q", "list_vhosts"])
-        vhosts = [line.split()[0] for line in out.split("\n") if len(line)]
-        if not RABBITMQ_VHOST in vhosts:
-            log.info("Creating RabbitMQ vhost...")
-            self.try_shell(sudo + ["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
+        log.info("Creating RabbitMQ user...")
+        self.try_shell(sudo + ["rabbitmqctl", "add_user", RABBITMQ_USER, RABBITMQ_PASSWORD])
+
+        log.info("Creating RabbitMQ vhost...")
+        self.try_shell(sudo + ["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
 
         self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
 

@@ -23,6 +23,7 @@
 import threading
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange
+from kombu.entity import TRANSIENT_DELIVERY_MODE
 import os
 import sys
 import traceback
@@ -106,4 +107,4 @@ def _amqp_connection():
 
 
 def _amqp_exchange():
-    return Exchange("rpc", type="topic", delivery_mode = 1)
+    return Exchange("rpc", type="topic", delivery_mode=TRANSIENT_DELIVERY_MODE, durable=False)
