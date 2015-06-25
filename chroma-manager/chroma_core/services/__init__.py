@@ -106,4 +106,4 @@ def _amqp_connection():
 
 
 def _amqp_exchange():
-    return Exchange("rpc", type="topic", delivery_mode = 1)
+    return Exchange("rpc", type="topic", delivery_mode=1, durable=False)

@@ -170,7 +170,9 @@ class RpcServer(ConsumerMixin):
         self._response_conn_pool = kombu.pools.Connections(limit = RESPONSE_CONN_LIMIT)
 
     def get_consumers(self, Consumer, channel):
-        return [Consumer(queues=[Queue(self.request_routing_key, _amqp_exchange(), routing_key=self.request_routing_key)], callbacks=[self.process_task])]
+        return [Consumer(
+            queues=[Queue(self.request_routing_key, _amqp_exchange(), routing_key=self.request_routing_key, durable=False)],
+            callbacks=[self.process_task])]
 
     def process_task(self, body, message):
         message.ack()
