@@ -21,10 +21,8 @@
 
 'use strict';
 
-exports.wiretree = function getGroups () {
-  return {
-    SUPERUSERS: 'superusers',
-    FS_ADMINS: 'filesystem_administrators',
-    FS_USERS: 'filesystem_users'
-  };
+module.exports = {
+  SUPERUSERS: 'superusers',
+  FS_ADMINS: 'filesystem_administrators',
+  FS_USERS: 'filesystem_users'
 };

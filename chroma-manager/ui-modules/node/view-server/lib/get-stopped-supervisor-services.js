@@ -21,28 +21,27 @@
 
 'use strict';
 
-exports.wiretree = function getStoppedSupervisorServicesFactory (λ, xmlrpc, getSupervisorCredentials) {
-  /**
-   * Returns a stream containing the names of non-running supervisor services.
-   */
-  return function getSupervisorServices () {
-    return getSupervisorCredentials()
-      .flatMap(function getServicesInfo (creds) {
-        var client = xmlrpc.createClient({
-          host: 'localhost',
-          port: 9100,
-          path: '/RPC2',
-          basic_auth: creds
-        });
+var λ = require('highland');
+var xmlrpc = require('xmlrpc');
+var getSupervisorCredentials = require('./get-supervisor-credentials');
 
-        var methodCall = λ.wrapCallback(client.methodCall.bind(client));
+module.exports = function getSupervisorServices () {
+  return getSupervisorCredentials()
+    .flatMap(function getServicesInfo (creds) {
+      var client = xmlrpc.createClient({
+        host: 'localhost',
+        port: 9100,
+        path: '/RPC2',
+        basic_auth: creds
+      });
 
-        return [methodCall('supervisor.getAllProcessInfo', [])];
-      })
-      .flatten()
-      .filter(function filterRunningServices (service) {
-        return service.statename !== 'RUNNING';
-      })
-      .pluck('name');
-  };
+      var methodCall = λ.wrapCallback(client.methodCall.bind(client));
+
+      return [methodCall('supervisor.getAllProcessInfo', [])];
+    })
+    .flatten()
+    .filter(function filterRunningServices (service) {
+      return service.statename !== 'RUNNING';
+    })
+    .pluck('name');
 };

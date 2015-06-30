@@ -1,7 +1,7 @@
 'use strict';
 
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
-var renderRequestErrorFactory = require('../../../lib/render-request-error').wiretree;
 
 describe('render request error', function () {
   var renderRequestError, getUname, templates, stream, res;
@@ -21,7 +21,10 @@ describe('render request error', function () {
 
     getUname = jasmine.createSpy('getUname').and.returnValue(stream);
 
-    renderRequestError = renderRequestErrorFactory(λ, getUname, templates);
+    renderRequestError = proxyquire('../../../lib/render-request-error', {
+      './get-uname': getUname,
+      './templates': templates
+    });
   });
 
   it('should render a backend error', function () {

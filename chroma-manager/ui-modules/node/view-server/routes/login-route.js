@@ -21,61 +21,64 @@
 
 'use strict';
 
-exports.wiretree = function loginRouteFactory (viewRouter, templates, requestStream, renderRequestError) {
-  var indexTemplate = templates['new/index.html'];
+var viewRouter = require('../view-router');
+var templates = require('../lib/templates');
+var requestStream = require('../lib/request-stream');
+var renderRequestError = require('../lib/render-request-error');
 
-  return function loginRoute () {
-    viewRouter.route('/ui/login')
-    /**
-     * If the user is already authenticated and the eula is accepted, redirects to index page.
-     * If the user is already authenticated and the eula is not accepted, logs the user out.
-     * @param {Object} req
-     * @param {Object} res
-     * @param {Object} data
-     * @param {Function} next
-     */
-      .get(function checkEula (req, res, data, next) {
-        var session = data.cache.session;
+var indexTemplate = templates['new/index.html'];
 
-        if (!session.user)
-          return goToNext();
+module.exports = function loginRoute () {
+  viewRouter.route('/ui/login')
+  /**
+   * If the user is already authenticated and the eula is accepted, redirects to index page.
+   * If the user is already authenticated and the eula is not accepted, logs the user out.
+   * @param {Object} req
+   * @param {Object} res
+   * @param {Object} data
+   * @param {Function} next
+   */
+    .get(function checkEula (req, res, data, next) {
+      var session = data.cache.session;
 
-        if (session.user.eula_state === 'pass')
-          return res.redirect('/ui/');
-        else
-          requestStream('/session', {
-            method: 'delete',
-            headers: { cookie: data.cacheCookie }
-          })
-            .stopOnError(renderRequestError(res, function writeDescription (err) {
-              return 'Exception rendering resources: ' + err.stack;
-            }))
-            .each(goToNext);
+      if (!session.user)
+        return goToNext();
 
-        function goToNext () {
-          next(req, res, data.cache);
-        }
+      if (session.user.eula_state === 'pass')
+        return res.redirect('/ui/');
+      else
+        requestStream('/session', {
+          method: 'delete',
+          headers: { cookie: data.cacheCookie }
+        })
+          .stopOnError(renderRequestError(res, function writeDescription (err) {
+            return 'Exception rendering resources: ' + err.stack;
+          }))
+          .each(goToNext);
 
-      })
-    /**
-     * Renders the login page.
-     * @param {Object} req
-     * @param {Object} res
-     * @param {Object} cache
-     * @param {Function} next
-     */
-      .get(function renderLogin (req, res, cache, next) {
-        res.clientRes.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.clientRes.statusCode = 200;
+      function goToNext () {
+        next(req, res, data.cache);
+      }
 
-        var rendered = indexTemplate({
-          title: 'Login',
-          cache: cache
-        });
+    })
+  /**
+   * Renders the login page.
+   * @param {Object} req
+   * @param {Object} res
+   * @param {Object} cache
+   * @param {Function} next
+   */
+    .get(function renderLogin (req, res, cache, next) {
+      res.clientRes.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.clientRes.statusCode = 200;
 
-        res.clientRes.end(rendered);
-
-        next(req, res);
+      var rendered = indexTemplate({
+        title: 'Login',
+        cache: cache
       });
-  };
+
+      res.clientRes.end(rendered);
+
+      next(req, res);
+    });
 };

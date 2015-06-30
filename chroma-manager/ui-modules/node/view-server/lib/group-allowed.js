@@ -21,24 +21,20 @@
 
 'use strict';
 
-exports.wiretree = function groupAllowedFactory (λ, groups) {
-  /**
-   * Curried. returns if the session has the correct user permissions.
-   * @param {String} groupName
-   * @param {Object} session
-   */
-  return λ.curry(function groupAllowed (groupName, session) {
-    var hasGroups = session && session.user && Array.isArray(session.user.groups);
+var λ = require('highland');
+var groups = require('./groups');
 
-    return hasGroups && session.user.groups.some(function some (group) {
-        //Superusers can do everything.
-        if (group.name === groups.SUPERUSERS) return true;
+module.exports = λ.curry(function groupAllowed (groupName, session) {
+  var hasGroups = session && session.user && Array.isArray(session.user.groups);
 
-        //Filesystem administrators can do everything a filesystem user can do.
-        if (group.name === groups.FS_ADMINS && groupName === groups.FS_USERS) return true;
+  return hasGroups && session.user.groups.some(function some (group) {
+    //Superusers can do everything.
+    if (group.name === groups.SUPERUSERS) return true;
 
-        // Fallback to matching on names.
-        return group.name === groupName;
-      });
+    //Filesystem administrators can do everything a filesystem user can do.
+    if (group.name === groups.FS_ADMINS && groupName === groups.FS_USERS) return true;
+
+    // Fallback to matching on names.
+    return group.name === groupName;
   });
-};
+});

@@ -41,7 +41,7 @@ var conf = nconf
   .file(__dirname + '/conf.json')
   .defaults({
     LOG_PATH: '',
-    LOG_FILE: 'view-server.log'
+    LOG_FILE: 'view_server.log'
   });
 
 // Set the appropriate values when in the test environment
@@ -52,7 +52,6 @@ if (conf.get('NODE_ENV') === 'test') {
   conf.set('STATIC_URL', '/static/');
   conf.set('VERSION', '');
   conf.set('BUILD', 'jenkins__');
-  conf.set('MODE', 'DEV');
   conf.set('VIEW_SERVER_PORT', 8889);
   conf.set('LOG_PATH', managerDir);
 

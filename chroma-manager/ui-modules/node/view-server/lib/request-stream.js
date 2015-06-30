@@ -21,25 +21,13 @@
 
 'use strict';
 
-var logger = require('../logger');
-var getStoppedSupervisorServices = require('../lib/get-stopped-supervisor-services');
-var format = require('util').format;
-var renderRequestError = require('../lib/render-request-error');
+var requestStream = require('request-stream');
+var conf = require('../conf');
 
-module.exports = function checkForProblems (req, res, next) {
-  var log = logger.child({ path: req.matches[0], middleware: 'checkForProblems' });
+module.exports = function requestWithApiUrl (path, options) {
+  path = path
+    .replace(/^\/*/, '')
+    .replace(/\/*$/, '/');
 
-  getStoppedSupervisorServices()
-    .errors(function handleErrors (err, push) {
-      log.error(err);
-
-      push(null, 'supervisor');
-    })
-    .toArray(function render (stopped) {
-      if (stopped.length === 0)
-        return next(req, res);
-
-      var description = format('The following services are not running: \n\n%s\n\n', stopped.join('\n'));
-      renderRequestError(res, description, null);
-    });
+  return requestStream(conf.apiUrl + path, options);
 };

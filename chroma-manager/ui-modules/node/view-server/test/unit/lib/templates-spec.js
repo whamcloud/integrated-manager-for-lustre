@@ -1,7 +1,6 @@
 'use strict';
 
-var lodash = require('lodash-mixins');
-var templatesFactory = require('../../../lib/templates').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('templates', function () {
   var templates, conf, getDirTreeSync;
@@ -17,7 +16,10 @@ describe('templates', function () {
       templateRoot: '/a/b/c'
     };
 
-    templates = templatesFactory(getDirTreeSync, lodash, conf);
+    templates = proxyquire('../../../lib/templates', {
+      './get-dir-tree-sync': getDirTreeSync,
+      '../conf': conf
+    });
   });
 
   it('should populate a template as expected', function () {

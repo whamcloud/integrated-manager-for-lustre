@@ -21,33 +21,26 @@
 
 'use strict';
 
-exports.wiretree = function checkGroupFactory (_, groupAllowed, groups) {
-  /**
-   * Checks if the given group is allowed. Redirects to index if not.
-   * @param {String} groupName
-   * @param {Object} req
-   * @param {Object} res
-   * @param {Object} data
-   * @param {Function} next
-   * @type {Function}
-   */
-  var allowGroup = _.curry(function allowGroup (groupName, req, res, data, next) {
-    if (!groupAllowed(groupName, data.cache.session))
-      return res.redirect('/ui/');
+var _ = require('lodash-mixins');
+var groupAllowed = require('./group-allowed');
+var groups = require('./groups');
 
-    next(req, res, data);
+var allowGroup = _.curry(function allowGroup (groupName, req, res, data, next) {
+  if (!groupAllowed(groupName, data.cache.session))
+    return res.redirect('/ui/');
+
+  next(req, res, data);
+});
+
+module.exports = _.transform(groups, function buildChecker (result, value, key) {
+  result[transform(key)] = allowGroup(value);
+
+  return result;
+});
+
+function transform (text) {
+  return text.toLowerCase().split('_').reduce(function convert (str, part) {
+    return str += _.capitalize(part);
   });
-
-  return _.transform(groups, function buildChecker (result, value, key) {
-    result[transform(key)] = allowGroup(value);
-
-    return result;
-  });
-
-  function transform (text) {
-    return text.toLowerCase().split('_').reduce(function convert (str, part) {
-      return str += _.capitalize(part);
-    });
-  }
-};
+}
 

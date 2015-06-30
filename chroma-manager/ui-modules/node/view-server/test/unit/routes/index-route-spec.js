@@ -1,6 +1,6 @@
 'use strict';
 
-var indexRouteFactory = require('../../../../view-server/routes/index-route').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('index route', function () {
   var indexHandlers, checkGroup, viewRouter;
@@ -27,7 +27,11 @@ describe('index route', function () {
       route: jasmine.createSpy('route').and.returnValue(pathRouter)
     };
 
-    indexRouteFactory(viewRouter, indexHandlers, checkGroup)();
+    proxyquire('../../../../view-server/routes/index-route', {
+      '../view-router': viewRouter,
+      '../lib/index-handlers': indexHandlers,
+      '../lib/check-group': checkGroup
+    })();
   });
 
   it('should have a route for hsm', function () {

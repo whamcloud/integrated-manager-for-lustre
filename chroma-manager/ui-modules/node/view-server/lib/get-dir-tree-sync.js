@@ -21,29 +21,23 @@
 
 'use strict';
 
-exports.wiretree = function getDirTreeSyncFactory (fs, path) {
-  /**
-   * Recursively builds a directory tree
-   * And returns a flat object.
-   * @param {String} dir
-   * @param {Function} transformPath
-   * @returns {Object}
-   */
-  return function getDirTreeSync (dir, transformPath, dirTree) {
-    var files = fs.readdirSync(dir);
+var fs = require('fs');
+var path = require('path');
 
-    return files
-      .reduce(function buildTree (obj, file) {
-        var filePath = path.join(dir, file);
+module.exports = function getDirTreeSync (dir, transformPath, dirTree) {
+  var files = fs.readdirSync(dir);
 
-        var s = fs.statSync(filePath);
+  return files
+    .reduce(function buildTree (obj, file) {
+      var filePath = path.join(dir, file);
 
-        if (s.isFile() && /\.html$/.test(filePath))
-          obj[transformPath(filePath)] = fs.readFileSync(filePath, 'utf8');
-        if (s.isDirectory())
-          getDirTreeSync(filePath + '/', transformPath, obj);
+      var s = fs.statSync(filePath);
 
-        return obj;
-      }, dirTree || {});
-  };
+      if (s.isFile() && /\.html$/.test(filePath))
+        obj[transformPath(filePath)] = fs.readFileSync(filePath, 'utf8');
+      if (s.isDirectory())
+        getDirTreeSync(filePath + '/', transformPath, obj);
+
+      return obj;
+    }, dirTree || {});
 };

@@ -21,18 +21,20 @@
 
 'use strict';
 
-exports.wiretree = function loggerFactory (conf, bunyan, path) {
-  var level = (conf.nodeEnv === 'production' ? 'info' : 'debug');
+var conf = require('./conf');
+var bunyan = require('bunyan');
+var path = require('path');
 
-  return bunyan.createLogger({
-    name: 'view-server',
-    serializers: bunyan.stdSerializers,
-    streams: [
-      {
-        type: 'file',
-        level: level,
-        path: path.join(conf.logPath, conf.logFile)
-      }
-    ]
-  });
-};
+var level = (conf.nodeEnv === 'production' ? 'info' : 'debug');
+
+module.exports = bunyan.createLogger({
+  name: 'view_server',
+  serializers: bunyan.stdSerializers,
+  streams: [
+    {
+      type: 'file',
+      level: level,
+      path: path.join(conf.logPath, conf.logFile)
+    }
+  ]
+});

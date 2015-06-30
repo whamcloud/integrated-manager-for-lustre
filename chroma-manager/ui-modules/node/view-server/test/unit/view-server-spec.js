@@ -1,6 +1,6 @@
 'use strict';
 
-var viewServer = require('../../../view-server/view-server').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('view server', function () {
   var http, instance, server, loginRoute, indexRoute, viewRouter, conf;
@@ -25,7 +25,13 @@ describe('view server', function () {
     loginRoute = jasmine.createSpy('loginRoute');
     indexRoute = jasmine.createSpy('indexRoute');
 
-    instance = viewServer(http, loginRoute, indexRoute, viewRouter, conf);
+    instance = proxyquire('../../../view-server/view-server', {
+      'http': http,
+      './routes/login-route': loginRoute,
+      './routes/index-route': indexRoute,
+      './view-router': viewRouter,
+      './conf': conf
+    })();
   });
 
   it('should return a server', function () {

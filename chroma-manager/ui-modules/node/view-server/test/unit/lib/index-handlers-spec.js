@@ -1,7 +1,6 @@
 'use strict';
 
-var indexHandlersFactory = require('../../../lib/index-handlers').wiretree;
-var λ = require('highland');
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('index handlers', function () {
   var indexHandlers, templates, conf, req, res, data, next;
@@ -34,7 +33,10 @@ describe('index handlers', function () {
 
     conf = { allowAnonymousRead: false };
 
-    indexHandlers = indexHandlersFactory(λ, templates, conf);
+    indexHandlers = proxyquire('../../../lib/index-handlers', {
+      './templates': templates,
+      '../conf': conf
+    });
   });
 
   it('should redirect if we don\'t have a user and disallow anonymous read', function () {

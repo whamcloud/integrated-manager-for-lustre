@@ -21,9 +21,12 @@
 
 'use strict';
 
-exports.wiretree = function viewRouter (getRouter, checkForProblems, getSession, getCache) {
-  return getRouter()
-    .addStart(checkForProblems)
-    .addStart(getSession)
-    .addStart(getCache);
-};
+var getRouter = require('router');
+var checkForProblems = require('./middleware/check-for-problems');
+var getSession = require('./middleware/get-session');
+var getCache = require('./middleware/get-cache');
+
+module.exports = getRouter()
+  .addStart(checkForProblems)
+  .addStart(getSession)
+  .addStart(getCache);

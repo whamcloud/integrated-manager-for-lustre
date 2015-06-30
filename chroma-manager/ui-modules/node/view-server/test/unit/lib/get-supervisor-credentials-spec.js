@@ -1,8 +1,6 @@
 'use strict';
 
-var λ = require('highland');
-var lodash = require('lodash-mixins');
-var getSupervisorCredentialsFactory = require('../../../lib/get-supervisor-credentials').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 var crypto = require('crypto');
 
 describe('get supervisor credentials', function () {
@@ -15,9 +13,17 @@ describe('get supervisor credentials', function () {
       })
     };
 
-    conf = { nodeEnv: 'development' };
+    conf = {
+      nodeEnv: 'development'
+    };
 
-    getSupervisorCredentials = getSupervisorCredentialsFactory(λ, lodash, childProcess, conf, crypto);
+    spyOn(crypto, 'createHash').and.callThrough();
+
+    getSupervisorCredentials = proxyquire('../../../lib/get-supervisor-credentials', {
+      child_process: childProcess,
+      '../conf': conf,
+      crypto: crypto
+    });
   });
 
   it('should return supervisor credentials', function (done) {
@@ -47,12 +53,10 @@ describe('get supervisor credentials', function () {
   });
 
   it('should cache credentials', function (done) {
-    spyOn(crypto, 'createHash').and.callThrough();
-
     getSupervisorCredentials()
       .flatMap(getSupervisorCredentials)
       .apply(function () {
-        expect(crypto.createHash).toHaveBeenCalledNTimes(2);
+        expect(crypto.createHash).toHaveBeenCalledTwice();
         done();
       });
 

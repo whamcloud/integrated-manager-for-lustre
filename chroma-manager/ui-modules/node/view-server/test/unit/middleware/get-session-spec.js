@@ -1,11 +1,11 @@
 'use strict';
 
-var getSessionFactory = require('../../../../view-server/middleware/get-session').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
 
 describe('get session', function () {
-  var getSession, requestStream, renderRequestError, renderRequestErrorInner, req, res, next,
-    push;
+  var getSession, requestStream, renderRequestError,
+    renderRequestErrorInner, req, res, next, push;
 
   beforeEach(function () {
     req = {
@@ -36,7 +36,10 @@ describe('get session', function () {
     renderRequestError = jasmine.createSpy('renderRequestError')
       .and.returnValue(renderRequestErrorInner);
 
-    getSession = getSessionFactory(requestStream, renderRequestError);
+    getSession = proxyquire('../../../../view-server/middleware/get-session', {
+      '../lib/request-stream': requestStream,
+      '../lib/render-request-error': renderRequestError
+    });
 
     getSession(req, res, next);
   });

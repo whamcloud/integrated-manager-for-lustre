@@ -21,25 +21,20 @@
 
 'use strict';
 
-var logger = require('../logger');
-var getStoppedSupervisorServices = require('../lib/get-stopped-supervisor-services');
-var format = require('util').format;
-var renderRequestError = require('../lib/render-request-error');
+var conf = require('./conf');
+var start = require('./view-server');
 
-module.exports = function checkForProblems (req, res, next) {
-  var log = logger.child({ path: req.matches[0], middleware: 'checkForProblems' });
+if (conf.runner === 'supervisor') {
+  process.on('SIGINT', cleanShutdown('SIGINT (Ctrl-C)'));
+  process.on('SIGTERM', cleanShutdown('SIGTERM'));
+}
 
-  getStoppedSupervisorServices()
-    .errors(function handleErrors (err, push) {
-      log.error(err);
+function cleanShutdown (signal) {
+  return function cleanShutdownInner () {
+    console.log('Caught ' + signal + ', shutting down cleanly.');
+    // Exit with 0 to keep supervisor happy.
+    process.exit(0);
+  };
+}
 
-      push(null, 'supervisor');
-    })
-    .toArray(function render (stopped) {
-      if (stopped.length === 0)
-        return next(req, res);
-
-      var description = format('The following services are not running: \n\n%s\n\n', stopped.join('\n'));
-      renderRequestError(res, description, null);
-    });
-};
+start();

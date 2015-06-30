@@ -21,35 +21,31 @@
 
 'use strict';
 
-exports.wiretree = function getSessionFactory (requestStream, renderRequestError) {
-  /**
-   * Uses the passed in cookie to get a corresponding session.
-   * @param {Object} req
-   * @param {Object} res
-   * @param {Function} next
-   */
-  return function getSession (req, res, next) {
-    var cookie = req.clientReq.headers.cookie || '';
+var requestStream = require('../lib/request-stream');
+var renderRequestError = require('../lib/render-request-error');
 
-    requestStream('/session', {
-      headers: { cookie: cookie }
-    })
-      .stopOnError(renderRequestError(res, function writeDescription (err) {
-        return 'Exception rendering resources: ' + err.stack;
-      }))
-      .each(function setData (response) {
-        // Pass the session cookies to the client.
-        res.clientRes.setHeader('Set-Cookie', response.headers['set-cookie']);
+module.exports = function getSession (req, res, next) {
+  var cookie = req.clientReq.headers.cookie || '';
 
-        var data = {
-          session: response.body,
-          cacheCookie: response.headers['set-cookie']
-            .map(function extractAuthCookies (cookieString) {
-              return cookieString.match(/((?:csrftoken|sessionid)=[^;]+;)/)[0];
-            }).join(' ')
-        };
+  requestStream('/session', {
+    headers: { cookie: cookie }
+  })
+    .stopOnError(renderRequestError(res, function writeDescription (err) {
+      return 'Exception rendering resources: ' + err.stack;
+    }))
+    .each(function setData (response) {
+      // Pass the session cookies to the client.
+      res.clientRes.setHeader('Set-Cookie', response.headers['set-cookie']);
 
-        next(req, res, data);
-      });
-  };
+      var data = {
+        session: response.body,
+        cacheCookie: response.headers['set-cookie']
+          .map(function extractAuthCookies (cookieString) {
+            return cookieString.match(/((?:csrftoken|sessionid)=[^;]+;)/)[0];
+          }).join(' ')
+      };
+
+      next(req, res, data);
+    });
 };
+

@@ -21,41 +21,42 @@
 
 'use strict';
 
-exports.wiretree = function indexRouteFactory (viewRouter, indexHandlers, checkGroup) {
-  return function indexRoute () {
-    viewRouter.get('/ui/configure/hsm', indexHandlers.newHandler);
-    viewRouter.get('/ui/configure/server/:id*', indexHandlers.newHandler);
+var viewRouter = require('../view-router');
+var indexHandlers = require('../lib/index-handlers');
+var checkGroup = require('../lib/check-group');
 
-    viewRouter.route('/ui/configure/:subpath+')
-      .get(checkGroup.fsAdmins)
-      .get(indexHandlers.oldHandler);
+module.exports = function indexRoute () {
+  viewRouter.get('/ui/configure/hsm', indexHandlers.newHandler);
+  viewRouter.get('/ui/configure/server/:id*', indexHandlers.newHandler);
 
-    viewRouter.route('/ui/target/:id')
-      .get(checkGroup.fsAdmins)
-      .get(indexHandlers.oldHandler);
+  viewRouter.route('/ui/configure/:subpath+')
+    .get(checkGroup.fsAdmins)
+    .get(indexHandlers.oldHandler);
 
-    viewRouter.route('/ui/job/:id')
-      .get(checkGroup.fsAdmins)
-      .get(indexHandlers.oldHandler);
+  viewRouter.route('/ui/target/:id')
+    .get(checkGroup.fsAdmins)
+    .get(indexHandlers.oldHandler);
 
-    viewRouter.route('/ui/storage_resource/:id')
-      .get(checkGroup.fsAdmins)
-      .get(indexHandlers.oldHandler);
+  viewRouter.route('/ui/job/:id')
+    .get(checkGroup.fsAdmins)
+    .get(indexHandlers.oldHandler);
 
-    viewRouter.route('/ui/user/:id')
-      .get(checkGroup.fsUsers)
-      .get(indexHandlers.oldHandler);
+  viewRouter.route('/ui/storage_resource/:id')
+    .get(checkGroup.fsAdmins)
+    .get(indexHandlers.oldHandler);
 
-    viewRouter.route('/ui/system_status')
-      .get(checkGroup.fsAdmins)
-      .get(indexHandlers.oldHandler);
+  viewRouter.route('/ui/user/:id')
+    .get(checkGroup.fsUsers)
+    .get(indexHandlers.oldHandler);
 
-    viewRouter.get('/ui/command/:id', indexHandlers.oldHandler);
-    viewRouter.get('/ui/alert', indexHandlers.oldHandler);
-    viewRouter.get('/ui/event', indexHandlers.oldHandler);
-    viewRouter.get('/ui/log/:around*', indexHandlers.oldHandler);
-    viewRouter.get('/ui/status', indexHandlers.oldHandler);
-    viewRouter.get('/(.*)', indexHandlers.newHandler);
-  };
+  viewRouter.route('/ui/system_status')
+    .get(checkGroup.fsAdmins)
+    .get(indexHandlers.oldHandler);
+
+  viewRouter.get('/ui/command/:id', indexHandlers.oldHandler);
+  viewRouter.get('/ui/alert', indexHandlers.oldHandler);
+  viewRouter.get('/ui/event', indexHandlers.oldHandler);
+  viewRouter.get('/ui/log/:around*', indexHandlers.oldHandler);
+  viewRouter.get('/ui/status', indexHandlers.oldHandler);
+  viewRouter.get('/(.*)', indexHandlers.newHandler);
 };
-

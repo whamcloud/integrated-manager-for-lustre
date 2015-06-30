@@ -1,8 +1,7 @@
 'use strict';
 
-var format = require('util').format;
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
-var checkForProblemsFactory = require('../../../../view-server/middleware/check-for-problems').wiretree;
 
 describe('check for problems', function () {
   var checkForProblems, req, res, next, logger, renderRequestError,
@@ -27,7 +26,11 @@ describe('check for problems', function () {
 
     next = jasmine.createSpy('next');
 
-    checkForProblems = checkForProblemsFactory(logger, getStoppedSupervisorServices, format, renderRequestError);
+    checkForProblems = proxyquire('../../../../view-server/middleware/check-for-problems', {
+      '../logger': logger,
+      '../lib/get-stopped-supervisor-services': getStoppedSupervisorServices,
+      '../lib/render-request-error': renderRequestError
+    });
 
     checkForProblems(req, res, next);
   });

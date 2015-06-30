@@ -1,6 +1,6 @@
 'use strict';
 
-var getDirTreeSyncFactory = require('../../../lib/get-dir-tree-sync').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 var path = require('path');
 
 describe('get dir tree sync', function () {
@@ -33,7 +33,10 @@ describe('get dir tree sync', function () {
         return ['file.html', 'dir'];
     });
 
-    getDirTreeSync = getDirTreeSyncFactory(fs, path);
+    getDirTreeSync = proxyquire('../../../lib/get-dir-tree-sync', {
+      fs: fs,
+      path: path
+    });
   });
 
   it('should build a file list', function () {

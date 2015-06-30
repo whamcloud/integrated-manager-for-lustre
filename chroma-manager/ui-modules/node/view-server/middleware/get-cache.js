@@ -21,53 +21,49 @@
 
 'use strict';
 
-exports.wiretree = function getCacheFactory (λ, _, conf, requestStream, renderRequestError, through) {
-  /**
-   * Fetches data from API endpoints to push data into the templates
-   * on page load.
-   *
-   * @param {Object} req
-   * @param {Object} res
-   * @param {Object} data
-   * @param {Function} next
-   */
-  return function getCache (req, res, data, next) {
-    var cache;
+var λ = require('highland');
+var _ = require('lodash-mixins');
+var conf = require('../conf');
+var requestStream = require('../lib/request-stream');
+var renderRequestError = require('../lib/render-request-error');
+var through = require('through');
 
-    var keys = [
-      'filesystem',
-      'target',
-      'host',
-      'power_control_type',
-      'server_profile'
-    ];
+module.exports = function getCache (req, res, data, next) {
+  var cache;
 
-    if (data.session.user != null || conf.allowAnonymousRead)
-      cache = λ(keys)
-        .map(function addSlash (key) {
-          return '/' + key;
-        })
-        .map(_.partialRight(requestStream, {
-          headers: { Cookie: data.cacheCookie },
-          qs: { limit: 0 }
-        }))
-        .parallel(keys.length)
-        .pluck('body')
-        .pluck('objects');
-    else
-      cache = λ(_.times(keys.length, _.fidentity([])));
+  var keys = [
+    'filesystem',
+    'target',
+    'host',
+    'power_control_type',
+    'server_profile'
+  ];
 
-    cache
-      .through(through.zipObject(keys))
-      .stopOnError(renderRequestError(res, function writeDescription (err) {
-        return 'Exception rendering resources: ' + err.stack;
+  if (data.session.user != null || conf.allowAnonymousRead)
+    cache = λ(keys)
+      .map(function addSlash (key) {
+        return '/' + key;
+      })
+      .map(_.partialRight(requestStream, {
+        headers: { Cookie: data.cacheCookie },
+        qs: { limit: 0 }
       }))
-      .each(function setCache (cache) {
-        cache.session = data.session;
+      .parallel(keys.length)
+      .pluck('body')
+      .pluck('objects');
+  else
+    cache = λ(_.times(keys.length, _.fidentity([])));
 
-        data.cache = cache;
+  cache
+    .through(through.zipObject(keys))
+    .stopOnError(renderRequestError(res, function writeDescription (err) {
+      return 'Exception rendering resources: ' + err.stack;
+    }))
+    .each(function setCache (cache) {
+      cache.session = data.session;
 
-        next(req, res, data);
-      });
-  };
+      data.cache = cache;
+
+      next(req, res, data);
+    });
 };

@@ -21,41 +21,33 @@
 
 'use strict';
 
-exports.wiretree = function indexHandlersFactory (λ, templates, conf) {
-  var newTemplate = templates['new/index.html'];
-  var oldTemplate = templates['base.html'];
+var λ = require('highland');
+var templates = require('./templates');
+var conf = require('../conf');
 
-  /**
-   * Handles rendering the index page for the old or new UI.
-   * @param {Function} template
-   * @param {Object} req
-   * @param {Object} res
-   * @param {Object} data
-   * @param {Function} next
-   * @type {Function}
-   */
-  var handler = λ.curry(function indexHandler (template, req, res, data, next) {
-    var session = data.cache.session;
+var handler = λ.curry(function indexHandler (template, req, res, data, next) {
+  var session = data.cache.session;
 
-    if (!session.user && !conf.allowAnonymousRead)
-      return res.redirect('/ui/login/');
+  if (!session.user && !conf.allowAnonymousRead)
+    return res.redirect('/ui/login/');
 
-    res.clientRes.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.clientRes.statusCode = 200;
+  res.clientRes.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.clientRes.statusCode = 200;
 
-    var rendered = template({
-      title: '',
-      cache: data.cache
-    });
-
-    res.clientRes.end(rendered);
-
-    next(req, res);
+  var rendered = template({
+    title: '',
+    cache: data.cache
   });
 
-  return {
-    oldHandler: handler(oldTemplate),
-    newHandler: handler(newTemplate)
-  };
-};
+  res.clientRes.end(rendered);
 
+  next(req, res);
+});
+
+var newTemplate = templates['new/index.html'];
+var oldTemplate = templates['base.html'];
+
+module.exports = {
+  oldHandler: handler(oldTemplate),
+  newHandler: handler(newTemplate)
+};

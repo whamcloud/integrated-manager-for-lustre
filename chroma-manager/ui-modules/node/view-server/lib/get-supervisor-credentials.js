@@ -21,56 +21,51 @@
 
 'use strict';
 
-exports.wiretree = function getSupervisorCredentialsFactory (λ, _, childProcess, conf, crypto) {
-  var credentials;
-  var exec = λ.wrapCallback(childProcess.exec);
-  var command = 'python -c "import settings; print settings.SECRET_KEY"';
+var λ = require('highland');
+var _ = require('lodash-mixins');
+var childProcess = require('child_process');
+var conf = require('../conf');
+var crypto = require('crypto');
 
-  /**
-   * Gets the credentials to connect to supervisor.
-   * These are only needed for dev so we short-circuit if we
-   * are in production mode.
-   */
-  return function getSupervisorCredentials () {
-    if (conf.nodeEnv === 'production')
-      credentials = [null, null];
+var credentials;
+var command = 'python -c "import settings; print settings.SECRET_KEY"';
 
-    var credentialsStream;
+var exec = λ.wrapCallback(childProcess.exec);
 
-    if (credentials) {
-      credentialsStream = λ(credentials);
-    } else {
-      var userStream = exec(command, {cwd: conf.siteRoot})
-        .invoke('trim', [])
-        .through(getHash())
-        .invoke('slice', [0, 7]);
+module.exports = function getSupervisorCredentials () {
+  if (conf.nodeEnv === 'production')
+    credentials = [null, null];
 
-      var passwordStream = userStream
-        .observe()
-        .through(getHash());
+  var credentialsStream;
 
-      credentialsStream = λ([userStream, passwordStream])
-        .sequence();
-    }
+  if (credentials) {
+    credentialsStream = λ(credentials);
+  } else {
+    var userStream = exec(command, { cwd: conf.siteRoot })
+      .invoke('trim', [])
+      .through(getHash())
+      .invoke('slice', [0, 7]);
 
-    return credentialsStream
-      .collect()
-      .doto(function (c) {
-        credentials = c;
-      })
-      .stopOnError(console.log)
-      .map(_.partial(_.zipObject, ['user', 'pass']));
+    var passwordStream = userStream
+      .observe()
+      .through(getHash());
 
-    /**
-     * Create a hash object that
-     * is pipeable.
-     * @returns {Object}
-     */
-    function getHash () {
-      var hash = crypto.createHash('md5');
-      hash.setEncoding('hex');
+    credentialsStream = λ([userStream, passwordStream])
+      .sequence();
+  }
 
-      return hash;
-    }
-  };
+  return credentialsStream
+    .collect()
+    .tap(function (c) {
+      credentials = c;
+    })
+    .stopOnError(console.log)
+    .map(_.partial(_.zipObject, ['user', 'pass']));
+
+  function getHash () {
+    var hash = crypto.createHash('md5');
+    hash.setEncoding('hex');
+
+    return hash;
+  }
 };

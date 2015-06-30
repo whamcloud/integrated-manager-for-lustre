@@ -40,4 +40,9 @@ command = config.get('program:primus', 'command')
 new_command = command.replace('--type=dev', '--type=prod')
 config.set('program:primus', 'command', new_command)
 
+# Add production NODE_ENV
+env = config.get('program:view_server', 'environment')
+env = env + ',NODE_ENV="production"'
+config.set('program:view_server', 'environment', env)
+
 config.write(sys.stdout)

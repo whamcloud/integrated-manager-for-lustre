@@ -1,10 +1,11 @@
 'use strict';
 
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
-var getStoppedSupervisorServicesFactory = require('../../../lib/get-stopped-supervisor-services').wiretree;
 
 describe('get stopped supervisor services', function () {
-  var getStoppedSupervisorServices, xmlrpc, methodCall, getSupervisorCredentials, callback;
+  var xmlrpc, methodCall, getSupervisorCredentials,
+    callback, getStoppedSupervisorServices;
 
   beforeEach(function () {
     methodCall = jasmine.createSpy('methodCall').and.callFake(function (method, args, cb) {
@@ -22,7 +23,10 @@ describe('get stopped supervisor services', function () {
       pass: null
     }]));
 
-    getStoppedSupervisorServices = getStoppedSupervisorServicesFactory(λ, xmlrpc, getSupervisorCredentials);
+    getStoppedSupervisorServices = proxyquire('../../../lib/get-stopped-supervisor-services', {
+      xmlrpc: xmlrpc,
+      './get-supervisor-credentials': getSupervisorCredentials
+    });
   });
 
   it('should create a client', function (done) {

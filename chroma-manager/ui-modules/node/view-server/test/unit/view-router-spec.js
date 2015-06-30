@@ -1,6 +1,6 @@
 'use strict';
 
-var viewRouter = require('../../../view-server/view-router').wiretree;
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('view router', function () {
   var getRouter, router, checkForProblems, getSession, getCache, instance;
@@ -16,7 +16,12 @@ describe('view router', function () {
     getSession = function getSession () {};
     getCache = function  getCache () {};
 
-    instance = viewRouter(getRouter, checkForProblems, getSession, getCache);
+    instance = proxyquire('../../../view-server/view-router', {
+      'router': getRouter,
+      './middleware/check-for-problems': checkForProblems,
+      './middleware/get-session': getSession,
+      './middleware/get-cache': getCache
+    });
 
     function r () {
       return router;

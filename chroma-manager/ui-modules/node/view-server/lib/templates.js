@@ -21,36 +21,38 @@
 
 'use strict';
 
-exports.wiretree = function buildTemplates (getDirTreeSync, _, conf) {
-  var templates = getDirTreeSync(conf.templateRoot, transformPath);
+var getDirTreeSync = require('./get-dir-tree-sync');
+var _ = require('lodash-mixins');
+var conf = require('../conf');
 
-  _.templateSettings.imports = {
-    _: _,
-    t: function t (name, data) {
-      return templates[name](data);
-    },
-    conf: conf,
-    getServerDate: function getServerDate () {
-      return new Date();
-    }
-  };
+var templates = getDirTreeSync(conf.templateRoot, transformPath);
 
-  _.templateSettings.interpolate =  /<\$=([\s\S]+?)\$>/g;
-  _.templateSettings.escape =  /<\$-([\s\S]+?)\$>/g;
-  _.templateSettings.evaluate =  /<\$([\s\S]+?)\$>/g;
-
-  templates = _.transform(templates, function (result, value, key) {
-    result[key] = _.template(value);
-  });
-
-  return templates;
-
-  /**
-   * Remove extra leading path from template
-   * @param {String} p
-   * @returns {String}
-   */
-  function transformPath (p) {
-    return p.replace(conf.templateRoot, '');
+_.templateSettings.imports = {
+  _: _,
+  t: function t (name, data) {
+    return templates[name](data);
+  },
+  conf: conf,
+  getServerDate: function getServerDate () {
+    return new Date();
   }
 };
+
+_.templateSettings.interpolate =  /<\$=([\s\S]+?)\$>/g;
+_.templateSettings.escape =  /<\$-([\s\S]+?)\$>/g;
+_.templateSettings.evaluate =  /<\$([\s\S]+?)\$>/g;
+
+templates = _.transform(templates, function (result, value, key) {
+  result[key] = _.template(value);
+});
+
+module.exports = templates;
+
+/**
+ * Remove extra leading path from template
+ * @param {String} p
+ * @returns {String}
+ */
+function transformPath (p) {
+  return p.replace(conf.templateRoot, '');
+}

@@ -24,8 +24,6 @@ import os
 import settings
 import json
 
-import logging
-
 from chroma_help.help import help_text
 
 from django.core.management.commands.runserver import Command as BaseCommand
@@ -51,18 +49,12 @@ class Command(BaseCommand):
         VIEW_SERVER_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node', 'view-server')
         CONF = os.path.join(VIEW_SERVER_DIR, "conf.json")
 
-        if settings.LOG_LEVEL == logging.DEBUG or settings.DEBUG:
-            mode = 'DEV'
-        else:
-            mode = 'PROD'
-
         conf = {
             "HELP_TEXT": help_text,
             "ALLOW_ANONYMOUS_READ": settings.ALLOW_ANONYMOUS_READ,
             "BUILD": settings.BUILD,
             "IS_RELEASE": settings.IS_RELEASE,
             "LOG_PATH": settings.LOG_PATH,
-            "MODE": mode,
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
             "SITE_ROOT": settings.SITE_ROOT,
             "STATIC_URL": settings.STATIC_URL,
@@ -72,5 +64,5 @@ class Command(BaseCommand):
 
         json.dump(conf, open(CONF, 'w'), indent=2)
 
-        cmdline = ["node", VIEW_SERVER_DIR]
+        cmdline = ["node", VIEW_SERVER_DIR + '/server.js']
         print " ".join(cmdline)

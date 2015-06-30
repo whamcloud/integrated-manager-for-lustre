@@ -1,8 +1,6 @@
 'use strict';
 
-var getUnameFactory = require('../../../lib/get-uname').wiretree;
-var λ = require('highland');
-var through = require('through');
+var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('get uname', function () {
   var getUname, childProcess;
@@ -23,7 +21,9 @@ describe('get uname', function () {
       })
     };
 
-    getUname = getUnameFactory(λ, childProcess, through);
+    getUname = proxyquire('../../../lib/get-uname', {
+      child_process: childProcess
+    });
   });
 
   it('should return system information', function (done) {

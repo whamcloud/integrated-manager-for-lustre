@@ -21,25 +21,21 @@
 
 'use strict';
 
-exports.wiretree = function renderRequestErrorFactory (λ, getUname, templates) {
-  /**
-   * Handles rendering a backend error template
-   * @param {Object} res
-   * @param {String|Function} description
-   * @param {Object} err
-   */
-  return λ.curry(function renderRequestError (res, description, err) {
-    description = (typeof description === 'function' ? description(err) : description);
+var λ = require('highland');
+var getUname = require('./get-uname');
+var templates = require('./templates');
 
-    getUname().each(function getSystemInformation (map) {
-      var backendErrorTemplate = templates['backend_error.html'];
-      var rendered = backendErrorTemplate({
-        description: description,
-        debug_info: map
-      });
+module.exports = λ.curry(function renderRequestError (res, description, err) {
+  description = (typeof description === 'function' ? description(err) : description);
 
-      res.clientRes.end(rendered);
-      res = null;
+  getUname().each(function getSystemInformation (map) {
+    var backendErrorTemplate = templates['backend_error.html'];
+    var rendered = backendErrorTemplate({
+      description: description,
+      debug_info: map
     });
+
+    res.clientRes.end(rendered);
+    res = null;
   });
-};
+});

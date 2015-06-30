@@ -1,11 +1,12 @@
 'use strict';
 
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
-var loginRouteFactory = require('../../../../view-server/routes/login-route').wiretree;
 
 describe('login route', function () {
   var viewRouter, templates, req, res, next, push,
-    cache, requestStream, pathRouter, renderRequestError, renderRequestErrorInner;
+    cache, requestStream, pathRouter,
+    renderRequestError, renderRequestErrorInner;
 
   beforeEach(function () {
     req = {};
@@ -46,7 +47,12 @@ describe('login route', function () {
     renderRequestError = jasmine.createSpy('renderRequestError')
       .and.returnValue(renderRequestErrorInner);
 
-    loginRouteFactory(viewRouter, templates, requestStream, renderRequestError)();
+    proxyquire('../../../../view-server/routes/login-route', {
+      '../view-router': viewRouter,
+      '../lib/templates': templates,
+      '../lib/request-stream': requestStream,
+      '../lib/render-request-error': renderRequestError
+    })();
   });
 
   it('should register a path for the login route', function () {

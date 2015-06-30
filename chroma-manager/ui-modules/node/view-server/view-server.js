@@ -21,10 +21,20 @@
 
 'use strict';
 
-exports.wiretree = function viewServer (http, loginRoute, indexRoute, viewRouter, conf) {
-  loginRoute();
-  indexRoute();
+var http = require('http');
+var https = require('https');
+var loginRoute = require('./routes/login-route');
+var indexRoute = require('./routes/index-route');
+var viewRouter = require('./view-router');
+var conf = require('./conf');
 
+// Don't limit to pool to 5 in node 0.10.x
+https.globalAgent.maxSockets = http.globalAgent.maxSockets = Infinity;
+
+loginRoute();
+indexRoute();
+
+module.exports = function start () {
   return http.createServer(function createServer (req, res) {
     viewRouter.go(req.url,
       {

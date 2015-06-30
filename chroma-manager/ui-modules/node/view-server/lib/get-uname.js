@@ -21,19 +21,19 @@
 
 'use strict';
 
+var λ = require('highland');
+var childProcess = require('child_process');
+var through = require('through');
 
+module.exports = function getUname () {
+  return λ(['m', 'n', 'r', 's', 'v'])
+    .flatMap(execArg)
+    .invoke('trim', [])
+    .through(through.zipObject(['sysname', 'nodename', 'release', 'version', 'machine']));
+};
 
-exports.wiretree = function getUnameFactory (λ, childProcess, through) {
+function execArg (arg) {
   var exec = λ.wrapCallback(childProcess.exec);
 
-  return function getUname () {
-    return λ(['m', 'n', 'r', 's', 'v'])
-      .flatMap(execArg)
-      .invoke('trim', [])
-      .through(through.zipObject(['sysname', 'nodename', 'release', 'version', 'machine']));
-  };
-
-  function execArg (arg) {
-    return exec('uname -' + arg);
-  }
-};
+  return exec('uname -' + arg);
+}

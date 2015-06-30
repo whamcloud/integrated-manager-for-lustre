@@ -1,13 +1,10 @@
 'use strict';
 
-var λ = require('highland');
-var checkGroupFactory = require('../../../lib/check-group').wiretree;
-var GROUPS = require('../../../lib/groups').wiretree();
-var groupAllowed = require('../../../lib/group-allowed').wiretree(λ, GROUPS);
-var lodash = require('lodash-mixins');
+var GROUPS = require('../../../lib/groups');
+var checkGroup = require('../../../lib/check-group');
 
 describe('check group', function () {
-  var checkGroup, req, res, data, next;
+  var req, res, data, next;
 
   beforeEach(function () {
     req = {};
@@ -20,8 +17,6 @@ describe('check group', function () {
       }
     };
     next = jasmine.createSpy('next');
-
-    checkGroup = checkGroupFactory(lodash, groupAllowed, GROUPS);
   });
 
   it('should return the expected interface', function () {

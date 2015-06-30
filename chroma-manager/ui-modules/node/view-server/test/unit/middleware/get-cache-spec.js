@@ -1,12 +1,10 @@
 'use strict';
 
+var proxyquire = require('proxyquire').noPreserveCache();
 var λ = require('highland');
-var lodash = require('lodash-mixins');
-var through = require('through');
-var getCacheFactory = require('../../../../view-server/middleware/get-cache').wiretree;
 
 describe('get cache', function () {
-  var getCache, conf, requestStream, data, req, res,
+  var conf, requestStream, data, req, res, getCache,
     next, endpoints, renderRequestError, renderRequestErrorInner;
 
   beforeEach(function () {
@@ -62,7 +60,11 @@ describe('get cache', function () {
     renderRequestError = jasmine.createSpy('renderRequestError')
       .and.returnValue(renderRequestErrorInner);
 
-    getCache = getCacheFactory(λ, lodash, conf, requestStream, renderRequestError, through);
+    getCache = proxyquire('../../../../view-server/middleware/get-cache', {
+      '../conf': conf,
+      '../lib/request-stream': requestStream,
+      '../lib/render-request-error': renderRequestError
+    });
   });
 
   it('should return an empty map if user is null and anonymous read is false', function () {
