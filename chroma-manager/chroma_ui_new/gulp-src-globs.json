@@ -15,7 +15,6 @@
       "source/chroma_ui/bower_components*/twix/bin/twix.js",
       "source/chroma_ui/bower_components*/d3/d3.js",
       "source/chroma_ui/bower_components*/nvd3/nv.d3.js",
-      "source/chroma_ui/bower_components*/ngstorage/ngStorage.js",
       "source/chroma_ui/bower_components*/angular-route-segment/build/angular-route-segment.js",
       "source/chroma_ui/bower_components*/angular-bootstrap/ui-bootstrap-tpls.js",
       "source/chroma_ui/iml*/environment.js",
