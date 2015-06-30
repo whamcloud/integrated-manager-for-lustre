@@ -12,7 +12,4 @@
 
 # Explicitly ingoring certain files.
 bower_componenents/* -text eol=auto
-source/chroma_ui/bower_components/underscore-contrib/test/array.selectors.js -text
-source/chroma_ui/bower_components/underscore-contrib/.gitignore -text
-source/chroma_ui/bower_components/underscore-contrib/underscore.array.selectors.js -text
 source/chroma_ui/vendor/sprintf/sprintf.js -text

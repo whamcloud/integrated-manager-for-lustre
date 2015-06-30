@@ -1,5 +1,6 @@
 {
   "globals": {
+    "fp": false,
     "angular": false,
     "_": false,
     "module": false,

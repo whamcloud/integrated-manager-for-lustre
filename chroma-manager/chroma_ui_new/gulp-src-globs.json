@@ -3,7 +3,6 @@
     "source": [
       "source/chroma_ui/bower_components*/lodash/dist/lodash.js",
       "../ui-modules*/isomorphic/lodash-mixins/index.js",
-      "source/chroma_ui/bower_components*/underscore-contrib/underscore.function.iterators.js",
       "source/chroma_ui/vendor/sprintf*/sprintf.js",
       "source/chroma_ui/bower_components*/jquery/jquery.js",
       "source/chroma_ui/bower_components*/angular/angular.js",

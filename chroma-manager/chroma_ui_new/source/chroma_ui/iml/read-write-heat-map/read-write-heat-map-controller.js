@@ -145,7 +145,7 @@
      */
     function mouseHandler (overrides) {
       if (!_.isFunction(overrides))
-        overrides = _.iterators.K({});
+        overrides = fp.always({});
 
       return function (d) {
         $scope.$apply(function () {

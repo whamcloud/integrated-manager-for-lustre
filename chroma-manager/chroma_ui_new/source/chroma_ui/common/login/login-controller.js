@@ -41,7 +41,7 @@
         keyboard: false,
         windowClass: 'eula-modal',
         resolve: {
-          user: _.iterators.K(user)
+          user: fp.always(user)
         }
       }).result;
     }
@@ -57,7 +57,7 @@
         backdrop: 'static',
         keyboard: false,
         resolve: {
-          message: _.iterators.K(help.get('access_denied_eula'))
+          message: fp.always(help.get('access_denied_eula'))
         }
       }).result;
     }.bind(this);
