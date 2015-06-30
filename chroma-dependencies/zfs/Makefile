@@ -38,7 +38,7 @@ $(INCLUDE_DIR)/Makefile.zfs_version-$(DISTRO): $(INCLUDE_DIR)/Makefile.lustre_bu
 	echo "ZFS_RELEASE := $(shell $(INCLUDE_DIR)/jenkinsapi $(JENKINS_ROOT_URL)                   \
 			       $(JENKINS_USERNAME) $(JENKINS_PASSWORD) $(JENKINS_JOB_NAME)           \
 			       $(JENKINS_BUILD_NUMBER) $(DISTRO) get_zfs_ver)"; } > $@;              \
-	if git status --procelain $@ | grep -q ^??; then                                             \
+	if git status --porcelain $@ | grep -q ^??; then                                             \
 	    git add $@;                                                                              \
 	fi
 
