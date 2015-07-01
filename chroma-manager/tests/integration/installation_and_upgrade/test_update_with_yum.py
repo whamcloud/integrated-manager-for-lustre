@@ -95,26 +95,19 @@ class TestYumUpdate(TestCreateFilesystem):
         filesystem = self.get_filesystem_by_name(self.fs_name)
         self.stop_filesystem(filesystem['id'])
 
-        # With the list of hosts, start the upgrade
-        command = {}
-        for host in hosts:
-            # We send a command to update the storage servers with new packages
-            # =================================================================
-            command[host['id']] = self.chroma_manager.post("/api/command/", body={
-                'jobs': [{'class_name': 'UpdateJob', 'args': {'host_id': host['id']}}],
-                'message': "Test update"
-            }).json
+        # With the list of hosts, start the upgrade as a single command
+        command = self.chroma_manager.post("/api/command/", body={
+            'jobs': [{'class_name': 'UpdateJob', 'args': {'host_id': host['id']}} for host in hosts],
+            'message': "Test update of hosts"
+        }).json
 
-        # With the list of hosts, check the success of the upgrade, no need to actually check in parallel we will
-        # just sit waiting for the longest to completed.
-        for host in hosts:
-            # doing updates can include a reboot of the storage server,
-            # and perhaps RHN/proxy slowness, so give it some extra time
-            # Also note that IML is internally updating nodes in the same
-            # HA pair in serial, so the timeout needs to be 2x.
-            self.wait_for_command(self.chroma_manager, command[host['id']]['id'], timeout=UPDATE_TEST_TIMEOUT)
-            self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
-                                                             of_type='UpdatesAvailableAlert'))
+        # doing updates can include a reboot of the storage server,
+        # and perhaps RHN/proxy slowness, so give it some extra time
+        # Also note that IML is internally updating nodes in the same
+        # HA pair in serial, so the timeout needs to be 2x.
+        self.wait_for_command(self.chroma_manager, command['id'], timeout=UPDATE_TEST_TIMEOUT)
+        self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
+                                                         of_type='UpdatesAvailableAlert'))
 
         # Fully update all installed packages on the server
         for server in self.TEST_SERVERS:
