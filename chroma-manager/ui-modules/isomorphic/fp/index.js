@@ -141,9 +141,9 @@
     set = curry(2, set);
     innerLens.set = set;
 
-    innerLens.map = function map (fn, xs) {
+    innerLens.map = curry(2, function map (fn, xs) {
       return flow(get, fn, set(__, xs))(xs);
-    };
+    });
 
     function innerLens (x) {
       return get(x);
