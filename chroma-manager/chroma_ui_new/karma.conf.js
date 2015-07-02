@@ -32,7 +32,7 @@ module.exports = function setConfig (config) {
     // list of files / patterns to load in the browser
     files: [
       bowerDir('jasmine-stealth/dist/jasmine-stealth.js'),
-      bowerDir('jquery/jquery.js'),
+      bowerDir('jquery/dist/jquery.js'),
       bowerDir('angular/angular.js'),
       bowerDir('angular-resource/angular-resource.js'),
       bowerDir('angular-bindonce/bindonce.js'),

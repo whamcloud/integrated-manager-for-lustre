@@ -4,7 +4,7 @@
       "source/chroma_ui/bower_components*/lodash/dist/lodash.js",
       "../ui-modules*/isomorphic/lodash-mixins/index.js",
       "source/chroma_ui/vendor/sprintf*/sprintf.js",
-      "source/chroma_ui/bower_components*/jquery/jquery.js",
+      "source/chroma_ui/bower_components*/jquery/dist/jquery.js",
       "source/chroma_ui/bower_components*/angular/angular.js",
       "source/chroma_ui/bower_components*/angular-resource/angular-resource.js",
       "source/chroma_ui/bower_components*/angular-route/angular-route.js",

@@ -12,7 +12,7 @@
     "font-awesome": "4.2.0",
     "bootstrap": "3.2",
     "lodash": "2.4.1",
-    "jquery": "2.1.0",
+    "jquery": "2.1.4",
     "d3": "3.4.2",
     "nvd3": "git://github.com/jgrund/nvd3#fix-legend",
     "momentjs": "2.5.1",
