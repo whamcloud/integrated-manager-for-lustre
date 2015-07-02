@@ -39,7 +39,7 @@ module.exports = function setConfig (config) {
       bowerDir('angular-route/angular-route.js'),
       bowerDir('angular-route-segment/build/angular-route-segment.js'),
       bowerDir('lodash/dist/lodash.js'),
-      bowerDir('momentjs/moment.js'),
+      bowerDir('moment/moment.js'),
       bowerDir('twix/bin/twix.js'),
       bowerDir('d3/d3.js'),
       bowerDir('angular-bootstrap/ui-bootstrap-tpls.js'),

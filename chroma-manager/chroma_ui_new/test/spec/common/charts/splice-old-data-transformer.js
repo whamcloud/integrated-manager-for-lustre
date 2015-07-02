@@ -66,7 +66,7 @@ describe('splice old data transformer', function () {
 
     stream.getter.andReturn(data);
 
-    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
+    getServerMoment.plan().subtract.andReturn(moment('2013-12-11 00:00'));
 
     spliceOldDataTransformer.call(stream, {});
 
@@ -84,7 +84,7 @@ describe('splice old data transformer', function () {
 
     stream.getter.andReturn(data);
 
-    getServerMoment.plan().subtract.andReturn(moment('12/10/2013'));
+    getServerMoment.plan().subtract.andReturn(moment('2013-12-10 00:00'));
 
     spliceOldDataTransformer.call(stream, {});
 
@@ -104,7 +104,7 @@ describe('splice old data transformer', function () {
 
     stream.getter.andReturn(data);
 
-    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
+    getServerMoment.plan().subtract.andReturn(moment('2013-12-11 00:00'));
 
     spliceOldDataTransformer.call(stream, {});
 
@@ -129,7 +129,7 @@ describe('splice old data transformer', function () {
 
     stream.getter.andReturn(emptySeries);
 
-    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
+    getServerMoment.plan().subtract.andReturn(moment('2013-12-11 00:00'));
 
     spliceOldDataTransformer.call(stream, {});
 

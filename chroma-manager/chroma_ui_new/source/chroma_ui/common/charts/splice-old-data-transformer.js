@@ -42,7 +42,7 @@
       if (this.size == null)
         throw new Error(errorString.sprintf('Stream.size'));
 
-      var start = getServerMoment().subtract(this.unit, this.size).valueOf();
+      var start = getServerMoment().subtract(this.size, this.unit).valueOf();
 
       var deleteSeries = [];
 
