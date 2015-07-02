@@ -56,6 +56,8 @@ set -ex
 
 mkdir $HOME/bin
 
+MANAGER_DIR=${MANAGER_DIR:-"$HOME/chroma_test_env/chroma/chroma-manager"}
+
 # Install Chromedriver
 LATEST_CHROMEDRIVER_RELEASE=$(curl -f http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
 wget http://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER_RELEASE/chromedriver_linux64.zip
@@ -104,6 +106,8 @@ cd ../chroma_ui_new
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 cd gulp
 ../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
+cd $MANAGER_DIR/ui-modules/browser/socket-worker
+../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 
 # Configure VNC server
 cd ~
