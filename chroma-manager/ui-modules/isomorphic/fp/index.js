@@ -270,34 +270,18 @@
   function noop () {}
   fp.noop = noop;
 
-  function and () {
-    var args = new Array(arguments.length);
-
-    for (var i = 0, l = arguments.length; i < l; i++) {
-      args[i] = arguments[i];
-    }
-
-    return function run (val) {
-      return args.reduce(function reducer (curr, fn) {
-        return curr && fn(val);
+  var and = fp.curry(2, function and (predicates, val) {
+      return predicates.reduce(function reducer (curr, predicate) {
+        return curr && predicate(val);
       }, true);
-    };
-  }
+  });
   fp.and = and;
 
-  function or () {
-    var args = new Array(arguments.length);
-
-    for (var i = 0, l = arguments.length; i < l; i++) {
-      args[i] = arguments[i];
-    }
-
-    return function run (val) {
-      return args.reduce(function reducer (curr, fn) {
-        return curr || fn(val);
+  var or = fp.curry(2, function or (predicates, val) {
+      return predicates.reduce(function reducer (curr, predicate) {
+        return curr || predicate(val);
       }, false);
-    };
-  }
+  });
   fp.or = or;
 
   var bindMethod = fp.curry(2, function bindMethod (meth, obj) {

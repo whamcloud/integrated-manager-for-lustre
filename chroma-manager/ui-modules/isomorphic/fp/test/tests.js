@@ -582,11 +582,15 @@ describe('the fp module', function () {
       expect(fp.noop()).toBe(undefined);
     });
   });
+
   describe('has an or method', function () {
     var is5Or6;
 
     beforeEach(function () {
-      is5Or6 = fp.or(fp.eq(5), fp.eq(6));
+      is5Or6 = fp.or([
+        fp.eq(5),
+        fp.eq(6)
+      ]);
     });
 
     it('should exist on fp', function () {
@@ -595,6 +599,15 @@ describe('the fp module', function () {
 
     it('should return a function after seeding', function () {
       expect(is5Or6).toEqual(jasmine.any(Function));
+    });
+
+    it('should work with gaps', function () {
+      var baap  = 'baap';
+      var isNoWayOr4Chars = fp.or(_, baap);
+      expect(isNoWayOr4Chars([
+        fp.eq('no way'),
+        fp.eqFn(fp.identity, fp.lensProp('length'), 4)
+      ])).toBe(true);
     });
 
     [5,6].forEach(function (val) {
@@ -612,7 +625,10 @@ describe('the fp module', function () {
     var isFooAnd3Chars;
 
     beforeEach(function () {
-      isFooAnd3Chars = fp.and(fp.eq('foo'), fp.eqFn(fp.identity, fp.lensProp('length'), 3));
+      isFooAnd3Chars = fp.and([
+        fp.eq('foo'),
+        fp.eqFn(fp.identity, fp.lensProp('length'), 3)
+      ]);
     });
 
     it('should exist on fp', function () {
@@ -621,6 +637,15 @@ describe('the fp module', function () {
 
     it('should return a function after seeding', function () {
       expect(isFooAnd3Chars).toEqual(jasmine.any(Function));
+    });
+
+    it('should work with gaps', function () {
+      var baap  = 'baap';
+      var isBaapAnd4Chars = fp.and(_, baap);
+      expect(isBaapAnd4Chars([
+        fp.eq(baap),
+        fp.eqFn(fp.identity, fp.lensProp('length'), 4)
+      ])).toBe(true);
     });
 
     it('should return true if all true', function () {
