@@ -3,7 +3,8 @@
 var proxyquire = require('proxyquire').noPreserveCache();
 
 describe('get event socket handler test', function () {
-  var getEventSocketHandler, getEventSocket, eventSocket, socket, workerContext, handler;
+  var getEventSocketHandler, getEventSocket,
+    eventSocket, socket, workerContext, handler, router;
 
   beforeEach(function () {
     eventSocket = {
@@ -12,11 +13,19 @@ describe('get event socket handler test', function () {
       end: jasmine.createSpy('end')
     };
 
+    router = {
+      go: jasmine.createSpy('go'),
+      verbs: {
+        get: 'get'
+      }
+    };
+
     getEventSocket = jasmine.createSpy('getEventSocket')
       .and.returnValue(eventSocket);
 
     getEventSocketHandler = proxyquire('../../get-event-socket-handler', {
-        './get-event-socket': getEventSocket
+      './get-event-socket': getEventSocket,
+      './router': router
     });
 
     socket = {};
@@ -30,8 +39,6 @@ describe('get event socket handler test', function () {
 
     handler = workerContext.addEventListener.calls.allArgs()[0][1];
   });
-
-
 
   it('should be a factory function', function () {
     expect(getEventSocketHandler).toEqual(jasmine.any(Function));
@@ -67,13 +74,13 @@ describe('get event socket handler test', function () {
     });
   });
 
-
   describe('send', function () {
     var args;
 
     beforeEach(function () {
       args = {
         data: {
+          path: '/foo/bar',
           id: '1',
           payload: { path: '/foo/bar' },
           type: 'send'
@@ -81,10 +88,10 @@ describe('get event socket handler test', function () {
       };
     });
 
-    it('should not send a message if we haven\'t connected yet', function () {
+    it('should not route a message if we haven\'t connected yet', function () {
       handler(args);
 
-      expect(eventSocket.sendMessage).not.toHaveBeenCalled();
+      expect(router.go).not.toHaveBeenCalled();
     });
 
     describe('with a connected socket', function () {
@@ -95,35 +102,28 @@ describe('get event socket handler test', function () {
             type: 'connect'
           }
         });
-      });
-
-      it('should register an onMessage handler', function () {
-        handler(args);
-        expect(eventSocket.onMessage).toHaveBeenCalledOnceWith(jasmine.any(Function));
-      });
-
-      it('should send the payload as a message', function () {
-        handler(args);
-        expect(eventSocket.sendMessage).toHaveBeenCalledOnceWith({ path: '/foo/bar' }, undefined);
-      });
-
-      it('should send an ack if requested', function () {
-        args.data.ack = true;
 
         handler(args);
-
-        expect(eventSocket.sendMessage)
-          .toHaveBeenCalledOnceWith({ path: '/foo/bar'}, jasmine.any(Function));
       });
 
-      it('should not listen if sending an ack', function () {
-        args.data.ack = true;
-
-        handler(args);
-
-        expect(eventSocket.onMessage).not.toHaveBeenCalled();
+      it('should route the data', function () {
+        expect(router.go).toHaveBeenCalledOnceWith('/foo/bar',
+          { verb: 'get', data: args.data },
+          { socket: eventSocket, write: jasmine.any(Function)}
+        );
       });
 
+      it('should send a postMessage when writing', function () {
+        var write = router.go.calls.mostRecent().args[2].write;
+
+        write('foo');
+
+        expect(workerContext.postMessage).toHaveBeenCalledOnceWith({
+          type: 'message',
+          id: '1',
+          payload: 'foo'
+        });
+      });
     });
   });
 

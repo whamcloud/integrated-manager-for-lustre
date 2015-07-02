@@ -22,6 +22,7 @@
 'use strict';
 
 var getEventSocket = require('./get-event-socket');
+var router = require('./router');
 
 module.exports = function getEventSocketHandler (socket, workerContext) {
 
@@ -49,17 +50,16 @@ module.exports = function getEventSocketHandler (socket, workerContext) {
   }
 
   function onSend (data) {
+    var options = data.options || {};
+    var method = (typeof options.method !== 'string' ? router.verbs.get : options.method);
+
     if (!eventSockets[data.id])
       return;
 
-    var ack;
-
-    if (data.ack)
-      ack = fn;
-    else
-      eventSockets[data.id].onMessage(fn);
-
-    eventSockets[data.id].sendMessage(data.payload, ack);
+    router.go(data.path,
+      { verb: method, data: data },
+      { socket: eventSockets[data.id], write: fn }
+    );
 
     function fn (res) {
       workerContext.postMessage({ type: 'message', id: data.id, payload: res });

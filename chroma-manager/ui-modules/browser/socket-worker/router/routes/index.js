@@ -19,15 +19,8 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-/* global self */
-
 'use strict';
 
-var createSocket = require('./create-socket');
-var eventSocketHandler = require('./get-event-socket-handler');
-
-var routes = require('./routes');
-routes.wildcard();
-
-var socket = createSocket(self.location.origin, self);
-eventSocketHandler(socket, self);
+module.exports = {
+  wildcard: require('./wildcard')
+};
