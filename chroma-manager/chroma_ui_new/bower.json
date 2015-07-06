@@ -13,7 +13,7 @@
     "bootstrap": "3.2",
     "lodash": "2.4.1",
     "jquery": "2.1.4",
-    "d3": "3.4.2",
+    "d3": "3.5.5",
     "nvd3": "git://github.com/jgrund/nvd3#fix-legend",
     "moment": "2.10.3",
     "twix": "0.6.3"
@@ -23,8 +23,5 @@
     "jasmine-stealth": "0.0.15",
     "jasmine-object-containing": "0.0.1",
     "jasmine-n-matchers": "0.0.2"
-  },
-  "resolutions": {
-    "d3": "3.4.2"
   }
 }
