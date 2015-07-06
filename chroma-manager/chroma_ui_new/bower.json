@@ -17,7 +17,8 @@
     "nvd3": "git://github.com/jgrund/nvd3#fix-legend",
     "moment": "2.10.3",
     "twix": "0.6.4",
-    "fastdom": "0.8.6"
+    "fastdom": "0.8.6",
+    "highland": "2.4.0"
   },
   "devDependencies": {
     "angular-mocks": "1.2.21",
