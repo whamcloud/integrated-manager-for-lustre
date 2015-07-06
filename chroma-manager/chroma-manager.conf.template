@@ -135,6 +135,8 @@ server {
     }
 
     location /agent/message {
+        client_body_buffer_size 1m;
+
         if ($ssl_client_verify != SUCCESS) {
             return 401;
         }
