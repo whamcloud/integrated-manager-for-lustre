@@ -22,7 +22,7 @@
 'use strict';
 
 module.exports = function getClientLib () {
-  var tree = require('./index')({ primusPort: 8889 });
+  var tree = require('./index')({ primusPort: 8890 });
   tree.add(require('./generate-lib'), 'generateLib');
   return tree.get('generateLib');
 };
