@@ -21,15 +21,17 @@ And much more.
 
 ## [Documentation](http://icambron.github.io/twix.js/docs.html)
 
+**Attention Moment 2.10.x users**: You need to upgrade to the latest Twix! You also should make sure not to be on Moment 2.10.0 (i.e. upgrade to the latest point release) because it has some compatibility issues with Twix.
+
 **Breaking change in 0.6.0** Twix ranges will ignore changes to their endpoints; once you create the range, it's frozen in place. Construct new ranges to grow/shrink.
 
 ## Building
 
-If you want to build Twix for yourself, you'll need to install CoffeeScript. Then clone the repo out and run this:
+If you want to build Twix for yourself, clone the repo and run this:
 
     make configure build
 
-Configure just installs the NPMs and brings in Moment as a submodule, so you only have to do that part once.
+Configure just installs the NPMs (including CoffeeScript) and brings in Moment as a submodule, so you only have to do that part once.
 
 Note that the source is `src/twix.coffee`; the output is `bin/twix.js`. You can run the tests via
 
@@ -45,6 +47,10 @@ Patches are welcome!
  * Don't include your changes to the generated `.js` files in the patch; they're much harder to merge. I'll generate them when I cut the release.
 
 ## Changelog
+
+ * **0.6.4**: Use peerDependency for Moment
+
+ * **0.6.3**: Moment 2.10 compatibility
 
  * **0.6.2**: Fix `iterate` for months
 
@@ -78,12 +84,12 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-[license-image]: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
+[license-image]: http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square
 [license-url]: LICENSE
 
 [npm-url]: https://npmjs.org/package/twix
-[npm-version-image]: http://img.shields.io/npm/v/twix.svg?style=flat
-[npm-downloads-image]: http://img.shields.io/npm/dm/twix.svg?style=flat
+[npm-version-image]: http://img.shields.io/npm/v/twix.svg?style=flat-square
+[npm-downloads-image]: http://img.shields.io/npm/dm/twix.svg?style=flat-square
 
 [travis-url]: http://travis-ci.org/icambron/twix.js
-[travis-image]: http://img.shields.io/travis/icambron/twix.js/develop.svg?style=flat
+[travis-image]: http://img.shields.io/travis/icambron/twix.js/develop.svg?style=flat-square
