@@ -1,3 +1,27 @@
+# 1.5.0 (2015-06-15)
+
+- Changed `$routeSegmentProvider.when` signature to `when(path, name, route)` which enables to extend the route information object with any custom properties, like `reloadOnSearch` or `caseInsensitiveMatch` ([425ac](https://github.com/artch/angular-route-segment/commit/1c21f9f40855cf9d8a74f6a760471b0eae7425ac)) thanks to [krmarien](https://github.com/krmarien).
+- Published to npm repository.
+
+# 1.4.0 (2015-03-13) 
+
+- Refactored render directive using modern `$transclude` cloning mechanism instead of manual cloning ([32dea](https://github.com/artch/angular-route-segment/commit/904b72477e322a7ab647d8b6c96165c7d4332dea)).
+  **ATTENTION:** AngularJS 1.1.x is no longer supported due to this fix!
+- Fixed a bug with a segment placed inside `ng-if` ([32dea](https://github.com/artch/angular-route-segment/commit/904b72477e322a7ab647d8b6c96165c7d4332dea)).  
+- Fixed a bug with camelCasing default segment names ([74b64](https://github.com/artch/angular-route-segment/commit/60bf2eca0ed554809c14f4556776a92eb2574b64)).
+
+# 1.3.3 (2014-09-30)
+
+- Due to [angular.js@fca6be71](https://github.com/angular/angular.js/commit/fca6be71), filters are now flagged as `$stateful=true` for compatibility reasons ([03f8425](https://github.com/artch/angular-route-segment/commit/03f8425)).
+
+# 1.3.2 (2014-09-19)
+
+- Fixed a case when `watcher` is provided in annotated array form rather than as a function ([84602](https://github.com/artch/angular-route-segment/commit/84602f83fbb20d336f0fdc3d34a22d7834a6489b)).
+
+# 1.3.1 (2014-08-12)
+
+- Fixed a compatibility bug in IE8 ([0aaa2](https://github.com/artch/angular-route-segment/commit/0aaa25be27a8d0b7e36f2e07a9a303b9b3f3c3f5)) thanks to [jincod](https://github.com/jincod).
+
 # 1.3.0 (2014-05-15)
 
 ## Features

@@ -18,10 +18,10 @@ bower install angular-route-segment
 ```
 Or use this CDN link (thanks to [cdnjs.com](http://cdnjs.com)):
 ```html
-<script src="//cdnjs.cloudflare.com/ajax/libs/angular-route-segment/1.2.3/angular-route-segment.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/angular-route-segment/1.4.0/angular-route-segment.min.js"></script>
 ```
 
-Tested with AngularJS 1.1.5, 1.2.16 and 1.3.0-beta.7.
+Tested with AngularJS 1.2.21, 1.3.14, and 1.4.0-beta.5.
 
 Overview
 --------
@@ -34,7 +34,7 @@ The library provides two pieces of code: `$routeSegment` service and `app-view-s
 var app = angular.module('app', ['ngRoute', 'route-segment', 'view-segment']);
 ```
 
-`$routeSegment` is meant to be used instead of built-in Angular `$route` service. Its provider exposes configuration methods which can be used to traverse the tree of route segments and setup it properly.
+`$routeSegment` is a layer on top of built-in Angular `$route` service and is meant to be used instead of it. Its provider exposes configuration methods which can be used to traverse the tree of route segments and setup it properly.
 
 ```javascript
 
@@ -127,6 +127,18 @@ Section 1 contents.
 
 ...etc. You can reach any nesting level here. Every view will be handled independently, keeping the state of top-level views.
 
+You can also use filters to define link hrefs. It will resolve segment URLs automatically:
+```html
+<ul>
+    <li ng-class="{active: ('s1' | routeSegmentStartsWith)}">
+        <a href="{{ 's1' | routeSegmentUrl }}">Section 1</a>
+    </li>
+    <li ng-class="{active: ('s2' | routeSegmentStartsWith)}">
+        <a href="{{ 's2' | routeSegmentUrl }}">Section 2</a>
+    </li>
+</ul>
+```
+
 Difference from UI-Router
 -------------------------
 
@@ -155,17 +167,21 @@ A hash object which can be used to set up the service on config stage:
 
     When true, all attempts to call `within` method on non-existing segments will throw an error (you would usually want this behavior in production). When false, it will transparently create new empty segment (can be useful in isolated tests).
 
-##### when(route, name)
+##### when(path, name, route)
 
-The shorthand for $routeProvider.when() method with specified fully qualified route name.
+The shorthand for `$routeProvider.when()` method with specified fully qualified route name.
 
-- *route*
+- *path*
 
     Route URL, e.g. `/foo/bar`
     
 - *name*
     
     Fully qualified route name, e.g. `foo.bar`
+    
+- *route*
+
+    Mapping information object to be assigned to `$route.current` on route match.
 
 ##### segment(name, params)
 
@@ -256,6 +272,8 @@ $routeSegment.getSegmentUrl('s1.itemInfo.edit', {id: 123});     // -> '/section1
 ```
 
 ### Filters ###
+
+**ATTENTION:** filters are not stateless. While they are not intended to work with complex data structures, it can impact performance anyway. See more info at [angular.js commit fca6be71](https://github.com/angular/angular.js/commit/fca6be71).
 
 ##### routeSegmentEqualsTo
 
