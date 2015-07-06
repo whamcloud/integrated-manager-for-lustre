@@ -1,13 +1,13 @@
 {
   "name": "chroma-ui",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "private": true,
   "engines": {
     "node": ">=0.10.0"
   },
   "scripts": {
     "protractor": "protractor ./test/selenium/protractor-conf.js --config=./sample-config",
-    "unit": "./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots",
+    "test": "./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots",
     "zipdev": "../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'",
     "ziplock": "../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/'"
   },
