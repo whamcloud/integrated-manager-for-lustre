@@ -1,15 +1,18 @@
 describe('heat map legend', function () {
   'use strict';
 
-  var heatMapLegendFactory, d3, chartUtils, selection, eachSpy, raf;
+  var heatMapLegendFactory, d3, chartUtils, selection, eachSpy, rAF, cancelAnimation;
 
-  beforeEach(module('charts'));
+  beforeEach(module('charts', function ($provide) {
+    cancelAnimation = jasmine.createSpy('cancelAnimation');
+    rAF = jasmine.createSpy('rAF').andReturn(cancelAnimation);
+    $provide.value('$$rAF', rAF);
+  }));
 
-  mock.beforeEach('d3', 'chartUtils', 'raf');
+  mock.beforeEach('d3', 'chartUtils');
 
-  beforeEach(inject(function (_heatMapLegendFactory_, _d3_, _chartUtils_, _raf_) {
+  beforeEach(inject(function (_heatMapLegendFactory_, _d3_, _chartUtils_) {
     heatMapLegendFactory = _heatMapLegendFactory_;
-    raf = _raf_;
     d3 = _d3_;
     chartUtils = _chartUtils_;
 
@@ -142,7 +145,7 @@ describe('heat map legend', function () {
 
 
         it('should cancel any pending requestAnimationFrames', function () {
-          expect(raf.cancelAnimationFrame).toHaveBeenCalledOnce();
+          expect(cancelAnimation).toHaveBeenCalledOnce();
         });
       });
     });

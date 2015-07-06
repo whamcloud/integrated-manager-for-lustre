@@ -1,15 +1,15 @@
 describe('heat map legend DOM testing', function () {
   'use strict';
 
-  var heatMapLegend, raf, $legendGroup, legendGroup, $el, d3, getMin, getMax, getSteps;
+  var heatMapLegend, rAF, $legendGroup, legendGroup, $el, d3, getMin, getMax, getSteps;
 
   beforeEach(module('charts', 'd3'));
 
-  mock.beforeEach('chartUtils', 'raf');
+  mock.beforeEach('chartUtils');
 
-  beforeEach(inject(function (heatMapLegendFactory, _d3_, _raf_, chartUtils) {
+  beforeEach(inject(function (heatMapLegendFactory, _d3_, _$$rAF_, chartUtils) {
     d3 = _d3_;
-    raf = _raf_;
+    rAF = _$$rAF_;
 
     chartUtils.chartParamMixins.andCallThrough();
     chartUtils.cl.andCallThrough();
@@ -73,7 +73,7 @@ describe('heat map legend DOM testing', function () {
         }
       ]);
 
-      raf.requestAnimationFrame.flush();
+      rAF.flush();
     });
 
     it('should list the min', function () {

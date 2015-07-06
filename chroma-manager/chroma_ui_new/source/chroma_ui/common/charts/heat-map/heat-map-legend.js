@@ -24,9 +24,9 @@
   'use strict';
 
   angular.module('charts').factory('heatMapLegendFactory',
-    ['d3', 'chartUtils', 'raf', heatMapLegendFactory]);
+    ['d3', 'chartUtils', '$$rAF', heatMapLegendFactory]);
 
-  function heatMapLegendFactory (d3, chartUtils, raf) {
+  function heatMapLegendFactory (d3, chartUtils, $$rAF) {
     var TEXT_PADDING = 5,
       STEP_WIDTH = 1,
       MIN = 0,
@@ -67,8 +67,10 @@
           elRefs.container = d3.select(this);
 
           chart.destroy = function destroy () {
-            if (chart.requestID)
-              raf.cancelAnimationFrame(chart.requestID);
+            if (chart.cancelAnimation) {
+              chart.cancelAnimation();
+              delete chart.cancelAnimation;
+            }
 
             elRefs.container.remove();
             elRefs = null;
@@ -146,7 +148,7 @@
 
           var legendWidth = minAndStepsWidth + maxBBox.width;
 
-          chart.requestID = raf.requestAnimationFrame(function () {
+          chart.cancelAnimation = $$rAF(function () {
             elRefs.stepsGroup
               .attr('transform', translator(minBBox.width + TEXT_PADDING, (availableHeight - 10) / 2 ));
 

@@ -24,5 +24,5 @@
   'use strict';
 
   angular.module('charts',
-    ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame', 'serverMoment']);
+    ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'serverMoment']);
 }());
