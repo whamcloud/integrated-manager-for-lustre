@@ -158,13 +158,11 @@ describe('read write heat map controller', function () {
     });
 
     describe('mouse click', function () {
-      var params, el, now;
+      var params, el, now, then;
 
       beforeEach(function () {
         now = new Date(2013, 1, 29, 14, 30);
-
-        Timecop.install();
-        Timecop.freeze(now);
+        then =  new Date('2013-03-05T05:00:00.000Z');
 
         params = {
           x: new Date('2013-01-05T05:00:00.000Z'),
@@ -181,11 +179,8 @@ describe('read write heat map controller', function () {
             }
           }
         };
-      });
 
-      afterEach(function () {
-        Timecop.returnToPresent();
-        Timecop.uninstall();
+        spyOn(window, 'Date').andReturn(then);
       });
 
       it('should navigate the page', function () {
@@ -201,7 +196,7 @@ describe('read write heat map controller', function () {
         chart.onMouseClick.mostRecentCall.args[0](params, el);
 
         expect($location.path).toHaveBeenCalledOnceWith('dashboard/jobstats/2/2013-01-05T05:00:00.000Z/%s'
-          .sprintf(now.toISOString()));
+          .sprintf(then.toISOString()));
       });
     });
   });
