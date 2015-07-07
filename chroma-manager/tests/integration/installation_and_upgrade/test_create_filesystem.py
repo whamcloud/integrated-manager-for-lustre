@@ -9,13 +9,13 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
     fs_name = "testfs"
 
-    def add_hosts(self, addresses):
-        # Override add hosts functionality for older apis
+    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+        # Override add hosts functionality for older APIs
 
         # if the host_profile api endpoint exists or using simulator, can use current logic
         response = self.chroma_manager.get('/api/host_profile/')
         if response.successful or hasattr(self, 'simulator'):
-            super(TestCreateFilesystem, self).add_hosts()
+            super(TestCreateFilesystem, self).add_hosts(addresses, auth_type)
         else:
             # otherwise we need to use the old way of adding hosts
             host_create_command_ids = []
