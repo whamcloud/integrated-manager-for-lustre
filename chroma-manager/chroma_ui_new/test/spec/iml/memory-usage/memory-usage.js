@@ -43,9 +43,9 @@ describe('memory usage controller', function () {
 
   it('should start the host stream', function () {
     expect(streams.hostStream.plan().start).toHaveBeenCalledOnceWith({
-      qs : {
-        unit : DURATIONS.MINUTES,
-        size : 10,
+      qs: {
+        unit: DURATIONS.MINUTES,
+        size: 10,
         reduce_fn: 'average',
         metrics: 'mem_MemFree,mem_MemTotal,mem_SwapTotal,mem_SwapFree'
       }

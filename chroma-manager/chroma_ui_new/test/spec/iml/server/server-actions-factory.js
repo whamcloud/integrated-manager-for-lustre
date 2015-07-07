@@ -64,9 +64,9 @@ describe('server actions', function () {
     var result = detectFs.convertToJob(hosts);
 
     expect(result).toEqual([{
-      class_name : 'DetectTargetsJob',
-      args : {
-        hosts : [ '/api/host/1' ]
+      class_name: 'DetectTargetsJob',
+      args: {
+        hosts: [ '/api/host/1' ]
       }
     }]);
   });
@@ -83,9 +83,9 @@ describe('server actions', function () {
     var result = installUpdates.convertToJob(hosts);
 
     expect(result).toEqual([{
-      class_name : 'UpdateJob',
-      args : {
-        host_id : 1
+      class_name: 'UpdateJob',
+      args: {
+        host_id: 1
       }
     }]);
   });

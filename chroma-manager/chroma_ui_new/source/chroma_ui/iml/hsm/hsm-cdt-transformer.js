@@ -26,7 +26,7 @@ angular.module('hsm')
 
     /**
      * Transforms incoming stream data to compute HSM stats
-     * @param {Array|undefined} newVal The new data.
+     * @param {Object} resp The response.
      */
     return function transformer(resp) {
       if (!Array.isArray(resp.body) )

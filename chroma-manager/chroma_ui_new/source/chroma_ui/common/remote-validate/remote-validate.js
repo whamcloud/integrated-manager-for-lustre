@@ -82,7 +82,7 @@
 
         /**
          * Abstracts common code from success and errback functions.
-         * @param [func]
+         * @param {Function} [func]
          * @returns {Function}
          */
         function callbackBuilder(func) {

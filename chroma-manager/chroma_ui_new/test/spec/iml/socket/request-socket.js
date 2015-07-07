@@ -110,9 +110,9 @@ describe('request socket', function () {
         method('/api/command');
 
         expect(spark.send).toHaveBeenCalledOnceWith('req', {
-          path : '/command',
-          options : {
-            method : verb
+          path: '/command',
+          options: {
+            method: verb
           }
         }, undefined);
       });

@@ -96,12 +96,12 @@ describe('create or update hosts then', function () {
             {
               auth_type: 'existing_keys_choice',
               address: 'storage0.localdomain',
-              server_profile : '/api/server_profile/default/'
+              server_profile: '/api/server_profile/default/'
             },
             {
               auth_type: 'existing_keys_choice',
               address: 'storage1.localdomain',
-              server_profile : '/api/server_profile/default/'
+              server_profile: '/api/server_profile/default/'
             }
           ]
         }
@@ -222,9 +222,9 @@ describe('create or update hosts then', function () {
         json: {
           objects: [
             {
-              auth_type : 'existing_keys_choice',
-              address : 'storage1.localdomain',
-              server_profile : '/api/server_profile/default/'
+              auth_type: 'existing_keys_choice',
+              address: 'storage1.localdomain',
+              server_profile: '/api/server_profile/default/'
             }
           ]
         }
@@ -272,14 +272,14 @@ describe('create or update hosts then', function () {
           body: {
             objects: [
               {
-                command: { id : 2 },
+                command: { id: 2 },
                 host: {
                   id: 2,
                   address: 'storage1.localdomain'
                 }
               },
               {
-                command: { id : 1 },
+                command: { id: 1 },
                 host: {
                   id: 1,
                   address: 'storage0.localdomain'

@@ -40,7 +40,7 @@ angular.module('mdo', ['charts', 'stream'])
 
         //@FIXME: Hack, remove when https://github.com/novus/nvd3/pull/313 lands.
         function valueFormatter(d) {
-          return (chart.stacked.style() === 'expand' ? percentage(d): Math.round(d));
+          return (chart.stacked.style() === 'expand' ? percentage(d) : Math.round(d));
         }
         chart.interactiveLayer.tooltip.valueFormatter(valueFormatter);
 

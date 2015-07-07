@@ -84,7 +84,7 @@ describe('read write heat map controller', function () {
   it('should restart with new params on update', function () {
     $scope.readWriteHeatMap.onUpdate(1, 'second');
 
-    expect(readWriteHeatMapStream.restart).toHaveBeenCalledOnceWith({ qs : { unit : 1, size : 'second' } });
+    expect(readWriteHeatMapStream.restart).toHaveBeenCalledOnceWith({ qs: { unit: 1, size: 'second' } });
   });
 
   it('should toggle the type', function () {
@@ -101,7 +101,7 @@ describe('read write heat map controller', function () {
       expect(chart.options).toHaveBeenCalledOnceWith({
         showYAxis: false,
         formatter: jasmine.any(Function),
-        margin: {left : 50}
+        margin: { left: 50 }
       });
     });
 

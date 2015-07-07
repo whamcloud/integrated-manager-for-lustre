@@ -112,8 +112,8 @@ describe('Configure LNet modal', function () {
         expect(requestSocket.plan().sendPost).toHaveBeenCalledOnceWith('/nid', {
           json: {
             objects: [
-              { id : '1' },
-              { id : '2' }
+              { id: '1' },
+              { id: '2' }
             ]
           }
         }, true);
@@ -192,9 +192,9 @@ describe('Configure LNet modal', function () {
 
         expect(configureLnet.getDiff(configureLnet.networkInterfaces[0])).toEqual({
           params: {
-            remote : 'Lustre Network 3'
+            remote: 'Lustre Network 3'
           },
-          type : 'local'
+          type: 'local'
         });
       });
 
@@ -210,7 +210,7 @@ describe('Configure LNet modal', function () {
           params: {
             remote: 'Not Lustre Network'
           },
-          type : 'remote'
+          type: 'remote'
         });
       });
 
@@ -316,7 +316,7 @@ describe('Configure LNet modal', function () {
         it('should send a get', function () {
           expect(spark.sendGet).toHaveBeenCalledOnceWith('/network_interface', {
             qs: {
-              host__id : '1'
+              host__id: '1'
             }
           });
         });
@@ -359,12 +359,12 @@ describe('Configure LNet modal', function () {
             var result = pipe(response);
 
             expect(result).toEqual([{
-              resource_uri : '/api/network_interface/1',
-              nid : { lnd_network : -1, network_interface : '/api/network_interface/1' }
+              resource_uri: '/api/network_interface/1',
+              nid: { lnd_network: -1, network_interface: '/api/network_interface/1' }
             },
             {
-              resource_uri : '/api/network_interface/2',
-              nid : { lnd_network : 1, network_interface : '/api/network_interface/2' }
+              resource_uri: '/api/network_interface/2',
+              nid: { lnd_network: 1, network_interface: '/api/network_interface/2' }
             }]);
           });
         });

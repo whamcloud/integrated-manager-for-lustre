@@ -31,15 +31,15 @@ describe('file system stream model', function () {
 
     it('should calculate space graph data', function () {
       expect(fileSystemStreamModel.spaceGraphData).toEqual([
-        { key : 'Free', y : 10000 },
-        { key : 'Used', y : 90000 }
+        { key: 'Free', y: 10000 },
+        { key: 'Used', y: 90000 }
       ]);
     });
 
     it('should calculate usage graph data', function () {
       expect(fileSystemStreamModel.usageGraphData).toEqual([
-        { key : 'Free', y : 50000 },
-        { key : 'Used', y : 450000 }
+        { key: 'Free', y: 50000 },
+        { key: 'Used', y: 450000 }
       ]);
     });
 

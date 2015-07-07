@@ -169,7 +169,7 @@
         if (typeof this._removeOpenListener === 'function')
           this._removeOpenListener();
 
-        if(typeof this._removePageVisibilityListener === 'function')
+        if (typeof this._removePageVisibilityListener === 'function')
           this._removePageVisibilityListener();
       };
 
@@ -222,7 +222,7 @@
         if (typeof this._removeOpenListener === 'function')
           this._removeOpenListener();
 
-        if(typeof this._removePageVisibilityListener === 'function')
+        if (typeof this._removePageVisibilityListener === 'function')
           this._removePageVisibilityListener();
 
 

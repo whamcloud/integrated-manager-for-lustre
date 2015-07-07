@@ -127,7 +127,7 @@ describe('add server modal ctrl', function () {
       expect($modal.open).toHaveBeenCalledWith({
         templateUrl: 'iml/server/assets/html/add-server-modal.html',
         controller: 'AddServerModalCtrl as addServer',
-        backdropClass : 'add-server-modal-backdrop',
+        backdropClass: 'add-server-modal-backdrop',
         backdrop: 'static',
         keyboard: 'false',
         windowClass: 'add-server-modal',

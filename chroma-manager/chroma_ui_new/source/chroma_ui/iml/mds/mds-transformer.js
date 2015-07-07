@@ -20,12 +20,12 @@
 // express and approved by Intel in writing.
 
 
-angular.module('mds').factory('mdsTransformer', ['moment', function mdsTransformerFactory(moment) {
+angular.module('mds').factory('mdsTransformer', ['moment', function mdsTransformerFactory (moment) {
   'use strict';
 
   /**
    * Transforms incoming stream data to compute cpu and ram usage
-   * @param {Array|undefined} newVal The new data.
+   * @param {Object} resp The response.
    */
   return function transformer(resp) {
     var newVal = resp.body;
@@ -49,7 +49,7 @@ angular.module('mds').factory('mdsTransformer', ['moment', function mdsTransform
 
     resp.body = newVal.reduce(function (arr, curr) {
       var cpuSum = curr.data.cpu_user + curr.data.cpu_system + curr.data.cpu_iowait,
-        cpuPercentage = (curr.data.cpu_total ? (cpuSum / curr.data.cpu_total): 0.0),
+        cpuPercentage = (curr.data.cpu_total ? (cpuSum / curr.data.cpu_total) : 0.0),
         cpuUsage = {y: cpuPercentage, x: moment(curr.ts).utc().toDate()};
 
       arr[0].values.push(cpuUsage);

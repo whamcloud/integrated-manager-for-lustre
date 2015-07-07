@@ -35,7 +35,7 @@ describe('status controller', function () {
     name: 'Alert Monitor',
     type: 'alert',
     api: '/alert/',
-    jsonMask : 'objects(alert_item,message)',
+    jsonMask: 'objects(alert_item,message)',
     qs: {
       limit: 0,
       active: true
@@ -76,7 +76,7 @@ describe('status controller', function () {
 
       it('should get pending jobs', function () {
         expect(result.sendGet).toHaveBeenCalledOnceWith(monitor.api, {
-          jsonMask : monitor.jsonMask,
+          jsonMask: monitor.jsonMask,
           qs: monitor.qs
         });
       });

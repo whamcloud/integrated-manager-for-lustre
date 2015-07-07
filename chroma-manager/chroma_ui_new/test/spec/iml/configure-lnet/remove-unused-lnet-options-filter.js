@@ -42,7 +42,7 @@ describe('Remove used LNet options', function () {
     var networkInterfaces = createNetworkInterfaces(values);
     var filtered = removeUsedLnetOptions(LNET_OPTIONS, networkInterfaces, networkInterfaces[1]);
 
-    expect(filtered).toEqual([ { name : 'Not Lustre Network', value : -1 }, { name : 'Lustre Network 0', value : 0 } ]);
+    expect(filtered).toEqual([ { name: 'Not Lustre Network', value: -1 }, { name: 'Lustre Network 0', value: 0 } ]);
   });
 
   /**

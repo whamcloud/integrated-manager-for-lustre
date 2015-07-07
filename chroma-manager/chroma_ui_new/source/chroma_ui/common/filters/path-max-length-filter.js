@@ -48,11 +48,11 @@
     function reducePath(pathComponents, maxLength) {
       var path;
       var parts = pathComponents.parts;
-      var pointer = Math.ceil(parts.length/2) - (parts.length % 2 === 1 ? 1 : 0) ;
+      var pointer = Math.ceil(parts.length / 2) - (parts.length % 2 === 1 ? 1 : 0) ;
 
       parts[pointer] = '...';
 
-      while(1) {
+      while (1) {
         path = '%s%s/%s'.sprintf(
           pathComponents.leadingSlash,
           parts.join('/'),

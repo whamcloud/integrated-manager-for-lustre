@@ -99,7 +99,7 @@ describe('stream module', function () {
           'X-Foo': 'bar',
           Cookie: $document[0].cookie
         },
-        qs: {  param : 'value' }
+        qs: { param: 'value' }
       });
     });
 

@@ -28,9 +28,9 @@ angular.module('hsm')
 
     /**
      * Transforms incoming stream data to HsmCopytoolModel instances.
-     * @param {Array|undefined} newVal The new data.
+     * @param {Object} resp The response.
      */
-    return function transformer(resp) {
+    return function transformer (resp) {
       if (!_.isPlainObject(resp.body) )
         throw new Error('hsmCopytoolStreamTransformer expects resp.body to be an object!');
 

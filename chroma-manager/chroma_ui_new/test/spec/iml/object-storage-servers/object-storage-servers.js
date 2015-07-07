@@ -48,7 +48,7 @@ describe('ObjectStorageServers controller', function () {
   it('should setup the MdsStream', function () {
     expect(MdsStream.setup).toHaveBeenCalledOnceWith('objectStorageServers.data', $scope, {
       qs: {
-        role : 'OSS'
+        role: 'OSS'
       }
     });
   });

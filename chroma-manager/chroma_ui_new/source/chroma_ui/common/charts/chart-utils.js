@@ -43,7 +43,7 @@ angular.module('charts').factory('chartUtils', ['chartParamMixins', function (ch
     },
     /**
      * Convenience to get a node's bounding box.
-     * @param selection A d3 selection
+     * @param {Object} selection A d3 selection
      * @returns {Object}
      */
     getBBox: function getBBox(selection) {

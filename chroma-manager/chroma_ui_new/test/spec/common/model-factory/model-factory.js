@@ -132,7 +132,7 @@ describe('model factory', function () {
     $httpBackend.flush();
     $rootScope.$digest();
 
-    expect(SubTypeSpy).toHaveBeenCalledWith({foo : 'bar'});
+    expect(SubTypeSpy).toHaveBeenCalledWith({ foo: 'bar' });
   });
 
   it('should add methods to resources in a collection', function () {

@@ -43,11 +43,11 @@ describe('cpu usage controller', function () {
 
   it('should start the host stream', function () {
     expect(streams.hostStream.plan().start).toHaveBeenCalledOnceWith({
-      qs : {
-        unit : DURATIONS.MINUTES,
-        size : 10,
-        reduce_fn : 'average',
-        metrics : 'cpu_total,cpu_user,cpu_system,cpu_iowait'
+      qs: {
+        unit: DURATIONS.MINUTES,
+        size: 10,
+        reduce_fn: 'average',
+        metrics: 'cpu_total,cpu_user,cpu_system,cpu_iowait'
       }
     });
   });
@@ -59,8 +59,8 @@ describe('cpu usage controller', function () {
       qs: {
         unit: DURATIONS.HOURS,
         size: 5,
-        reduce_fn : 'average',
-        metrics : 'cpu_total,cpu_user,cpu_system,cpu_iowait'
+        reduce_fn: 'average',
+        metrics: 'cpu_total,cpu_user,cpu_system,cpu_iowait'
       }
     });
   });

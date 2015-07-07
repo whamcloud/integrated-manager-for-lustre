@@ -27,7 +27,7 @@ angular.module('fileSystem').factory('FileSystemStreamModel', ['formatBytes', 'd
 
   /**
    * Enhances file system data with model methods.
-   * @param value
+   * @param {Object} value
    * @constructor
    */
   function FileSystemStreamModel (value) {

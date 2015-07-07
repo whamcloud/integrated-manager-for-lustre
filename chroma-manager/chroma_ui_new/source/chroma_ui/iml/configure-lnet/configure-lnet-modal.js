@@ -87,7 +87,7 @@
             if (localChanged && remoteChanged)
               return {
                 params: {
-                  initial : getOption(initialRecord.nid.lnd_network),
+                  initial: getOption(initialRecord.nid.lnd_network),
                   remote: getOption(remoteRecord.nid.lnd_network)
                 },
                 type: 'conflict'

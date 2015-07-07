@@ -66,7 +66,7 @@ describe('get test host spark then', function () {
   it('should call sendPost', function () {
     expect(spark.sendPost).toHaveBeenCalledWith('/test_host', {
       json: {
-        objects: [ { address : 'address1' } ]
+        objects: [ { address: 'address1' } ]
       }
     });
   });
@@ -104,12 +104,12 @@ describe('get test host spark then', function () {
             {
               address: 'lotus-34vm5.iml.intel.com',
               status: [
-                { name : 'auth', value : true, uiName : 'Auth' },
-                { name : 'reverse_ping', value : false, uiName : 'Reverse ping' }
+                { name: 'auth', value: true, uiName: 'Auth' },
+                { name: 'reverse_ping', value: false, uiName: 'Reverse ping' }
               ]
             }
           ],
-          valid : false
+          valid: false
         }
       });
     });

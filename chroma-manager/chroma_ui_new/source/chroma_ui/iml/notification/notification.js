@@ -29,7 +29,7 @@
         var LIMIT = 99;
 
         $scope.notification = {
-          status : {},
+          status: {},
           /**
            * Returns the count or the limit if count > limit
            * @returns {Number}

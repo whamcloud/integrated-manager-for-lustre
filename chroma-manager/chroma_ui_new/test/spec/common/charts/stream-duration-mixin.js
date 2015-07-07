@@ -145,7 +145,7 @@ describe('stream duration mixin', function () {
 
     it('should set up params for an update', function () {
       expect(params).toEqual({
-        qs : {
+        qs: {
           update: true,
           begin: data[0].values[0].x.toISOString(),
           end: data[0].values[2].x.toISOString()

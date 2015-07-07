@@ -43,9 +43,9 @@ describe('space usage controller', function () {
 
   it('should start the target stream', function () {
     expect(streams.targetStream.plan().start).toHaveBeenCalledOnceWith({
-      qs : {
-        unit : DURATIONS.MINUTES,
-        size : 10,
+      qs: {
+        unit: DURATIONS.MINUTES,
+        size: 10,
         metrics: 'kbytestotal,kbytesfree'
       }
     });

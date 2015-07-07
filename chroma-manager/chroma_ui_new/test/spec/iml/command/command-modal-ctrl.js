@@ -114,7 +114,7 @@ describe('command modal', function () {
         controller: 'CommandModalCtrl',
         windowClass: 'command-modal',
         backdrop: 'static',
-        backdropClass : 'command-modal-backdrop',
+        backdropClass: 'command-modal-backdrop',
         resolve: {
           commands: [jasmine.any(Function)]
         }

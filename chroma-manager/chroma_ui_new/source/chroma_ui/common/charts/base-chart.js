@@ -54,7 +54,7 @@
 
           angular.element(window).on('resize', debounced);
 
-          if(scope.options && scope.options.setup) scope.options.setup(chart, d3, nv);
+          if (scope.options && scope.options.setup) scope.options.setup(chart, d3, nv);
 
           setChartViewBox();
 

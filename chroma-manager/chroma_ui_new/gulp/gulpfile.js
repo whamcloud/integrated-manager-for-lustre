@@ -30,7 +30,8 @@ var qualityFiles = files.js.source.concat(
   'test/mock/**/*.js',
   'test/*.js',
   '!source/chroma_ui/bower_components/**/*.js',
-  '!source/chroma_ui/vendor/**/*.js'
+  '!source/chroma_ui/vendor/**/*.js',
+  '!../ui-modules/**/*.js'
 );
 
 var options = minimist(process.argv.slice(2), { string: 'env' });

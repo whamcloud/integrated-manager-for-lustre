@@ -49,7 +49,7 @@ describe('pathMaxLength Filter', function() {
           cacheKey = test.maxLength + path;
 
 
-      describe('for path ' + path +' at length ' + test.maxLength, function() {
+      describe('for path ' + path + ' at length ' + test.maxLength, function() {
         var result, cachedResult;
 
         beforeEach(function() {

@@ -27,7 +27,7 @@ function ostBalanceTransformer(formatBytes) {
 
   /**
    * Transforms incoming stream data to a format nvd3 can use.
-   * @param {Array|undefined} newVal The new data.
+   * @param {Object} resp The response.
    */
   return function transformer(resp) {
     var newVal = resp.body;

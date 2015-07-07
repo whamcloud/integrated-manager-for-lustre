@@ -41,9 +41,9 @@ describe('heat map legend', function () {
 
     beforeEach(function () {
       defaultConfig = {
-        margin : { top : 5, right : 0, bottom : 5, left : 0 },
-        width : 200,
-        height : 30,
+        margin: { top: 5, right: 0, bottom: 5, left: 0 },
+        width: 200,
+        height: 30,
         formatter: _.identity,
         colorScale: d3.scale.linear.plan(),
         rightAlign: true

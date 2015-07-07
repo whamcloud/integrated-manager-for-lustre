@@ -25,9 +25,9 @@ angular.module('mdo').factory('mdoTransformer', [function mdoTransformerFactory(
 
   /**
    * Transforms incoming stream data to a format nvd3 can use.
-   * @param {Array|undefined} newVal The new data.
+   * @param {Object} resp The response.
    */
-  return function transformer(resp) {
+  return function transformer (resp) {
     var newVal = resp.body;
 
     if (!Array.isArray(newVal) )

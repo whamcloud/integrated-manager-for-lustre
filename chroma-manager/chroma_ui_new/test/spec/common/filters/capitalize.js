@@ -36,7 +36,7 @@ describe('Capitalize Filter', function () {
     var description = 'should convert %s to %s',
     allDescription = description + 'using all';
 
-    var desc = isAll ? allDescription: description;
+    var desc = isAll ? allDescription : description;
 
     return desc.sprintf(input, expected);
   }

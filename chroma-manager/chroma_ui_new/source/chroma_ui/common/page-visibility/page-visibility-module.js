@@ -27,7 +27,7 @@
 
   /**
    * Abstracts browser differences in the page visibility api.
-   * @param $document
+   * @param {Object} $document
    * @constructor
    */
   function PageVisibility($document) {
