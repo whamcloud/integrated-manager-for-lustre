@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -121,7 +121,7 @@ try:
     command = sys.argv[1]
     filename = sys.argv[2]
 except IndexError:
-    print "Usage: boilerplate.py <test|apply> <filename>"
+    print "Usage: boilerplate.py <test|apply|freshen> <filename>"
     sys.exit(-1)
 
 boiler_plate = BoilerPlate(filename)
@@ -131,8 +131,8 @@ if command == 'apply':
 elif command == 'freshen':
     boiler_plate.freshen_boilerplate()
 elif command == 'test':
-    if boiler_plate.find_boilerplate(boiler_plate.boilerplate) == -1:
-        print "Missing Copyright Boilerplate"
+    if boiler_plate.lines and boiler_plate.find_boilerplate(boiler_plate.boilerplate) == -1:
+        print "%s missing copyright boilerplate" % filename
         sys.exit(-2)
 else:
     print "Unknown command %s" % command
