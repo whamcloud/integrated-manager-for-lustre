@@ -57,6 +57,9 @@ set -ex
 mkdir $HOME/bin
 
 MANAGER_DIR=${MANAGER_DIR:-"$HOME/chroma_test_env/chroma/chroma-manager"}
+ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node/ziplocker"}
+CHROMA_EXTERNALS=${CHROMA_EXTERNALS:-"$HOME/chroma_test_env/chroma/chroma-externals"}
+ZIP_INSTALL_DEV=${ZIP_INSTALL_DEV:-"$ZIPLOCK_DIR/bin/zip-install-dev --overrides.ziplockDir=$CHROMA_EXTERNALS"}
 
 # Install Chromedriver
 LATEST_CHROMEDRIVER_RELEASE=$(curl -f http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
@@ -81,37 +84,30 @@ cd chroma/chroma-manager
 python tests/utils/pip_install_requirements.py ../chroma-externals/ ../chroma-externals/*.tar.gz
 
 # Install npm-based requirements
-cd ui-modules/node/ziplocker
-cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/
-./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../router/
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../srcmap-reverse
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../stub-daddy/
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../stub-daddy-client/
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../dirp/
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../req
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../../isomorphic/fp/
-../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd $MANAGER_DIR/ui-modules/isomorphic/obj/
-../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../../../realtime/
-../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
-cd ../ui-modules/node/view-server/
-../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../../../chroma_ui
-../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
-cd ../chroma_ui_new
-../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
-cd gulp
-../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
-cd $MANAGER_DIR/ui-modules/browser/socket-worker
-../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+cd $ZIPLOCK_DIR
+cp -r $CHROMA_EXTERNALS/ziplocker/node_modules/ ./node_modules/
+$ZIP_INSTALL_DEV
+
+PATHS_TO_INSTALL="ui-modules/node/router/
+ui-modules/node/srcmap-reverse
+ui-modules/node/stub-daddy/
+ui-modules/node/stub-daddy-client/
+ui-modules/node/dirp/
+ui-modules/node/req/
+ui-modules/isomorphic/fp/
+ui-modules/isomorphic/obj/
+realtime/
+ui-modules/node/view-server/
+chroma_ui/
+chroma_ui_new
+chroma_ui_new/gulp
+ui-modules/browser/socket-worker"
+
+for install_path in $PATHS_TO_INSTALL
+do
+    cd $MANAGER_DIR/$install_path
+    $ZIP_INSTALL_DEV
+done
 
 # Configure VNC server
 cd ~
