@@ -9,6 +9,16 @@ describe('pdsh parser', function () {
     parser = pdshParser;
   }));
 
+  var nameWithId = _.curry(function getNameWithId(name, id) {
+    return name.sprintf(id);
+  });
+
+  var idInObject = _.curry(function addIdToObject(name, obj, id) {
+    obj[nameWithId(name, id)] = 1;
+    return obj;
+  });
+
+
   var tests = [
     // single item without ranges
     {
@@ -55,28 +65,41 @@ describe('pdsh parser', function () {
     },
     // single item with single digit prefixed range
     {
-      expression: 'hostname[09-011]',
+      expression: 'hostname[09-11]',
       expanded: {
-        expansion: ['hostname09', 'hostname010', 'hostname011'],
-        sections: ['hostname09..011'],
+        expansion: ['hostname09', 'hostname10', 'hostname11'],
+        sections: ['hostname09..11'],
         expansionHash : {
           hostname09 : 1,
-          hostname010 : 1,
-          hostname011 : 1
+          hostname10 : 1,
+          hostname11 : 1
         }
       }
     },
     // single item with double digit prefixed range
     {
-      expression: 'hostname[009-0011]',
+      expression: 'hostname[009-011]',
       expanded: {
-        expansion: ['hostname009', 'hostname0010', 'hostname0011'],
-        sections: ['hostname009..0011'],
+        expansion: ['hostname009', 'hostname010', 'hostname011'],
+        sections: ['hostname009..011'],
         expansionHash : {
           hostname009 : 1,
-          hostname0010 : 1,
-          hostname0011 : 1
+          hostname010 : 1,
+          hostname011 : 1
         }
+      }
+    },
+    // long range with prefix
+    {
+      expression: 'hostname[001-999]',
+      expanded: {
+        expansion: _.range(1, 10).map(nameWithId('hostname00%s'))
+          .concat(_.range(10, 100).map(nameWithId('hostname0%s')))
+            .concat(_.range(100, 1000).map(nameWithId('hostname%s'))),
+        sections: ['hostname001..999'],
+        expansionHash: _.chain(_.range(1, 10).reduce(idInObject('hostname00%s'), {}))
+          .merge(_.range(10, 100).reduce(idInObject('hostname0%s'), {}))
+          .merge(_.range(100, 1000).reduce(idInObject('hostname%s'), {})).value()
       }
     },
     // single item with two ranges
@@ -211,6 +234,13 @@ describe('pdsh parser', function () {
         }
       }
     },
+    // no prefix to prefix should throw an error
+    {
+      expression: 'hostname[9-0011]',
+      expanded: {
+        errors: ['Number of digits must be consistent across padded entries']
+      }
+    },
     // Duplicate occurring when the difference between ranges is > 1. In this case, the duplicate
     // can't be detected because the expressions cannot be combined.
     {
@@ -275,7 +305,7 @@ describe('pdsh parser', function () {
         }
       }
     },
-    // Single item with prefixe range starting at 0
+    // Single item with prefix range starting at 0
     {
       expression: 'test[000-002].localdomain',
       expanded: {
@@ -310,6 +340,21 @@ describe('pdsh parser', function () {
           'hostname15.iml.com' : 1,
           'hostname16.iml.com' : 1,
           'hostname17.iml.com' : 1
+        }
+      }
+    },
+    // Padding with a single and double digit number
+    {
+      expression: 'hostname[06-10]',
+      expanded: {
+        expansion: ['hostname06', 'hostname07', 'hostname08', 'hostname09', 'hostname10'],
+        sections: ['hostname06..10'],
+        expansionHash : {
+          'hostname06' : 1,
+          'hostname07' : 1,
+          'hostname08' : 1,
+          'hostname09' : 1,
+          'hostname10' : 1
         }
       }
     },
@@ -369,18 +414,11 @@ describe('pdsh parser', function () {
         errors: ['Expression is invalid']
       }
     },
-    // Beginning and ending prefixes that don't match between a single and double digit number
-    {
-      expression: 'hostname[06-10]',
-      expanded: {
-        errors: ['Beginning and ending prefixes don\'t match']
-      }
-    },
     // Beginning and ending prefixes that don't match with two single digit numbers
     {
       expression: 'hostname[01-009]',
       expanded: {
-        errors: ['Beginning and ending prefixes don\'t match']
+        errors: ['Number of digits must be consistent across padded entries']
       }
     },
     // Having a closing brace before an opening brace
@@ -390,21 +428,21 @@ describe('pdsh parser', function () {
         errors: ['Expression is invalid']
       }
     },
-    // Goving over cap
+    // Going over cap
     {
       expression: 'hostname[1-50001].iml.com',
       expanded: {
         errors: ['The hostlist cannot contain more than 50000 entries.']
       }
     },
-    // Goving over cap using multiple ranges in a single expression
+    // Going over cap using multiple ranges in a single expression
     {
       expression: 'hostname[1-25001].iml[1-2].com',
       expanded: {
         errors: ['The hostlist cannot contain more than 50000 entries.']
       }
     },
-    // Goving over cap using multiple ranges in multiple expressions
+    // Going over cap using multiple ranges in multiple expressions
     {
       expression: 'hostname[1-20000].iml[1-2].com,host[1-10001].iml[1].com',
       expanded: {

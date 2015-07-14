@@ -51,7 +51,7 @@
         EXPRESSION_INVALID: 'Expression is invalid',
         INDEX_OF: 'indexOf',
         LAST_INDEX_OF: 'lastIndexOf',
-        PREFIXES_DONT_MATCH: 'Beginning and ending prefixes don\'t match',
+        INCONSISTENT_DIGITS: 'Number of digits must be consistent across padded entries',
         EXPRESSION_OVER_CAP: 'The hostlist cannot contain more than 50000 entries.',
         CAP: 50000
       });
@@ -255,8 +255,8 @@
        * @example
        * // returns ['hostname[5-7].iml[1-2].com', 'hostname[10-12].iml[2-3]']
        * ['hostname[5-7].iml[1-2].com', 'hostname[10-12].iml[2-3]'].reduce(combineSimilarExpressions)
-       * @param prevExpressions
-       * @param curExpression
+       * @param {Array} prevExpressions
+       * @param {String} curExpression
        * @returns {*}
        */
       function combineSimilarExpressions (prevExpressions, curExpression) {
@@ -721,8 +721,8 @@
       /**
        * Parses an item and returns an array representation of the items
        * @example
-       * // returns ['09', '010', '011']
-       * parseItem('09-011')
+       * // returns ['09', '10', '11']
+       * parseItem('09-11')
        * @param {String} item
        * @returns {Array}
        */
@@ -741,7 +741,7 @@
        * Parses an item and returns the total length
        * @example
        * // returns 3
-       * parseItemIntoTotalLength('09-011')
+       * parseItemIntoTotalLength('09-11')
        * @param {String} rangeComponent
        * @returns {Number}
        */
@@ -771,12 +771,14 @@
        * @returns {Array}
        */
       function generateRange (range) {
-        // is there a prefix in the range? We would only need to check the first value in the range array
+        // is there a prefix in the range?
         var prefixBeginning = getPrefix(range[0]);
         var prefixEnding = getPrefix(range[1]);
+        var valid = (range[0].length === range[1].length && prefixBeginning.length > 0) ||
+          (prefixBeginning.length === 0 && prefixEnding.length === 0);
 
-        return maybe(referenceEqualTo(prefixBeginning, prefixEnding), generatePrefixedRanges,
-          _.partial(addPrefixNotEqualError, errorCollection.errors, constants))(range, prefixBeginning) || [];
+        return maybe(isTrue(valid), generatePrefixedRanges,
+          _.partial(addInconsistentDigitsError, errorCollection.errors, constants))(range, prefixBeginning) || [];
       }
 
       /**
@@ -789,7 +791,7 @@
        */
       function generatePrefixedRanges (range, prefix) {
         return _.range(range[0], +range[1] + 1)
-          .map(prefixString(prefix));
+          .map(prefixString(prefix, range[0].length));
       }
 
       /**
@@ -797,16 +799,16 @@
        * @param {Array} errors
        * @param {Object} constants
        */
-      function addPrefixNotEqualError (errors, constants) {
-        if (!_.contains(errors, constants.PREFIXES_DONT_MATCH))
-          addErrorObject(constants.PREFIXES_DONT_MATCH);
+      function addInconsistentDigitsError (errors, constants) {
+        if (!_.contains(errors, constants.INCONSISTENT_DIGITS))
+          addErrorObject(constants.INCONSISTENT_DIGITS);
       }
 
       /**
        * Retrieves the prefix given an item
        * @example
        * Given item = 001, the value returned would be "00"
-       * @param item
+       * @param {String} item
        * @returns {string}
        */
       function getPrefix (item) {
@@ -820,16 +822,24 @@
       /**
        * HOF that prefixes a specified item with the prefix passed in.
        * @param {String} prefix
+       * @param {Number} numDigits The number of digits to use on the range
        * @returns {Function}
        */
-      function prefixString (prefix) {
+      function prefixString (prefix, numDigits) {
         /**
          * Prefixes the specified item with the prefix passed in above.
-         * @param {String} item
+         * @param {Number} item
          * @returns {String}
          */
         return function innerPrefixString (item) {
-          return prefix + item;
+          item = item + '';
+          if (prefix === '')
+            return item;
+
+          var prefixesToAdd = numDigits - item.length;
+          var prefixToUse = _.times(prefixesToAdd, _.partial(_.identity, 0)).join('');
+
+          return prefixToUse + item;
         };
       }
 
