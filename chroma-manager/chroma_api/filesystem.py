@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -314,7 +314,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
                             help_text = "The MGT on which this file system is registered")
 
-    def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
+    def _get_stat_simple(self, bundle, klass, stat_name, factor = 1.0):
         try:
             return bundle.obj.metrics.fetch_last(klass, fetch_metrics=[stat_name])[1][stat_name] * factor
         except (KeyError, IndexError, TypeError):
@@ -341,9 +341,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
 
     def dehydrate_files_total(self, bundle):
         return self._get_stat_simple(bundle, ManagedMdt, 'filestotal')
-
-    def dehydrate_client_count(self, bundle):
-        return self._get_stat_simple(bundle, ManagedMdt, 'client_count')
 
     def get_hsm_control_params(self, mdt, bundle):
         all_params = set(HSM_CONTROL_PARAMS.keys())
@@ -381,6 +378,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
             bundle.data['hsm_control_params'] = self.get_hsm_control_params(mdt, bundle)
         except StopIteration:
             pass
+
+        # And here we calculate the client count, because we for sure had the number of mdts.
+        bundle.data['client_count'] = self._get_stat_simple(bundle, ManagedMdt, 'client_count', factor=1.0 / len(bundle.data['mdts']))
 
         return bundle
 
