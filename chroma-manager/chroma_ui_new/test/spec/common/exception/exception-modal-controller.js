@@ -91,15 +91,15 @@ describe('Exception modal controller', function () {
     createController({cause: null, exception: responseError});
 
     expect($scope.exceptionModal.messages).toEqual([
+      {name: 'name', value: 'Error'},
+      {name: 'message', value: 'Response Error'},
+      {name: 'Client Stack Trace', value: 'ERROOR!'},
       {name: 'Response Status', value: 500},
       {name: 'Response Headers', value: '{}'},
       {name: 'method', value: 'POST'},
       {name: 'url', value: '/api/foo/bar/'},
       {name: 'Request Headers', value: '{}'},
-      {name: 'data', value: '{}'},
-      {name: 'name', value: 'Error'},
-      {name: 'message', value: 'Response Error'},
-      {name: 'Client Stack Trace', value: 'ERROOR!'}
+      {name: 'data', value: '{}'}
     ]);
   });
 

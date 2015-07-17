@@ -23,9 +23,11 @@
 (function () {
   'use strict';
 
-  function ExceptionModalCtrl ($scope, $document, $parse, exception, stackTraceContainsLineNumber,
-                               sendStackTraceToRealTime) {
+  angular.module('exception')
+    .controller('ExceptionModalCtrl', ['$scope', '$document', 'exception',
+      'stackTraceContainsLineNumber', 'sendStackTraceToRealTime', ExceptionModalCtrl]);
 
+  function ExceptionModalCtrl ($scope, $document, exception, stackTraceContainsLineNumber, sendStackTraceToRealTime) {
     $scope.exceptionModal = {
       messages: [],
       reload: function reload () {
@@ -33,34 +35,84 @@
       }
     };
 
-    $scope.exceptionModal.messages = new PropLookup($parse, exception)
-      .add('cause')
-      .add({name: 'statusCode', alias: 'Status Code'})
-      .path('response')
-      .add({name: 'status', alias: 'Response Status'})
-      .path('response.data')
-      .add({name: 'error_message', alias: 'Error Message'})
-      .add({name: 'traceback', alias: 'Server Stack Trace', transform: lookupAnd(multiLineTrim)})
-      .path('response')
-      .add({name: 'headers', alias: 'Response Headers', transform: lookupAnd(stringify)})
-      .path('response.config')
-      .add('method')
-      .add('url')
-      .add({name: 'headers', alias: 'Request Headers', transform: lookupAnd(stringify)})
-      .add({name: 'data', transform: lookupAnd(stringify)})
-      .reset()
-      .add('name')
-      .add('message')
-      .add({name: 'stack', alias: 'Client Stack Trace', transform: lookupAnd(multiLineTrim)})
-      .get();
-
     if (!exception.statusCode && stackTraceContainsLineNumber(exception)) {
       $scope.exceptionModal.loadingStack = true;
-      sendStackTraceToRealTime(exception).then(function updateData (newException) {
-        $scope.exceptionModal.loadingStack = false;
-        _.find($scope.exceptionModal.messages, {name: 'Client Stack Trace'}).value = newException.stack;
-      });
+      sendStackTraceToRealTime(exception)
+        .then(function updateData (newException) {
+          $scope.exceptionModal.loadingStack = false;
+          $scope.exceptionModal.messages
+            .filter(fp.eqLens(fp.lensProp('name'))({name: 'Client Stack Trace'}))
+            .map(fp.lensProp('value').set(newException.stack));
+
+          if (!$scope.$$phase)
+            $scope.$digest();
+        });
     }
+
+    /**
+     * Stringify's a value
+     * @param {*} value
+     * @returns {String}
+     */
+    var stringify = lookupAnd(function stringify (value) {
+      return JSON.stringify(value, null, 2);
+    });
+
+    /**
+     * Multi line trim
+     * @param {String} value
+     * @returns {String}
+     */
+    var multiLineTrim = lookupAnd(function multiLineTrim (value) {
+      return value.split('\n')
+        .map(function (line) {
+          return line.trim();
+        }).join('\n');
+    });
+
+    var buildMessage = fp.curry(5, function buildMessage (arr, err, path, top, opts) {
+      opts = _.clone(opts || {});
+      _.defaults(opts, {
+        transform: fp.identity,
+        name: top
+      });
+
+      var item = fp.safe(1, path, undefined)(err);
+
+      if (!item)
+        return;
+
+      arr.push({
+        name: opts.name,
+        value: opts.transform(item)
+      });
+    });
+
+    var addSection = buildMessage($scope.exceptionModal.messages, exception);
+
+    addSection(fp.lensProp('name'), 'name', {});
+    addSection(fp.lensProp('message'), 'message', {});
+    addSection(fp.lensProp('statusCode'), 'statusCode', { name: 'Status Code' });
+    addSection(fp.lensProp('stack'), 'stack', { name: 'Client Stack Trace', transform: multiLineTrim });
+    addSection(fp.lensProp('cause'), 'cause', {});
+
+    var responseLens = fp.lensProp('response');
+    addSection(fp.flowLens(responseLens, fp.lensProp('status')), 'status', { name: 'Response Status' });
+    addSection(fp.flowLens(responseLens, fp.lensProp('headers')), 'headers', { name: 'Response Headers',
+      transform: stringify });
+
+    var dataLens = fp.flowLens(responseLens, fp.lensProp('data'));
+    addSection(fp.flowLens(dataLens, fp.lensProp('error_message')), 'error_message', { name: 'Error Message' });
+    addSection(fp.flowLens(dataLens, fp.lensProp('traceback')), 'traceback', { name: 'Server Stack Trace',
+      transform: multiLineTrim });
+
+    var configLens = fp.flowLens(responseLens, fp.lensProp('config'));
+    addSection(fp.flowLens(configLens, fp.lensProp('method')), 'method', {});
+    addSection(fp.flowLens(configLens, fp.lensProp('url')), 'url', {});
+    addSection(fp.flowLens(configLens, fp.lensProp('headers')), 'headers', { name: 'Request Headers',
+      transform: stringify });
+    addSection(fp.flowLens(configLens, fp.lensProp('data')), 'data', { transform: stringify });
+
 
     /**
      * HOF Lookup and do something
@@ -68,9 +120,7 @@
      * @returns {Function}
      */
     function lookupAnd (func) {
-      return function (name, spot) {
-        var value = spot[name];
-
+      return function (value) {
         if (!value) return false;
 
         try {
@@ -80,143 +130,49 @@
         }
       };
     }
-
-    /**
-     * Stringify's a value
-     * @param {*} value
-     * @returns {String}
-     */
-    function stringify (value) {
-      return JSON.stringify(value, null, 2);
-    }
-
-    /**
-     * Multi line trim
-     * @param {String} value
-     * @returns {String}
-     */
-    function multiLineTrim (value) {
-      return value.split('\n').map(function (line) {
-        return line.trim();
-      }).join('\n');
-    }
   }
+
+  var regex = /^.+\:\d+\:\d+.*$/;
 
   angular.module('exception')
-    .controller('ExceptionModalCtrl', ['$scope', '$document', '$parse', 'exception',
-      'stackTraceContainsLineNumber', 'sendStackTraceToRealTime', ExceptionModalCtrl])
-    .factory('stackTraceContainsLineNumber', [function stackTraceContainsLineNumbers () {
-      var regex = /^.+\:\d+\:\d+.*$/;
-
-      return function stackTraceContainsLineNumbers (stackTrace) {
-        return stackTrace.stack.split('\n')
-          .some(function verifyStackTraceContainsLineNumbers (val) {
-            var match = val.trim().match(regex);
-            return (match == null) ? false : match.length > 0;
-          });
-      };
-    }]).factory('sendStackTraceToRealTime', ['$rootScope', 'socket', '$q',
+    .value('stackTraceContainsLineNumber', function stackTraceContainsLineNumbers (stackTrace) {
+      return stackTrace.stack.split('\n')
+        .some(function verifyStackTraceContainsLineNumbers (val) {
+          var match = val.trim().match(regex);
+          return (match == null) ? false : match.length > 0;
+        });
+    })
+    .factory('sendStackTraceToRealTime', ['$rootScope', 'socket', '$q',
       function sendStackTraceToRealTime ($rootScope, socket, $q) {
 
-      /**
-       * Sends the stack trace to the real time service
-       * @param {Object} exception
-       * @returns {$q.promise}
-       */
-      return function sendStackTraceToRealTime (exception) {
-        var deferred = $q.defer();
-        var spark = socket('request');
+        /**
+         * Sends the stack trace to the real time service
+         * @param {Object} exception
+         * @returns {$q.promise}
+         */
+        return function sendStackTraceToRealTime (exception) {
+          var deferred = $q.defer();
+          var spark = socket('request');
 
-        spark.send('req', {
-            path: '/srcmap-reverse',
-            options: {
-              method: 'post',
-              cause: exception.cause,
-              message: exception.message,
-              stack: exception.stack,
-              url: exception.url
-            }
-          },
-          function processResponse (response) {
-            // Keep the original stack trace if reformatting of the stack trace failed.
-            if (response.body && response.body.data)
-              exception.stack = response.body.data;
+          spark.send('req', {
+              path: '/srcmap-reverse',
+              options: {
+                method: 'post',
+                cause: exception.cause,
+                message: exception.message,
+                stack: exception.stack,
+                url: exception.url
+              }
+            },
+            function processResponse (response) {
+              // Keep the original stack trace if reformatting of the stack trace failed.
+              if (response.body && response.body.data)
+                exception.stack = response.body.data;
 
-            deferred.resolve(exception);
-          });
+              deferred.resolve(exception);
+            });
 
-        return deferred.promise;
-      };
-    }]);
-
-  /**
-   * Helper class that builds a message list from a given object
-   * @param {function} $parse
-   * @param {object} obj
-   * @constructor
-   */
-  function PropLookup ($parse, obj) {
-    this._$parse = $parse;
-    this._obj = obj;
-    this.messages = [];
-
-    this.reset();
-  }
-
-  /**
-   * Moves the spot to the parsed expression on the object.
-   * @param {string} expression
-   * @returns {PropLookup} This instance for chaining.
-   */
-  PropLookup.prototype.path = function path (expression) {
-    this.spot = this._$parse(expression)(this._obj);
-
-    return this;
-  };
-
-  /**
-   * Resets the spot to the top of the object.
-   * @returns {PropLookup} This instance for chaining.
-   */
-  PropLookup.prototype.reset = function path () {
-    this.spot = this._obj;
-
-    return this;
-  };
-
-  /**
-   * Adds the item to the messages if it is found.
-   * @param {string|object} item
-   * @returns {PropLookup} This instance for chaining
-   */
-  PropLookup.prototype.add = function add (item) {
-    if (!this.spot) return this;
-
-    if (_.isString(item)) item = {name: item};
-
-    if (!_.isPlainObject(item)) return this;
-
-    _.defaults(item, {
-      transform: function (name, spot) {
-        return spot[name];
-      },
-      alias: item.name
-    });
-
-    var value = item.transform(item.name, this.spot);
-
-    if (value)
-      this.messages.push({name: item.alias, value: value});
-
-    return this;
-  };
-
-  /**
-   * Returns the list of messages.
-   * @returns {Array} The messages.
-   */
-  PropLookup.prototype.get = function get () {
-    return this.messages;
-  };
-
+          return deferred.promise;
+        };
+      }]);
 }());
