@@ -98,6 +98,8 @@ cd ../req
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../isomorphic/fp/
 ../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+cd $MANAGER_DIR/ui-modules/isomorphic/obj/
+../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../../realtime/
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 cd ../ui-modules/node/view-server/
