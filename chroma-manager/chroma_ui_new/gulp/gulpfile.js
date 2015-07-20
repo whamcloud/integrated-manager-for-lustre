@@ -110,7 +110,7 @@ gulp.task('jshint', function jsHint () {
   return gulp.src(qualityFiles, { cwd: '../' })
     .pipe(plumber())
     .pipe(cache('linting'))
-    .pipe(jshint('../.jshintrc'))
+    .pipe(jshint())
     .pipe(jshint.reporter(stylish));
 });
 

@@ -21,6 +21,7 @@
       "source/chroma_ui/iml*/help.js",
       "source/chroma_ui/common*/**/*-module.js",
       "source/chroma_ui/iml*/**/*-module.js",
+      "../ui-modules*/angular/src/**/*-module.js",
       "source/chroma_ui/common*/**/*.js",
       "source/chroma_ui/iml*/**/*.js",
       "../ui-modules*/angular/src/**/*.js"
