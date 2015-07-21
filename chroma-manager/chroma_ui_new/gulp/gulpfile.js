@@ -1,22 +1,23 @@
 'use strict';
 
+var PassThrough = require('stream').PassThrough;
+var path = require('path');
 var del = require('del');
 var gulp = require('gulp');
 var cache = require('gulp-cached');
+var remember = require('gulp-remember');
+var less = require('gulp-less');
 var csso = require('gulp-csso');
-var gulpIf = require('gulp-if');
+var mergeStream = require('merge-stream');
+var order = require('gulp-order');
 var injector = require('gulp-inject');
 var jscs = require('gulp-jscs');
 var jshint = require('gulp-jshint');
-var less = require('gulp-less');
+var stylish = require('jshint-stylish');
 var minifyHtml = require('gulp-minify-html');
 var ngHtml2Js = require('gulp-ng-html2js');
 var plumber = require('gulp-plumber');
 var rev = require('gulp-rev');
-var stylish = require('jshint-stylish');
-var minimist = require('minimist');
-var streamqueue = require('streamqueue');
-
 var sourcemaps = require('gulp-sourcemaps');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
@@ -24,134 +25,40 @@ var gulpPrimus = require('./lib/gulp-primus');
 var iifeWrap = require('./lib/gulp-iife-wrap');
 var annotate = require('./lib/gulp-annotate');
 var ngAnnotate = require('gulp-ng-annotate');
+var clone = require('gulp-clone');
+var glob2base = require('glob2base');
+var Glob = require('glob').Glob;
+var anymatch = require('anymatch');
+var files = require('./gulp-src-globs.json');
+var fp = require('fp');
 
-var files = require('../gulp-src-globs.json');
-var qualityFiles = files.js.source.concat(
-  'test/spec/**/*.js',
-  'test/mock/**/*.js',
-  'test/*.js',
-  '!source/chroma_ui/bower_components/**/*.js',
-  '!source/chroma_ui/vendor/**/*.js',
-  '!../ui-modules/**/*.js'
-);
+var writeToDest = fp.curry(2, gulp.dest)(fp.__, { cwd: '../../chroma_ui' });
+var writeToStatic = writeToDest.bind(null, 'static/chroma_ui');
+var getSource = fp.curry(2, gulp.src)(fp.__, { cwd: '../' });
 
-var options = minimist(process.argv.slice(2), { string: 'env' });
-var isProduction = (options.env === 'production');
+function buildPrimusClient () {
+  return gulpPrimus().on('error', function handleError (error) {
+      /* jshint validthis: true */
+      console.error(error);
+      this.emit('end');
+    }
+  );
+}
 
-gulp.task('default', ['static', 'clean-static'], function buildApp () {
-  var scripts = getJavaScripts()
+function buildJs () {
+  return getSource(files.js.source)
     .pipe(plumber())
+    .pipe(cache('scripts'))
     .pipe(ngAnnotate({ add: true }))
-    .pipe(gulpIf(isProduction, annotate))
-    .pipe(gulpIf(isProduction, iifeWrap))
-    .pipe(gulpIf(isProduction, sourcemaps.init()))
-    .pipe(gulpIf(isProduction, concat('built.js')))
-    .pipe(gulpIf(isProduction, uglify({ compress: true, screw_ie8: true, mangle: true })))
-    .pipe(gulpIf(isProduction, rev()))
-    .pipe(gulpIf(isProduction, sourcemaps.write('.')))
-    .pipe(gulp.dest('static/chroma_ui', { cwd: '../../chroma_ui' }));
-
-  var lessFile = compileLess()
-    .pipe(plumber())
-    .pipe(gulpIf(isProduction, rev()))
-    .pipe(gulpIf(isProduction, csso()))
-    .pipe(gulp.dest('static/chroma_ui/styles', { cwd: '../../chroma_ui' }));
-
-  return gulp.src(files.templates.server.index, { cwd: '../' })
-    .pipe(plumber())
-    .pipe(injector(lessFile))
-    .pipe(injector(scripts))
-    .pipe(gulp.dest('templates/new', { cwd: '../../chroma_ui' }));
-});
-
-
-/**
- * Watch files for changes.
- * Any source file change triggers a rebuild.
- */
-gulp.task('watch', ['default'], function watcher () {
-  var sourceFiles = files.js.source
-    .concat(files.less.source)
-    .concat(files.less.imports)
-    .concat(files.assets.fonts)
-    .concat(files.assets.images)
-    .concat(files.templates.angular.source)
-    .concat(files.templates.server.index);
-
-  gulp.watch(sourceFiles, { cwd: '../' }, ['default']);
-});
-
-/*
- * Move static resources for distributable
- */
-gulp.task('static', ['clean-static'], function staticBuild () {
-  return gulp.src([files.assets.fonts, files.assets.images], { cwd: '../', base: '../source' })
-    .pipe(gulp.dest('static', { cwd: '../../chroma_ui' }));
-});
-
-/**
- * Clean out the static dir
- * @param {Function} cb
- */
-gulp.task('clean-static', function cleanStatic (cb) {
-  del(['../../chroma_ui/static/chroma_ui/**/*'], { force: true }, cb);
-});
-
-
-/**
- * Runs code quality tools.
- */
-gulp.task('quality', ['jscs', 'jshint']);
-
-/**
- * Lint and report on files.
- */
-gulp.task('jshint', function jsHint () {
-  return gulp.src(qualityFiles, { cwd: '../' })
-    .pipe(plumber())
-    .pipe(cache('linting'))
-    .pipe(jshint())
-    .pipe(jshint.reporter(stylish));
-});
-
-/**
- * Check JavaScript code style with jscs
- */
-gulp.task('jscs', function jsCs () {
-  return gulp.src(qualityFiles, { cwd: '../' })
-    .pipe(plumber())
-    .pipe(cache('codestylechecking'))
-    .pipe(jscs('../.jscsrc'));
-});
-
-/**
- * Logs errors and ends the stream.
- * @param {Error} error
- */
-function handleError (error) {
-  /* jshint validthis: true */
-  console.error(error);
-  this.emit('end');
+    .pipe(annotate())
+    .pipe(iifeWrap())
+    .pipe(plumber.stop());
 }
 
-/**
- * Gets the JavaScript files.
- * @returns {Object}
- */
-function getJavaScripts () {
-  var primusClient = gulpPrimus().on('error', handleError);
-  var javaScriptSourceFiles = gulp.src(files.js.source, { cwd: '../' });
+var buildAssets = getSource.bind(null, [files.assets.fonts, files.assets.images]);
 
-  return streamqueue({ objectMode: true }, primusClient, javaScriptSourceFiles, compileTemplates())
-    .on('error', handleError);
-}
-
-/**
- * Compiles Less files.
- * @returns {Object}
- */
-function compileLess () {
-  return gulp.src(files.less.imports, { cwd: '../' })
+function buildLess () {
+  return getSource(files.less.imports)
     .pipe(plumber())
     .pipe(less({
       relativeUrls: false,
@@ -161,13 +68,10 @@ function compileLess () {
     .pipe(plumber.stop());
 }
 
-/**
- * Compiles templates.
- * @returns {Object}
- */
-function compileTemplates () {
-  return gulp.src(files.templates.angular.source, { cwd: '../' })
+function buildTemplates () {
+  return getSource(files.templates.angular.source)
     .pipe(plumber())
+    .pipe(cache('scripts'))
     .pipe(minifyHtml({
       quotes: true,
       empty: true
@@ -179,3 +83,236 @@ function compileTemplates () {
     }))
     .pipe(plumber.stop());
 }
+
+var toStatic = fp.curry(3, function toStatic (type, filepath, file) {
+  return injector.transform.html[type]('/static/chroma_ui/' + file.relative);
+});
+
+function injectFiles (jsStream, lessStream) {
+  return getSource(files.templates.server.index)
+    .pipe(plumber())
+    .pipe(injector(lessStream, {
+      transform: toStatic('css')
+    }))
+    .pipe(injector(jsStream, {
+      transform: toStatic('js')
+    }))
+    .pipe(writeToDest('templates/new'))
+    .pipe(plumber.stop());
+}
+
+var sources = ['**/primus-client/*.js']
+  .concat(files.js.source);
+var orderJsFiles = order.bind(null, sources, { base: '../' });
+
+gulp.task('clean', function clean (cb) {
+  del(['../../chroma_ui/static/chroma_ui/**/*'], { force: true }, cb);
+});
+
+gulp.task('dev', ['clean'], function devTask () {
+  var primusClientStream = buildPrimusClient();
+  var jsStream = buildJs();
+  var templatesStream = buildTemplates();
+  var lessStream = buildLess();
+  var assetsStream = buildAssets();
+
+  var merged = mergeStream(primusClientStream, jsStream, templatesStream);
+
+  var statics = mergeStream(
+    merged.pipe(clone()),
+    lessStream.pipe(clone()),
+    assetsStream
+  ).pipe(writeToStatic());
+
+  var ordered = merged
+    .pipe(orderJsFiles())
+    .pipe(remember('scripts'));
+
+  var indexStream = injectFiles(ordered, lessStream);
+
+  return mergeStream(indexStream, statics);
+});
+
+gulp.task('prod', ['clean'], function prodTask () {
+  var primusClientStream = buildPrimusClient();
+  var jsStream = buildJs();
+  var templatesStream = buildTemplates();
+  var assetsStream = buildAssets();
+
+  var lessStream = buildLess()
+    .pipe(plumber())
+    .pipe(rev())
+    .pipe(csso())
+    .pipe(plumber.stop());
+
+  var merged = mergeStream(primusClientStream, jsStream, templatesStream)
+    .pipe(plumber())
+    .pipe(orderJsFiles())
+    .pipe(sourcemaps.init())
+    .pipe(concat('built.js'))
+    .pipe(uglify({ compress: true, screw_ie8: true, mangle: true }))
+    .pipe(rev())
+    .pipe(sourcemaps.write('.'))
+    .pipe(plumber.stop());
+
+  var statics = mergeStream(
+    merged.pipe(clone()),
+    lessStream.pipe(clone()),
+    assetsStream
+  ).pipe(writeToStatic());
+
+  var indexStream = injectFiles(merged, lessStream);
+
+  return mergeStream(indexStream, statics);
+});
+
+var lessSrc = gulp.src.bind(null, files.less.imports, {
+  read: false,
+  cwd: '../'
+});
+
+gulp.task('incremental-js', function () {
+  var jsFiles = buildJs();
+
+  jsFiles
+    .pipe(clone())
+    .pipe(writeToStatic());
+
+  jsFiles = jsFiles
+    .pipe(remember('scripts'))
+    .pipe(orderJsFiles());
+
+  return injectFiles(jsFiles, lessSrc());
+});
+
+gulp.task('incremental-templates', function () {
+  var jsFiles = buildTemplates();
+
+  jsFiles
+    .pipe(clone())
+    .pipe(writeToStatic());
+
+  jsFiles = jsFiles
+    .pipe(remember('scripts'))
+    .pipe(orderJsFiles());
+
+  return injectFiles(jsFiles, lessSrc());
+});
+
+gulp.task('incremental-less', function () {
+  var lessFile = buildLess();
+
+  var p = new PassThrough();
+
+  var jsFiles = p
+    .pipe(remember('scripts'));
+
+  var written = mergeStream(jsFiles.pipe(clone()), lessFile.pipe(clone()))
+    .pipe(writeToStatic());
+
+  jsFiles = jsFiles
+    .pipe(orderJsFiles());
+
+  var s = injectFiles(jsFiles, lessFile);
+
+  p.end();
+
+  return mergeStream(s, written);
+});
+
+gulp.task('incremental-assets', function () {
+  return buildAssets()
+    .pipe(writeToStatic());
+});
+
+var getDest = fp.curry(3, function getDest (globs, filePath, opts) {
+  var sourcePath = path.relative(opts.cwd, filePath);
+  var index = anymatch(globs, sourcePath, true);
+  var glob = globs[index];
+  var fileBase = path.resolve(opts.cwd, glob2base(new Glob(glob)));
+  var basePath = path.resolve(opts.destCwd);
+  var commonPath = path.relative(fileBase, filePath);
+
+  return path.resolve(basePath, commonPath);
+});
+
+gulp.task('watch', ['dev'], function () {
+  var watchCwd = fp.curry(3, gulp.watch.bind(gulp))(fp.__, {
+    cwd: '../'
+  });
+  var toDest = getDest(fp.__, fp.__, {
+    cwd: '../',
+    destCwd: '../../chroma_ui/static/chroma_ui'
+  });
+
+
+  var jsWatch = watchCwd(files.js.source, ['incremental-js']);
+  jsWatch.on('change', function handleChange (ev) {
+    if (ev.type !== 'deleted')
+      return;
+
+    delete cache.caches.scripts[ev.path];
+    remember.forget('scripts', ev.path);
+
+    var dest = toDest(files.js.source, ev.path);
+    del.sync(dest, { force: true });
+  });
+
+  var replaceHtml = fp.invokeMethod('replace', [/\.html$/, '.js']);
+  var templateWatch = watchCwd(files.templates.angular.source, ['incremental-templates']);
+  templateWatch.on('change', function handleChange (ev) {
+    if (ev.type !== 'deleted')
+      return;
+
+    var path = replaceHtml(ev.path);
+
+    delete cache.caches.scripts[ev.path];
+    remember.forget('scripts', path);
+
+    var toDestAndReplace = fp.flow(toDest(files.templates.angular.source), replaceHtml);
+    del.sync(toDestAndReplace(path), { force: true });
+  });
+
+  var lessFiles = files.less.source
+    .concat(files.less.imports);
+  watchCwd(lessFiles, ['incremental-less']);
+
+  var assets = [files.assets.fonts]
+    .concat(files.assets.images);
+  var assetWatch = watchCwd(assets, ['incremental-assets']);
+  assetWatch.on('change', function handleChange (ev) {
+    if (ev.type !== 'deleted')
+      return;
+
+    var dest = toDest(assets, ev.path);
+    del.sync(dest, { force: true });
+  });
+
+  watchCwd(files.templates.server.index, ['incremental-templates']);
+});
+
+var qualitySource = getSource.bind(null, files.js.source.concat(
+  'test/spec/**/*.js',
+  'test/mock/**/*.js',
+  'test/*.js',
+  '!source/chroma_ui/bower_components/**/*.js',
+  '!source/chroma_ui/vendor/**/*.js',
+  '!../ui-modules/**/*.js'
+));
+
+gulp.task('quality', ['jscs', 'jshint']);
+
+gulp.task('jshint', function jsHint () {
+  return qualitySource()
+    .pipe(plumber())
+    .pipe(jshint())
+    .pipe(jshint.reporter(stylish))
+    .pipe(plumber.stop());
+});
+
+gulp.task('jscs', function jsCs () {
+  return qualitySource()
+    .pipe(plumber())
+    .pipe(jscs('../.jscsrc'))
+    .pipe(plumber.stop());
+});

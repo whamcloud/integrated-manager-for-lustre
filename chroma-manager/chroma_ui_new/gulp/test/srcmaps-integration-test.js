@@ -11,7 +11,7 @@ describe('Srcmapped file', function () {
 
   beforeAll(function createSrcMap (done) {
     gulp = path.resolve(__dirname + '/../node_modules/.bin/gulp');
-    contents = exec(gulp + ' default --env production');
+    contents = exec(gulp + ' prod');
     contents.stdout.setEncoding('utf8');
 
     λ(contents.stdout)

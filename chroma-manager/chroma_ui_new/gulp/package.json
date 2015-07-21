@@ -5,29 +5,35 @@
   "description": "Gulp Tasks for the GUI",
   "author": "IML Team",
   "scripts": {
-    "build": "gulp --env production",
-    "dev": "gulp",
+    "build": "gulp prod",
+    "dev": "gulp dev",
     "watch": "gulp watch",
     "test": "JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test jasmine",
     "zipdev": "../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'",
     "ziplock": "../../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../../chroma-externals/'"
   },
   "devDependencies": {
+    "anymatch": "1.3.0",
     "del": "1.2.0",
     "from": "0.1.3",
+    "fp": "file:../../ui-modules/isomorphic/fp",
+    "glob": "5.0.14",
+    "glob2base": "0.0.12",
     "gulp": "3.9.0",
     "gulp-cached": "1.1.0",
+    "gulp-clone": "1.0.0",
     "gulp-concat": "2.6.0",
     "gulp-csso": "1.0.0",
-    "gulp-if": "1.2.5",
     "gulp-inject": "1.5.0",
     "gulp-jscs": "1.6.0",
     "gulp-jshint": "1.11.2",
     "gulp-less": "3.0.3",
     "gulp-minify-html": "1.0.4",
-    "gulp-ng-annotate": "1.0.0",
+    "gulp-ng-annotate": "1.1.0",
     "gulp-ng-html2js": "0.2.0",
+    "gulp-order": "1.1.1",
     "gulp-plumber": "1.0.1",
+    "gulp-remember": "0.3.0",
     "gulp-rev": "5.1.0",
     "gulp-sourcemaps": "1.5.2",
     "gulp-uglify": "1.2.0",
@@ -36,7 +42,6 @@
     "jasmine": "2.3.1",
     "jshint-stylish": "2.0.1",
     "krusty-jasmine-reporter": "1.0.0",
-    "minimist": "1.1.1",
-    "streamqueue": "1.1.0"
+    "merge-stream": "0.1.8"
   }
 }

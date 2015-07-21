@@ -98,7 +98,7 @@ gulp-build.stamp: chroma_ui_new/gulp/ziplock.json realtime.stamp view-server.sta
 	../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
 	touch $@
 
-gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/index.html chroma_ui_new/gulp-src-globs.json gulp-build.stamp realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
+gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/index.html chroma_ui_new/gulp/gulp-src-globs.json gulp-build.stamp realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
 	@echo "Building GUI for deployment"; \
 	cd chroma_ui_new/gulp && \
 	npm run build

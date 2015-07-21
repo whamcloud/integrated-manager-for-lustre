@@ -3,14 +3,14 @@
     "source": [
       "source/chroma_ui/bower_components*/lodash/dist/lodash.js",
       "../ui-modules*/isomorphic/lodash-mixins/index.js",
-      "source/chroma_ui/vendor/sprintf*/sprintf.js",
+      "../ui-modules*/isomorphic/fp/index.js",
+      "source/chroma_ui/vendor*/**/*.js",
       "source/chroma_ui/bower_components*/jquery/dist/jquery.js",
       "source/chroma_ui/bower_components*/angular/angular.js",
       "source/chroma_ui/bower_components*/angular-resource/angular-resource.js",
       "source/chroma_ui/bower_components*/angular-route/angular-route.js",
       "source/chroma_ui/bower_components*/angular-bindonce/bindonce.js",
       "source/chroma_ui/bower_components*/angular-animate/angular-animate.js",
-      "../ui-modules*/isomorphic/fp/index.js",
       "source/chroma_ui/bower_components*/moment/moment.js",
       "source/chroma_ui/bower_components*/twix/bin/twix.js",
       "source/chroma_ui/bower_components*/d3/d3.js",
@@ -22,19 +22,19 @@
       "source/chroma_ui/common*/**/*-module.js",
       "source/chroma_ui/iml*/**/*-module.js",
       "../ui-modules*/angular/src/**/*-module.js",
+      "../ui-modules*/angular/src/**/*.js",
       "source/chroma_ui/common*/**/*.js",
-      "source/chroma_ui/iml*/**/*.js",
-      "../ui-modules*/angular/src/**/*.js"
+      "source/chroma_ui/iml*/**/*.js"
     ]
   },
   "less": {
     "source": [
       "source/chroma_ui/**/*.less"
     ],
-    "imports": "source/chroma_ui/styles/imports.less"
+    "imports": "source/chroma_ui/*styles/imports.less"
   },
   "assets": {
-    "fonts": "source/chroma_ui/bower_components/font-awesome/**/*.{woff,ttf,svg}",
+    "fonts": "source/chroma_ui/*bower_components/font-awesome/**/*.{woff,ttf,svg}",
     "images": "source/chroma_ui/**/*.{png,ico}"
   },
   "templates": {
@@ -43,8 +43,8 @@
     },
     "angular": {
       "source": [
-        "source/chroma_ui/**/*.html",
-        "!source/chroma_ui/bower_components/**/*.html"
+        "source/chroma_ui/common*/**/*.html",
+        "source/chroma_ui/iml*/**/*.html"
       ]
     }
   }

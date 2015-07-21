@@ -20,9 +20,6 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
   angular.module('iml', ['ui.bootstrap', 'environment', 'exception', 'login', 'app',
       'ngAnimate', 'imlRoutes'])
     .config(['$locationProvider', function ($locationProvider) {
@@ -38,4 +35,3 @@
     .config(['$animateProvider', function ($animateProvider) {
       $animateProvider.classNameFilter(/^((?!(fa-spin)).)*$/);
     }]);
-}());
