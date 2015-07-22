@@ -87,17 +87,17 @@ class ChromaLogCollector(object):
             return["chroma-diagnostics not installed on %s. skipping." % server]
 
         # Generate the diagnostics from the server
-        result = safe_shell.run(['ssh', server, 'chroma-diagnostics'])
+        result = safe_shell.run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
 
         if result.timeout:
             return["Chroma Diagnostics timed-out"]
 
         # Find the diagnostics filename from the chroma-diagnostics output
         cd_out = result.stderr.decode('utf8')
-        match = re.compile('/var/log/(.*)').search(cd_out)
+        match = re.compile('/var/log/(diagnostics_.*\.tar\..*)').search(cd_out)
         if not match:
-            return ["Did not find diagnostics filepath in chroma-diagnostics output"]
-
+            return ["Did not find diagnostics filepath in chroma-diagnostics output:\nstderr:\n%s\nstdout:\n%s" %
+                    (cd_out, result.stdout.decode('utf8'))]
         diagnostics = match.group(1).strip()
 
         errors = []
@@ -108,11 +108,11 @@ class ChromaLogCollector(object):
 
         if diagnostics.endswith('tar.lzma'):
             if safe_shell.run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
-                            '-C', self.destination_path]).rc:
+                               '-C', self.destination_path]).rc:
                 errors.append("Error tar --lzma the chroma diagnostics file")
         elif diagnostics.endswith('tar.gz'):
             if safe_shell.run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
-                            '-C', self.destination_path]).rc:
+                               '-C', self.destination_path]).rc:
                 errors.append("Error tar -xvzf the chroma diagnostics file")
         else:
             errors = "Didnt recognize chroma-diagnostics file format"

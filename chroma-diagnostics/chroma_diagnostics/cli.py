@@ -66,7 +66,7 @@ logrotate_logs = {
                          'supervisord.log',
                          'install.log',
                          'client_errors.log',
-                         'realtime.log',
+                         'realtime.log'
                          ],
     '/var/log/nginx': ['error.log',
                        'access.log'
@@ -74,7 +74,7 @@ logrotate_logs = {
     '/var/log/': ['messages',
                   'chroma-agent.log',
                   'chroma-agent-console.log'
-    ]}
+                  ]}
 
 
 def run_command(cmd, out, err):
@@ -156,6 +156,8 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
 
                 if root_file_name in log_names_to_collect:
                     abs_path = os.path.join(path, file_name)
+                    if verbose > 2:
+                        log.info(run_command_output_piped(['ls', '-l', abs_path]).stdout.read())
                     last_modified = os.path.getmtime(abs_path)
                     if last_modified >= cutoff_date_seconds:
                         collected_files[root_file_name].append((abs_path,
@@ -167,7 +169,8 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
     # Copy all files into one file per filename
     for file_name, log_files in collected_files.items():
         ordered_log_files = [t[0] for t in sorted(log_files,
-            key=lambda file_tuple: file_tuple[1])]
+                                                  key=lambda file_tuple:
+                                                  file_tuple[1])]
         output_file_name = os.path.join(output_directory, file_name)
         for log_file in ordered_log_files:
             if log_file.endswith('gz'):
@@ -176,7 +179,7 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
                 cmd = ['cat', log_file, '>>', output_file_name, ]
             subprocess.Popen(' '.join(cmd), shell=True)
         if verbose > 1:
-            log.info("copied logs: " % "\t\n".join(ordered_log_files))
+            log.info("copied logs: %s" % "\t\n".join(ordered_log_files))
 
     return len(collected_files)
 
@@ -209,7 +212,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=desc, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--verbose', '-v', action='count', required=False,
-        help="More output for troubleshooting.")
+                        help="More output for troubleshooting.")
 
     def _check_days_back(arg):
         try:
@@ -224,9 +227,9 @@ def main():
             else:
                 return days_back
     parser.add_argument('--days-back', '-d', required=False,
-        type=_check_days_back, default=1,
-        help="Number of days back to collect logs. "
-             "default is 1.  0 would mean today's logs only.")
+                        type=_check_days_back, default=1,
+                        help="Number of days back to collect logs. "
+                        "default is 1.  0 would mean today's logs only.")
     args = parser.parse_args()
 
     time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
