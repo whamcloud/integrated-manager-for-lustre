@@ -1,3 +1,5 @@
+import re
+
 from functools import partial
 
 from selenium.common.exceptions import NoSuchElementException
@@ -52,6 +54,10 @@ class wrapped_login(object):
         if self.outer_user:
             from selenium.common.exceptions import ElementNotVisibleException
             try:
+                WebDriverWait(self.test_case.user_page, self.test_case.standard_wait).until(
+                    lambda user: re.match('/ui/user/\d+/', user._get_url_parts()[2]) is None,
+                    "Still on user account url."
+                )
                 self.test_case.user_page._reset_ui()
                 self.test_case.navigation.logout()
             except ElementNotVisibleException:

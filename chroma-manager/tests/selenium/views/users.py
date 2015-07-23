@@ -1,3 +1,4 @@
+import re
 from functools import wraps
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -99,6 +100,10 @@ class Users(DatatableView):
     def open_account_dialog(self):
         account_button = wait_for_element_by_css_selector(self.driver, "#account", 10)
         account_button.click()
+        WebDriverWait(self, self.standard_wait).until(
+            lambda user: re.match('/ui/user/\d+/', user._get_url_parts()[2]) is not None,
+            "Not on user account url."
+        )
         self._reset_ui()
         wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
 
