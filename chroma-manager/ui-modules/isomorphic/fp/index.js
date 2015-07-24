@@ -74,7 +74,7 @@
 
   var map = curry(2, function m (f, x) {
     if (x && typeof x.map === 'function')
-      return x.map(f);
+      return x.map(fp.curry(1, f));
     else
       return f(x);
   });

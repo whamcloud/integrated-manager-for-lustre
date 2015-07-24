@@ -144,6 +144,12 @@ describe('the fp module', function () {
     it('should work with a placeholder', function () {
       expect(fp.map(_, 1)(add1)).toEqual(2);
     });
+
+    it('should be unary\'d', function () {
+      var spy = jasmine.createSpy('unary');
+      fp.map(spy, [1]);
+      expect(spy).toHaveBeenCalledWith(1);
+    });
   });
 
   describe('has a filter method', function () {
