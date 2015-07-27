@@ -76,7 +76,7 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
             }
           },
           'promise-it': {
-            version: 'file://../promise-it'
+            version: 'file:../promise-it'
           },
           'bar-foo': {
             version: 'https://foobar.com/bar-foo.2.0.0.tar.gz'

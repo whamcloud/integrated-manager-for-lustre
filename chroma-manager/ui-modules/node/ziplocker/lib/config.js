@@ -9,7 +9,7 @@
 exports.wiretree = function configModule (process, path, configulator) {
   var config = configulator({
     default: {
-      FILE_TOKEN: 'file://',
+      FILE_TOKEN: 'file:',
       tarGzRegexp: /\.tar\.gz$/,
       registryUrl: 'https://registry.npmjs.org/',
       proxyUrl: process.env.HTTP_PROXY,

@@ -9,7 +9,7 @@ describe('resolve from fs', function () {
 
   beforeEach(function () {
     config = {
-      FILE_TOKEN: 'file://'
+      FILE_TOKEN: 'file:'
     };
 
     fsThen = {
@@ -32,7 +32,7 @@ describe('resolve from fs', function () {
     var filePath, promise;
 
     beforeEach(function () {
-      filePath = 'file://foo/bar';
+      filePath = 'file:foo/bar';
       promise = resolveFromFs(filePath, '/bar/bat');
     });
 
@@ -44,7 +44,7 @@ describe('resolve from fs', function () {
       return promise.then(function assertResponse (responseObject) {
         expect(responseObject).toEqual({
           response : {},
-          value : 'file://foo/bar',
+          value : 'file:foo/bar',
           newPath : '/bar/bat/foo/bar'
         });
       });

@@ -15,7 +15,7 @@ describe('dependency tree', function () {
       dependencies: {
         foo: '^0.0.1',
         bar: '~1.2.3',
-        bim: 'file://../bim/',
+        bim: 'file:../bim/',
         bapper: 'https://bapper.com/bapper-1.2.3.tar.gz',
         'coffee-script-redux': 'git+https://github.com/michaelficarra/\
 CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
@@ -30,7 +30,7 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
 
     resolveFromFs = jasmine.createSpy('resolveFromFs').and.returnValue(Promise.resolve({
       response: {},
-      value: 'file://../bim/'
+      value: 'file:../bim/'
     }));
 
     resolveFromGithub = jasmine.createSpy('resolveFromGithub').and.returnValue(Promise.resolve({
@@ -131,7 +131,7 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
             }
           },
           bim: {
-            version: 'file://../bim/'
+            version: 'file:../bim/'
           },
           bapper: {
             version: 'https://bapper.com/bap-1.2.3.tar.gz'

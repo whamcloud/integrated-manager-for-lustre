@@ -2,7 +2,7 @@
 
 Ziplocker is a tool to statically manage node.js dependencies. It enumerates a full dependency tree ala `npm shrinkwrap`
 and saves unbuilt dependencies to a specified directory. It also allows for local module installation using the
-`file://` specifier.
+`file:` specifier.
 
 #Getting Started
 

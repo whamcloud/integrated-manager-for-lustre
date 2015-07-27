@@ -27,7 +27,7 @@ describe('config', function () {
   it('should call configulator with the correct config', function () {
     expect(configulator).toHaveBeenCalledWith({
       default: {
-        FILE_TOKEN: 'file://',
+        FILE_TOKEN: 'file:',
         tarGzRegexp: /\.tar\.gz$/,
         registryUrl: 'https://registry.npmjs.org/',
         proxyUrl: process.env.HTTP_PROXY,
