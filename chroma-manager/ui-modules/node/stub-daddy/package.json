@@ -11,7 +11,7 @@
     "wiretree": "0.2.5",
     "yargs": "1.2.6",
     "promise": "5.0.0",
-    "lodash-mixins": "file://../../isomorphic/lodash-mixins"
+    "lodash-mixins": "file:../../isomorphic/lodash-mixins"
   },
   "devDependencies": {
     "dotty": "0.0.2",

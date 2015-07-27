@@ -323,7 +323,7 @@ var wireTreeModule = require('../../index');
                     'content-length': '33',
                     authorization: 'BEARER token55',
                     host: 'localhost:' + config.port,
-                    connection: 'keep-alive'
+                    connection: 'close'
                   }
                 }
               }
@@ -476,7 +476,7 @@ var wireTreeModule = require('../../index');
                     authorization: 'BEARER token55',
                     host: 'localhost:' + config.port,
                     'content-length': '33',
-                    connection: 'keep-alive'
+                    connection: 'close'
                   }
                 }
               },
@@ -655,7 +655,10 @@ function makeRequestAndExpectWrap (url) {
 
     options = _.merge({}, options, {
       uri: url(options.path),
-      strictSSL: false
+      strictSSL: false,
+      headers: {
+        'Connection': 'close'
+      }
     });
     delete options.path;
 

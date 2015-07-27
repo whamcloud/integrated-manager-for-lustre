@@ -169,6 +169,7 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
   function executeService(boundCreateServer, port) {
     server = boundCreateServer(onRequestReceived).listen(port);
     server.on('connection', handleSocketConnection);
+    server.on('clientError', logger.error.bind(logger));
     logger.info('Starting service on ' + config.requestProtocol + '://localhost:' + port);
     return server;
   }

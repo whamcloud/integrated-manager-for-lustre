@@ -133,7 +133,7 @@ describe('webservice module', function () {
           assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
           // call the handleSocketConnection callback
-          assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+          assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
           assignments.port = 8000;
           assignments.responseWriteHeadValue = assignments.evaluatedResponse.status.toString();
@@ -165,7 +165,7 @@ describe('webservice module', function () {
             assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
             // call the handleSocketConnection callback
-            assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+            assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
             assignments.port = 8888;
             assignments.responseWriteHeadValue = '404';
@@ -193,7 +193,7 @@ describe('webservice module', function () {
         assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
         // call the handleSocketConnection callback
-        assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+        assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
         assignments.port = 8888;
         assignments.responseWriteHeadValue = assignments.evaluatedResponse.status.toString();
@@ -216,7 +216,7 @@ describe('webservice module', function () {
         assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
         // call the handleSocketConnection callback
-        assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+        assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
         assignments.port = 8888;
         assignments.responseWriteHeadValue = '404';
@@ -238,7 +238,7 @@ describe('webservice module', function () {
           assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
           // call the handleSocketConnection callback
-          assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+          assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
           // Simulate a user disconnecting. This will effectively remove the socket.
           assignments.socket.on.calls.mostRecent().args[1]();
@@ -265,7 +265,7 @@ describe('webservice module', function () {
         assignments.boundCreateServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
         // call the handleSocketConnection callback
-        assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+        assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
         assignments.port = 8888;
         assignments.responseWriteHeadValue = assignments.evaluatedResponse.status.toString();
@@ -309,7 +309,7 @@ describe('webservice module', function () {
         assignments.request.createServer.calls.argsFor(0)[0](assignments.requestData, assignments.response);
 
         // call the handleSocketConnection callback
-        assignments.server.on.calls.mostRecent().args[1](assignments.socket);
+        assignments.server.on.calls.argsFor(0)[1](assignments.socket);
 
         // Simulate a user disconnecting. This will effectively remove the socket.
         assignments.socket.on.calls.mostRecent().args[1]();
@@ -354,6 +354,10 @@ describe('webservice module', function () {
 
     it('should call an anonomous function when the connection is made', function() {
       expect(assignments.server.on.calls.argsFor(0)).toEqual(['connection', jasmine.any(Function)]);
+    });
+
+    it('should handle clientErrors', function () {
+      expect(assignments.server.on.calls.argsFor(1)).toEqual(['clientError', jasmine.any(Function)]);
     });
 
     it('should call socket.setTimeout with a value of 4000', function() {
