@@ -15,7 +15,7 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
         # if the host_profile api endpoint exists or using simulator, can use current logic
         response = self.chroma_manager.get('/api/host_profile/')
         if response.successful or hasattr(self, 'simulator'):
-            super(TestCreateFilesystem, self).add_hosts(addresses, auth_type)
+            new_hosts = super(TestCreateFilesystem, self).add_hosts(addresses, auth_type)
         else:
             # otherwise we need to use the old way of adding hosts
             host_create_command_ids = []
@@ -40,9 +40,11 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
                 host_create_command_ids.append(response.json['command']['id'])
             self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=1800)
             new_hosts = self.get_hosts(addresses)
-            self.assertEqual(len(new_hosts), len(addresses), "Hosts found: '%s'" % new_hosts)
-            self.remote_operations.sync_disks(new_hosts)
-            return new_hosts
+
+        self.assertEqual(len(new_hosts), len(addresses), "Hosts found: '%s'" % new_hosts)
+        self.remote_operations.sync_disks(new_hosts)
+
+        return new_hosts
 
     def _exercise_simple(self, fs_id):
         filesystem = self.get_filesystem(fs_id)
