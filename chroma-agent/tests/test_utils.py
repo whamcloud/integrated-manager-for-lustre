@@ -22,7 +22,7 @@ class TestBlkId(CommandCaptureTestCase):
 /dev/mapper/LustreVG-root: UUID="9503858f-5ea9-44b6-b690-f473def07a3d" TYPE="ext3"
 /dev/mapper/LustreVG-swap: UUID="c334dbab-3121-41c3-ae2b-1d7ab26f5329" TYPE="swap"
 /dev/mapper/LustreVG-usr: UUID="9bc9c040-fc00-4cf3-a073-7096c12a8f17" TYPE="ext3"
-/dev/mapper/LustreVG-var: UUID="f9093f90-534c-4c61-a49e-b7cadd32fb90" TYPE="ext3"
+/dev/mapper/LustreVG-var: TYPE="ext3" UUID="f9093f90-534c-4c61-a49e-b7cadd32fb90"
 """)
 
         expected_result = [{'path': '/dev/sda1', 'uuid': 'd546845f-481f-48f8-a998-8a81adcdb53d', 'type': 'ext3'},
