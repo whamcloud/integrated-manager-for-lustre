@@ -245,25 +245,23 @@ gulp.task('watch', ['dev'], function () {
     destCwd: '../../chroma_ui/static/chroma_ui'
   });
 
+  var deleted = fp.eqFn(fp.identity, fp.lensProp('type'), 'deleted');
+  var ifDeleted = fp.flow(toArray, fp.invokeMethod('concat', fp.__, [deleted]), fp.and);
+
+  function toArray (x) { return [x]; }
 
   var jsWatch = watchCwd(files.js.source, ['incremental-js']);
-  jsWatch.on('change', function handleChange (ev) {
-    if (ev.type !== 'deleted')
-      return;
-
+  jsWatch.on('change', ifDeleted(function handleChange (ev) {
     delete cache.caches.scripts[ev.path];
     remember.forget('scripts', ev.path);
 
     var dest = toDest(files.js.source, ev.path);
     del.sync(dest, { force: true });
-  });
+  }));
 
   var replaceHtml = fp.invokeMethod('replace', [/\.html$/, '.js']);
   var templateWatch = watchCwd(files.templates.angular.source, ['incremental-templates']);
-  templateWatch.on('change', function handleChange (ev) {
-    if (ev.type !== 'deleted')
-      return;
-
+  templateWatch.on('change', ifDeleted(function handleChange (ev) {
     var path = replaceHtml(ev.path);
 
     delete cache.caches.scripts[ev.path];
@@ -271,7 +269,7 @@ gulp.task('watch', ['dev'], function () {
 
     var toDestAndReplace = fp.flow(toDest(files.templates.angular.source), replaceHtml);
     del.sync(toDestAndReplace(path), { force: true });
-  });
+  }));
 
   var lessFiles = files.less.source
     .concat(files.less.imports);
@@ -280,13 +278,10 @@ gulp.task('watch', ['dev'], function () {
   var assets = [files.assets.fonts]
     .concat(files.assets.images);
   var assetWatch = watchCwd(assets, ['incremental-assets']);
-  assetWatch.on('change', function handleChange (ev) {
-    if (ev.type !== 'deleted')
-      return;
-
+  assetWatch.on('change', ifDeleted(function handleChange (ev) {
     var dest = toDest(assets, ev.path);
     del.sync(dest, { force: true });
-  });
+  }));
 
   watchCwd(files.templates.server.index, ['incremental-templates']);
 });
