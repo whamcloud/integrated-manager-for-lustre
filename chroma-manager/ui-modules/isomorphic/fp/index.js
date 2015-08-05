@@ -176,16 +176,50 @@
     return lens(
       flow.apply(null, args),
       function set (val, xs) {
-        return args.reduce(function reducer (xs, l, index) {
+        args.reduce(function reducer (xs, l, index) {
           if (index === args.length - 1)
             return l.set(val, xs);
           else
             return l(xs);
         }, xs);
+
+        return xs;
       }
     );
   }
   fp.flowLens = flowLens;
+
+  function pathLens (path) {
+    var pathType = _type(path);
+    if (pathType !== 'Array')
+      throw new TypeError('pathLens must receive the path in the form of an array. Got: ' + pathType);
+
+    var lenses = map(fp.lensProp, path);
+
+    return fp.lens(
+      fp.safe(1, fp.flow.apply(null, lenses), undefined),
+      function set (val, xs) {
+        lenses.reduce(function reducer (xs, l, index) {
+          if (index === lenses.length - 1)
+            return l.set(val, xs);
+
+          var x = l(xs);
+
+          if (x != null)
+            return x;
+
+          x = {};
+
+          l.set(x, xs);
+          return x;
+        }, xs);
+
+        return xs;
+      }
+    );
+  }
+
+  fp.pathLens = pathLens;
 
   function cond () {
     var args = new Array(arguments.length);

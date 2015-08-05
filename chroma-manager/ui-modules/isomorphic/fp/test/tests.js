@@ -384,7 +384,69 @@ describe('the fp module', function () {
 
     it('should set a nested value', function () {
       expect(lens.set('bap', obj))
-        .toEqual({ bar: 'bap' });
+        .toEqual({foo: { bar: 'bap' } });
+    });
+  });
+
+  describe('has a pathLens method', function () {
+    var pl;
+
+    beforeEach(function () {
+      pl = fp.pathLens(['foo', 'bar', 'baz']);
+    });
+
+    it('should exist on fp', function () {
+      expect(fp.pathLens).toEqual(jasmine.any(Function));
+    });
+
+    it('should pluck the value for the given path', function () {
+      var obj = {
+        foo: {
+          bar: {
+            baz: 7,
+            other: 'test'
+          }
+        }
+      };
+
+      expect(pl(obj)).toEqual(7);
+    });
+
+    it('should throw an error if the path is not an array', function () {
+      expect(function () { fp.pathLens('foo')({foo: 'bar'}); }).toThrow(
+        new TypeError('pathLens must receive the path in the form of an array. Got: String'));
+    });
+
+    it('should not error when path does not exist', function () {
+      expect(pl({})).toBe(undefined);
+    });
+
+    it('should not error when path is undefined', function () {
+      expect(pl(undefined)).toBe(undefined);
+    });
+
+    it('should set a nested path when it does not exist', function () {
+      expect(pl.set('bap', {})).toEqual({
+        foo: {
+          bar: {
+            baz: 'bap'
+          }
+        }
+      });
+    });
+
+    it('should set a nested path when it does exist', function () {
+      expect(pl.set('bap', {foo: {bar: {}}})).toEqual({
+        foo: {
+          bar: {
+            baz: 'bap'
+          }
+        }
+      });
+    });
+
+    it('should get a nested array path', function () {
+      expect(fp.pathLens([0, 1, 2, 3])([[0, [0, 1, [0, 1, 2, 3]]]])).toEqual(3);
     });
   });
 
