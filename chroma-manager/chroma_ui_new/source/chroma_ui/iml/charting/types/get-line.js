@@ -74,8 +74,6 @@ angular.module('charting')
 
           lineEl
             .transition()
-            .duration(1000)
-            .ease('linear')
             .attr('d', line)
             .each('end', function removeOldPoint () {
               if (shouldShift)
@@ -100,8 +98,6 @@ angular.module('charting')
                 .attr('stroke-dashoffset', totalLength);
             })
             .transition()
-            .duration(1000)
-            .ease('linear')
             .attr('stroke-dashoffset', 0)
             .each('end', function resetDashArray () {
               d3.select(this).attr('stroke-dasharray', null);
