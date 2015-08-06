@@ -6,6 +6,7 @@ from tests.selenium.views.create_filesystem import CreateFilesystem
 from tests.selenium.views.volumes import Volumes
 from tests.selenium.views.conf_param_dialog import ConfParamDialog
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
 from utils.sample_data import Testdata
 
 
@@ -265,7 +266,11 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.create_filesystem_button.click()
         create_filesystem_page.quiesce()
 
-        self.assertEqual(create_filesystem_page.conf_params_open, True)
+        WebDriverWait(create_filesystem_page, self.standard_wait).until(
+            lambda fs_page: fs_page.conf_params_open,
+            "Conf params dialog is not open."
+        )
+
         self.assertEqual(conf_params.get_conf_param_error('llite.max_cached_mb'), "Invalid size string (must be integer number of m)")
 
         # Check that if we try again with a different error then the
@@ -279,6 +284,10 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.create_filesystem_button.click()
         create_filesystem_page.quiesce()
 
-        self.assertEqual(create_filesystem_page.conf_params_open, True)
+        WebDriverWait(create_filesystem_page, self.standard_wait).until(
+            lambda fs_page: fs_page.conf_params_open,
+            "Conf params dialog is not open."
+        )
+
         self.assertEqual(conf_params.get_conf_param_error('llite.max_cached_mb'), None)
         self.assertEqual(conf_params.get_conf_param_error('llite.max_read_ahead_mb'), "Invalid size string (must be integer number of m)")
