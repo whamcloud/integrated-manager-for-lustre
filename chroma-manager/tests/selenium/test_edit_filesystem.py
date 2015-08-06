@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
 from testconfig import config
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.views.conf_param_dialog import ConfParamDialog
@@ -88,7 +89,11 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.edit_filesystem_page.apply_conf_params()
         self.assertTrue(self.edit_filesystem_page.conf_param_dialog_visible())
         self.assertEqual(None, dialog.get_conf_param_error('llite.max_cached_mb'))
-        self.assertEqual(invalid_int_string, dialog.get_conf_param_error('llite.max_read_ahead_mb'))
+        error_text = WebDriverWait(dialog, self.standard_wait).until(
+            lambda d: d.get_conf_param_error('llite.max_read_ahead_mb'),
+            "Error message did not appear."
+        )
+        self.assertEqual(invalid_int_string, error_text)
 
         # Navigate away and back, check validation messages are cleared
         self.edit_filesystem_page.close_conf_params()
