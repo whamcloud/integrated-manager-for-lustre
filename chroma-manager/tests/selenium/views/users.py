@@ -1,6 +1,9 @@
 import re
 from functools import wraps
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import presence_of_element_located
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.common.by import By
 
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
@@ -111,9 +114,9 @@ class Users(DatatableView):
         wait_for_element_by_css_selector(self.driver, self.close_account_dialog_button, wait_time['medium'])
         # Click the close button
         self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
-        # Wait for the account dialog to no longer be visible
-        WebDriverWait(self.driver, self.standard_wait).until_not(
-            lambda driver: driver.find_element_by_css_selector(self.user_detail).is_displayed(),
+
+        WebDriverWait(self.driver, self.standard_wait, ignored_exceptions=StaleElementReferenceException).until_not(
+            presence_of_element_located((By.CSS_SELECTOR, self.user_detail)),
             "Expected the user dialog to close, but it is still visible after %s seconds." % self.standard_wait
         )
 
