@@ -1,6 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import BaseView
@@ -61,7 +62,11 @@ class EditFilesystem(BaseView):
             new_link.click()
 
         self.quiesce()
-        self.config_param_tab = self.driver.find_element_by_css_selector('div.target_detail a[href="#target_dialog_config_param_tab"]')
+        self.config_param_tab = WebDriverWait(self.driver, self.standard_wait).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'div.target_detail a[href="#target_dialog_config_param_tab"]')),
+            'config param tab not open.')
+
         self.config_param_tab.click()
 
     def apply_conf_params(self):
