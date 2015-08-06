@@ -9,7 +9,9 @@ var modalFile = require('../views/modal');
 var addServerModal = modalFile.addServerModal;
 var commandModal = modalFile.commandModal;
 var commandMonitor = require('../util/command-monitor');
+var waitForCommands = commandMonitor.waitForCommandsToFinish;
 var manager = require('../util/manager');
+var longWait = manager.waitTimes.long;
 var actionDropdownFactory = require('./action-dropdown');
 var editMode = require('./server-edit-mode');
 var isRemoved = require('../util/is-removed');
@@ -231,22 +233,22 @@ Server.prototype.removeAll = function removeAll () {
   Server.prototype.waitForLoadingSpinnerRemove();
 
   browser.isElementPresent(Server.prototype.serverTable)
-    .then(function removeServersMaybe (serverTablePresent) {
+    .then(removeServers)
+    .then(waitForCommands(longWait));
 
-      if (serverTablePresent) {
-        getHostsAnd(remove)();
-        commandMonitor.waitForCommandsToFinish(manager.waitTimes.long);
-      }
-
-    });
-
-  /**
-   * Clicks the Remove button for a single storage server.
-   */
-  function remove () {
-    actionDropdownFactory(Server.prototype.getRow()).clickAction('Remove');
+  function removeServers (isPresent) {
+    if (isPresent)
+      return getHostsAnd(getRow)();
   }
 
+  function getRow () {
+    return Server.prototype.getRow()
+      .then(clickRemove);
+  }
+
+  function clickRemove (row) {
+    return actionDropdownFactory(row).clickAction('Remove');
+  }
 };
 
 /**
