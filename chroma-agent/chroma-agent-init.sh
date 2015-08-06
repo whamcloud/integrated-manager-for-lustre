@@ -12,6 +12,8 @@ export SVC_NAME=chroma-agent
 export PID_FILE=/var/run/chroma-agent.pid
 export DAEMON_BIN=/usr/bin/chroma-agent-daemon
 
+[ -r /etc/sysconfig/chroma-agent ] && . /etc/sysconfig/chroma-agent
+
 start() {
     echo -n "Starting the Chroma Agent daemon: "
     $DAEMON_BIN --pid-file=$PID_FILE
