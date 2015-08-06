@@ -95,6 +95,7 @@ class Volumes(DatatableView):
     def change_volume_config(self):
         """Changing volume configuration"""
         # TODO: Lots of this needs refactored into the test_volumes module, where we can do proper asserts, etc.
+
         for tr in self.rows:
             selects = tr.find_elements_by_css_selector(SelectBoxIt.CONTAINER_SELECTOR)
             assert len(selects) == 2, selects
@@ -102,6 +103,8 @@ class Volumes(DatatableView):
             primary_select_id = selects[0].get_attribute('id')
             failover_select = SelectBoxIt(self.driver, selects[1])
             failover_select_id = selects[1].get_attribute('id')
+            new_primary_text = None
+            new_failover_text = None
 
             if not primary_select.is_disabled() and not failover_select.is_disabled():
                 # Get primary and failover 'select' dropdown elements
@@ -112,15 +115,20 @@ class Volumes(DatatableView):
                 for primary_text in primary_select.get_options_text():
                     if primary_text != SelectBoxIt.BLANK_OPTION_TEXT and primary_text != original_primary_text:
                         primary_select.select_option(primary_text)
+                        new_primary_text = primary_text
                         break
 
                 # Select another option different from its original value for failover select dropdown
                 for failover_text in failover_select.get_options_text():
                     if failover_text != SelectBoxIt.BLANK_OPTION_TEXT and failover_text != original_failover_text:
                         failover_select.select_option(failover_text)
+                        new_failover_text = failover_text
+                        break
 
-                new_primary_text = primary_select.get_selected()
-                new_failover_text = failover_select.get_selected()
+                if not new_primary_text:
+                    raise Exception("Did not change primary select")
+                if not new_failover_text:
+                    raise Exception("Did not change failover select")
 
                 # Click Apply button
                 self.driver.find_element_by_css_selector('#btnApplyConfig').click()
