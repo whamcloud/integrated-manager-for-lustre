@@ -1,5 +1,5 @@
-var baseConfig = require('./karma.conf.js'),
-  _ = require('lodash');
+var baseConfig = require('./karma.conf.js');
+var obj = require('obj');
 
 
 module.exports = function(config) {
@@ -10,7 +10,7 @@ module.exports = function(config) {
   config.set({
     reporters: ['coverage'],
 
-    preprocessors: _.extend({}, config.preprocessors, {
+    preprocessors: obj.merge({}, config.preprocessors, {
       'source/chroma_ui/!(vendor|bower_components)/**/*.js': ['coverage']
     }),
 

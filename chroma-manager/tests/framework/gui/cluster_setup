@@ -66,15 +66,6 @@ LATEST_CHROMEDRIVER_RELEASE=$(curl -f http://chromedriver.storage.googleapis.com
 wget http://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER_RELEASE/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip -d $HOME/bin/
 
-# Install Selenium
-selenium_filename="selenium-server-standalone-*.jar"
-num_matching_files=$(find chroma_test_env/chroma/chroma-externals/ -maxdepth 1 -name "$selenium_filename" | wc -l)
-if [ $num_matching_files != 1 ]; then
-    echo "Expected to find exactly 1 match for $selenium_filename in chroma-externals, but found $num_matching_files"
-    ls chroma_test_env/chroma/chroma-externals/$selenium_filename
-fi
-cp chroma_test_env/chroma/chroma-externals/$selenium_filename $HOME/bin/selenium-server-standalone.jar
-
 # Set up the virtualenv to run the tests in
 cd chroma_test_env
 virtualenv --no-site-packages .
@@ -160,20 +151,10 @@ EOF1
 mkdir -p /usr/share/chroma-manager/tests/framework/gui/"
 
 scp -r chroma/chroma-manager/tests/request_logging_middleware.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/request_logging_middleware.py
-scp -r chroma/chroma-manager/tests/framework/gui/mock_agent root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/framework/gui/mock_agent
 scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
 scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
 
-# copy the .py's that where stripped (HYD-1849)
-scp chroma/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
-scp chroma/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
-
 ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
-# patch the agent
-cat /usr/share/chroma-manager/tests/framework/gui/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
-
-# patch the plugin manager
-cat /usr/share/chroma-manager/tests/framework/gui/mock_agent/agent_daemon_addon.py >> /usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
 
 if $MEASURE_COVERAGE; then
   cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc

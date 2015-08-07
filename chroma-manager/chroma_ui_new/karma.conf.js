@@ -53,7 +53,6 @@ module.exports = function setConfig (config) {
       imlDir('**/*.js'),
       imlDir('**/*.html'),
       bowerDir('angular-mocks/angular-mocks.js'),
-      bowerDir('timecop/timecop-0.1.1.js'),
       testDir('mocks/mock.js'),
       testDir('**/*-module.js'),
       testDir('data-fixtures/data-fixtures-module.js'),

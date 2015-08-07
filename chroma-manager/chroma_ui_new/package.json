@@ -6,7 +6,6 @@
     "node": ">=0.10.0"
   },
   "scripts": {
-    "protractor": "protractor ./test/selenium/protractor-conf.js --config=./sample-config",
     "test": "./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots",
     "zipdev": "../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'",
     "ziplock": "../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/'"
@@ -21,11 +20,7 @@
     "karma-junit-reporter": "0.2.2",
     "karma-ng-html2js-preprocessor": "0.1.2",
     "karma-safari-launcher": "0.1.1",
-    "lodash": "2.4.1",
-    "lodash-contrib": "241.3.1",
-    "mkdirp": "0.5.0",
-    "optimist": "0.6.0",
-    "protractor": "1.2.0",
+    "obj": "file:../ui-modules/isomorphic/obj",
     "semver-check": "0.0.2"
   }
 }

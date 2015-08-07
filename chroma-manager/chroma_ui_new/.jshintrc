@@ -15,7 +15,6 @@
     "afterEach": false,
     "mock": false,
     "Mock": false,
-    "Timecop": false,
     "waits": false,
     "waitsFor": false,
     "runs": false

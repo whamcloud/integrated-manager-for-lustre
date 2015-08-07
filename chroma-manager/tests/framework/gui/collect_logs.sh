@@ -16,7 +16,6 @@ scp chromatest@$TEST_RUNNER:.vnc/*.log $WORKSPACE/test_logs/
 scp chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/*log $WORKSPACE/test_logs/
 scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/chroma_ui_new/failed-screen-shots/ $WORKSPACE
 scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/chroma_ui_new/failed-browser-logs/ $WORKSPACE
-scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/chroma_ui_new/protractor-console-logs/ $WORKSPACE/test_logs/
 scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/chroma_ui_new/*.log $WORKSPACE/test_logs/
 scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/debug-screen-shots/ $WORKSPACE
 scp -r chromatest@$TEST_RUNNER:chroma_test_env/chroma/chroma-manager/failed-screen-shots/ $WORKSPACE
