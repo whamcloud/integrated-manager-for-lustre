@@ -72,7 +72,6 @@ module.exports = function setConfig (config) {
     // list of files to exclude
     exclude: [
       imlDir('iml.js'),
-      testDir('selenium/**/*'),
       testDir('integration/*')
     ],
 
