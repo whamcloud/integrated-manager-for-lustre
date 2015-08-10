@@ -48,6 +48,6 @@ export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" ]; then
     export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el7.2"}
 else
-    export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
+    export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.7"}
 fi
 export CLUSTER_CONFIG="cluster_cfg.json"

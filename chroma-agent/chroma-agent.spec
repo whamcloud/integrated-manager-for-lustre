@@ -37,9 +37,30 @@ This is the Intel Manager for Lustre monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6 pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-cli <= 1.1.7-6.wc2.el6
-Requires: %{name} = %{version}-%{release} rsyslog pcs pacemaker > 1.1.7-6.wc2.el6 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket system-config-firewall-base ed at
+
+Requires: %{name} = %{version}-%{release}
+Requires: rsyslog
+Requires: pcs
+Requires: libxml2-python
+Requires: python-netaddr
+Requires: python-ethtool
+Requires: python-jinja2
+Requires: pcapy
+Requires: python-impacket
+Requires: system-config-firewall-base
+Requires: ed
+Requires: at
+
+%if 0%{?rhel} < 7
+Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6
+Obsoletes: pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6
+Obsoletes: pacemaker-iml-libs <= 1.1.7-6.wc2.el6
+Obsoletes: pacemaker-iml-cli <= 1.1.7-6.wc2.el6
+Requires: pacemaker-iml = 1.1.12-4.wc1.el6
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
+%endif
+
+
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
 
