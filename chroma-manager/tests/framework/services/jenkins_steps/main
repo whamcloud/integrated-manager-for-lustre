@@ -50,7 +50,7 @@ eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py services_cluster_
 pdsh -R ssh -l root -S -w $CHROMA_MANAGER $TEST_RUNNER "exec 2>&1; set -xe
 cd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e 's/distro=rhel6.5/distro=el6.4/' -e 's/distro=el6.5/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+  sed -i -e 's/distro=el6.7/distro=el6.4/' -e 's/distro=el6.7/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
 done" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

@@ -46,10 +46,10 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.2.0.2
+# first fetch and install chroma 2.3.0.0
 BUILD_JOB=chroma-blessed
-BUILD_NUM=111
-IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
+BUILD_NUM=117
+IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
 # Install and setup old chroma manager
@@ -61,6 +61,11 @@ yum -y install expect
 cd /tmp
 tar xzvf $IEEL_FROM_VERSION
 cd ${IEEL_FROM_VERSION%%.tar.gz}
+# hack out the O/S version check in old version so it installs on the new O/S
+ed <<"EOF" install
+/_check_platform()\$/d
+wq
+EOF
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
@@ -137,11 +142,13 @@ rm -f /etc/yum.repos.d/epel.repo
 if $RHEL; then
     release=\$(lsb_release -sr || sed -n -e '1s/.* release \(.*\) .*/\1/p' /etc/issue)
     yum-config-manager --disable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
-    # let's also remove ann local RH optional repo
-    ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
+    # let's also remove any local RH optional repo
+    if grep \"RHEL-6\.[0-9]-optional-x86_64\" /etc/yum.repos.d/cobbler-config.repo; then
+        ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
 /\[RHEL-6\.[0-9]-optional-x86_64\]/;/^$/d
 wq
 EOF
+    fi
 fi
 
 if ! expect ../upgrade.exp; then
