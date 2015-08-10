@@ -99,7 +99,7 @@ describe('request', function () {
         });
     });
 
-    it('should handle error when status code is greater than 400', function (done) {
+    it('should handle error when status code is greater than or equal to 400', function (done) {
       r.statusCode = 404;
       s = requestIndex('/api/alert/', 'buffer');
       λ(s)
