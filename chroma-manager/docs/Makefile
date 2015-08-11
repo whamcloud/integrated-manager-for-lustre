@@ -8,6 +8,6 @@ dist:
 .PHONY: $(DIRS)
 $(DIRS): dist
 	make -C $@ html
-	rm -rf dist/chroma-doc-$@
-	cp -r $@/_build/html dist/chroma-doc-$@
-	tar -C dist -czf dist/chroma-doc-$@.tar.gz chroma-doc-$@
+	rm -rf dist/*-doc-$@
+	cp -r $@/_build/html dist/manager-doc-$@
+	tar -C dist -czf dist/manager-doc-$@.tar.gz manager-doc-$@
