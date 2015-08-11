@@ -170,15 +170,19 @@ describe('get line', function () {
       });
 
       it('should set stroke-dasharray to the total length of the line', function () {
-        var len = line.getTotalLength();
+        line.getAttribute('stroke-dasharray')
+          .split(' ')
+          .map(fp.curry(1, parseInt))
+          .forEach(expectToBeGreaterThan0);
 
-        expect(line.getAttribute('stroke-dasharray')).toEqual(len + ' ' + len);
+        function expectToBeGreaterThan0 (x) {
+          expect(x).toBeGreaterThan(0);
+        }
       });
 
       it('should set stroke-dashoffset to the total length of the line', function () {
-        var len = line.getTotalLength();
-
-        expect(line.getAttribute('stroke-dashoffset')).toEqual(len + '');
+        expect(parseInt(line.getAttribute('stroke-dashoffset')))
+          .toBeGreaterThan(0);
       });
 
       it('should animate stroke-dashoffset to 0', function () {
