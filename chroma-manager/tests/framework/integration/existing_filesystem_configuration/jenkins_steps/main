@@ -77,6 +77,7 @@ ORIGINAL_CLUSTER_CONFIG=$(ls $PWD/existing_filesystem_configuration_cluster_cfg.
 chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
 
 setup_rc=0
+test_run_rc=0
 for dne in true false; do
     for test_ha in true false; do
         if $test_ha; then
@@ -123,7 +124,7 @@ for dne in true false; do
     done
 done
 
-if [ $setup_rc > 0 -o $test_run_rc > 0 ]; then
+if [ $setup_rc -gt 0 -o $test_run_rc -gt 0 ]; then
     echo "One or more iterations failed"
     exit 1
 fi
