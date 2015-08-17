@@ -264,10 +264,8 @@ class SessionTable(object):
 
     def create(self, plugin_name, id):
         daemon_log.info("SessionTable.create %s/%s" % (plugin_name, id))
-        if plugin_name in self._requested_at:
-            del self._requested_at[plugin_name]
-        if plugin_name in self._backoffs:
-            del self._backoffs[plugin_name]
+        self._requested_at.pop(plugin_name, None)
+        self._backoffs.pop(plugin_name, None)
         self._sessions[plugin_name] = Session(self._client, id, plugin_name)
 
     def get(self, plugin_name, id = None):

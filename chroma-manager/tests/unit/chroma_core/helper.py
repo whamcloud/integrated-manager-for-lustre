@@ -356,6 +356,10 @@ class MockAgentRpc(object):
         pass
 
     @classmethod
+    def await_session(cls, fqdn, timeout):
+        return True
+
+    @classmethod
     def get_session_id(cls, fqdn):
         return sum(bytearray(str(fqdn)))
 
