@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -63,8 +63,6 @@ class CryptoClient(object):
         cert, key = self._crypto.certificate_file, self._crypto.private_key_file
         if cert:
             kwargs['cert'] = (cert, key)
-
-        daemon_log.error("*************** Sending request %s" % method)
 
         try:
             response = requests.request(method, self.url,
@@ -266,10 +264,8 @@ class SessionTable(object):
 
     def create(self, plugin_name, id):
         daemon_log.info("SessionTable.create %s/%s" % (plugin_name, id))
-        if plugin_name in self._requested_at:
-            del self._requested_at[plugin_name]
-        if plugin_name in self._backoffs:
-            del self._backoffs[plugin_name]
+        self._requested_at.pop(plugin_name, None)
+        self._backoffs.pop(plugin_name, None)
         self._sessions[plugin_name] = Session(self._client, id, plugin_name)
 
     def get(self, plugin_name, id = None):

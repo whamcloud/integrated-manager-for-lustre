@@ -782,27 +782,27 @@ class RealRemoteOperations(RemoteOperations):
         """
         Unmount all filesystems of type lustre from all clients in the config.
         """
-        for client in config['lustre_clients']:
-            self._ssh_address(
-                client['address'],
-                'umount -t lustre -a'
-            )
+        for client in config['lustre_clients'] + self.config_workers:
+            self._ssh_address(client['address'],
+                              'umount -t lustre -a')
+            self._ssh_address(client['address'],
+                              'sed -i \'/lustre/d\' /etc/fstab')
             if client not in [server['address'] for server in config['lustre_servers']]:
                 # Skip this check if the client is also a server, because
                 # both targets and clients look like 'lustre' mounts
-                result = self._ssh_address(
-                    client['address'],
-                    'mount'
-                )
-                self._test_case.assertNotRegexpMatches(
-                    result.stdout,
-                    " type lustre"
-                )
+                result = self._ssh_address(client['address'],
+                                           'mount')
+                self._test_case.assertNotRegexpMatches(result.stdout,
+                                                       " type lustre")
 
     def is_worker(self, server):
         workers = [w['address'] for w in
                    config['lustre_servers'] if 'worker' in w.get('profile', "")]
         return server['address'] in workers
+
+    @property
+    def config_workers(self):
+        return [w for w in config['lustre_servers'] if self.is_worker(w)]
 
     def has_pacemaker(self, server):
         result = self._ssh_address(

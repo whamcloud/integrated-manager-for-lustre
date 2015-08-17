@@ -1,7 +1,8 @@
+
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -194,11 +195,7 @@ class AgentRpcMessenger(object):
         duration = 0
         poll_period = 1.0
         while True:
-            with self._lock:
-                try:
-                    current_session_id = self._sessions[fqdn]
-                except KeyError:
-                    current_session_id = None
+            current_session_id = self.get_session_id(fqdn)
 
             if current_session_id is not None and current_session_id != old_session_id:
                 log.info("AgentRpcMessenger.await_restart: %s new %s" % (fqdn, current_session_id))
@@ -271,26 +268,19 @@ class AgentRpcMessenger(object):
     def _send_request(self, fqdn, action, args):
         wait_count = 0
 
-        while not fqdn in self._sessions:
-            # Allow a short wait for a session to show up, for example
-            # when running setup actions on a host we've just added its
-            # session may not yet have been fully established
-            log.info("AgentRpcMessenger._send: no session yet for %s" % fqdn)
-            wait_count += 1
-            time.sleep(1)
-            if wait_count > AgentRpcMessenger.SESSION_WAIT_TIMEOUT:
-                log.error("No %s session for %s" % (AgentRpcMessenger.PLUGIN_NAME, fqdn))
-                raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
+        if not self.await_session(fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT):
+            log.error("No %s session for %s after %s seconds" % (AgentRpcMessenger.PLUGIN_NAME, fqdn, wait_count))
+            raise AgentException(fqdn, action, args, "Could not contact server %s no session after %s seconds" % (fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT))
 
         with self._lock:
             try:
                 session_id = self._sessions[fqdn]
-                log.debug("AgentRpcMessenger._send: using session %s" % session_id)
             except KeyError:
-                # This could happen in spite of the earlier check, as that was
-                # outside the lock.
+                # This could happen in spite of the earlier check, as that was outside the lock.
                 log.warning("AgentRpcMessenger._send: no session for %s" % fqdn)
                 raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
+
+            log.debug("AgentRpcMessenger._send: using session %s" % session_id)
 
             rpc = ActionInFlight(session_id, fqdn, action, args)
 
@@ -335,6 +325,23 @@ class AgentRpcMessenger(object):
         rpc = self._send_request(fqdn, action, args)
         return self._complete(rpc, cancel_event), rpc
 
+    def await_session(self, fqdn, timeout):
+        '''
+        Wait for the agent to connect back to the manager and hence be ready to accept commands
+        :param fqdn: fqdn of the agent we are waiting for
+        :param timeout: how long to wait before quiting.
+        :return: timeout remaining 0=failed, !0 is pass and useful for debug.
+        '''
+        while self.get_session_id(fqdn) == None and timeout > 0:
+            # Allow a short wait for a session to show up, for example
+            # when running setup actions on a host we've just added its
+            # session may not yet have been fully established
+            log.info("AgentRpcMessenger._send: no session yet for %s, %s seconds remain" % (fqdn, timeout))
+            timeout -= 1
+            time.sleep(1)
+
+        return timeout
+
 
 class AgentRpc(object):
     """
@@ -372,6 +379,10 @@ class AgentRpc(object):
     @classmethod
     def await_restart(cls, fqdn, timeout, old_session_id=None):
         return cls._messenger.await_restart(fqdn, timeout, old_session_id)
+
+    @classmethod
+    def await_session(cls, fqdn, timeout):
+        return cls._messenger.await_session(fqdn, timeout)
 
 
 class AgentCancellation(Exception):

@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -869,33 +869,52 @@ class UpdateDevicesStep(Step):
 
 
 class DeployStep(Step):
+    # TODO: This timeout is the time to wait for the agent to successfully connect back to the manager. It is stupidly long
+    # because we have seen the agent take stupidly long times to connect back to the manager. I've raised HYD-4769
+    # to address the need for this long time out.
+    DEPLOY_STARTUP_TIMEOUT = 360
+
     def run(self, kwargs):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        host = kwargs['host']
 
         # TODO: before kicking this off, check if an existing agent install is present:
         # the decision to clear it out/reset it should be something explicit maybe
         # even requiring user permission
-        agent_ssh = AgentSsh(kwargs['address'])
+        agent_ssh = AgentSsh(host.fqdn)
         auth_args = agent_ssh.construct_ssh_auth_args(kwargs['__auth_args']['root_pw'],
                                                       kwargs['__auth_args']['pkey'],
                                                       kwargs['__auth_args']['pkey_pw'])
 
-        rc, stdout, stderr = agent_ssh.ssh('curl -k %s/agent/setup/%s/%s | python' %
-                                                             (settings.SERVER_HTTP_URL,
-                                                              kwargs['token'].secret,
-                                                              '?profile_name=%s' % kwargs['profile_name']),
-                                                              auth_args=auth_args)
+        rc, stdout, stderr = agent_ssh.ssh('curl -k %s/agent/setup/%s/%s | python' % (settings.SERVER_HTTP_URL,
+                                                                                      kwargs['token'].secret,
+                                                                                      '?profile_name=%s' % kwargs['profile_name']),
+                                           auth_args=auth_args)
 
         if rc == 0:
             try:
-                registration_result = json.loads(stdout)
+                json.loads(stdout)
             except ValueError:
                 # Not valid JSON
-                raise RuntimeError("Failed to register host %s: rc=%s\n'%s'\n'%s'" % (kwargs['address'], rc, stdout, stderr))
-
-            return registration_result['host_id'], registration_result['command_id']
+                raise AgentException(host.fqdn,
+                                     "DeployAgent",
+                                     kwargs,
+                                     help_text["deploy_failed_to_register_host"] % (host.fqdn, rc, stdout, stderr))
         else:
-            raise RuntimeError("Failed to register host %s: rc=%s\n'%s'\n'%s'" % (kwargs['address'], rc, stdout, stderr))
+            raise AgentException(host.fqdn,
+                                 "DeployAgent",
+                                 kwargs,
+                                 help_text["deploy_failed_to_register_host"] % (host.fqdn, rc, stdout, stderr))
+
+        # No wait for the agent to actually connect back to the manager.
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+        if not AgentRpc.await_session(host.fqdn, self.DEPLOY_STARTUP_TIMEOUT):
+            raise AgentException(host.fqdn,
+                                 "DeployAgent",
+                                 kwargs,
+                                 help_text["deployed_agent_failed_to_contact_manager"] % host.fqdn)
 
 
 class AwaitRebootStep(Step):
@@ -940,7 +959,7 @@ class DeployHostJob(StateChangeJob):
         return [
             (DeployStep, {
                 'token': token,
-                'address': self.managed_host.address,
+                'host': self.managed_host,
                 'profile_name': self.managed_host.server_profile.name,
                 '__auth_args': self.auth_args},)
         ]

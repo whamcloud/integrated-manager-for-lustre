@@ -152,6 +152,8 @@ help_text = {
     'update_conf_params': 'Update Conf params.',
     'make_file_system_unavailable': 'Make this file system unavailable.',
     'deploy_agent': 'Deploy agent to host.',
+    'deploy_failed_to_register_host': 'Failed to register host %s: rc=%s\n\'%s\'\n\'%s\'',
+    'deployed_agent_failed_to_contact_manager': 'Deployed agent on %s failed to contact manager.',
     'detect_targets': 'Scan for Lustre targets',
     'discovered_target': 'Discovered %s \'%s\' on server %s',
     'discovered_no_new_target': "Discovered no new %ss",
