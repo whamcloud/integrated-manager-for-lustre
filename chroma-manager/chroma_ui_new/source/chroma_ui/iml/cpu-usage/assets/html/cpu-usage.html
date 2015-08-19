@@ -1,9 +1,0 @@
-<div ng-controller="CpuUsageCtrl" class="with-transitions">
-  <h5>CPU Usage</h5>
-  <div class="controls">
-    <duration-picker start-unit="{{ cpuUsage.unit }}" start-size="{{ cpuUsage.size }}" on-update="cpuUsage.onUpdate(unit, size)"></duration-picker>
-    <a full-screen-btn class="btn btn-primary btn-xs"></a>
-    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
-  </div>
-  <line-chart options="cpuUsage.options" chart-data="cpuUsage.data"></line-chart>
-</div>

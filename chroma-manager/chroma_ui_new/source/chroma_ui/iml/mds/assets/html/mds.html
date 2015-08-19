@@ -1,9 +1,0 @@
-<div ng-controller="MdsCtrl" class="with-transitions">
-  <h5>Metadata Servers</h5>
-  <div class="controls">
-    <duration-picker start-unit="{{ mds.unit }}" start-size="{{ mds.size }}" on-update="mds.onUpdate(unit, size)"></duration-picker>
-    <a full-screen-btn class="btn btn-primary btn-xs"></a>
-    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
-  </div>
-  <line-chart options="mds.options" chart-data="mds.data"></line-chart>
-</div>

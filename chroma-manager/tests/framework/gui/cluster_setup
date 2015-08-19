@@ -11,15 +11,15 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 GOOGLE_REPO=${GOOGLE_REPO:-"http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64"}  # If not on Toro, can pass in http://dl.google.com/linux/chrome/rpm/stable/x86_64
 
-echo "Beginning installation and setup on $CHROMA_MANAGER..."
+echo "Beginning installation and setup..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk haveged
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
-# Selenium server needs entropy
-service haveged start
+export NODE_PATH=/usr/lib/node_modules
+npm i -g npm@latest
 
 if [ ! -z "$GOOGLE_REPO" ]; then
   # Install Google Chrome
@@ -57,42 +57,18 @@ set -ex
 mkdir $HOME/bin
 
 MANAGER_DIR=${MANAGER_DIR:-"$HOME/chroma_test_env/chroma/chroma-manager"}
-ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node/ziplocker"}
+ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node_modules/@intel-js/ziplocker"}
 CHROMA_EXTERNALS=${CHROMA_EXTERNALS:-"$HOME/chroma_test_env/chroma/chroma-externals"}
 ZIP_INSTALL_DEV=${ZIP_INSTALL_DEV:-"$ZIPLOCK_DIR/bin/zip-install-dev --overrides.ziplockDir=$CHROMA_EXTERNALS"}
 
-# Install Chromedriver
-LATEST_CHROMEDRIVER_RELEASE=$(curl -f http://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-wget http://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER_RELEASE/chromedriver_linux64.zip
-unzip chromedriver_linux64.zip -d $HOME/bin/
-
-# Set up the virtualenv to run the tests in
-cd chroma_test_env
-virtualenv --no-site-packages .
-source bin/activate
-cd chroma/chroma-manager
-
-python tests/utils/pip_install_requirements.py ../chroma-externals/ ../chroma-externals/*.tar.gz
+cd chroma_test_env/chroma/chroma-manager
 
 # Install npm-based requirements
-cd $ZIPLOCK_DIR
-cp -r $CHROMA_EXTERNALS/ziplocker/node_modules/ ./node_modules/
-$ZIP_INSTALL_DEV
+export ZIP_DEV=true
+export NODE_PATH=/usr/lib/node_modules
+make ui-modules
 
-PATHS_TO_INSTALL="ui-modules/node/router/
-ui-modules/node/srcmap-reverse
-ui-modules/node/stub-daddy/
-ui-modules/node/stub-daddy-client/
-ui-modules/node/dirp/
-ui-modules/node/req/
-ui-modules/isomorphic/fp/
-ui-modules/isomorphic/obj/
-ui-modules/node/realtime/
-ui-modules/node/view-server/
-chroma_ui/
-chroma_ui_new
-chroma_ui_new/gulp
-ui-modules/browser/socket-worker"
+PATHS_TO_INSTALL="chroma_ui/"
 
 for install_path in $PATHS_TO_INSTALL
 do
@@ -107,72 +83,5 @@ somepassword
 somepassword
 EOC
 EOF
-
-# Install and setup chroma manager
-scp ../$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
-ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
-set -ex
-cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
-retries=50
-timeout=180
-EOF
-yum install -y python-mock expect
-if $MEASURE_COVERAGE; then
-    yum install -y python-coverage
-fi
-rm -f /etc/yum.repos.d/autotest.repo
-yum clean metadata
-# Install from the installation package
-cd /tmp
-tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME .tar.gz)
-if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
-    rc=${PIPESTATUS[0]}
-    cat /var/log/chroma/install.log
-    exit $rc
-fi
-
-cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
-import logging
-import sys
-import settings
-from scripts.nginx_settings import get_production_nginx_settings
-LOG_LEVEL = logging.DEBUG
-MIDDLEWARE_CLASSES = settings.MIDDLEWARE_CLASSES + ('tests.request_logging_middleware.RequestLoggingMiddleware',)
-DEBUG = True
-TEMPLATE_DEBUG = False
-LOG_PATH = \"/var/log/chroma\"
-CRYPTO_FOLDER = \"/var/lib/chroma\"
-STORAGE_PLUGIN_DEBUG = False
-for key, value in get_production_nginx_settings().items():
-    setattr(sys.modules[__name__], key, value)
-EOF1
-
-mkdir -p /usr/share/chroma-manager/tests/framework/gui/"
-
-scp -r chroma/chroma-manager/tests/request_logging_middleware.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/request_logging_middleware.py
-scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
-scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
-
-ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
-
-if $MEASURE_COVERAGE; then
-  cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
-[run]
-data_file = /var/tmp/.coverage
-parallel = True
-source = /usr/share/chroma-manager/
-EOF1
-  cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
-import coverage
-cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
-cov.start()
-cov._warn_no_data = False
-cov._warn_unimported_source = False
-EOF1
-fi
-
-chroma-config restart
-"
 
 echo "End installation and setup."

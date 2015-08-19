@@ -141,5 +141,6 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
+export NODE_PATH=/usr/lib/node_modules
 make develop
 EOF

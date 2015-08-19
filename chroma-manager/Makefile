@@ -48,8 +48,6 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-find = $(foreach dir,$(1),$(foreach d,$(wildcard $(dir)/*),$(call find,$(d),$(2))) $(wildcard $(dir)/$(strip $(2))))
-
 all: rpms docs
 
 cleandist:
@@ -62,7 +60,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version realtime.stamp view-server.stamp
+develop: version ui-modules
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
@@ -73,37 +71,32 @@ $(NPM):
 	@echo "Or maybe you don't even have the which(1) command"
 	exit 1
 
-ziplocker.stamp: ui-modules/node/ziplocker/ziplock.json $(NPM)
+ziplocker: $(NPM)
 	@echo "Setting up ziplocker module"; \
-	cd ui-modules/node/ziplocker && \
-	rm -rf ./node_modules && \
-	cp -r ../../../../chroma-externals/ziplocker/node_modules ./ && \
-	./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-	touch $@
+	mkdir -p ui-modules/node_modules/@intel-js && \
+	cd ui-modules/node_modules/@intel-js && \
+	rm -rf ./* && \
+	cp -r ../../../../chroma-externals/ui-modules/node_modules/@intel-js/ziplocker ./
 
-realtime.stamp: ui-modules/node/realtime/ziplock.json ziplocker.stamp $(NPM)
-	@echo "Setting up realtime module"; \
-	cd ui-modules/node/realtime && \
-	../ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../../../chroma-externals/'
-	touch $@
+ui-modules: ziplocker
+	@echo "Setting up ui-modules zipdev: $(ZIP_DEV)"; \
+	cd ui-modules && \
+	node_modules/@intel-js/ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../chroma-externals/'
 
-view-server.stamp: ui-modules/node/view-server/ziplock.json ziplocker.stamp $(NPM)
-	@echo "Setting up view-server module"; \
-	cd ui-modules/node/view-server && \
-	../ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../../../chroma-externals/'
-	touch $@
-
-gulp-build.stamp: chroma_ui_new/gulp/ziplock.json realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
-	@echo "Setting up gulp"; \
-	cd chroma_ui_new/gulp && \
-	../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
-	touch $@
-
-gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/index.html chroma_ui_new/gulp/gulp-src-globs.json gulp-build.stamp realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
+gui: ui-modules
 	@echo "Building GUI for deployment"; \
-	cd chroma_ui_new/gulp && \
-	npm run build
-	touch $@
+	cd ui-modules/node_modules/@intel-js/gui/gulp && \
+	npm run build -- --dest-dir='../../../../..'
+
+socket-worker: gui
+	@echo "Building socket worker"; \
+	cd ui-modules/node_modules/@intel-js/socket-worker && \
+	npm run build && \
+	mv bundle.js ../../../../chroma_ui/static/chroma_ui && \
+	mv bundle.map.json ../../../../chroma_ui/static/chroma_ui
+
+build-ui: socket-worker
+	@echo "Building UI Components";
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -202,7 +195,7 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version gui.stamp
+tarball: version build-ui
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
@@ -240,10 +233,8 @@ requirements:
 		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
 	fi
 
-download: requirements ziplocker.stamp
-	pip install --download ../chroma-externals -r requirements.txt
-	cd realtime && \
-	../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/' --no-overrides.askQuestions
+download: requirements
+	pip-python install --download ../chroma-externals -r requirements.txt
 
 docs: requirements version
 	set -e ; \
@@ -256,4 +247,4 @@ docs: requirements version
 	fi; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs download
+.PHONY: docs download build-ui socket-worker gui ui-modules ziplocker

@@ -10,82 +10,113 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 
 trap "set +e; scp -r chromatest@$TEST_RUNNER:test_reports $WORKSPACE" EXIT
 
-scp $CLUSTER_CONFIG chromatest@$TEST_RUNNER:cluster_config.json
 ssh chromatest@$TEST_RUNNER <<EOC
 set -ex
 mkdir test_reports
-source chroma_test_env/bin/activate
 vncserver :1 -geometry 1024x768
 export DISPLAY=\$(hostname):1
+export NODE_PATH=/usr/lib/node_modules
+export RUNNER=CI
+
+INTEL_JS_MODULES=${INTEL_JS_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-manager/ui-modules/node_modules/@intel-js"}
 
 #######################################
 # New UI Tests
 #######################################
 
-# Run Karma GUI unit tests (new ui)
-cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
+# Run angular-modules
+cd \$INTEL_JS_MODULES/angular-modules
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
-mv test-results.xml \$HOME/test_reports/karma-test-results-new-ui.xml
-
-# Run gulp Test(s)
-cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new/gulp
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=CI ./node_modules/.bin/jasmine
-mv gulp-results.xml \$HOME/test_reports/
-
-# Run ziplocker tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/ziplocker
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=ziplocker-results
-
-# Run Stub Daddy Mock API Service unit tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-results
-
-# Run Stub Daddy Client tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy-client
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-client-results
+mv test-results.xml \$HOME/test_reports/karma-test-results-angular-modules.xml
 
 # Run dirp tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/dirp
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/dirp
+npm t
 mv dirp-results.xml \$HOME/test_reports/dirp-results.xml
 
-# Run router tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/router
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=router-results
-
 #Run fp tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/isomorphic/fp
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/fp
+npm t
 mv fp-results.xml \$HOME/test_reports/
 
+# Run Karma GUI unit tests (new ui)
+cd \$INTEL_JS_MODULES/gui
+./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
+mv test-results/*.xml \$HOME/test_reports/
+rm -rf ./test-results
+
+# Run gulp Test(s)
+cd \$INTEL_JS_MODULES/gui/gulp
+npm t
+mv gulp-results.xml \$HOME/test_reports/
+
+#Run gulp-iife-wrap tests
+cd \$INTEL_JS_MODULES/gulp-iife-wrap
+npm t
+mv gulp-iife-wrap-results.xml \$HOME/test_reports/
+
+#Run iife-wrap tests
+cd \$INTEL_JS_MODULES/iife-wrap
+npm t
+mv iife-wrap-results.xml \$HOME/test_reports/
+
+#Run karma-iife-wrap-preprocessor tests
+cd \$INTEL_JS_MODULES/karma-iife-wrap-preprocessor
+npm t
+mv karma-iife-wrap-preprocessor-results.xml \$HOME/test_reports/
+
+#Run natural-sort tests
+cd \$INTEL_JS_MODULES/natural-sort
+npm t
+mv natural-sort-results.xml \$HOME/test_reports/
+
 #Run obj tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/isomorphic/obj
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/obj
+npm t
 mv obj-results.xml \$HOME/test_reports/
 
 # Run realtime service tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/realtime/
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/realtime/
+npm t
 mv realtime-results.xml \$HOME/test_reports/
 
-# Run view-server service tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/view-server/
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
-mv view-server-results.xml \$HOME/test_reports/
-
 # Run req service tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/req/
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/req
+npm t
 mv req-results.xml \$HOME/test_reports/
 
-# Run srcmap-reverse tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/srcmap-reverse
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=srcmap-reverse-results
+# Run router tests
+cd \$INTEL_JS_MODULES/router
+npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=router-results
 
 # Run socket-worker tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/browser/socket-worker/
-JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+cd \$INTEL_JS_MODULES/socket-worker
+npm t
 mv socket-worker-results.xml \$HOME/test_reports/
+
+# Run srcmap-reverse tests
+cd \$INTEL_JS_MODULES/srcmap-reverse
+npm t
+mv srcmap-reverse-results.xml \$HOME/test_reports/
+
+# Run Stub Daddy Mock API Service unit tests
+cd \$INTEL_JS_MODULES/stub-daddy
+npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-results
+
+#Run through tests
+cd \$INTEL_JS_MODULES/through
+npm t
+mv through-results.xml \$HOME/test_reports/
+
+# Run view-server service tests
+cd \$INTEL_JS_MODULES/view-server
+npm t
+mv view-server-results.xml \$HOME/test_reports/
+
+# Run ziplocker tests
+cd \$INTEL_JS_MODULES/ziplocker
+npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=ziplocker-results
+
 
 #######################################
 # Old UI Tests
@@ -98,7 +129,7 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
 
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=15
+NUM_EXPECTED_TEST_REPORTS=21
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

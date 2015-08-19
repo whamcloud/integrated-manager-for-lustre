@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2015 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -927,14 +927,14 @@ var AlertNotification = function() {
     active_alerts[alert_info.id] = alert_info
 
     $.each(alert_info.affected, function(i, effectee) {
-      if (!alert_effects[effectee.resource_uri]) {
-        alert_effects[effectee.resource_uri] = {}
+      if (!alert_effects[effectee]) {
+        alert_effects[effectee] = {}
       }
-      alert_effects[effectee.resource_uri][alert_info.id] = 1
-      $(".alert_indicator[data-resource_uri='" + effectee.resource_uri + "']").each(function() {
+      alert_effects[effectee][alert_info.id] = 1
+      $(".alert_indicator[data-resource_uri='" + effectee+ "']").each(function() {
         updateIcon($(this));
       });
-      CommandNotification.updateObject(effectee.resource_uri);
+      CommandNotification.updateObject(effectee);
     });
 
     updateSidebar();
@@ -948,11 +948,11 @@ var AlertNotification = function() {
     delete active_alerts[alert_info.id]
 
     $.each(alert_info.affected, function(i, effectee) {
-      delete alert_effects[effectee.resource_uri][alert_info.id]
-      $(".alert_indicator[data-resource_uri='" + effectee.resource_uri + "']").each(function() {
+      delete alert_effects[effectee][alert_info.id]
+      $(".alert_indicator[data-resource_uri='" + effectee + "']").each(function() {
         updateIcon($(this));
       });
-      CommandNotification.updateObject(effectee.resource_uri);
+      CommandNotification.updateObject(effectee);
     });
 
 

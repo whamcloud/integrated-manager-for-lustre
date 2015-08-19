@@ -70,7 +70,9 @@ setup(
                       "static/chroma_ui/common/login/assets/images/*.png",
                       "static/chroma_ui/iml/app/assets/images/*",
                       "static/chroma_ui/styles/imports-*.css",
-                      "static/chroma_ui/built-*.js", "static/chroma_ui/built-*.js.map"],
+                      "static/chroma_ui/built-*.js", "static/chroma_ui/built-*.js.map",
+                      "static/chroma_ui/bundle.js",
+                      "static/chroma_ui/bundle.map.json"],
         'chroma_help': ["static/webhelp/*.htm*",
                         "static/webhelp/*.gif", "static/webhelp/*.js",
                         "static/webhelp/*.css", "static/webhelp/*.jpg",
@@ -78,20 +80,20 @@ setup(
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
         'ui-modules': [
-            "node/view-server/*.js",
-            "node/view-server/lib/*.js",
-            "node/view-server/middleware/*.js",
-            "node/view-server/routes/*.js",
-            "node/view-server/package.json",
-            "node/realtime/*.js",
-            "node/realtime/request/*.js",
-            "node/realtime/reverse-source-map/*.js",
-            "node/realtime/socket-router/*.js",
-            "node/realtime/socket-router/middleware/*.js",
-            "node/realtime/socket-router/routes/*.js",
-            "node/realtime/package.json"
-        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node/view-server/node_modules')]
-          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node/realtime/node_modules')]
+            "node_modules/@intel-js/view-server/*.js",
+            "node_modules/@intel-js/view-server/lib/*.js",
+            "node_modules/@intel-js/view-server/middleware/*.js",
+            "node_modules/@intel-js/view-server/routes/*.js",
+            "node_modules/@intel-js/view-server/package.json",
+            "node_modules/@intel-js/realtime/*.js",
+            "node_modules/@intel-js/realtime/reverse-source-map/*.js",
+            "node_modules/@intel-js/realtime/serialize-error/*.js",
+            "node_modules/@intel-js/realtime/socket-router/*.js",
+            "node_modules/@intel-js/realtime/socket-router/middleware/*.js",
+            "node_modules/@intel-js/realtime/socket-router/routes/*.js",
+            "node_modules/@intel-js/realtime/package.json"
+        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/@intel-js/view-server/node_modules')]
+          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/@intel-js/realtime/node_modules')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {
