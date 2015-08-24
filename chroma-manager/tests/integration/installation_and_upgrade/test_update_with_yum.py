@@ -2,14 +2,10 @@ from testconfig import config
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_create_filesystem \
-    import TestCreateFilesystem, my_setUp
+    import TestCreateFilesystem
 
 
 class TestYumUpdate(TestCreateFilesystem):
-
-    def setUp(self):
-        my_setUp(self)
-
     def test_create(self):
         """ Test that a filesystem can be created"""
 

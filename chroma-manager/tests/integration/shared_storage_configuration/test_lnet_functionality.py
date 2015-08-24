@@ -26,10 +26,6 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
     def test_nids(self):
         lnetinfo = self._get_lnet_info(self.host)
 
-        # If _get_lnet_info returns None then lnet config is not supported by the version of IML running.
-        if not lnetinfo:
-            return
-
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
 
@@ -37,10 +33,11 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         objects = []
         for lnd_network, interface in enumerate(lnetinfo.network_interfaces, start = 99):
             logger.debug("Setting lnd_network to %s for interface %s" % (lnd_network, interface['name']))
-            objects.append({"lnd_network": lnd_network,
+            objects.append({"lnd_type": "tcp",
+                            "lnd_network": lnd_network,
                             "network_interface": interface['resource_uri']})
 
-        # Now post these of values, this will wait for the command to complete.
+        # Now post these values, this will wait for the command to complete.
         self.post_by_uri('/api/nid/', {'objects': objects})
 
         # Now see what we have.
@@ -101,17 +98,17 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
         objects = []
         for interface in lnetinfo.network_interfaces:
-            logger.debug("Deleting lnd_network for interface %s" % interface['name'])
+            logger.debug("Setting lnd_network to -1 for interface %s" % interface['name'])
             objects.append({"lnd_network": -1,
                             "network_interface": interface['resource_uri']})
         self.post_by_uri('/api/nid/', {'objects': objects})
 
         # Because lnet is not loaded we should see 0 nids.
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 0, self._get_lnet_info(self.host).nids)
+        self.assertEqual(len(self._get_lnet_info(self.host).nids), 0, self._get_lnet_info(self.host))
 
         # But if lnet is up we should receive 1 nid back - because 1 nid is always reported by lnet.
         self.set_state(self.host['lnet_configuration'], 'lnet_up')
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 1, self._get_lnet_info(self.host).nids)
+        self.assertEqual(len(self._get_lnet_info(self.host).nids), 1, self._get_lnet_info(self.host))
 
     def _change_lnet_state(self):
         state = self.states[self.state_order.next()]

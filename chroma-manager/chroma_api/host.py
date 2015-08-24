@@ -182,7 +182,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
     server_profile = fields.ToOneField(ServerProfileResource, 'server_profile',
                                        full = True)
 
-    lnet_configuration = fields.ToOneField('chroma_api.network_interface.LNetConfigurationResource', 'lnetconfiguration',
+    lnet_configuration = fields.ToOneField('chroma_api.lnet_configuration.LNetConfigurationResource', 'lnetconfiguration',
                                            full = False)
 
     def dehydrate_nids(self, bundle):

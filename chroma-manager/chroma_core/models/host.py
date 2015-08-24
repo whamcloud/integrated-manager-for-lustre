@@ -42,6 +42,7 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models.jobs import Job, AdvertisedJob, StateLock
+
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn, DependAll, DependAny, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableMetaclass
@@ -439,23 +440,6 @@ class VolumeNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
-
-
-class NetworkInterface(models.Model):
-    host = models.ForeignKey('ManagedHost')
-
-    name = models.CharField(max_length=32)
-    inet4_address = models.CharField(max_length=128)
-    type = models.CharField(max_length=32)          # tcp, o2ib, ... (best stick to lnet types!)
-    state_up = models.BooleanField()
-
-    def __str__(self):
-        return "%s-%s" % (self.host, self.name)
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-        unique_together = ('host', 'name')
 
 
 class ConfigurePacemakerStep(Step):

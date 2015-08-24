@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # INTEL CONFIDENTIAL
 #
@@ -20,26 +21,27 @@
 # express and approved by Intel in writing.
 
 
-from nid import *
-from network_interface import *
-from jobs import *
-from host import *
-from host_jobs import *
-from target import *
-from filesystem import *
-from conf_param import *
-from storage_plugin import *
-from alert import *
-from event import *
-from log import *
-from registration_token import *
-from stats import *
-from ha_cluster import *
-from power_control import *
-from bundle import *
-from server_profile import *
-from package import *
-from user_profile import *
-from copytool import *
-from client_mount import *
-from lnet_configuration import *
+from django.db import models
+
+from chroma_core.models import Nid
+
+
+class NetworkInterface(models.Model):
+    host = models.ForeignKey('ManagedHost')
+
+    name = models.CharField(max_length=32)
+    inet4_address = models.CharField(max_length=128)
+    type = models.CharField(max_length=32)          # tcp, o2ib, ... (best stick to lnet types!)
+    state_up = models.BooleanField()
+
+    def __str__(self):
+        return "%s-%s" % (self.host, self.name)
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+        unique_together = ('host', 'name')
+
+    @property
+    def lnd_types(self):
+        return Nid.lnd_types_for_network_type(self.type)

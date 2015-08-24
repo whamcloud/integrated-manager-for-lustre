@@ -63,17 +63,18 @@ class Nid(resources.LNETInterface):
     class Meta:
         identifier = ScopedId('host_id', 'name')
 
-    """Simplified NID representation for those we detect already-configured"""
+    # Simplified NID representation for those we detect already-configured
     name = attributes.String()                  # This is only used to scope it.
     host_id = attributes.Integer()              # Need so we uniquely identify it.
     lnd_network = attributes.Integer()
+    lnd_type = attributes.String()
 
 
 class LNetState(resources.LNETModules):
     class Meta:
         identifier = ScopedId('host_id')
 
-    """ Lnet is pretty simple at the moment just a state """
+    # Lnet is pretty simple at the moment just a state
     state = attributes.String()
 
 
@@ -132,10 +133,11 @@ class LinuxNetwork(Plugin):
                                                     parents = [parent_interface],
                                                     name = name,
                                                     host_id = host_id,
-                                                    lnd_network = nid['lnd_network'])
+                                                    lnd_network = nid['lnd_network'],
+                                                    lnd_type = nid['lnd_type'])
 
             if created:
-                self.log.debug("Learned new nid %s:%s@%s%s" % (parent_interface.host_id, parent_interface.inet4_address, parent_interface.type, nid['lnd_network']))
+                self.log.debug("Learned new nid %s:%s@%s%s" % (parent_interface.host_id, parent_interface.inet4_address, nid['lnd_type'], nid['lnd_network']))
 
         lnet_state, created = self.update_or_create(LNetState,
                                                     host_id = host_id,

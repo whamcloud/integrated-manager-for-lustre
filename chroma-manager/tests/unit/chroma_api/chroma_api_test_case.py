@@ -107,6 +107,14 @@ class ChromaApiTestCase(ResourceTestCase):
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
         return self.deserialize(response)
 
+    def api_post(self, uri, data=None, assertion_test=lambda self, response: self.assertHttpAccepted(response)):
+        response = self.api_client.post(uri, data=data)
+        try:
+            assertion_test(self, response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+        return self.deserialize(response)
+
     def create_simple_filesystem(self, host):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedTargetMount
         self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name = "MGS")
@@ -122,8 +130,8 @@ class ChromaApiTestCase(ResourceTestCase):
         ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id = self.mdt.id))
         ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id = self.ost.id))
 
-    def api_get_list(self, uri):
-        response = self.api_client.get(uri)
+    def api_get_list(self, uri, **kwargs):
+        response = self.api_client.get(uri, **kwargs)
         try:
             self.assertHttpOK(response)
         except AssertionError:

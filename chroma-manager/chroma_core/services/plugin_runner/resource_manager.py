@@ -884,6 +884,7 @@ class ResourceManager(object):
                                                              network_interface = nw_interfaces[parent])
 
                     nid.lnd_network = source_nid.lnd_network
+                    nid.lnd_type = source_nid.lnd_type
                     nid.save()
 
                     log.debug("_persist_nid_updates nid %s %s" % (nid, "created" if created else "updated"))

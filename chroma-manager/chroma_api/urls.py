@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -77,6 +77,8 @@ import chroma_api.package
 import chroma_api.client_error
 import chroma_api.notification
 import chroma_api.copytool
+import chroma_api.nid
+import chroma_api.lnet_configuration
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
@@ -113,8 +115,8 @@ api.register(chroma_api.notification.NotificationResource())
 api.register(chroma_api.copytool.CopytoolResource())
 api.register(chroma_api.copytool.CopytoolOperationResource())
 api.register(chroma_api.network_interface.NetworkInterfaceResource())
-api.register(chroma_api.network_interface.NidResource())
-api.register(chroma_api.network_interface.LNetConfigurationResource())
+api.register(chroma_api.nid.NidResource())
+api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 
 urlpatterns = patterns('',
     (r'^', include(api.urls)),

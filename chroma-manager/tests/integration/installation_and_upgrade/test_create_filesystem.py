@@ -9,6 +9,19 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
     fs_name = "testfs"
 
+    def setUp(self):
+        # connect the remote operations but otherwise...
+        if config.get('simulator', False):
+            self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
+        else:
+            self.remote_operations = RealRemoteOperations(self)
+
+        # Enable agent debugging
+        self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
+
+        self.wait_until_true(self.supervisor_controlled_processes_running)
+        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
+
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         # Override add hosts functionality for older APIs
 
@@ -64,24 +77,7 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
         self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
 
 
-def my_setUp(self):
-    # connect the remote operations but otherwise...
-    if config.get('simulator', False):
-        self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
-    else:
-        self.remote_operations = RealRemoteOperations(self)
-
-    # Enable agent debugging
-    self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
-
-    self.wait_until_true(self.supervisor_controlled_processes_running)
-    self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
-
-
 class TestAddHost(TestCreateFilesystem):
-    def setUp(self):
-        my_setUp(self)
-
     def test_add_host(self):
         """ Test that a host and OST can be added to a filesystem"""
 
@@ -119,9 +115,6 @@ class TestAddHost(TestCreateFilesystem):
 
 
 class TestExistsFilesystem(TestCreateFilesystem):
-    def setUp(self):
-        my_setUp(self)
-
     def test_exists(self):
         self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
         # wait for it to be available, in case we rebooted storage servers before getting here

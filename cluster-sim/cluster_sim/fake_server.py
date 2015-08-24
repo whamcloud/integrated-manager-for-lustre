@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -78,7 +78,10 @@ class FakeServer(Persisted):
             self.network_interfaces = {}
             interface_no = 0
             for nid in nid_tuples_or_network_interfaces:
-                self.network_interfaces[nid[0]] = {'interface_no': interface_no, 'type': nid[1], 'lnd_network': nid[2]}
+                self.network_interfaces[nid[0]] = {'interface_no': interface_no,
+                                                   'type': nid[1],
+                                                   'lnd_type': nid[1],
+                                                   'lnd_network': nid[2]}
                 interface_no += 1
 
         self.boot_time = datetime.datetime.utcnow()
@@ -630,6 +633,7 @@ class FakeServer(Persisted):
 
         for nid in lnet_configuration['network_interfaces']:
             inet4_address = nid[0]
+            self.network_interfaces[inet4_address]['lnd_type'] = nid[1]
             self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
 
         self.state['network_interfaces'] = self.network_interfaces

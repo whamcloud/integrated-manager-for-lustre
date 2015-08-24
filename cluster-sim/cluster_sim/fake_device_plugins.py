@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -91,7 +91,8 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
             if interface['lnd_network'] is not None:
                 nids[name] = {'nid_address': inet4_address,
                               'type': interface['type'],
-                              'lnd_network': interface['lnd_network']}
+                              'lnd_network': interface['lnd_network'],
+                              'lnd_type': interface['lnd_type']}
 
         # If lnet is up but no nids are configured then create 1 because lnet always returns 1 nid
         if (self._server.state['lnet_up'] == True) and (nids == {}):

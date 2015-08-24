@@ -137,10 +137,10 @@ def synthetic_host_create_lnet_configuration(host, nids):
             network_interface.state_up = True
             network_interface.save()
 
-            nid_record = Nid.objects.create(lnet_configuration = lnet_configuration,
-                                            network_interface = network_interface)
-
-            nid_record.lnd_network = nid.lnd_network
+            nid_record = Nid.objects.create(lnet_configuration=lnet_configuration,
+                                            network_interface=network_interface,
+                                            lnd_network=nid.lnd_network,
+                                            lnd_type=nid.lnd_type)
             nid_record.save()
 
             interface_no += 1

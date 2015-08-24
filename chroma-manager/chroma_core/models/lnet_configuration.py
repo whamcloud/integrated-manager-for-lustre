@@ -21,8 +21,6 @@
 # express and approved by Intel in writing.
 
 import json
-import re
-from collections import namedtuple
 import logging
 
 from django.db import models
@@ -34,6 +32,7 @@ from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
 from chroma_core.models import NullStateChangeJob
+from chroma_core.models import Nid
 from chroma_core.models import Job, StateLock
 from chroma_core.models import NetworkInterface
 from chroma_core.lib.job import DependOn, DependAll, Step
@@ -147,7 +146,8 @@ class ConfigureLNetStep(Step):
             elif str(network_interface.id) in nid_updates:
                 nid = Nid(network_interface = network_interface,
                           lnet_configuration = lnet_configuration,
-                          lnd_network = nid_updates[str(network_interface.id)]['lnd_network'])
+                          lnd_network = nid_updates[str(network_interface.id)]['lnd_network'],
+                          lnd_type = nid_updates[str(network_interface.id)]['lnd_type'])
             else:
                 try:
                     nid = Nid.objects.get(network_interface = network_interface)
@@ -407,63 +407,6 @@ class GetLNetStateStep(Step):
             self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
         except AgentException as e:
             self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
-
-
-class Nid(models.Model):
-    """Simplified NID representation for those we detect already-configured"""
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
-    network_interface = models.OneToOneField(NetworkInterface, primary_key = True)
-
-    lnd_network = models.IntegerField(null=True)
-
-    @property
-    def nid_string(self):
-        return ("%s@%s%s" % (self.network_interface.inet4_address,
-                             self.network_interface.type,
-                             self.lnd_network))
-
-    @property
-    def modprobe_entry(self):
-        return("%s%s(%s)" % (self.network_interface.type,
-                             self.lnd_network,
-                             self.network_interface.name))
-
-    @property
-    def to_tuple(self):
-        return tuple([self.network_interface.inet4_address,
-                      self.network_interface.type,
-                      self.lnd_network])
-
-    @classmethod
-    def nid_tuple_to_string(cls, nid):
-        return ("%s@%s%s" % (nid.nid_address,
-                             nid.lnd_type,
-                             nid.lnd_network))
-
-    Nid = namedtuple("Nid", ["nid_address", "lnd_type", "lnd_network"])
-
-    @classmethod
-    def split_nid_string(cls, nid_string):
-        '''
-        :param nid_string: Can be multiple format tcp0, tcp, tcp1234, o2ib0, o2ib (not number in the word)
-        :return: Nid name tuple containing the address, the lnd_type or the lnd_network
-        '''
-        assert '@' in nid_string, "Malformed NID?!: %s"
-
-        # Split the nid so we can search correctly on its parts.
-        nid_address = nid_string.split("@")[0]
-        type_network_no = nid_string.split("@")[1]
-        m = re.match('(\w+?)(\d+)?$', type_network_no)   # Non word, then optional greedy number at end of line.
-        lnd_type = m.group(1)
-        lnd_network = m.group(2)
-        if not lnd_network:
-            lnd_network = 0
-
-        return Nid.Nid(nid_address, lnd_type, lnd_network)
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['network_interface']
 
 
 class GetLNetStateJob(Job):
