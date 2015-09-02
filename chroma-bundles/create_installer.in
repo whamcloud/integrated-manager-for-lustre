@@ -55,6 +55,21 @@ zfs_installer() {
     cat <<EOF > install
 #!/bin/sh
 
+if \$(which dkms >/dev/null 2>&1); then
+    LVER=\$(dkms status lustre | sed 's/[^,]*, //;s/,.*//'|head -1)
+    ZVER=\$(dkms status zfs | sed 's/[^,]*, //;s/,.*//'|head -1)
+    SVER=\$(dkms status spl | sed 's/[^,]*, //;s/,.*//'|head -1)
+
+    # ZFS/SPL version 0.6.5.2 and later have correct uninstall behavior so search for a version prior to 0.6.5.2
+    if [ "\$(echo -e "\$ZVER\\n\$SVER\\n0.6.5.2"|sort -V|head -1)" != "0.6.5.2" ]; then
+        [ -n "\$LVER" ] && dkms remove lustre/\$LVER --all
+        [ -n "\$ZVER" ] && dkms remove zfs/\$ZVER --all
+        [ -n "\$SVER" ] && dkms remove spl/\$SVER --all
+    fi
+fi
+
+depmod -a
+
 yum -y install dkms-*.$DISTRO.noarch.rpm \
                zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
                lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
