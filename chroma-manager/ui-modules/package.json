@@ -11,8 +11,9 @@
   "dependencies": {
     "@intel-js/angular-modules": "1.0.1",
     "@intel-js/dirp": "1.0.4",
+    "@intel-js/extract-api": "1.0.0",
     "@intel-js/fp": "1.0.7",
-    "@intel-js/gui": "3.0.14",
+    "@intel-js/gui": "3.0.17",
     "@intel-js/gulp-iife-wrap": "1.0.1",
     "@intel-js/iife-wrap": "1.0.2",
     "@intel-js/karma-iife-wrap-preprocessor": "1.0.1",
@@ -22,12 +23,12 @@
     "@intel-js/promise-it": "1.0.0",
     "@intel-js/realtime": "3.0.3",
     "@intel-js/req": "1.0.2",
-    "@intel-js/router": "3.0.2",
+    "@intel-js/router": "3.0.3",
     "@intel-js/socket-worker": "1.0.4",
     "@intel-js/srcmap-reverse": "1.1.1",
-    "@intel-js/stub-daddy": "1.0.2",
+    "@intel-js/stub-daddy": "1.0.3",
     "@intel-js/through": "1.0.7",
     "@intel-js/view-server": "3.0.2",
-    "@intel-js/ziplocker": "1.1.5"
+    "@intel-js/ziplocker": "1.1.7"
   }
 }

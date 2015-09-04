@@ -29,16 +29,6 @@ cd \$INTEL_JS_MODULES/angular-modules
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
 mv test-results.xml \$HOME/test_reports/karma-test-results-angular-modules.xml
 
-# Run dirp tests
-cd \$INTEL_JS_MODULES/dirp
-npm t
-mv dirp-results.xml \$HOME/test_reports/dirp-results.xml
-
-#Run fp tests
-cd \$INTEL_JS_MODULES/fp
-npm t
-mv fp-results.xml \$HOME/test_reports/
-
 # Run Karma GUI unit tests (new ui)
 cd \$INTEL_JS_MODULES/gui
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
@@ -50,72 +40,31 @@ cd \$INTEL_JS_MODULES/gui/gulp
 npm t
 mv gulp-results.xml \$HOME/test_reports/
 
-#Run gulp-iife-wrap tests
-cd \$INTEL_JS_MODULES/gulp-iife-wrap
-npm t
-mv gulp-iife-wrap-results.xml \$HOME/test_reports/
+MODULES_TO_TEST="dirp
+extract-api
+fp
+gulp-iife-wrap
+iife-wrap
+karma-iife-wrap-preprocessor
+natural-sort
+obj
+realtime
+req
+router
+socket-worker
+srcmap-reverse
+stub-daddy
+through
+view-server
+ziplocker"
 
-#Run iife-wrap tests
-cd \$INTEL_JS_MODULES/iife-wrap
-npm t
-mv iife-wrap-results.xml \$HOME/test_reports/
-
-#Run karma-iife-wrap-preprocessor tests
-cd \$INTEL_JS_MODULES/karma-iife-wrap-preprocessor
-npm t
-mv karma-iife-wrap-preprocessor-results.xml \$HOME/test_reports/
-
-#Run natural-sort tests
-cd \$INTEL_JS_MODULES/natural-sort
-npm t
-mv natural-sort-results.xml \$HOME/test_reports/
-
-#Run obj tests
-cd \$INTEL_JS_MODULES/obj
-npm t
-mv obj-results.xml \$HOME/test_reports/
-
-# Run realtime service tests
-cd \$INTEL_JS_MODULES/realtime/
-npm t
-mv realtime-results.xml \$HOME/test_reports/
-
-# Run req service tests
-cd \$INTEL_JS_MODULES/req
-npm t
-mv req-results.xml \$HOME/test_reports/
-
-# Run router tests
-cd \$INTEL_JS_MODULES/router
-npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=router-results
-
-# Run socket-worker tests
-cd \$INTEL_JS_MODULES/socket-worker
-npm t
-mv socket-worker-results.xml \$HOME/test_reports/
-
-# Run srcmap-reverse tests
-cd \$INTEL_JS_MODULES/srcmap-reverse
-npm t
-mv srcmap-reverse-results.xml \$HOME/test_reports/
-
-# Run Stub Daddy Mock API Service unit tests
-cd \$INTEL_JS_MODULES/stub-daddy
-npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-results
-
-#Run through tests
-cd \$INTEL_JS_MODULES/through
-npm t
-mv through-results.xml \$HOME/test_reports/
-
-# Run view-server service tests
-cd \$INTEL_JS_MODULES/view-server
-npm t
-mv view-server-results.xml \$HOME/test_reports/
-
-# Run ziplocker tests
-cd \$INTEL_JS_MODULES/ziplocker
-npm t -- --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=ziplocker-results
+for module_name in \$MODULES_TO_TEST
+do
+    # Run test
+    cd \$INTEL_JS_MODULES/\$module_name
+    npm t
+    mv \$module_name-results.xml \$HOME/test_reports/\$module_name-results.xml
+done
 
 
 #######################################
@@ -129,7 +78,7 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
 
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=21
+NUM_EXPECTED_TEST_REPORTS=22
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."
