@@ -25,7 +25,7 @@ import os
 from collections import defaultdict
 from collections import namedtuple
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 
@@ -43,7 +43,7 @@ class NetworkInterface(object):
 
     RXTXStats = namedtuple('RXTXStats', ['rx_bytes', 'tx_bytes'])
 
-    def __init__(self, ifconfig_lines, rx_tx_stats):
+    def __init__(self, ip_output_lines, rx_tx_stats):
         match_values = ['([0-9]*):(\s*)(?P<interface>[^:]*).*',
                         '(.*)link/(?P<type>[^\s]*)(\s*)(?P<mac_address>[^\s]*).*',
                         '(.*)inet (?P<inet4_addr>[^/]*)/(?P<inet4_prefix>[0-9]*).*',
@@ -56,7 +56,7 @@ class NetworkInterface(object):
         # Set some defaults
         self._values['up'] = 'DOWN'
 
-        for line in ifconfig_lines:
+        for line in ip_output_lines:
             for match_value in match_values:
                 m = re.match(match_value, line)
                 if m:
@@ -154,7 +154,7 @@ class NetworkInterfaces(dict):
             return self.network_translation.get(if_type.lower(), if_type.lower())
 
         try:
-            ip_out = shell.try_run(['ip', 'addr'])
+            ip_out = AgentShell.try_run(['ip', 'addr'])
 
             with open("/proc/net/dev") as file:
                 dev_stats = file.readlines()

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,10 +19,11 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import os
 import re
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
@@ -54,11 +55,11 @@ class DmsetupTable(DeviceHelper):
                     'uuid': lv_uuid,
                     'size': lv_size}
 
-        stdout = shell.try_run(['dmsetup', 'table'])
+        stdout = AgentShell.try_run(['dmsetup', 'table'])
         self._parse_dm_table(stdout)
 
     def _get_vgs(self):
-        out = shell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
+        out = AgentShell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
 
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
@@ -67,7 +68,7 @@ class DmsetupTable(DeviceHelper):
             yield (name, uuid, size)
 
     def _get_lvs(self, vg_name):
-        out = shell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
+        out = AgentShell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
 
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:

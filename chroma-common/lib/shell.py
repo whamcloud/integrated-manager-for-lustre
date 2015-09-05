@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,158 +20,122 @@
 # express and approved by Intel in writing.
 
 
-from StringIO import StringIO
-from copy import deepcopy
 import subprocess
-import threading
 import os
 import tempfile
+import collections
+import time
+import warnings
 
 
-logger = None
+class Shell(object):
+    class CommandExecutionError(Exception):
+        def __init__(self, result, command):
+            self.result = result
+            self.command = " ".join(command)
 
+        def __str__(self):
+            return "Error (%s) running '%s': '%s' '%s'" % (self.result.rc, self.command,
+                                                           self.result.stdout, self.result.stderr)
 
-class CommandExecutionError(Exception):
-    def __init__(self, rc, command, stdout, stderr):
-        self.rc = rc
-        self.command = " ".join(command)
-        self.stdout = stdout
-        self.stderr = stderr
+        # Keeping for backwards compatibility, will be removed over time.
+        @property
+        def rc(self):
+            warnings.warn("Direct use of rc in CommandExecutionError is deprecated", DeprecationWarning)
+            return self.result.rc
 
-    def __str__(self):
-        return "Error (%s) running '%s': '%s' '%s'" % (self.rc, self.command,
-                                                       self.stdout, self.stderr)
+        @property
+        def stdout(self):
+            warnings.warn("Direct use of stdout in CommandExecutionError is deprecated", DeprecationWarning)
+            return self.result.stdout
 
+        @property
+        def stderr(self):
+            warnings.warn("Direct use of stderr in CommandExecutionError is deprecated", DeprecationWarning)
+            return self.result.stderr
 
-class ThreadState(threading.local):
-    """Thread-local logs for stdout/stderr from wrapped commands"""
+    # Effectively no autotimeout for commands.
+    SHELLTIMEOUT = 0xfffffff
 
-    def __init__(self):
-        self._save = False
-        self._subprocesses = []
-        self.messages_buf = StringIO()
-        self.abort = threading.Event()
+    RunResult = collections.namedtuple("RunResult", ['rc', 'stdout', 'stderr', 'timeout'])
 
-    def enable_save(self):
+    @classmethod
+    def _run(cls, arg_list, logger, monitor_func, timeout):
         """
-        Enable recording of all subprocesses run in this thread
+        Separate the bare inner of running a command, so that tests can
+        stub this function while retaining the related behaviour of run()
         """
-        self._save = True
 
-    def get_subprocesses(self):
-        """Return a non-thread-local copy of the subprocesses"""
-        return deepcopy(self._subprocesses)
+        # Popen has a limit of 2^16 for the output if you use subprocess.PIPE (as we did recently) so use real files so
+        # the output side is effectively limitless
 
-    def save_result(self, arg_list, rc, stdout, stderr):
-        if self._save:
-            self._subprocesses.append({
-                'args': arg_list,
-                'rc': rc,
-                'stdout': stdout,
-                'stderr': stderr
-            })
+        stdout_fd = tempfile.TemporaryFile()
+        stderr_fd = tempfile.TemporaryFile()
 
-# The logging state for this thread
-thread_state = ThreadState()
+        try:
+            p = subprocess.Popen(arg_list,
+                                 stdout = stdout_fd,
+                                 stderr = stderr_fd,
+                                 close_fds = True)
 
+            # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
+            # to poll the thread_state.teardown event as well as the completion of the subprocess.
+            # This is done to allow cancellation of subprocesses
+            rc = None
+            max_wait = 1.0
+            wait = 1.0E-3
+            timeout += time.time()
+            while rc is None:
+                rc = p.poll()
+                if rc is None:
+                    if monitor_func:
+                        monitor_func(p, arg_list, logger)
 
-class SubprocessAborted(Exception):
-    pass
+                    time.sleep(1)
 
+                    if time.time() > timeout:
+                        p.kill()
+                        stdout_fd.seek(0)
+                        stderr_fd.seek(0)
+                        return cls.RunResult(254, stdout_fd.read(), stderr_fd.read(), True)
+                    elif wait < max_wait:
+                        wait *= 2.0
+                else:
+                    stdout_fd.seek(0)
+                    stderr_fd.seek(0)
+                    return cls.RunResult(rc, stdout_fd.read(), stderr_fd.read(), False)
+        finally:
+            stdout_fd.close()
+            stderr_fd.close()
 
-def set_logger(_logger):
-    global logger
-    logger = _logger
+    @classmethod
+    def run(cls, arg_list, logger=None, monitor_func=None, timeout=SHELLTIMEOUT):
+        """Run a subprocess, and return a tuple of rc, stdout, stderr.
+        Record subprocesses run and their results in log.
 
+        Note: we buffer all output, so do not run subprocesses with large outputs
+        using this function.
+        """
 
-def _run(arg_list):
-    """
-    Separate the bare inner of running a command, so that tests can
-    stub this function while retaining the related behaviour of run()
-    """
+        # TODO: add a 'quiet' flag and use it from spammy/polling plugins to avoid
+        # sending silly amounts of command output back to the manager.
+        if logger:
+            logger.debug("Shell.run: %s" % repr(arg_list))
 
-    """
-    Popen has a limit of 2^16 for the output if you use subprocess.PIPE (as we did recently) so use real files so
-    the output side is effectively limitless
-    """
-    stdout_fd = tempfile.TemporaryFile()
-    stderr_fd = tempfile.TemporaryFile()
+        os.environ["TERM"] = ""
 
-    try:
-        p = subprocess.Popen(arg_list,
-                             stdout = stdout_fd,
-                             stderr = stderr_fd,
-                             close_fds = True)
+        result = Shell._run(arg_list, logger, monitor_func, timeout)
 
-        # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
-        # to poll the thread_state.teardown event as well as the completion of the subprocess.
-        # This is done to allow cancellation of subprocesses
-        rc = None
-        min_wait = 1.0E-3
-        max_wait = 1.0
-        wait = min_wait
-        while rc is None:
-            rc = p.poll()
-            if rc is None:
-                thread_state.abort.wait(timeout = wait)
-                if thread_state.abort.is_set():
-                    if logger:
-                        logger.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
-                    p.kill()
-                    raise SubprocessAborted()
-                elif wait < max_wait:
-                    wait *= 2.0
-            else:
-                stdout_fd.seek(0)
-                stderr_fd.seek(0)
-                return rc, stdout_fd.read(), stderr_fd.read()
-    finally:
-        stdout_fd.close()
-        stderr_fd.close()
+        return result
 
+    @classmethod
+    def try_run(cls, arg_list, logger=None, monitor_func=None, timeout=SHELLTIMEOUT):
+        """Run a subprocess, and raise an exception if it returns nonzero.  Return
+        stdout string."""
 
-def run(arg_list):
-    """Run a subprocess, and return a tuple of rc, stdout, stderr.
-    Record subprocesses run and their results in log.
+        result = Shell.run(arg_list, logger, monitor_func, timeout)
 
-    Note: we buffer all output, so do not run subprocesses with large outputs
-    using this function.
-    """
+        if result.rc != 0:
+            raise Shell.CommandExecutionError(result, arg_list)
 
-    # TODO: add a 'quiet' flag and use it from spammy/polling plugins to avoid
-    # sending silly amounts of command output back to the manager.
-    if logger:
-        logger.debug("shell.run: %s" % repr(arg_list))
-
-    os.environ["TERM"] = ""
-
-    rc, stdout_buf, stderr_buf = _run(arg_list)
-
-    thread_state.save_result(arg_list, rc, stdout_buf, stderr_buf)
-
-    return rc, stdout_buf, stderr_buf
-
-
-def try_run(arg_list):
-    """Run a subprocess, and raise an exception if it returns nonzero.  Return
-    stdout string."""
-
-    rc, stdout, stderr = run(arg_list)
-    if rc != 0:
-        raise CommandExecutionError(rc, arg_list, stdout, stderr)
-
-    return stdout
-
-
-def run_canned_error_message(arg_list):
-    '''
-    Run a shell command return None is successful, or User Error message if not
-    :param args:
-    :return: None if successful or canned user error message
-    '''
-    rc, stdout, stderr = run(arg_list)
-
-    if rc != 0:
-        return "Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr)
-
-    return None
+        return result.stdout

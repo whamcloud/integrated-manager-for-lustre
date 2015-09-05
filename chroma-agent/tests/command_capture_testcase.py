@@ -2,7 +2,7 @@ import mock
 from collections import namedtuple
 from django.utils import unittest
 
-import chroma_agent.chroma_common.lib.shell
+from chroma_agent.chroma_common.lib.shell import Shell
 
 CommandCaptureCommand = namedtuple("CommandCaptureCommand", ["args", "rc", "stdout", "stderr"])
 CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
@@ -11,43 +11,23 @@ CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
 class CommandCaptureTestCase(unittest.TestCase):
     def setUp(self):
         self.reset_command_capture()
-        self._err_msg = 'Command attempted was unknown to the CommandCaptureTestCase code, did you intend this?'
+        self._missing_command_err_msg = 'Command attempted was unknown to CommandCaptureTestCase, did you intend this?'
 
-        def fake_try_run(args):
-            args = tuple(args)
-            self._commands_history.append(args)
-
-            try:
-                result = self._get_command(args)
-                if type(result) == str:
-                    return result
-                else:
-                    if result.rc:
-                        raise chroma_agent.chroma_common.lib.shell.CommandExecutionError(result.rc,
-                                                                                         args,
-                                                                                         result.stdout,
-                                                                                         result.stderr)
-                    return result.stdout
-            except KeyError:
-                raise OSError(2, self._err_msg, args[0])
-
-        assert 'fake' not in str(chroma_agent.chroma_common.lib.shell.try_run)
-        mock.patch('chroma_agent.chroma_common.lib.shell.try_run', fake_try_run).start()
-
-        def fake_run(args):
-            args = tuple(args)
-            self._commands_history.append(args)
-
-            try:
-                result = self._get_command(args)
-
-                return result.rc, result.stdout, result.stderr
-            except KeyError:
-                return (2, "", self._err_msg)
-
-        mock.patch('chroma_agent.chroma_common.lib.shell.run', fake_run).start()
+        assert 'fake' not in str(Shell.run)
+        mock.patch('chroma_agent.chroma_common.lib.shell.Shell.run', self._fake_run).start()
 
         self.addCleanup(mock.patch.stopall)
+
+    def _fake_run(self, arg_list, logger=None, monitor_func=None, timeout=Shell.SHELLTIMEOUT):
+            args = tuple(arg_list)
+            self._commands_history.append(args)
+
+            try:
+                result = self._get_command(args)
+
+                return Shell.RunResult(result.rc, result.stdout, result.stderr, False)
+            except KeyError:
+                return Shell.RunResult(2, "", self._missing_command_err_msg, False)
 
     def _get_command(self, args):
         '''

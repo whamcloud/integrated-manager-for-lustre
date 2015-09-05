@@ -25,8 +25,7 @@ from xml.parsers.expat import ExpatError as ParseError
 import socket
 import time
 
-from chroma_agent.chroma_common.lib.shell import CommandExecutionError
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib import fence_agents
 from chroma_agent.utils import wait
 
@@ -136,19 +135,19 @@ class PacemakerNode(object):
                 self.clear_attribute(agent_attr)
 
     def enable_standby(self):
-        shell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "on", "--lifetime=forever"])
+        AgentShell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "on", "--lifetime=forever"])
 
     def disable_standby(self):
-        shell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "off", "--lifetime=forever"])
+        AgentShell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "off", "--lifetime=forever"])
 
     # These crm_attribute options are undocumented, but they're exactly
     # what the crm utility uses when it does its thing. The documented
     # options don't actually work! Fun.
     def set_attribute(self, key, value):
-        shell.try_run(["crm_attribute", "-t", "nodes", "-U", self.name, "-n", key, "-v", str(value)])
+        AgentShell.try_run(["crm_attribute", "-t", "nodes", "-U", self.name, "-n", key, "-v", str(value)])
 
     def clear_attribute(self, key):
-        shell.try_run(["crm_attribute", "-D", "-t", "nodes", "-U", self.name, "-n", key])
+        AgentShell.try_run(["crm_attribute", "-D", "-t", "nodes", "-U", self.name, "-n", key])
 
 
 class PacemakerConfig(object):
@@ -163,7 +162,7 @@ class PacemakerConfig(object):
             # daemon is running at all.
             cibadmin(["--query", "--local"], timeout=10)
             return True
-        except CommandExecutionError as e:
+        except AgentShell.CommandExecutionError as e:
             # Known exception caused by the service being unconfigured or
             # not started.
             if e.rc == 107:
@@ -288,7 +287,7 @@ def cibadmin(command_args, timeout = 120):
     # subprocess after a timeout. We'd need more invasive changes to
     # shell._run() for that.
     for index in wait(timeout):
-        rc, stdout, stderr = shell.run(command_args)
+        rc, stdout, stderr = AgentShell.run(command_args)
         if rc == 0:
             return rc, stdout, stderr
         elif rc not in RETRY_CODES:
@@ -298,10 +297,10 @@ def cibadmin(command_args, timeout = 120):
         raise PacemakerError("%s timed out after %d seconds: rc: %s, stderr: %s"
                              % (" ".join(command_args), timeout, rc, stderr))
     else:
-        raise CommandExecutionError(rc, command_args, stdout, stderr)
+        raise AgentShell.CommandExecutionError(rc, command_args, stdout, stderr)
 
 
 def pacemaker_running():
-    rc, stdout, stderr = shell.run(['service', 'pacemaker', 'status'])
+    rc, stdout, stderr = AgentShell.run(['service', 'pacemaker', 'status'])
 
     return rc == 0

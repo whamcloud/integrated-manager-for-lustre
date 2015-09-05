@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,7 @@
 import os
 import re
 
-from ..lib import shell
+from ..lib.shell import Shell
 from filesystem import FileSystem
 
 
@@ -41,9 +41,9 @@ class FileSystemLdiskfs(FileSystem):
         if not self._modules_initialized:
             try:
                 # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
-                shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
-            except shell.CommandExecutionError:
-                shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
+                Shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
+            except Shell.CommandExecutionError:
+                Shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
 
             self._modules_initialized = True
 
@@ -51,7 +51,7 @@ class FileSystemLdiskfs(FileSystem):
     def label(self):
         self._initialize_modules()
 
-        blkid_output = shell.try_run(['blkid', '-c/dev/null', '-o', 'value', '-s', 'LABEL', self._device_path])
+        blkid_output = Shell.try_run(['blkid', '-c/dev/null', '-o', 'value', '-s', 'LABEL', self._device_path])
 
         return blkid_output.strip()
 
@@ -59,7 +59,7 @@ class FileSystemLdiskfs(FileSystem):
     def inode_size(self):
         self._initialize_modules()
 
-        dumpe2fs_output = shell.try_run(['dumpe2fs', '-h', self._device_path])
+        dumpe2fs_output = Shell.try_run(['dumpe2fs', '-h', self._device_path])
 
         return int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
@@ -67,30 +67,30 @@ class FileSystemLdiskfs(FileSystem):
     def inode_count(self):
         self._initialize_modules()
 
-        dumpe2fs_output = shell.try_run(["dumpe2fs", "-h", self._device_path])
+        dumpe2fs_output = Shell.try_run(["dumpe2fs", "-h", self._device_path])
 
         return int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
     def mount(self, target_name, mount_point):
         self._initialize_modules()
 
-        rc, stdout, stderr = shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
+        result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
 
-        if rc == 5:
+        if result.rc == 5:
             # HYD-1040: Sometimes we should retry on a failed registration
-            rc, stdout, stderr = shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
+            Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
 
-        if (rc != 0):
-            raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (rc, mount_point, stdout, stderr))
+        if (result.rc != 0):
+            raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
     def umount(self, target_name, mount_point):
-        return shell.try_run(["umount", os.path.realpath(self._device_path)])
+        return Shell.try_run(["umount", os.path.realpath(self._device_path)])
 
     def mkfs(self, target_name, options):
         self._initialize_modules()
 
-        shell.try_run(['mkfs.lustre'] + options + [self._device_path])
+        Shell.try_run(['mkfs.lustre'] + options + [self._device_path])
 
     def mkfs_options(self, target):
         mkfsoptions = []

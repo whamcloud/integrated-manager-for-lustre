@@ -7,7 +7,7 @@ PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/simulator.json"}
 
 # Get the chroma-externals repo as pip is going to need it
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
 make requirements

@@ -60,7 +60,7 @@ pre_build()
     # Nuke these tarballs to deal with name changes
     rm -f chroma-bundles/*.tar.gz
     # update modules
-    . scripts/update_chroma-externals.sh
+    scripts/update_chroma-externals.py
     run_pre_commit_hook
 }
 

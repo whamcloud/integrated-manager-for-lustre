@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,7 +25,7 @@ import re
 import time
 import itertools
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
@@ -62,7 +62,7 @@ class Fstab(object):
                 if uuid_match:
                     # Resolve UUID to device node path
                     uuid = uuid_match.group(1)
-                    device = shell.try_run(['blkid', '-U', uuid]).strip()
+                    device = AgentShell.try_run(['blkid', '-U', uuid]).strip()
 
                 self.fstab.append((device, mntpnt, fstype))
             except ValueError:
@@ -75,7 +75,7 @@ class Fstab(object):
 
 class BlkId(dict):
     def __init__(self):
-        blkid_lines = shell.try_run(['blkid', '-s', 'UUID', '-s', 'TYPE']).split("\n")
+        blkid_lines = AgentShell.try_run(['blkid', '-s', 'UUID', '-s', 'TYPE']).split("\n")
 
         # Record filesystem type and UUID for each block devices reported by blkid
         for line in [l.strip() for l in blkid_lines if len(l)]:
@@ -113,7 +113,7 @@ def lsof(pid=None, file=None):
     pids = defaultdict(dict)
     current_pid = None
 
-    rc, stdout, stderr = shell.run(lsof_args)
+    rc, stdout, stderr = AgentShell.run(lsof_args)
     if rc != 0:
         if stderr:
             raise RuntimeError(stderr)

@@ -27,7 +27,7 @@ import socket
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
 from chroma_agent import node_admin, config
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.lib.system import iptables
 from jinja2 import Environment, PackageLoader
@@ -63,7 +63,7 @@ def get_ring0():
     from urlparse import urlparse
     server_url = config.get('settings', 'server')['url']
     manager_address = socket.gethostbyname(urlparse(server_url).hostname)
-    out = shell.try_run(['/sbin/ip', 'route', 'get', manager_address])
+    out = AgentShell.try_run(['/sbin/ip', 'route', 'get', manager_address])
     match = re.search(r'dev\s+([^\s]+)', out)
     if match:
         manager_dev = match.groups()[0]
@@ -335,7 +335,7 @@ class CorosyncRingInterface(object):
 
     def set_address(self, address, prefix):
         ifaddr = "%s/%s" % (address, prefix)
-        shell.try_run(['/sbin/ifconfig', self.name, ifaddr, 'up'])
+        AgentShell.try_run(['/sbin/ifconfig', self.name, ifaddr, 'up'])
         console_log.info("Set %s (%s) up" % (self.name, ifaddr))
         self.refresh()
         node_admin.write_ifcfg(self.device, self.mac_address,
@@ -394,7 +394,7 @@ class CorosyncRingInterface(object):
         # status.
         time_left = 0
         if not self.is_up:
-            shell.try_run(['/sbin/ifconfig', self.name, "0.0.0.0", "up"])
+            AgentShell.try_run(['/sbin/ifconfig', self.name, "0.0.0.0", "up"])
             time_left = 10
 
         def _has_link():
@@ -424,6 +424,6 @@ class CorosyncRingInterface(object):
 
 
 def corosync_running():
-    rc, stdout, stderr = shell.run(['service', 'corosync', 'status'])
+    rc, stdout, stderr = AgentShell.run(['service', 'corosync', 'status'])
 
     return rc == 0

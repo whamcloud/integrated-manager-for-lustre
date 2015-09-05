@@ -117,7 +117,7 @@ rpmlib(PayloadIsXz) <= 5.2-1
 kernel-2.6.32-358.18.1.el6.x86_64
 """
 
-        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=try_run):
+        with patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=try_run):
             result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
                 'required': 'kernel-2.6.32-358.18.1.el6.x86_64',

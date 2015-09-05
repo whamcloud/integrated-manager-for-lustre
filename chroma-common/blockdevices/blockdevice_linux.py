@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,6 +19,7 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import re
 import os
 import subprocess
@@ -26,7 +27,7 @@ from collections import defaultdict
 from tempfile import mktemp
 
 from blockdevice import BlockDevice
-from ..lib import shell
+from ..lib.shell import Shell
 
 
 class BlockDeviceLinux(BlockDevice):
@@ -42,13 +43,13 @@ class BlockDeviceLinux(BlockDevice):
         return self._blkid_value("UUID")
 
     def _blkid_value(self, value):
-        rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", value, self._device_path])
+        result = Shell.run(["blkid", "-p", "-o", "value", "-s", value, self._device_path])
 
-        if rc == 2:
+        if result.rc == 2:
             # blkid returns 2 if there is no filesystem on the device
             return None
-        elif rc == 0:
-            result = blkid_output.strip()
+        elif result.rc == 0:
+            result = result.stdout.strip()
 
             if result:
                 return result
@@ -57,7 +58,7 @@ class BlockDeviceLinux(BlockDevice):
                 # like an MBR
                 return None
         else:
-            raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, self._device_path, blkid_output, blkid_err))
+            raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (result.rc, self._device_path, result.stdout, result.stderr))
 
     @property
     def preferred_fstype(self):
@@ -71,7 +72,7 @@ class BlockDeviceLinux(BlockDevice):
 
         log.info("Searching Lustre logs for filesystems")
 
-        ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", self._device_path])
+        ls = Shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", self._device_path])
         filesystems = []
         targets = []
         for line in ls.split("\n"):
@@ -127,7 +128,7 @@ class BlockDeviceLinux(BlockDevice):
         log.info("Reading log for %s:%s from log %s" % (conf_param_type, conf_param_name, log_name))
 
         try:
-            shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), self._device_path])
+            Shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), self._device_path])
             if not os.path.exists(tmpfile) or os.path.getsize(tmpfile) == 0:
                 # debugfs returns 0 whether it succeeds or not, find out whether
                 # dump worked by looking for output file of some length. (LU-632)
@@ -200,16 +201,16 @@ class BlockDeviceLinux(BlockDevice):
     def targets(self, uuid_name_to_target, device, log):
         log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
 
-        rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", device['path']])
-        if rc != 0:
+        result = Shell.run(["tunefs.lustre", "--dryrun", device['path']])
+        if result.rc != 0:
             log.info("Device %s did not have a Lustre filesystem on it" % device['path'])
             return self.TargetsInfo([], None)
 
         # For a Lustre block device, extract name and params
         # ==================================================
-        name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
-        flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", tunefs_text).group(1), 16)
-        params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
+        name = re.search("Target:\\s+(.*)\n", result.stdout).group(1)
+        flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", result.stdout).group(1), 16)
+        params_re = re.search("Parameters:\\ ([^\n]+)\n", result.stdout)
         if params_re:
             # Dictionary of parameter name to list of instance values
             params = defaultdict(list)

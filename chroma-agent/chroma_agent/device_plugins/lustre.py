@@ -26,7 +26,7 @@ import glob
 import datetime
 import ConfigParser
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.log import console_log
 from chroma_agent.utils import Mounts
@@ -155,7 +155,7 @@ class LustrePlugin(DevicePlugin):
                     if LinuxDevicePlugin.devices_scanned:
                         self._mount_cache[device]['fs_uuid'] = fs_uuid
                         self._mount_cache[device]['fs_label'] = fs_label
-                except shell.CommandExecutionError:
+                except AgentShell.CommandExecutionError:
                     continue
 
             dev_normalized = ndp.normalized_device_path(device)

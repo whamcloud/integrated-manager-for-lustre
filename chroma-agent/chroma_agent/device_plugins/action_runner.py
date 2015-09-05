@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,10 +24,9 @@ import threading
 import traceback
 import sys
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
-from chroma_agent.chroma_common.lib.shell import SubprocessAborted
 
 
 class CallbackAfterResponse(Exception):
@@ -167,22 +166,22 @@ class ActionRunner(threading.Thread):
         # Grab a reference to the thread-local state for this thread and put
         # it somewhere that other threads can see it, so that we can be signalled
         # to shut down
-        self._subprocess_abort = shell.thread_state.abort
+        self._subprocess_abort = AgentShell.thread_state.abort
 
         # We are now stoppable
         self._started.set()
 
         daemon_log.info("%s.run: %s %s %s" % (self.__class__.__name__, self.id, self.action, self.args))
         try:
-            shell.thread_state.enable_save()
+            AgentShell.thread_state.enable_save()
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
         except CallbackAfterResponse, e:
-            self.manager.respond_with_callback(self.id, e, shell.thread_state.get_subprocesses())
-        except SubprocessAborted:
+            self.manager.respond_with_callback(self.id, e, AgentShell.thread_state.get_subprocesses())
+        except AgentShell.SubprocessAborted:
             self.manager.cancelled(self.id)
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
 
-            self.manager.fail(self.id, backtrace, shell.thread_state.get_subprocesses())
+            self.manager.fail(self.id, backtrace, AgentShell.thread_state.get_subprocesses())
         else:
-            self.manager.succeed(self.id, result, shell.thread_state.get_subprocesses())
+            self.manager.succeed(self.id, result, AgentShell.thread_state.get_subprocesses())

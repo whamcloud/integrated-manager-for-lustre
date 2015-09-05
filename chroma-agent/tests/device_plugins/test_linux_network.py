@@ -5,32 +5,8 @@ from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin, 
 
 
 class TestLinuxNetwork(unittest.TestCase):
-    def test_network_interface(self):
-        class mock_open:
-            def __init__(self, fname):
-                pass
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exception_type, value, _traceback):
-                pass
-
-            def readlines(self):
-                '''
-                The out of of a 'cat /proc/net/dev command.
-                :return: Returns a list of lines as readlines would.
-                '''
-                return ["Inter-|   Receive                                                |  Transmit",
-                        "face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed",
-                        "lo: 8305400   85521    0    0    0     0          0         0  8305401   85521    0    0    0     0       0          0",
-                        "bond0: 314203   2322    0    0    0     0          0         0  129834   82221    0    0    0     0       0          0",
-                        "eth0.1.1?1b34*430: 318398818 20564    0    0    0     0          0         0  2069564   50037    0    0    0     0       0          0",
-                        "eth4: 20400 6802    0    0    0     0          0         0  6859022   50337    0    0    0     0       0          0",
-                        "ib0: 3286081 4756    0    0    0     0          0         0  4753096   50237    0    0    0     0       0          0"]
-
-        def mock_try_run_ip(args):
-            return """1: bond0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    def mock_try_run(self, args):
+        return """1: bond0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
     link/ether 52:54:00:33:d9:15 brd ff:ff:ff:ff:ff:ff
     inet 192.168.10.79/21 brd 192.168.10.255 scope global bond0
     inet6 fe80::4e00:10ff:feac:61e0/64 scope link
@@ -58,8 +34,32 @@ class TestLinuxNetwork(unittest.TestCase):
     inet6 fe80::225:90ff:ff1c:a229/64 scope link
        valid_lft forever preferred_lft forever"""
 
+    def test_network_interface(self):
+        class mock_open:
+            def __init__(self, fname):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exception_type, value, _traceback):
+                pass
+
+            def readlines(self):
+                '''
+                The out of of a 'cat /proc/net/dev command.
+                :return: Returns a list of lines as readlines would.
+                '''
+                return ["Inter-|   Receive                                                |  Transmit",
+                        "face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed",
+                        "lo: 8305400   85521    0    0    0     0          0         0  8305401   85521    0    0    0     0       0          0",
+                        "bond0: 314203   2322    0    0    0     0          0         0  129834   82221    0    0    0     0       0          0",
+                        "eth0.1.1?1b34*430: 318398818 20564    0    0    0     0          0         0  2069564   50037    0    0    0     0       0          0",
+                        "eth4: 20400 6802    0    0    0     0          0         0  6859022   50337    0    0    0     0       0          0",
+                        "ib0: 3286081 4756    0    0    0     0          0         0  4753096   50237    0    0    0     0       0          0"]
+
         with mock.patch('__builtin__.open', mock_open):
-            with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', mock_try_run_ip):
+            with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', self.mock_try_run):
                 interfaces = NetworkInterfaces()
 
         ResultCheck = namedtuple("ResultCheck",

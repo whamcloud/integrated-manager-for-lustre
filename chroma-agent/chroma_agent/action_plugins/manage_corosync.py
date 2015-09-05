@@ -29,7 +29,7 @@ from collections import namedtuple
 import errno
 import re
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
 from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1
@@ -45,7 +45,7 @@ RSRC_FAIL_MIGRATION_COUNT = "3"
 
 
 def start_corosync():
-    error = shell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
+    error = AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
 
     if error:
         return agent_error(error)
@@ -54,7 +54,7 @@ def start_corosync():
 
 
 def stop_corosync():
-    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
 
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
 
@@ -88,7 +88,7 @@ def configure_corosync(ring0_name,
 
     add_firewall_rule(mcast_port, "udp", "corosync")
 
-    error = shell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
+    error = AgentShell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
     if error:
         return agent_error(error)
 
@@ -99,7 +99,7 @@ def get_cluster_size():
     # you'd think there'd be a way to query the value of a property
     # such as "expected-quorum-votes" but there does not seem to be, so
     # just count nodes instead
-    rc, stdout, stderr = shell.run(["crm_node", "-l"])
+    rc, stdout, stderr = AgentShell.run(["crm_node", "-l"])
 
     if not stdout:
         return 0
@@ -120,8 +120,8 @@ def unconfigure_corosync():
     Return: Value using simple return protocol
     '''
 
-    shell.try_run(['service', 'corosync', 'stop'])
-    shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
+    AgentShell.try_run(['service', 'corosync', 'stop'])
+    AgentShell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
     mcastport = None
 
     with open("/etc/corosync/corosync.conf") as f:

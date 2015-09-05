@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,7 +24,7 @@ import re
 import socket
 import platform
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
@@ -74,7 +74,7 @@ class NodeAudit(BaseAudit, FileSystemMixin):
 
         If the fetched property is expensive to compute, it should be cached / updated less frequently.
         """
-        zfs_not_installed, stdout, stderr = shell.run(['which', 'zfs'])
+        zfs_not_installed, stdout, stderr = AgentShell.run(['which', 'zfs'])
 
         return {'zfs_installed': not zfs_not_installed,
                 'distro': platform.linux_distribution()[0],

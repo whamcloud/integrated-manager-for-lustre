@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,7 @@
 import os
 from tempfile import mkstemp
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
 
 
@@ -96,10 +96,10 @@ def configure_ntp(ntp_server):
             # So run the service commands via the file above in 1 min - then wait for the command to finish by looking
             # for the self deleting file to exit. Not the action runner process will timeout these commands should they
             # hang
-            shell.try_run(['at', '-M', 'now', '+0', 'min', '-f', tmp_name])
-            shell.try_run(['bash', '-c', 'while [ -f %s ]; do echo *; sleep 1; done' % tmp_name])
+            AgentShell.try_run(['at', '-M', 'now', '+0', 'min', '-f', tmp_name])
+            AgentShell.try_run(['bash', '-c', 'while [ -f %s ]; do echo *; sleep 1; done' % tmp_name])
 
-            rc, stdout, stderr = shell.run(['service', 'ntpdate', 'status'])
+            rc, stdout, stderr = AgentShell.run(['service', 'ntpdate', 'status'])
 
             if rc == 0:
                 break
@@ -111,7 +111,7 @@ def configure_ntp(ntp_server):
             return agent_error("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
     else:
         # With no server, just restart ntpd, don't worry about the sync
-        error = shell.run_canned_error_message(['service', 'ntpd', 'restart'])
+        error = AgentShell.run_canned_error_message(['service', 'ntpd', 'restart'])
 
         if error:
             return agent_error(error)

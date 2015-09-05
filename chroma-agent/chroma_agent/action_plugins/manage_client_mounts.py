@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,7 @@
 import os
 import errno
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 
 
 FSTAB_ENTRY_TEMPLATE = "%s\t%s\t\tlustre\tdefaults,_netdev\t0 0\n"
@@ -65,7 +65,7 @@ def mount_lustre_filesystem(mountspec, mountpoint):
             raise
 
     create_fstab_entry(mountspec, mountpoint)
-    shell.try_run(['/bin/mount', mountpoint])
+    AgentShell.try_run(['/bin/mount', mountpoint])
 
 
 def mount_lustre_filesystems(filesystems):
@@ -75,7 +75,7 @@ def mount_lustre_filesystems(filesystems):
 
 def unmount_lustre_filesystem(mountspec, mountpoint):
     delete_fstab_entry(mountspec, mountpoint)
-    shell.try_run(['/bin/umount', mountpoint])
+    AgentShell.try_run(['/bin/umount', mountpoint])
 
 
 def unmount_lustre_filesystems(filesystems):

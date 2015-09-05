@@ -9,7 +9,7 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 #--------------------------------------------------------------------------
 # Get the chroma-externals repo as pip is going to need it
 #--------------------------------------------------------------------------
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 #--------------------------------------------------------------------------
 # Fetch the IEEL installation package from the upstream job

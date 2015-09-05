@@ -26,7 +26,7 @@ import re
 import tempfile
 import time
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log, console_log
@@ -102,7 +102,7 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
         if value is not None:
             options.append("--%s=%s" % (name, value))
 
-    shell.try_run(['tunefs.lustre'] + options + [device])
+    AgentShell.try_run(['tunefs.lustre'] + options + [device])
 
 
 def get_resource_location(resource_name):
@@ -126,7 +126,7 @@ def get_resource_locations():
     """Parse `crm_mon -1` to identify where (if anywhere)
        resources (i.e. targets) are running."""
 
-    rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
+    rc, lines_text, stderr = AgentShell.run(["crm_mon", "-1", "-r"])
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
         return {"crm_mon_error": {"rc": rc,
@@ -342,7 +342,7 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     if primary:
         # If the target already exists with the same params, skip.
         # If it already exists with different params, that is an error
-        rc, stdout, stderr = shell.run(["crm_resource", "-r", ha_label, "-g", "target"])
+        rc, stdout, stderr = AgentShell.run(["crm_resource", "-r", ha_label, "-g", "target"])
         if rc == 0:
             info = _get_target_config(stdout.rstrip("\n"))
             if info['bdev'] == device and info['mntpt'] == mount_point:
@@ -398,7 +398,7 @@ def _get_nvpairid_from_xml(xml_string):
 def _query_ha_targets():
     targets = {}
 
-    rc, stdout, stderr = shell.run(['crm_resource', '-l'])
+    rc, stdout, stderr = AgentShell.run(['crm_resource', '-l'])
     if rc == 234:
         return targets
     elif rc != 0:
@@ -409,7 +409,7 @@ def _query_ha_targets():
                 continue
 
             target = {'ha_label': resource_id}
-            raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', resource_id, '-q']).split("\n")[2:])
+            raw_xml = "\n".join(AgentShell.try_run(['crm_resource', '-r', resource_id, '-q']).split("\n")[2:])
             target['uuid'] = _get_nvpairid_from_xml(raw_xml)
             targets[resource_id] = target
 
@@ -479,7 +479,7 @@ def start_target(ha_label):
     while True:
         i += 1
 
-        error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Started'])
+        error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Started'])
 
         if error:
             return agent_error(error)
@@ -488,7 +488,7 @@ def start_target(ha_label):
         _wait_target(ha_label, True)
 
         # and make sure it didn't start but (the RA) fail(ed)
-        rc, stdout, stderr = shell.run(['crm_mon', '-1'])
+        rc, stdout, stderr = AgentShell.run(['crm_mon', '-1'])
 
         failed = True
         for line in stdout.split("\n"):
@@ -498,7 +498,7 @@ def start_target(ha_label):
 
         if failed:
             # try to leave things in a sane state for a failed mount
-            error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
+            error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
 
             if error:
                 return agent_error(error)
@@ -521,7 +521,7 @@ def stop_target(ha_label):
 
     Return: Value using simple return protocol
     '''
-    error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
+    error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
 
     if error:
         return agent_error(error)
@@ -535,7 +535,7 @@ def stop_target(ha_label):
 # common plumbing for failover/failback
 def _move_target(target_label, dest_node):
     arg_list = ["crm_resource", "--resource", target_label, "--move", "--node", dest_node]
-    rc, stdout, stderr = shell.run(arg_list)
+    rc, stdout, stderr = AgentShell.run(arg_list)
 
     if rc != 0:
         return "Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr)
@@ -556,7 +556,7 @@ def _move_target(target_label, dest_node):
         n += 1
 
     # now delete the constraint that crm_resource --move created
-    shell.try_run(["crm_resource", "--resource", target_label, "--un-move",
+    AgentShell.try_run(["crm_resource", "--resource", target_label, "--un-move",
                    "--node", dest_node])
     if not migrated:
         return "Failed to fail back target %s" % target_label
@@ -565,7 +565,7 @@ def _move_target(target_label, dest_node):
 
 
 def _find_resource_constraint(ha_label, disp):
-    stdout = shell.try_run(["crm_resource", "-r", ha_label, "-a"])
+    stdout = AgentShell.try_run(["crm_resource", "-r", ha_label, "-a"])
 
     for line in stdout.rstrip().split("\n"):
         match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=\d+, id=%s-%s\)" %
@@ -669,7 +669,7 @@ def clear_targets(force = False):
 
 
 def purge_configuration(device, filesystem_name):
-    ls = shell.try_run(["debugfs", "-w", "-R", "ls -l CONFIGS/", device])
+    ls = AgentShell.try_run(["debugfs", "-w", "-R", "ls -l CONFIGS/", device])
 
     victims = []
     for line in ls.split("\n"):
@@ -684,7 +684,7 @@ def purge_configuration(device, filesystem_name):
     daemon_log.info("Purging config files: %s" % victims)
 
     for victim in victims:
-        shell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, device])
+        AgentShell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, device])
 
 
 ACTIONS = [purge_configuration, register_target, configure_target_ha,

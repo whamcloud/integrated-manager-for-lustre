@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,10 +19,11 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import re
 import glob
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
@@ -43,14 +44,14 @@ class ZfsDevices(DeviceHelper):
     @exceptionSandBox(daemon_log, [])
     def quick_scan(self):
         try:
-            return shell.try_run(['zfs', 'list', '-H', '-o', 'name,guid']).split("\n")
+            return AgentShell.try_run(['zfs', 'list', '-H', '-o', 'name,guid']).split("\n")
         except (IOError, OSError):
             return []
 
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
         try:
-            shell.run(["partprobe"])    # Before looking for zfs pools, ensure we are relooked at the partitions, might throw errors so ignore return
+            AgentShell.run(["partprobe"])    # Before looking for zfs pools, ensure we are relooked at the partitions, might throw errors so ignore return
             self._search_for_active(block_devices)
             self._search_for_inactive(block_devices)
         except OSError:                 # OSError occurs when ZFS is not installed.
@@ -58,7 +59,7 @@ class ZfsDevices(DeviceHelper):
 
     def _search_for_active(self, block_devices):
         # First look for active/imported zpools
-        out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health"])
+        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health"])
 
         for line in filter(None, out.split('\n')):
             self._add_zfs_pool(line, block_devices)
@@ -76,8 +77,8 @@ class ZfsDevices(DeviceHelper):
         # 	  scsi-0QEMU_QEMU_HARDDISK_disk15  ONLINE
         # 	  scsi-0QEMU_QEMU_HARDDISK_disk14  ONLINE
         try:
-            out = shell.try_run(["zpool", "import"])
-        except shell.CommandExecutionError as e:
+            out = AgentShell.try_run(["zpool", "import"])
+        except AgentShell.CommandExecutionError as e:
             # zpool import errors with error code 1 if nothing available to import
             if e.rc == 1:
                 out = ""
@@ -104,7 +105,7 @@ class ZfsDevices(DeviceHelper):
             if state in self.acceptable_health:
                 with ExportedZfsDevice(pool) as available:
                     if available:
-                        out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", pool])
+                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", pool])
                         self._add_zfs_pool(out, block_devices)
             else:
                 daemon_log.warning("Not scanning zpool %s because it is %s." % (pool, state))
@@ -183,7 +184,7 @@ class ZfsDevices(DeviceHelper):
         # 	  /tmp/zfsfs  ONLINE       0     0     0
         #
         # errors: No known data errors
-        out = shell.try_run(['zpool', 'status', name])
+        out = AgentShell.try_run(['zpool', 'status', name])
 
         lines = [l for l in out.split("\n") if len(l) > 0]
 
@@ -204,7 +205,7 @@ class ZfsDevices(DeviceHelper):
         return devices
 
     def _get_zpool_datasets(self, pool_name, drives, block_devices):
-        out = shell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
+        out = AgentShell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
 
         zpool_datasets = {}
 

@@ -5,7 +5,7 @@ import mock
 
 from django.utils import unittest
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin, CallbackAfterResponse
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePlugin
 
@@ -15,8 +15,8 @@ ACTION_TWO_RETVAL = 'action_two_return'
 
 
 subprocesses = {
-    ('subprocess_one', 'subprocess_one_arg'): lambda: (0, 'subprocess_one_stdout', 'subprocess_one_stderr'),
-    ('subprocess_two', 'subprocess_two_arg'): lambda: (-1, 'subprocess_two_stdout', 'subprocess_two_stderr')
+    ('subprocess_one', 'subprocess_one_arg'): lambda: AgentShell.RunResult(0, 'subprocess_one_stdout', 'subprocess_one_stderr', False),
+    ('subprocess_two', 'subprocess_two_arg'): lambda: AgentShell.RunResult(-1, 'subprocess_two_stdout', 'subprocess_two_stderr', False)
 }
 
 
@@ -24,7 +24,7 @@ def action_one(arg1):
     """An action which invokes subprocess_one"""
 
     assert arg1 == "arg1_test"
-    stdout = shell.try_run(['subprocess_one', 'subprocess_one_arg'])
+    stdout = AgentShell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
     return ACTION_ONE_RETVAL
 
@@ -33,16 +33,16 @@ def action_two(arg1):
     """An action which invokes subprocess_one and subprocess_two"""
 
     assert arg1 == "arg2_test"
-    stdout = shell.try_run(['subprocess_one', 'subprocess_one_arg'])
+    stdout = AgentShell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
-    shell.try_run(['subprocess_two', 'subprocess_two_arg'])
+    AgentShell.try_run(['subprocess_two', 'subprocess_two_arg'])
     return ACTION_TWO_RETVAL
 
 
 def action_three():
     """An action which runs for a long time unless interrupted"""
 
-    shell.try_run(['sleep', '10000'])
+    AgentShell.try_run(['sleep', '10000'])
     raise AssertionError("subprocess three should last forever!")
 
 
@@ -68,6 +68,9 @@ class ActionTestCase(unittest.TestCase):
         self.mock_send_message_call_count += 1
         self.mock_send_message_lock.release()
 
+    def mock_run(self, args, logger, result_store, timeout):
+        return self.MOCK_SUBPROCESSES[tuple(args)]()
+
     def setUp(self):
         # Register some testing actions
         self.action_plugins = ActionPluginManager()
@@ -82,7 +85,7 @@ class ActionTestCase(unittest.TestCase):
 
         # Intercept subprocess invocations
         if self.MOCK_SUBPROCESSES:
-            mock.patch('chroma_agent.chroma_common.lib.shell._run', side_effect = lambda args: self.MOCK_SUBPROCESSES[tuple(args)]()).start()
+            mock.patch('chroma_agent.chroma_common.lib.shell.Shell._run', self.mock_run).start()
 
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)

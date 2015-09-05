@@ -23,7 +23,7 @@
 import os
 import json
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
@@ -72,7 +72,8 @@ def _remove_module(name, modules):
             return error
 
     console_log.info("Removing %s" % name)
-    error = shell.run_canned_error_message(['rmmod', name])
+
+    error = AgentShell.run_canned_error_message(['rmmod', name])
 
     if error:
         return error
@@ -109,8 +110,8 @@ def start_lnet():
 
     # modprobe lust is a hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount
     # should be removed when LU-1279 is fixed
-    return agent_ok_or_error(shell.run_canned_error_message(["lctl", "net", "up"]) or
-                             shell.run_canned_error_message(["modprobe", "lustre"]))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(["lctl", "net", "up"]) or
+                             AgentShell.run_canned_error_message(["modprobe", "lustre"]))
 
 
 def stop_lnet():
@@ -121,14 +122,14 @@ def stop_lnet():
 
     console_log.info("Stopping LNet")
     return agent_ok_or_error(_rmmod_deps("lnet", excpt=["ksocklnd", "ko2iblnd"]) or
-                             shell.run_canned_error_message(["lctl", "net", "down"]))
+                             AgentShell.run_canned_error_message(["lctl", "net", "down"]))
 
 
 def load_lnet():
     '''
     Load the lnet modules from disk into memory including an modules using the modprobe command.
     '''
-    return agent_ok_or_error(shell.run_canned_error_message(["modprobe", "lnet"]))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(["modprobe", "lnet"]))
 
 
 def unload_lnet():

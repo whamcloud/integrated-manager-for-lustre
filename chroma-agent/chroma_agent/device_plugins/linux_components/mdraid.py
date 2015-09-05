@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,9 +19,10 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import re
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
@@ -56,7 +57,7 @@ class MdRaid(DeviceHelper):
                     continue
 
                 try:
-                    detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
+                    detail = AgentShell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
                     device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
                     device_list_csv = re.search("^\s+devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
                     device_list = device_list_csv.split(",")

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,14 +20,14 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib.shell import try_run
+from chroma_agent.lib.shell import AgentShell
 
 
 def fail_node(args):
     # force a manual failover by failing a node
-    try_run(["sync"])
-    try_run(["sync"])
-    try_run(["init", "0"])
+    AgentShell.try_run(["sync"])
+    AgentShell.try_run(["sync"])
+    AgentShell.try_run(["init", "0"])
 
 ACTIONS = [fail_node]
 CAPABILITIES = []

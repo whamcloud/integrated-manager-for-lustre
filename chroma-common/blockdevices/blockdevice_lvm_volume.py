@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,7 +21,7 @@
 
 
 from blockdevice_linux import BlockDeviceLinux
-from ..lib import shell
+from ..lib.shell import Shell
 
 
 class BlockDeviceLvmVolume(BlockDeviceLinux):
@@ -29,6 +29,6 @@ class BlockDeviceLvmVolume(BlockDeviceLinux):
 
     @property
     def uuid(self):
-        out = shell.try_run(["lvs", "--noheadings", "-o", "lv_uuid", self._device_path])
+        out = Shell.try_run(["lvs", "--noheadings", "-o", "lv_uuid", self._device_path])
 
         return out.strip()

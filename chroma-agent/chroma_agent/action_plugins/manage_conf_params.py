@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,14 +20,14 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib.shell import try_run
+from chroma_agent.lib.shell import AgentShell
 
 
 def set_conf_param(key = None, value = None):
-    if value:
-        try_run(['lctl', 'conf_param', "%s=%s" % (key, value)])
+    if value is not None:
+        AgentShell.try_run(['lctl', 'conf_param', "%s=%s" % (key, value)])
     else:
-        try_run(['lctl', 'conf_param', "-d", key])
+        AgentShell.try_run(['lctl', 'conf_param', "-d", key])
 
 ACTIONS = [set_conf_param]
 CAPABILITIES = ['manage_conf_params']

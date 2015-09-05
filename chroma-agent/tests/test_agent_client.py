@@ -2,11 +2,12 @@ import logging
 import time
 import json
 import datetime
+import mock
+
 from chroma_agent.agent_client import HttpWriter, Message, HttpReader, SessionTable, HttpError
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import PRIO_LOW, DevicePluginMessage, PRIO_NORMAL, PRIO_HIGH
 from django.utils import unittest
-import mock
 
 
 class TestHttpWriter(unittest.TestCase):

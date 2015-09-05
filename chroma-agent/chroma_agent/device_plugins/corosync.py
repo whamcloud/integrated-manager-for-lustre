@@ -25,7 +25,7 @@ import xml.etree.ElementTree as xml
 from dateutil.tz import tzutc, tzlocal
 from dateutil.parser import parse
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
@@ -110,7 +110,7 @@ class CorosyncPlugin(DevicePlugin):
         """
 
         crm_command = ['crm_mon', '--one-shot', '--as-xml']
-        rc, stdout, stderr = shell.run(crm_command)
+        rc, stdout, stderr = AgentShell.run(crm_command)
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
             daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
                                (rc, crm_command, stdout, stderr))

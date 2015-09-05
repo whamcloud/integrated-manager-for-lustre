@@ -11,7 +11,7 @@ import json
 import re
 import sys
 
-import safe_shell
+from chroma_common.lib.shell import Shell
 
 
 class ChromaLogCollector(object):
@@ -28,7 +28,7 @@ class ChromaLogCollector(object):
         Collect the logs from the target
         :return: empty list on success or error messages that can be used for diagnosing what went wrong.
         """
-        if safe_shell.run(['rm', '-rf', "%s/*.log" % destination_path]).rc:
+        if Shell.run(['rm', '-rf', "%s/*.log" % destination_path]).rc:
             return "Fail to clear out destination path for logs collection: %s" % destination_path
 
         errors = []
@@ -50,7 +50,7 @@ class ChromaLogCollector(object):
         """
         action = "Fetching %s from %s to %s/%s" % (source_log_path, server, self.destination_path, destination_log_filename)
         print action
-        if safe_shell.run(['scp', "%s:%s" % (server, source_log_path), "%s/%s" % (
+        if Shell.run(['scp', "%s:%s" % (server, source_log_path), "%s/%s" % (
                 self.destination_path, destination_log_filename)]).rc:
             error = "Failed %s" % action
 
@@ -65,7 +65,7 @@ class ChromaLogCollector(object):
         Collect the log directory from the target
         :return: None on success or error message that can be used for diagnosing what went wrong.
         """
-        logs = safe_shell.run(['ssh', server, "ls %s | xargs -n1 basename" % dir])
+        logs = Shell.run(['ssh', server, "ls %s | xargs -n1 basename" % dir])
 
         if logs.rc:
             return "Failed fecthing log dir %s from %s" % (server, dir)
@@ -83,11 +83,11 @@ class ChromaLogCollector(object):
         """
 
         # Check that chroma-diagnostics is installed. May not be if installation failed, etc.
-        if safe_shell.run(['ssh', server, 'which chroma-diagnostics']).rc:
+        if Shell.run(['ssh', server, 'which chroma-diagnostics']).rc:
             return["chroma-diagnostics not installed on %s. skipping." % server]
 
         # Generate the diagnostics from the server
-        result = safe_shell.run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
+        result = Shell.run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
 
         if result.timeout:
             return["Chroma Diagnostics timed-out"]
@@ -107,17 +107,17 @@ class ChromaLogCollector(object):
         errors.append(self.fetch_log(server, "chroma-diagnostics.log", '%s-chroma-diagnostics.log' % server))
 
         if diagnostics.endswith('tar.lzma'):
-            if safe_shell.run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
+            if Shell.run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
                 errors.append("Error tar --lzma the chroma diagnostics file")
         elif diagnostics.endswith('tar.gz'):
-            if safe_shell.run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
+            if Shell.run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
                 errors.append("Error tar -xvzf the chroma diagnostics file")
         else:
-            errors = "Didnt recognize chroma-diagnostics file format"
+            errors = "Didn't recognize chroma-diagnostics file format"
 
-        if safe_shell.run(['rm', '-f', "%s/%s" % (self.destination_path, diagnostics)]).rc:
+        if Shell.run(['rm', '-f', "%s/%s" % (self.destination_path, diagnostics)]).rc:
             errors.append("Unable to remove the diagnostics %s/%s" % (self.destination_path, diagnostics))
 
         return errors
@@ -127,8 +127,8 @@ if __name__ == '__main__':
     destination_path = sys.argv[1]
     cluster_cfg_path = sys.argv[2]
 
-    safe_shell.run(['mkdir', '-p', destination_path])
-    safe_shell.run(['rm', '-f', "%s.tgz" % destination_path])
+    Shell.run(['mkdir', '-p', destination_path])
+    Shell.run(['rm', '-f', "%s.tgz" % destination_path])
     cluster_cfg_json = open(cluster_cfg_path)
     cluster_cfg = json.loads(cluster_cfg_json.read())
 

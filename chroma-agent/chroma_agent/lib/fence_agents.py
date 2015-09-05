@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,18 +27,18 @@ from os.path import isfile, expanduser
 
 # TODO: Refactor out this hard-coded stuff in favor of using templates
 # supplied by the manager.
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 
 
 class FenceAgent(object):
     def toggle_outlet(self, state):
-        shell.try_run(self.base_cmd + ['-n', self.plug, '-o', state])
+        AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', state])
 
     def list(self):
-        shell.try_run(self.base_cmd + ['-a', 'list'])
+        AgentShell.try_run(self.base_cmd + ['-a', 'list'])
 
     def status(self):
-        shell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'status'])
+        AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'status'])
 
     def off(self):
         self.toggle_outlet('off')
@@ -96,4 +96,4 @@ class fence_ipmilan(FenceAgent):
             self.base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
 
     def toggle_outlet(self, state):
-        shell.try_run(self.base_cmd + ['-o', state])
+        AgentShell.try_run(self.base_cmd + ['-o', state])

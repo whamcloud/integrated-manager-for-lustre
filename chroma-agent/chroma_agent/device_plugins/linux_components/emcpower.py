@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,11 +19,12 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import glob
 import os
 import re
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
@@ -51,7 +52,7 @@ class EMCPower(DeviceHelper):
 
                     name = os.path.basename(device_path)
 
-                    out = shell.try_run(['powermt', 'display', 'dev=%s' % name])
+                    out = AgentShell.try_run(['powermt', 'display', 'dev=%s' % name])
 
                     # The command above returns something like below, so use the === lines as keys to search for different things.
                     # above search for the logical device ID and below search for the devices used by the emcpower device.

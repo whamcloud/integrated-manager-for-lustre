@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from ..lib import shell
+from ..lib.shell import Shell
 from filesystem import FileSystem
 from ..blockdevices.blockdevice_zfs import BlockDeviceZfs
 
@@ -42,10 +42,10 @@ class FileSystemZfs(FileSystem):
         return 0
 
     def mount(self, target_name, mount_point):
-        return shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
+        return Shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
 
     def mount_path(self, target_name):
         return "%s/%s" % (self._device_path, target_name)
 
     def mkfs(self, target_name, options):
-        shell.try_run(["mkfs.lustre"] + options + [self.mount_path(target_name)])
+        Shell.try_run(["mkfs.lustre"] + options + [self.mount_path(target_name)])

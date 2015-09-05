@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,12 +19,13 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import re
 import threading
 
 from collections import defaultdict
 
-from ..lib import shell
+from ..lib.shell import Shell
 from blockdevice import BlockDevice
 
 
@@ -41,13 +42,13 @@ class ExportedZfsDevice(object):
         self.lock_acquired = False
 
     def __enter__(self):
-        imported_pools = shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
+        imported_pools = Shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
 
         if self.pool_path not in imported_pools:
             try:
                 self.lock_acquired = ExportedZfsDevice.import_lock.acquire()
-                shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
-            except shell.CommandExecutionError:
+                Shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
+            except Shell.CommandExecutionError:
                 if self.lock_acquired:
                     ExportedZfsDevice.import_lock.release()
                     self.lock_acquired = False
@@ -57,7 +58,7 @@ class ExportedZfsDevice(object):
 
     def __exit__(self, type, value, traceback):
         if self.lock_acquired:
-            shell.try_run(['zpool', 'export', self.pool_path])
+            Shell.try_run(['zpool', 'export', self.pool_path])
             ExportedZfsDevice.import_lock.release()
             self.lock_acquired = False
 
@@ -89,13 +90,13 @@ class BlockDeviceZfs(BlockDevice):
         :return:
         '''
         try:
-            out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+            out = Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
         except OSError:                                 # zfs not found
             out = ""
-        except shell.CommandExecutionError:             # device not available.
+        except Shell.CommandExecutionError:             # device not available.
             with ExportedZfsDevice(self.device_path) as available:
                 if (available):
-                    out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+                    out = Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
                 else:
                     out = ""
 
@@ -115,13 +116,13 @@ class BlockDeviceZfs(BlockDevice):
             self._zfs_properties = {}
 
             try:
-                ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
+                ls = Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
             except OSError:                                         # Zfs not found.
                 return self._zfs_properties
-            except shell.CommandExecutionError:                     # Errors probably not imported.
+            except Shell.CommandExecutionError:                     # Errors probably not imported.
                 with ExportedZfsDevice(self.device_path) as available:
                     if available:
-                        ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
+                        ls = Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
                     else:
                         ls = ""
 

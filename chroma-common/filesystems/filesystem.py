@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,7 +19,8 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-from ..lib import shell
+
+from ..lib.shell import Shell
 from ..lib import util
 
 _cached_filesystem_types = {}
@@ -102,7 +103,7 @@ class FileSystem(object):
         '''
         self._initialize_modules()
 
-        return shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
+        return Shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
 
     def umount(self, target_name, mount_point):
         '''
@@ -110,7 +111,7 @@ class FileSystem(object):
         '''
         self._initialize_modules()
 
-        return shell.try_run(["umount", self.mount_path(target_name)])
+        return Shell.try_run(["umount", self.mount_path(target_name)])
 
     def mount_path(self, target_name):
         '''

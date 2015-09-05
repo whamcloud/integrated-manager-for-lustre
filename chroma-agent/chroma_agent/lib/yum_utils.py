@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
 
@@ -72,7 +72,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     # 1 in 50 (estimate) times. yum commands are idempotent and so trying the command three
     # times has no downside and changes the estimated chance of fail to 1 in 12500.
     for hyd_3885 in range(2, -1, -1):
-        rc, stdout, stderr = shell.run(cmd)
+        rc, stdout, stderr = AgentShell.run(cmd)
 
         if rc in valid_rc_values:
             return stdout
@@ -80,7 +80,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
             daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
             if hyd_3885 == 0:
                 daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
-                raise shell.CommandExecutionError(rc, cmd, stdout, stderr)   # Out of retries so raise for the caller..
+                raise AgentShell.CommandExecutionError(AgentShell.RunResult(rc, stdout, stderr, False), cmd)   # Out of retries so raise for the caller..
 
 
 def yum_check_update(repos):

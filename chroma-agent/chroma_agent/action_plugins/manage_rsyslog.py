@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -18,9 +18,11 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
+
 import os
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.syslog import SYSLOG_PORT
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
@@ -71,9 +73,9 @@ def _configure_rsyslog(destination):
     error = None
 
     # signal the process
-    rc, stdout, stderr = shell.run(['service', 'rsyslog', 'reload'])
+    rc, stdout, stderr = AgentShell.run(['service', 'rsyslog', 'reload'])
     if rc != 0:
-        error = shell.run_canned_error_message(['service', 'rsyslog', 'restart'])
+        error = AgentShell.run_canned_error_message(['service', 'rsyslog', 'restart'])
 
     return agent_ok_or_error(error)
 

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 
 
@@ -33,7 +33,7 @@ def iptables(op, chain, args):
     else:
         raise RuntimeError("invalid mode: %s" % op)
 
-    rc, stdout, stderr = shell.run(["service", "iptables", "status"])
+    rc, stdout, stderr = AgentShell.run(["service", "iptables", "status"])
     if rc == 0 and stdout != '''Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination         
@@ -47,13 +47,13 @@ num  target     prot opt source               destination
 ''':
         cmdlist = ["/sbin/iptables", op_arg, chain]
         cmdlist.extend(args)
-        shell.try_run(cmdlist)
+        AgentShell.try_run(cmdlist)
 
 
 def add_firewall_rule(port, proto, port_desc):
     console_log.info("Opening firewall for %s" % port_desc)
     # install a firewall rule for this port
-    shell.try_run(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port, proto)])
+    AgentShell.try_run(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port, proto)])
     # XXX using -n above and installing the rule manually here is a
     #     dirty hack due to lokkit completely restarting the firewall
     #     interrupts existing sessions

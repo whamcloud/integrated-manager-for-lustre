@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,7 +22,7 @@
 
 from datetime import datetime
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
@@ -52,7 +52,7 @@ class LocalTargets(object):
             if device['uuid'] == None:
                 try:
                     device['uuid'] = block_device.uuid
-                except shell.CommandExecutionError:
+                except AgentShell.CommandExecutionError:
                     pass
 
             # OK, so we really don't have a uuid for this, so we won't find a lustre filesystem on it.

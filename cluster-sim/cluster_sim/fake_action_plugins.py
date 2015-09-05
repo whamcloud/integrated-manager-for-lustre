@@ -22,7 +22,7 @@
 
 import threading
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell, ResultStore
 from chroma_agent.lib.pacemaker import PacemakerConfigurationError
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
@@ -51,7 +51,7 @@ class FakeActionPlugins():
         # This is a little hackish: we don't actually separate the thread_state for
         # each simulated agent (they mostly don't even shell out when simulated) but
         # do this to avoid the subprocess log building up indefinitely.
-        shell.thread_state = shell.ThreadState()
+        AgentShell.thread_state = ResultStore()
 
         log.debug("FakeActionPlugins: %s %s" % (cmd, kwargs))
         with self._lock:

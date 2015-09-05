@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,7 +25,6 @@ from logging.handlers import SysLogHandler
 import os
 import sys
 
-from chroma_agent.chroma_common.lib import shell
 from chroma_agent.chroma_common.lib.exception_sandbox import ExceptionSandBox
 
 # This log is for messages about the internal machinations of our
@@ -41,10 +40,6 @@ copytool_log = logging.getLogger('copytool')
 # the user will be interested general breezy chat (INFO) about what we're
 # doing for them
 console_log = logging.getLogger('console')
-
-# Enable logging in the shell commands, can help this is ass backwards and the shell should fetch a logger
-# but for today this achieves what we want, and has no debt.
-shell.set_logger(console_log)
 
 logging_in_debug_mode = os.path.exists("/tmp/chroma-agent-debug")
 

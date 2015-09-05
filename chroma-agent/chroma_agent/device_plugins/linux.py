@@ -18,12 +18,14 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
+
 import os
 import glob
 import re
 import errno
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import utils
@@ -131,7 +133,7 @@ class BlockDevices(DeviceHelper):
             raise RuntimeError("Unabled to find scsi_id")
 
         def scsi_id_command(cmd):
-            rc, out, err = shell.run(cmd)
+            rc, out, err = AgentShell.run(cmd)
             if rc:
                 return None
             else:

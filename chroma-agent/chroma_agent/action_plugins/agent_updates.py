@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,7 +25,7 @@ import re
 import os
 import platform
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.device_plugins import lustre
 from chroma_agent.log import daemon_log
@@ -89,7 +89,7 @@ def update_profile(profile):
 
         try:
             yum_util(action, enablerepo=["iml-agent"], packages=['chroma-agent-management'])
-        except shell.CommandExecutionError as cee:
+        except AgentShell.CommandExecutionError as cee:
             return agent_error("Unable to set profile because yum returned %s" % cee.stdout)
 
     config.update('settings', 'profile', profile)
@@ -200,8 +200,8 @@ def _check_HYD4050():
 
     #  Make sure that there is an initramfs for the booting kernel
     try:
-        default_kernel = shell.try_run(["grubby", "--default-kernel"]).strip()
-    except shell.CommandExecutionError:
+        default_kernel = AgentShell.try_run(["grubby", "--default-kernel"]).strip()
+    except AgentShell.CommandExecutionError:
         return ("Unable to determine your default kernel.  "
                 "This node may not boot successfully until grub "
                 "is fixed to have a default kernel to boot.")
@@ -221,13 +221,13 @@ def kernel_status():
     """
     :return: {'running': {'kernel-X.Y.Z'}, 'required': <'kernel-A.B.C' or None>}
     """
-    running_kernel = "kernel-%s" % shell.try_run(["uname", "-r"]).strip()
+    running_kernel = "kernel-%s" % AgentShell.try_run(["uname", "-r"]).strip()
     try:
-        required_kernel_stdout = shell.try_run(["rpm", "-qR", "lustre-modules"])
-    except shell.CommandExecutionError:
+        required_kernel_stdout = AgentShell.try_run(["rpm", "-qR", "lustre-modules"])
+    except AgentShell.CommandExecutionError:
         try:
-            required_kernel_stdout = shell.try_run(["rpm", "-qR", "lustre-client-modules"])
-        except shell.CommandExecutionError:
+            required_kernel_stdout = AgentShell.try_run(["rpm", "-qR", "lustre-client-modules"])
+        except AgentShell.CommandExecutionError:
             required_kernel_stdout = None
 
     required_kernel = None
@@ -238,7 +238,7 @@ def kernel_status():
                                                     platform.machine())
 
     available_kernels = []
-    for installed_kernel in shell.try_run(["rpm", "-q", "kernel"]).split("\n"):
+    for installed_kernel in AgentShell.try_run(["rpm", "-q", "kernel"]).split("\n"):
         if installed_kernel:
             available_kernels.append(installed_kernel)
 

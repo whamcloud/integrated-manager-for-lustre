@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,10 +24,9 @@ import time
 import copy
 
 from chroma_agent import config
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.config_store import ConfigKeyExistsError
 from chroma_agent.cli import raw_result
-from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 from chroma_agent.copytool_monitor import Copytool, COPYTOOL_PROGRESS_INTERVAL
 from chroma_agent.log import copytool_log
 
@@ -36,40 +35,40 @@ def start_monitored_copytool(id):
     # Start the monitor first so that we have a reader on the FIFO when
     # the copytool begins emitting events.
     try:
-        shell.try_run(['/sbin/start', 'copytool-monitor', 'id=%s' % id])
-    except CommandExecutionError as e:
+        AgentShell.try_run(['/sbin/start', 'copytool-monitor', 'id=%s' % id])
+    except AgentShell.CommandExecutionError as e:
         if 'is already running' in str(e):
             copytool_log.warn("Copytool monitor %s was already running -- restarting" % id)
-            shell.try_run(['/sbin/restart', 'copytool-monitor', 'id=%s' % id])
+            AgentShell.try_run(['/sbin/restart', 'copytool-monitor', 'id=%s' % id])
     time.sleep(1)
-    shell.try_run(['/sbin/status', 'copytool-monitor', 'id=%s' % id])
+    AgentShell.try_run(['/sbin/status', 'copytool-monitor', 'id=%s' % id])
 
     # Next, try to start the copytool, then sleep for a second before checking
     # its status. This will catch some of the more obvious problems which
     # result in the process (re-)spawn failing right away.
     try:
-        shell.try_run(['/sbin/start', 'copytool'] +
+        AgentShell.try_run(['/sbin/start', 'copytool'] +
                       ["%s=%s" % item for item in _copytool_vars(id).items()])
-    except CommandExecutionError as e:
+    except AgentShell.CommandExecutionError as e:
         if 'is already running' in str(e):
             copytool_log.warn("Copytool %s was already running -- restarting" % id)
-            shell.try_run(['/sbin/restart', 'copytool'] +
+            AgentShell.try_run(['/sbin/restart', 'copytool'] +
                           ["%s=%s" % item for item in _copytool_vars(id).items()])
     time.sleep(1)
-    shell.try_run(['/sbin/status', 'copytool', 'id=%s' % id])
+    AgentShell.try_run(['/sbin/status', 'copytool', 'id=%s' % id])
 
 
 def stop_monitored_copytool(id):
     # Stop the monitor after the copytool so that we can relay the
     # unconfigure event.
     try:
-        shell.try_run(['/sbin/stop', 'copytool', 'id=%s' % id])
-    except CommandExecutionError as e:
+        AgentShell.try_run(['/sbin/stop', 'copytool', 'id=%s' % id])
+    except AgentShell.CommandExecutionError as e:
         if 'Unknown instance' not in str(e):
             raise e
     try:
-        shell.try_run(['/sbin/stop', 'copytool-monitor', 'id=%s' % id])
-    except CommandExecutionError as e:
+        AgentShell.try_run(['/sbin/stop', 'copytool-monitor', 'id=%s' % id])
+    except AgentShell.CommandExecutionError as e:
         if 'Unknown instance' not in str(e):
             raise e
 

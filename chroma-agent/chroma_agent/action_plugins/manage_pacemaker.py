@@ -29,7 +29,7 @@ import json
 import time
 import threading
 
-from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
@@ -48,7 +48,7 @@ def _get_cluster_size():
     # you'd think there'd be a way to query the value of a property
     # such as "expected-quorum-votes" but there does not seem to be, so
     # just count nodes instead
-    rc, stdout, stderr = shell.run(["crm_node", "-l"])
+    rc, stdout, stderr = AgentShell.run(["crm_node", "-l"])
 
     if not stdout:
         return 0
@@ -64,8 +64,8 @@ def _get_cluster_size():
 
 def _debug_corosync_pacemaker(value=None):
     # Just run some harmless pacemaker corosync commands to provide some output on stdout
-    shell.run(['/sbin/service', 'pacemaker', 'status'])
-    shell.run(['/sbin/service', 'corosync', 'status'])
+    AgentShell.run(['/sbin/service', 'pacemaker', 'status'])
+    AgentShell.run(['/sbin/service', 'corosync', 'status'])
 
     return value
 
@@ -77,7 +77,7 @@ def start_pacemaker():
     result = None
 
     for timeout in range(0, 3):
-        result = shell.run_canned_error_message(['/sbin/service', 'pacemaker', 'start'])
+        result = AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'start'])
 
         if result is None:
             break
@@ -92,12 +92,12 @@ def start_pacemaker():
 
 
 def stop_pacemaker():
-    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']))
 
 
 def enable_pacemaker():
-    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/chkconfig', '--add', 'pacemaker']) or \
-                              shell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'on']))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', 'pacemaker']) or \
+                             AgentShell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'on']))
 
 
 def configure_pacemaker():
@@ -107,16 +107,16 @@ def configure_pacemaker():
     '''
     # Corosync needs to be running for pacemaker -- if it's not, make
     # an attempt to get it going.
-    if shell.run(['/sbin/service', 'corosync', 'status'])[0]:
-        error = shell.run_canned_error_message(['/sbin/service', 'corosync', 'restart']) or \
-                shell.run_canned_error_message(['/sbin/service', 'corosync', 'status'])
+    if AgentShell.run(['/sbin/service', 'corosync', 'status'])[0]:
+        error = AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'restart']) or \
+                AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'status'])
 
         if error:
             return agent_error(error)
 
     #enable_pacemaker()
 
-    #shell.run_canned_error_message(['/sbin/service', 'pacemaker', 'restart'])
+    #Agent.run_canned_error_message(['/sbin/service', 'pacemaker', 'restart'])
 
     for action in [enable_pacemaker, stop_pacemaker, start_pacemaker, _configure_pacemaker]:
         error = action()
@@ -167,8 +167,8 @@ def _configure_pacemaker():
         cibadmin(["--create", "-o", "resources", "-X",
                   "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
     except Exception as e:
-        rc, stdout, stderr = shell.run(['crm_resource', '--locate',
-                                        '--resource', "st-fencing"])
+        rc, stdout, stderr = AgentShell.run(['crm_resource', '--locate',
+                                             '--resource', "st-fencing"])
         if rc == 0:                     # no need to do the rest if another member is already doing it
             return agent_result_ok
         else:
@@ -187,8 +187,8 @@ def _configure_pacemaker():
         :param value: value to set
         :return: None if an error else a canned error message
         '''
-        return shell.run_canned_error_message(["crm_attribute", "--type", "rsc_defaults",
-                                               "--attr-name", name, "--attr-value", value])
+        return AgentShell.run_canned_error_message(["crm_attribute", "--type", "rsc_defaults",
+                                                    "--attr-name", name, "--attr-value", value])
 
     error = set_rsc_default("resource-stickiness", "1000") or \
             set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW) or \
@@ -238,7 +238,7 @@ def set_node_online(node):
 
 
 def _pacemaker_running():
-    rc, stdout, stderr = shell.run(['service', 'pacemaker', 'status'])
+    rc, stdout, stderr = AgentShell.run(['service', 'pacemaker', 'status'])
 
     return rc == 0
 
@@ -254,8 +254,8 @@ def unconfigure_pacemaker():
         # last node, nuke the CIB
         cibadmin(["-f", "-E"])
 
-    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']) or \
-                              shell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'off']))
+    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']) or \
+                             AgentShell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'off']))
 
 
 def _unconfigure_fencing():
@@ -282,13 +282,13 @@ def unconfigure_fencing():
 
 
 def delete_node(nodename):
-    rc, stdout, stderr = shell.run(['crm_node', '-l'])
+    rc, stdout, stderr = AgentShell.run(['crm_node', '-l'])
     node_id = None
     for line in stdout.split('\n'):
         node_id, name, status = line.split(" ")
         if name == nodename:
             break
-    shell.try_run(['crm_node', '--force', '-R', node_id])
+    AgentShell.try_run(['crm_node', '--force', '-R', node_id])
     cibadmin(["--delete", "-o", "nodes", "-X",
               "<node uname=\"%s\"/>" % nodename])
     cibadmin(["--delete", "-o", "nodes", "--crm_xml",
