@@ -1,4 +1,4 @@
-DISTRO=el6.6
+DISTRO=el6.7
 
 include ../../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
 

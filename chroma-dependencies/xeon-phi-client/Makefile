@@ -1,4 +1,4 @@
-DISTRO			:= el6.6
+DISTRO			:= el6.7
 include ../include/Makefile.lustre_build_meta
 
 override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-xeon-phi-client

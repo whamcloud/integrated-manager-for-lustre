@@ -1,4 +1,4 @@
-DISTRO			:= el6.6
+DISTRO			:= el6.7
 include ../include/Makefile.lustre_build_meta
 
 RELEASE_POSTFIX		:= .x86_64$(UNDERSCORE_RELEASE_POSTFIX)
