@@ -44,7 +44,7 @@ BuildRequires: mailx \
 ###### end of macro definitions #####
 
 Name: robinhood
-Version: 2.5.4
+Version: 2.5.5
 
 Vendor: CEA, HPC department <http://www-hpc.cea.fr>
 Prefix: %{_prefix}
@@ -61,7 +61,7 @@ Prefix: %{_prefix}
 %define db_dependant .sqlite
 %endif
 
-Release: 1%{?config_dependant}%{?db_dependant}%{?dist}
+Release: 2%{?config_dependant}%{?db_dependant}%{?dist}
 
 
 Summary: Robinhood - Policy engine and accounting tool for large filesystems
@@ -83,7 +83,7 @@ Generated using options:  '--with-purpose=LUSTRE_HSM' '--with-lustre=/scratch/gi
 %package adm
 Summary: admin/config helper for Robinhood PolicyEngine
 Group: Applications/System
-Release: 1.noarch
+Release: 2.noarch
 
 %description adm
 This RPM provides admin/config helper for Robinhood PolicyEngine (command rbh-config)
@@ -92,7 +92,7 @@ which is common to all robinhood flavors.
 %package webgui
 Summary: Web interface to vizualize filesystems stats
 Group: Applications/System
-Release: 1.noarch
+Release: 2.noarch
 Requires: php, php-mysql, php-xml, php-gd, php-pdo
 
 %description webgui
@@ -224,11 +224,44 @@ fi
 
 %changelog
 
+* Wed Jun 03 2015 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.5
+- [lustre] Support Lustre versions up to 2.7.
+- [DB performance] Allow both batching and parallelizing DB operations when accounting is OFF. Benchmarks show a x3~x4 speedup of DB ingest rate in this case.
+- [DB performance] Reduce lock contention on indexes of STRIPE_ITEMS table.
+- [acct] Avoid accounting stats inconsistency when this feature is enabled/disabled/re-enabled.
+- [policy performance] Disable ignored class re-matching by default.
+- [policy performance] Disable sort by mtime by default.
+- [policy performance] Allow disabling sort by atime for purge policies.
+- [fix] Fix segfault when log rotation occurs under heavy logging.
+- [fix] When processing a RENAME changelog record, match the new path in filesystem instead of building it from DB (which caused 'incomplete path' errors).
+- [fix] Fix sendfile copy operation for backup mode.
+- [fix] Fix various requests about directories: --topdirs with --filter-path option, --toprmdir, ...
+- [fix] Fix possible duplicate insert error when updated entry attributes are only in ANNEX_INFO table (rare).
+- [fix] Some purge parameters may not be taken into account.
+- [packaging] clean permissions in distribution tarball.
+- [report performance] Improve performance of path matching when running directory reports with --filter-path option.
+
+- [lustre] Support Lustre versions up to 2.7.
+- [DB performance] Allow both batching and parallelizing DB operations when accounting is OFF. Benchmarks show a x3~x4 speedup of DB ingest rate in this case.
+- [DB performance] Reduce lock contention on indexes of STRIPE_ITEMS table.
+- [acct] Avoid accounting stats inconsistency when this feature is enabled/disabled/re-enabled.
+- [policy performance] Disable ignored class re-matching by default.
+- [policy performance] Disable sort by mtime by default.
+- [policy performance] Allow disabling sort by atime for purge policies.
+- [fix] Fix segfault when log rotation occurs under heavy logging.
+- [fix] When processing a RENAME changelog record, match the new path in filesystem instead of building it from DB (which caused 'incomplete path' errors).
+- [fix] Fix sendfile copy operation for backup mode.
+- [fix] Fix various requests about directories: --topdirs with --filter-path option, --toprmdir, ...
+- [fix] Fix possible duplicate insert error when updated entry attributes are only in ANNEX_INFO table (rare).
+- [fix] Some purge parameters may not be taken into account.
+- [packaging] clean permissions in distribution tarball.
+- [report performance] Improve performance of path matching when running directory reports with --filter-path option.
+
 * Mon Dec 08 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.4
-- [lustre] Lustre 2.4+: detect all stripe changes and update the DB accordingly
+- [lustre] Lustre 2.4+: detect all stripe changes and update the DB accordingly.
 - [scan] Prevent from dropping entries from DB when opendir or stat fail.
 - [DB] Optimization to batch more DB requests.
-- [DB] Allow using any MySQL engine (new config parameter: listmanager::mysql::
+- [DB] Allow using any MySQL engine (new config parameter: listmanager::mysql::engine).
 - [rbh-config] Avoid backup_db to lock the whole tables with innodb.
 - [bugfix] Improve robustness to corrupted mtimes.
 - [bugfix] Fix possible crash in db_exec_sql.
@@ -271,14 +304,6 @@ fi
 - backup (feature): allow compressing data in archive.
 - backup (fix): wrong path in archive when robinhood root directory != mount point.
 - backup (fix): fix segfault when importing a single file with a FID-ending name.
-
-* Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
-Summary:
-- filesystem disaster recovery features
-- new namespace management (new DB schema to properly handle hardlinks, renames...)
-- scanning and changelog processing optimizations
-- database optimizations (requests batching)
-- many other changes, improvements and code cleaning...
 
 * Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
 Summary:

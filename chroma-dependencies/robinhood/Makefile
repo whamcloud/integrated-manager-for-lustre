@@ -3,7 +3,7 @@ include ../include/Makefile.lustre_build_meta
 
 KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
 
-VERSION=2.5.4
+VERSION=2.5.5
 LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/$(VERSION)/robinhood-$(VERSION).tar.gz
 REQUIREMENT :=
 INSTALL_PKGS := robinhood-lhsm robinhood-adm robinhood-webgui
