@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,5 +21,9 @@
 
 
 from chroma_core.services import log_register
+
+from chroma_api.related_field import RelatedField
+
+assert RelatedField  # silence pyflakes
 
 api_log = log_register('django.request.tastypie')

@@ -107,6 +107,8 @@ class TestAlerting(ChromaIntegrationTestCase):
         for target in self.get_list("/api/target/"):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
         self.remote_operations.stop_lnet(host['fqdn'])
+
+        # Waiting for 3 x TargetOfflineAlert, 1 x LNetOfflineAlert = 4 Alerts.
         self._wait_alerts(4, active=True)
 
         # Remove everything

@@ -51,9 +51,9 @@ class TestAvailable(ChromaIntegrationTestCase):
         self.assertEqual(set(returned_jobs),
                          set(expected_jobs),
                          'Host state %s (%s)\n Host Alerts [%s]' % (host1['state'],
-                                                                  self.get_json_by_uri(host1['resource_uri'])['state'],
-                                                                  ', '.join(self.get_list("/api/alert/", {'active': True,
-                                                                                                          'alert_item_id': host1['id']}))))
+                                                                    self.get_json_by_uri(host1['resource_uri'])['state'],
+                                                                   ', '.join([alert['alert_type'] for alert in self.get_list("/api/alert/", {'active': True,
+                                                                                                                                              'alert_item_id': host1['id']})])))
 
     def test_available_actions(self):
         """Test that hosts actions can be looked on the JobScheduler over RPC
