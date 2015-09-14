@@ -45,7 +45,7 @@ from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
-from chroma_core.lib.cache import ObjectCache
+
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
@@ -185,7 +185,6 @@ class StatefulModelResource(CustomModelResource):
     available_jobs = fields.ListField()
     label = fields.CharField()
     locks = fields.DictField(help_text= "Lists of locked job ids for this object")
-    version = fields.FloatField()  # Incremetal float representing epoch time used only for comparative cache access
 
     class Meta:
         readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at', 'locks']
@@ -204,12 +203,6 @@ class StatefulModelResource(CustomModelResource):
         obj_key = ContentType.objects.get_for_model(obj.downcast()).natural_key()
 
         return JobSchedulerClient.get_locks(obj_key, obj.id)
-
-    def dehydrate_version(self, bundle):
-        try:
-            return ObjectCache.get_by_id(bundle.obj.__class__, bundle.obj.id).version
-        except:
-            return None
 
     def alter_detail_data_to_serialize(self, request, bundle):
         """Add post dehydrate data to a single bundle
