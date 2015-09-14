@@ -23,6 +23,9 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false
 
+PREVIOUS_INSTALL_DIR=previous_install
+UPGRADE_INSTALL_DIR=upgrade_install
+
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 TESTS=${TESTS:-"tests/integration/installation_and_upgrade/"}
@@ -57,9 +60,17 @@ scp $IEEL_FROM_VERSION $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
-# Install from the installation package
+
+# Unpack the previous install into /tmp/$PREVIOUS_INSTALL_DIR
 cd /tmp
+mkdir $PREVIOUS_INSTALL_DIR
+mv $IEEL_FROM_VERSION $PREVIOUS_INSTALL_DIR/$IEEL_FROM_VERSION
+mv install.exp $PREVIOUS_INSTALL_DIR/install.exp
+
+cd $PREVIOUS_INSTALL_DIR
 tar xzvf $IEEL_FROM_VERSION
+
+# Install from the installation package
 cd ${IEEL_FROM_VERSION%%.tar.gz}
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
@@ -86,11 +97,18 @@ ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with ex
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 yum -y update
-# Install from the installation package
+
+# Unpack the previous install into /tmp/$UPGRADE_INSTALL_DIR
 cd /tmp
+mkdir $UPGRADE_INSTALL_DIR
+mv $ARCHIVE_NAME $UPGRADE_INSTALL_DIR/$ARCHIVE_NAME
+mv upgrade.exp $UPGRADE_INSTALL_DIR/upgrade.exp
+
+cd $UPGRADE_INSTALL_DIR
 tar xzvf $ARCHIVE_NAME
 cd $(basename $ARCHIVE_NAME -current.tar.gz)
 
+# Install from the installation package
 echo \"First without access to YUM repos\"
 
 ips=\$(grep -e ^base -e ^mirror /etc/yum.repos.d/* | sed -e 's/.*:\/\/\([^/]*\)\/.*/\1/g' -e 's/:.*//' | sort -u | while read n; do getent ahosts \$n | sed -ne 's/\(.*\)  STREAM .*/\1/p'; done | sort -u)
