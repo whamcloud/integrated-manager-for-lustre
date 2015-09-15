@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2015 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -101,11 +101,8 @@ var RouteUtils = function() {
     'user/:id/': 'user_detail',
     'storage_resource/:id/': 'storage_resource_detail',
     'job/:id/': 'job_detail',
-    'alert/': 'alert',
-    'event/': 'event',
     'log/around-:aroundDatetime/': 'log',
     'log/': 'log',
-    'status/': 'status',
     'system_status/': 'system_status'
   };
 
@@ -205,20 +202,9 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.object_detail(id, User, UserDetail, 'username');
   },
-  alert: function()
-  {
-    this.toplevel('alert');
-  },
-  event: function()
-  {
-    this.toplevel('event');
-  },
   log: function(aroundDatetime)
   {
     this.toplevel('log', aroundDatetime);
-  },
-  status: function () {
-    this.toplevel('status');
   },
   system_status:function() {
     this.toplevel('system_status');
@@ -241,9 +227,7 @@ var ChromaRouter = Backbone.Router.extend({
   {
     $('div.toplevel').hide();
     $("#toplevel-" + name).show();
-    if (name === 'status') {
-      angular.element('html').injector().get('pageTitle').set('Status');
-    }
+
 
     var navAnchors = $('a.navigation'),
       menuItem = $("#" + name + "_menu");
@@ -253,11 +237,7 @@ var ChromaRouter = Backbone.Router.extend({
     menuItem.addClass('active');
     menuItem.parent('li').addClass('active');
 
-    if (name == 'alert') {
-      AlertView.draw();
-    } else if (name == 'event') {
-      EventView.draw();
-    } else if (name == 'log') {
+    if (name == 'log') {
       LogView.draw(aroundDatetime);
     }
   },

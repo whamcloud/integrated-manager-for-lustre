@@ -44,7 +44,6 @@
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/big_green_button.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/power_control.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/outlet_info.css" type="text/css" />
-    <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/status.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/create_pdu.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>js/modules/exception/assets/css/exception-dialog.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>js/modules/exception/assets/css/disconnect-dialog.css" type="text/css" />
@@ -75,24 +74,17 @@
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/interceptors/clean-request-url.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/controller_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/bigGreenButton.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/status.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/power_control.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/dialogs/create_pdu.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/dialogs/access_denied.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/dialogs/create_bmc.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/models_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/base_model.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/alert.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/command.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/event.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/notification.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/health.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_device.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_device_outlet.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_type.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/host.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/session.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/user.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/services_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/compile_template.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/safe_apply.js"></script>
@@ -100,14 +92,11 @@
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/generate_command_dropdown.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/interval.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/page-title.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/services/confirm-dialog.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/filters/filters_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/filters/capitalize.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/directive_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/context_tooltip.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/transform_model.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/command-dropdown.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/at-scroll-boundary.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/directives/power_control_autocomplete.js"></script>
 
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/modules/exception/exception-module.js"></script>
@@ -210,29 +199,23 @@
                   </ul>
                 </li>
                 <li>
-                  <a id="alert-menu" class="navigation" href="alert/"><i class="icon-warning-sign"></i> Alerts</a>
-                </li>
-                <li>
-                  <a id="event-menu" class="navigation" href="event/"><i class="icon-time"></i> History</a>
-                </li>
-                <li>
                   <a id="log-menu" class="navigation" href="log/"><i class="icon-book"></i> Logs</a>
                 </li>
                 <li>
                   <a id="help-menu" class="navigation skip_router" href="<$= conf.get('STATIC_URL') $>webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a>
                 </li>
                 <li class="status-menu-container">
-                  <a id="status-menu" class="navigation status-nav" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
-              <span ng-controller="BigGreenButtonCtrl" ng-class="bigGreen.status.health" class="ng-cloak badge">
-                ((bigGreen.count))<sup ng-if="bigGreen.aboveLimit">+</sup>
-              </span>
+                  <a id="status-menu" class="navigation status-nav skip_router" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
+                    <span ng-controller="BigGreenButtonCtrl" ng-class="bigGreen.status.health" class="ng-cloak badge">
+                      ((bigGreen.count))<sup ng-if="bigGreen.aboveLimit">+</sup>
+                    </span>
                     <span class="status-text">Status</span>
                   </a>
                 </li>
               </ul>
               <ul class="nav pull-right">
                 <li>
-                  <a class="navigation" href="/ui/status/">
+                  <a class="navigation skip_router" href="/ui/status/">
                     <i id="notification_icon_jobs" class="icon-spinner icon-spin" style="display: none;"> </i>
                   </a>
                 </li>
@@ -295,22 +278,11 @@
           <script type='text/javascript' src="<$= conf.get('STATIC_URL') $>js/filesystem_configuration.js"></script>
           <$= t('configuration.html') $>
         </div>
-        <div class="toplevel" id='toplevel-alert' style="display: none;">
-          <$= t('alerts.html') $>
-        </div>
-        <div class="toplevel" id='toplevel-event' style="display: none;">
-          <$= t('events.html') $>
-        </div>
         <div class="toplevel" id='toplevel-log' style="display: none;">
           <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/jquery-ui-timepicker-addon.js"></script>
           <$= t('logs.html') $>
         </div>
-          <div class="toplevel" id='toplevel-system_status' style="display: none;">
-          </div>
-          <div class="toplevel" id='toplevel-status' style="display: none;">
-            <h1 class="page-header"><i class="icon-dashboard"></i> Status</h1>
-            <div ng-include="(( config.asStatic('partials/status.html') ))"></div>
-          </div>
+        <div class="toplevel" id='toplevel-system_status' style="display: none;"></div>
       </div>
     </div>
     <footer class="container logo-footer">
