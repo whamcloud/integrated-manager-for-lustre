@@ -176,7 +176,7 @@ def get_resource_locations():
     return locations
 
 
-def check_block_device(device_type, path):
+def check_block_device(path, device_type):
     """
     Precursor to formatting a device: check if there is already a filesystem on it.
 
@@ -184,7 +184,7 @@ def check_block_device(device_type, path):
     :param device_type: The type of device the path references
     :return The filesystem type of the filesystem on the device, or None if unoccupied.
     """
-    return BlockDevice(device_type, path).filesystem_type
+    return agent_ok_or_error(BlockDevice(device_type, path).filesystem_info)
 
 
 def format_target(device_type, target_name, device, backfstype,
@@ -252,12 +252,7 @@ def format_target(device_type, target_name, device, backfstype,
     block_device = BlockDevice(device_type, device)
     filesystem = FileSystem(backfstype, device)
 
-    filesystem.mkfs(target_name, options)
-
-    return {'uuid': block_device.uuid,
-            'filesystem_type': block_device.filesystem_type,
-            'inode_size': filesystem.inode_size,
-            'inode_count': filesystem.inode_count}
+    return filesystem.mkfs(target_name, options)
 
 
 def _mkdir_p_concurrent(path):
@@ -285,7 +280,7 @@ def _mkdir_p_concurrent(path):
     mkdir_silent(path)
 
 
-def register_target(target_name, device_path, mount_point, backfstype):
+def register_target(device_path, mount_point, backfstype):
     filesystem = FileSystem(backfstype, device_path)
 
     _mkdir_p_concurrent(mount_point)
@@ -683,7 +678,6 @@ def _get_target_config(uuid):
         info['backfstype'] = info.get('backfstype', 'ldiskfs')
         info['device_type'] = info.get('device_type', 'linux')
         config.update('targets', uuid, info)
-
     return info
 
 
@@ -697,12 +691,11 @@ def target_running(uuid):
         # it doesn't even exist, or if the store doesn't even exist!
         _exit(1)
 
-    def devices_match(a, b):
-        return os.stat(a).st_ino == os.stat(b).st_ino
+    filesystem = FileSystem(info['backfstype'], info['bdev'])
 
     mounts = Mounts()
     for device, mntpnt, fstype in mounts.all():
-        if mntpnt == info['mntpt'] and devices_match(device, info['bdev']):
+        if (mntpnt == info['mntpt']) and filesystem.devices_match(device, info['bdev'], uuid):
             _exit(0)
 
     _exit(1)

@@ -25,9 +25,10 @@ import re
 
 from ..lib.shell import Shell
 from filesystem import FileSystem
+from ..blockdevices.blockdevice_linux import BlockDeviceLinux
 
 
-class FileSystemLdiskfs(FileSystem):
+class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
     # Lustre 2.x's ldiskfs filesystems appear as ext4, maybe we should translate that
     # in the read from blkid. But listing both is safe.
     _supported_filesystems = ['ldiskfs', 'ext4']
@@ -39,16 +40,6 @@ class FileSystemLdiskfs(FileSystem):
         super(FileSystemLdiskfs, self).__init__(fstype, device_path)
 
         self._modules_initialized = False
-
-    def _initialize_modules(self):
-        if not self._modules_initialized:
-            try:
-                # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
-                Shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
-            except Shell.CommandExecutionError:
-                Shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
-
-            self._modules_initialized = True
 
     @property
     def label(self):
@@ -95,6 +86,11 @@ class FileSystemLdiskfs(FileSystem):
 
         Shell.try_run(['mkfs.lustre'] + options + [self._device_path])
 
+        return {'uuid': self.uuid,
+                'filesystem_type': self.filesystem_type,
+                'inode_size': self.inode_size,
+                'inode_count': self.inode_count}
+
     def mkfs_options(self, target):
         mkfsoptions = []
 
@@ -106,3 +102,14 @@ class FileSystemLdiskfs(FileSystem):
             mkfsoptions.append("-N %s" % target.inode_count)
 
         return mkfsoptions
+
+    def devices_match(self, device1_path, device2_path, device2_uuid):
+        """
+        Verifies that the devices referenced in the parameters are the same
+
+        :param device1_path: first device string representation
+        :param device2_path: second device string representation
+        :param device2_uuid: uuid of second device
+        :return: return True if both device identifiers reference the same object
+        """
+        return os.stat(device1_path).st_ino == os.stat(device2_path).st_ino

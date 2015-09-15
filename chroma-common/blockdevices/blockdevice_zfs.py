@@ -30,11 +30,11 @@ from blockdevice import BlockDevice
 
 
 class ExportedZfsDevice(object):
-    '''
+    """
     This allows the enclosed code to read the status, attributes etc of a zfs device that is not currently imported to the machine.
     The code imports in read only mode and then exports the device whilst the enclosed code can then operate on the device as if
     it was locally active.
-    '''
+    """
     import_lock = threading.RLock()
 
     def __init__(self, device_path):
@@ -63,8 +63,11 @@ class ExportedZfsDevice(object):
             self.lock_acquired = False
 
 
-class BlockDeviceZfs(BlockDevice):
+class NotZpoolException(Exception):
+    pass
 
+
+class BlockDeviceZfs(BlockDevice):
     # From lustre_disk.h
     LDD_F_SV_TYPE_MDT = 0x0001
     LDD_F_SV_TYPE_OST = 0x0002
@@ -74,32 +77,75 @@ class BlockDeviceZfs(BlockDevice):
     _supported_device_types = ['zfs']
 
     def __init__(self, device_type, device_path):
+        super(BlockDeviceZfs, self).__init__(device_type, device_path)
+
+        self._modules_initialized = False
         self._zfs_properties = None
 
-        super(BlockDeviceZfs, self).__init__(device_type, device_path)
+    def _initialize_modules(self):
+        if not self._modules_initialized:
+            Shell.try_run(['modprobe', 'osd_zfs'])
+            Shell.try_run(['modprobe', 'zfs'])
+
+            self._modules_initialized = True
+
+    def _assert_zpool(self, caller_name):
+        if '/' in self._device_path:
+            raise NotZpoolException("%s accepts zpools as device_path, '%s' is not a zpool!" % (caller_name,
+                                                                                                self._device_path))
+
+    @property
+    def filesystem_info(self):
+        """
+        Verify if any zfs datasets exist on zpool named (self._device_path)
+
+        :return: message describing zfs type and datasets found, None otherwise
+        """
+        self._assert_zpool('filesystem_info')
+
+        try:
+            device_names = Shell.try_run(['zfs', 'list', '-H', '-o', 'name', '-r', self._device_path]).split('\n')
+
+            datasets = [line.split('/', 1)[1] for line in device_names if '/' in line]
+
+            if datasets:
+                return "Dataset%s '%s' found on zpool '%s'" % ('s' if (len(datasets) > 1) else '',
+                                                               ','.join(datasets),
+                                                               self._device_path)
+            return None
+        except OSError:                             # zfs not found
+            return "Unable to execute commands, check zfs is installed."
+        except Shell.CommandExecutionError as e:    # no zpool 'self._device_path' found
+            return str(e)
 
     @property
     def filesystem_type(self):
-        # We should verify the value, but for now lets just presume.
-        return 'zfs'
+        """
+        Verify if any zfs datasets exist on zpool identified by self._device_path
+
+        :return: 'zfs' if occupied or error encountered, None otherwise
+        """
+        self._assert_zpool('filesystem_type')
+
+        return self.preferred_fstype if self.filesystem_info is not None else None
 
     @property
     def uuid(self):
-        '''
-        This method is simpler than the method above, but doesn't yet work with exported pools, however I want to keep
-        the code so have left it in place. The code works and has tests.
-        :return:
-        '''
+        """
+        Try to retrieve the guid property of a zfs device, we will use this as the uuid for block device or file system
+        objects.
+
+        :return: uuid of zfs device (usually zpool or dataset)
+        """
+        out = ""
         try:
             out = Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
-        except OSError:                                 # zfs not found
-            out = ""
-        except Shell.CommandExecutionError:             # device not available.
+        except OSError:                                     # Zfs not found.
+            pass
+        except Shell.CommandExecutionError:                 # Error is probably because device is not imported.
             with ExportedZfsDevice(self.device_path) as available:
-                if (available):
+                if available:
                     out = Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
-                else:
-                    out = ""
 
         lines = [l for l in out.split("\n") if len(l) > 0]
 
@@ -113,27 +159,32 @@ class BlockDeviceZfs(BlockDevice):
         return 'zfs'
 
     def zfs_properties(self, log=None):
+        """
+        Try to retrieve the properties for a zfs device at self._device_path.
+
+        :param log: optional logger
+        :return: dictionary of zfs properties
+        """
         if not self._zfs_properties:
             self._zfs_properties = {}
 
             try:
                 ls = Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-            except OSError:                                         # Zfs not found.
+            except OSError:                                     # Zfs not found.
                 return self._zfs_properties
-            except Shell.CommandExecutionError:                     # Errors probably not imported.
+            except Shell.CommandExecutionError:                 # Error is probably because device is not imported.
                 with ExportedZfsDevice(self.device_path) as available:
                     if available:
                         ls = Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
                     else:
-                        ls = ""
+                        return self._zfs_properties
 
             for line in ls.split("\n"):
                 try:
                     key, value = line.split('\t')
 
                     self._zfs_properties[key] = value
-                except ValueError:
-                    # Be resilient to things we don't understand.
+                except ValueError:                              # Be resilient to things we don't understand.
                     if log:
                         log.info("zfs get for %s returned %s which was not parsable." % (self._device_path, line))
                     pass
@@ -144,12 +195,18 @@ class BlockDeviceZfs(BlockDevice):
         return {}
 
     def targets(self, uuid_name_to_target, device, log):
-        log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
+        self._initialize_modules()
+
+        if log:
+            log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'],
+                                                                                          device['type'],
+                                                                                          device['uuid']))
 
         zfs_properties = self.zfs_properties(log)
 
         if ('lustre:svname' not in zfs_properties) or ('lustre:flags' not in zfs_properties):
-            log.info("Device %s did not have a Lustre property values required" % device['path'])
+            if log:
+                log.info("Device %s did not have a Lustre property values required" % device['path'])
             return self.TargetsInfo([], None)
 
         # For a Lustre block device, extract name and params
@@ -159,13 +216,15 @@ class BlockDeviceZfs(BlockDevice):
 
         params = defaultdict(list)
 
-        for prop in zfs_properties:
-            if prop.startswith('lustre:'):
-                lustre_property = prop.split(':')[1]
-                params[lustre_property].extend(re.split(BlockDeviceZfs.lustre_property_delimiters[lustre_property], zfs_properties[prop]))
+        for zfs_property in zfs_properties:
+            if zfs_property.startswith('lustre:'):
+                lustre_property = zfs_property.split(':')[1]
+                params[lustre_property].extend(re.split(BlockDeviceZfs.lustre_property_delimiters[lustre_property],
+                                                        zfs_properties[zfs_property]))
 
         if name.find("ffff") != -1:
-            log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])
+            if log:
+                log.info("Device %s reported an unregistered lustre target" % device['path'])
             return self.TargetsInfo([], None)
 
         if (flags & self.LDD_F_SV_TYPE_MGS_or_MDT) == self.LDD_F_SV_TYPE_MGS_or_MDT:
@@ -177,10 +236,20 @@ class BlockDeviceZfs(BlockDevice):
         return self.TargetsInfo(names, params)
 
     def import_(self):
-        # We can actually only import the zpool so if we aren't the pool get the pool and import that.
-        if '/' in self._device_path:
-            blockdevice = BlockDevice(self._supported_device_types[0],
-                                      self._device_path.split('/')[0])
+        """
+        Before importing check the device_path does not reference a dataset, if it does then retry on parent zpool
+        block device.
+
+        We can only import the zpool if it's not already imported so check before importing.
+
+        :return: None for success meaning the zpool is imported
+        """
+        self._initialize_modules()
+
+        try:
+            self._assert_zpool('import_')
+        except NotZpoolException:
+            blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
 
             return blockdevice.import_()
 
@@ -191,10 +260,20 @@ class BlockDeviceZfs(BlockDevice):
             return Shell.run_canned_error_message(['zpool', 'import', self._device_path])
 
     def export(self):
-        # We can actually only export the zpool so if we aren't the pool get the pool and export that.
-        if '/' in self._device_path:
-            blockdevice = BlockDevice(self._supported_device_types[0],
-                                      self._device_path.split('/')[0])
+        """
+        Before importing check the device_path does not reference a dataset, if it does then retry on parent zpool
+        block device.
+
+        We can only export the zpool if it's already imported so check before exporting.
+
+        :return: None for success meaning the zpool has been exported
+        """
+        self._initialize_modules()
+
+        try:
+            self._assert_zpool('export')
+        except NotZpoolException:
+            blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
 
             return blockdevice.export()
 

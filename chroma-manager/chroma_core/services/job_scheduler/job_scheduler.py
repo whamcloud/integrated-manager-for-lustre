@@ -623,8 +623,12 @@ class JobScheduler(object):
         :param command: If set, any created jobs are added
         to this command object.
         """
-        log.debug("_completion_hooks command %s, %s (%s) state=%s" % (
-            None if command is None else command.id, changed_item, changed_item.__class__, changed_item.state))
+        log.debug("_completion_hooks command %s, %s (%s) state=%s" %
+                  (None if command is None else
+                   command.id,
+                   changed_item,
+                   changed_item.__class__,
+                   getattr(changed_item, 'state', 'n/a')))
 
         for hook in self.completion_hooks:
             hook(changed_item, command, updated_attrs)

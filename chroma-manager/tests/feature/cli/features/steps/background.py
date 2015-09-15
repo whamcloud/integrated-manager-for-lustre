@@ -22,11 +22,18 @@ def load_filesystem_from_json(data):
     lookup = defaultdict(dict)
 
     for host_info in data['hosts']:
-        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-        mock_host_info = AgentRpc.mock_servers[host_info['address']]
+        from tests.unit.chroma_core.helpers import MockAgentRpc
+        mock_host_info = MockAgentRpc.mock_servers[host_info['address']]
         #host, command = JobSchedulerClient.create_host(mock_host_info['fqdn'], mock_host_info['nodename'], ['manage_targets'], address = host_info['address'])
         nids = [Nid.split_nid_string(n) for n in mock_host_info['nids']]
-        host = synthetic_host(mock_host_info['address'], nids=nids, fqdn=mock_host_info['fqdn'], nodename=mock_host_info['nodename'])
+
+        # update mock_servers with list of Nid objects
+        MockAgentRpc.mock_servers[host_info['address']]['nids'] = nids
+
+        host = synthetic_host(mock_host_info['address'],
+                              nids=nids,
+                              fqdn=mock_host_info['fqdn'],
+                              nodename=mock_host_info['nodename'])
         ObjectCache.add(ManagedHost, host)
         host.state = 'managed'
         host.save()

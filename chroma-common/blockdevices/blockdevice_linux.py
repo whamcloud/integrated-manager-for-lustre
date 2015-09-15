@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -34,9 +34,41 @@ class BlockDeviceLinux(BlockDevice):
     _supported_device_types = ['linux']
     TARGET_NAME_REGEX = "([\w-]+)-(MDT|OST)\w+"
 
+    def __init__(self, device_type, device_path):
+        super(BlockDeviceLinux, self).__init__(device_type, device_path)
+
+        self._modules_initialized = False
+
+    def _initialize_modules(self):
+        if not self._modules_initialized:
+            try:                                            # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
+                Shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
+            except Shell.CommandExecutionError:
+                Shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
+
+            self._modules_initialized = True
+
     @property
     def filesystem_type(self):
-        return self._blkid_value("TYPE")
+        """
+        Verify if filesystem exists at self._device_path and return type
+
+        :return: type if exists, None otherwise
+        """
+        occupying_fs = self._blkid_value("TYPE")
+
+        return occupying_fs
+
+    @property
+    def filesystem_info(self):
+        """
+        Verify if filesystem exists at self._device_path and return message
+
+        :return: message indicating type if exists, None otherwise
+        """
+        occupying_fs = self._blkid_value("TYPE")
+
+        return None if occupying_fs is None else "Filesystem found: type '%s'" % occupying_fs
 
     @property
     def uuid(self):
@@ -65,8 +97,11 @@ class BlockDeviceLinux(BlockDevice):
         return 'ldiskfs'
 
     def mgs_targets(self, log):
-        """If there is an MGS in the local targets, use debugfs to
-           get a list of targets.  Return a dict of filesystem->(list of targets)"""
+        """
+        If there is an MGS in the local targets, use debugfs to get a list of targets.
+        Return a dict of filesystem->(list of targets)
+        """
+        self._initialize_modules()
 
         result = defaultdict(lambda: [])
 
@@ -199,6 +234,8 @@ class BlockDeviceLinux(BlockDevice):
                 os.unlink(tmpfile)
 
     def targets(self, uuid_name_to_target, device, log):
+        self._initialize_modules()
+
         log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
 
         result = Shell.run(["tunefs.lustre", "--dryrun", device['path']])

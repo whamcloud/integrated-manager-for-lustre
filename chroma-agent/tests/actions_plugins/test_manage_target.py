@@ -1,6 +1,8 @@
+import mock
+
 from chroma_agent.action_plugins import manage_targets
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 from django.utils import unittest
@@ -83,17 +85,29 @@ class TestFormatTarget(CommandCaptureTestCase):
         if block_device.device_type == 'linux':
             return block_device.device_path
         elif block_device.device_type == 'zfs':
-            return block_device.device_path
+            return "%s/%s" % (block_device.device_path, target_name)
+            # TODO: when BlockDevice and FileSystem merge
+            # return block_device.mount_path(target_name)
 
         assert "Unknown device type %s" % block_device.device_type
 
     def _setup_run_exceptions(self, block_device, run_args):
         self._run_command = CommandCaptureCommand(run_args)
 
-        self.add_commands(CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"), stdout="Inode size: 1024\nInode count: 1024\n"),
-                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"), stdout="%s\n" % block_device.preferred_fstype),
-                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"), stdout="123456789\n"),
-                          CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1"), stdout="9845118046416187754"),
+        self.add_commands(CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"),
+                                                stdout="Inode size: 1024\nInode count: 1024\n"),
+                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"),
+                                                stdout="%s\n" % block_device.preferred_fstype),
+                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"),
+                                                stdout="123456789\n"),
+                          CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1/OST0000"),
+                                                stdout="9845118046416187754"),
+                          CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1/MDT0000"),
+                                                stdout="9845118046416187755"),
+                          CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1/MGS0000"),
+                                                stdout="9845118046416187756"),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name", "-r", "lustre1")),
+                          CommandCaptureCommand(("modprobe", "%s" % block_device.preferred_fstype)),
                           CommandCaptureCommand(("modprobe", "osd_%s" % block_device.preferred_fstype)),
                           self._run_command)
 
@@ -331,28 +345,53 @@ class TestXMLParsing(unittest.TestCase):
 
 
 class TestCheckBlockDevice(CommandCaptureTestCase):
-    def test_occupied_device(self):
+    def test_occupied_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="ext4\n"))
 
-        self.assertEqual(manage_targets.check_block_device("linux", "/dev/sdb"), 'ext4')
+        self.assertAgentError(manage_targets.check_block_device("/dev/sdb", "linux"), "Filesystem found: type 'ext4'")
         self.assertRanAllCommands()
 
-    def test_mbr_device(self):
+    def test_mbr_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="\n"))
 
-        self.assertEqual(manage_targets.check_block_device("linux", "/dev/sdb"), None)
+        self.assertAgentOK(manage_targets.check_block_device("/dev/sdb", "linux"))
         self.assertRanAllCommands()
 
-    def test_empty_device(self):
+    def test_empty_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), rc=2))
 
-        self.assertEqual(manage_targets.check_block_device("linux", "/dev/sdb"), None)
+        self.assertAgentOK(manage_targets.check_block_device("/dev/sdb", "linux"))
         self.assertRanAllCommands()
+
+    def test_occupied_device_zfs(self):
+        self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\npool1/dataset_1\n")
+
+        self.assertAgentError(manage_targets.check_block_device("pool1", "zfs"),
+                              "Dataset 'dataset_1' found on zpool 'pool1'")
+        self.assertRanAllCommands()
+
+    def test_empty_device_zfs(self):
+        self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\n")
+
+        self.assertAgentOK(manage_targets.check_block_device("pool1", "zfs"))
+        self.assertRanAllCommands()
+
+    @unittest.skip('Unimplemented, need to test running check_block_device on a zfs dataset')
+    def test_dataset_device_zfs(self):
+        pass
 
 
 class TestCheckImportExport(CommandCaptureTestCase):
     zpool = 'zpool'
     zpool_dataset = '%s/dataset' % zpool
+
+    def setUp(self):
+        super(TestCheckImportExport, self).setUp()
+
+        self.patch_init_modules = mock.patch.object(BlockDeviceZfs, '_initialize_modules')
+        self.patch_init_modules.start()
+
+        self.addCleanup(mock.patch.stopall)
 
     def test_import_device_ldiskfs(self):
         self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb'))

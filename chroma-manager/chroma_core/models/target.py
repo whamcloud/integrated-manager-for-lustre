@@ -41,6 +41,7 @@ from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
 from chroma_core.chroma_common.lib import util
 from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
+from chroma_core.models import UpdateDevicesStep
 
 import settings
 
@@ -128,8 +129,7 @@ class ManagedTarget(StatefulObject):
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
         try:
             started_on = ObjectCache.get_one(ManagedHost,
-                                             lambda mh: (mh.nodename == nodename) or
-                                                        (mh.fqdn == nodename))
+                                             lambda mh: (mh.nodename == nodename) or (mh.fqdn == nodename))
         except ManagedHost.DoesNotExist:
             raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
 
@@ -397,7 +397,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "ost"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
-        if (settings.JOURNAL_SIZE != None) and (filesystemtype == 'ldiskfs'):
+        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == 'ldiskfs'):
             mkfs_options.append("-J size=%s" % settings.JOURNAL_SIZE)
 
         # HYD-1089 should supercede these settings
@@ -426,7 +426,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "mdt"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
-        if (settings.JOURNAL_SIZE != None) and (filesystemtype == 'ldiskfs'):
+        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == 'ldiskfs'):
             mkfs_options += ["-J size=%s" % settings.JOURNAL_SIZE]
 
         # HYD-1089 should supercede these settings
@@ -534,7 +534,7 @@ class TargetRecoveryInfo(models.Model):
             data = json.loads(self.recovery_status)
         return ("status" in data and data["status"] == "RECOVERING")
 
-    #def recovery_status_str(self):
+    # def recovery_status_str(self):
     #    data = json.loads(self.recovery_status)
     #    if 'status' in data and data["status"] == "RECOVERING":
     #        return "%s %ss remaining" % (data["status"], data["time_remaining"])
@@ -683,8 +683,7 @@ class RegisterTargetStep(Step):
         target = kwargs['target']
 
         result = self.invoke_agent(kwargs['primary_host'], "register_target",
-                                   {'target_name': target.name,
-                                    'device_path': kwargs['device_path'],
+                                   {'device_path': kwargs['device_path'],
                                     'mount_point': kwargs['mount_point'],
                                     'backfstype': kwargs['backfstype']})
 
@@ -789,9 +788,9 @@ class RemoveTargetFromPacemakerConfigStep(Step):
         target_mount = kwargs['target_mount']
 
         self.invoke_agent_expect_result(kwargs['host'], "unconfigure_target_ha",
-                          {'ha_label': target.ha_label,
-                           'uuid': target.uuid,
-                           'primary': target_mount.primary})
+                                        {'ha_label': target.ha_label,
+                                         'uuid': target.uuid,
+                                         'primary': target_mount.primary})
 
     @classmethod
     def describe(cls, kwargs):
@@ -894,10 +893,14 @@ class ConfigureTargetJob(StateChangeJob):
             steps.append((OpenLustreFirewallStep, {'host': target_mount.host}))
 
         for target_mount in target_mounts:
+            device_type = target_mount.volume_node.volume.storage_resource.to_resource_class().device_type()
+            # retrieve the preferred fs type for this block device type to be used as backfstype for target
+            backfstype = BlockDevice(device_type, target_mount.volume_node.path).preferred_fstype
+
             steps.append((ConfigureTargetStoreStep, {'host': target_mount.host,
                                                      'target': target_mount.target,
                                                      'target_mount': target_mount,
-                                                     'backfstype': target_mount.volume_node.volume.filesystem_type,
+                                                     'backfstype': backfstype,
                                                      'volume_node': target_mount.volume_node,
                                                      'device_type': target_mount.target.volume.storage_resource.to_resource_class().device_type()}))
 
@@ -952,6 +955,10 @@ class RegisterTargetJob(StateChangeJob):
             mgs_id = self.target.downcast().filesystem.mgs.id
             mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
 
+            # retrieve the preferred fs type for this block device type to be used as backfstype for target
+            device_type = primary_mount.volume_node.volume.storage_resource.to_resource_class().device_type()
+            backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
+
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
             if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
@@ -961,7 +968,7 @@ class RegisterTargetJob(StateChangeJob):
                 'target': self.target,
                 'device_path': path,
                 'mount_point': primary_mount.mount_point,
-                'backfstype': primary_mount.volume_node.volume.filesystem_type
+                'backfstype': backfstype
             })]
         else:
             raise NotImplementedError(target_class)
@@ -1084,12 +1091,8 @@ class PreFormatCheck(Step):
         return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
 
     def run(self, kwargs):
-        occupying_fs = self.invoke_agent(kwargs['host'], "check_block_device", {'path': kwargs['path'],
-                                                                                'device_type': kwargs['device_type']})
-        if occupying_fs is not None:
-            msg = "Found filesystem of type '%s' on %s:%s" % (occupying_fs, kwargs['host'], kwargs['path'])
-            self.log(msg)
-            raise RuntimeError(msg)
+        self.invoke_agent_expect_result(kwargs['host'], "check_block_device", {'path': kwargs['path'],
+                                                                               'device_type': kwargs['device_type']})
 
 
 class PreFormatComplete(Step):
@@ -1109,6 +1112,8 @@ class PreFormatComplete(Step):
 
 
 class MkfsStep(Step):
+    database = True
+
     def _mkfs_args(self, kwargs):
         target = kwargs['target']
 
@@ -1160,21 +1165,65 @@ class MkfsStep(Step):
 
         target.uuid = result['uuid']
 
-        # Check that inode_size was applied correctly
-        if target.inode_size:
-            if target.inode_size != result['inode_size']:
-                raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
-                    target.inode_size, result['inode_size']))
+        if result['inode_count'] is not None:
+            # Check that inode_size was applied correctly
+            if target.inode_size:
+                if target.inode_size != result['inode_size']:
+                    raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
+                        target.inode_size, result['inode_size']))
 
-        # Check that inode_count was applied correctly
-        if target.inode_count:
-            if target.inode_count != result['inode_count']:
-                raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
-                    target.inode_count, result['inode_count']))
+            # Check that inode_count was applied correctly
+            if target.inode_count:
+                if target.inode_count != result['inode_count']:
+                    raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
+                        target.inode_count, result['inode_count']))
 
-        # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
-        target.inode_count = result['inode_count']
-        target.inode_size = result['inode_size']
+            # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
+            target.inode_count = result['inode_count']
+            target.inode_size = result['inode_size']
+
+        # FIXME: investigate and use notify instead of saving directly, initial attempts at this failed
+        target.volume.save()
+        target.save()
+
+
+class UpdateManagedTargetMount(Step):
+    """
+    This step will update the volume_nodes within the
+    manage target mounts to reflect changes during MkfsStep
+    """
+    database = True
+
+    @classmethod
+    def describe(cls, kwargs):
+        return "Update managed target mounts for target %s" % kwargs['target']
+
+    def run(self, kwargs):
+        target = kwargs['target']
+        job_log.info("Updating mtm volume_nodes for target %s" % target)
+
+        original_volume = target.volume
+        device_type = original_volume.storage_resource.to_resource_class().device_type()
+
+        for mtm in target.managedtargetmount_set.all():
+            host = mtm.host
+            current_volume_node = mtm.volume_node
+            assert original_volume == current_volume_node.volume
+            primary = current_volume_node.primary
+
+            block_device = BlockDevice(device_type, current_volume_node.path)
+            filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
+
+            mtm.volume_node = VolumeNode.objects.get(host=host,
+                                                     path=filesystem.mount_path(target.name))
+
+            mtm.volume_node.primary = primary
+            mtm.volume_node.save()
+            mtm.save()
+
+            target.volume = mtm.volume_node.volume
+
+        target.save()
 
 
 class FormatTargetJob(StateChangeJob):
@@ -1235,19 +1284,16 @@ class FormatTargetJob(StateChangeJob):
         device_type = self.target.volume.storage_resource.to_resource_class().device_type()
 
         steps = [(MakeTargetActiveStep,
-                      MakeTargetActiveStep.create_parameters(self.target,
-                                                             primary_mount.host))]
+                  MakeTargetActiveStep.create_parameters(self.target, primary_mount.host))]
 
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume
             # so before proceeding, check that it is indeed unoccupied
-            steps.append((PreFormatCheck,
-                          {'host': primary_mount.host,
-                           'path': primary_mount.volume_node.path,
-                           'device_type': device_type}))
+            steps.append((PreFormatCheck, {'host': primary_mount.host,
+                                           'path': primary_mount.volume_node.path,
+                                           'device_type': device_type}))
 
-            steps.append((PreFormatComplete,
-                          {'target': self.target}))
+            steps.append((PreFormatComplete, {'target': self.target}))
 
         # This line is key, because it causes the volume property to be filled so it can be access by the step
         self.target.volume
@@ -1259,23 +1305,39 @@ class FormatTargetJob(StateChangeJob):
 
         mkfsoptions = self.target.downcast().mkfs_override_options(block_device.preferred_fstype, mkfsoptions)
 
-        steps.append((MkfsStep, {
-            'primary_host': primary_mount.host,
-            'target': self.target,
-            'device_path': primary_mount.volume_node.path,
-            'failover_nids': self.target.get_failover_nids(),
-            'mgs_nids': mgs_nids,
-            'reformat': self.target.reformat,
-            'device_type': device_type,
-            'backfstype': block_device.preferred_fstype,
-            'mkfsoptions': mkfsoptions
-        }))
+        steps.append((MkfsStep, {'primary_host': primary_mount.host,
+                                 'target': self.target,
+                                 'device_path': primary_mount.volume_node.path,
+                                 'failover_nids': self.target.get_failover_nids(),
+                                 'mgs_nids': mgs_nids,
+                                 'reformat': self.target.reformat,
+                                 'device_type': device_type,
+                                 'backfstype': block_device.preferred_fstype,
+                                 'mkfsoptions': mkfsoptions}))
+
+        # post format tasks include detecting and updating volume_nodes
+        hosts = [mtm.host for mtm in self.target.managedtargetmount_set.all()]
+        steps.append((UpdateDevicesStep, {'hosts': hosts}))
+        steps.append((UpdateManagedTargetMount, {'target': self.target}))
 
         return steps
 
     def on_success(self):
         super(FormatTargetJob, self).on_success()
         self.target.volume.save()
+
+    def create_locks(self):
+        locks = super(FormatTargetJob, self).create_locks()
+
+        # Take a write lock on mtm objects related to this target
+        for mtm in self.target.managedtargetmount_set.all():
+            job_log.debug("Creating StateLock on %s/%s" % (mtm.__class__, mtm.id))
+            locks.append(StateLock(
+                job=self,
+                locked_item=mtm,
+                write=True))
+
+        return locks
 
 
 class MigrateTargetJob(AdvertisedJob):
@@ -1341,7 +1403,7 @@ class FailbackTargetJob(MigrateTargetJob):
             instance.primary_host != instance.active_host
         # HYD-1238: once we have a valid online/offline piece of info for each host,
         # reinstate the condition
-        #instance.primary_host.is_available() and \
+        # instance.primary_host.is_available()
 
     @classmethod
     def long_description(cls, stateful_object):

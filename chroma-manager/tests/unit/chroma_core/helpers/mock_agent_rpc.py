@@ -54,6 +54,16 @@ class MockAgentRpc(object):
     def last_call(cls):
         return cls.calls[-1]
 
+    @classmethod
+    def skip_calls(cls, cmds_to_skip):
+        """ Find the most recent agent RPC that wasn't in the list of specified cmds """
+        index = 1
+
+        while cls.calls[-index][0] in cmds_to_skip:
+            index += 1
+
+        return cls.calls[-index]
+
     succeed = True
     fail_commands = []
     selinux_enabled = False

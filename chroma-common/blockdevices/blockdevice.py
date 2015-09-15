@@ -28,10 +28,12 @@ _cached_device_types = {}
 
 
 class BlockDevice(object):
-    """ BlockDevice abstraction which provides blockdevice specific functionality
-        This class really really really needs to be in a common place to all code
-        so that its functionality can be used in all components. Then we could pass
-        it around as a class and not as a hash of its values. """
+    """
+    BlockDevice abstraction which provides blockdevice specific functionality
+    This class really really really needs to be in a common place to all code
+    so that its functionality can be used in all components. Then we could pass
+    it around as a class and not as a hash of its values.
+    """
 
     class_override = None
     __metaclass__ = abc.ABCMeta
@@ -50,7 +52,7 @@ class BlockDevice(object):
             # It is possible the caller doesn't know the device type, but they do know the path - these cases should be
             # avoided but in IML today this is the case, so keep a class variable to allow use to resolve it. We default
             # very badly to linux if we don't have a value.
-            if (device_type == None):
+            if device_type == None:
                 if device in _cached_device_types:
                     device_type = _cached_device_types[device]
                 else:
@@ -60,7 +62,7 @@ class BlockDevice(object):
 
             subtype = next(klass for klass in util.all_subclasses(BlockDevice) if device_type in klass._supported_device_types)
 
-            if (cls != subtype):
+            if cls != subtype:
                 return subtype.__new__(subtype, device_type, device)
             else:
                 return super(BlockDevice, cls).__new__(cls)
@@ -72,15 +74,33 @@ class BlockDevice(object):
         self._device_type = device_type
         self._device_path = device_path
 
-    @abc.abstractmethod
+    def _initialize_modules(self):
+        """
+        Called before operations that might result the filesystem specific modules to be loaded.
+
+        :return: None
+        """
+        return None
+
+    @abc.abstractproperty
     def filesystem_type(self):
+        """
+        Return type of occupying filesystem(s)
+        """
         pass
 
-    @abc.abstractmethod
+    @abc.abstractproperty
+    def filesystem_info(self):
+        """
+        Return message regarding occupying filesystem(s) that reside on this block device
+        """
+        pass
+
+    @abc.abstractproperty
     def uuid(self):
         pass
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def preferred_fstype(self):
         pass
 
@@ -96,6 +116,7 @@ class BlockDevice(object):
     def mgs_targets(self, log):
         """
         Creates a list of all the mgs targets on a given device, returning a dict of filesystems and names
+
         :param log: The log to write debug info to
         :return: dict of filesystems and names
         """

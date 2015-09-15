@@ -820,7 +820,7 @@ class FakeServer(utils.Persisted):
 
         return self._devices.format(self.fqdn, device, mkfsoptions, target)
 
-    def register_target(self, target_name, device_path, mount_point, backfstype):
+    def register_target(self, device_path, mount_point, backfstype):
 
         # FIXME: arbitrary choice of which NID to use, correctly this should be
         # whichever NID LNet uses to route to the MGS, or what is set

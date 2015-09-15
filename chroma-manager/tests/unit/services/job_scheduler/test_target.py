@@ -13,25 +13,27 @@ class TestMkfsOverrides(JobTestCaseWithHost):
     def test_mdt_override(self):
         import settings
 
-        self.create_simple_filesystem(self.host, start = False)
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
+        self.create_simple_filesystem(self.host, start=False)
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
 
-        settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mdt.managedtarget_ptr, "formatted")
-        cmd, args = MockAgentRpc.last_call()
-        self.assertEqual(cmd, "format_target")
+        settings.LUSTRE_MKFS_OPTIONS_MDT = '-E block_size=1024'
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mdt.managedtarget_ptr, 'formatted')
+
+        cmd, args = MockAgentRpc.skip_calls(['device_plugin'])
+        self.assertEqual(cmd, 'format_target')
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
 
     def test_ost_override(self):
         import settings
 
-        self.create_simple_filesystem(self.host, start = False)
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
+        self.create_simple_filesystem(self.host, start=False)
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
 
-        settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.ost.managedtarget_ptr, "formatted")
-        cmd, args = MockAgentRpc.last_call()
-        self.assertEqual(cmd, "format_target")
+        settings.LUSTRE_MKFS_OPTIONS_OST = '-E block_size=2048'
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.ost.managedtarget_ptr, 'formatted')
+
+        cmd, args = MockAgentRpc.skip_calls(['device_plugin'])
+        self.assertEqual(cmd, 'format_target')
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
 
 
@@ -39,25 +41,25 @@ class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()
 
-        self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name='MGS')
         ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
         for tm in mgt_tms:
             ObjectCache.add(ManagedTargetMount, tm)
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
+        self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, 'unformatted')
 
     def test_start_stop(self):
         from chroma_core.models import ManagedMgs
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'unmounted')
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unmounted')
+        self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, 'unmounted')
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
+        self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, 'mounted')
 
     def test_removal(self):
         from chroma_core.models import ManagedMgs
         self.mgt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mgt.managedtarget_ptr), 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
-            ManagedMgs.objects.get(pk = self.mgt.pk)
-        self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
+            ManagedMgs.objects.get(pk=self.mgt.pk)
+        self.assertEqual(ManagedMgs._base_manager.get(pk=self.mgt.pk).state, 'removed')
 
     def test_removal_mount_dependency(self):
         """Test that when removing, if target mounts cannot be unconfigured,
@@ -71,18 +73,18 @@ class TestTargetTransitions(JobTestCaseWithHost):
             # -> the TargetMount removal parts of this operation will fail, we
             # want to make sure that this means that Target deletion part
             # fails as well
-            self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed', check = False)
+            self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed', check=False)
 
-            ManagedMgs.objects.get(pk = self.mgt.pk)
-            self.assertNotEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
+            ManagedMgs.objects.get(pk=self.mgt.pk)
+            self.assertNotEqual(ManagedMgs._base_manager.get(pk=self.mgt.pk).state, 'removed')
         finally:
             MockAgentRpc.succeed = True
 
         # Now let the op go through successfully
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
-            ManagedMgs.objects.get(pk = self.mgt.pk)
-        self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
+            ManagedMgs.objects.get(pk=self.mgt.pk)
+        self.assertEqual(ManagedMgs._base_manager.get(pk=self.mgt.pk).state, 'removed')
 
     def test_lnet_dependency(self):
         """Test that if I try to stop LNet on a host where a target is running,
@@ -116,22 +118,22 @@ class TestTargetTransitions(JobTestCaseWithHost):
             MockAgentRpc.fail_commands = []
 
         # Check that the initial format did not pass the reformat flag
-        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path,
-                                                                      'target_types': 'mgs',
-                                                                      'backfstype': 'ldiskfs',
-                                                                      'device_type': 'linux',
-                                                                      'target_name': 'MGS'}))
+        self.assertEqual(MockAgentRpc.skip_calls(['device_plugin']), ('format_target', {'device': path,
+                                                                                        'target_types': 'mgs',
+                                                                                        'backfstype': 'ldiskfs',
+                                                                                        'device_type': 'linux',
+                                                                                        'target_name': 'MGS'}))
 
         # This one should succeed
         self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
 
         # Check that it passed the reformat flag
-        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path,
-                                                                      'target_types': 'mgs',
-                                                                      'backfstype': 'ldiskfs',
-                                                                      'device_type': 'linux',
-                                                                      'target_name': 'MGS',
-                                                                      'reformat': True}))
+        self.assertEqual(MockAgentRpc.skip_calls(['device_plugin']), ('format_target', {'device': path,
+                                                                                        'target_types': 'mgs',
+                                                                                        'backfstype': 'ldiskfs',
+                                                                                        'device_type': 'linux',
+                                                                                        'target_name': 'MGS',
+                                                                                        'reformat': True}))
 
 
 class TestSharedTarget(JobTestCaseWithHost):
