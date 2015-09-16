@@ -19,10 +19,10 @@
       "status_command": "virsh domstate hydra-4vm3",
       "users": [
         {
-          "password": "chr0m4_d3bug",
+          "password": "lustre",
           "super": true,
           "email": "nobody@example.com",
-          "username": "debug"
+          "username": "admin"
         }
       ]
     }

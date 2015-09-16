@@ -13,7 +13,7 @@ class ChromaApiTestCase(ResourceTestCase):
     Unit tests which drive the *Resource classes in chroma_api/
     """
 
-    def __init__(self, methodName=None, username = 'debug', password = 'chr0m4_d3bug'):
+    def __init__(self, methodName=None, username = 'admin', password = 'lustre'):
         super(ChromaApiTestCase, self).__init__(methodName=methodName)
         self.username = username
         self.password = password

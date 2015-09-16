@@ -329,7 +329,7 @@ class TestFSAdminsCanDismiss(NotificationTestCase):
 
     def __init__(self, methodName=None):
         super(TestFSAdminsCanDismiss, self).__init__(
-            methodName, username='admin', password='chr0m4_d3bug')
+            methodName, username='debug', password='lustre')
 
     def test_dismissing_alert(self):
         """Test dismissing alert by fs admins is allowed"""
@@ -387,7 +387,7 @@ class TestFSUsersCannotDismiss(NotificationTestCase):
 
     def __init__(self, methodName=None):
         super(TestFSUsersCannotDismiss, self).__init__(
-            methodName, username='user', password='chr0m4_d3bug')
+            methodName, username='user', password='lustre')
 
     def test_dismissing_alert(self):
         """Test dismissing alert by fs users is prevented"""

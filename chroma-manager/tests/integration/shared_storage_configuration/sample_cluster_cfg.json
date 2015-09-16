@@ -8,7 +8,7 @@
             "address": "hydra-2-ss2-chroma-manager-1",
             "server_http_url": "https://hydra-2-ss2-chroma-manager-1/",
             "users": [
-                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+                {"username": "admin", "super": true, "password": "lustre"}
             ]
         }
     ],

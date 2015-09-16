@@ -8,9 +8,9 @@
             "server_http_url": "https://localhost:8000/ui/",
             "users": [
                 {
-                    "username": "debug",
+                    "username": "admin",
                     "is_superuser": true,
-                    "password": "chr0m4_d3bug",
+                    "password": "lustre",
                     "email": "nobody@example.com"
                 }
             ],

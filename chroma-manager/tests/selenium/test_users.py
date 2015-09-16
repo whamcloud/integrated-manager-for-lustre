@@ -82,7 +82,7 @@ class TestUsers(SeleniumBaseTestCase):
 
         for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
-                self.users['debug'] = SampleUser(user)
+                self.users['admin'] = SampleUser(user)
 
         self.navigation.go('Configure', 'Users')
         self.login_page = Login(self.driver)
@@ -284,7 +284,7 @@ class TestUsers(SeleniumBaseTestCase):
         # Bit of a hack here, would be better to verify as the user themselves,
         # but then we'd need a separate code path.  This way we just log back
         # in as a superuser and reuse the same verify_edit() method.
-        with wrapped_login(self, 'debug'):
+        with wrapped_login(self, 'admin'):
             self.navigation.go('Configure', 'Users')
             # Verify that the edits made by the user stuck
             self.verify_edit(user)

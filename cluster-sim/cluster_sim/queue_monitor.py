@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,6 +19,7 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
 
 import json
 import argparse
@@ -81,8 +82,8 @@ def get_queues(session, url):
 
 parser = argparse.ArgumentParser(description="IML Queue Monitor")
 parser.add_argument('--url', required=False, help="Chroma manager URL", default="https://localhost:8000")
-parser.add_argument('--username', required=False, help="REST API username", default='debug')
-parser.add_argument('--password', required=False, help="REST API password", default='chr0m4_d3bug')
+parser.add_argument('--username', required=False, help="REST API username", default='admin')
+parser.add_argument('--password', required=False, help="REST API password", default='lustre')
 parser.add_argument('--colwidth', required=False, help="Width of output columns", default=20)
 
 args = parser.parse_args()

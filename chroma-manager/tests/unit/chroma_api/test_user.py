@@ -15,7 +15,7 @@ class TestUserResource(ChromaApiTestCase):
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
         self.assertHttpBadRequest(response)
 
-        me['old_password'] = "chr0m4_d3bug"
+        me['old_password'] = "lustre"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
         self.assertHttpAccepted(response)
 

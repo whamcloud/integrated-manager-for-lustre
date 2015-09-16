@@ -59,7 +59,7 @@
             "address": "hydra-2-lustre-1-8-chroma-manager-1",
             "server_http_url": "http://hydra-2-lustre-1-8-chroma-manager-1/",
             "users": [
-                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+                {"username": "admin", "super": true, "password": "lustre"}
             ]
         }
     ],

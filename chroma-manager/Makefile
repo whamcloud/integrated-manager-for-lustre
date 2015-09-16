@@ -39,8 +39,8 @@ CLUSTER_SIM_REGISTER_ARGS ?= --username $(DEV_USERNAME) --password $(DEV_PASSWOR
 DB_NAME ?= chroma
 DB_USER ?= $(DB_NAME)
 TEST_HTTPD_PORT ?= 8000
-DEV_USERNAME = debug
-DEV_PASSWORD = chr0m4_d3bug
+DEV_USERNAME = admin
+DEV_PASSWORD = lustre
 
 # Test runner options
 BEHAVE_ARGS ?= -q --stop

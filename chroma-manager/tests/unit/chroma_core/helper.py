@@ -473,7 +473,7 @@ class MockAgentRpc(object):
             old_is_authenticated = CsrfAuthentication.is_authenticated
             try:
                 CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
-                api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
+                api_client.client.login(username = 'admin', password = 'lustre')
                 fqdn = cls.mock_servers[host]['fqdn']
 
                 response = api_client.post(args['url'] + "register/%s/" % args['secret'], data = {

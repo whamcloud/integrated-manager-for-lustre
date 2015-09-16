@@ -37,8 +37,8 @@ def step(context, args):
         else:
             # Set env vars for username/password so that we don't need
             # to pollute the features files with them.
-            os.environ['CHROMA_USERNAME'] = 'debug'
-            os.environ['CHROMA_PASSWORD'] = 'chr0m4_d3bug'
+            os.environ['CHROMA_USERNAME'] = 'admin'
+            os.environ['CHROMA_PASSWORD'] = 'lustre'
             standard_cli(args.split())
 
     except SystemExit, e:

@@ -21,7 +21,7 @@ class TestLogResource(ChromaApiTestCase):
 
         # authenticate clients
         self.assertTrue(self.clients['filesystem_user'].client.login(username = 'test_filesystem_user', password = 'password'))
-        self.assertTrue(self.clients['filesystem_administrator'].client.login(username = 'admin', password = 'chr0m4_d3bug'))
+        self.assertTrue(self.clients['filesystem_administrator'].client.login(username = 'debug', password = 'lustre'))
 
         # some basic log entries
         # all Lustre log entries have a leading space.

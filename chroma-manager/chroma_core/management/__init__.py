@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -78,11 +78,11 @@ def setup_groups(app, **kwargs):
         print "***\n" * 3,
         print "*** SECURITY WARNING: You are running in DEBUG mode and default users have been created"
         print "***\n" * 3
-        user = auth.models.User.objects.create_superuser("debug", "debug@debug.co.eh", "chr0m4_d3bug")
+        user = auth.models.User.objects.create_superuser("admin", "admin@debug.co.eh", "lustre")
         user.groups.add(auth.models.Group.objects.get(name='superusers'))
-        user = auth.models.User.objects.create_user("admin", "admin@debug.co.eh", "chr0m4_d3bug")
+        user = auth.models.User.objects.create_user("debug", "debug@debug.co.eh", "lustre")
         user.groups.add(auth.models.Group.objects.get(name='filesystem_administrators'))
-        user = auth.models.User.objects.create_user("user", "user@debug.co.eh", "chr0m4_d3bug")
+        user = auth.models.User.objects.create_user("user", "user@debug.co.eh", "lustre")
         user.groups.add(auth.models.Group.objects.get(name='filesystem_users'))
 
 
