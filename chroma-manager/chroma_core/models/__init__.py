@@ -25,6 +25,7 @@ from network_interface import *
 from alert import *
 from event import *
 from jobs import *
+from command import *
 from ntp import *
 from network_interface import *
 from client_certificate import *

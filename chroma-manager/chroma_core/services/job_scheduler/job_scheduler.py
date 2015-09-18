@@ -426,11 +426,8 @@ class JobCollection(object):
                     if errored or cancelled:
                         for job in jobs:
                             log.debug("Command %s job %s: %s %s" % (command_id, job.id, job.errored, job.cancelled))
-
-                    self._commands[command_id].errored = errored
-                    self._commands[command_id].cancelled = cancelled
-                    self._commands[command_id].complete = True
-                    Command.objects.filter(pk = command_id).update(errored = errored, cancelled = cancelled, complete = True)
+                    self._commands[command_id].completed(errored, cancelled)
+                    #Command.objects.filter(pk = command_id).update(errored = errored, cancelled = cancelled, complete = True)
 
     def update_many(self, jobs, new_state):
         for job in jobs:

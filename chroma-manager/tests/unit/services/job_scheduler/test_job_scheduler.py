@@ -4,7 +4,8 @@ import mock
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import SchedulingError, Job, Command
+from chroma_core.models.jobs import SchedulingError, Job
+from chroma_core.models.command import Command
 from chroma_core.models import ManagedMgs, ManagedTarget, ManagedTargetMount
 from chroma_core.models import LNetConfiguration
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread

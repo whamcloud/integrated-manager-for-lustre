@@ -182,7 +182,34 @@ class SparseModel(models.Model):
                     property(variant.getter if variant.getter else lambda self_: self_.get_variant(variant.name, variant.default, variant.type),
                              variant.setter if variant.setter else lambda self_, value: self_.set_variant(variant.name, variant.type, value)))
 
+        # We only want to create the class attributes once, so keep track of classes already processed
+        # and do not do them more than once.
         if cls not in cls.variant_fields_inited:
             for variant in cls.variant_fields:
                 create_attr(variant)
             cls.variant_fields_inited.append(cls)
+
+    def cast(self, target_class):
+        """
+        This allows a record to be cast into another type of record on that is based on the same table and has the same variant fields. In future we can
+        work on making variant changes possible but for now it allows simple changes for things like command alerts.
+
+        Typical usage:
+        new_command_failed_alert = old_command_successful_alert(CommandFailedAlert)
+
+        Not when you do this in the case above old_command_successful_alert is now invalid and should be discarded, the record type changes a new
+        record is not created.
+
+        :param target_class:
+        :return: A new instance in the target class.
+        """
+
+        assert self.table_name == target_class.table_name, "Invalid cast %s to %s, tables names differ" % (self._meta.object_name, target_class._meta.object_name)
+        assert sorted([variant.name for variant in self.variant_fields]) == sorted([variant.name for variant in target_class.variant_fields]), \
+            "Invalid cast %s to %s, variant fields differ." % (self._meta.object_name, target_class._meta.object_name)
+
+        # This should really come from target_class.__class__ but for some Python reason that gives the meta_class
+        # not the class, which seems wrong to me but is the python way. I should ask I guess.
+        self.record_type = target_class._meta.object_name
+        self.save()
+        return target_class.objects.get(id = self.id)

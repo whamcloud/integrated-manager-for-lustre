@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -31,7 +31,8 @@ from django.db.models.query_utils import Q
 
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
-from chroma_core.models.jobs import Job, Command
+from chroma_core.models.jobs import Job
+from chroma_core.models.command import Command
 
 
 log = log_register(__name__)

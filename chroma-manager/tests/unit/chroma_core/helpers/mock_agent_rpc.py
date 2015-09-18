@@ -15,8 +15,8 @@ from chroma_core.chroma_common.lib.agent_rpc import agent_result, agent_result_o
 from synthentic_objects import synthetic_lnet_configuration
 from synthentic_objects import create_synthetic_device_info
 from chroma_core.services.log import log_register
-from tests.unit.chroma_core.helpers import generate_csr
-from tests.unit.chroma_api.tastypie_test import TestApiClient
+from tests.unit.chroma_core.helpers.test_api_client import TestApiClient
+from tests.unit.chroma_core.helpers import helper
 
 log = log_register('mock_agent_rpc')
 
@@ -162,7 +162,7 @@ class MockAgentRpc(object):
                     'nodename': cls.mock_servers[host]['nodename'],
                     'capabilities': ['manage_targets'],
                     'version': cls.version,
-                    'csr': generate_csr(fqdn)
+                    'csr': helper.generate_csr(fqdn)
                 })
                 assert response.status_code == 201
                 registration_data = Serializer().deserialize(response.content, format = response['Content-Type'])

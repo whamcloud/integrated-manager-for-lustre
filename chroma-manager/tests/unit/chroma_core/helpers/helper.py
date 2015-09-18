@@ -7,7 +7,7 @@ from dateutil import tz
 import mock
 
 from chroma_core.models import LogMessage
-from chroma_core.models import Bundle, Command, ServerProfile
+from chroma_core.models import Bundle, ServerProfile
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
@@ -86,18 +86,3 @@ def load_default_profile():
     default_sp.bundles.add('agent')
     default_sp.bundles.add('agent_dependencies')
     default_sp.save()
-
-
-def make_command(complete=False, created_at=None, failed=True, message='test'):
-
-    command = Command.objects.create(message=message,
-                                     complete=complete,
-                                     errored=failed)
-
-    #  Command.created_at is auto_add_now - so have to update it
-    if created_at is not None:
-        command.created_at = created_at
-        command.save()
-        command = freshen(command)
-
-    return command

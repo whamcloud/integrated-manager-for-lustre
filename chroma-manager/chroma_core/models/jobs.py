@@ -21,8 +21,6 @@
 
 
 from collections import defaultdict, namedtuple
-import traceback
-import logging
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -34,8 +32,6 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
-from chroma_core.services.rpc import RpcError
-from chroma_core.models.alert import AlertStateBase
 
 MAX_STATE_STRING = 32
 
@@ -45,79 +41,6 @@ class SchedulingError(Exception):
     change requested would leave the system in an invalid state, or because
     the transition has requirements which cannot be met"""
     pass
-
-
-class Command(models.Model):
-    jobs = models.ManyToManyField('Job')
-
-    complete = models.BooleanField(default = False,
-        help_text = "True if all jobs have completed, or no jobs were needed to \
-                     satisfy the command")
-    errored = models.BooleanField(default = False,
-        help_text = "True if one or more of the command's jobs failed, or if \
-        there was an error scheduling jobs for this command")
-    cancelled = models.BooleanField(default = False,
-            help_text = "True if one or more of the command's jobs completed\
-            with its cancelled attribute set to True, or if this command\
-            was cancelled by the user")
-    message = models.CharField(max_length = 512,
-            help_text = "Human readable string about one sentence long describing\
-            the action being done by the command")
-    created_at = models.DateTimeField(auto_now_add = True)
-
-    @classmethod
-    def set_state(cls, objects, message = None, **kwargs):
-        """The states argument must be a collection of 2-tuples
-        of (<StatefulObject instance>, state)"""
-
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-
-        for object, state in objects:
-            # Check if the state is modified
-            if object.state != state:
-                if not message:
-                    old_state = object.state
-                    new_state = state
-                    route = object.get_route(old_state, new_state)
-                    from chroma_core.services.job_scheduler.command_plan import Transition
-                    job = Transition(object, route[-2], route[-1]).to_job()
-                    message = job.description()
-
-                object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
-
-                try:
-                    command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
-                except RpcError, e:
-                    job_log.error("Failed to set object state: " + traceback.format_exc())
-                    # FIXME: Would be better to have a generalized mechanism
-                    # for reconstituting remote exceptions, as this sort of thing
-                    # won't scale.
-                    if e.remote_exception_type == "SchedulingError":
-                        raise SchedulingError(e.description)
-                    else:
-                        raise
-
-                return Command.objects.get(pk = command_id)
-
-        return None
-
-    def __repr__(self):
-        return "<Command %s: '%s'>" % (self.id, self.message)
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-
-class CommandAlert(AlertStateBase):
-    default_severity = logging.INFO
-
-    class Meta:
-        app_label = 'chroma_core'
-        db_table = AlertStateBase.table_name
-
-    def message(self):
-        return "Command %s executing" % self.alert_item
 
 
 class StatefulObject(models.Model):
@@ -183,9 +106,9 @@ class StatefulObject(models.Model):
         """Populate route_map and transition_map attributes by introspection of
            this class and related StateChangeJob classes.  It is legal to call this
            twice or concurrently."""
-        cls = StatefulObject.so_child(cls)
+        cls_ = StatefulObject.so_child(cls)
 
-        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition[0] == cls]
+        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition[0] == cls_]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
@@ -201,7 +124,7 @@ class StatefulObject(models.Model):
 
         transition_map = defaultdict(list)
         route_map = {}
-        for begin_state in cls.states:
+        for begin_state in cls_.states:
             all_routes = set()
 
             # Enumerate all possible routes from this state
@@ -243,10 +166,10 @@ class StatefulObject(models.Model):
                 transition_map[begin_state].append(end_state)
                 route_map[(begin_state, end_state)] = shortest_route
 
-        cls.route_map = route_map
-        cls.transition_map = transition_map
+        cls_.route_map = route_map
+        cls_.transition_map = transition_map
 
-        cls.job_class_map = job_class_map
+        cls_.job_class_map = job_class_map
 
     @classmethod
     def get_route(cls, begin_state, end_state):

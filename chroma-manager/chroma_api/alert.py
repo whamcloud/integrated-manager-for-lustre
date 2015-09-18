@@ -232,7 +232,7 @@ class AlertResource(LongPollingAPI, SeverityResource):
         queryset = AlertState.objects.order_by('-begin')
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'dismissed',
-                  'id', 'severity', 'alert_type', 'created_at']
+                  'id', 'severity', 'alert_type', 'created_at', 'record_type']
         filtering = {}
         for field in AlertState.__dict__['_meta'].fields:
             filtering.update({field.name: ALL_WITH_RELATIONS})

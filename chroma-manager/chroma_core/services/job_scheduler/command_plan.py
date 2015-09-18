@@ -29,7 +29,8 @@ from django.db import transaction
 
 from chroma_core.services.log import log_register
 from chroma_core.services.job_scheduler.dep_cache import DepCache
-from chroma_core.models.jobs import StateChangeJob, Command, SchedulingError, StateLock
+from chroma_core.models.jobs import StateChangeJob, SchedulingError, StateLock
+from chroma_core.models.command import Command
 
 
 log = log_register(__name__.split('.')[-1])
@@ -481,8 +482,7 @@ class CommandPlan(object):
 
         log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
         if command.jobs.count() == 0:
-            command.complete = True
-            command.save()
+            command.complete(False, False)
 
         return command
 

@@ -244,6 +244,18 @@ class AlertStateBase(SparseModel):
         cls.high(alert_item, attrs_to_save=kwargs)
         cls.low(alert_item, attrs_to_save=kwargs)
 
+    def cast(self, target_class):
+        """
+        Works exactly as the super except because we duplicate record_type with alert_type. We should remove in the
+        future, but for now this fixes that up.
+        :param target_class:
+        :return:
+        """
+        # If the save fails for some reason then this change will have no affect.
+        self.alert_type = target_class._meta.object_name
+
+        return super(AlertStateBase, self).cast(target_class)
+
 
 class AlertState(AlertStateBase):
     # This is worse than INFO because it *could* indicate that

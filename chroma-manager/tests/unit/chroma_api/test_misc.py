@@ -1,5 +1,3 @@
-import time
-
 import dateutil.parser
 import mock
 
@@ -70,9 +68,20 @@ class TestMisc(ChromaApiTestCase):
                                   args = args, step_index = 0, step_count = 1,
                                   state = 'failed')
 
-        # Create an alert/event referencing the host
+        # There will now be an CommandErroredAlert because the command above failed.
+        alerts = self.deserialize(self.api_client.get("/api/alert/"))['objects']
+        self.assertEqual(len(alerts), 1)
+        self.assertEqual(alerts[0]['alert_type'], 'CommandErroredAlert')
+
+        # Now create an alert/event referencing the host
         HostOfflineAlert.notify(host, True)
-        self.assertEqual(len(self.deserialize(self.api_client.get("/api/alert/"))['objects']), 1)
+        alerts = self.deserialize(self.api_client.get("/api/alert/", data={'active': True}))['objects']
+        self.assertEqual(len(alerts), 1)
+        self.assertEqual(alerts[0]['alert_type'], 'HostOfflineAlert')
+
+        # Double check that is 2 alerts in total.
+        alerts = self.deserialize(self.api_client.get("/api/alert/"))['objects']
+        self.assertEqual(len(alerts), 2)
 
         # Cause JobScheduler() to delete the objects, check the objects are gone in the API
         # and the API can still be spidered cleanly

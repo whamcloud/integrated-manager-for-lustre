@@ -38,7 +38,7 @@ from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 
-from chroma_core.models.jobs import Command
+from chroma_core.models.command import Command
 from chroma_core.models.target import ManagedMgs
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.services import log_register
