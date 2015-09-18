@@ -29,6 +29,6 @@
     "@intel-js/stub-daddy": "1.0.3",
     "@intel-js/through": "1.0.7",
     "@intel-js/view-server": "3.0.2",
-    "@intel-js/ziplocker": "1.1.7"
+    "@intel-js/ziplocker": "1.1.12"
   }
 }

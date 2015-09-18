@@ -19,7 +19,6 @@ yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-d
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 export NODE_PATH=/usr/lib/node_modules
-npm i -g npm@latest
 
 if [ ! -z "$GOOGLE_REPO" ]; then
   # Install Google Chrome

@@ -37,7 +37,7 @@ rm -rf ./test-results
 
 # Run gulp Test(s)
 cd \$INTEL_JS_MODULES/gui/gulp
-npm t
+\$INTEL_JS_MODULES/ziplocker/node_modules/npm/bin/npm-cli.js t
 mv gulp-results.xml \$HOME/test_reports/
 
 MODULES_TO_TEST="dirp
@@ -62,7 +62,7 @@ for module_name in \$MODULES_TO_TEST
 do
     # Run test
     cd \$INTEL_JS_MODULES/\$module_name
-    npm t
+    \$INTEL_JS_MODULES/ziplocker/node_modules/npm/bin/npm-cli.js t
     mv \$module_name-results.xml \$HOME/test_reports/\$module_name-results.xml
 done
 

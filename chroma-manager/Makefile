@@ -76,7 +76,9 @@ ziplocker: $(NPM)
 	mkdir -p ui-modules/node_modules/@intel-js && \
 	cd ui-modules/node_modules/@intel-js && \
 	rm -rf ./* && \
-	cp -r ../../../../chroma-externals/ui-modules/node_modules/@intel-js/ziplocker ./
+	cp -r ../../../../chroma-externals/ui-modules/node_modules/@intel-js/ziplocker ./ && \
+	cd ziplocker && \
+	npm rebuild
 
 ui-modules: ziplocker
 	@echo "Setting up ui-modules zipdev: $(ZIP_DEV)"; \
@@ -86,12 +88,12 @@ ui-modules: ziplocker
 gui: ui-modules
 	@echo "Building GUI for deployment"; \
 	cd ui-modules/node_modules/@intel-js/gui/gulp && \
-	npm run build -- --dest-dir='../../../../..'
+	../../ziplocker/node_modules/npm/bin/npm-cli.js run build -- --dest-dir='../../../../..'
 
 socket-worker: gui
 	@echo "Building socket worker"; \
 	cd ui-modules/node_modules/@intel-js/socket-worker && \
-	npm run build && \
+	../ziplocker/node_modules/npm/bin/npm-cli.js run build && \
 	mv bundle.js ../../../../chroma_ui/static/chroma_ui && \
 	mv bundle.map.json ../../../../chroma_ui/static/chroma_ui
 
