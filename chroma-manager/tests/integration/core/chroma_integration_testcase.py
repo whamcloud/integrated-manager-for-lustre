@@ -7,7 +7,7 @@ import socket
 from collections import namedtuple
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
-from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import LONG_TEST_TIMEOUT, INSTALL_TIMEOUT
 from tests.utils.check_server_host import check_nodes_status
 
 logger = logging.getLogger('test')
@@ -28,15 +28,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             host = [h for h in config['lustre_servers']
                     if h['address'] == address][0]
             response = self.chroma_manager.get("/api/server_profile/?name=%s" % host['profile'])
-            return response.json['objects'][0]
         except KeyError:
-            if config.get('managed'):
-                response = self.chroma_manager.get("/api/server_profile/?managed=true&worker=false")
-            else:
-                response = self.chroma_manager.get("/api/server_profile/?managed=false")
-            return response.json['objects'][0]
+            response = self.chroma_manager.get("/api/server_profile/?user_selectable=true&managed=%s&worker=false" % config.get("managed", False))
         except IndexError:
             raise RuntimeError("No host in config with address %s" % address)
+
+        return response.json['objects'][0]
 
     def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
         """Verify server checks pass for provided addresses"""
@@ -104,9 +101,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         try:
             command_ids = []
             for object in response.json['objects']:
+                self.assertTrue(object['commands'], object)
                 for command in object['commands']:
                     command_ids.append(command['id'])
-            self.wait_for_commands(self.chroma_manager, command_ids, timeout=1200)
+            self.assertTrue(command_ids)
+            self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT)
         except AssertionError as e:
             # Debugging added for HYD-2849, must not impact normal exception handling
             check_nodes_status(config)
@@ -174,7 +173,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'], host)
 
         # Make sure the agent config is flushed to disk
-        self.remote_operations.sync_disks(new_hosts)
+        self.remote_operations.sync_disks([h['address'] for h in new_hosts])
 
         return new_hosts
 
@@ -195,6 +194,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     def create_filesystem_simple(self, name = 'testfs', hsm = False):
         """
         Create the simplest possible filesystem on a single server.
+
+        DEPRECATED - Please don't use this as it is an unsupported
+        configuration. Please instead use create_filesystem_standard.
         """
         self.add_hosts([self.TEST_SERVERS[0]['address']])
 
@@ -227,6 +229,77 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             }
         )
 
+    @property
+    def standard_filesystem_layout(self):
+        if not hasattr(self, '_standard_filesystem_layout'):
+            # Only want to calculate once in case ordering is nondeterministic
+            hosts = self.get_hosts()
+            self.assertGreaterEqual(4, len(hosts),
+                "Must have added at least 4 hosts before calling standard_filesystem_layout. Found '%s'" % hosts)
+
+            # Count how many of the reported Luns are ready for our test
+            # (i.e. they have both a primary and a failover node)
+            ha_volumes = self.get_shared_volumes(required_hosts = 4)
+            self.assertGreaterEqual(len(ha_volumes), 4,
+                "Need at least 4 ha volumes. Found '%s'" % ha_volumes)
+
+            self._standard_filesystem_layout = {
+                'mgt': {'primary_host': hosts[0], 'failover_host': hosts[1], 'volume': ha_volumes[0]},
+                'mdt': {'primary_host': hosts[1], 'failover_host': hosts[0], 'volume': ha_volumes[1]},
+                'ost1': {'primary_host': hosts[2], 'failover_host': hosts[3], 'volume': ha_volumes[2]},
+                'ost2': {'primary_host': hosts[3], 'failover_host': hosts[2], 'volume': ha_volumes[3]},
+            }
+        return self._standard_filesystem_layout
+
+    def create_filesystem_standard(self):
+        """Create a standard, basic filesystem configuration.
+        One MGT, one MDT, in an active/active pair
+        Two OSTs in an active/active pair"""
+        # Add hosts as managed hosts
+        self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
+        servers = [s['address'] for s in self.TEST_SERVERS][:4]
+        self.add_hosts(servers)
+
+        # Set up power control for fencing -- needed to ensure that
+        # failover completes. Pacemaker won't fail over the resource
+        # if it can't STONITH the primary.
+        if config['failover_is_configured']:
+            self.configure_power_control(servers)
+
+        # Set primary and failover mounts explicitly and check they
+        # are respected
+        self.set_volume_mounts(
+            self.standard_filesystem_layout['mgt']['volume'],
+            self.standard_filesystem_layout['mgt']['primary_host']['id'],
+            self.standard_filesystem_layout['mgt']['failover_host']['id']
+        )
+        self.set_volume_mounts(
+            self.standard_filesystem_layout['mdt']['volume'],
+            self.standard_filesystem_layout['mdt']['primary_host']['id'],
+            self.standard_filesystem_layout['mdt']['failover_host']['id']
+        )
+        self.set_volume_mounts(
+            self.standard_filesystem_layout['ost1']['volume'],
+            self.standard_filesystem_layout['ost1']['primary_host']['id'],
+            self.standard_filesystem_layout['ost1']['failover_host']['id']
+        )
+        self.set_volume_mounts(
+            self.standard_filesystem_layout['ost2']['volume'],
+            self.standard_filesystem_layout['ost2']['primary_host']['id'],
+            self.standard_filesystem_layout['ost2']['failover_host']['id']
+        )
+
+        # Create new filesystem
+        return self.create_filesystem(
+            {
+                'name': 'testfs',
+                'mgt': {'volume_id': self.standard_filesystem_layout['mgt']['volume']['id']},
+                'mdts': [{'volume_id': self.standard_filesystem_layout['mdt']['volume']['id'], 'conf_params': {}}],
+                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [self.standard_filesystem_layout['ost1']['volume'], self.standard_filesystem_layout['ost2']['volume']]],
+                'conf_params': {}
+            }
+        )
+
     def create_filesystem(self, filesystem, verify_successful = True):
         """
         Specify a filesystem to be created by chroma.
@@ -236,7 +309,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 {
                     'name': 'testfs',
                     'mgt': {'volume_id': mgt_volume['id']},
-                    'mdt': {'volume_id': mdt_volume['id'], 'conf_params': {}},
+                    'mdts': [{'volume_id': mdt_volume['id'], 'conf_params': {}}],
                     'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
                     'conf_params': {}
                 }
@@ -267,7 +340,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         hosts = response.json['objects']
 
         # Verify mgs and fs targets in pacemaker config for hosts
-        self.remote_operations.check_ha_config(hosts, filesystem)
+        self.remote_operations.check_ha_config(hosts, filesystem['name'])
 
         return filesystem_id
 
@@ -410,7 +483,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertTrue(response.successful, response.text)
         return response.json
 
-    def configure_power_control(self):
+    def configure_power_control(self, servers):
         if not config.get('power_control_types', False):
             return
 
@@ -445,12 +518,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         for outlet in config['pdu_outlets']:
             new = {'identifier': outlet['identifier'],
                    'device': power_devices[outlet['pdu']]['resource_uri']}
-            if 'host' in outlet and outlet['host'] in [h['address'] for h in self.TEST_SERVERS]:
+            if 'host' in outlet and outlet['host'] in servers:
                 hosts = self.get_list("/api/host/", args = {'limit': 0})
                 try:
                     host = [h for h in hosts if h['address'] == outlet['host']][0]
                 except IndexError:
-                    raise RuntimeError("%s not found in /api/host/" % outlet['host'])
+                    raise RuntimeError("%s not found in /api/host/. Found '%s'" % (outlet['host'], hosts))
                 new['host'] = host['resource_uri']
 
             try:

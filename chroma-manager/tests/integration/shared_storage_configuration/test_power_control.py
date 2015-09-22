@@ -17,7 +17,7 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
 
         self.server = self.add_hosts([s['address'] for s in self.TEST_SERVERS])[0]
 
-        self.configure_power_control()
+        self.configure_power_control([s['address'] for s in self.TEST_SERVERS])
 
     def all_outlets_known(self):
         outlets = self.get_list("/api/power_control_device_outlet/",

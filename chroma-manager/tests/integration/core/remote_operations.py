@@ -164,7 +164,7 @@ class SimulatorRemoteOperations(RemoteOperations):
         logger.debug("get_resource_running: %s %s %s" % (ha_label, actual, expected))
         return actual == expected
 
-    def check_ha_config(self, hosts, filesystem):
+    def check_ha_config(self, hosts, filesystem_name):
         # TODO check self._simulator.get_cluster(fqdn) for some resources
         # configured on these hosts withthe filesystem name in them
         pass
@@ -505,7 +505,7 @@ class RealRemoteOperations(RemoteOperations):
 
         return bool(re.search(expected_resource_status, resource_status))
 
-    def check_ha_config(self, hosts, filesystem):
+    def check_ha_config(self, hosts, filesystem_name):
         import xml.etree.ElementTree as xml
 
         def host_has_location(items, host):
@@ -534,13 +534,13 @@ class RealRemoteOperations(RemoteOperations):
                 host_has_location(
                     configuration.findall(
                         './configuration/constraints/rsc_location'),
-                    host['nodename']))
+                    host['nodename']), configuration)
 
             self._test_case.assertTrue(
                 has_primitive(
                     configuration.findall(
                         './configuration/resources/primitive'),
-                    filesystem['name']))
+                    filesystem_name), configuration)
 
     def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
         """
@@ -884,7 +884,7 @@ class RealRemoteOperations(RemoteOperations):
                     buffer = cfg_str.getvalue()
                 )
 
-        self.sync_disks(server_list)
+        self.sync_disks([s['address'] for s in server_list])
 
     def sync_disks(self, server_list):
         """
@@ -893,7 +893,7 @@ class RealRemoteOperations(RemoteOperations):
         between configs getting to disk and powercycle operations.
         """
         for server in server_list:
-            self._ssh_address(server['address'], 'sync; sync')
+            self._ssh_address(server, 'sync; sync')
 
     def clear_ha(self, server_list):
         """
