@@ -119,7 +119,7 @@ def update_packages(repos, packages):
         return None
 
     if packages:
-        out = yum_util('requires', packages=packages)
+        out = yum_util('requires', enablerepo=repos, packages=packages)
         force_installs = []
         for requirement in [l.strip() for l in out.strip().split("\n")]:
             match = re.match("([^\)/]*) = (.*)", requirement)

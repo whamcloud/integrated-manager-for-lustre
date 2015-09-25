@@ -51,7 +51,7 @@ sslclientcert = /var/lib/chroma/self.crt
                           CommandCaptureCommand(('repoquery', '--disablerepo=*', '--enablerepo=myrepo', '--pkgnarrow=updates', '-a'), stdout="""chroma-agent-99.01-3061.noarch
 chroma-agent-management-99.01-3061.noarch
 """),
-                          CommandCaptureCommand(('repoquery', '--requires', 'mypackage')),
+                          CommandCaptureCommand(('repoquery', '--requires', '--enablerepo=myrepo', 'mypackage')),
                           CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'chroma-agent-99.01-3061.noarch', 'chroma-agent-management-99.01-3061.noarch')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
@@ -68,7 +68,7 @@ chroma-agent-management-99.01-3061.noarch
                           CommandCaptureCommand(('repoquery', '--disablerepo=*', '--enablerepo=myrepo', '--pkgnarrow=updates', '-a'), stdout="""chroma-agent-99.01-3061.noarch
 chroma-agent-management-99.01-3061.noarch
 """),
-                          CommandCaptureCommand(('repoquery', '--requires', 'mypackage')),
+                          CommandCaptureCommand(('repoquery', '--requires', '--enablerepo=myrepo', 'mypackage')),
                           CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'chroma-agent-99.01-3061.noarch', 'chroma-agent-management-99.01-3061.noarch')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
 
@@ -155,7 +155,7 @@ jasper-libs.x86_64                                                              
 
     def test_install_packages_hyd_4050_grubby(self):
         self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
-                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo')),
                           CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
 

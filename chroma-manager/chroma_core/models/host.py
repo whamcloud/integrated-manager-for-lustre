@@ -1767,7 +1767,14 @@ class UpdateJob(Job):
         return "Update packages on server %s" % self.host
 
     def get_steps(self):
+        # Two stage update, first update the agent - then update everything. This means that when the packages are
+        # updated the new agent is used.
         return [
+            (UpdatePackagesStep, {
+                'host': self.host,
+                'bundles': ['iml-agent'],
+                'packages': [],
+            }),
             (UpdatePackagesStep, {
                 'host': self.host,
                 'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
