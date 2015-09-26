@@ -19,7 +19,7 @@ while [ ! -f $d/include/Makefile.version ]; do
 done
 export IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
 
-PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
 
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
@@ -29,8 +29,9 @@ set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api tok
 export JENKINS_USER=${JENKINS_USER:-jenkins-pull}
 export JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
 set -x
-BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
-BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
-JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
-WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
-TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
+export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+export BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
+export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
+export CLUSTER_CONFIG="cluster_cfg.json"

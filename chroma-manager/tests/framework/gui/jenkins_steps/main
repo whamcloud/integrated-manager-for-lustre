@@ -2,7 +2,9 @@
 
 PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 
-. chroma-manager/tests/framework/integration/utils/defaults.sh
+. chroma-manager/tests/framework/utils/defaults.sh
+
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json"}
 
 #--------------------------------------------------------------------------
 # Get the chroma-externals repo as pip is going to need it
@@ -30,40 +32,21 @@ python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 #-------------------------------------------------------------
 trap "set +e
 cd $WORKSPACE/chroma_test_env/
-WORKSPACE=$WORKSPACE \
-CLUSTER_CONFIG=selenium_cluster_config.json \
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
 chroma/chroma-manager/tests/framework/gui/collect_logs.sh
 
 cd $WORKSPACE/chroma_test_env
-sed -e 's/provision\": *true/provision\": false/g' < provisioner_output.json | $PROVISIONER" EXIT
+chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
 
 #--------------------------------
 # Provision a node
 #--------------------------------
 cd $WORKSPACE/chroma_test_env/
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
-       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
-       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
-       chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json provisioner_input.json
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json
-cat provisioner_input.json
-
-if ! grep '"success":true' provisioner_output.json; then
-    echo "Cluster provisioner failed"
-    cat provisioner_output.json
-    exit 1
-fi
-echo
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json selenium_cluster_config.json
-cat selenium_cluster_config.json
+chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 # --------------------------------------------------------------------
 # Fix up the chroma repo URL (distro=el6.3 should just be "distro=el6)
 # --------------------------------------------------------------------
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py selenium_cluster_config.json)
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 ssh root@$CHROMA_MANAGER "set -xe
 sed -i -e 's/\(distro=el6\).3\//\1\//' -e \"s/Aitahd9u/$JENKINS_PULL/g\"  -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' /etc/yum.repos.d/autotest.repo
 cd /etc/yum.repos.d/
@@ -77,17 +60,12 @@ yum-config-manager --disable EPEL-6-x86_64"
 #---------------------------
 # Install Chroma on the node
 #---------------------------
-CLUSTER_CONFIG=selenium_cluster_config.json \
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
 GOOGLE_REPO="http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64" \
 chroma/chroma-manager/tests/framework/gui/cluster_setup
 
 #-----------------------
 # Run the selenium tests
 #-----------------------
-WORKSPACE=$WORKSPACE \
-CLUSTER_CONFIG=selenium_cluster_config.json \
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
 chroma/chroma-manager/tests/framework/gui/run_tests
 
 #-------------------------

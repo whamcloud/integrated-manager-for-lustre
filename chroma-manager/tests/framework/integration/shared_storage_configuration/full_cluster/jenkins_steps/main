@@ -1,21 +1,13 @@
 #!/bin/bash -ex
 
-. chroma-manager/tests/framework/integration/utils/defaults.sh
+. chroma-manager/tests/framework/utils/defaults.sh
+
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
 curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
 set -x
-
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
-       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
-       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
-       chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
-
-cat provisioner_input.json
-echo
 
 # Gather logs from nodes and release the cluster at exit
 cleanup() {
@@ -25,7 +17,7 @@ cleanup() {
         tmpfile=/tmp/abort.$$.debug
         exec 2>$tmpfile
     fi
-    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json | tee $WORKSPACE/log_collector_out 2>&1 || true
+    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1 || true
     # look for known failures in the logs
     if grep "LDISKFS-fs (.*): group descriptors corrupted" $WORKSPACE/test_logs/*-messages.log; then
         echo "bug: TEI-39" test_output
@@ -40,10 +32,9 @@ cleanup() {
     if grep "Could not match packages: Cannot retrieve repository metadata (repomd.xml) for repository: lustre-client. Please verify its path and try again" $WORKSPACE/test_logs/*-chroma_test.log; then
         echo "bug: HYD-2948"
     fi
-    if !  sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER; then
-        rc=$?
-        echo "unprovisioning failed" >&2
-    fi
+
+    chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
+
     echo "exit trap done"
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
         cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
@@ -60,25 +51,10 @@ echo \"Got SIGTERM\"
 ps axf
 exit 1" TERM
 
-rc=0
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
-
-cat provisioner_output.json
-echo
-
-if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
-    echo "Cluster provisioner failed"
-    cat provisioner_output.json
-    echo
-    exit 1
-fi
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
-cat shared_storage_configuration_cluster_cfg.json
-echo
+chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 # see if this cures the 401 errors from jenkins
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py shared_storage_configuration_cluster_cfg.json)
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     set +x

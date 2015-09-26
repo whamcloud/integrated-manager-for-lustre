@@ -1,0 +1,12 @@
+#!/bin/bash -ex
+
+PROVISIONER=${PROVISIONER:?"Need to specify a PROVISIONER string"}
+
+# cluster_provisioned protects us from releasing the same cluster twice
+if [ -f cluster_provisioned ]; then
+    if ! sed -e 's/provision\": *true/provision\":false/g' < provisioner_output.json | $PROVISIONER; then
+        rc=$?
+        echo "unprovisioning failed" >&2
+    fi
+    rm -f cluster_provisioned
+fi
