@@ -80,6 +80,7 @@ class TestBigFilesystem(JobTestCase):
 
             self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.mgs0, self.mgs1).id, name = "MGS")
             self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+            ObjectCache.add(ManagedFilesystem, self.fs)
             self.mdt, mdt_tms = ManagedMdt.create_for_volume(self._test_lun(self.mds0, self.mds1).id, filesystem = self.fs)
 
             self.osts = {}
@@ -94,7 +95,6 @@ class TestBigFilesystem(JobTestCase):
                 secondary_oss = self.osss[secondary_oss_i]
                 self.osts[i], tms = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
                 ost_tms.extend(tms)
-            ObjectCache.add(ManagedFilesystem, self.fs)
             for target in [self.mgt, self.mdt] + self.osts.values():
                 ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
             for tm in chain(mgt_tms, mdt_tms, ost_tms):
@@ -183,9 +183,9 @@ class TestFSTransitions(JobTestCaseWithHost):
         Test that we can concurrently remove two filesystems which depend on the same mgt
         """
         fs2 = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs2")
+        ObjectCache.add(ManagedFilesystem, fs2)
         mdt2, mdt_tms = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs2)
         ost2, ost_tms = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = fs2)
-        ObjectCache.add(ManagedFilesystem, fs2)
         for target in [mdt2, ost2]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
         for tm in chain(mdt_tms, ost_tms):

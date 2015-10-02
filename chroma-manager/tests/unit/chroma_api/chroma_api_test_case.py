@@ -111,11 +111,11 @@ class ChromaApiTestCase(ResourceTestCase):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name = "MGS")
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
-        self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
-        self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
-
         ObjectCache.add(ManagedFilesystem, self.fs)
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.mgt.id))
+
+        self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
+        self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.mdt.id))
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.ost.id))
 

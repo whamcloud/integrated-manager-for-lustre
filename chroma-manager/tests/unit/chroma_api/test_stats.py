@@ -2,8 +2,11 @@ import os
 import json
 import collections
 import operator
+
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib import metrics
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, Stats
+from chroma_core.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+from chroma_core.models import Stats
 from .chroma_api_test_case import ChromaApiTestCase
 from ..chroma_core.helper import synthetic_host, synthetic_volume_full
 
@@ -22,7 +25,12 @@ class TestStats(ChromaApiTestCase):
         self.hosts = [synthetic_host('myserver{0:d}'.format(n)) for n in range(2)]
         self.mgt, mounts = ManagedMgs.create_for_volume(synthetic_volume_full(self.hosts[0]).id, name='MGS')
         self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name='testfs')
+        ObjectCache.add(ManagedFilesystem, self.fs)
         self.mdt, mounts = ManagedMdt.create_for_volume(synthetic_volume_full(self.hosts[0]).id, filesystem=self.fs)
+        ObjectCache.add(ManagedTarget, self.mdt.managedtarget_ptr)
+        for tm in mounts:
+            ObjectCache.add(ManagedTargetMount, tm)
+
         self.osts = [ManagedOst.create_for_volume(synthetic_volume_full(self.hosts[1]).id, filesystem=self.fs)[0] for n in range(2)]
         # store fixture data with corresponding targets
         for target, key in zip(self.hosts + [self.mdt] + self.osts, sorted(fixture)):
