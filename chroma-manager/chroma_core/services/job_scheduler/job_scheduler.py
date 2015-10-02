@@ -1070,6 +1070,10 @@ class JobScheduler(object):
                 fs = ManagedFilesystem(mgs=mgs, name = fs_data['name'])
                 fs.save()
 
+            # Now that the creation has committed, update ObjectCache
+            ObjectCache.add(ManagedFilesystem, fs)
+
+            with transaction.commit_on_success():
                 chroma_core.lib.conf_param.set_conf_params(fs, fs_data['conf_params'])
 
                 mdts = []
@@ -1090,8 +1094,6 @@ class JobScheduler(object):
                     mounts.extend(ost_mounts)
                     chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
 
-            # Now that the creation has committed, update ObjectCache
-            ObjectCache.add(ManagedFilesystem, fs)
             for ost in osts:
                 ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
             for mdt in mdts:

@@ -204,13 +204,13 @@ class TestQueryScaling(ChromaApiTestCase):
             if i == 0:
                 mgt, mounts = ManagedMgs.create_for_volume(volume.id)
                 fs = ManagedFilesystem.objects.create(name = 'foo', mgs = mgt)
+                ObjectCache.add(ManagedFilesystem, fs)
             elif i == 1:
-                ManagedMdt.create_for_volume(volume.id, filesystem = fs)
+                ObjectCache.add(ManagedTarget, ManagedMdt.create_for_volume(volume.id, filesystem = fs)[0].managedtarget_ptr)
             else:
-                ManagedOst.create_for_volume(volume.id, filesystem = fs)
+                ObjectCache.add(ManagedTarget, ManagedOst.create_for_volume(volume.id, filesystem = fs)[0].managedtarget_ptr)
 
     def test_filesystem_targets(self):
-
         target_scaling = self._measure_scaling(self._create_filesystem_n_osts, TargetResource, TargetResource)
         self.assertIsInstance(target_scaling, OrderN)
         self.assertEqual(target_scaling.queries_per_object, QUERIES_PER_TARGET)

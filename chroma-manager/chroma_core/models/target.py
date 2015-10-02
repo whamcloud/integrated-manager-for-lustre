@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -262,27 +262,33 @@ class ManagedTarget(StatefulObject):
     }
 
     @classmethod
-    def create_for_volume(cls, volume_id, create_target_mounts = True, **kwargs):
+    def create_for_volume(cls_, volume_id, create_target_mounts = True, **kwargs):
         # Local imports to avoid inter-model import dependencies
         volume = Volume.objects.get(pk = volume_id)
 
-        target = cls(**kwargs)
+        target = cls_(**kwargs)
         target.volume = volume
 
-        # Acquire a target index for FilesystemMember targets, and
-        # populate `name`
-        if issubclass(cls, ManagedMdt):
-            index = target.filesystem.mdt_next_index
-            target.name = "%s-MDT%04x" % (target.filesystem.name, index)
-            target.index = index
-            target.filesystem.mdt_next_index += 1
-            target.filesystem.save()
-        elif issubclass(cls, ManagedOst):
-            index = target.filesystem.ost_next_index
-            target.name = "%s-OST%04x" % (target.filesystem.name, index)
-            target.index = index
-            target.filesystem.ost_next_index += 1
-            target.filesystem.save()
+        # Acquire a target index for FilesystemMember targets, and populate `name`
+        if issubclass(cls_, FilesystemMember):
+            # Make sure we update the value in the object cache, not just the value in the DB. HYD-4898
+            filesystem = ObjectCache.get_by_id(type(target.filesystem), target.filesystem.id)
+
+            if issubclass(cls_, ManagedMdt):
+                target_index = filesystem.mdt_next_index
+                target_name = "%s-MDT%04x" % (filesystem.name, target_index)
+                filesystem.mdt_next_index += 1
+            elif issubclass(cls_, ManagedOst):
+                target_index = filesystem.ost_next_index
+                target_name = "%s-OST%04x" % (filesystem.name, target_index)
+                filesystem.ost_next_index += 1
+            else:
+                raise RuntimeError("Unknown filesystem member type %s" % type(cls_))
+
+            target.name = target_name
+            target.index = target_index
+            filesystem.save()
+            filesystem = ObjectCache.update(filesystem)
         else:
             target.name = "MGS"
 

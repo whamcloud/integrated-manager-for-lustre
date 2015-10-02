@@ -260,6 +260,7 @@ class TestClientManagementJobs(TestCase):
 
         mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name = "MGS")
         fs = ManagedFilesystem.objects.create(mgs = mgt, name = 'testfs')
+        ObjectCache.add(ManagedFilesystem, fs)
         ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
         ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
         state = 'mounted' if active else 'unmounted'
