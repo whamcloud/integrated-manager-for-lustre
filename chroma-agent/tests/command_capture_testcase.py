@@ -11,6 +11,7 @@ CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
 class CommandCaptureTestCase(unittest.TestCase):
     def setUp(self):
         self.reset_command_capture()
+        self._err_msg = 'Command attempted was unknown to the CommandCaptureTestCase code, did you intend this?'
 
         def fake_try_run(args):
             args = tuple(args)

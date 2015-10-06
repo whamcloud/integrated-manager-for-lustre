@@ -108,22 +108,24 @@ class TestLustreAudit(unittest.TestCase):
 
 class TestLustreScanPackages(CommandCaptureTestCase):
     '''
-    This is a very incomplete test of the scan packages. But is at least some test that I added, it ensures the expected commands are run
-    and does a loose check of the scanning of the repo file.
+    This is a very incomplete test of the scan packages. But is at least some test that I added, it ensures the expected
+    commands are run and does a loose check of the scanning of the repo file. Pass alphabetically sorted repo_list.
     '''
     def test_scan_packages(self):
-        repo_list = ['lustre-client', 'lustre', 'iml-agent', 'e2fsprogs', 'robinhood']
+        repo_list = sorted(['lustre-client', 'lustre', 'iml-agent', 'e2fsprogs', 'robinhood'])
         lustre.REPO_PATH = os.path.join(os.path.dirname(__file__), '../data/device_plugins/lustre/Intel-Lustre-Agent.repo')
 
         lustre.rpm_lib = mock.Mock()
 
-        self.add_command(('yum', 'clean', 'all', '--disablerepo=*', '--enablerepo=lustre-client,lustre,iml-agent,e2fsprogs,robinhood'))
+        # supply sorted list to preserve command parameter sequence
+        self.add_command(('yum', 'clean', 'all', '--disablerepo=*', '--enablerepo=' + ','.join(repo_list)))
 
         for repo in repo_list:
             self.add_command(('repoquery', '--disablerepo=*', '--enablerepo=%s' % repo, '-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))
 
         scanned_packages = lustre.scan_packages()
 
-        self.assertEqual(scanned_packages.keys(), repo_list)
+        # sort keys before comparing with initial sorted list
+        self.assertEqual(sorted(scanned_packages.keys()), repo_list)
 
         self.assertRanAllCommandsInOrder()
