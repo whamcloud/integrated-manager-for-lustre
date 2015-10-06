@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -72,16 +72,19 @@ def scan_packages():
 
     cp = ConfigParser.SafeConfigParser()
     cp.read(REPO_PATH)
-    repo_names = cp.sections()
+    repo_names = sorted(cp.sections())
     repo_packages = dict([(name, defaultdict(lambda: {'available': [], 'installed': []})) for name in repo_names])
 
-    # For all repos, enumerate packages in the repo
-    # =============================================
-    yum_util('clean', fromrepo = [repo for repo in repo_packages])
+    # For all repos, enumerate packages in the repo in alphabetic order
+    # =================================================================
+    yum_util('clean', fromrepo=repo_names)
 
-    for repo_name, packages in repo_packages.items():
+    # For all repos, query packages in alphabetical order
+    # ===================================================
+    for repo_name in repo_names:
+        packages = repo_packages[repo_name]
         try:
-            stdout = yum_util('repoquery', fromrepo = [repo_name])
+            stdout = yum_util('repoquery', fromrepo=[repo_name])
 
             # Returning nothing means the package was not found at all and so we have no data to deliver back.
             if stdout:
@@ -118,7 +121,8 @@ def scan_packages():
 
 
 class LustrePlugin(DevicePlugin):
-    FAILSAFEDUPDATE = 60                # We always send an update every 60 cycles (60*10)seconds - 10 minutes.
+    # We always send an update every 60 cycles (60*10)seconds - 10 minutes.
+    FAILSAFEDUPDATE = 60
     delta_fields = ['capabilities', 'properties', 'mounts', 'packages', 'resource_locations']
 
     def __init__(self, session):

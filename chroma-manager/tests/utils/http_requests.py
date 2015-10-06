@@ -147,4 +147,4 @@ class AuthorizedHttpRequests(HttpRequests):
 
         response = self.post("/api/session/", data = json.dumps({'username': username, 'password': password}))
         if not response.successful:
-            raise RuntimeError("Failed to authenticate")
+            raise RuntimeError("Failed to authenticate with username: %s and password: %s" % (username, password))

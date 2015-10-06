@@ -11,6 +11,7 @@ CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
 class CommandCaptureTestCase(unittest.TestCase):
     def setUp(self):
         self.reset_command_capture()
+        self._err_msg = 'Command attempted was unknown to the CommandCaptureTestCase code, did you intend this?'
 
         def fake_try_run(args):
             args = tuple(args)
@@ -28,7 +29,7 @@ class CommandCaptureTestCase(unittest.TestCase):
                                                                                          result.stderr)
                     return result.stdout
             except KeyError:
-                raise OSError(2, 'No such file or directory', args[0])
+                raise OSError(2, self._err_msg, args[0])
 
         assert 'fake' not in str(chroma_agent.chroma_common.lib.shell.try_run)
         mock.patch('chroma_agent.chroma_common.lib.shell.try_run', fake_try_run).start()
@@ -42,7 +43,7 @@ class CommandCaptureTestCase(unittest.TestCase):
 
                 return result.rc, result.stdout, result.stderr
             except KeyError:
-                return (2, "", 'No such file or directory')
+                return (2, "", self._err_msg)
 
         mock.patch('chroma_agent.chroma_common.lib.shell.run', fake_run).start()
 
@@ -50,14 +51,17 @@ class CommandCaptureTestCase(unittest.TestCase):
 
     def _get_command(self, args):
         '''
-        return the command whose args match those given.
+        return the command whose args match those given. note that exact order match is needed
+
+        FIXME: return more information about whether command was nearly correct compare each
+        command in list, print the one that's closest rather than just 'no such...'
+
         :param args: Tuple of the arguments of the command
         :return: The command requested or raise a KeyError
         '''
         for command in self._commands:
             if command.args == args:
                 return command
-
         raise KeyError
 
     def assertRanCommand(self, args):
