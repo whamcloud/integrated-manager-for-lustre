@@ -73,7 +73,11 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
                         name = 'TestAgentRpcProfile',
                         ui_name = 'Profile created to TestAgentRpc can work',
                         managed = True,
-                        worker = False)
+                        worker = False,
+                        rsyslog = True,
+                        ntp = True,
+                        corosync = True,
+                        corosync2 = False)
             else:
                 server_profile = ServerProfile.objects.get(name = 'TestAgentRpcProfile')
 

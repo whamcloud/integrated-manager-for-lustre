@@ -4,6 +4,11 @@
   "worker": true,
   "name": "posix_copytool_worker",
   "initial_state": "working",
+  "rsyslog": false,
+  "ntp": false,
+  "corosync": false,
+  "corosync2": false,
+  "pacemaker": false,
   "bundles": [
     "iml-agent",
     "lustre-client"

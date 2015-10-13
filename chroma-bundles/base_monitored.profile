@@ -4,6 +4,11 @@
   "worker": false,
   "name": "base_monitored",
   "initial_state": "monitored",
+  "rsyslog": false,
+  "ntp": false,
+  "corosync": false,
+  "corosync2": false,
+  "pacemaker": false,
   "bundles": [
     "iml-agent"
   ],

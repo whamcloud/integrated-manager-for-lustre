@@ -22,13 +22,19 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         try:
             host = [h for h in config['lustre_servers']
                     if h['address'] == address][0]
-            response = self.chroma_manager.get("/api/server_profile/?name=%s" % host['profile'])
+            return self.chroma_manager.get("/api/server_profile/?name=%s" % host['profile']).json['objects'][0]
         except KeyError:
-            response = self.chroma_manager.get("/api/server_profile/?user_selectable=true&managed=%s&worker=false" % config.get("managed", False))
+            profiles = self.chroma_manager.get("/api/server_profile/?user_selectable=true&managed=%s&worker=false" %
+                                               config.get("managed", False)).json['objects']
+
+            # This will be extended in the future to deal with picking the correct profile for the
+            # OS it is running on, primarily to deal with 7.2 testing for today just pick the 6.x profile.
+            if config.get("managed", False):
+                return next(profile for profile in profiles if profile['name'] == 'base_managed')
+            else:
+                return profiles[0]
         except IndexError:
             raise RuntimeError("No host in config with address %s" % address)
-
-        return response.json['objects'][0]
 
     def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
         """Verify server checks pass for provided addresses"""

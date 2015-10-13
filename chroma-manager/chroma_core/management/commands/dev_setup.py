@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,6 +25,8 @@ import tarfile
 from chroma_core.lib.util import site_dir
 import os
 import sys
+import glob
+import json
 
 from django.core.management import BaseCommand
 import settings
@@ -40,18 +42,16 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        from chroma_core.lib.service_config import ServiceConfig
+        from chroma_core.lib import service_config
+        from chroma_core.models import Bundle
 
-        sc = ServiceConfig()
+        sc = service_config.ServiceConfig()
         sc._setup_rabbitmq_credentials()
         sc._setup_crypto()
         sc._syncdb()
 
-        import chroma_core.lib.service_config
-        from chroma_core.models import Bundle, ServerProfile
-
         # default, works for --no-bundles
-        base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
+        profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
 
         if options['no_bundles']:
             for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood']:
@@ -60,11 +60,9 @@ class Command(BaseCommand):
             # override the default path if we have unpacked a real archive
             repo_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
             if os.path.isfile(repo_profile_path):
-                base_profile_path = repo_profile_path
+                profile_path = repo_profile_path
 
-            import json
-            import glob
-            with open(base_profile_path) as f:
+            with open(profile_path) as f:
                 bundle_names = json.load(f)['bundles']
             missing_bundles = bundle_names
 
@@ -84,7 +82,7 @@ class Command(BaseCommand):
                     archive.close()
 
                 if not Bundle.objects.filter(location=repo).exists():
-                    chroma_core.lib.service_config.bundle('register', repo)
+                    service_config.bundle('register', repo)
 
                 try:
                     missing_bundles.remove(meta['name'])
@@ -109,10 +107,9 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
-        for name in ('default', 'base_managed', 'base_monitored', 'posix_copytool_worker', 'robinhood_server'):
-            base_profile_path = os.path.join(os.path.dirname(base_profile_path), name + '.profile')
-            if not ServerProfile.objects.filter(name=name).exists():
-                chroma_core.lib.service_config.register_profile(open(base_profile_path))
+        for profile_path in glob.glob(os.path.join(os.path.dirname(profile_path), '*.profile')):
+            with open(profile_path) as profile_file:
+                service_config.register_profile(profile_file)
 
         print """Great success:
  * run `./manage.py supervisor`

@@ -628,14 +628,18 @@ def register_profile(profile_file):
         "initial_state": "monitored",
         "packages": {},
         "validation": [],
-        "default": False,
+        "rsyslog": False,
+        "ntp": False,
+        "corosync": False,
+        "corosync2": False,
+        "pacemaker": False,
     }
 
     # create new profile record
     try:
         data = json.load(profile_file)
     except ValueError, e:
-        raise RuntimeError("Malformed profile: %s" % e)
+        raise RuntimeError("Profile %s is malformed: %s" % (profile_file.name, e.message))
 
     log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
 
@@ -648,7 +652,7 @@ def register_profile(profile_file):
 
     # Make sure new keys have a default value set.
     for key in data.keys():
-        assert key in default_profile
+        assert key in default_profile, "Key %s is not in the default profile" % key
 
     # Take the default and replace the values that are in the data
     data = dict(default_profile.items() + data.items())
@@ -657,16 +661,18 @@ def register_profile(profile_file):
         log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
         sys.exit(-1)
 
-    profile_fields = ['ui_name', 'ui_description', 'managed', 'worker', 'user_selectable', 'initial_state']
+    calculated_profile_fields = set(['packages', 'name', 'bundles', 'validation'])
+    regular_profile_fields = set(data.keys()) - calculated_profile_fields
+
     try:
         profile = ServerProfile.objects.get(name=data['name'])
         log.debug("Updating profile %s" % data['name'])
-        for field in profile_fields:
+        for field in regular_profile_fields:
             setattr(profile, field, data[field])
         profile.save()
     except ServerProfile.DoesNotExist:
         log.debug("Creating profile %s" % data['name'])
-        kwargs = dict([(f, data[f]) for f in profile_fields])
+        kwargs = dict([(f, data[f]) for f in regular_profile_fields])
         kwargs['name'] = data['name']
         profile = ServerProfile.objects.create(**kwargs)
 

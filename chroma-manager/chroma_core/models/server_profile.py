@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,6 +21,8 @@
 
 
 from django.db import models
+from django.db import IntegrityError
+
 from chroma_core.models.bundle import Bundle
 
 
@@ -38,12 +40,10 @@ class ServerProfile(models.Model):
         help_text = "String, human readable name")
     ui_description = models.TextField(help_text = "Description of the server profile")
     managed = models.BooleanField(
-        default=True,
-        help_text = "Boolean, if the host will be managed"
+        help_text = "Boolean, True if the host will be managed"
     )
     worker = models.BooleanField(
-        default = False,
-        help_text = "Boolean, if the host is available to be used as a Lustre worker node"
+        help_text = "Boolean, True if the host is available to be used as a Lustre worker node"
     )
     bundles = models.ManyToManyField(
         Bundle,
@@ -51,6 +51,21 @@ class ServerProfile(models.Model):
     )
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
+    rsyslog = models.BooleanField(
+        help_text = "Boolean, True if the host will manage rsyslog"
+    )
+    ntp = models.BooleanField(
+        help_text = "Boolean, True if the host will manage ntp"
+    )
+    corosync = models.BooleanField(
+        help_text = "Boolean, True if the host will manage corosync"
+    )
+    corosync2 = models.BooleanField(
+        help_text = "Boolean, True if the host will manage corosync2"
+    )
+    pacemaker = models.BooleanField(
+        help_text = "Boolean, True if the host will manage pacemaker"
+    )
 
     @property
     def packages(self):
@@ -79,6 +94,15 @@ class ServerProfile(models.Model):
             result[field.name] = getattr(self, field.name)
 
         return result
+
+    def save(self, *args, **kwargs):
+        """
+        Quick validation before saving
+        """
+        if self.corosync and self.corosync2:
+            raise IntegrityError("Corosync and Corosync2 configured for %s" % self.name)
+
+        super(ServerProfile, self).save(*args, **kwargs)
 
     class Meta:
         app_label = 'chroma_core'

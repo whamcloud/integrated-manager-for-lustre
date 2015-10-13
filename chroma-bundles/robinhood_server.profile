@@ -4,6 +4,11 @@
   "worker": true,
   "name": "robinhood_server",
   "initial_state": "working",
+  "rsyslog": false,
+  "ntp": false,
+  "corosync": false,
+  "corosync2": false,
+  "pacemaker": false,
   "bundles": [
     "iml-agent",
     "lustre-client",

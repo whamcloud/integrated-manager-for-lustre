@@ -45,7 +45,7 @@ from chroma_core.models import ServerProfile
 from chroma_core.models import AlertStateBase
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import CorosyncConfiguration
-#from chroma_core.models import Corosync2Configuration
+from chroma_core.models import Corosync2Configuration
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import RSyslogConfiguration
 from chroma_core.models import Job
@@ -760,16 +760,27 @@ class SetupHostJob(NullStateChangeJob):
         # It really does not feel right that this is in here, but it does sort of work. These are the things
         # it is dependent on so create them. Also I can't work out with today's state machine anywhere else to
         # put them that works.
-        if self.target_object.pacemaker_configuration is None:
+        if self.target_object.pacemaker_configuration is None and self.target_object.server_profile.pacemaker:
             pacemaker_configuration, _ = PacemakerConfiguration.objects.get_or_create(host=self.target_object)
-            corosync_configuration, _ = CorosyncConfiguration.objects.get_or_create(host=self.target_object)
-            #corosync_configuration, _ = Corosync2Configuration.objects.get_or_create(host=self.target_object)
-            ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
-            rsyslog_configuration, _ = RSyslogConfiguration.objects.get_or_create(host=self.target_object)
+            ObjectCache.add(PacemakerConfiguration, pacemaker_configuration)
+
+        if self.target_object.corosync_configuration is None:
+            if self.target_object.server_profile.corosync:
+                corosync_configuration, _ = CorosyncConfiguration.objects.get_or_create(host=self.target_object)
+            elif self.target_object.server_profile.corosync2:
+                corosync_configuration, _ = Corosync2Configuration.objects.get_or_create(host=self.target_object)
+            else:
+                assert RuntimeError("Unknown corosync type for host %s profile %s" % (self.target_object,
+                                                                                      self.target_object.server_profile.name))
 
             ObjectCache.add(type(corosync_configuration), corosync_configuration)
-            ObjectCache.add(PacemakerConfiguration, pacemaker_configuration)
+
+        if self.target_object.rsyslog_configuration is None and self.target_object.server_profile.rsyslog:
+            ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
             ObjectCache.add(NTPConfiguration, ntp_configuration)
+
+        if self.target_object.rsyslog_configuration is None and self.target_object.server_profile.rsyslog:
+            rsyslog_configuration, _ = RSyslogConfiguration.objects.get_or_create(host=self.target_object)
             ObjectCache.add(RSyslogConfiguration, rsyslog_configuration)
 
         deps = []

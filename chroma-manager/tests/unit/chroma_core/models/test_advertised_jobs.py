@@ -14,6 +14,10 @@ class TestAdvertisedCase(IMLUnitTestCase):
     def set_managed(self, managed):
         self.host.immutable_state = not managed
         self.host.server_profile.managed = managed
+        self.host.server_profile.corosync = managed
+        self.host.server_profile.corosync2 = False
+        self.host.server_profile.rsyslog = managed
+        self.host.server_profile.ntp = managed
 
 
 class TestAdvertisedJobCoverage(TestAdvertisedCase):

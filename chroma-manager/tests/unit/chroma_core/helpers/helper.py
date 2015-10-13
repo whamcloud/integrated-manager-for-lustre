@@ -80,7 +80,12 @@ def load_default_profile():
     load_default_bundles()
     default_sp = ServerProfile(name='test_profile', ui_name='Managed storage server',
                                ui_description='A storage server suitable for creating new HA-enabled filesystem targets',
-                               managed=True, default=True,
+                               managed=True,
+                               default=True,
+                               corosync=True,
+                               corosync2=False,
+                               rsyslog=True,
+                               ntp=True,
                                initial_state="managed")
     default_sp.bundles.add('lustre')
     default_sp.bundles.add('agent')

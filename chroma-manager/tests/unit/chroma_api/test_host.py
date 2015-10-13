@@ -118,7 +118,13 @@ class TestHostResource(ChromaApiTestCase):
     @create_host_ssh_patch
     def test_creation_different_profile(self):
         test_sp = ServerProfile(name='test', ui_name='test UI',
-                                ui_description='a test description', managed=False,
+                                ui_description='a test description',
+                                managed=False,
+                                worker=False,
+                                ntp=False,
+                                corosync=False,
+                                corosync2=False,
+                                rsyslog=False,
                                 initial_state="monitored")
         test_sp.save()
         test_sp.bundles.add(Bundle.objects.get(bundle_name='agent'))
@@ -216,6 +222,11 @@ class TestHostResource(ChromaApiTestCase):
                                 ui_name='Not Test Profile',
                                 ui_description='Not Test Profile',
                                 managed=False,
+                                worker=False,
+                                corosync=False,
+                                corosync2=False,
+                                rsyslog=False,
+                                ntp=False,
                                 user_selectable=False,
                                 initial_state="monitored")
         profile.save()
