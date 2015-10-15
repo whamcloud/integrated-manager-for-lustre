@@ -10,7 +10,7 @@
         {
             "server_http_url": "https://localhost:8000/",
             "users": [
-                {"username": "admin", "super": true, "password": "luster"}
+                {"username": "admin", "super": true, "password": "lustre"}
             ],
             "distro": "TEST_DISTRIBUTION"
         }

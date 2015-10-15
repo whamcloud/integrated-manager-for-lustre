@@ -23,7 +23,7 @@
             "firewall_enabled": true,
             "repos": ["chroma"],
             "users": [
-                {"username": "admin", "super": true, "password": "luster",
+                {"username": "admin", "super": true, "password": "lustre",
                  "email": "nobody@example.com"}
             ]
         }
