@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,7 +25,7 @@ import os
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
-import simplejson as json
+import json
 
 
 IML_CONFIGURATION_FILE = '/etc/modprobe.d/iml_lnet_module_parameters.conf'

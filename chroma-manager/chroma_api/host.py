@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,7 +26,7 @@ from chroma_core.services import log_register
 from tastypie.validation import Validation
 from tastypie.utils import dict_strip_unicode_keys
 
-import simplejson as json
+import json
 
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount, Command

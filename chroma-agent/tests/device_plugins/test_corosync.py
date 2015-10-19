@@ -1,6 +1,6 @@
 import logging
 import datetime
-import simplejson as json
+import json
 
 
 from chroma_agent.device_plugins.corosync import CorosyncPlugin

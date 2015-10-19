@@ -24,7 +24,6 @@ requirements::
 	echo "paramiko==1.7.5";                                                         \
 	echo "pycrypto==2.0.1";                                                         \
 	echo "psycopg2==2.0.14";                                                        \
-	echo "simplejson==2.0.9";                                                       \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >>                       \
 	    $(TOP)/../chroma-manager/requirements.tmp
 
