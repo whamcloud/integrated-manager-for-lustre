@@ -1,4 +1,4 @@
-DISTRO			:= sles11sp3
+DISTRO			:= sles11sp4
 include ../include/Makefile.lustre_build_meta
 
 override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-sles-client
