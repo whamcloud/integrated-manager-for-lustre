@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
+import json
 
 
 class UserProfileManager(models.Manager):
@@ -45,6 +46,16 @@ class UserProfile(models.Model):
     objects = UserProfileManager()
 
     accepted_eula = models.BooleanField(default=False)
+
+    _gui_config = models.TextField(db_column='gui_config', default='{}')
+
+    @property
+    def gui_config(self):
+        return json.loads(self._gui_config)
+
+    @gui_config.setter
+    def gui_config(self, config):
+        self._gui_config = json.dumps(config)
 
     def clean(self):
         from django.core.exceptions import ValidationError
