@@ -564,12 +564,12 @@ def _move_target(target_label, dest_node):
     return None
 
 
-def _find_resource_constraint(ha_label, disp):
+def _find_resource_constraint(ha_label, location):
     stdout = AgentShell.try_run(["crm_resource", "-r", ha_label, "-a"])
 
     for line in stdout.rstrip().split("\n"):
-        match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=\d+, id=%s-%s\)" %
-                        (ha_label, disp), line)
+        match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=[^\s]+ id=%s-%s\)" %
+                        (ha_label, location), line)
         if match:
             return match.group(1)
 
@@ -577,8 +577,7 @@ def _find_resource_constraint(ha_label, disp):
 
 
 def _failoverback_target(ha_label, destination):
-    """
-    Fail a target over to the  destination node
+    """Fail a target over to the  destination node
 
     Return: Value using simple return protocol
     """

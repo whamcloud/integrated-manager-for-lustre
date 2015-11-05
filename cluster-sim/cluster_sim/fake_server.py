@@ -653,6 +653,12 @@ class FakeServer(utils.Persisted):
     def stop_corosync2(self):
         return self.stop_corosync()
 
+    def configure_network(self,
+                          ring0_name, ring1_name=None,
+                          ring0_ipaddr=None, ring0_prefix=None,
+                          ring1_ipaddr=None, ring1_prefix=None):
+        return agent_result_ok
+
     def configure_corosync(self,
                            ring0_name,
                            mcast_port,
@@ -664,13 +670,10 @@ class FakeServer(utils.Persisted):
             self.save()
             return agent_result_ok
 
-    def configure_corosync2(self,
-                            peer_fqdns,
-                            ring0_name,
-                            mcast_port,
-                            ring1_name=None,
-                            ring0_ipaddr=None, ring0_prefix=None,
-                            ring1_ipaddr=None, ring1_prefix=None):
+    def configure_corosync2_stage_1(self):
+        return agent_result_ok
+
+    def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, mcast_port, create_cluster):
         with self._lock:
             self.state['corosync'].mcast_port = mcast_port
             self.save()

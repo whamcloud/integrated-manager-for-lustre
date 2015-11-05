@@ -68,16 +68,7 @@ def _get_cluster_size():
     return n
 
 
-def _debug_corosync_pacemaker(value=None):
-    # Just run some harmless pacemaker corosync commands to provide some output on stdout
-    pacemaker_service.running
-    corosync_service.running
-
-    return value
-
-
 def start_pacemaker():
-
     return agent_ok_or_error(pacemaker_service.start())
 
 

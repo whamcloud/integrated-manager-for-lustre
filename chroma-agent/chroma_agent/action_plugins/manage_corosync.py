@@ -63,28 +63,17 @@ def enable_corosync():
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
 
 
-def configure_corosync(ring0_name,
-                       mcast_port,
-                       ring1_name=None,
-                       ring0_ipaddr=None, ring0_prefix=None,
-                       ring1_ipaddr=None, ring1_prefix=None):
+def configure_corosync(ring0_name, ring1_name, mcast_port):
+    """
+    Process configuration including negotiated multicast port, no IP address information required
+    :param ring0_name:
+    :param ring1_name:
+    :param mcast_port:
+    :return:
+    """
 
-    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name,
-                                                      ringnumber=0,
-                                                      mcastport=mcast_port),
-                                ring0_ipaddr,
-                                ring0_prefix)]
-
-    if ring1_name:
-        interfaces.append(InterfaceInfo(CorosyncRingInterface(ring1_name,
-                                                              ringnumber=1,
-                                                              mcastport=mcast_port),
-                                        ring1_ipaddr,
-                                        ring1_prefix))
-
-    for interface in interfaces:
-        if interface.ipaddr:
-            interface.corosync_iface.set_address(interface.ipaddr, interface.prefix)
+    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name, ringnumber=0, mcastport=mcast_port), None, None),
+                  InterfaceInfo(CorosyncRingInterface(name=ring1_name, ringnumber=1, mcastport=mcast_port), None, None)]
 
     config = render_config([interface.corosync_iface for interface in interfaces])
 
@@ -95,12 +84,7 @@ def configure_corosync(ring0_name,
     if error:
         return agent_error(error)
 
-    error = corosync_service.enable()
-
-    if error:
-        return agent_error(error)
-
-    return agent_result_ok
+    return agent_ok_or_error(corosync_service.enable())
 
 
 def unconfigure_corosync():

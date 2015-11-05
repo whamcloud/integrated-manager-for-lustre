@@ -56,7 +56,7 @@ class ServiceControl(object):
 
             return required_class(service_name)
         except StopIteration:
-            raise RuntimeError('Current platform version not applicable')
+            raise RuntimeError('Current platform not supported by any ServiceControl class')
 
     def _retried_action(self,
                         action,

@@ -122,7 +122,7 @@ def detect_ring1(ring0, ring1_address, ring1_prefix):
         if iface.ipv4_address != ring1_address:
             continue
 
-        # This toggles things like mulicast group, etc.
+        # This toggles things like multicast group, etc.
         iface.ringnumber = 1
 
         # Now we need to agree on a mcastport for these peers.
@@ -231,10 +231,10 @@ def create_talker_thread(ring1):
 
 
 def discover_existing_mcastport(ring1, timeout = 10):
+    console_log.debug("Sniffing for packets to %s on %s (%s)" % (ring1.mcastaddr, ring1.name, ring1.ipv4_address))
     subscribe_multicast(ring1)
-    console_log.debug("Sniffing for packets to %s on %s" % (ring1.mcastaddr, ring1.name))
-    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (
-        ring1.mcastaddr, ring1.ipv4_address))
+    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr,
+                                                                                               ring1.ipv4_address))
 
     def recv_packets(header, data):
         ring1.mcastport = get_dport_from_packet(data)
@@ -301,7 +301,7 @@ def get_dport_from_packet(data):
 
 def render_config(interfaces):
     conf_template = env.get_template('corosync.conf')
-    return conf_template.render(interfaces = interfaces)
+    return conf_template.render(interfaces=interfaces)
 
 
 def write_config_to_file(path, config):
@@ -351,13 +351,35 @@ class CorosyncRingInterface(object):
             raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, attr))
 
-    def set_address(self, address, prefix):
-        ifaddr = "%s/%s" % (address, prefix)
-        AgentShell.try_run(['/sbin/ifconfig', self.name, ifaddr, 'up'])
+    def set_address(self, ipv4_address, prefix):
+        ifaddr = "%s/%s" % (ipv4_address, prefix)
+
         console_log.info("Set %s (%s) up" % (self.name, ifaddr))
-        self.refresh()
-        node_admin.write_ifcfg(self.device, self.mac_address,
-                               self.ipv4_address, self.ipv4_netmask)
+
+        if self.ipv4_address != ipv4_address:
+            # use replace rather than add to set the address, sets and  address is one isn't
+            # present and replaces it if one is. add fails if an address exists. Bring the link up
+            # to activate address change
+
+            AgentShell.try_run(['/sbin/ip', 'addr', 'add', ifaddr, 'dev', self.name])
+            AgentShell.try_run(['/sbin/ip', 'link', 'set', 'dev', self.name, 'up'])
+            self.refresh()
+
+            # The link address change is asynchronous, so we need to wait for the address to stick of we have
+            # a race condition.
+            timeout = 30
+            while self.ipv4_address != ipv4_address and timeout != 0:
+                self.refresh()
+                time.sleep(1)
+                timeout -= 1
+
+            if self.ipv4_address != ipv4_address:
+                raise RuntimeError('Unable to set the address %s for interface %s' % (self.ipv4_address, self.name))
+
+            node_admin.write_ifcfg(self.device, self.mac_address,
+                                   self.ipv4_address, self.ipv4_netmask)
+        else:
+            console_log.info("Nothing to do as %s already has address %s" % (self.name, ifaddr))
 
     def refresh(self):
         import ethtool
@@ -406,13 +428,15 @@ class CorosyncRingInterface(object):
         import array
         import struct
         import fcntl
+
+        old_link_state_up = self.is_up
+
         # HYD-2003: Some NICs require the interface to be in an UP state
-        # before link detection will work. Work around this by bringing
-        # the interface up with a 0.0.0.0 address before testing link
-        # status.
+        # before link detection will work.
         time_left = 0
+
         if not self.is_up:
-            AgentShell.try_run(['/sbin/ifconfig', self.name, "0.0.0.0", "up"])
+            AgentShell.try_run(['/sbin/ip', 'link', 'set', 'dev', self.name, 'up'])
             time_left = 10
 
         def _has_link():
@@ -439,6 +463,9 @@ class CorosyncRingInterface(object):
             # If the ioctl fails, then for the purposes of this test, the
             # interface is not usable. HYD-2679
             return False
+        finally:
+            if not old_link_state_up:
+                AgentShell.try_run(['/sbin/ip', 'link', 'set', 'dev', self.name, 'down'])
 
 
 def corosync_running():

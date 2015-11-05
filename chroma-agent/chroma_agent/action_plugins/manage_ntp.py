@@ -20,7 +20,11 @@
 # express and approved by Intel in writing.
 
 
+import os
+from tempfile import mkstemp
+
 from chroma_agent.chroma_common.lib.ntp import AgentNTPConfig
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 

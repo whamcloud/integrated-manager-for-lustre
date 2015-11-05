@@ -26,13 +26,15 @@ cib_configured_result = '''<cib epoch="99" num_updates="1" admin_epoch="0" valid
 
 
 class FencingTestCase(CommandCaptureTestCase):
-    fake_node_hostname = 'fake.host.domain'
-    fake_node_kwargs = {fake_node_hostname: {'name': fake_node_hostname,
-                                             'attributes': {}}}
-    stdin_lines = None
 
     def setUp(self):
         super(FencingTestCase, self).setUp()
+
+        self.fake_node_hostname = 'fake.host.domain'
+        self.fake_node_uuid = '1234567890'
+        self.fake_node_attributes = {}
+
+        self.stdin_lines = None
 
         def fake_hostname():
             return self.fake_node_hostname
@@ -41,7 +43,11 @@ class FencingTestCase(CommandCaptureTestCase):
 
         @property
         def nodes(obj):
-            return [PacemakerNode(**self.fake_node_kwargs[self.fake_node_hostname])]
+            pacemaker_node = PacemakerNode(self.fake_node_hostname,
+                                           self.fake_node_uuid)
+            pacemaker_node.attributes = self.fake_node_attributes
+            return [pacemaker_node]
+
         patcher = mock.patch('chroma_agent.lib.pacemaker.PacemakerConfig.nodes', nodes)
         patcher.start()
 
@@ -65,6 +71,10 @@ class TestAgentConfiguration(FencingTestCase):
     def setUp(self):
         super(TestAgentConfiguration, self).setUp()
         self.add_command(('cibadmin', '--query', '--local'))
+
+        self.fake_node_attributes = {'0_fence_agent': 'fake_agent',
+                                     '0_fence_login': 'admin',
+                                     '0_fence_password': 'yourmom'}
 
         # Reset the corosync configured flags
         manage_corosync.pacemaker_configured = False
@@ -99,12 +109,7 @@ class TestAgentConfiguration(FencingTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test_empty_agents_clears_fence_config(self):
-        fake_attributes = {'0_fence_agent': 'fake_agent',
-                           '0_fence_login': 'admin',
-                           '0_fence_password': 'yourmom'}
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = fake_attributes
-
-        for key in fake_attributes:
+        for key in self.fake_node_attributes:
             self.add_command(('crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key))
 
         self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="false"/>\n'))
@@ -131,25 +136,25 @@ class TestAgentConfiguration(FencingTestCase):
 
 
 class TestFenceAgent(FencingTestCase):
-    fake_attributes = {'0_fence_agent': 'fence_apc',
-                           '0_fence_login': 'admin',
-                           '0_fence_password': 'yourmom',
-                           '0_fence_ipaddr': '1.2.3.4',
-                           '0_fence_plug': '1'}
-    call_template = "%(0_fence_agent)s -a %(0_fence_ipaddr)s -u 23 -l %(0_fence_login)s -p %(0_fence_password)s -n %(0_fence_plug)s" % fake_attributes
-    call_base = tuple(call_template.split())
-
     def setUp(self):
         super(TestFenceAgent, self).setUp()
+
+        self.fake_node_attributes = {'0_fence_agent': 'fence_apc',
+                                     '0_fence_login': 'admin',
+                                     '0_fence_password': 'yourmom',
+                                     '0_fence_ipaddr': '1.2.3.4',
+                                     '0_fence_plug': '1'}
+
+        call_template = "%(0_fence_agent)s -a %(0_fence_ipaddr)s -u 23 -l %(0_fence_login)s -p %(0_fence_password)s -n %(0_fence_plug)s" % self.fake_node_attributes
+        call_base = tuple(call_template.split())
+
         self.add_commands(CommandCaptureCommand(('cibadmin', '--query', '--local')),
-                          CommandCaptureCommand((self.call_base + ('-o', 'off'))),
-                          CommandCaptureCommand((self.call_base + ('-o', 'on'))))
+                          CommandCaptureCommand((call_base + ('-o', 'off'))),
+                          CommandCaptureCommand((call_base + ('-o', 'on'))))
 
     def test_finding_fenceable_nodes(self):
         self.reset_command_capture()
         self.add_command(('cibadmin', '--query', '--local'))
-
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
 
         # Not strictly an agent test, but the tested method is used by
         # the agent to generate the -o list output.
@@ -160,8 +165,6 @@ class TestFenceAgent(FencingTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test_fence_agent_reboot(self):
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
-
         from chroma_agent.fence_chroma import main as agent_main
 
         # Normal use, stonithd feeds commands via stdin
@@ -178,8 +181,6 @@ class TestFenceAgent(FencingTestCase):
         self.assertRanAllCommands()
 
     def test_fence_agent_on_off(self):
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
-
         from chroma_agent.fence_chroma import main as agent_main
 
         # These options aren't likely to be used for STONITH, but they
@@ -190,8 +191,6 @@ class TestFenceAgent(FencingTestCase):
         self.assertRanAllCommands()
 
     def test_fence_agent_monitor(self):
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
-
         patcher = mock.patch('sys.exit')
         exit = patcher.start()
 
@@ -218,9 +217,8 @@ class TestFenceAgent(FencingTestCase):
         self.add_command(('cibadmin', '--query', '--local'))
 
         # a node in standby should not be fenced
-        attributes = self.fake_attributes.copy()
-        attributes['standby'] = "on"
-        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = attributes
+        self.fake_node_attributes = self.fake_node_attributes.copy()
+        self.fake_node_attributes['standby'] = "on"
 
         from chroma_agent.fence_chroma import main as agent_main
 

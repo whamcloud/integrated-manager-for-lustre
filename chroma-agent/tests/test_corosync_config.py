@@ -1,11 +1,13 @@
 import sys
 import mock
 
-from django.utils import unittest
-
+from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
+from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
+from chroma_agent.action_plugins.manage_corosync2 import unconfigure_corosync2
+from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
-from chroma_agent.chroma_common.lib.shell import Shell
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class FakeEtherInfo(object):
@@ -36,11 +38,9 @@ class fake_ethtool(object):
         return 4163
 
 
-class TestConfigureCorosync(unittest.TestCase):
+class TestConfigureCorosync(CommandCaptureTestCase):
     def setUp(self):
         super(TestConfigureCorosync, self).setUp()
-
-        mock.patch('chroma_agent.lib.shell.AgentShell.run_new', return_value=Shell.RunResult(0, '', '', False)).start()
 
         from chroma_agent.lib.corosync import CorosyncRingInterface
 
@@ -109,7 +109,7 @@ class TestConfigureCorosync(unittest.TestCase):
         if self.old_ethtool:
             sys.modules['ethtool'] = self.old_ethtool
 
-    def _render_test_config(self):
+    def _ring_iface_info(self):
         from netaddr import IPNetwork
         interfaces = []
         for name in sorted(self.interfaces.keys()):
@@ -121,7 +121,10 @@ class TestConfigureCorosync(unittest.TestCase):
                                              'bindnetaddr': bindnetaddr,
                                              'mcastaddr': "226.94.%s.1" % ringnumber,
                                              'mcastport': 4242}))
-        return self.conf_template.render(interfaces = interfaces)
+        return interfaces
+
+    def _render_test_config(self):
+        return self.conf_template.render(interfaces=self._ring_iface_info())
 
     def test_manual_ring1_config(self):
         ring0_name = "eth0.1.1?1b34*430"
@@ -129,12 +132,100 @@ class TestConfigureCorosync(unittest.TestCase):
         ring1_ipaddr = "10.42.42.42"
         ring1_netmask = "255.255.255.0"
         mcast_port = "4242"
-        configure_corosync(ring0_name, mcast_port, ring1_name=ring1_name, ring1_ipaddr=ring1_ipaddr, ring1_prefix=ring1_netmask)
 
-        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
+        # add shell commands to be expected
+        for s in [
+            "/sbin/ip link set dev %s up" % ring1_name,
+            "/sbin/ip addr add %s dev %s" % ('/'.join([ring1_ipaddr, ring1_netmask]), ring1_name),
+            "/usr/sbin/lokkit -n -p %s:udp" % mcast_port,
+        ]:
+            self.add_command(tuple(s.split()))
+
+        # now a two-step process! first network...
+        configure_network(ring0_name, ring1_name=ring1_name,
+                          ring1_ipaddr=ring1_ipaddr, ring1_prefix=ring1_netmask)
+
+        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42',
+                                            '255.255.255.0')
+
+        # ...then corosync
+        configure_corosync(ring0_name, ring1_name, mcast_port)
 
         test_config = self._render_test_config()
         self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+
+        # FIXME: doesn't test the last two firewall commands
+        # self.assertRanAllCommandsInOrder()
+
+    def test_manual_ring1_config_corosync2(self):
+
+        ring0_name = "eth0.1.1?1b34*430"
+        ring1_name = "eth1"
+        ring1_ipaddr = "10.42.42.42"
+        ring1_netmask = "255.255.255.0"
+        mcast_port = "4242"
+        new_node_fqdn = 'servera.somewhere.org'
+
+        # add shell commands to be expected
+        self.add_commands(CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
+                          CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
+                          CommandCaptureCommand(("bash", "-c", "echo lustre | passwd --stdin hacluster")),
+                          CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
+                          CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
+                          CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
+                          CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
+                          CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "lustre"])))
+
+        # now a two-step process! first network...
+        configure_network(ring0_name, ring1_name=ring1_name, ring1_ipaddr=ring1_ipaddr,
+                          ring1_prefix=ring1_netmask)
+
+        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42',
+                                            '255.255.255.0')
+
+        # fetch ring info
+        r0, r1 = self._ring_iface_info()
+
+        # add shell commands to be expected populated with ring interface info
+        self.add_command(("pcs", "cluster", "setup",
+                                                       "--name", "lustre-ha-cluster",
+                                                       "--force", new_node_fqdn,
+                                                       "--transport", "udp",
+                                                       "--rrpmode", "passive",
+                                                       "--addr0", str(r0.bindnetaddr),
+                                                       "--mcast0", str(r0.mcastaddr),
+                                                       "--mcastport0", str(r0.mcastport),
+                                                       "--addr1", str(r1.bindnetaddr),
+                                                       "--mcast1", str(r1.mcastaddr),
+                                                       "--mcastport1", str(r1.mcastport),
+                                                       "--token", "5000",
+                                                       "--fail_recv_const", "10"))
+
+        # ...then corosync / pcsd
+        configure_corosync2_stage_1()
+        configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, True)
+
+        self.assertRanAllCommandsInOrder()
+
+    def test_unconfigure_corosync2(self):
+
+        from sys import version_info
+        if version_info[0] == 2:
+            import __builtin__ as builtins  # pylint:disable=import-error
+        else:
+            import builtins  # pylint:disable=import-error
+
+        host_fqdn = "serverb.somewhere.org"
+
+        # add shell commands to be expected
+        self.add_command(('/sbin/chkconfig', 'corosync', 'off'))
+        self.add_command(('pcs', 'cluster', 'node', 'remove', host_fqdn))
+
+        # mock built-in 'open' to avoid trying to read local filesystem
+        with mock.patch.object(builtins, 'open', mock.mock_open(read_data='mock data')):
+            unconfigure_corosync2(host_fqdn)
+
+        self.assertRanAllCommandsInOrder()
 
     def test_find_subnet(self):
         from chroma_agent.lib.corosync import find_subnet
@@ -154,7 +245,8 @@ class TestConfigureCorosync(unittest.TestCase):
     def test_failed_has_link(self):
         self.link_patcher.stop()
 
-        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.__getattr__', return_value = False).start()
+        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.__getattr__',
+                   return_value=False).start()
 
         import errno
 
@@ -167,4 +259,10 @@ class TestConfigureCorosync(unittest.TestCase):
         from chroma_agent.lib.corosync import get_ring0
         iface = get_ring0()
 
+        # add shell commands to be expected
+        self.add_commands(CommandCaptureCommand(('/sbin/ip', 'link', 'set', 'dev', iface.name, 'up')),
+                          CommandCaptureCommand(('/sbin/ip', 'link', 'set', 'dev', iface.name, 'down')))
+
         self.assertFalse(iface.has_link)
+
+        self.assertRanAllCommandsInOrder()

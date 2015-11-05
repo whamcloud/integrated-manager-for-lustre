@@ -153,11 +153,16 @@ class AutoConfigureCorosyncStep(Step):
         ring1_name, ring1_config = next((interface, config) for interface, config in config['interfaces'].items() if config['dedicated'] == True)
 
         self.invoke_agent_expect_result(corosync_configuration.host,
-                                        "configure_corosync",
+                                        "configure_network",
                                         {'ring0_name': ring0_name,
                                          'ring1_name': ring1_name,
                                          'ring1_ipaddr': ring1_config['ipaddr'],
-                                         'ring1_prefix': ring1_config['prefix'],
+                                         'ring1_prefix': ring1_config['prefix']})
+
+        self.invoke_agent_expect_result(corosync_configuration.host,
+                                        "configure_corosync",
+                                        {'ring0_name': ring0_name,
+                                         'ring1_name': ring1_name,
                                          'mcast_port': config['mcast_port']})
 
         job_scheduler_notify.notify(corosync_configuration,

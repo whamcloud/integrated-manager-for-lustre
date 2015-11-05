@@ -25,101 +25,136 @@ Corosync verification
 """
 
 from os import remove
-from collections import namedtuple
 import errno
-import re
 
-from chroma_agent.chroma_common.lib import shell
-from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
-from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
+from chroma_agent.lib.shell import AgentShell
+#from chroma_agent.lib.system import del_firewall_rule_el7, add_firewall_rule_el7
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.lib.corosync import CorosyncRingInterface
+from chroma_agent.action_plugins.manage_corosync_common import InterfaceInfo
 
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
 
 
-def start_corosync2():
-    error = shell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
+corosync_service = ServiceControl.create('corosync')
+pscd_service = ServiceControl.create('pcsd')
 
-    if error:
-        return agent_error(error)
-    else:
-        return agent_result_ok
+
+PCS_USER = 'hacluster'
+PCS_PASSWORD = 'lustre'
+PCS_CLUSTER_NAME = 'lustre-ha-cluster'
+
+
+def start_corosync2():
+    return agent_ok_or_error(corosync_service.enable() or corosync_service.start())
 
 
 def stop_corosync2():
-    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
-
-InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
+    return agent_ok_or_error(corosync_service.stop())
 
 
-def configure_corosync2(peer_fqdns,
-                        ring0_name,
-                        mcast_port,
-                        ring1_name=None,
-                        ring0_ipaddr=None, ring0_prefix=None,
-                        ring1_ipaddr=None, ring1_prefix=None):
+def configure_corosync2_stage_1():
+    # need to use user "hacluster" which is created on install of "pcs" package,
+    # WARNING: clear text password
+    set_password_command = ['bash', '-c', 'echo %s | passwd --stdin %s' %
+                                          (PCS_PASSWORD,
+                                           PCS_USER)]
 
-    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name,
-                                                      ringnumber=0,
-                                                      mcastport=mcast_port),
-                                ring0_ipaddr,
-                                ring0_prefix)]
+    return agent_ok_or_error(AgentShell.run_canned_error_message(set_password_command) or
+                             pscd_service.start() or
+                             corosync_service.enable() or
+                             pscd_service.enable())
 
-    if ring1_name:
-        interfaces.append(InterfaceInfo(CorosyncRingInterface(ring1_name,
-                                                              ringnumber=1,
-                                                              mcastport=mcast_port),
-                                        ring1_ipaddr,
-                                        ring1_prefix))
 
-    for interface in interfaces:
-        if interface.ipaddr:
-            interface.corosync_iface.set_address(interface.ipaddr, interface.prefix)
+def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, create_cluster):
+    """Process configuration including peers and negotiated multicast port, no IP address
+    information required
 
-    config = render_config([interface.corosync_iface for interface in interfaces])
+    Note: "The pcs cluster setup command will automatically configure two_node: 1 in
+    corosync.conf, so a two-node cluster will "just work". If you are using a different cluster
+    shell, you will have to configure corosync.conf appropriately yourself." Therefore
+    no-quorum-policy does not have to be set when setting up cluster with pcs.
 
-    write_config_to_file("/etc/corosync/corosync.conf", config)
+    :param ring0_name:
+    :param ring1_name:
+    :param peer_fqdns:
+    :param mcast_port:
+    :return:
+    """
 
-    add_firewall_rule(mcast_port, "udp", "corosync")
+    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name, ringnumber=0,
+                                                      mcastport=mcast_port), None, None),
+                  InterfaceInfo(CorosyncRingInterface(name=ring1_name, ringnumber=1,
+                                                      mcastport=mcast_port), None, None)]
 
-    error = shell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
+    config_params = {
+        'token': '5000',
+        'fail_recv_const': '10',
+        'name': 'imltest',
+        'transport': 'udp',
+        'rrpmode': 'passive',
+        'addr0': interfaces[0].corosync_iface.bindnetaddr,
+        'addr1': interfaces[1].corosync_iface.bindnetaddr,
+        'mcast0': interfaces[0].corosync_iface.mcastaddr,
+        'mcast1': interfaces[1].corosync_iface.mcastaddr,
+        'mcastport0': interfaces[0].corosync_iface.mcastport,
+        'mcastport1': interfaces[1].corosync_iface.mcastport
+    }
+
+    # TODO: re-enable firewall when corosync el7 is working
+    # add_firewall_rule_el7(mcast_port, "udp", "corosync")
+
+    # authenticate nodes in cluster
+    authenticate_nodes_in_cluster_command = ['pcs', 'cluster', 'auth'] + \
+                                            [new_node_fqdn] + \
+                                            ['-u', PCS_USER,
+                                             '-p', PCS_PASSWORD]
+
+    # build command string for setup of cluster which will result in corosync.conf rather than
+    # writing from template, note we don't start the cluster here as services are managed
+    # independently
+    if create_cluster:
+        cluster_setup_command = ['pcs', 'cluster', 'setup', '--name', PCS_CLUSTER_NAME, '--force'] + [new_node_fqdn]
+        for param in ['transport', 'rrpmode', 'addr0', 'mcast0', 'mcastport0', 'addr1', 'mcast1',
+                      'mcastport1', 'token', 'fail_recv_const']:
+            # pull this value from the dictionary using parameter keyword
+            cluster_setup_command.extend(["--" + param, str(config_params[param])])
+    else:
+        cluster_setup_command = ['pcs', 'cluster', 'node', 'add'] + [new_node_fqdn]
+
+    return agent_ok_or_error(AgentShell.run_canned_error_message(authenticate_nodes_in_cluster_command) or \
+                             AgentShell.run_canned_error_message(cluster_setup_command))
+
+
+def unconfigure_corosync2(host_fqdn):
+    """Unconfigure the corosync application.
+    For corosync2 don't disable pcsd, just remove host node from cluster and disable corosync from
+    auto starting (service should already be stopped by state machine)
+
+    Return: Value using simple return protocol
+    """
+    error = corosync_service.disable()
     if error:
         return agent_error(error)
 
-    return agent_result_ok
+    # will fail with "Error: pcsd is not running on <node fqdn>" if not a valid member of cluster
+    error = AgentShell.run_canned_error_message(["pcs", "cluster", "node", "remove", host_fqdn])
+    if error:
+        return agent_error(error)
 
-
-def unconfigure_corosync2():
-    '''
-    Unconfigure the corosync application.
-
-    Return: Value using simple return protocol
-    '''
-
-    shell.try_run(['service', 'corosync', 'stop'])
-    shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
-    mcastport = None
-
-    with open("/etc/corosync/corosync.conf") as f:
-        for line in f.readlines():
-            match = re.match("\s*mcastport:\s*(\d+)", line)
-            if match:
-                mcastport = match.group(1)
-                break
-    if mcastport is None:
-        return agent_error("Failed to find mcastport in corosync.conf")
-
+    # FIXME: do we need to remove the conf file even though pcs removes the reference to 'this' node and syncs?
     try:
         remove("/etc/corosync/corosync.conf")
-    except OSError, e:
-        if e.errno != errno.ENOENT:
+    except Exception as e:
+        if (type(e) is not OSError) or (e.errno != errno.ENOENT):
             return agent_error("Failed to remove corosync.conf")
-    except:
-        return agent_error("Failed to remove corosync.conf")
 
-    del_firewall_rule(mcastport, "udp", "corosync")
+    # TODO: re-enable firewall when corosync el7 is working
+    # del_firewall_rule_el7(mcastport, "udp", "corosync")
 
     return agent_result_ok
 
 
 ACTIONS = [start_corosync2, stop_corosync2,
-           configure_corosync2, unconfigure_corosync2]
+           configure_corosync2_stage_1, configure_corosync2_stage_2,
+           unconfigure_corosync2]

@@ -24,16 +24,23 @@ class CommandCaptureTestCase(unittest.TestCase):
         self.addCleanup(mock.patch.stopall)
 
     def _fake_run(self, arg_list, logger=None, monitor_func=None, timeout=Shell.SHELLTIMEOUT):
-            args = tuple(arg_list)
-            self._commands_history.append(args)
+        assert type(arg_list) in [list, str, unicode], 'arg list must be list or str :%s' % type(arg_list)
 
-            try:
-                result = self._get_executable_command(args)
-                result.executions_remaining -= 1
+        # Allow simple commands to just be presented as a string. However do not start formatting the string this
+        # will be rejected in a code review. If it has args present them as a list.
+        if type(arg_list) in [str, unicode]:
+            arg_list = arg_list.split()
 
-                return Shell.RunResult(result.rc, result.stdout, result.stderr, False)
-            except KeyError:
-                return Shell.RunResult(2, "", self._missing_command_err_msg, False)
+        args = tuple(arg_list)
+        self._commands_history.append(args)
+
+        try:
+            result = self._get_executable_command(args)
+            result.executions_remaining -= 1
+
+            return Shell.RunResult(result.rc, result.stdout, result.stderr, False)
+        except KeyError:
+            return Shell.RunResult(2, "", self._missing_command_err_msg, False)
 
     def _get_executable_command(self, args):
         '''

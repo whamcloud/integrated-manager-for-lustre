@@ -26,6 +26,8 @@ import traceback
 import collections
 
 from chroma_agent.log import daemon_log
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+
 EXCLUDED_PLUGINS = []
 
 
@@ -303,6 +305,6 @@ class ActionPluginManager(object):
         try:
             fn = self.commands[cmd]
         except KeyError:
-            raise RuntimeError("Unknown command %s" % cmd)
+            return agent_error("Requested command %s was unknown to the agent" % cmd)
 
         return fn(**args)

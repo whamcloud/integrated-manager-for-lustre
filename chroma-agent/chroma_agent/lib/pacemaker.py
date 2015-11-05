@@ -65,11 +65,10 @@ class LustreTarget(PacemakerObject):
 
 # TODO: Refactor this class to use PacemakerObject
 class PacemakerNode(object):
-    def __init__(self, name, attributes=None):
+    def __init__(self, name, uuid):
         self.name = name
-        self.attributes = attributes
-        if not self.attributes:
-            self.attributes = {}
+        self.uuid = uuid
+        self.attributes = {}
 
     def fence_reboot(self):
         self.fence_off()
@@ -190,7 +189,7 @@ class PacemakerConfig(object):
     def nodes(self):
         nodes = []
         for node in self.configuration.find('nodes'):
-            nodeobj = PacemakerNode(node.get('uname'))
+            nodeobj = PacemakerNode(node.get('uname'), node.get('id'))
             try:
                 i_attrs = node.find('instance_attributes')
                 for nvpair in i_attrs.findall('nvpair'):
@@ -214,18 +213,19 @@ class PacemakerConfig(object):
     @property
     def dc(self):
         timeout = 30
-        dc = None
-        while not dc and timeout > 0:
-            dc = self.root.get('dc-uuid')
-            if dc:
-                break
+        dc_uuid = None
+        while not dc_uuid and timeout > 0:
+            dc_uuid = self.root.get('dc-uuid')
+            if dc_uuid:
+                try:
+                    return next(node.name for node in self.nodes if node.uuid == dc_uuid)
+                except StopIteration:
+                    raise PacemakerError("Could not match DC uuid=%s to a node" % dc_uuid)
+
             time.sleep(1)
             timeout -= 1
 
-        if not dc:
-            raise PacemakerError("could not determine DC")
-
-        return dc
+        raise PacemakerError("Could not determine DC")
 
     @property
     def fenceable_nodes(self):
