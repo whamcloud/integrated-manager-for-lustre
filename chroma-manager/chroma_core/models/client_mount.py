@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -134,7 +134,7 @@ class MountLustreClientJob(StateChangeJob):
     Enables the client mount to be transitioned from unmounted -> mounted
     as part of a dependency resolution phase.
     """
-    state_transition = (LustreClientMount, 'unmounted', 'mounted')
+    state_transition = StateChangeJob.StateTransition(LustreClientMount, 'unmounted', 'mounted')
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None
@@ -171,7 +171,7 @@ class UnmountLustreClientMountJob(StateChangeJob):
     Enables the client mount to be transitioned from mounted -> unmounted
     as part of a dependency resolution phase.
     """
-    state_transition = (LustreClientMount, 'mounted', 'unmounted')
+    state_transition = StateChangeJob.StateTransition(LustreClientMount, 'mounted', 'unmounted')
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None
@@ -208,7 +208,7 @@ class RemoveLustreClientJob(StateChangeJob):
     Enables the client mount to be transitioned from unmounted -> removed
     as part of a dependency resolution phase.
     """
-    state_transition = (LustreClientMount, 'unmounted', 'removed')
+    state_transition = StateChangeJob.StateTransition(LustreClientMount, 'unmounted', 'removed')
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None

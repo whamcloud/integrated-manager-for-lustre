@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -67,7 +67,7 @@ class ConfigureNtpStep(Step):
 
 
 class ConfigureNtpJob(StateChangeJob):
-    state_transition = (NTPConfiguration, 'unconfigured', 'configured')
+    state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'unconfigured', 'configured')
     stateful_object = 'ntp_configuration'
     ntp_configuration = models.ForeignKey(NTPConfiguration)
     state_verb = 'Start Ntp'
@@ -111,7 +111,7 @@ class UnconfigureNtpStep(Step):
 
 
 class UnconfigureNtpJob(StateChangeJob):
-    state_transition = (NTPConfiguration, 'configured', 'unconfigured')
+    state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'configured', 'unconfigured')
     stateful_object = 'ntp_configuration'
     ntp_configuration = models.ForeignKey(NTPConfiguration)
     state_verb = 'Unconfigure NTP'

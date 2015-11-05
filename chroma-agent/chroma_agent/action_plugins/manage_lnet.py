@@ -102,6 +102,9 @@ def _rmmod_deps(module_name, excpt=[]):
 
 
 def start_lnet():
+    '''
+    Place lnet into the 'up' state.
+    '''
     console_log.info("Starting LNet")
 
     # modprobe lust is a hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount
@@ -111,16 +114,30 @@ def start_lnet():
 
 
 def stop_lnet():
+    '''
+    Place lnet into the 'down' state, any modules that are dependent on lnet being in the 'up' state
+    will be unloaded before lnet is stopped.
+    '''
+
     console_log.info("Stopping LNet")
     return agent_ok_or_error(_rmmod_deps("lnet", excpt=["ksocklnd", "ko2iblnd"]) or
                              shell.run_canned_error_message(["lctl", "net", "down"]))
 
 
 def load_lnet():
+    '''
+    Load the lnet modules from disk into memory including an modules using the modprobe command.
+    '''
     return agent_ok_or_error(shell.run_canned_error_message(["modprobe", "lnet"]))
 
 
 def unload_lnet():
+    '''
+    Unload the lnet modules from memory including an modules that are dependent on the lnet
+    module.
+
+    Lnet must be stopped before unload_lnet is called.
+    '''
     return agent_ok_or_error(_rmmod('lnet'))
 
 

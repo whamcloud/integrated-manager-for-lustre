@@ -545,7 +545,7 @@ def _delete_target(target):
 
 
 class RemoveConfiguredTargetJob(StateChangeJob):
-    state_transition = (ManagedTarget, 'unmounted', 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unmounted', 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
@@ -600,7 +600,7 @@ class RemoveTargetJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    state_transition = (ManagedTarget, ['unformatted', 'formatted', 'registered'], 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unformatted', 'formatted', 'registered'], 'removed')
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
@@ -654,7 +654,7 @@ class ForgetTargetJob(StateChangeJob):
 
         super(ForgetTargetJob, self).on_success()
 
-    state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
     stateful_object = 'target'
     state_verb = "Forget"
     target = models.ForeignKey(ManagedTarget)
@@ -765,7 +765,7 @@ class RemoveTargetFromPacemakerConfigStep(Step):
 
 
 class ConfigureTargetJob(StateChangeJob):
-    state_transition = (ManagedTarget, 'registered', 'unmounted')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'registered', 'unmounted')
     stateful_object = 'target'
     state_verb = "Configure mount points"
     target = models.ForeignKey(ManagedTarget)
@@ -817,7 +817,7 @@ class ConfigureTargetJob(StateChangeJob):
 
 class RegisterTargetJob(StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
-    state_transition = (ManagedTarget, 'formatted', 'registered')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'formatted', 'registered')
     stateful_object = 'target'
     state_verb = "Register"
     target = models.ForeignKey(ManagedTarget)
@@ -900,7 +900,7 @@ class MountStep(Step):
 
 class StartTargetJob(StateChangeJob):
     stateful_object = 'target'
-    state_transition = (ManagedTarget, 'unmounted', 'mounted')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
     target = models.ForeignKey(ManagedTarget)
 
@@ -944,7 +944,7 @@ class UnmountStep(Step):
 
 class StopTargetJob(StateChangeJob):
     stateful_object = 'target'
-    state_transition = (ManagedTarget, 'mounted', 'unmounted')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
 
@@ -1068,7 +1068,7 @@ class MkfsStep(Step):
 
 
 class FormatTargetJob(StateChangeJob):
-    state_transition = (ManagedTarget, 'unformatted', 'formatted')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unformatted', 'formatted')
     target = models.ForeignKey(ManagedTarget)
     stateful_object = 'target'
     state_verb = 'Format'

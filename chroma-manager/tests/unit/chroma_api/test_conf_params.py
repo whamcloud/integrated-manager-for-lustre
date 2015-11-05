@@ -29,8 +29,8 @@ class TestTargetPostValidation(ChromaApiTestCase):
 
     @create_targets_patch
     def test_missing(self):
-        """Test that POSTs without conf_params are OK -- this
-        is for backwards compatability with respect to Chroma 1.0.0.0
+        """Test that POSTs without conf_params are OK.
+        This is for backwards compatability with respect to Chroma 1.0.0.0
         which didn't have conf_params on POSTs at all"""
         spare_volume = synthetic_volume_full(self.host)
 

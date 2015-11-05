@@ -3,7 +3,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -254,7 +254,7 @@ class Copytool(StatefulObject, MeasuredEntity):
 
 
 class StartCopytoolJob(StateChangeJob):
-    state_transition = (Copytool, 'stopped', 'started')
+    state_transition = StateChangeJob.StateTransition(Copytool, 'stopped', 'started')
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Start"
@@ -295,7 +295,7 @@ class StartCopytoolStep(Step):
 
 
 class StopCopytoolJob(StateChangeJob):
-    state_transition = (Copytool, 'started', 'stopped')
+    state_transition = StateChangeJob.StateTransition(Copytool, 'started', 'stopped')
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Stop"
@@ -343,7 +343,7 @@ class StopCopytoolStep(Step):
 
 
 class ConfigureCopytoolJob(StateChangeJob):
-    state_transition = (Copytool, 'unconfigured', 'stopped')
+    state_transition = StateChangeJob.StateTransition(Copytool, 'unconfigured', 'stopped')
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Configure"
@@ -394,7 +394,7 @@ class ConfigureCopytoolStep(Step):
 
 
 class RemoveCopytoolJob(StateChangeJob):
-    state_transition = (Copytool, 'stopped', 'removed')
+    state_transition = StateChangeJob.StateTransition(Copytool, 'stopped', 'removed')
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Remove"
@@ -465,7 +465,7 @@ class UnconfigureCopytoolStep(Step):
 
 
 class RemoveUnconfiguredCopytoolJob(StateChangeJob):
-    state_transition = (Copytool, 'unconfigured', 'removed')
+    state_transition = StateChangeJob.StateTransition(Copytool, 'unconfigured', 'removed')
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Remove"

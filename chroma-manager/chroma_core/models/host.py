@@ -587,7 +587,7 @@ class AwaitRebootStep(Step):
 class DeployHostJob(StateChangeJob):
     """Handles Deployment of the IML agent code base to a new host"""
 
-    state_transition = (ManagedHost, 'undeployed', 'unconfigured')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'undeployed', 'unconfigured')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
     state_verb = 'Deploy agent'
@@ -679,7 +679,7 @@ class InstallPackagesStep(Step):
 
 
 class InstallHostPackagesJob(StateChangeJob):
-    state_transition = (ManagedHost, 'unconfigured', 'packages_installed')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'unconfigured', 'packages_installed')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
     state_verb = None
@@ -727,7 +727,7 @@ class InstallHostPackagesJob(StateChangeJob):
 
 class SetupHostJob(NullStateChangeJob):
     target_object = models.ForeignKey(ManagedHost)
-    state_transition = (ManagedHost, 'packages_installed', 'managed')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'managed')
     _long_description = help_text['setup_managed_host']
     state_verb = 'Setup managed server'
 
@@ -776,7 +776,7 @@ class SetupHostJob(NullStateChangeJob):
 
 class SetupMonitoredHostJob(NullStateChangeJob):
     target_object = models.ForeignKey(ManagedHost)
-    state_transition = (ManagedHost, 'packages_installed', 'monitored')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'monitored')
     _long_description = help_text['setup_monitored_host']
     state_verb = 'Setup monitored server'
 
@@ -798,7 +798,7 @@ class SetupMonitoredHostJob(NullStateChangeJob):
 
 class SetupWorkertJob(NullStateChangeJob):
     target_object = models.ForeignKey(ManagedHost)
-    state_transition = (ManagedHost, 'packages_installed', 'working')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'working')
     _long_description = help_text['setup_worker_host']
     state_verb = 'Setup worker node'
 
@@ -1016,7 +1016,7 @@ class DeleteHostStep(Step):
 
 
 class RemoveHostJob(StateChangeJob):
-    state_transition = (ManagedHost, ['unconfigured', 'managed', 'monitored', 'working'], 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, ['unconfigured', 'managed', 'monitored', 'working'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -1255,7 +1255,7 @@ class ShutdownHostStep(Step):
 
 
 class RemoveUnconfiguredHostJob(StateChangeJob):
-    state_transition = (ManagedHost, 'unconfigured', 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'unconfigured', 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'

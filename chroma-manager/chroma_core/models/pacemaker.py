@@ -120,7 +120,7 @@ class ConfigurePacemakerStep(Step):
 
 
 class ConfigurePacemakerJob(StateChangeJob):
-    state_transition = (PacemakerConfiguration, 'unconfigured', 'stopped')
+    state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, 'unconfigured', 'stopped')
     stateful_object = 'pacemaker_configuration'
     pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
     state_verb = 'Configure Pacemaker'
@@ -173,7 +173,7 @@ class UnconfigurePacemakerStep(Step):
 
 
 class UnconfigurePacemakerJob(StateChangeJob):
-    state_transition = (PacemakerConfiguration, 'stopped', 'unconfigured')
+    state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, 'stopped', 'unconfigured')
     stateful_object = 'pacemaker_configuration'
     pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
     state_verb = 'Unconfigure Pacemaker'
@@ -231,7 +231,7 @@ class StartPacemakerStep(Step):
 
 
 class StartPacemakerJob(StateChangeJob):
-    state_transition = (PacemakerConfiguration, 'stopped', 'started')
+    state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, 'stopped', 'started')
     stateful_object = 'pacemaker_configuration'
     pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
     state_verb = 'Start Pacemaker'
@@ -269,7 +269,7 @@ class StopPacemakerStep(Step):
 
 
 class StopPacemakerJob(StateChangeJob):
-    state_transition = (PacemakerConfiguration, 'started', 'stopped')
+    state_transition = StateChangeJob.StateTransition(PacemakerConfiguration, 'started', 'stopped')
     stateful_object = 'pacemaker_configuration'
     pacemaker_configuration = models.ForeignKey(PacemakerConfiguration)
     state_verb = 'Stop Pacemaker'

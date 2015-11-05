@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -185,11 +185,11 @@ class StatefulObject(models.Model):
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
-            to_state = c.state_transition[2]
-            if isinstance(c.state_transition[1], list):
-                from_states = c.state_transition[1]
+            to_state = c.state_transition.new_state
+            if isinstance(c.state_transition.old_state, list):
+                from_states = c.state_transition.old_state
             else:
-                from_states = [c.state_transition[1]]
+                from_states = [c.state_transition.old_state]
 
             for from_state in from_states:
                 transition_options[from_state].append(to_state)
@@ -571,7 +571,7 @@ class StateChangeJob(Job):
 
     old_state = models.CharField(max_length = MAX_STATE_STRING)
 
-    # Tuple of (StatefulObjectSubclass, old_state, new_state)
+    StateTransition = namedtuple('StateTransition', ['class_', 'old_state', 'new_state'])
     state_transition = None
     # Name of an attribute which is a ForeignKey to a StatefulObject
     stateful_object = None
@@ -595,7 +595,7 @@ class StateChangeJob(Job):
 
     def on_success(self):
         obj = self.get_stateful_object()
-        new_state = self.state_transition[2]
+        new_state = self.state_transition.new_state
         obj.set_state(new_state, intentional = True)
         obj.save()
         job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
@@ -608,7 +608,7 @@ class NullStateChangeJob(StateChangeJob):
     '''
     A null state change job is one which the state changes but no actions take place.
     '''
-    state_transition = (None, None, None)
+    state_transition = StateChangeJob.StateTransition(None, None, None)
     stateful_object = "target_object"
     _long_description = ""
     _description = ""

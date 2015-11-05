@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -175,7 +175,7 @@ class PurgeFilesystemStep(Step):
 
 
 class RemoveFilesystemJob(StateChangeJob):
-    state_transition = (ManagedFilesystem, 'stopped', 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, 'stopped', 'removed')
     stateful_object = 'filesystem'
     state_verb = "Remove"
     filesystem = models.ForeignKey('ManagedFilesystem')
@@ -251,7 +251,7 @@ class FilesystemJob():
 
 class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
-    state_transition = (ManagedFilesystem, 'stopped', 'available')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, 'stopped', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -276,7 +276,7 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
 
 class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
-    state_transition = (ManagedFilesystem, 'unavailable', 'available')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, 'unavailable', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     display_group = Job.JOB_GROUPS.COMMON
@@ -300,7 +300,7 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
 
 class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Stop"
-    state_transition = (ManagedFilesystem, 'unavailable', 'stopped')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, 'unavailable', 'stopped')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     display_group = Job.JOB_GROUPS.INFREQUENT
@@ -336,7 +336,7 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
     """
 
     state_verb = None
-    state_transition = (ManagedFilesystem, 'available', 'unavailable')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, 'available', 'unavailable')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
     @classmethod
@@ -355,7 +355,7 @@ class ForgetFilesystemJob(StateChangeJob):
     display_group = Job.JOB_GROUPS.RARE
     display_order = 40
 
-    state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
+    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
     stateful_object = 'filesystem'
     state_verb = "Forget"
     filesystem = models.ForeignKey(ManagedFilesystem)

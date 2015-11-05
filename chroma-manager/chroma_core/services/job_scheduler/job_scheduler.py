@@ -53,7 +53,8 @@ from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, 
 from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
-from chroma_core.models import CorosyncConfiguration, PacemakerConfiguration
+from chroma_core.models import CorosyncConfiguration
+from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache

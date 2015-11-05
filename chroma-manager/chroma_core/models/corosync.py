@@ -223,7 +223,7 @@ class AutoConfigureCorosyncStep(Step):
 
 
 class AutoConfigureCorosyncJob(StateChangeJob):
-    state_transition = (CorosyncConfiguration, 'unconfigured', 'stopped')
+    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'unconfigured', 'stopped')
     stateful_object = 'corosync_configuration'
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
     state_verb = 'Configure Corosync'
@@ -267,7 +267,7 @@ class UnconfigureCorosyncStep(Step):
 
 
 class UnconfigureCorosyncJob(StateChangeJob):
-    state_transition = (CorosyncConfiguration, 'stopped', 'unconfigured')
+    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'stopped', 'unconfigured')
     stateful_object = 'corosync_configuration'
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
     state_verb = 'Unconfigure Corosync'
@@ -298,7 +298,7 @@ class StartCorosyncStep(Step):
 
 
 class StartCorosyncJob(StateChangeJob):
-    state_transition = (CorosyncConfiguration, 'stopped', 'started')
+    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'stopped', 'started')
     stateful_object = 'corosync_configuration'
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
     state_verb = 'Start Corosync'
@@ -329,7 +329,7 @@ class StopCorosyncStep(Step):
 
 
 class StopCorosyncJob(StateChangeJob):
-    state_transition = (CorosyncConfiguration, 'started', 'stopped')
+    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'started', 'stopped')
     stateful_object = 'corosync_configuration'
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
     state_verb = 'Stop Corosync'

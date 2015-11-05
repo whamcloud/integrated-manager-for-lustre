@@ -233,7 +233,7 @@ class UnconfigureLNetStep(Step):
 
 class UnconfigureLNetJob(NullStateChangeJob):
     target_object = models.ForeignKey(LNetConfiguration)
-    state_transition = (LNetConfiguration, 'lnet_unloaded', 'unconfigured')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_unloaded', 'unconfigured')
     _long_description = help_text['change_state_of_lnet_to_unconfigured']
 
     class Meta:
@@ -249,7 +249,7 @@ class UnconfigureLNetJob(NullStateChangeJob):
 
 class EnableLNetJob(NullStateChangeJob):
     target_object = models.ForeignKey(LNetConfiguration)
-    state_transition = (LNetConfiguration, 'unconfigured', 'lnet_unloaded')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'unconfigured', 'lnet_unloaded')
     _long_description = help_text['enable_lnet']
 
     class Meta:
@@ -281,7 +281,7 @@ class LoadLNetStep(Step):
 
 
 class LoadLNetJob(StateChangeJob):
-    state_transition = (LNetConfiguration, 'lnet_unloaded', 'lnet_down')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
     state_verb = 'Load LNet'
@@ -313,7 +313,7 @@ class StartLNetStep(Step):
 
 
 class StartLNetJob(StateChangeJob):
-    state_transition = (LNetConfiguration, 'lnet_down', 'lnet_up')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_down', 'lnet_up')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
     state_verb = 'Start LNet'
@@ -345,7 +345,7 @@ class StopLNetStep(Step):
 
 
 class StopLNetJob(StateChangeJob):
-    state_transition = (LNetConfiguration, 'lnet_up', 'lnet_down')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_up', 'lnet_down')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
     state_verb = 'Stop LNet'
@@ -377,7 +377,7 @@ class UnloadLNetStep(Step):
 
 
 class UnloadLNetJob(StateChangeJob):
-    state_transition = (LNetConfiguration, 'lnet_down', 'lnet_unloaded')
+    state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_down', 'lnet_unloaded')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
     state_verb = 'Unload LNet'

@@ -95,7 +95,6 @@ class CommandPlan(object):
 
         if isinstance(job, StateChangeJob):
             stateful_object = job.get_stateful_object()
-            target_klass, origins, new_state = job.state_transition
 
             # Take read lock on everything from get_stateful_object's self._dep_cache.get if
             # this is a StateChangeJob.  We do things depended on by both the old
@@ -105,7 +104,7 @@ class CommandPlan(object):
             # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
-            for d in chain(self._dep_cache.get(stateful_object, job.old_state).all(), self._dep_cache.get(stateful_object, new_state).all()):
+            for d in chain(self._dep_cache.get(stateful_object, job.old_state).all(), self._dep_cache.get(stateful_object, job.state_transition.new_state).all()):
                 locks.append(StateLock(
                     job = job,
                     locked_item = d.stateful_object,
@@ -117,7 +116,7 @@ class CommandPlan(object):
                 job = job,
                 locked_item = stateful_object,
                 begin_state = job.old_state,
-                end_state = new_state,
+                end_state = job.state_transition.new_state,
                 write = True))
 
         locks.extend(job.create_locks())
