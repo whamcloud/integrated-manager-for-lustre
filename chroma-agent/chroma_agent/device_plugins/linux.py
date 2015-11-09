@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -119,13 +119,16 @@ class BlockDevices(DeviceHelper):
         self.block_device_nodes, self.node_block_devices = self._parse_sys_block()
 
     def _device_node(self, device_name, major_minor, path, size, parent):
-        # Old (RHEL5) version of scsi_id has a different command line
-        # syntax to new (RHEL6) version.  Tell them apart with --version
-        # (old one doesn't have --version, new one does)
-        SCSI_ID_PATH = "/sbin/scsi_id"
-        if self.old_udev is None:
-            rc, out, err = shell.run([SCSI_ID_PATH, '--version'])
-            self.old_udev = (rc != 0)
+        # RHEL6 version of scsi_id is located at a different location to the RHEL7 version
+        # work this out at the start then go with it.
+        scsi_id_cmd = None
+
+        for scsi_id_command in ["/sbin/scsi_id", "/lib/udev/scsi_id", ""]:
+            if os.path.isfile(scsi_id_command):
+                scsi_id_cmd = scsi_id_command
+
+        if scsi_id_cmd == None:
+            raise RuntimeError("Unabled to find scsi_id")
 
         def scsi_id_command(cmd):
             rc, out, err = shell.run(cmd)
@@ -134,14 +137,9 @@ class BlockDevices(DeviceHelper):
             else:
                 return out.strip()
 
-        if self.old_udev:
-            # Old scsi_id, operates on a /sys reference
-            serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", "-s", "/block/%s" % device_name])
-            serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", "-s", "/block/%s" % device_name])
-        else:
-            # New scsi_id, always operates directly on a device
-            serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", path])
-            serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", path])
+        # New scsi_id, always operates directly on a device
+        serial_80 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x80", path])
+        serial_83 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x83", path])
 
         try:
             type = self._major_minor_to_fstype[major_minor]

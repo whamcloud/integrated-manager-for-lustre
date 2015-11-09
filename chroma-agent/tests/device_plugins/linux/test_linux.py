@@ -4,7 +4,9 @@ import os
 from django.utils import unittest
 
 from chroma_agent.device_plugins.linux import DmsetupTable
+from chroma_agent.device_plugins.linux import BlockDevices
 import chroma_agent.lib.normalize_device_path as ndp
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class MockDmsetupTable(DmsetupTable):
@@ -87,3 +89,41 @@ class TestDmSetupParse(DummyDataTestCase):
                            'dmsetup_HYD-1390.json',
                            'mpaths_HYD-1390.json',
                            'normalized_HYD-1390.json')
+
+
+class TestBlockDevices(CommandCaptureTestCase):
+    def setUp(self):
+        super(TestBlockDevices, self).setUp()
+
+        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
+            self.block_devices = BlockDevices()
+
+        mock.patch('os.path.isfile', self.mock_isfile).start()
+        self.existing_files = []
+
+        # Guaranteed cleanup with unittest2
+        self.addCleanup(mock.patch.stopall)
+
+    def mock_isfile(self, file):
+        return file in self.existing_files
+
+    def test_device_node_versions(self):
+        for scsi_id in ["/sbin/scsi_id", "/lib/udev/scsi_id"]:
+            # Check runs with correct scsi_id
+            self.existing_files = [scsi_id]
+
+            self.reset_command_capture()
+            self.add_commands(CommandCaptureCommand(((scsi_id, '-g', '-p', '0x80', '/dev/blop'))),
+                              CommandCaptureCommand(((scsi_id, '-g', '-p', '0x83', '/dev/blop'))))
+
+            result = self.block_devices._device_node("blop", 1, "/dev/blop", 1, None)
+
+            self.assertRanAllCommandsInOrder()
+
+            self.assertEqual(result, {'parent': None,
+                                      'major_minor': 1,
+                                      'serial_83': '',
+                                      'serial_80': '',
+                                      'path': '/dev/blop',
+                                      'filesystem_type': None,
+                                      'size': 1})
