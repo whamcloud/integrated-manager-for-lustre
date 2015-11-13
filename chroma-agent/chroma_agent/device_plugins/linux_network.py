@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,7 @@
 import re
 import os
 from collections import defaultdict
+from collections import namedtuple
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log
@@ -32,26 +33,23 @@ from chroma_agent.plugin_manager import DevicePlugin
 EXCLUDE_INTERFACES = ['lo']
 
 
-class NetworkInterface():
+class NetworkInterface(object):
     ''' Created with an array of lines that are the output from ifconfig, this class will
     parse those lines and end up with a set of properties corresponding to the parsed data
 
     It only produces what is there and so some values may be left unset. The idea is that
     once parsed the results can be accessed using named properties.
     '''
-    def __init__(self, ifconfig_lines):
-        match_values = ['(?P<interface>^[^\s]+)(.*)Link encap:(.*).*',
-                        '(.*)Link encap:(?P<type>[^\s]*).*(HWaddr )(?P<mac_address>[^\s]*).*',
-                        '.*(inet addr:)(?P<inet4_addr>[^\s]*).*',
-                        '.*(inet6 addr: )(?P<inet6_addr>[^\s\/]*/(?P<prefixlen>[\d]*)).*',
-                        '.*(P-t-P:)(?P<ptp>[^\s]*).*',
-                        '.*(Bcast:)(?P<inet4_broadcast>[^\s]*).*',
-                        '.*(Mask:)(?P<inet4_mask>[^\s]*).*',
-                        '\s*(?P<up>[a-zA-Z]+) BROADCAST.*',
-                        '.*RUNNING (?P<slave>[a-zA-Z]+) MULTICAST.*',
-                        '.*(Scope:)(?P<scopeid>[^\s]*).*',
-                        '.*(RX bytes:)(?P<rx_bytes>\d+).*',
-                        '.*(TX bytes:)(?P<tx_bytes>\d+).*']
+
+    RXTXStats = namedtuple('RXTXStats', ['rx_bytes', 'tx_bytes'])
+
+    def __init__(self, ifconfig_lines, rx_tx_stats):
+        match_values = ['([0-9]*):(\s*)(?P<interface>[^:]*).*',
+                        '(.*)link/(?P<type>[^\s]*)(\s*)(?P<mac_address>[^\s]*).*',
+                        '(.*)inet (?P<inet4_addr>[^/]*)/(?P<inet4_mask>[0-9]*).*',
+                        '(.*)inet6 (?P<inet6_addr>[^/]*)/(?P<inet6_mask>[0-9]*).*',
+                        '.*(?P<slave>SLAVE).*',
+                        '.*(?P<up>UP).*']
 
         self._values = defaultdict(lambda: '')
 
@@ -63,6 +61,11 @@ class NetworkInterface():
                 m = re.match(match_value, line)
                 if m:
                     self._values.update(m.groupdict())
+
+        try:
+            self.rx_tx_stats = rx_tx_stats[self.interface]
+        except KeyError:
+            self.rx_tx_stats = self.RXTXStats('0', '0')
 
     @property
     def interface(self):
@@ -100,20 +103,6 @@ class NetworkInterface():
         return self._values["inet6_addr"]
 
     @property
-    def rx_bytes(self):
-        '''
-        :return: str: Containing the type of the number of received bytes for the interface, or '' if not present.
-        '''
-        return self._values["rx_bytes"] if self._values["rx_bytes"] else "0"
-
-    @property
-    def tx_bytes(self):
-        '''
-        :return: str: Containing the type of the number of transmitted bytes for the interface, or '' if not present.
-        '''
-        return self._values["tx_bytes"] if self._values["tx_bytes"] else "0"
-
-    @property
     def up(self):
         '''
         :return: bool: True if the device described as being by ifconfig as being in the up state
@@ -130,7 +119,10 @@ class NetworkInterface():
 
 class NetworkInterfaces(dict):
     network_translation = {'ethernet': 'tcp',
+                           'ether': 'tcp',
                            'infiniband': 'o2ib'}
+
+    proc_net_dev_keys = {}
 
     class InterfaceNotFound(LookupError):
         pass
@@ -152,36 +144,60 @@ class NetworkInterfaces(dict):
             return self.network_translation.get(if_type.lower(), if_type.lower())
 
         try:
-            out = shell.try_run(['ifconfig', '-a'])
+            ip_out = shell.try_run(['ip', 'addr'])
+
+            with open("/proc/net/dev") as file:
+                dev_stats = file.readlines()
         except IOError:
-            daemon_log.warning("ifconfig: failed to run")
-            return []
+            daemon_log.warning("ip: failed to run")
+            return
 
-        lines = out.split("\n")
-
-        lines.append("")                # This empty line on the end just causes interfaces to get flushed in the loop below
-
+        # Parse the ip command output and create a list of lists, where each entry is the output from one device.
         device_lines = []
+        devices = [device_lines]
+        for line in ip_out.split("\n"):
+            if line and line[0] != ' ':                                      # First line of a new device.
+                if device_lines:
+                    device_lines = []
+                    devices.append(device_lines)
 
-        for line in lines:
+            device_lines.append(line)
 
-            if (line == "") and (len(device_lines) > 0):             # Blank line end of device
-                interface = NetworkInterface(device_lines)
+        # Parse the /proc/net/dev output and create a dictionary of stats (just rx_byte, tx_bytes today) with an entry for each
+        # network port. The input will look something like below.
+        # Inter-|   Receive                                                |  Transmit
+        # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+        #    lo: 8305402   85521    0    0    0     0          0         0  8305402   85521    0    0    0     0       0          0
+        #  eth0: 318398818 2069564    0    0    0     0          0         0  6622219   50337    0    0    0     0       0          0
+        #  eth1:  408736    7857    0    0    0     0          0         0  4347300   35206    0    0    0     0       0          0
+        if NetworkInterfaces.proc_net_dev_keys == {}:
+            keys = dev_stats[1].replace("|", " ").split()
+            keys = keys[1:]
 
-                if (interface.interface not in EXCLUDE_INTERFACES) and (interface.slave == False):
-                    self[interface.interface] = {'mac_address': interface.mac_address,
-                                                 'inet4_address': interface.inet4_addr,
-                                                 'inet6_address': interface.inet6_addr,
-                                                 'type': interface_to_lnet_type(interface.type),
-                                                 'rx_bytes': interface.rx_bytes,
-                                                 'tx_bytes': interface.tx_bytes,
-                                                 'up': interface.up,
-                                                 'slave': interface.slave}
+            for index in range(0, len(keys)):
+                NetworkInterfaces.proc_net_dev_keys[("rx_" if index < len(keys) / 2 else "tx_") + keys[index]] = index + 1
 
-                device_lines = []
+        proc_net_dev_values = {}
 
-            if (line != ""):
-                device_lines.append(line)
+        # Data is on the 3rd line to the end, so get the values for each entry.
+        for line in dev_stats[2:]:
+            values = line.split()
+            proc_net_dev_values[values[0][:-1]] = NetworkInterface.RXTXStats(values[NetworkInterfaces.proc_net_dev_keys['rx_bytes']],
+                                                                          values[NetworkInterfaces.proc_net_dev_keys['tx_bytes']])
+
+        # Now create a network interface for each of the entries.
+        for device_lines in devices:
+            interface = NetworkInterface(device_lines, proc_net_dev_values)
+
+            if (interface.interface not in EXCLUDE_INTERFACES) and (interface.slave == False):
+                self[interface.interface] = {'mac_address': interface.mac_address,
+                                             'inet4_address': interface.inet4_addr,
+                                             'inet6_address': interface.inet6_addr,
+                                             'type': interface_to_lnet_type(interface.type),
+                                             'rx_bytes': interface.rx_tx_stats.rx_bytes,
+                                             'tx_bytes': interface.rx_tx_stats.tx_bytes,
+                                             'up': interface.up,
+                                             'slave': interface.slave}
 
     def name(self, inet4_address):
         result = None
@@ -258,7 +274,8 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
         '''
         # Read active NIDs from /proc
         try:
-            lines = open("/proc/sys/lnet/nis").readlines()
+            with open("/proc/sys/lnet/nis") as file:
+                lines = file.readlines()
         except IOError:
             daemon_log.warning("get_nids: failed to open")
             return LinuxNetworkDevicePlugin.cached_results

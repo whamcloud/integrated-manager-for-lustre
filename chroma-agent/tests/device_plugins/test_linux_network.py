@@ -6,83 +6,73 @@ from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin, 
 
 class TestLinuxNetwork(unittest.TestCase):
     def test_network_interface(self):
-        def mock_try_run_ifconfig(args):
-            return """bond0         Link encap:Ethernet  HWaddr 4C:00:10:AC:61:E0
-        inet addr:192.168.10.79  Bcast:192.168.10.255 \        Mask:255.255.255.0
-        inet6 addr: fe80::4e00:10ff:feac:61e0/64 Scope:Link
-        UP BROADCAST RUNNING MASTER MULTICAST  MTU:1500 Metric:1
-        RX packets:3091 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:880 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:0
-        RX bytes:314203 (306.8 KiB)  TX bytes:129834 (126.7 KiB)
+        class mock_open:
+            def __init__(self, fname):
+                pass
 
-eth0.1.1?1b34*430    Link encap:Ethernet  HWaddr 4C:00:10:AC:61:E1
-        inet6 addr: fe80::4e00:10ff:feac:61e1/64 Scope:Link
-        UP BROADCAST RUNNING SLAVE MULTICAST  MTU:1500 Metric:1
-        RX packets:1581 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:448 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:1000
-        RX bytes:162084 (158.2 KiB)  TX bytes:67245 (65.6 KiB)
-        Interrupt:193 Base address:0x8c00
+            def __enter__(self):
+                return self
 
-eth1    Link encap:Ethernet  HWaddr 4C:00:10:AC:61:E2
-        inet6 addr: fe80::4e00:10ff:feac:61e2/64 Scope:Link
-        UP BROADCAST RUNNING SLAVE MULTICAST  MTU:1500 Metric:1
-        RX packets:1513 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:444 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:1000
-        RX bytes:152299 (148.7 KiB)  TX bytes:64517 (63.0 KiB)
-        Interrupt:185 Base address:0x6000
+            def __exit__(self, exception_type, value, _traceback):
+                pass
 
-lo      Link encap:Local Loopback
-        inet addr:127.0.0.1  Mask:255.0.0.0
-        inet6 addr: ::1/128 Scope:Host
-        UP LOOPBACK RUNNING  MTU:16436  Metric:1
-        RX packets:39959872 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:39959872 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:0
-        RX bytes:11955542777 (11.9 GB)  TX bytes:11955542777 (11.9 GB)
+            def readlines(self):
+                '''
+                The out of of a 'cat /proc/net/dev command.
+                :return: Returns a list of lines as readlines would.
+                '''
+                return ["Inter-|   Receive                                                |  Transmit",
+                        "face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed",
+                        "lo: 8305400   85521    0    0    0     0          0         0  8305401   85521    0    0    0     0       0          0",
+                        "bond0: 314203   2322    0    0    0     0          0         0  129834   82221    0    0    0     0       0          0",
+                        "eth0.1.1?1b34*430: 318398818 20564    0    0    0     0          0         0  2069564   50037    0    0    0     0       0          0",
+                        "eth4: 20400 6802    0    0    0     0          0         0  6859022   50337    0    0    0     0       0          0",
+                        "ib0: 3286081 4756    0    0    0     0          0         0  4753096   50237    0    0    0     0       0          0"]
 
-eth2    Link encap:Ethernet  HWaddr 00:02:c9:0e:38:2c
-        BROADCAST MULTICAST  MTU:1500  Metric:1
-        RX packets:0 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:1000
-        RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+        def mock_try_run_ip(args):
+            return """1: bond0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 52:54:00:33:d9:15 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.10.79/21 brd 192.168.10.255 scope global bond0
+    inet6 fe80::4e00:10ff:feac:61e0/64 scope link
+       valid_lft forever preferred_lft forever
+2: eth0.1.1?1b34*430: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 52:54:00:33:a7:15 brd ff:ff:ff:ff:ff:ff
+    inet 10.128.3.141/21 brd 10.128.7.255 scope global eth0.1.1?1b34*430
+    inet6 fe80::4e00:10ff:feac:61e1/64 scope link
+       valid_lft forever preferred_lft forever
+3: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+4: eth2:  <BROADCAST,MULTICAST> mtu 1500 qdisc pfifo_fast state DOWN qlen 1000
+    link/ether 52:54:00:33:a7:11 brd ff:ff:ff:ff:ff:ff
+5: eth4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 52:54:00:33:a7:15 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.0.101/24 brd 10.0.0.255 scope global eth4
+    inet6 fe80::200:ff:fe00:2/64 scope link
+       valid_lft forever preferred_lft forever
+6: ib0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/infiniband 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.4.23/23 brd 192.168.5.2555 scope global ib0
+    inet6 fe80::225:90ff:ff1c:a229/64 scope link
+       valid_lft forever preferred_lft forever"""
 
-eth4    Link encap:Ethernet  HWaddr 00:00:00:00:00:02
-        inet addr:10.0.0.101  Bcast:10.0.0.255  Mask:255.255.255.0
-        inet6 addr: fe80::200:ff:fe00:2/64 Scope:Link
-        UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
-        RX packets:347 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:55864 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:1000
-        RX bytes:20400 (19.9 KiB)  TX bytes:6859022 (6.5 MiB)
-        Interrupt:11
-
-ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:00:00:00:00:00:00
-        inet addr:192.168.4.23  Bcast:192.168.5.255  Mask:255.255.254.0
-        inet6 addr: fe80::225:90ff:ff1c:a229/64 Scope:Link
-        UP BROADCAST RUNNING MULTICAST  MTU:2044  Metric:1
-        RX packets:55810 errors:0 dropped:0 overruns:0 frame:0
-        TX packets:47276 errors:0 dropped:0 overruns:0 carrier:0
-        collisions:0 txqueuelen:256
-        RX bytes:3286081 (3.1 MiB)  TX bytes:4753096 (4.5 MiB)"""
-
-        with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', mock_try_run_ifconfig):
-            interfaces = NetworkInterfaces()
+        with mock.patch('__builtin__.open', mock_open):
+            with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', mock_try_run_ip):
+                interfaces = NetworkInterfaces()
 
         ResultCheck = namedtuple("ResultCheck",
                                  ["interface", "mac_address", "type", "inet4_addr", "inet6_addr",
                                  "rx_bytes", "tx_bytes", "up", "slave"])
 
-        self.assertEqual(len(interfaces), 4)
+        self.assertEqual(len(interfaces), 5)
 
-        for result_check in [ResultCheck("bond0", "4C:00:10:AC:61:E0", "tcp", "192.168.10.79", "fe80::4e00:10ff:feac:61e0/64", "314203", "129834", True, False),
-                             ResultCheck("eth2", "00:02:c9:0e:38:2c", "tcp", "", "", "0", "0", False, False),
-                             ResultCheck("eth4", "00:00:00:00:00:02", "tcp", "10.0.0.101", "fe80::200:ff:fe00:2/64", "20400", "6859022", True, False),
+        for result_check in [ResultCheck("bond0", "52:54:00:33:d9:15", "tcp", "192.168.10.79", "fe80::4e00:10ff:feac:61e0", "314203", "129834", True, False),
+                             ResultCheck("eth2", "52:54:00:33:a7:11", "tcp", "", "", "0", "0", False, False),
+                             ResultCheck("eth4", "52:54:00:33:a7:15", "tcp", "10.0.0.101", "fe80::200:ff:fe00:2", "20400", "6859022", True, False),
                              ResultCheck("ib0", "80:00:00:48:FE:80:00:00:00:00:00:00:00:00:00:00:00:00:00:00",
-                                         "o2ib", "192.168.4.23", "fe80::225:90ff:ff1c:a229/64", "3286081", "4753096", True, False)]:
+                                         "o2ib", "192.168.4.23", "fe80::225:90ff:ff1c:a229", "3286081", "4753096", True, False)]:
 
             interface = interfaces[result_check.interface]
 
@@ -100,6 +90,12 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
     def test_lnet_interface(self):
         class mock_open:
             def __init__(self, fname):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exception_type, value, _traceback):
                 pass
 
             def readlines(self):
