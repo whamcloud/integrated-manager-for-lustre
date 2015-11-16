@@ -18,52 +18,50 @@ export DISPLAY=\$(hostname):1
 export NODE_PATH=/usr/lib/node_modules
 export RUNNER=CI
 
-INTEL_JS_MODULES=${INTEL_JS_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-manager/ui-modules/node_modules/@intel-js"}
+NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-manager/ui-modules/node_modules"}
 
 #######################################
 # New UI Tests
 #######################################
 
 # Run angular-modules
-cd \$INTEL_JS_MODULES/angular-modules
+cd \$NODE_MODULES/intel-angular-modules
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
-mv test-results.xml \$HOME/test_reports/karma-test-results-angular-modules.xml
+for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/NG_MODULES_\$filename"; done;
 
 # Run Karma GUI unit tests (new ui)
-cd \$INTEL_JS_MODULES/gui
+cd \$NODE_MODULES/intel-gui
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
 mv test-results/*.xml \$HOME/test_reports/
 rm -rf ./test-results
 
 # Run gulp Test(s)
-cd \$INTEL_JS_MODULES/gui/gulp
-\$INTEL_JS_MODULES/ziplocker/node_modules/npm/bin/npm-cli.js t
+cd \$NODE_MODULES/intel-gui/gulp
+\$NODE_MODULES/intel-ziplocker/node_modules/npm/bin/npm-cli.js t
 mv gulp-results.xml \$HOME/test_reports/
 
-MODULES_TO_TEST="dirp
-extract-api
-fp
-gulp-iife-wrap
-iife-wrap
-karma-iife-wrap-preprocessor
-natural-sort
-obj
-realtime
-req
-router
-socket-worker
-srcmap-reverse
-stub-daddy
-through
-view-server
-ziplocker"
+MODULES_TO_TEST="intel-dirp
+intel-extract-api
+intel-furp
+intel-fp
+intel-natural-sort
+intel-obj
+intel-realtime
+intel-req
+intel-router
+intel-socket-worker
+intel-srcmap-reverse
+intel-stub-daddy
+intel-through
+intel-view-server
+intel-ziplocker"
 
 for module_name in \$MODULES_TO_TEST
 do
     # Run test
-    cd \$INTEL_JS_MODULES/\$module_name
-    \$INTEL_JS_MODULES/ziplocker/node_modules/npm/bin/npm-cli.js t
-    mv \$module_name-results.xml \$HOME/test_reports/\$module_name-results.xml
+    cd \$NODE_MODULES/\$module_name
+    \$NODE_MODULES/intel-ziplocker/node_modules/npm/bin/npm-cli.js t
+    mv *-results-*.xml \$HOME/test_reports/test-\$module_name-results.xml
 done
 
 
@@ -73,8 +71,8 @@ done
 
 # Run Karma GUI unit tests (old ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui
-./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
-mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
+\$NODE_MODULES/intel-gui/node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
+for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/OLD_\$filename"; done;
 
 EOC
 

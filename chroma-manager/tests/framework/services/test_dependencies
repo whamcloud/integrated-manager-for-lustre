@@ -1,4 +1,4 @@
-ui-modules/node_modules/@intel-js/ziplocker
-ui-modules/node_modules/@intel-js/realtime
-ui-modules/node_modules/@intel-js/view-server
+ui-modules/node_modules/intel-ziplocker
+ui-modules/node_modules/intel-realtime
+ui-modules/node_modules/intel-view-server
 nginx-*.el6.ngx.x86_64.rpm

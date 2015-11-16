@@ -8,7 +8,6 @@ import errno
 import os
 import re
 import sys
-import requests
 from jenkinsapi.utils.requester import Requester
 
 from jenkinsapi import api
@@ -99,7 +98,7 @@ if __name__ == '__main__':
             coverage_report = artifacts['.coverage']
             coverage_report.save('coverage_files/.coverage.%s' % test_run.job.name)
 
-        test_reports = [v for k, v in artifacts.iteritems() if re.match(".*test.*.xml", k)]
+        test_reports = [v for k, v in artifacts.iteritems() if re.match(".*test|TEST.*.xml", k)]
         logging.info("Found the following reports for %s: '%s'" % (test_run.name, [r.filename for r in test_reports]))
         mkdir_p("test_reports/%s" % os.path.normpath(test_run.name))
         for test_report in test_reports:

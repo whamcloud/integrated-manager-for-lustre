@@ -73,32 +73,22 @@ $(NPM):
 
 ziplocker: $(NPM)
 	@echo "Setting up ziplocker module"; \
-	mkdir -p ui-modules/node_modules/@intel-js && \
-	cd ui-modules/node_modules/@intel-js && \
+	mkdir -p ui-modules/node_modules && \
+	cd ui-modules/node_modules && \
 	rm -rf ./* && \
-	cp -r ../../../../chroma-externals/ui-modules/node_modules/@intel-js/ziplocker ./ && \
-	cd ziplocker && \
+	cp -r ../../../chroma-externals/ui-modules/node_modules/intel-ziplocker ./ && \
+	cd intel-ziplocker && \
 	npm rebuild
 
 ui-modules: ziplocker
 	@echo "Setting up ui-modules zipdev: $(ZIP_DEV)"; \
 	cd ui-modules && \
-	node_modules/@intel-js/ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../chroma-externals/'
+	node_modules/intel-ziplocker/bin/ziplocker-install$(ZIP_TYPE) --DEST_DIR="$(CURDIR)/../chroma-externals/ui-modules/node_modules/."
 
 gui: ui-modules
 	@echo "Building GUI for deployment"; \
-	cd ui-modules/node_modules/@intel-js/gui/gulp && \
-	../../ziplocker/node_modules/npm/bin/npm-cli.js run build -- --dest-dir='../../../../..'
-
-socket-worker: gui
-	@echo "Building socket worker"; \
-	cd ui-modules/node_modules/@intel-js/socket-worker && \
-	../ziplocker/node_modules/npm/bin/npm-cli.js run build && \
-	mv bundle.js ../../../../chroma_ui/static/chroma_ui && \
-	mv bundle.map.json ../../../../chroma_ui/static/chroma_ui
-
-build-ui: socket-worker
-	@echo "Building UI Components";
+	cd ui-modules/node_modules/intel-gui/gulp && \
+	../../intel-ziplocker/node_modules/npm/bin/npm-cli.js run build -- --dest-dir='../../../..'
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -197,7 +187,7 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version build-ui
+tarball: version gui
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
@@ -249,4 +239,4 @@ docs: requirements version
 	fi; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs download build-ui socket-worker gui ui-modules ziplocker
+.PHONY: docs download gui ui-modules ziplocker

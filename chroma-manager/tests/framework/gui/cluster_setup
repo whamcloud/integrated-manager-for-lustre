@@ -56,9 +56,8 @@ set -ex
 mkdir $HOME/bin
 
 MANAGER_DIR=${MANAGER_DIR:-"$HOME/chroma_test_env/chroma/chroma-manager"}
-ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node_modules/@intel-js/ziplocker"}
+ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node_modules/intel-ziplocker"}
 CHROMA_EXTERNALS=${CHROMA_EXTERNALS:-"$HOME/chroma_test_env/chroma/chroma-externals"}
-ZIP_INSTALL_DEV=${ZIP_INSTALL_DEV:-"$ZIPLOCK_DIR/bin/zip-install-dev --overrides.ziplockDir=$CHROMA_EXTERNALS"}
 
 cd chroma_test_env/chroma/chroma-manager
 
@@ -66,14 +65,6 @@ cd chroma_test_env/chroma/chroma-manager
 export ZIP_DEV=true
 export NODE_PATH=/usr/lib/node_modules
 make ui-modules
-
-PATHS_TO_INSTALL="chroma_ui/"
-
-for install_path in $PATHS_TO_INSTALL
-do
-    cd $MANAGER_DIR/$install_path
-    $ZIP_INSTALL_DEV
-done
 
 # Configure VNC server
 cd ~

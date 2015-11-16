@@ -80,20 +80,20 @@ setup(
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
         'ui-modules': [
-            "node_modules/@intel-js/view-server/*.js",
-            "node_modules/@intel-js/view-server/lib/*.js",
-            "node_modules/@intel-js/view-server/middleware/*.js",
-            "node_modules/@intel-js/view-server/routes/*.js",
-            "node_modules/@intel-js/view-server/package.json",
-            "node_modules/@intel-js/realtime/*.js",
-            "node_modules/@intel-js/realtime/reverse-source-map/*.js",
-            "node_modules/@intel-js/realtime/serialize-error/*.js",
-            "node_modules/@intel-js/realtime/socket-router/*.js",
-            "node_modules/@intel-js/realtime/socket-router/middleware/*.js",
-            "node_modules/@intel-js/realtime/socket-router/routes/*.js",
-            "node_modules/@intel-js/realtime/package.json"
-        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/@intel-js/view-server/node_modules')]
-          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/@intel-js/realtime/node_modules')]
+            "node_modules/intel-view-server/*.js",
+            "node_modules/intel-view-server/lib/*.js",
+            "node_modules/intel-view-server/middleware/*.js",
+            "node_modules/intel-view-server/routes/*.js",
+            "node_modules/intel-view-server/package.json",
+            "node_modules/intel-realtime/*.js",
+            "node_modules/intel-realtime/reverse-source-map/*.js",
+            "node_modules/intel-realtime/serialize-error/*.js",
+            "node_modules/intel-realtime/socket-router/*.js",
+            "node_modules/intel-realtime/socket-router/middleware/*.js",
+            "node_modules/intel-realtime/socket-router/routes/*.js",
+            "node_modules/intel-realtime/package.json"
+        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/intel-view-server/node_modules')]
+          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/intel-realtime/node_modules')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {
