@@ -209,13 +209,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list known servers:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText"># chroma server-list</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | &nbsp;fqdn &nbsp;| state | nids | last_contact |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | fqdn | state | nids | last_contact |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 4 | autonoe.jovian.private | lnet_up | 10.141.255.2@tcp0 | 20:10:46 |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 5 | thyone.jovian.private | lnet_up | 10.141.255.3@tcp0 | 20:10:46 |</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list known OSTs:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma ost-list</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp; |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp;|</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 3 | jovian-OST0002 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost0 |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 4 | jovian-OST0001 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost1 |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 5 | jovian-OST0000 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost2 |</span></p>
@@ -223,7 +223,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list targets on a given server, limiting to primary targets:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma server autonoe target-list --primary</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp; |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp;|</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 1 | MGS | mounted | autonoe.jovian.private:/dev/mapper/LustreVG-mgs |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 2 | jovian-MDT0000 | mounted | autonoe.jovian.private:/dev/mapper/LustreVG-mdt |</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>

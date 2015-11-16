@@ -194,15 +194,73 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">The job statistics feature is accessible from the </span><span class="f_BodyText">Read/Write Heat Map</span><span class="f_BodyText"> chart and for a given OST and time interval, displays the read and write throughput for the top five jobs for that OST. The page also shows the top five Read IOPS and Write IOPS for that OST and time interval. This feature supports the creation of plug-ins to display user account, command line, job size, and job start/finish times.</span></p>
 <h2 class="p_Heading2"><span class="f_Heading2">To view job statistics</span></h2>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Before viewing job statistics, you will need to run a command to enable this feature. &nbsp;Run this command for each file system. Run the following command on the management server:</span><br />
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Before viewing job statistics, you will need to run a command to enable this feature. Run this command for each file system. Run the following command on the management server (MGS):</span><br />
 <span class="f_BodyText">&nbsp;</span><br />
  &nbsp; &nbsp; &nbsp; &nbsp;<span class="f_CodeExample">lctl conf_param &lt;test1&gt;.sys.jobid_var=procname_uid</span><br />
 <span class="f_CodeExample">&nbsp;</span><br />
-<span class="f_BodyText">where </span><span class="f_CodeExample">&lt;test1&gt;</span><span class="f_BodyText"> is the file system name.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">The variable testfs.mdt.job_cleanup_interval sets the period after which collected statistics are cleared out. &nbsp;If this interval is to short, statistics may get cleared while you're viewing job statistics. &nbsp;Set this interval to a value greater than your collection/viewing period. As an example, you could set this interval to 70 minutes (4200 seconds) using the following command:</span><br />
+<span class="f_BodyText">where </span><span class="f_CodeExample">&lt;test1&gt;</span><span class="f_BodyText"> is the file system name.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">The variable testfs.mdt.job_cleanup_interval sets the period after which collected statistics are cleared out. If this interval is to short, statistics may get cleared while you're viewing job statistics. Set this interval to a value greater than your collection/viewing period. As an example, you could set this interval to 70 minutes (4200 seconds) using the following command:</span><br />
 <span class="f_BodyText">&nbsp;</span><br />
  &nbsp; &nbsp; &nbsp; &nbsp;<span class="f_CodeExample">lctl conf_param testfs.mdt.job_cleanup_interval=4200</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">View the </span><span class="f_BodyText" style="font-weight: bold;">Read/Write Heat Map</span><span class="f_BodyText"> chart on the dashboard page. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">Each row on the Read/Write Heat Map corresponds to an OST, with consecutive columns from left-to-right, corresponding to consecutive time intervals. Mouse over a cell to find an OST and time interval of interest, and click on the desired cell. </span><br />
 <span class="f_BodyText">&nbsp;</span><br />
 <span class="f_BodyText">The </span><span class="f_BodyText" style="font-weight: bold;">Jobs Stats</span><span class="f_BodyText"> page opens. The top banner reveals the OST and time interval. Each job executing during that interval is displayed as a row, with its average data throughput revealed for that interval. Only the top five read and write jobs are displayed. The window displays the Read Bytes, Write Bytes, Read OPS, and Write IOPS for the top five jobs, listed by Job ID. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText">To change the duration of the job statistics sampling period, return to the </span><span class="f_BodyText" style="font-weight: bold;">Read/Write Heat Map</span><span class="f_BodyText"> chart. Click </span><span class="f_BodyText" style="font-weight: bold;">Change Duration</span><span class="f_BodyText"> and set the time period for the heat map. If you set the time period to one day (as an example), the 24-hour period will be divided into 20 equal, consecutive cells, starting 24 hours previous and ending now. Each Read/Write Heat Map cell now covers 1.2 hours. Clicking on a cell now will reveal a job statistics page that averages 1.2 hours of read/write operations. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 2px; margin: 0px 0px 8px 16px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText">To send this Job Stats page to another person, select and copy the URL from browser URL field. Then paste the URL into an email message body and send. </span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">:</span><span class="f_BodyText"> The </span><span class="f_BodyText" style="font-weight: bold;">Job Stats</span><span class="f_BodyText"> page is static, specific to that time period and OST. To view another time period or OST, return to the </span><span class="f_BodyText" style="font-weight: bold;">Read/Write Heat Map</span><span class="f_BodyText"> chart and select the desired cell.</span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">Using jobstats with other job schedulers</span></h2>
+<p class="p_BodyText"><span class="f_BodyText">The jobstats code extracts the job identifier from an environment variable set by the scheduler when the job is started. &nbsp;Intel® EE for Lustre* software sets a </span><span class="f_CodeExample">jobstats</span><span class="f_BodyText"> environment variable to work with SLURM, however you can set the variable to work with other job schedulers. &nbsp;To enable jobstats to work with a desired scheduler, specify the jobid_var to name the environment variable set by the scheduler. For example, SLURM sets the SLURM_JOB_ID environment variable with the unique job ID on each client. To permanently enable jobstats on the testfs file system, run this command on the MGS:</span></p>
+<p class="p_CodeExample" style="margin: 0px 0px 0px 24px;"><span class="f_CodeExample">$&nbsp;lctl&nbsp;conf_param&nbsp;testfs.sys.jobid_var=&lt;environment&nbsp;variable&gt;</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText">&nbsp;</span><br />
+<span class="f_BodyText"> - where &lt;environment variable&gt; is one of the following:</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<div style="text-align: left; text-indent: 0px; line-height: 1.10; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 0px;"><table style="border:none; border-spacing:0px; border-collapse:collapse;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Job Scheduler</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">environment variable</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Simple Linux Utility for Resource Management (SLURM)</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">SLURM_JOB_ID</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Sun Grid Engine (SGE)</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">JOB_ID</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Load Sharing Facility (LSF)</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">LSB_JOBID</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Loadleveler</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">LOADL_JOBID</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Portable Batch Scheduler (PBS)/MAUI</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">PBS_JOBID</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:386px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">Cray Application Level Placement Scheduler (ALPS)</span></p>
+</td>
+<td style="vertical-align:top; width:405px; padding:4px; border:solid 1px #000000;"><p class="p_BodyText"><span class="f_BodyText">ALPS_APP_ID</span></p>
+</td>
+</tr>
+</table>
+</div>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p class="p_BodyText"><span class="f_BodyText">To disable jobstats, specify </span><span class="f_CodeExample">jobid_var</span><span class="f_BodyText"> as </span><span class="f_CodeExample">disable</span><span class="f_BodyText">:</span></p>
+<p class="p_CodeExample" style="margin: 0px 0px 0px 24px;"><span class="f_CodeExample">$&nbsp;lctl&nbsp;conf_param&nbsp;testfs.sys.jobid_var=disable</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p class="p_BodyText"><span class="f_BodyText">To track job stats per process name and user ID (for debugging, or if no job scheduler is in use), specify </span><span class="f_CodeExample">jobid_var</span><span class="f_BodyText"> as </span><span class="f_CodeExample">procname_uid</span><span class="f_BodyText">:</span></p>
+<p class="p_CodeExample" style="margin: 0px 0px 0px 24px;"><span class="f_CodeExample">$&nbsp;lctl&nbsp;conf_param&nbsp;testfs.sys.jobid_var=procname_uid</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 
 <!--ZOOMSTOP-->
 
