@@ -152,6 +152,7 @@ cp -a chroma-manager.py build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
 cp -a mime.types build/lib
+cp -a agent-bootstrap-script.template build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
@@ -289,6 +290,7 @@ fi
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf
+%{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
