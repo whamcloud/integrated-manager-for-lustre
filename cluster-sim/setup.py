@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,7 @@
 
 from setuptools import setup, find_packages
 from cluster_sim import package_version
+from distutils.sysconfig import get_python_lib
 
 setup(
     name = 'chroma-cluster-sim',
@@ -30,7 +31,7 @@ setup(
     author = "Intel Corporation",
     packages = find_packages(),
     include_package_data = True,
-    data_files=[('/usr/lib/python2.6/site-packages/cluster_sim', ['cluster_sim/MDT_STAT_TEMPLATE.json', 'cluster_sim/OST_STAT_TEMPLATE.json'])],
+    data_files=[(get_python_lib() + '/cluster_sim', ['cluster_sim/MDT_STAT_TEMPLATE.json', 'cluster_sim/OST_STAT_TEMPLATE.json'])],
     license = 'Proprietary',
     description = 'Cluster simulator',
     entry_points = {
