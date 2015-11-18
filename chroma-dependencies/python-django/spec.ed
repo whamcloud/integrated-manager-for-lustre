@@ -4,7 +4,15 @@ Release:        2.wc2%{?dist}
 /Patch1:/a
 Patch2:         Django-1.4-19903--Fixed_unbalanced_setUp_tearDown_calls_in_LiveServerAddress_test.patch
 .
+/BuildRequires:  python2-devel/a
+%if 0%{?rhel} > 6
+BuildRequires:  python-sphinx
+%else
+.
 /^BuildRequires:[   ][  ]python-sphinx/s/\(BuildRequires:[  ][  ]*python-sphinx\)/\110/
+/%endif/a
+%endif
+.
 g/^%find_lang/d
 /^cat djangojs.lang/c
 # forward-port %find_lang workaround
