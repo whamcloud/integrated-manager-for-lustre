@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -33,7 +33,12 @@ import socket
 
 from daemon.daemon import set_signal_handlers
 from daemon import DaemonContext
-from daemon.pidlockfile import PIDLockFile
+# pidlockfile was split out of daemon into it's own package in 1.6
+try:
+    from daemon.pidlockfile import PIDLockFile
+    assert PIDLockFile  # Silence Pyflakes
+except ImportError:
+    from lockfile.pidlockfile import PIDLockFile
 
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
@@ -166,7 +171,7 @@ def main():
             daemon_log.error("No configuration found (must be registered before running the agent service)")
             return
 
-        if config.get('settings', 'profile')['managed'] == False:
+        if config.get('settings', 'profile')['managed'] is False:
             # This is kind of terrible. The design of DevicePluginManager is
             # such that it can be called with either class methods or
             # instantiated and then called with instance methods. As such,
