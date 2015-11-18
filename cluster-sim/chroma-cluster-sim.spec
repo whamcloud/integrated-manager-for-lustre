@@ -1,12 +1,12 @@
 %{!?name: %define name chroma-cluster-sim}
 %{?!version: %define version %(%{__python} -c "from cluster_sim import version; sys.stdout.write(version())")}
-%{?!release: %define release 1}
+%{?!package_release: %define package_release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 Summary: Chroma Cluster Simulator
 Name: %{name}
 Version: %{version}
-Release: %{release}
+Release: %{package_release}
 Source0: %{name}-%{version}.tar.gz
 License: Proprietary
 Group: Development/Libraries

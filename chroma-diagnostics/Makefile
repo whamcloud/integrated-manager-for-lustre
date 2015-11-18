@@ -24,7 +24,7 @@ rpms: cleandist tarball
 	cp chroma-diagnostics.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \
-		--define "release $(PACKAGE_RELEASE)" \
+		--define "package_release $(PACKAGE_RELEASE)" \
 		-bb _topdir/SPECS/chroma-diagnostics.spec
 	mv _topdir/RPMS/noarch/chroma-diagnostics-*.noarch.rpm dist/
 	rm -rf _topdir

@@ -42,7 +42,7 @@ rpms: production cleandist tarball
 	cp chroma-agent.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \
-		--define "release $(PACKAGE_RELEASE)" \
+		--define "package_release $(PACKAGE_RELEASE)" \
 		-bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir

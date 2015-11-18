@@ -1,12 +1,12 @@
 %{!?name: %define name chroma-agent}
 %{?!version: %define version %(%{__python} -c "from chroma_agent import version; sys.stdout.write(version())")}
-%{?!release: %define release 1}
+%{?!package_release: %define package_release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 Summary: Chroma Agent
 Name: %{name}
 Version: %{version}
-Release: %{release}
+Release: %{package_release}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh
