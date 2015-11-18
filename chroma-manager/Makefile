@@ -241,7 +241,7 @@ requirements:
 	fi
 
 download: requirements ziplocker.stamp
-	pip-python install --download ../chroma-externals -r requirements.txt
+	pip install --download ../chroma-externals -r requirements.txt
 	cd realtime && \
 	../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/' --no-overrides.askQuestions
 
