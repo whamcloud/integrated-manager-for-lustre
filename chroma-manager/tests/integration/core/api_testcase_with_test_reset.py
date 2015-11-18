@@ -513,12 +513,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         alerts = self.get_list("/api/alert/", data)
         self.assertIn(uri, [a['alert_item'] for a in alerts], [a['alert_item'] for a in alerts])
 
-    def get_alert(self, uri, regex=None, alert_type=None):
+    def get_alert(self, uri, regex=None, alert_type=None, active=True):
         """Given that there is an active alert for object `uri` whose
            message matches `regex`, return it.  Raise an AssertionError
            if no such alert exists"""
 
-        all_alerts = self.get_list("/api/alert/", {'active': True,
+        all_alerts = self.get_list("/api/alert/", {'active': active,
                                                    'limit': 0})
         alerts = [a for a in all_alerts if a['alert_item'] == uri]
         if not alerts:
