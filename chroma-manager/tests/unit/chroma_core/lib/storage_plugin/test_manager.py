@@ -4,6 +4,7 @@ import os
 from django.test import TestCase
 from chroma_core.management.commands.validate_storage_plugin import Command as ValidateCommand
 import settings
+import shutil
 
 
 class TestCornerCases(TestCase):
@@ -147,6 +148,10 @@ class TestValidate(TestCase):
         self.assertListEqual(errors, [])
 
     def test_junk(self):
-        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "junk.py"))
+        src = os.path.join(os.path.abspath(os.path.dirname(__file__)), "junk.not-really-py")
+        dst = os.path.join(os.path.abspath(os.path.dirname(__file__)), "junk.py")
+        shutil.copy(src, dst)
+        errors = ValidateCommand().execute(dst)
+        os.remove(dst)
         self.assertEqual(len(errors), 1)
         self.assertTrue(errors[0].startswith("SyntaxError:"), errors[0])
