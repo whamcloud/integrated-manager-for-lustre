@@ -6,7 +6,7 @@
 Summary: Chroma Diagnostics
 Name: %{name}
 Version: %{version}
-Release: %{package_release}
+Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
 License: Proprietary
 Group: Development/Libraries

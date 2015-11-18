@@ -6,7 +6,7 @@
 Summary: Chroma Agent
 Name: %{name}
 Version: %{version}
-Release: %{package_release}
+Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh

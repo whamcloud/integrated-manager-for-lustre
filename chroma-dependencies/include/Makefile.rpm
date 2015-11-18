@@ -17,15 +17,23 @@ endif
 NAME         ?= $(patsubst python-%,%,$(RPM_NAME))
 REQUIREMENT  ?= $(NAME)==$(RPM_VERSION)
 
-rpms: $(RPM_NAME).spec
+rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
 	if $(PLAT_BUILD_OK); then                                                                               \
 		for dep in $(DEPS); do                                                                          \
 			$(MAKE) -C ../$$dep pkg_install;                                                        \
 		done;                                                                                           \
 		$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@; \
+		for dep in $(DEPS); do                                                                          \
+			$(MAKE) -C ../$$dep pkg_uninstall;                                                      \
+		done;                                                                                           \
 	fi
 
 install pkg_install: rpms
+	if $(PLAT_BUILD_OK); then                                                                                   \
+		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
+	fi
+
+uninstall pkg_uninstall:
 	if $(PLAT_BUILD_OK); then                                                                                   \
 		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
 	fi

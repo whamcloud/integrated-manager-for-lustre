@@ -2,6 +2,7 @@
 a
 %define name python-%{tgz_name}
 .
+/^Release:/s/$/%{?dist}/
 /^Source0:/c
 Source0: %{tgz_name}-%{unmangled_version}.tar.gz
 .

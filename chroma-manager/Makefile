@@ -222,7 +222,7 @@ rpms: cleandist tarball
 		--define "version $(PACKAGE_VERSION)" \
 		--define "package_release $(PACKAGE_RELEASE)" \
 		-bb _topdir/SPECS/chroma-manager.spec
-	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).$(ARCH).rpm dist/
+	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist}).$(ARCH).rpm dist/
 	rm -rf _topdir
 
 requirements:

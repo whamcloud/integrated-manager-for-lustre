@@ -9,7 +9,7 @@
 Summary: The Intel Manager for Lustre Monitoring and Administration Interface
 Name: %{name}
 Version: %{version}
-Release: %{package_release}
+Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-supervisor-init.sh
 Source2: chroma-host-discover-init.sh

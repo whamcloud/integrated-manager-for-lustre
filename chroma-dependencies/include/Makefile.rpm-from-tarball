@@ -19,13 +19,19 @@ else
 	REQUIREMENT ?= file://$(CHROMA_EXTERNALS_DIR)$(TARBALL)
 endif
 
-rpms: $(SPECNAME) $(TARBALL)
-	for dep in $(DEPS); do                 \
+rpms: $(SPECNAME) $(TARBALL) ../include/Makefile.rpmbuild ../include/Makefile.install
+	for dep in $(DEPS); do                   \
 		$(MAKE) -C ../$$dep pkg_install; \
 	done
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
+	for dep in $(DEPS); do                     \
+		$(MAKE) -C ../$$dep pkg_uninstall; \
+	done
 
 install pkg_install: rpms
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS=$(RPM_OPTS) SPECFILE="$(SPECNAME)" $@
+
+uninstall pkg_uninstall:
 	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS=$(RPM_OPTS) SPECFILE="$(SPECNAME)" $@
 
 # Grab a tarball and build without all the python stuff
