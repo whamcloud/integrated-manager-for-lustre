@@ -1,4 +1,4 @@
-BUILDER_IS_EL6 = $(shell rpm --eval '%{?el6:true}%{!?el6:false}')
+BUILDER_IS_EL = $(shell rpm --eval '%{?rhel:true}%{!?rhel:false}')
 
 # Top-level Makefile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
@@ -19,13 +19,13 @@ dist: cleandist
 	mkdir dist
 
 agent:
-	# On non-EL6 builders, we'll only do an agent build
-	$(BUILDER_IS_EL6) || $(MAKE) -C chroma-agent $(TARGET)
-	$(BUILDER_IS_EL6) || cp -a chroma-agent/dist/* dist/
+	# On non-EL[67] builders, we'll only do an agent build
+	$(BUILDER_IS_EL) || $(MAKE) -C chroma-agent $(TARGET)
+	$(BUILDER_IS_EL) || cp -a chroma-agent/dist/* dist/
 
 $(SUBDIRS): dist agent
 	set -e; \
-	if $(BUILDER_IS_EL6); then \
+	if $(BUILDER_IS_EL); then \
 		$(MAKE) -C $@ $(TARGET); \
 		if [ $(TARGET) != download -a -d $@/dist/ ]; then \
 			cp -a $@/dist/* dist/; \

@@ -13,6 +13,9 @@ dist/
 *.egg-info/
 node_modules
 simulator_state_*
+artifacts
+chroma-bundles/*/repo
+chroma-bundles/ieel-*.tar.gz
 chroma-dependencies/*/.last_built
 chroma-dependencies/*/6.[345]
 chroma-dependencies/*/*.zip
@@ -44,3 +47,6 @@ chroma-dependencies/greenlet/spec.ed
 chroma-dependencies/anyjson/spec.ed
 chroma-dependencies/pssh/spec.ed
 chroma-dependencies/python-mimeparse/spec.ed
+chroma-dependencies/repo-*
+chroma-manager/myenv/
+chroma_unit_test_env/

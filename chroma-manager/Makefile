@@ -70,6 +70,7 @@ develop: version realtime.stamp view-server.stamp
 
 $(NPM):
 	@echo "You need to install $@ first... (brew install $@?)"
+	@echo "Or maybe you don't even have the which(1) command"
 	exit 1
 
 ziplocker.stamp: ui-modules/node/ziplocker/ziplock.json $(NPM)

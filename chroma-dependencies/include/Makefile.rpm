@@ -18,13 +18,17 @@ NAME         ?= $(patsubst python-%,%,$(RPM_NAME))
 REQUIREMENT  ?= $(NAME)==$(RPM_VERSION)
 
 rpms: $(RPM_NAME).spec
-	for dep in $(DEPS); do                 \
-		$(MAKE) -C ../$$dep pkg_install; \
-	done
-	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
+	if $(PLAT_BUILD_OK); then                                                                               \
+		for dep in $(DEPS); do                                                                          \
+			$(MAKE) -C ../$$dep pkg_install;                                                        \
+		done;                                                                                           \
+		$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@; \
+	fi
 
 install pkg_install: rpms
-	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@
+	if $(PLAT_BUILD_OK); then                                                                                   \
+		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
+	fi
 
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
