@@ -13,6 +13,9 @@ ALL_RPMS = pcapy-0.10.8-5.el7.x86_64.rpm \
            nodejs-0.10.36-3.el7.x86_64.rpm \
            http-parser-2.0-4.20121128gitcd01361.el7.x86_64.rpm \
            libuv-0.10.34-1.el7.x86_64.rpm \
+           python-paramiko-1.15.1-1.el7.noarch.rpm \
+           python-crypto-2.6.1-1.el7.x86_64.rpm \
+           python-ecdsa-0.11-3.el7.noarch.rpm \
            erlang-erts-R16B-03.11.el7.x86_64.rpm \
            erlang-mnesia-R16B-03.11.el7.x86_64.rpm \
            erlang-os_mon-R16B-03.11.el7.x86_64.rpm \
@@ -32,6 +35,7 @@ ALL_RPMS = pcapy-0.10.8-5.el7.x86_64.rpm \
            erlang-stdlib-R16B-03.11.el7.x86_64.rpm \
            erlang-syntax_tools-R16B-03.11.el7.x86_64.rpm \
            erlang-tools-R16B-03.11.el7.x86_64.rpm
+REQUIREMENTS += pycrypto==2.6.1
 else
 ALL_RPMS = pcapy-0.10.5-6.el6.x86_64.rpm \
            python-argparse-1.2.1-2.el6.noarch.rpm \
@@ -53,6 +57,6 @@ ALL_RPMS = pcapy-0.10.5-6.el6.x86_64.rpm \
 REQUIREMENTS += python-daemon==1.5.2
 endif
 
-NO_REQUIREMENT = pcapy python-daemon v8 nodejs http-parser libuv c-ares19 erlang-erts erlang-mnesia erlang-os_mon erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler erlang-crypto erlang-hipe erlang-inets erlang-kernel erlang-otp_mibs erlang-public_key erlang-runtime_tools erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools erlang-tools
+NO_REQUIREMENT = pcapy python-daemon v8 nodejs http-parser libuv c-ares19 python-crypto erlang-erts erlang-mnesia erlang-os_mon erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler erlang-crypto erlang-hipe erlang-inets erlang-kernel erlang-otp_mibs erlang-public_key erlang-runtime_tools erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools erlang-tools
 
 include ../include/Makefile.fetch-from-repo
