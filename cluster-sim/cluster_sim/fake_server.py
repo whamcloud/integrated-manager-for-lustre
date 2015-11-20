@@ -34,10 +34,11 @@ from chroma_agent.crypto import Crypto
 from chroma_agent.agent_client import AgentClient
 
 from cluster_sim.log import log
-from cluster_sim.utils import Persisted, perturb
+from cluster_sim import utils
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
+
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
@@ -48,13 +49,8 @@ MIN_SHUTDOWN_DURATION = 10
 # this long.
 MIN_STARTUP_DURATION = 20
 
-# It is my intention to create a factory class that will actually allow these to be created with a definition
-# like the namedtuple.
-# PacemakerState = namedstruct(PacemakerState, ['state'])
-# CorosyncState = namedstruct(CorosyncState, ['state', 'mcast_port])
 
-
-class PacemakerState(dict):
+class PacemakerState(utils.DictStruct):
     def __init__(self, state):
         super(PacemakerState, self).__init__()
         self['state'] = state
@@ -82,7 +78,7 @@ class CorosyncState(PacemakerState):
         self['mcast_port'] = value
 
 
-class FakeServer(Persisted):
+class FakeServer(utils.Persisted):
     """Represent a single storage server.  Initialized with an arbitrary
     hostname and NIDs, subsequently manages/modifies its own /proc/ etc.
     """
@@ -907,7 +903,7 @@ class FakeServer(Persisted):
                 }
             }
 
-        self.state['stats']['meminfo']['MemFree'] = perturb(self.state['stats']['meminfo']['MemFree'], 5000, 0, self.state['stats']['meminfo']['MemTotal'])
+        self.state['stats']['meminfo']['MemFree'] = utils.perturb(self.state['stats']['meminfo']['MemFree'], 5000, 0, self.state['stats']['meminfo']['MemTotal'])
 
         user_inc = random.randint(50, 100)
         idle_inc = random.randint(50, 100)
