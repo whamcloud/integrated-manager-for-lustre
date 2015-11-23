@@ -1,6 +1,8 @@
-SRC_REPO = http://nginx.org/packages/centos/6/x86_64/RPMS/
+EL_MAJOR = $(shell rpm --eval '%{?rhel}')
 
-ALL_RPMS = nginx-1.6.2-1.el6.ngx.x86_64.rpm
+SRC_REPO = http://nginx.org/packages/centos/$(EL_MAJOR)/x86_64/RPMS/
+
+ALL_RPMS = nginx-1.8.0-1.el$(EL_MAJOR).ngx.x86_64.rpm
 NO_REQUIREMENT = nginx
 
 rpm_file:
