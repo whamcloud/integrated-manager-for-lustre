@@ -31,7 +31,6 @@ from django.db import IntegrityError
 
 from chroma_core.models.sparse_model import SparseModel
 from chroma_core.models import utils as conversion_util
-from chroma_core.lib.util import time_str
 from chroma_core.lib.job import job_log
 
 
@@ -58,7 +57,7 @@ class AlertStateBase(SparseModel):
     end = models.DateTimeField(help_text = "Time at which the alert was resolved\
             if active is false, else time that the alert was last checked (e.g.\
             time when we last checked an offline target was still not offline)",
-                               default=timezone.now)
+                               null=True)
 
     # Note: use True and None instead of True and False so that
     # unique-together constraint only applied to active alerts
@@ -99,29 +98,12 @@ class AlertStateBase(SparseModel):
 
     active_bool = property(get_active_bool, set_active_bool)
 
-    def to_dict(self):
-        return {
-         'alert_severity': 'alert',  # FIXME: Still need to figure out wheather to pass enum or display string.
-         'alert_item': str(self.alert_item),
-         'alert_message': self.message(),
-         'message': self.message(),
-         'active': bool(self.active),
-         'begin': time_str(self.begin),
-         'end': time_str(self.end),
-         'id': self.id,
-         'alert_item_id': self.alert_item_id,
-         'alert_item_content_type_id': self.alert_item_type_id
-        }
-
     @property
     def affected_objects(self):
         """
         :return: A list of objects other than the alert_item that are affected by this alert
         """
         return []
-
-    def duration(self):
-        return self.end - self.begin
 
     def end_event(self):
         return None
@@ -131,12 +113,6 @@ class AlertStateBase(SparseModel):
 
     def affected_targets(self, affect_target):
         pass
-
-    # This addition is because when we are querying notifications it is useful to be able
-    # query by created_at begin is clearly the best analogy
-    @property
-    def created_at(self):
-        return self.begin
 
     @classmethod
     def subclasses(cls):
@@ -214,8 +190,6 @@ class AlertStateBase(SparseModel):
 
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
-            alert_state.end = timezone.now()
-            alert_state.save()
         except cls.DoesNotExist:
             kwargs.update(attrs_to_save)
 
