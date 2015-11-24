@@ -66,13 +66,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['AutoConfigureCorosyncJob'])
 
-        # Adding model 'SetupWorkertJob'
-        db.create_table('chroma_core_setupworkertjob', (
+        # Adding model 'SetupWorkerJob'
+        db.create_table('chroma_core_setupworkerjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('target_object', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
         ))
-        db.send_create_signal('chroma_core', ['SetupWorkertJob'])
+        db.send_create_signal('chroma_core', ['SetupWorkerJob'])
 
         # Adding model 'ConfigureRSyslogJob'
         db.create_table('chroma_core_configurersyslogjob', (
@@ -279,8 +279,8 @@ class Migration(SchemaMigration):
         # Deleting model 'AutoConfigureCorosyncJob'
         db.delete_table('chroma_core_autoconfigurecorosyncjob')
 
-        # Deleting model 'SetupWorkertJob'
-        db.delete_table('chroma_core_setupworkertjob')
+        # Deleting model 'SetupWorkerJob'
+        db.delete_table('chroma_core_setupworkerjob')
 
         # Deleting model 'ConfigureRSyslogJob'
         db.delete_table('chroma_core_configurersyslogjob')
@@ -1143,8 +1143,8 @@ class Migration(SchemaMigration):
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"})
         },
-        'chroma_core.setupworkertjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'SetupWorkertJob'},
+        'chroma_core.setupworkerjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'SetupWorkerJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"})

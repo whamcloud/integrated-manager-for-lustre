@@ -816,7 +816,7 @@ class SetupMonitoredHostJob(NullStateChangeJob):
         return host.is_monitored
 
 
-class SetupWorkertJob(NullStateChangeJob):
+class SetupWorkerJob(NullStateChangeJob):
     target_object = models.ForeignKey(ManagedHost)
     state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'working')
     _long_description = help_text['setup_worker_host']
