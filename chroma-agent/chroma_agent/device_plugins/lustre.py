@@ -222,7 +222,6 @@ class LustrePlugin(DevicePlugin):
         }
 
     def start_session(self):
-        super(LustrePlugin, self).start_session()
         self.reset_state()
         self._reset_delta()
         return self._delta_result(self._scan(initial=True), self.delta_fields)

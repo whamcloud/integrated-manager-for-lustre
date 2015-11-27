@@ -23,6 +23,7 @@
 
 import json
 import logging
+from collections import defaultdict
 
 from django.db import models
 from django.db import transaction
@@ -51,6 +52,7 @@ from chroma_core.lib.job import DependOn, DependAll, DependAny, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableMetaclass
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
+from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
 
 import settings
 
@@ -508,14 +510,9 @@ class UpdateDevicesStep(Step):
     # Require database to talk to plugin_manager
     database = True
 
-    def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+    def update_devices(self, host, plugin_data):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        # Get the device-scan output
-        host = kwargs['host']
-
-        plugin_data = {}
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for plugin in storage_plugin_manager.loaded_plugin_names:
             try:
@@ -523,9 +520,24 @@ class UpdateDevicesStep(Step):
             except AgentException as e:
                 self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
 
-        # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
-        if (plugin_data != {}):
-            AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
+    def run(self, kwargs):
+        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+
+        threads = []
+        plugins_data = defaultdict(dict)
+
+        for host in kwargs['hosts']:
+            thread = ExceptionThrowingThread(target=self.update_devices,
+                                             args=(host, plugins_data[host]))
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+
+        for host, plugin_data in plugins_data.items():
+            # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
+            if plugin_data != {}:
+                AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
 
 
 class DeployStep(Step):
@@ -824,16 +836,20 @@ class DetectTargetsStep(Step):
     def is_dempotent(self):
         return True
 
+    def detect_scan(self, host, host_data, target_devices):
+        host_data[host] = self.invoke_agent(host, 'detect_scan', {"target_devices": target_devices})
+
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         from chroma_core.lib.detection import DetectScan
 
         # Get all the host data
-        # FIXME: HYD-1120: should do this part in parallel
         host_data = {}
+        threads = []
+        host_target_devices = defaultdict(list)
+
         for host in ManagedHost.objects.filter(id__in = kwargs['host_ids']):
             volume_nodes = VolumeNode.objects.filter(host = host)
-            target_devices = []
 
             for volume_node in volume_nodes:
                 resource = volume_node.volume.storage_resource.to_resource()
@@ -842,14 +858,19 @@ class DetectTargetsStep(Step):
                 except AttributeError:
                     uuid = None
 
-                target_devices.append({"path": volume_node.path,
-                                       "type": resource.device_type(),
-                                       "uuid": uuid})
+                host_target_devices[host].append({"path": volume_node.path,
+                                                  "type": resource.device_type(),
+                                                  "uuid": uuid})
 
             with transaction.commit_on_success():
                 self.log("Scanning server %s..." % host)
-            data = self.invoke_agent(host, 'detect_scan', {"target_devices": target_devices})
-            host_data[host] = data
+
+            thread = ExceptionThrowingThread(target=self.detect_scan,
+                                             args=(host, host_data, host_target_devices[host]))
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
 
         with transaction.commit_on_success():
             DetectScan(self).run(host_data)
@@ -868,8 +889,8 @@ class DetectTargetsJob(HostListMixin):
         return "Scan for Lustre targets"
 
     def get_steps(self):
-        return [(UpdateDevicesStep, {'host': host}) for host in self.hosts] + \
-               [(DetectTargetsStep, {'host_ids': [h.id for h in self.hosts]})]
+        return [(UpdateDevicesStep, {'hosts': self.hosts}),
+                (DetectTargetsStep, {'host_ids': [h.id for h in self.hosts]})]
 
 
 class SetHostProfileStep(Step):
@@ -944,8 +965,7 @@ class UpdateDevicesJob(HostListMixin):
         return DependAll(DependOn(host.lnet_configuration, 'lnet_up') for host in self.hosts)
 
     def get_steps(self):
-        return [(UpdateDevicesStep, {'host': host})
-                for host in self.hosts]
+        return [(UpdateDevicesStep, {'hosts': self.hosts})]
 
     class Meta:
         app_label = 'chroma_core'

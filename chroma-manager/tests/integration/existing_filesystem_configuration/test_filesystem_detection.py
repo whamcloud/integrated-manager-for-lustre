@@ -5,6 +5,7 @@ import time
 
 from testconfig import config
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
 class TestFilesystemDetection(StatsTestCaseMixin):
@@ -53,7 +54,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             )
             self.assertEqual(response.successful, True, response.text)
             command = response.json
-            self.wait_for_command(self.chroma_manager, command['id'])
+            self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
 
             # Verify it detected the filesystem
             filesystems = self._filesystems

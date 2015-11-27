@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -591,6 +591,6 @@ class NidsHandler(Handler):
         host = self.api.endpoints['host'].show(ns.subject)
         kwargs = {'message': "Updating device info on %s" % host.label,
                   'jobs': [{'class_name': 'UpdateDevicesJob', 'args': {
-                      'host_id': host['id']
+                      'hosts': [host]
         }}]}
         self.output(self.api.endpoints['command'].create(**kwargs))

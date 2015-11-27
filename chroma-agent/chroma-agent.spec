@@ -23,7 +23,7 @@ BuildArch: noarch
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
-Requires: ntp python-argparse python-daemon python-setuptools python-requests >= 2.6.0 python-tablib yum-utils
+Requires: ntp python-argparse python-daemon python-setuptools python-dateutil >= 1.5 python-requests >= 2.6.0 python-tablib yum-utils
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
@@ -38,7 +38,7 @@ Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
 Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6 pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-cli <= 1.1.7-6.wc2.el6
-Requires: %{name} = %{version}-%{release} rsyslog pcs pacemaker > 1.1.7-6.wc2.el6 python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket system-config-firewall-base ed at
+Requires: %{name} = %{version}-%{release} rsyslog pcs pacemaker > 1.1.7-6.wc2.el6 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket system-config-firewall-base ed at
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
