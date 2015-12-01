@@ -1,9 +1,6 @@
-#PLAT_NAME	:= $(shell $(TOP)/include/platform_info --name)
-#PLAT_VERSION	:= $(shell $(TOP)/include/platform_info --release)
-#PLAT_BUILD_OK	:= $(shell $(TOP)/include/platform_info --buildok $(CURDIR))
-PLAT_NAME      := centos
-PLAT_VERSION   := 6.4
-PLAT_BUILD_OK  := true
+PLAT_NAME	:= $(shell $(TOP)/include/platform_info --name)
+PLAT_VERSION	:= $(shell $(TOP)/include/platform_info --release)
+PLAT_BUILD_OK	:= $(shell $(TOP)/include/platform_info --buildok $(CURDIR))
 
 # Don't use platform in _topdir for Jenkins builds
 #ifeq ('$(WORKSPACE)', '')

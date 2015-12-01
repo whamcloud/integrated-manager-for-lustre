@@ -28,7 +28,7 @@ def build_ok?(dir, ohai)
   # otherwise see if there was a specific platform match.
   if %w{centos redhat}.include?(ohai[:platform])
     tmp = ohai.clone
-    tmp[:platform] = "el"
+    tmp.data[:platform] = "el"
     return true if build_ok?(dir, tmp)
   end
 
