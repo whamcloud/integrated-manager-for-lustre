@@ -20,11 +20,8 @@
 # express and approved by Intel in writing.
 
 
-import os
-from tempfile import mkstemp
-
-from chroma_agent.lib.shell import AgentShell
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
+from chroma_agent.chroma_common.lib.ntp import AgentNTPConfig
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 from chroma_agent.lib.service_control import ServiceControl
 
 
@@ -32,95 +29,20 @@ ntp_service = ServiceControl.create('ntp')
 
 
 def unconfigure_ntp():
-    '''
-    Unconfigure the ntp client
+    """Unconfigure the ntp client
 
-    Return: Value using simple return protocol
-    '''
-    return configure_ntp(ntp_server = "")
+    :return: Value using simple return protocol
+    """
+    configure_ntp(None)
 
 
 def configure_ntp(ntp_server):
-    '''
-    Configure the ntp client
+    """Change the ntp configuration file to use the server passed
 
-    Return: Value using simple return protocol
-    '''
-    added_server = False
-    PRECHROMA_NTP_FILE = '/etc/ntp.conf.pre-chroma'
-    NTP_FILE = '/etc/ntp.conf'
-    COMMENT_PREFIX = "# Commented by chroma-agent: "
-    ADD_SUFFIX = " # Added by chroma-agent"
-
-    tmp_f, tmp_name = mkstemp(dir = '/etc')
-
-    f = open(NTP_FILE, 'r')
-
-    for line in f.readlines():
-        if ntp_server:
-            # Comment out existing server lines and add one of our own
-            if line.startswith("server "):
-                if not added_server:
-                    os.write(tmp_f, "server %s%s\n" % (ntp_server, ADD_SUFFIX))
-                    added_server = True
-                line = "%s%s" % (COMMENT_PREFIX, line)
-        else:
-            # Remove anything we added, and uncomment anything we commented
-            if line.startswith("server "):
-                continue
-            elif line.startswith(COMMENT_PREFIX):
-                line = line[len(COMMENT_PREFIX):]
-        os.write(tmp_f, line)
-
-    if ntp_server and not added_server:
-        # This can happen if there was no existing 'server' line for
-        # us to insert before
-        os.write(tmp_f, "server %s%s\n" % (ntp_server, ADD_SUFFIX))
-
-    f.close()
-    os.close(tmp_f)
-    os.chmod(tmp_name, 0644)
-    if not os.path.exists(PRECHROMA_NTP_FILE):
-        os.rename(NTP_FILE, PRECHROMA_NTP_FILE)
-    os.rename(tmp_name, NTP_FILE)
-
-    if ntp_server:
-        timeout = 6
-        while timeout > 0:
-            # This rather strange code is a result of HYD-3988. The segfault SEEMS to be isolated to the case where
-            # 'service ntpdate restart' is run by shell._run . If as is the case here 'service ntpdate restart' runs
-            # whilst shell._run is executing then the segfault does not occur.
-            # This is evidenced by the fact that the code below runs 'service ntpdate restart' in 1 minute and then
-            # runs another command to detect that it was run. This doesn't cause a segfault. At some point once the
-            # root cause is resolved the patch should be reverted back to some reasonable code.
-            tmp_f, tmp_name = mkstemp(dir = '/root')
-            os.write(tmp_f, "service ntpd stop\nservice ntpdate restart\nservice ntpd start\nrm -f %s" % tmp_name)
-            os.close(tmp_f)
-
-            # So run the service commands via the file above in 1 min - then wait for the command to finish by looking
-            # for the self deleting file to exit. Not the action runner process will timeout these commands should they
-            # hang
-            AgentShell.try_run(['at', '-M', 'now', '+0', 'min', '-f', tmp_name])
-            AgentShell.try_run(['bash', '-c', 'while [ -f %s ]; do echo *; sleep 1; done' % tmp_name])
-
-            rc, stdout, stderr = AgentShell.run(['service', 'ntpdate', 'status'])
-
-            if rc == 0:
-                break
-            else:
-                timeout -= 1
-
-        # did we time out?
-        if timeout <= 0:
-            return agent_error("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
-    else:
-        # With no server, just restart ntpd, don't worry about the sync
-        error = AgentShell.run_canned_error_message(['service', 'ntpd', 'restart'])
-
-        if error:
-            return agent_error(error)
-
-    return agent_result_ok
+    :return: Value using simple return protocol
+    """
+    ntp = AgentNTPConfig()
+    return agent_ok_or_error(ntp.add(ntp_server))
 
 
 ACTIONS = [configure_ntp, unconfigure_ntp]

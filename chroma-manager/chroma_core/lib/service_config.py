@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,6 @@
 import hashlib
 import logging
 import getpass
-import re
 import socket
 import sys
 import xmlrpclib
@@ -31,7 +30,6 @@ import time
 import os
 import json
 import tempfile
-from tempfile import mkstemp
 import shutil
 import errno
 
@@ -49,6 +47,7 @@ from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
+from chroma_core.chroma_common.lib.ntp import ManagerNTPConfig
 
 
 log = logging.getLogger('installation')
@@ -81,98 +80,6 @@ class SupervisorStatus(object):
 
     def get_non_running_services(self):
         return [p['name'] for p in SupervisorStatus().get_all_process_info() if p['statename'] != 'RUNNING']
-
-
-class NTPConfig:
-    CONFIG_FILE = "/etc/ntp.conf"
-    PRE_CHROMA_CONFIG_FILE = "/etc/ntp.conf.pre-chroma"
-    SENTINEL = "# Added by chroma-manager\n"
-    COMMENTED = "# Commented out by chroma-manager: "
-
-    def __init__(self, config_file = CONFIG_FILE):
-        self.config_file = config_file
-
-    def open_conf_for_edit(self):
-        tmp_f, tmp_name = tempfile.mkstemp(dir = '/etc')
-        f = open(self.config_file, 'r')
-        return tmp_f, tmp_name, f
-
-    def close_conf(self, tmp_f, tmp_name, f):
-        f.close()
-        os.close(tmp_f)
-        if not os.path.exists(self.PRE_CHROMA_CONFIG_FILE):
-            os.rename(self.config_file, self.PRE_CHROMA_CONFIG_FILE)
-        os.chmod(tmp_name, 0644)
-        os.rename(tmp_name, self.config_file)
-
-    def get_configured_server(self):
-        """Return the currently IML set server found in the ntp conf file
-
-        if IML did not set the server or if any error occurs return None.
-        If IML did set the server, return that value
-        """
-
-        with open(self.config_file, 'r') as f:
-            ntp_conf_text = f.read()
-        server = None
-        if self.SENTINEL in ntp_conf_text:
-            #  Only consider returning if IML set the value
-            match = re.search('^\s*server\s+(\S+)', ntp_conf_text, re.MULTILINE)
-            if match:
-                try:
-                    server = match.group(1)
-                    if server == "127.127.1.0":
-                        server = "localhost"
-                except IndexError:
-                    pass
-
-        return server
-
-    def remove(self):
-        """Remove our config section from the ntp config file, or do
-        nothing if our section is not there"""
-        tmp_f, tmp_name, f = self.open_conf_for_edit()
-        skip = False
-        server = None
-        for line in f.readlines():
-            if skip:
-                if line.startswith("server "):
-                    server = line.split()[1]
-                    if server == "127.127.1.0":
-                        server = "localhost"
-                if line == self.SENTINEL:
-                    skip = False
-                continue
-            if line == self.SENTINEL:
-                skip = True
-                continue
-            if line.startswith(self.COMMENTED):
-                line = line[len(self.COMMENTED):]
-            os.write(tmp_f, line)
-        self.close_conf(tmp_f, tmp_name, f)
-
-        return server
-
-    def add(self, server):
-        tmp_f, tmp_name, f = self.open_conf_for_edit()
-        added_server = False
-        for line in f.readlines():
-            if line.startswith("server "):
-                line = "%s%s" % (self.COMMENTED, line)
-                if server != "localhost" and not added_server:
-                    line = "%sserver %s\n%s%s" % (self.SENTINEL, server, self.SENTINEL, line)
-                    added_server = True
-            # EL 6.4
-            if server == "localhost" and line.startswith("#fudge"):
-                line = "%s%sserver  127.127.1.0     # local clock\nfudge   127.127.1.0 stratum 10\n%s" % (line, self.SENTINEL, self.SENTINEL)
-                added_server = True
-            # EL 6.5
-            if server == "localhost" and not added_server and \
-               line.startswith("# Enable public key cryptography."):
-                line = "%sserver  127.127.1.0     # local clock\nfudge   127.127.1.0 stratum 10\n%s\n%s" % (self.SENTINEL, self.SENTINEL, line)
-                added_server = True
-            os.write(tmp_f, line)
-        self.close_conf(tmp_f, tmp_name, f)
 
 
 class ServiceConfig(CommandLine):
@@ -336,7 +243,7 @@ num  target     prot opt source               destination
         self.iptables("del", 'INPUT', ['-m', 'state', '--state', 'new', '-p',
                       proto, '--dport', str(port), '-j', 'ACCEPT'])
         try:
-            tmp = mkstemp(dir = "/etc/sysconfig")
+            tmp = tempfile.mkstemp(dir = "/etc/sysconfig")
             with os.fdopen(tmp[0], "w") as tmpf:
                 for line in open("/etc/sysconfig/iptables").readlines():
                     if line.rstrip() != "-A INPUT -m state --state NEW -m %s -p %s --dport %s -j ACCEPT" % (proto, proto, port):
@@ -348,7 +255,7 @@ num  target     prot opt source               destination
                 raise
 
         try:
-            tmp = mkstemp(dir = "/etc/sysconfig")
+            tmp = tempfile.mkstemp(dir = "/etc/sysconfig")
             with os.fdopen(tmp[0], "w") as tmpf:
                 for line in open("/etc/sysconfig/system-config-firewall").readlines():
                     if line.rstrip() != "--port=%s:udp" % port:
@@ -359,14 +266,14 @@ num  target     prot opt source               destination
             if e.errno != errno.ENOENT:
                 raise
 
-    def _setup_ntp(self, server = None):
+    def _setup_ntp(self, server=None):
         """
         Change the ntp configuration file to use the server passed.
 
         If no server is passed then use the existing setting and if there is no existing setting ask the user
         which server they would like to use.
         """
-        ntp = NTPConfig()
+        ntp = ManagerNTPConfig(logger=log)
         existing_server = ntp.get_configured_server()
 
         if not server:
@@ -375,22 +282,20 @@ num  target     prot opt source               destination
                 log.info("Using existing ntp server: %s" % existing_server)
             else:
                 # Only if you haven't already set it
-                server = self.get_input(msg = "NTP Server", default = 'localhost')
+                server = self.get_input(msg="NTP Server", default='localhost')
 
         log.info("Writing ntp configuration: %s " % server)
-        old_server = ntp.remove()
-        ntp.add(server)
+        error = ntp.add(server)
+        if error:
+            log.error("Failed to write ntp server (%s) to config file (%s), %s" % (server,
+                                                                                   ntp.CONFIG_FILE,
+                                                                                   error))
+            raise RuntimeError("Failure when writing ntp config: %s" % error)
         self._add_firewall_rule(123, "udp", "ntp")
-        self._start_ntp(old_server != server)
-
-    def _start_ntp(self, restart):
+        # TODO: always restart service, should we find a way to return if config file was changed
         self.try_shell(["chkconfig", "ntpd", "on"])
-        if restart:
-            log.info("Restarting ntp")
-            self.try_shell(['service', 'ntpd', 'restart'])
-        else:
-            log.info("Starting ntp")
-            self.try_shell(['service', 'ntpd', 'start'])
+        log.info("Restarting ntp")
+        self.try_shell(['service', 'ntpd', 'restart'])
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,16 +20,10 @@
 # express and approved by Intel in writing.
 
 
-# This file contains utility routines that can be used from all packages.
-# for example from chroma_agent.
-# import chroma_agent.chroma-common.lib.utils
-#
-# from chroma_core
-# import chroma_core.chroma-common.lib.utils
-
 import time
 import threading
-from collections import MutableSequence, namedtuple
+from collections import namedtuple
+from collections import MutableSequence
 
 ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
 
@@ -67,7 +61,8 @@ class ExpiringList(MutableSequence):
 
 class ExceptionThrowingThread(threading.Thread):
     def __init__(self, *args, **kwargs):
-        self._use_threads = kwargs.pop('use_threads', True)     # Sometimes not threading helps with debug.
+        # Sometimes not threading helps with debug.
+        self._use_threads = kwargs.pop('use_threads', True)
 
         if self._use_threads:
             super(ExceptionThrowingThread, self).__init__(*args, **kwargs)
@@ -98,11 +93,10 @@ class ExceptionThrowingThread(threading.Thread):
 
     @classmethod
     def wait_for_threads(cls, threads):
-        '''
-        Wait for all the threads to finish raising an exception if any of them raise an exception
-        We have to capture and then raise one of them because we can't re-raise all of the exceptions.
-        We do this to make sure all the threads exit before we start the next test.
-        '''
+        """Wait for all the threads to finish raising an exception if any of them raise an exception
+        We have to capture and then raise one of them because we can't re-raise all of the
+        exceptions. We do this to make sure all the threads exit before we start the next test.
+        """
 
         exception_raised = None
 
@@ -117,7 +111,9 @@ class ExceptionThrowingThread(threading.Thread):
 
 
 def all_subclasses(klass):
-    '''
-    :return: All the subclasses of the class passed, scanning the inheritance tree recursively to find ALL the subclasses.
-    '''
-    return klass.__subclasses__() + [child for subclass in klass.__subclasses__() for child in all_subclasses(subclass)]
+    """
+    :return: All the subclasses of the class passed, scanning the inheritance tree recursively
+             to find ALL the subclasses.
+    """
+    return klass.__subclasses__() + [child for subclass in klass.__subclasses__() for child in
+                                     all_subclasses(subclass)]
