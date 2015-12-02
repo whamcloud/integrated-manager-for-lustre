@@ -70,7 +70,7 @@ var hmnavpages = {
    checkChrome: true,
    ffCacheFix: false,
    printHL: true,
-   share: true,
+   share: false,
    banneroff: false
 }
 
@@ -162,11 +162,7 @@ var hmfb = {
      <br /><span id="feedbackText" class="navtextOn">Feedback</span>
      </div>
 
-<div class="naviconboxR">
-     <a id="navicon_social" href="javascript:void(0);" onclick="hmWebHelp.doSocial();"><img id="social_on" class="navicon" src="share.png" title="Show social sharing buttons" alt="Show social sharing buttons"/></a>
-     <img id="social_off" src="share_off.png" title="Share button disabled - registered server not found" />
-     <br /><span id="socialText" class="navtextOn">Share</span>
-     </div>
+
 <div class="naviconboxR">
      <a id="navicon_printer" href="javascript:void(0);" onclick="hmWebHelp.printTopic(hmWebHelp.activePage);"><img id="printer_on" class="navicon" src="printer.png" title="Print the current topic" alt="Print the current topic"/></a>
      <img id="printer_off" src="printer_off.png" />
