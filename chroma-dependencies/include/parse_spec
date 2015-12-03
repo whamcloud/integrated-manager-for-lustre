@@ -47,7 +47,9 @@ rpm_query()
   CLEAN_OPTS=$(clean_opts ${RPM_OPTS:-""})
 
   (local pkg n=1 basename
-  pkgs=$(eval rpm $CLEAN_OPTS --qf "'$format\n'" -q --specfile $specfile 2>/dev/null | sed -e 's/\*/\\*/g')
+  pkgs=$(eval rpm $CLEAN_OPTS --qf "'$format\n'" -q --specfile $specfile 2>/dev/null |
+         sed -e 's/\*/\\*/g' \
+             -e 's/\(\.el[0-9][0-9]*\)\.centos/\1/')
   # this is some nasty gymnastics.  the sed above is to escape any * in the
   # names so that they don't expand to any packages matching $pkg in the loop
   # below.  the only way to prevent the expansion in the loop below is to ""

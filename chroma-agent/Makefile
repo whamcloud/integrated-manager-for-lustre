@@ -36,14 +36,17 @@ rpms: production cleandist tarball
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES
 	cp chroma-agent-init.sh lustre-modules-init.sh logrotate.cfg \
-	   start-copytools.conf copytool.conf \
-	   start-copytool-monitors.conf copytool-monitor.conf \
+	   start-copytools.conf copytool.conf                        \
+	   start-copytool-monitors.conf copytool-monitor.conf        \
 	   _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
-	rpmbuild --define "_topdir $$(pwd)/_topdir" \
-		--define "version $(PACKAGE_VERSION)" \
-		--define "package_release $(PACKAGE_RELEASE)" \
-		-bb _topdir/SPECS/chroma-agent.spec
+	dist=$$(rpm --eval %dist);                             \
+	dist=$${dist/.centos/};                                \
+	rpmbuild --define "_topdir $$(pwd)/_topdir"            \
+		 --define "version $(PACKAGE_VERSION)"         \
+		 --define "package_release $(PACKAGE_RELEASE)" \
+		 --define "%dist $$dist"                       \
+		 -bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir
 

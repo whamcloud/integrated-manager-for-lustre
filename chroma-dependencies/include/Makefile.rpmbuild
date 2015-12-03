@@ -21,10 +21,13 @@ rpms: $(ALL_TARGETS)
 $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 	mkdir -p $(RPM_TOP)/{RPMS/{noarch,i686,x86_64},SRPMS,BUILD,TMP};        \
 	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS;                      \
+	dist=$$(rpm --eval %dist);                                              \
+	dist=$${dist/.centos/};                                                 \
 	sudo yum-builddep -y $(SPECFILE) &&                                     \
 	rpmbuild --define '%_topdir $(RPM_TOP)'                                 \
 		 --define '%_sourcedir $(SOURCEDIR)'                            \
 	         --define '%_tmppath $(RPM_TOP)/TMP'                            \
+	         --define "%dist $$dist"                                        \
 	         --define '%debug_package %{nil}'                               \
 	         $(RPM_OPTS)                                                    \
 	         $(RPMBUILD_OPTS)                                               \

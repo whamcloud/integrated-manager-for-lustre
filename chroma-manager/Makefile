@@ -203,11 +203,14 @@ rpms: cleandist tarball
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
 	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
-	rpmbuild --define "_topdir $$(pwd)/_topdir" \
-		--define "version $(PACKAGE_VERSION)" \
-		--define "package_release $(PACKAGE_RELEASE)" \
-		-bb _topdir/SPECS/chroma-manager.spec
-	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist}).$(ARCH).rpm dist/
+	dist=$$(rpm --eval %dist);                             \
+	dist=$${dist/.centos/};                                \
+	rpmbuild --define "_topdir $$(pwd)/_topdir"            \
+		 --define "version $(PACKAGE_VERSION)"         \
+		 --define "package_release $(PACKAGE_RELEASE)" \
+		 --define "%dist $$dist"                       \
+		 -bb _topdir/SPECS/chroma-manager.spec
+	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist} | sed -e 's/\(\.el[0-9][0-9]*\)\.centos/\1/').$(ARCH).rpm dist/
 	rm -rf _topdir
 
 requirements:
