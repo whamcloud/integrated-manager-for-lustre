@@ -22,9 +22,11 @@
 
 import os
 
-from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.syslog import SYSLOG_PORT
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
+from chroma_agent.lib.service_control import ServiceControl
+
+rsyslog_service = ServiceControl.create('rsyslog')
 
 
 def unconfigure_rsyslog():
@@ -47,7 +49,7 @@ def configure_rsyslog():
 
 def _configure_rsyslog(destination):
     from tempfile import mkstemp
-    tmp_f, tmp_name = mkstemp(dir = '/etc')
+    tmp_f, tmp_name = mkstemp(dir='/etc')
     f = open('/etc/rsyslog.conf', 'r')
     skip = False
     for line in f.readlines():
@@ -72,10 +74,8 @@ def _configure_rsyslog(destination):
 
     error = None
 
-    # signal the process
-    rc, stdout, stderr = AgentShell.run(['service', 'rsyslog', 'reload'])
-    if rc != 0:
-        error = AgentShell.run_canned_error_message(['service', 'rsyslog', 'restart'])
+    # signal the process and restart if the signal fails.
+    error = rsyslog_service.reload() and rsyslog_service.restart()
 
     return agent_ok_or_error(error)
 

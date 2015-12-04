@@ -25,6 +25,10 @@ from tempfile import mkstemp
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
+from chroma_agent.lib.service_control import ServiceControl
+
+
+ntp_service = ServiceControl.create('ntp')
 
 
 def unconfigure_ntp():

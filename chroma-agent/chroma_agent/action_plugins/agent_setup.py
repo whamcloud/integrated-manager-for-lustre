@@ -30,31 +30,39 @@ import os
 from chroma_agent import config
 from chroma_agent.agent_client import AgentClient, HttpError
 from chroma_agent.agent_daemon import ServerProperties
-from chroma_agent.lib.shell import AgentShell
 from chroma_agent.crypto import Crypto
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
+from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
+
+
+agent_service = ServiceControl.create('chroma-agent')
 
 
 def _service_is_running():
-    return AgentShell.run(["/sbin/service", "chroma-agent", "status"])[0] == 0
+    return agent_service.running
 
 
 def _start_service():
-    AgentShell.try_run(["/sbin/service", "chroma-agent", "start"])
+    return agent_ok_or_error(agent_service.start())
+
+
+def _stop_service():
+    return agent_ok_or_error(agent_service.stop())
 
 
 def _service_is_enabled():
-    return AgentShell.run(["/sbin/chkconfig", "chroma-agent"])[0] == 0
+    return agent_service.enabled
 
 
 def _enable_service():
-    AgentShell.try_run(["/sbin/chkconfig", "chroma-agent", "on"])
+    return agent_ok_or_error(agent_service.enable())
 
 
 def _disable_service():
-    AgentShell.try_run(["/sbin/chkconfig", "chroma-agent", "off"])
+    return agent_ok_or_error(agent_service.disable())
 
 
 def deregister_server():
@@ -70,11 +78,11 @@ def deregister_server():
     raise CallbackAfterResponse(None, disable_and_kill)
 
 
-def register_server(url, ca, secret, address = None):
+def register_server(url, ca, secret, address =None):
 
-    if _service_is_running():
+    if _service_is_running() is None:
         console_log.warning("chroma-agent service was running before registration, stopping.")
-        AgentShell.try_run(["/sbin/service", "chroma-agent", "stop"])
+        agent_service.stop()
 
     crypto = Crypto(config.path)
     # Call delete in case we are over-writing a previous configuration that wasn't removed properly
@@ -82,10 +90,10 @@ def register_server(url, ca, secret, address = None):
     crypto.install_authority(ca)
 
     agent_client = AgentClient(url + "register/%s/" % secret,
-        ActionPluginManager(),
-        DevicePluginManager(),
-        ServerProperties(),
-        crypto)
+                               ActionPluginManager(),
+                               DevicePluginManager(),
+                               ServerProperties(),
+                               crypto)
 
     registration_result = agent_client.register(address)
     crypto.install_certificate(registration_result['certificate'])
@@ -93,23 +101,24 @@ def register_server(url, ca, secret, address = None):
     config.set('settings', 'server', {'url': url})
 
     console_log.info("Enabling chroma-agent service")
-    AgentShell.try_run(["/sbin/chkconfig", "chroma-agent", "on"])
+    agent_service.enable()
 
     console_log.info("Starting chroma-agent service")
-    AgentShell.try_run(["/sbin/service", "chroma-agent", "start"])
+    agent_service.start()
 
     return registration_result
 
 
 def reregister_server(url, address):
     "Update manager url and register agent address with manager."
-    if _service_is_running():
+    if _service_is_running() is None:
         console_log.warning("chroma-agent service was running before registration, stopping.")
-        AgentShell.try_run(["/sbin/service", "chroma-agent", "stop"])
+        agent_service.stop()
 
     config.set('settings', 'server', {'url': url})
     crypto = Crypto(config.path)
-    agent_client = AgentClient(url + 'reregister/', ActionPluginManager(), DevicePluginManager(), ServerProperties(), crypto)
+    agent_client = AgentClient(url + 'reregister/', ActionPluginManager(), DevicePluginManager(), ServerProperties(),
+                               crypto)
     data = {'address': address, 'fqdn': agent_client._fqdn}
 
     try:
@@ -119,7 +128,7 @@ def reregister_server(url, address):
         raise
 
     console_log.info("Starting chroma-agent service")
-    AgentShell.try_run(["/sbin/service", "chroma-agent", "start"])
+    agent_service.start()
 
     return result
 

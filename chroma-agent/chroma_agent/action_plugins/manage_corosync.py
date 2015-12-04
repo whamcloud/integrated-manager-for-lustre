@@ -33,7 +33,7 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
 from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1
-
+from chroma_agent.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result, agent_ok_or_error
 
 
@@ -44,17 +44,28 @@ RSRC_FAIL_WINDOW = "20m"
 RSRC_FAIL_MIGRATION_COUNT = "3"
 
 
-def start_corosync():
-    error = AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
+corosync_service = ServiceControl.create('corosync')
 
-    if error:
-        return agent_error(error)
-    else:
-        return agent_result_ok
+
+def start_corosync():
+    return agent_ok_or_error(corosync_service.start())
 
 
 def stop_corosync():
-    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
+
+    return agent_ok_or_error(corosync_service.stop())
+
+
+def restart_corosync():
+    return agent_ok_or_error(corosync_service.restart())
+
+
+def check_corosync_enabled():
+    return corosync_service.enabled
+
+
+def enable_corosync():
+    return agent_ok_or_error(corosync_service.enable())
 
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
 
@@ -88,7 +99,8 @@ def configure_corosync(ring0_name,
 
     add_firewall_rule(mcast_port, "udp", "corosync")
 
-    error = AgentShell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
+    error = corosync_service.enable()
+
     if error:
         return agent_error(error)
 
@@ -108,20 +120,19 @@ def get_cluster_size():
     for line in stdout.rstrip().split('\n'):
         node_id, name, status = line.split(" ")
         if status == "member" or status == "lost":
-            n = n + 1
+            n += 1
 
     return n
 
 
 def unconfigure_corosync():
-    '''
-    Unconfigure the corosync application.
+    """
+      Unconfigure the corosync application.
 
-    Return: Value using simple return protocol
-    '''
-
-    AgentShell.try_run(['service', 'corosync', 'stop'])
-    AgentShell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
+      Return: Value using simple return protocol
+    """
+    corosync_service.stop()
+    corosync_service.disable()
     mcastport = None
 
     with open("/etc/corosync/corosync.conf") as f:
@@ -147,10 +158,10 @@ def unconfigure_corosync():
 
 
 def get_corosync_autoconfig():
-    '''
-    Automatically detect the configuration for corosync.
-    :return: dictionary containing 'result' or 'error'.
-    '''
+    """
+      Automatically detect the configuration for corosync.
+      :return: dictionary containing 'result' or 'error'.
+    """
     ring0 = get_ring0()
 
     if not ring0:

@@ -1,11 +1,16 @@
 import mock
-from collections import namedtuple
 from django.utils import unittest
 
 from chroma_agent.chroma_common.lib.shell import Shell
 
-CommandCaptureCommand = namedtuple("CommandCaptureCommand", ["args", "rc", "stdout", "stderr"])
-CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
+
+class CommandCaptureCommand(object):
+    def __init__(self, args, rc=0, stdout='', stderr='', executions_remaining=99999999):
+        self.args = args
+        self.rc = rc
+        self.stdout = stdout
+        self.stderr = stderr
+        self.executions_remaining = executions_remaining
 
 
 class CommandCaptureTestCase(unittest.TestCase):
@@ -23,13 +28,14 @@ class CommandCaptureTestCase(unittest.TestCase):
             self._commands_history.append(args)
 
             try:
-                result = self._get_command(args)
+                result = self._get_executable_command(args)
+                result.executions_remaining -= 1
 
                 return Shell.RunResult(result.rc, result.stdout, result.stderr, False)
             except KeyError:
                 return Shell.RunResult(2, "", self._missing_command_err_msg, False)
 
-    def _get_command(self, args):
+    def _get_executable_command(self, args):
         '''
         return the command whose args match those given. note that exact order match is needed
 
@@ -40,7 +46,7 @@ class CommandCaptureTestCase(unittest.TestCase):
         :return: The command requested or raise a KeyError
         '''
         for command in self._commands:
-            if command.args == args:
+            if command.args == args and command.executions_remaining > 0:
                 return command
         raise KeyError
 
@@ -49,7 +55,7 @@ class CommandCaptureTestCase(unittest.TestCase):
         assert that the command made up of the args passed was executed.
         :param args: Tuple of the arguments of the command
         '''
-        self._get_command(args)
+        self._get_executable_command(args)
 
     def assertRanAllCommandsInOrder(self):
         '''
@@ -81,7 +87,7 @@ class CommandCaptureTestCase(unittest.TestCase):
         for command in commands:
             self._commands.append(command)
 
-    def add_command(self, args, rc = 0, stdout = "", stderr = ""):
+    def add_command(self, args, rc = 0, stdout = "", stderr = "", executions_remaining=99999999):
         '''
         Add a single command that is expected to be run.
         :param args: Tuple of the arguments of the command
@@ -90,7 +96,7 @@ class CommandCaptureTestCase(unittest.TestCase):
         :param stderr: stderr for the command
         :return: No return value
         '''
-        self.add_commands(CommandCaptureCommand(args, rc, stdout, stderr))
+        self.add_commands(CommandCaptureCommand(args, rc, stdout, stderr, executions_remaining))
 
     @property
     def commands_ran_count(self):

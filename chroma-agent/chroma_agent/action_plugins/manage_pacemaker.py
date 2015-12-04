@@ -36,12 +36,18 @@ from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_o
 from manage_corosync import start_corosync, stop_corosync
 from chroma_agent.lib.pacemaker import pacemaker_running
 from chroma_agent.lib.corosync import corosync_running
+from chroma_agent.lib.service_control import ServiceControl
+
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
 # The number of times in the above window a resource monitor can fail
 # before we migrate it
 RSRC_FAIL_MIGRATION_COUNT = "3"
+
+
+pacemaker_service = ServiceControl.create('pacemaker')
+corosync_service = ServiceControl.create('corosync')
 
 
 def _get_cluster_size():
@@ -64,40 +70,24 @@ def _get_cluster_size():
 
 def _debug_corosync_pacemaker(value=None):
     # Just run some harmless pacemaker corosync commands to provide some output on stdout
-    AgentShell.run(['/sbin/service', 'pacemaker', 'status'])
-    AgentShell.run(['/sbin/service', 'corosync', 'status'])
+    pacemaker_service.running
+    corosync_service.running
 
     return value
 
 
 def start_pacemaker():
-    # pacemaker sometimes does not start, not sure why but with HYD-4255 I found that stopping a node in the test
-    # system where pacemaker had just failed ot start would on typing 'service pacemaker start' happily start.
-    # So this just has a got a trying a few times.
-    result = None
 
-    for timeout in range(0, 3):
-        result = AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'start'])
-
-        if result is None:
-            break
-
-        daemon_log.warn("Had trouble starting pacemaker attempt %s" % timeout)
-
-        time.sleep(5)
-
-    _debug_corosync_pacemaker()
-
-    return agent_ok_or_error(result)
+    return agent_ok_or_error(pacemaker_service.start())
 
 
 def stop_pacemaker():
-    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']))
+    return agent_ok_or_error(pacemaker_service.stop())
 
 
 def enable_pacemaker():
-    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', 'pacemaker']) or \
-                             AgentShell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'on']))
+    return agent_ok_or_error(pacemaker_service.add() or
+                             pacemaker_service.enable())
 
 
 def configure_pacemaker():
@@ -107,16 +97,14 @@ def configure_pacemaker():
     '''
     # Corosync needs to be running for pacemaker -- if it's not, make
     # an attempt to get it going.
-    if AgentShell.run(['/sbin/service', 'corosync', 'status'])[0]:
-        error = AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'restart']) or \
-                AgentShell.run_canned_error_message(['/sbin/service', 'corosync', 'status'])
+    if not corosync_service.running:
+        error = corosync_service.restart()
 
         if error:
             return agent_error(error)
 
-    #enable_pacemaker()
-
-    #Agent.run_canned_error_message(['/sbin/service', 'pacemaker', 'restart'])
+    # enable_pacemaker()
+    # Agent.run_canned_error_message(['/sbin/service', 'pacemaker', 'restart'])
 
     for action in [enable_pacemaker, stop_pacemaker, start_pacemaker, _configure_pacemaker]:
         error = action()
@@ -238,9 +226,7 @@ def set_node_online(node):
 
 
 def _pacemaker_running():
-    rc, stdout, stderr = AgentShell.run(['service', 'pacemaker', 'status'])
-
-    return rc == 0
+    return pacemaker_service.running
 
 
 def unconfigure_pacemaker():
@@ -254,8 +240,8 @@ def unconfigure_pacemaker():
         # last node, nuke the CIB
         cibadmin(["-f", "-E"])
 
-    return agent_ok_or_error(AgentShell.run_canned_error_message(['/sbin/service', 'pacemaker', 'stop']) or \
-                             AgentShell.run_canned_error_message(['/sbin/chkconfig', 'pacemaker', 'off']))
+    return agent_ok_or_error(pacemaker_service.stop() or
+                             pacemaker_service.disable())
 
 
 def _unconfigure_fencing():
