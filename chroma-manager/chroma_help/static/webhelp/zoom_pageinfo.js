@@ -150,7 +150,7 @@ pagedata = [ ["accessing_the_command_line_int.htm","Accessing the command line i
 ["history_page.htm","History window","The History page display events. The History page provides a finer level of event filtering than the listing of events displayed on the Status page.",""],
 ["hsm_page.htm","HSM page","After Hierarchical Storage Management (HSM) has been configured for a file system, this HSM Copytool chart displays a moving time-line of waiting ...",""],
 ["increasing_the_file_systems_ca.htm","Increase a file system&#39;s storage capacity","Perform the following procedures to increase a file system&#39;s storage capacity. This section applies to Managed, HA file systems. For instructions ...",""],
-["intel_manager_for_lustre.htm","Cover","Intel&#174; Manager for Lustre* 2.4.0.0  Online Help  Legal Information Start Here",""],
+["intel_manager_for_lustre.htm","Cover","Intel&#174; Manager for Lustre* 2.4  Online Help  Legal Information Start Here",""],
 ["introducing_intel_manager_for_lustre.htm","Introducing Intel&#174; Manager for Lustre*","Enterprises and institutions of all sizes use high performance computing to solve today&#39;s most intense computing challenges. Just as compute clust...",""],
 ["jobs_stats_page.htm","Jobs Stats","The job statistics feature is accessible from the Read/Write Heat Map chart and for a given OST and time interval, displays the read and write thr...",""],
 ["legal_information.htm","Legal Information","Copyright &#169; 2015 Intel Corporation. All Rights Reserved.",""],
