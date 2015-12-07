@@ -9,7 +9,7 @@ server {
 }
 
 server {
-    listen {{HTTPS_FRONTEND_PORT}} ssl;
+    listen {{HTTPS_FRONTEND_PORT}} ssl spdy;
 
     proxy_read_timeout 330s;
 
