@@ -9,6 +9,7 @@ ALL_RPMS = pcapy-0.10.8-5.el7.x86_64.rpm \
            python-lockfile-0.9.1-4.el7.noarch.rpm \
            python-meld3-0.6.10-1.el7.x86_64.rpm \
            python-ordereddict-1.1-6.el7.noarch.rpm \
+           python-simplejson-3.3.3-1.el7.x86_64.rpm \
            v8-3.14.5.10-17.el7.x86_64.rpm \
            nodejs-0.10.36-3.el7.x86_64.rpm \
            http-parser-2.0-4.20121128gitcd01361.el7.x86_64.rpm \
