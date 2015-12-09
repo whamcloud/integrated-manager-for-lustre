@@ -379,8 +379,13 @@ class FilesystemResource(MetricResource, ConfParamResource):
         except StopIteration:
             pass
 
-        # And here we calculate the client count, because we for sure had the number of mdts.
-        bundle.data['client_count'] = self._get_stat_simple(bundle, ManagedMdt, 'client_count', factor=1.0 / len(bundle.data['mdts']))
+        # Now the number of MDT's is known calculate the client count. The client count is calculated by the number of connections
+        # divided by the number of MDT's. In the case, that is possible durring creation and deletion of filesystems, where the mdt
+        # count is 0 then the connected clients must be zero.
+        if len(bundle.data['mdts']) == 0:
+            bundle.data['client_count'] = 0
+        else:
+            bundle.data['client_count'] = self._get_stat_simple(bundle, ManagedMdt, 'client_count', factor=1.0 / len(bundle.data['mdts']))
 
         return bundle
 
