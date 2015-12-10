@@ -1,8 +1,4 @@
 import logging
-import os
-import subprocess
-import time
-import socket
 
 from collections import namedtuple
 from testconfig import config
@@ -15,8 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
-    """
-    The TestCase class all chroma integration test cases should inherit form.
+    """The TestCase class all chroma integration test cases should inherit form.
 
     This class ties together the common functionality needed in most
     integration test cases. For functionality used in a limited subset
@@ -581,54 +576,3 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         logger.debug("LNetConfiguration info %s" % lnet_configuration)
 
         return self.LNetInfo(nids, network_interfaces, lnet_configuration, host)
-
-    def _fetch_help(self, assert_test, tell_who, message, callback=lambda: True, timeout=1800):
-        '''
-        When an error occurs that we want to hold the cluster for until someone logs in then this function will do that.
-
-        The file /tmp/waiting_help is used as an exit switch along with time. Deleting this file will cause the test to
-        continue running - actually raising the exception in fact. This file is also used to put the message in.
-
-        :param assert_test: test that if it occurs will fetch the help
-        :param callback: optional but if present returning False will cause the routine to not fetch help.
-        :param tell_who: list of email addresses to contact about the issue
-        :param message: message to deliver to those people, can be a callable returning a string.
-        :param timeout: How long to wait before continuing.
-        :return: None
-
-        Typical usage.
-        self._fetch_help(lambda: self.assertEqual(commandResult, True),
-                         ['chris.gearing@intel.com'],
-                         'Send the cavalry',
-                         callback=lambda: check_if_significant(data))
-
-        self._fetch_help(lambda: self.assertEqual(commandResult, True),
-                         ['chris.gearing@intel.com'],
-                         lambda: 'Send the cavalry',
-                         callback=lambda: check_if_significant(data))
-
-        '''
-
-        try:
-            return assert_test()
-        except:
-            if callback() == False:
-                raise
-
-            key_file = '/tmp/waiting_help'
-
-            if hasattr(message, '__call__'):
-                message = message()
-
-            # First create the file, errors in here do destroy the original, but will be reported by the test framework
-            fd = os.open(key_file, os.O_RDWR | os.O_CREAT)
-            os.write(fd, "Subject: %s\n\n%s\n\nTest Runner %s" % (message, message, socket.gethostname()))
-            os.lseek(fd, 0, os.SEEK_SET)
-            subprocess.call(['sendmail'] + tell_who, stdin=fd)
-            os.close(fd)
-
-            while timeout > 0 and os.path.isfile(key_file):
-                timeout -= 1
-                time.sleep(1)
-
-            raise

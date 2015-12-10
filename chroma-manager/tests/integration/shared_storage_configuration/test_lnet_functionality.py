@@ -85,9 +85,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
                              self._get_lnet_info(self.host).nids)
 
             # Now try posting it back.
-            self._fetch_help(lambda: self.post_by_uri('/api/nid/', nid),
-                             ['chris.gearing@intel.com'],
-                             'lnet_configuration')
+            self.post_by_uri('/api/nid/', nid)
 
             # Move to another state
             self._change_lnet_state()
