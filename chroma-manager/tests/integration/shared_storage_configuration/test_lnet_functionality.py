@@ -121,6 +121,10 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
 
 class TestLNetLongPolling(ChromaIntegrationTestCase):
+    def _wait_response_count(self, count):
+        self.wait_until_true(lambda: self.long_polling_end_point.response_count == count,
+                             error_message=lambda: 'Longpolling expected %s\nData %s' % (count, self.long_polling_end_point))
+
     def test_lnet_long_polling(self):
         """Test long polling for alerts responds correctly."""
 
@@ -128,27 +132,27 @@ class TestLNetLongPolling(ChromaIntegrationTestCase):
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
         # Now start monitoring the endpoint
-        long_polling_end_point = LongPollingThread("/api/lnet_configuration/", self)
+        self.long_polling_end_point = LongPollingThread("/api/lnet_configuration/", self)
 
-        self.wait_until_true(lambda: long_polling_end_point.response_count == 1)
+        self._wait_response_count(1)
 
         # Now wait 10 seconds and the the response count should not have changed.
         time.sleep(10)
 
-        self.assertEqual(long_polling_end_point.response_count, 1)
+        self._wait_response_count(1)
 
         # Stop LNet and the response should change.
         self.remote_operations.stop_lnet(host['fqdn'])
 
-        self.wait_until_true(lambda: long_polling_end_point.response_count == 2)
+        self._wait_response_count(2)
 
         # Now exit.
-        long_polling_end_point.exit = True
+        self.long_polling_end_point.exit = True
 
         # Need to cause an alert of some sort, or wait for a timeout of long polling, so start Lnet again.
         self.remote_operations.start_lnet(host['fqdn'])
-        self.wait_until_true(lambda: long_polling_end_point.response_count == 3)
+        self._wait_response_count(3)
 
-        long_polling_end_point.join()
+        self.long_polling_end_point.join()
 
-        self.assertEqual(long_polling_end_point.error, None, long_polling_end_point.error)
+        self.assertEqual(self.long_polling_end_point.error, None, self.long_polling_end_point.error)

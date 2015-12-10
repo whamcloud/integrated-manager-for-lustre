@@ -40,7 +40,7 @@ class LongPollingThread(Thread):
                 response = self.test_case.get_by_uri(self.test_uri,
                                                      args={'last_modified': self.last_modified,
                                                            'limit': 0},
-                                                     verify_successful = False)
+                                                     verify_successful=False)
 
                 if response.status_code == 200:
                     self.last_modified = response.json['meta']['last_modified']
@@ -57,3 +57,14 @@ class LongPollingThread(Thread):
     @property
     def response_count(self):
         return len(self.responses)
+
+    def __repr__(self):
+        return ('Endpoint {0}\n'
+                'Count {1}\n'
+                'Responses: {2}\n'
+                'Current: {3}').format(self.test_uri,
+                                       self.response_count,
+                                       '\n'.join([response._content for response in self.responses]),
+                                       self.test_case.get_by_uri(self.test_uri,
+                                                                 args={'limit': 0},
+                                                                 verify_successful=False))

@@ -843,15 +843,19 @@ class ResourceManager(object):
                                                                    name = nw_resource.name,
                                                                    inet4_prefix = nw_resource.inet4_prefix)
 
-                nw_interface.inet4_address = nw_resource.inet4_address
-                nw_interface.inet4_prefix = nw_resource.inet4_prefix
-                nw_interface.type = nw_resource.type
-                nw_interface.state_up = nw_resource.up
-                nw_interface.save()
+                if (nw_interface.inet4_address != nw_resource.inet4_address or
+                        nw_interface.inet4_prefix != nw_resource.inet4_prefix or
+                        nw_interface.type != nw_resource.type or
+                        nw_interface.state_up != nw_resource.up):
+                    nw_interface.inet4_address = nw_resource.inet4_address
+                    nw_interface.inet4_prefix = nw_resource.inet4_prefix
+                    nw_interface.type = nw_resource.type
+                    nw_interface.state_up = nw_resource.up
+                    nw_interface.save()
+
+                    log.debug("_persist_nid_updates nw_resource %s" % nw_interface)
 
                 nw_interfaces[nw_resource._handle] = nw_interface
-
-                log.debug("_persist_nid_updates nw_resource %s" % nw_interface)
 
         for lnet_state_resource in node_resources[LNETModules]:
             lnet_state = lnet_state_resource.to_resource()
@@ -889,11 +893,13 @@ class ResourceManager(object):
                     nid, created = Nid.objects.get_or_create(lnet_configuration = lnet_configuration,
                                                              network_interface = nw_interfaces[parent])
 
-                    nid.lnd_network = source_nid.lnd_network
-                    nid.lnd_type = source_nid.lnd_type
-                    nid.save()
+                    if (nid.lnd_network != source_nid.lnd_network or
+                                nid.lnd_type != source_nid.lnd_type):
+                        nid.lnd_network = source_nid.lnd_network
+                        nid.lnd_type = source_nid.lnd_type
+                        nid.save()
 
-                    log.debug("_persist_nid_updates nid %s %s" % (nid, "created" if created else "updated"))
+                        log.debug("_persist_nid_updates nid %s %s" % (nid, "created" if created else "updated"))
 
         # We want to raise an alert if the nid configuration changes. So check it at the end.
         if previous_nids != []:

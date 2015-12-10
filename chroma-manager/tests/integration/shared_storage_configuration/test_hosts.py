@@ -65,43 +65,42 @@ class TestHosts(ChromaIntegrationTestCase):
 
 
 class TestHostLongPolling(ChromaIntegrationTestCase):
-    def test_alert_long_polling(self):
+    def _wait_response_count(self, count):
+        self.wait_until_true(lambda: self.long_polling_end_point.response_count == count,
+                             error_message=lambda: ('Expected count {0}\n'
+                                                    'Actual Count {1}\n'
+                                                    'Polling Data {2}').format(count,
+                                                                              self.long_polling_end_point.response_count,
+                                                                              self.long_polling_end_point))
+
+    def test_host_long_polling(self):
         """Test long polling for alerts responds correctly."""
 
         # Add one host
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
         # Now start monitoring the endpoint
-        long_polling_end_point = LongPollingThread("/api/host/", self)
+        self.long_polling_end_point = LongPollingThread("/api/host/", self)
 
-        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 1),
-                         ['chris.gearing@intel.com'],
-                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+        self._wait_response_count(1)
 
         # Now wait 10 seconds and the the response count should not have changed.
         time.sleep(10)
 
-        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 1),
-                         ['chris.gearing@intel.com'],
-                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+        self._wait_response_count(1)
 
         # Stop LNet and the response should change.
         self.remote_operations.stop_lnet(host['fqdn'])
 
-        # We get two writes to the table, should be optimized for 1 I guess but that is another story.
-        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 3),
-                         ['chris.gearing@intel.com'],
-                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+        self._wait_response_count(2)
 
         # Now exit.
-        long_polling_end_point.exit = True
+        self.long_polling_end_point.exit = True
 
         # Need to cause an alert of some sort, or wait for a timeout of long polling, so start Lnet again.
         self.remote_operations.start_lnet(host['fqdn'])
-        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 4),
-                         ['chris.gearing@intel.com'],
-                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+        self._wait_response_count(3)
 
-        long_polling_end_point.join()
+        self.long_polling_end_point.join()
 
-        self.assertEqual(long_polling_end_point.error, None, long_polling_end_point.error)
+        self.assertEqual(self.long_polling_end_point.error, None, self.long_polling_end_point.error)

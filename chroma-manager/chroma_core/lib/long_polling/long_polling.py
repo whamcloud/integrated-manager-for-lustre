@@ -50,12 +50,14 @@ def table_change(timestamp, table):
             event.set()
 
 
-def wait_table_change(last_change_timestamp, tables_list, timeout):
+def wait_table_change(table_timestamps, tables_list, timeout):
     with operation_lock:
+        last_change_timestamp = int(table_timestamps['max_timestamp'])
+
         # First see if the table has already changed, we get rounding errors hence the maths.
         for table in tables_list:
             if timestamps[table] > last_change_timestamp:
-                return _max_timestamp_tables(tables_list)
+                return _table_timestamps(tables_list)
 
         # So now setup the semaphore
         event = threading.Event()
@@ -70,16 +72,20 @@ def wait_table_change(last_change_timestamp, tables_list, timeout):
             events[table].remove(event)
 
         if event.isSet():
-            return _max_timestamp_tables(tables_list)
+            return _table_timestamps(tables_list)
         else:
             return 0
 
 
-def _max_timestamp_tables(tables_list):
+def _table_timestamps(tables_list):
     max_timestamp = 0
+    table_timestamps = {}
 
     for table in tables_list:
+        table_timestamps[table] = timestamps[table]
         if timestamps[table] > max_timestamp:
             max_timestamp = timestamps[table]
 
-    return max_timestamp
+    table_timestamps['max_timestamp'] = max_timestamp
+
+    return table_timestamps

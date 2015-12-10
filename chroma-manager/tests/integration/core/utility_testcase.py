@@ -73,10 +73,12 @@ class UtilityTestCase(TestCase):
             self.assertEqual(exit_status, expected_return_code, stderr)
         return RemoteCommandResult(exit_status, stdout, stderr)
 
-    def wait_until_true(self, lambda_expression, timeout=TEST_TIMEOUT):
-        """
-        Evaluates lambda_expression once/1s until True or hits timeout.
-        """
+    def wait_until_true(self, lambda_expression, error_message='', timeout=TEST_TIMEOUT):
+        """Evaluates lambda_expression once/1s until True or hits timeout."""
+        assert hasattr(lambda_expression, '__call__'), 'lambda_expression is not callable: %s' % type(lambda_expression)
+        assert hasattr(error_message, '__call__') or type(error_message) is str, 'error_message is not callable and not a str: %s' % type(error_message)
+        assert type(timeout) == int, 'timeout is not an int: %s' % type(timeout)
+
         running_time = 0
         lambda_result = None
         while not lambda_result and running_time < timeout:
@@ -84,7 +86,13 @@ class UtilityTestCase(TestCase):
             logger.debug("%s evaluated to %s" % (inspect.getsource(lambda_expression), lambda_result))
             time.sleep(1)
             running_time += 1
-        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
+
+        if hasattr(error_message, '__call__'):
+            error_message = error_message()
+
+        self.assertLess(running_time,
+                        timeout,
+                        'Timed out waiting for %s\nError Message %s' % (inspect.getsource(lambda_expression), error_message))
 
     def wait_for_items_length(self, fetch_items, length, timeout=TEST_TIMEOUT):
         """

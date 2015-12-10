@@ -43,10 +43,8 @@ class TestConnectivity(ChromaIntegrationTestCase):
         # Enter the failure mode
         start_failure_cb()
         try:
-            self.wait_until_true(
-                lambda: len(self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})) > 0,
-                time_to_failure  # Long enough to time out and notice timing out
-            )
+            self.wait_until_true(lambda: len(self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})) > 0,
+                                 timeout=time_to_failure)  # Long enough to time out and notice timing out
 
             # A 'Lost contact' alert should be raised
             self.assertHasAlert(host['resource_uri'])
@@ -64,7 +62,7 @@ class TestConnectivity(ChromaIntegrationTestCase):
 
         # The alert should go away
         self.wait_until_true(lambda: len(self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})) == 0,
-                             MAX_AGENT_BACKOFF * 2)  # The agent may have backed off up to its max backoff
+                             timeout=MAX_AGENT_BACKOFF * 2)  # The agent may have backed off up to its max backoff
 
         # The alert goes away as soon as an agent GET gets through, but the action_runner session might
         # not be re-established until the max backoff period
