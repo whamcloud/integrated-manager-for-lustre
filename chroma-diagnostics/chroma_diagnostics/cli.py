@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -66,7 +66,10 @@ logrotate_logs = {
                          'supervisord.log',
                          'install.log',
                          'client_errors.log',
-                         'realtime.log'
+                         'realtime.log',
+                         'gunicorn-access.log',
+                         'gunicorn-error.log',
+                         'view_server.log'
                          ],
     '/var/log/nginx': ['error.log',
                        'access.log'
