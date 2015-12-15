@@ -160,6 +160,51 @@ class ServiceControlRH6(ServiceControl):
         return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'stop'])
 
 
+class ServiceControlRH7(ServiceControl):
+
+    platform_use = 7
+
+    @property
+    def running(self):
+        # Returns True if the service is running. "service servicename status"
+        return AgentShell.run(['systemctl', 'is-active', self.service_name])[0] == 0
+
+    @property
+    def enabled(self):
+        # Returns True if the service is enabled. "chkconfig servicename"
+        return AgentShell.run(['systemctl', 'is-enabled', self.service_name])[0] == 0
+
+    @classmethod
+    def _applicable(cls):
+        if platform.system() == 'Linux':
+            platform_info = platform.linux_distribution()
+            version = math.floor(float(platform_info[1]))
+            if version == cls.platform_use:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def add(self):
+        pass
+
+    def enable(self):
+        return AgentShell.run_canned_error_message(['systemctl', 'enable', self.service_name])
+
+    def reload(self):
+        return AgentShell.run_canned_error_message(['systemctl', 'reload', self.service_name])
+
+    def disable(self):
+        return AgentShell.run_canned_error_message(['systemctl', 'disable', self.service_name])
+
+    def _start(self):
+        return AgentShell.run_canned_error_message(['systemctl', 'start', self.service_name])
+
+    def _stop(self):
+        return AgentShell.run_canned_error_message(['systemctl', 'stop', self.service_name])
+
+
 class ServiceControlOSX(ServiceControlRH6):
     """ Just a stub class so that running on OSX things can be made to work.
 

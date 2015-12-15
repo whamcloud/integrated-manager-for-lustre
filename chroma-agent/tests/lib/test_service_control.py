@@ -1,6 +1,6 @@
 import mock
 
-from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.lib.service_control import ServiceControl, ServiceControlRH7
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
@@ -115,3 +115,71 @@ class TestServiceStateRH6(CommandCaptureTestCase):
         response = self.test_service.disable()
         self.assertEqual(response, None)
         self.assertEqual(self.commands_ran_count, 1)
+
+
+class TestServiceStateRH7(CommandCaptureTestCase):
+    def setUp(self):
+        super(TestServiceStateRH7, self).setUp()
+
+        mock.patch('chroma_agent.lib.service_control.platform.system', return_value="Linux").start()
+        mock.patch('chroma_agent.lib.service_control.platform.linux_distribution',
+                   return_value=('CentOS', '7.2', 'Final')).start()
+
+        self.test = ServiceControlRH7('test_service')
+
+    # Test the start method
+    def test_service_start(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'start', 'test_service'), executions_remaining=1))
+
+        self.test._start()
+        self.assertEqual(('systemctl', 'start', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+    # Test the stop method
+    def test_service_stop(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'stop', 'test_service'), executions_remaining=1))
+
+        self.test._stop()
+        self.assertEqual(('systemctl', 'stop', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+    # Test the running method
+    def test_service_running(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'is-active', 'test_service'), executions_remaining=1))
+
+        self.test.running
+        self.assertEqual(('systemctl', 'is-active', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+    # Test the enabled method
+    def test_service_enabled(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'is-enabled', 'test_service'), executions_remaining=1))
+
+        self.test.enabled
+        self.assertEqual(('systemctl', 'is-enabled', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+        # Test the enable method
+    def test_service_enable(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'enable', 'test_service'), executions_remaining=1))
+
+        self.test.enable()
+        self.assertEqual(('systemctl', 'enable', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+        # Test the reload method
+    def test_service_reload(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'reload', 'test_service'), executions_remaining=1))
+
+        self.test.reload()
+        self.assertEqual(('systemctl', 'reload', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
+        # Test the disable method
+    def test_service_disable(self):
+        self.add_commands(CommandCaptureCommand(('systemctl', 'disable', 'test_service'), executions_remaining=1))
+
+        self.test.disable()
+        self.assertEqual(('systemctl', 'disable', 'test_service'), self._commands_history[0])
+        self.assertEqual(self.commands_ran_count, 1)
+
