@@ -21,7 +21,7 @@ cleanrepo: TARGET=cleanrepo
 requirements::
 	# these are the ones provided by EL
 	{ echo "../chroma-externals/netaddr-0.7.5.zip";                                 \
-	if [ $(rpm --eval '%{?rhel}') -lt 7 ]; then                                     \
+	if [ $(shell rpm --eval '%{?rhel}') -lt 7 ]; then                               \
 	    echo "paramiko==1.7.5";                                                     \
 	    echo "pycrypto==2.0.1";                                                     \
 	fi;                                                                             \
