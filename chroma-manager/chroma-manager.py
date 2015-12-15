@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -18,6 +18,7 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
 
 import os
 import sys
@@ -40,6 +41,8 @@ bind = "127.0.0.1:%s" % settings.HTTP_API_PORT
 
 errorlog = os.path.join(settings.LOG_PATH, 'gunicorn-error.log')
 accesslog = os.path.join(settings.LOG_PATH, 'gunicorn-access.log')
+
+timeout = settings.LONG_POLL_TIMEOUT_SECONDS + 10
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
