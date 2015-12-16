@@ -120,7 +120,7 @@ class BlockDevices(DeviceHelper):
 
         self.block_device_nodes, self.node_block_devices = self._parse_sys_block()
 
-    def _device_node(self, device_name, major_minor, path, size, parent):
+    def _device_node(self, major_minor, path, size, parent, partition_number):
         # RHEL6 version of scsi_id is located at a different location to the RHEL7 version
         # work this out at the start then go with it.
         scsi_id_cmd = None
@@ -154,6 +154,7 @@ class BlockDevices(DeviceHelper):
                 'serial_83': serial_83,
                 'size': size,
                 'filesystem_type': type,
+                'partition_number': partition_number,
                 'parent': parent}
 
         return info
@@ -212,7 +213,12 @@ class BlockDevices(DeviceHelper):
             # Resolve a major:minor to a /dev/foo
             path = get_path(major_minor, device_name)
             if path:
-                block_device_nodes[major_minor] = self._device_node(device_name, major_minor, path, size, parent)
+                if parent:
+                    partition_number = int(re.search("(\d+)$", device_name).group(1))
+                else:
+                    partition_number = None
+
+                block_device_nodes[major_minor] = self._device_node(major_minor, path, size, parent, partition_number)
                 node_block_devices[path] = major_minor
 
             return major_minor

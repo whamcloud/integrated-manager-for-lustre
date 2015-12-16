@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -68,6 +68,7 @@ class FakeDevices(Persisted):
         self.state['devices'][serial] = {
             "major_minor": major_minor,
             "parent": None,
+            "partition_number": None,
             "serial_83": serial,
             "serial_80": serial,
             "size": 1024 * 1024 * 1024 * 1024 * 32

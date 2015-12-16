@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -30,7 +30,6 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 from chroma_core.models import ManagedHost
 from settings import SERIAL_PREFERENCE
-import re
 
 version = 1
 
@@ -153,7 +152,7 @@ class LvmGroup(resources.StoragePool):
 class LvmVolume(resources.LogicalDriveSlice):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
     #    LV UUID?  Isn't the LV UUID unique enough?
-    # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
+    # A: We're matching LVM2's behaviour.  If you e.g. imagine a machine that
     #    has some VGs and LVs, then if you want to disambiguate them you run
     #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
     #    command to reset LV uuid, because LVM finds two LVs with the same UUID
@@ -405,7 +404,6 @@ class Linux(Plugin):
         for bdev in [x for x in devices['devs'].values() if x['parent']]:
             this_node = major_minor_to_node_resource[bdev['major_minor']]
             parent_resource = major_minor_to_node_resource[bdev['parent']]
-            number = int(re.search("(\d+)$", bdev['path']).group(1))
 
             if not parent_resource.logical_drive:
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
@@ -413,7 +411,7 @@ class Linux(Plugin):
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
                     container = parent_resource.logical_drive,
-                    number = number,
+                    number = bdev['partition_number'],
                     size = bdev['size'],
                     filesystem_type = bdev['filesystem_type'])
 

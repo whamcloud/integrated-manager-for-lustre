@@ -33,7 +33,8 @@
       "8:0": {
         "major_minor": "8:0", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": "SQEMU    QEMU HARDDISK", 
         "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_scsi0-hd0", 
         "size": 104857600, 
@@ -41,7 +42,8 @@
       }, 
       "8:16": {
         "major_minor": "8:16", 
-        "parent": null, 
+        "parent": null,
+        "partition_number": null,
         "serial_83": null, 
         "serial_80": "SQEMU    QEMU HARDDISK", 
         "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_scsi0-hd1", 
@@ -51,7 +53,8 @@
       "253:1": {
         "major_minor": "253:1", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/mapper/LustreVG-swap", 
         "size": 1669332992, 
@@ -60,7 +63,8 @@
       "253:0": {
         "major_minor": "253:0", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/mapper/LustreVG-root", 
         "size": 629145600, 
@@ -69,7 +73,8 @@
       "253:3": {
         "major_minor": "253:3", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/mapper/LustreVG-var", 
         "size": 3980394496, 
@@ -78,7 +83,8 @@
       "253:2": {
         "major_minor": "253:2", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/mapper/LustreVG-usr", 
         "size": 2097152000, 
@@ -87,7 +93,8 @@
       "252:0": {
         "major_minor": "252:0", 
         "parent": null, 
-        "serial_83": null, 
+        "partition_number": null,
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/vda", 
         "size": 8589934592, 
@@ -96,7 +103,8 @@
       "252:1": {
         "major_minor": "252:1", 
         "parent": "252:0", 
-        "serial_83": null, 
+        "partition_number": "1",
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/vda1", 
         "size": 209715200, 
@@ -105,7 +113,8 @@
       "252:2": {
         "major_minor": "252:2", 
         "parent": "252:0", 
-        "serial_83": null, 
+        "partition_number": "2",
+        "serial_83": null,
         "serial_80": null, 
         "path": "/dev/vda2", 
         "size": 8379170816, 

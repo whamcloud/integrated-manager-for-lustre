@@ -116,7 +116,7 @@ class TestBlockDevices(CommandCaptureTestCase):
             self.add_commands(CommandCaptureCommand(((scsi_id, '-g', '-p', '0x80', '/dev/blop'))),
                               CommandCaptureCommand(((scsi_id, '-g', '-p', '0x83', '/dev/blop'))))
 
-            result = self.block_devices._device_node("blop", 1, "/dev/blop", 1, None)
+            result = self.block_devices._device_node(1, "/dev/blop", 1, None, '1234')
 
             self.assertRanAllCommandsInOrder()
 
@@ -126,4 +126,5 @@ class TestBlockDevices(CommandCaptureTestCase):
                                       'serial_80': '',
                                       'path': '/dev/blop',
                                       'filesystem_type': None,
+                                      'partition_number': '1234',
                                       'size': 1})

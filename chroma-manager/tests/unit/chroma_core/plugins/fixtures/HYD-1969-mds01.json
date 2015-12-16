@@ -62,7 +62,8 @@
       }, 
       "devs": {
         "253:2": {
-          "parent": null, 
+          "parent": null,
+          "partition_number": null,
           "major_minor": "253:2", 
           "serial_83": "3690b11c00006c68d000007ea5158674f", 
           "serial_80": "SDELL    MD32xx         28F005X", 
@@ -72,7 +73,8 @@
         }, 
         "8:1": {
           "parent": "8:0", 
-          "major_minor": "8:1", 
+          "partition_number": "1",
+          "major_minor": "8:1",
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/disk/by-id/scsi-3690b11c002c4e9001800848e18aeeefe-part1", 
@@ -81,7 +83,8 @@
         }, 
         "8:0": {
           "parent": null, 
-          "major_minor": "8:0", 
+          "partition_number": null,
+          "major_minor": "8:0",
           "serial_83": "3690b11c002c4e9001800848e18aeeefe", 
           "serial_80": "SDELLPERC H710P", 
           "path": "/dev/disk/by-id/scsi-3690b11c002c4e9001800848e18aeeefe", 
@@ -90,7 +93,8 @@
         }, 
         "8:3": {
           "parent": "8:0", 
-          "major_minor": "8:3", 
+          "partition_number": "3",
+          "major_minor": "8:3",
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/disk/by-id/scsi-3690b11c002c4e9001800848e18aeeefe-part3", 
@@ -99,7 +103,8 @@
         }, 
         "8:16": {
           "parent": null, 
-          "major_minor": "8:16", 
+          "partition_number": null,
+          "major_minor": "8:16",
           "serial_83": "3690b11c00006c68d000007ea5158674f", 
           "serial_80": "SDELL    MD32xx         28F005X", 
           "path": "/dev/sdb", 
@@ -108,7 +113,8 @@
         }, 
         "253:1": {
           "parent": null, 
-          "major_minor": "253:1", 
+          "partition_number": null,
+          "major_minor": "253:1",
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/mapper/vg_regalmds01-lv_lustre23", 
@@ -117,7 +123,8 @@
         }, 
         "253:0": {
           "parent": null, 
-          "major_minor": "253:0", 
+          "partition_number": null,
+          "major_minor": "253:0",
           "serial_83": "3690b11c0000bb1d00000080c51597d7b", 
           "serial_80": "SDELL    MD32xx         28R00JQ", 
           "path": "/dev/mapper/mpathc", 
@@ -126,7 +133,8 @@
         }, 
         "8:2": {
           "parent": "8:0", 
-          "major_minor": "8:2", 
+          "partition_number": "2",
+          "major_minor": "8:2",
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/disk/by-id/scsi-3690b11c002c4e9001800848e18aeeefe-part2", 
@@ -135,8 +143,9 @@
         }, 
         "8:64": {
           "parent": null, 
-          "major_minor": "8:64", 
-          "serial_83": "3690b11c0000bb1d00000080c51597d7b", 
+          "partition_number": null,
+          "major_minor": "8:64",
+          "serial_83": "3690b11c0000bb1d00000080c51597d7b",
           "serial_80": "SDELL    MD32xx         28F005X", 
           "path": "/dev/sdc", 
           "filesystem_type": "ext4", 
@@ -144,7 +153,8 @@
         }, 
         "8:32": {
           "parent": null, 
-          "major_minor": "8:32", 
+          "partition_number": null,
+          "major_minor": "8:32",
           "serial_83": "3690b11c0000bb1d00000080c51597d7b", 
           "serial_80": "SDELL    MD32xx         28F005X", 
           "path": "/dev/sdc", 
@@ -153,7 +163,8 @@
         }, 
         "8:48": {
           "parent": null, 
-          "major_minor": "8:48", 
+          "partition_number": null,
+          "major_minor": "8:48",
           "serial_83": "3690b11c00006c68d000007ea5158674f", 
           "serial_80": "SDELL    MD32xx         28F005X", 
           "path": "/dev/sdb", 
