@@ -29,10 +29,12 @@ from netaddr.core import AddrFormatError
 from chroma_agent import node_admin, config
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.lib.system import iptables
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 from jinja2 import Environment, PackageLoader
 
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
+
+firewall_control = FirewallControl.create(logger=console_log)
 
 
 def get_all_interfaces():
@@ -99,7 +101,8 @@ def detect_ring1(ring0, ring1_address, ring1_prefix):
         console_log.info("Chose %s for corosync ring1" % iface.name)
         iface.set_address(ring1_address, ring1_prefix)
     elif len(ring1_candidates) > 1:
-        raise RuntimeError("Unable to autodetect ring1: found %d unconfigured interfaces with link" % len(ring1_candidates))
+        raise RuntimeError("Unable to autodetect ring1: found %d unconfigured interfaces with "
+                           "link" % len(ring1_candidates))
 
     # Now, go back and look through the list of all interfaces again for
     # our ring1 address. We do it this way in order to handle the situation
@@ -137,8 +140,7 @@ def find_subnet(network, prefixlen):
     10.255.255.255/32
     """
     _network = IPNetwork("%s/%s" % (network, prefixlen))
-    if _network >= IPNetwork("10.0.0.0/8") and \
-       _network < IPAddress("10.255.255.255"):
+    if IPNetwork("10.0.0.0/8") <= _network < IPAddress("10.255.255.255"):
         if _network >= IPNetwork("10.128.0.0/9"):
             shadow_network = IPNetwork("10.0.0.0/%s" % prefixlen)
         else:
@@ -154,8 +156,7 @@ def find_unused_port(ring0, timeout = 10):
     dest_addr = ring0.mcastaddr
     ports = range(32767, 65535, 2)
 
-    iptables("add", "INPUT", ["4", "-m", "state", "--state", "NEW", "-m", "tcp",
-             "-p", "tcp", "-d", ring0.mcastaddr, "-j", "ACCEPT"])
+    firewall_control.add_rule(0, 'tcp', 'find unused port', persist=False, address=ring0.mcastaddr)
 
     try:
         subscribe_multicast(ring0)
@@ -181,8 +182,8 @@ def find_unused_port(ring0, timeout = 10):
 
         console_log.debug("Finished after %d seconds, sniffed: %d" % (timeout, packet_count))
     finally:
-        iptables("del", "INPUT", ["-m", "state", "--state", "NEW", "-m", "tcp",
-                 "-p", "tcp", "-d", ring0.mcastaddr, "-j", "ACCEPT"])
+        firewall_control.remove_rule(0, 'tcp', 'find unused port', persist=False,
+                                     address=ring0.mcastaddr)
 
     return choice(ports)
 
@@ -220,7 +221,8 @@ def create_talker_thread(ring1):
 def discover_existing_mcastport(ring1, timeout = 10):
     subscribe_multicast(ring1)
     console_log.debug("Sniffing for packets to %s on %s" % (ring1.mcastaddr, ring1.name))
-    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr, ring1.ipv4_address))
+    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (
+        ring1.mcastaddr, ring1.ipv4_address))
 
     def recv_packets(header, data):
         ring1.mcastport = get_dport_from_packet(data)
@@ -243,7 +245,8 @@ def discover_existing_mcastport(ring1, timeout = 10):
                 talker_thread.start()
             current_time = time.time()
 
-        console_log.debug("Finished after %d seconds, sniffed: %d" % (current_time - start_time, packet_count))
+        console_log.debug("Finished after %d seconds, sniffed: %d" % (current_time -
+                                                                      start_time, packet_count))
     finally:
         if talker_thread.is_alive():
             talker_thread.stop()
@@ -312,7 +315,10 @@ class CorosyncRingInterface(object):
     Provides a wrapper around an ethtool device with extra functionality
     specific to corosync configuration.
     """
-    IFF_LIST = ['IFF_ALLMULTI', 'IFF_AUTOMEDIA', 'IFF_BROADCAST', 'IFF_DEBUG', 'IFF_DYNAMIC', 'IFF_LOOPBACK', 'IFF_MASTER', 'IFF_MULTICAST', 'IFF_NOARP', 'IFF_NOTRAILERS', 'IFF_POINTOPOINT', 'IFF_PORTSEL', 'IFF_PROMISC', 'IFF_RUNNING', 'IFF_SLAVE', 'IFF_UP']
+    IFF_LIST = ['IFF_ALLMULTI', 'IFF_AUTOMEDIA', 'IFF_BROADCAST', 'IFF_DEBUG', 'IFF_DYNAMIC',
+                'IFF_LOOPBACK', 'IFF_MASTER', 'IFF_MULTICAST', 'IFF_NOARP', 'IFF_NOTRAILERS',
+                'IFF_POINTOPOINT', 'IFF_PORTSEL', 'IFF_PROMISC', 'IFF_RUNNING', 'IFF_SLAVE',
+                'IFF_UP']
 
     def __init__(self, name, ringnumber=0, mcastport=0):
         # ethtool does NOT like unicode

@@ -30,11 +30,12 @@ import errno
 import re
 
 from chroma_agent.lib.shell import AgentShell
-from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
 from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result, agent_ok_or_error
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result, \
+                                                     agent_ok_or_error
 
 
 # The window of time in which we count resource monitor failures
@@ -43,8 +44,8 @@ RSRC_FAIL_WINDOW = "20m"
 # before we migrate it
 RSRC_FAIL_MIGRATION_COUNT = "3"
 
-
 corosync_service = ServiceControl.create('corosync')
+firewall_control = FirewallControl.create()
 
 
 def start_corosync():
@@ -97,7 +98,10 @@ def configure_corosync(ring0_name,
 
     write_config_to_file("/etc/corosync/corosync.conf", config)
 
-    add_firewall_rule(mcast_port, "udp", "corosync")
+    error = firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True)
+
+    if error:
+        return agent_error(error)
 
     error = corosync_service.enable()
 
@@ -133,15 +137,15 @@ def unconfigure_corosync():
     """
     corosync_service.stop()
     corosync_service.disable()
-    mcastport = None
+    mcast_port = None
 
     with open("/etc/corosync/corosync.conf") as f:
         for line in f.readlines():
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
-                mcastport = match.group(1)
+                mcast_port = match.group(1)
                 break
-    if mcastport is None:
+    if mcast_port is None:
         return agent_error("Failed to find mcastport in corosync.conf")
 
     try:
@@ -152,7 +156,10 @@ def unconfigure_corosync():
     except:
         return agent_error("Failed to remove corosync.conf")
 
-    del_firewall_rule(mcastport, "udp", "corosync")
+    error = firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True)
+
+    if error:
+        return agent_error(error)
 
     return agent_result_ok
 

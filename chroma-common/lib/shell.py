@@ -131,7 +131,8 @@ class Shell(object):
     @classmethod
     def try_run(cls, arg_list, logger=None, monitor_func=None, timeout=SHELLTIMEOUT):
         """Run a subprocess, and raise an exception if it returns nonzero.  Return
-        stdout string."""
+        stdout string.
+        """
 
         result = Shell.run(arg_list, logger, monitor_func, timeout)
 
@@ -139,3 +140,18 @@ class Shell(object):
             raise Shell.CommandExecutionError(result, arg_list)
 
         return result.stdout
+
+    @classmethod
+    def run_canned_error_message(cls, arg_list):
+        """
+        Run a shell command return None is successful, or User Error message if not
+        :param args:
+        :return: None if successful or canned user error message
+        """
+        result = Shell.run(arg_list)
+
+        if result.rc != 0:
+            return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list),
+                                                           result.stdout, result.stderr)
+
+        return None
