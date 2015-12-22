@@ -58,6 +58,6 @@ ALL_RPMS = pcapy-0.10.5-6.el6.x86_64.rpm \
 REQUIREMENTS += python-daemon==1.5.2
 endif
 
-NO_REQUIREMENT = pcapy python-daemon v8 nodejs http-parser libuv c-ares19 python-crypto erlang-erts erlang-mnesia erlang-os_mon erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler erlang-crypto erlang-hipe erlang-inets erlang-kernel erlang-otp_mibs erlang-public_key erlang-runtime_tools erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools erlang-tools
+NO_REQUIREMENT = pcapy python-daemon v8 nodejs http-parser libuv c-ares19 python-crypto erlang-erts erlang-mnesia erlang-os_mon erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler erlang-crypto erlang-hipe erlang-inets erlang-kernel erlang-otp_mibs erlang-public_key erlang-runtime_tools erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools erlang-tools python-simplejson
 
 include ../include/Makefile.fetch-from-repo
