@@ -44,16 +44,15 @@ class ChromaService(object):
 
     def __init__(self):
         self.log = None
-        # Enable long polling.
-        from chroma_core.lib.long_polling import enable_long_polling
-        assert enable_long_polling    # Prevent pep8 warning
 
     @property
     def name(self):
         return self.__class__.__module__.split('.')[-1]
 
     def run(self):
-        raise NotImplementedError()
+        # Enable long polling.
+        from chroma_core.lib.long_polling import enable_long_polling
+        assert enable_long_polling    # Prevent pep8 warning
 
     def stop(self):
         pass

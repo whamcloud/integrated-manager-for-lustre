@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -56,6 +56,8 @@ class Pinger(threading.Thread):
 
 class Service(ChromaService):
     def run(self):
+        super(Service, self).run()
+
         overall_ts = time.time()
         threads = []
         N = 4096
@@ -88,4 +90,4 @@ class Service(ChromaService):
         os._exit(0)
 
     def stop(self):
-        pass
+        super(Service, self).stop()

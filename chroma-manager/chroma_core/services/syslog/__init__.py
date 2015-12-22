@@ -104,7 +104,11 @@ class Service(ChromaService):
                         self.log.error("Error %s ingesting syslog entry: %s" % (e, msg))
 
     def run(self):
+        super(Service, self).run()
+
         self._queue.serve(data_callback = self.on_data)
 
     def stop(self):
+        super(Service, self).stop()
+
         self._queue.stop()

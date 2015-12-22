@@ -175,7 +175,11 @@ class Service(ChromaService):
                                                                        datetime=dt)
 
     def run(self):
+        super(Service, self).run()
+
         self._queue.serve(data_callback=self.on_data)
 
     def stop(self):
+        super(Service, self).stop()
+
         self._queue.stop()

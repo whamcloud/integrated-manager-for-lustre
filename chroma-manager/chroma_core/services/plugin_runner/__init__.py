@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -68,6 +68,8 @@ class Service(ChromaService):
         from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonRpcInterface
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
+        super(Service, self).run()
+
         errors = storage_plugin_manager.get_errored_plugins()
         if errors:
             self.log.error("The following plugins could not be loaded: %s" % errors)
@@ -94,6 +96,8 @@ class Service(ChromaService):
         self.log.debug("Leaving main loop")
 
     def stop(self):
+        super(Service, self).stop()
+
         # Guard against trying to stop after child threads are created, but before they are started.
         self._children_started.wait()
 

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -40,6 +40,8 @@ class Service(ChromaService):
         self._queue.purge()
 
     def run(self):
+        super(Service, self).run()
+
         self._queue.serve(data_callback = self.on_data)
 
     def on_data(self, fqdn, data):
@@ -53,4 +55,6 @@ class Service(ChromaService):
             log.error("Error handling lustre message: %s", '\n'.join(traceback.format_exception(*(sys.exc_info()))))
 
     def stop(self):
+        super(Service, self).stop()
+
         self._queue.stop()

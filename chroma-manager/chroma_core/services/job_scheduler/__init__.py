@@ -98,6 +98,8 @@ class Service(ChromaService):
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
+        super(Service, self).run()
+
         # Cancel anything that's left behind from a previous run
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
@@ -124,6 +126,8 @@ class Service(ChromaService):
 
     def stop(self):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+        super(Service, self).stop()
 
         # Guard against trying to stop after child threads are created, but before they are started
         self._children_started.wait()

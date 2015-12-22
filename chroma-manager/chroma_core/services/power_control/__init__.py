@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -36,6 +36,8 @@ class Service(ChromaService):
         from chroma_core.services.power_control.monitor_daemon import PowerMonitorDaemon
         from chroma_core.services.power_control.rpc import PowerControlRpc
 
+        super(Service, self).run()
+
         manager = PowerControlManager()
         monitor_daemon = PowerMonitorDaemon(manager)
 
@@ -49,6 +51,8 @@ class Service(ChromaService):
         self._complete.wait()
 
     def stop(self):
+        super(Service, self).stop()
+
         # Guard against trying to stop after child threads are created, but before they are started.
         self._children_started.wait()
 
