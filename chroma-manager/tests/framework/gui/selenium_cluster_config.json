@@ -1,67 +1,8 @@
 {
     "headless": false,
-    "screenshots": true,
+    "chroma_managers": [],
+    "lustre_servers": [],
     "clean_up_on_failure": true,
-    "browser": "Chrome",
-    "chroma_managers": [
-        {
-            "server_http_url": "https://localhost:8000/ui/",
-            "users": [
-                {
-                    "username": "admin",
-                    "is_superuser": true,
-                    "password": "lustre",
-                    "email": "nobody@example.com"
-                }
-            ],
-            "distro": "TEST_DISTRIBUTION",
-            "repos": ["chroma"]
-        }
-    ],
-    "lustre_servers":[
-        {
-            "nodename": "kp-ss-storage-appliance-1",
-            "address": "kp-ss-storage-appliance-1",
-            "fqdn": "kp-ss-storage-appliance-1",
-            "device_paths": [
-                "/dev/disk/by-id/scsi-1IET_00010001",
-                "/dev/disk/by-id/scsi-1IET_00020001",
-                "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001",
-                "/dev/disk/by-id/scsi-1IET_00070001",
-                "/dev/disk/by-id/scsi-1IET_00080001"
-            ],
-            "distro": "mock"
-        },
-        {
-            "nodename": "kp-ss-storage-appliance-2",
-            "address": "kp-ss-storage-appliance-2",
-            "fqdn": "kp-ss-storage-appliance-2",
-            "device_paths": [
-                "/dev/disk/by-id/scsi-1IET_00010001",
-                "/dev/disk/by-id/scsi-1IET_00020001",
-                "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001",
-                "/dev/disk/by-id/scsi-1IET_00070001",
-                "/dev/disk/by-id/scsi-1IET_00080001"
-            ],
-            "distro": "mock"
-        }
-    ],
-    "device_path_to_label_map" : {
-        "/dev/disk/by-id/scsi-1IET_00010001": "1IET 00010001",
-        "/dev/disk/by-id/scsi-1IET_00020001": "1IET 00020001",
-        "/dev/disk/by-id/scsi-1IET_00030001": "1IET 00030001",
-        "/dev/disk/by-id/scsi-1IET_00040001": "1IET 00040001",
-        "/dev/disk/by-id/scsi-1IET_00070001": "1IET 00070001",
-        "/dev/disk/by-id/scsi-1IET_00080001": "1IET 00080001"
-    },
-    "wait_time": {
-        "long": 900000,
-        "standard": 300000,
-        "medium": 60000,
-        "short": 30000
-    },
     "repos": {
         "chroma": {
             "build_job": "BUILD_JOB_NAME",

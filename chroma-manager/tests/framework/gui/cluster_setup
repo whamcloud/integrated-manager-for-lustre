@@ -15,10 +15,8 @@ echo "Beginning installation and setup..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 gcc make tigervnc-server npm git firefox
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
-
-export NODE_PATH=/usr/lib/node_modules
 
 if [ ! -z "$GOOGLE_REPO" ]; then
   # Install Google Chrome
@@ -63,7 +61,6 @@ cd chroma_test_env/chroma/chroma-manager
 
 # Install npm-based requirements
 export ZIP_DEV=true
-export NODE_PATH=/usr/lib/node_modules
 make ui-modules
 
 # Configure VNC server

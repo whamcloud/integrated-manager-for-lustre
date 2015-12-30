@@ -15,7 +15,6 @@ set -ex
 mkdir test_reports
 vncserver :1 -geometry 1024x768
 export DISPLAY=\$(hostname):1
-export NODE_PATH=/usr/lib/node_modules
 export RUNNER=CI
 
 NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-manager/ui-modules/node_modules"}
