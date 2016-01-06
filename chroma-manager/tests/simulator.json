@@ -10,7 +10,7 @@
             "users": [
                 {"username": "admin", "super": true, "password": "lustre"}
             ],
-            "distro": "TEST_DISTRIBUTION"
+            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION"
         }
     ],
     "lustre_servers": [

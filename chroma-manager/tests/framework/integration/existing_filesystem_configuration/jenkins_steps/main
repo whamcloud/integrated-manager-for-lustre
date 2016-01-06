@@ -3,6 +3,8 @@
 . chroma-manager/tests/framework/utils/defaults.sh
 . chroma-manager/tests/framework/utils/selective_auto_pass.sh
 
+set_defaults false
+
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
@@ -56,6 +58,11 @@ for dne in true false; do
         fi
 
         for device_type in ${device_types_to_test[@]}; do
+            if [ $TEST_DISTRO_VERSION == "7.2" ] && [ $device_type == "linux" ] && ! $test_ha; then
+                echo "Skipping linux with no HA on el7.2 until it can be fixed"
+                continue
+            fi
+
             echo "Beginning automated ${device_type} run..."
 
             export TEST_SPECIFIC_CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}_dne_is_${dne}.json

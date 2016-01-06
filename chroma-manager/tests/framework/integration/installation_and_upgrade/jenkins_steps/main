@@ -3,6 +3,9 @@
 . chroma-manager/tests/framework/utils/defaults.sh
 . chroma-manager/tests/framework/utils/selective_auto_pass.sh
 
+set_defaults true
+
+
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
 SLAVE=${slave:?"Need to set slave"}
@@ -13,10 +16,6 @@ set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api tok
 echo "+ curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:********* \"$JOB_URL/ieel-$CURRENT_IEEL_VERSION.tar.gz\""
 curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$CURRENT_IEEL_VERSION.tar.gz"
 set -x
-
-if [ "$SLAVE" = "rhel6&&ssi" ]; then
-    export TEST_DISTRIBUTION=$(echo $TEST_DISTRIBUTION | sed 's/^el/rhel/')
-fi
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e
