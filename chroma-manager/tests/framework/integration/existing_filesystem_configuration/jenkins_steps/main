@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
 . chroma-manager/tests/framework/utils/defaults.sh
+set_defaults false
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
@@ -56,7 +57,7 @@ for dne in true false; do
 
         for device_type in ${device_types_to_test[@]}; do
 
-            if [[ "el7.2 rhel7.2" =~ $TEST_DISTRIBUTION ]] && [ $device_type == "linux" ] && ! $test_ha; then
+            if [ $TEST_DISTRO_VERSION == "7.2" ] && [ $device_type == "linux" ] && ! $test_ha; then
                 echo "Skipping linux with no HA on el7.2 until it can be fixed"
                 continue
             fi

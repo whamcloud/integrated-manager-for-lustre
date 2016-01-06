@@ -39,10 +39,10 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             # The needs_update flag should be set on the host
             self.assertEqual(self.get_json_by_uri(host['resource_uri'])['needs_update'], True)
 
-        # Stop the filesystem. Currently the GUI forces you to stop the filesystem before
-        # the buttons to install updates is available as we don't do a kind "rolling upgrade".
-        filesystem = self.get_filesystem_by_name(self.fs_name)
-        self.stop_filesystem(filesystem['id'])
+        # Even though we have to stop a filesytem to do an upgrade (i.e. no
+        # rolling upgrades, we stopped it before doing the upgrade to avoid
+        # situations where the O/S upgrade results in an IML that can no
+        # longer function with the upgraded O/S.
 
         # With the list of hosts, start the upgrade as a single command
         command = self.chroma_manager.post("/api/command/", body={
@@ -65,6 +65,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
 
         # Start the filesystem back up
+        filesystem = self.get_filesystem_by_name(self.fs_name)
         self.start_filesystem(filesystem['id'])
 
     def test_no_retired_repos(self):
@@ -73,3 +74,9 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         current_repos = self.remote_operations.get_chroma_repos()
         for repo in retired_repos:
             self.assertFalse(repo in current_repos, "Unexpectedly found repo '%s' in %s" % (repo, current_repos))
+
+    def test_stop_before_update(self):
+        # Stop the filesystem. Currently the GUI forces you to stop the filesystem before
+        # the buttons to install updates is available as we don't do a kind "rolling upgrade".
+        filesystem = self.get_filesystem_by_name(self.fs_name)
+        self.stop_filesystem(filesystem['id'])

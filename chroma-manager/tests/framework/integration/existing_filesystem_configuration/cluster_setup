@@ -66,8 +66,8 @@ cd ${ARCHIVE_NAME%.tar.gz}
 # Execute the create_installer script and distribute the install procedure to the storage nodes
 ./create_installer zfs
 ./create_installer ldiskfs
-pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRIBUTION%%.*}-installer.tar.gz $INSTALLER_PATH
-pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-ldiskfs-${TEST_DISTRIBUTION%%.*}-installer.tar.gz $INSTALLER_PATH
+pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH
+pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-ldiskfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH
 
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}

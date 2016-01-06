@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
 . chroma-manager/tests/framework/utils/defaults.sh
+set_defaults false
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 

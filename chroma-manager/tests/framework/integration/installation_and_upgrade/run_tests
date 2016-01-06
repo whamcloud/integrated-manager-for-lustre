@@ -140,14 +140,22 @@ cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS"
 
-echo "Now upgrade IML..."
+echo "Now upgrade the OS and IML..."
+
+# first have to shut down the filesystem so that we don't have incompatible OS/IML issues
+ssh root@$TEST_RUNNER "exec 2>&1; set -xe
+cd /usr/share/chroma-manager/
+unset http_proxy; unset https_proxy
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_filesystem_stop.xml $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_stop_before_update"
+
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/upgrade_os.sh
+upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]})
 
 # Install and setup new chroma manager
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
-yum -y update
 
 # Unpack the previous install into /tmp/$UPGRADE_INSTALL_DIR
 cd /tmp
