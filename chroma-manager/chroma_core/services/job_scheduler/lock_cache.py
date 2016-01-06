@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,6 +26,14 @@ from django.db.models import Q
 
 
 class LockCache(object):
+
+    # Lock change receivers are called whenever a change occurs to the locks. It allows something to
+    # respond to changes. An example would be long polling.
+    # The receivers are called with the lock being removed and LOCK_ADD or LOCK_REMOVE as the paramter.
+    lock_change_receivers = []
+    LOCK_ADD = 1
+    LOCK_REMOVE = 2
+
     def __init__(self):
         from chroma_core.models import Job, StateLock
 
@@ -42,25 +50,31 @@ class LockCache(object):
                 for lock in locks:
                     self._add(StateLock.from_dict(job, lock))
 
+    def call_receivers(self, lock, add_remove):
+        for lock_change_receiver in self.lock_change_receivers:
+            lock_change_receiver(lock, add_remove)
+
     def remove_job(self, job):
         locks = list(self.all_by_job[job.id])
         n = len(locks)
-        for l in locks:
-            if l.write:
-                self.write_locks.remove(l)
-                self.write_by_item[l.locked_item].remove(l)
+        for lock in locks:
+            if lock.write:
+                self.write_locks.remove(lock)
+                self.write_by_item[lock.locked_item].remove(lock)
             else:
-                self.read_locks.remove(l)
-                self.read_by_item[l.locked_item].remove(l)
-            self.all_by_job[job.id].remove(l)
-            self.all_by_item[l.locked_item].remove(l)
-
+                self.read_locks.remove(lock)
+                self.read_by_item[lock.locked_item].remove(lock)
+            self.all_by_job[job.id].remove(lock)
+            self.all_by_item[lock.locked_item].remove(lock)
+            self.call_receivers(lock, self.LOCK_REMOVE)
         return n
 
     def add(self, lock):
         self._add(lock)
 
     def _add(self, lock):
+        assert lock.job.id is not None
+
         if lock.write:
             self.write_locks.append(lock)
             self.write_by_item[lock.locked_item].append(lock)
@@ -68,11 +82,9 @@ class LockCache(object):
             self.read_locks.append(lock)
             self.read_by_item[lock.locked_item].append(lock)
 
-        if lock.job.id is None:
-            raise RuntimeError()
-
         self.all_by_job[lock.job.id].append(lock)
         self.all_by_item[lock.locked_item].append(lock)
+        self.call_receivers(lock, self.LOCK_ADD)
 
     def get_by_job(self, job):
         return self.all_by_job[job.id]
@@ -104,3 +116,19 @@ class LockCache(object):
             if locks:
                 result[locked_item] = sorted(locks, lambda a, b: cmp(a.job.id, b.job.id))[-1]
         return result
+
+
+def lock_change_receiver():
+    """
+    A decorator for connecting receivers to signals that a lock has change.
+
+        @receiver(post_save, sender=MyModel)
+        def signal_receiver(sender, **kwargs):
+            ...
+
+    """
+    def _decorator(func):
+        LockCache.lock_change_receivers.append(func)
+        return func
+
+    return _decorator

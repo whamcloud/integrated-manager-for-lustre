@@ -99,14 +99,6 @@ class FakeActionPlugins():
                     server.shutdown(simulate_shutdown = True, reboot = True)
 
                 raise CallbackAfterResponse(None, _reboot)
-            elif cmd == 'restart_agent':
-                server = self._server
-
-                def _restart():
-                    # FIXME: don't actually want to simulate_shutdown but otherwise it tries to join from the current thread
-                    server.shutdown(simulate_shutdown=True, reboot=True)
-
-                raise CallbackAfterResponse(None, _restart)
             elif cmd == 'failover_target':
                 self._server._cluster.failover(kwargs['ha_label'])
                 return agent_result_ok

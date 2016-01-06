@@ -26,7 +26,7 @@ import time
 from collections import defaultdict
 
 from chroma_core.lib import util
-
+from chroma_core.services.job_scheduler import lock_cache
 
 # table_name: list events
 # When waiting for a table to change a semaphore is added to the list this is trigger when that table changes
@@ -38,6 +38,11 @@ timestamps = defaultdict(lambda: int(util.SECONDSTOMICROSECONDS * (time.time() -
 
 # Semaphore for operations
 operation_lock = threading.RLock()
+
+
+@lock_cache.lock_change_receiver()
+def lock_change_receiver(lock, add_remove):
+    table_change(int(time.time() * util.SECONDSTOMICROSECONDS), lock.locked_item._meta.db_table)
 
 
 def table_change(timestamp, table):

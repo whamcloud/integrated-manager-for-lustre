@@ -35,6 +35,7 @@ from chroma_agent.agent_client import AgentClient
 
 from cluster_sim.log import log
 from cluster_sim import utils
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
@@ -206,12 +207,11 @@ class FakeServer(utils.Persisted):
         return agent_result_ok
 
     def restart_agent(self):
-        log.debug("restart agent %s" % self.fqdn)
-        server = self.servers[self.fqdn]
+        def _restart():
+            # FIXME: don't actually want to simulate_shutdown but otherwise it tries to join from the current thread
+            self.shutdown(simulate_shutdown=True, reboot=True)
 
-        if server.running:
-            server.shutdown_agent()
-        server.start_agent()
+        raise CallbackAfterResponse(None, _restart)
 
     def scan_packages(self):
         packages = {}

@@ -1,8 +1,5 @@
-import time
-
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.integration.core.long_polling_testing import LongPollingThread
 
 
 class TestHosts(ChromaIntegrationTestCase):
@@ -62,45 +59,3 @@ class TestHosts(ChromaIntegrationTestCase):
         self.assertState(filesystem_uri, 'available')
 
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects'][0]['osts']), 2)
-
-
-class TestHostLongPolling(ChromaIntegrationTestCase):
-    def _wait_response_count(self, count):
-        self.wait_until_true(lambda: self.long_polling_end_point.response_count == count,
-                             error_message=lambda: ('Expected count {0}\n'
-                                                    'Actual Count {1}\n'
-                                                    'Polling Data {2}').format(count,
-                                                                              self.long_polling_end_point.response_count,
-                                                                              self.long_polling_end_point))
-
-    def test_host_long_polling(self):
-        """Test long polling for alerts responds correctly."""
-
-        # Add one host
-        host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
-
-        # Now start monitoring the endpoint
-        self.long_polling_end_point = LongPollingThread("/api/host/", self)
-
-        self._wait_response_count(1)
-
-        # Now wait 10 seconds and the the response count should not have changed.
-        time.sleep(10)
-
-        self._wait_response_count(1)
-
-        # Stop LNet and the response should change.
-        self.remote_operations.stop_lnet(host['fqdn'])
-
-        self._wait_response_count(2)
-
-        # Now exit.
-        self.long_polling_end_point.exit = True
-
-        # Need to cause an alert of some sort, or wait for a timeout of long polling, so start Lnet again.
-        self.remote_operations.start_lnet(host['fqdn'])
-        self._wait_response_count(3)
-
-        self.long_polling_end_point.join()
-
-        self.assertEqual(self.long_polling_end_point.error, None, self.long_polling_end_point.error)
