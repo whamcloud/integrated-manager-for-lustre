@@ -1,6 +1,9 @@
 #!/bin/bash -ex
 
 . chroma-manager/tests/framework/integration/utils/defaults.sh
+set_defaults false
+
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
@@ -9,49 +12,17 @@ echo "+ curl -k -O -u $JENKINS_USER:********* \"$JOB_URL/ieel-$IEEL_VERSION.tar.
 curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
-       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
-       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
-       chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json provisioner_input.json
-
-# don't really need a client configured so let's save the time doing it
-sed -i -e '/lustre_client_version/c\
-            "lustre_client_version": ""' provisioner_input.json
-
-cat provisioner_input.json
-echo
-
 # Release the provisioned cluster (at exit of this script)
 trap "set +e
 set -x
 # Gather logs from nodes
-python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs existing_filesystem_configuration_cluster_cfg.json || true
+python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG
+
 sed -e 's/provision\": *true/provision\": false/g' < provisioner_output.json | $PROVISIONER" EXIT
 
-# Provision cluster to run tests on
-PROVISION_START_TIME=$SECONDS
+chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
-if ! cat provisioner_input.json | $PROVISIONER > provisioner_output.json ||
-   [ ! -s provisioner_output.json ] ||
-   grep '"success": false' provisioner_output.json; then
-    echo "Cluster provisioner failed"
-    cat provisioner_output.json
-    exit 1
-else
-    cat provisioner_output.json
-    echo
-fi
-PROVISION_END_TIME=$SECONDS
-PROVISION_DURATION=$((PROVISION_END_TIME-PROVISION_START_TIME))
-echo "$PROVISION_DURATION" > $WORKSPACE/provision_duration.txt
-echo "Provision took $((PROVISION_DURATION/60)) minutes."
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json existing_filesystem_configuration_cluster_cfg.json
-cat existing_filesystem_configuration_cluster_cfg.json
-
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py existing_filesystem_configuration_cluster_cfg.json)
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
 pushd /etc/yum.repos.d/
 for f in *.repo; do
@@ -68,13 +39,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-echo "Beginning automated test run..."
-export MEASURE_COVERAGE
-export JENKINS_PULL
-
-
-echo "Beginning automated efs run..."
-ORIGINAL_CLUSTER_CONFIG=$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)
+ORIGINAL_CLUSTER_CONFIG=$CLUSTER_CONFIG
 chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
 
 setup_rc=0

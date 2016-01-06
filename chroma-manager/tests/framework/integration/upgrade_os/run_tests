@@ -34,24 +34,8 @@ cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS/../shared_storage_configuration/test_cluster_setup.py $TESTS/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
-echo "Now upgrade the operating system..."
-
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
-if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
-    cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
-fi
-if $RHEL; then
-    OS=rhel
-else
-    OS=el
-fi
-curl -o /etc/yum.repos.d/cobbler-config.repo \"http://${COBBLER:-10.14.80.10}/cblr/svc/op/yum/profile/IML_test-\${OS}6.6-x86_64\"
-yum-config-manager --disable addon-epel6-x86_64
-rpm -qa | sort >/tmp/before_upgrade
-yum -y upgrade
-rpm -qa | sort >/tmp/after_upgrade" | dshbak -c
-
-echo "End operating system upgrade"
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/upgrade_os.sh
+upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]})
 
 echo "Test existing filesystem is still there and functional"
 

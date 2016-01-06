@@ -116,14 +116,22 @@ cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS/../shared_storage_configuration/test_cluster_setup.py $TESTS/test_update_with_yum.py:TestYumUpdate.test_create"
 
-echo "Now upgrade IML..."
+echo "Now upgrade the OS and IML..."
+
+# first have to shut down the filesystem so that we don't have incompatible OS/IML issues
+ssh root@$TEST_RUNNER "exec 2>&1; set -xe
+cd /usr/share/chroma-manager/
+unset http_proxy; unset https_proxy
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_filesystem_stop.xml $TESTS/test_update_with_yum.py:TestYumUpdate.test_stop_before_update"
+
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/upgrade_os.sh
+upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]})
 
 # Install and setup chroma manager
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
-yum -y update
 # Install from the installation package
 cd /tmp
 tar xzvf $ARCHIVE_NAME
@@ -216,10 +224,13 @@ echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
+TESTS="$TESTS/test_update_with_yum.py:TestYumUpdate.test_yum_update \
+       $TESTS/test_create_filesystem.py:TestExistsFilesystem.test_exists"
+
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS/test_update_with_yum.py:TestYumUpdate.test_yum_update $TESTS/test_create_filesystem.py:TestExistsFilesystem.test_exists"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS"
 
 # test that removing the chroma-manager RPM removes /var/lib/chroma
 ssh root@$CHROMA_MANAGER "set -xe

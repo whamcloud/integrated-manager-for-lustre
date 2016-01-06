@@ -10,7 +10,7 @@
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ],
-            "distro": "TEST_DISTRIBUTION"
+            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION"
         }
     ],
     "lustre_servers": [

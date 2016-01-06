@@ -3,6 +3,9 @@
 PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 
 . chroma-manager/tests/framework/integration/utils/defaults.sh
+set_defaults false
+
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json"}
 
 #--------------------------------------------------------------------------
 # Get the chroma-externals repo as pip is going to need it
@@ -42,35 +45,14 @@ sed -e 's/provision\": *true/provision\": false/g' < provisioner_output.json | $
 # Provision a node
 #--------------------------------
 cd $WORKSPACE/chroma_test_env/
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
-       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
-       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
-       chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json provisioner_input.json
-cat provisioner_input.json | $PROVISIONER > provisioner_output.json
-cat provisioner_input.json
-
-if ! grep '"success":true' provisioner_output.json; then
-    echo "Cluster provisioner failed"
-    cat provisioner_output.json
-    exit 1
-fi
-echo
-
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json selenium_cluster_config.json
-cat selenium_cluster_config.json
+chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 #---------------------------
 # Install Chroma on the node
 #---------------------------
-CLUSTER_CONFIG=selenium_cluster_config.json \
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
 chroma/chroma-manager/tests/framework/gui/cluster_setup
 
 #-----------------------
 # Run the selenium tests
 #-----------------------
-WORKSPACE=$WORKSPACE \
-CLUSTER_CONFIG=selenium_cluster_config.json \
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
 chroma/chroma-manager/tests/framework/gui/run_tests
