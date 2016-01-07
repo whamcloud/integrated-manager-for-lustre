@@ -46,7 +46,6 @@ chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_clus
 #---------------------------
 # Install Chroma on the node
 #---------------------------
-GOOGLE_REPO="http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64" \
 chroma/chroma-manager/tests/framework/gui/cluster_setup
 
 #-----------------------

@@ -39,7 +39,6 @@ echo "Beginning automated test run..."
 set +x
 export JENKINS_PULL
 set -x
-PROXY="http_proxy=\"http://proxy.dp.intel.com:911\" https_proxy=\"http://proxy.dp.intel.com:911\" no_proxy=\"cobbler,.iml.intel.com,.intel.com,172.24.111.129\"" \
 chroma/chroma-manager/tests/framework/integration/installation_and_upgrade/cluster_setup
 chroma/chroma-manager/tests/framework/integration/installation_and_upgrade/run_tests
 echo "Automated test run complete."

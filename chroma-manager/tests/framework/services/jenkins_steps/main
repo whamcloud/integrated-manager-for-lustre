@@ -34,18 +34,7 @@ fi
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
-cat <<EOC > /etc/yum.repos.d/internal_epel.repo
-[addon-epel6-x86_64]
-name=addon-epel6-x86_64
-baseurl=http://cobbler/cobbler/repo_mirror/EPEL-6-x86_64
-enabled=1
-gpgcheck=0
-priority=99
-EOC
 yum install -y python-virtualenv
-yum-config-manager --disable addon-epel6-x86_64
-# Disable EPEL
-yum-config-manager --disable EPEL-6-x86_64
 EOF
 
 echo "Beginning automated test run..."
