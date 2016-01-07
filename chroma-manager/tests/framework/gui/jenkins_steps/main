@@ -82,7 +82,6 @@ yum-config-manager --disable EPEL-6-x86_64"
 #---------------------------
 CLUSTER_CONFIG=selenium_cluster_config.json \
 MEASURE_COVERAGE=$MEASURE_COVERAGE \
-GOOGLE_REPO="http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64" \
 chroma/chroma-manager/tests/framework/gui/cluster_setup
 
 #-----------------------

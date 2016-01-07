@@ -9,7 +9,6 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/gui
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-GOOGLE_REPO=${GOOGLE_REPO:-"http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64"}  # If not on Toro, can pass in http://dl.google.com/linux/chrome/rpm/stable/x86_64
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
@@ -21,19 +20,7 @@ yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 # Selenium server needs entropy
 service haveged start
 
-if [ ! -z "$GOOGLE_REPO" ]; then
-  # Install Google Chrome
-  cat << EOC >> /etc/yum.repos.d/google.repo
-[google]
-name=Google
-baseurl=$GOOGLE_REPO
-enabled=0
-gpgcheck=0
-retries=50
-timeout=180
-EOC
-  yum --enablerepo=google install -y google-chrome-stable
-fi
+yum install -y google-chrome-stable
 
 # Create a user so we can run the tests as non-root
 useradd chromatest

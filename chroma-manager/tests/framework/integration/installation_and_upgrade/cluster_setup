@@ -24,8 +24,6 @@ USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
-
 echo "Beginning installation and setup..."
 
 # put some keys on the nodes for easy access by developers
@@ -45,7 +43,7 @@ fi
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
 fi
-$PROXY yum install -y omping" | dshbak -c
+yum install -y omping" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -54,14 +52,14 @@ fi
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests
+yum --disablerepo=\* --enablerepo=chroma makecache
+yum -y install chroma-manager-integration-tests
 
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured
     ssh root@$HOST_IP "exec 2>&1; set -xe
     uname -a
-    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
     mkdir -p /etc/cluster
     echo \"not secure\" > /etc/cluster/fence_xvm.key
     restorecon -Rv /etc/cluster/

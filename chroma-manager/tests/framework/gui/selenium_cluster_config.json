@@ -70,7 +70,7 @@
     },
     "test_runners": [
         {
-            "distro": "fc19"
+            "distro": "fc21"
         }
     ],
     "provision": true

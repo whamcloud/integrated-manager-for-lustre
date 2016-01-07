@@ -10,7 +10,6 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/simulator.jso
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-EPEL_SOURCE=${EPEL_SOURCE:-"baseurl=http://cobbler/cobbler/repo_mirror/EPEL-6-x86_64/"}  # For a dev env, use mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-6&arch=$basearch
 
 echo "Beginning installation and setup..."
 
@@ -19,15 +18,6 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 
-cat <<EOC > /etc/yum.repos.d/epel.repo
-[epel]
-name=epel
-$EPEL_SOURCE
-enabled=1
-priority=1
-gpgcheck=0
-sslverify=0
-EOC
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server erlang-inets npm patch httpd-devel
 
