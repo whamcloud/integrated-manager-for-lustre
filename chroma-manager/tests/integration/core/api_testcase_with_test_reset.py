@@ -641,7 +641,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             # Run chroma-config setup to recreate the database and start the chroma manager.
             result = self.remote_command(
                 chroma_manager['address'],
-                "chroma-config setup %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost")),
+                "chroma-config setup %s %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost"), "--no-dbspace-check"),
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status

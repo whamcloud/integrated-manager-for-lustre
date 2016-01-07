@@ -639,7 +639,8 @@ def main():
                         dest='repo_check',  required=False)
     parser.add_argument('--no-platform-check', '-p', action='store_false', default=True,
                         dest='platform_check', required=False)
-
+    parser.add_argument('--no-dbspace-check', '-d', action='store_true', default=False,
+                        dest='dbspace_check', required=False)
     args = parser.parse_args()
 
     if args.platform_check:
@@ -684,7 +685,9 @@ def main():
     _install_or_upgrade_packages()
 
     # Ensure database migrations are run (may prompt the user)
-    _run(['chroma-config', 'setup'], passthrough=True, drain_stdin=True)
+    _run(['chroma-config', 'setup'] + (['--no-dbspace-check'] if args.dbspace_check else []),
+         passthrough=True,
+         drain_stdin=True)
 
     # Install/update bundles
     _install_or_upgrade_bundles(old_bundles, new_bundles)

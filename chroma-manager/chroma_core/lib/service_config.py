@@ -29,9 +29,12 @@ import xmlrpclib
 import time
 import os
 import json
+
 # without GNU readline, raw_input prompt goes to stderr
 import readline
 assert readline
+
+from collections import namedtuple
 
 from chroma_core.lib.util import chroma_settings
 
@@ -93,6 +96,9 @@ class SupervisorStatus(object):
 
 
 class ServiceConfig(CommandLine):
+    REQUIRED_DB_SPACE_GB = 100
+    bytes_in_gigabytes = 1073741824
+
     def __init__(self):
         self.verbose = False
 
@@ -386,9 +392,42 @@ class ServiceConfig(CommandLine):
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
 
-    def _setup_pgsql(self, database):
+    PathStats = namedtuple('PathStats', ['total', 'used', 'free'])
+
+    def _path_space(self, path):
+        """Returns the disk statistics of the given path.
+
+        Returned values is a named tuple with attributes 'total', 'used' and
+        'free', which are the amount of total, used and free space, in bytes.
+        """
+        statvfs = os.statvfs(path)
+        total = statvfs.f_frsize * statvfs.f_blocks     # size in bytes
+        free_space = statvfs.f_frsize * statvfs.f_bfree      # number of free bytes
+        used = total - free_space   # number of used bytes
+
+        return self.PathStats(total, used, free_space)
+
+    def _check_db_space(self, required_space_gigabytes):
+        rc, out, err = self.try_shell(["su", "postgres", "-c", "psql -c 'SHOW data_directory;'"])
+        db_storage_path = out.split()[2]
+        stats = self._path_space(db_storage_path)
+        gigabytes_free = stats.free / self.bytes_in_gigabytes
+
+        if gigabytes_free < required_space_gigabytes:
+            log.error('Insufficient space for postgres database. %sGB available, %sGB required' %
+                      (gigabytes_free, required_space_gigabytes))
+
+            error_msg = 'Insufficient space for postgres database in path directory %s. %sGB available, %sGB required ' \
+                        % (
+                            db_storage_path, gigabytes_free, required_space_gigabytes)
+            log.error(error_msg)
+            return error_msg
+
+    def _setup_pgsql(self, database, check_db_space):
         log.info("Setting up PostgreSQL service...")
+
         self._init_pgsql(database)
+
         postgresql_service = ServiceControl.create("postgresql")
         postgresql_service.restart()
         postgresql_service.enable()
@@ -399,6 +438,12 @@ class ServiceConfig(CommandLine):
                 raise RuntimeError("Timed out waiting for PostgreSQL service to start")
             tries += 1
             time.sleep(1)
+
+        if check_db_space:
+            error = self._check_db_space(self.REQUIRED_DB_SPACE_GB)
+
+            if error:
+                return error
 
         if not self._db_accessible():
             log.info("Creating database owner '%s'...\n" % database['USER'])
@@ -417,6 +462,7 @@ class ServiceConfig(CommandLine):
             log.info("Creating database '%s'...\n" % database['NAME'])
             self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'],
                                                                             database['NAME'])])
+        return None
 
     @staticmethod
     def get_input(msg, empty_allowed=True, password=False, default=""):
@@ -501,15 +547,19 @@ class ServiceConfig(CommandLine):
         else:
             log.info("Database tables already OK")
 
-    def _setup_database(self, username=None, password=None):
+    def _setup_database(self, username, password, check_db_space):
+        error = None
         if not self._db_accessible():
             # For the moment use the builtin configuration
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
 
-            self._setup_pgsql(databases['default'])
+            error = self._setup_pgsql(databases['default'], check_db_space)
         else:
             log.info("DB already accessible")
+
+        if error:
+            return error
 
         self._syncdb()
 
@@ -532,18 +582,20 @@ class ServiceConfig(CommandLine):
         if not self.verbose:
             args = args + ["--verbosity", "0"]
         ManagementUtility(args).execute()
+        return error
 
-    def setup(self, username=None, password=None, ntp_server=None):
+    def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
 
-        self._setup_database(username, password)
+        error = self._setup_database(username, password, check_db_space)
+        if error:
+            return [error]
         self._setup_ntp(ntp_server)
         self._setup_rabbitmq_service()
         self._setup_rabbitmq_credentials()
         self._setup_crypto()
         self._enable_services()
-
         self._start_services()
 
         return self.validate()
@@ -796,26 +848,36 @@ def chroma_config():
         else:
             log.info("OK.")
 
+    if '-v' in sys.argv:
+        service_config.verbose = True
+        sys.argv.remove('-v')
+
     if command == 'setup':
         def usage():
             log.error("Usage: setup [-v] [username password ntpserver]")
             sys.exit(-1)
 
-        args = []
-        if len(sys.argv) > 2:
-            if sys.argv[2] == "-v":
-                service_config.verbose = True
-                if len(sys.argv) == 6:
-                    args = sys.argv[3:6]
-                elif len(sys.argv) != 3:
-                    usage()
-            elif len(sys.argv) == 5:
-                args = sys.argv[2:5]
-            else:
+        if '--no-dbspace-check' in sys.argv:
+            check_db_space = False
+            sys.argv.remove('--no-dbspace-check')
+        else:
+            check_db_space = True
+
+        if len(sys.argv) == 2:
+            username = None
+            password = None
+            ntpserver = None
+
+        elif len(sys.argv) == 5:
+            username = sys.argv[2]
+            password = sys.argv[3]
+            ntpserver = sys.argv[4]
+
+        else:
                 usage()
 
         log.info("Starting setup...\n")
-        errors = service_config.setup(*args)
+        errors = service_config.setup(username, password, ntpserver, check_db_space)
         if errors:
             print_errors(errors)
             sys.exit(-1)
