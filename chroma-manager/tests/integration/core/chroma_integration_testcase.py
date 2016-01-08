@@ -145,7 +145,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             # Pass our token to the simulator to register a server
             registration_result = self.simulator.register(fqdn, token['secret'])
             host_create_command_ids[host_address] = registration_result['command_id']
-            self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
+
+        self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         return self._fetch_help(lambda: self._add_hosts(addresses, auth_type),

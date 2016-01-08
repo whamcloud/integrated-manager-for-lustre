@@ -346,6 +346,18 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             last_command = max(response['objects'], key= lambda command: int(command['id']))
             self.wait_for_command(self.chroma_manager, last_command['id'], timeout, True)
 
+    def wait_alerts(self, expected_alerts, **filters):
+        "Wait and assert correct number of matching alerts."
+        expected_alerts.sort()
+
+        for index in wait(timeout=TEST_TIMEOUT):
+            alerts = [alert['alert_type'] for alert in self.get_list("/api/alert/", filters)]
+            alerts.sort()
+            if alerts == expected_alerts:
+                return alerts
+
+        raise AssertionError(alerts)
+
     def get_list(self, url, args=None):
         args = args if args else {}
         assert type(args) is dict, "args is not a dictionary: %s" % type(args)

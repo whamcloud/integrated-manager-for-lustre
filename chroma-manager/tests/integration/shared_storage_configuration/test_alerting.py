@@ -1,8 +1,6 @@
 
 
 from testconfig import config
-from tests.utils import wait
-from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
@@ -35,24 +33,13 @@ class TestEvents(ChromaIntegrationTestCase):
 
 
 class TestAlerting(ChromaIntegrationTestCase):
-    def _wait_alerts(self, expected_alerts, **filters):
-        "Wait and assert correct number of matching alerts."
-        expected_alerts.sort()
-
-        for index in wait(timeout=TEST_TIMEOUT):
-            alerts = [alert['alert_type'] for alert in self.get_list("/api/alert/", filters)]
-            alerts.sort()
-            if alerts == expected_alerts:
-                return alerts
-        raise AssertionError(alerts)
-
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 
         fs = self.get_json_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
-        self._wait_alerts([], active=True, severity='ERROR')
+        self.wait_alerts([], active=True, severity='ERROR')
 
         mgt = fs['mgt']
 
@@ -113,13 +100,14 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.stop_pacemaker(host['fqdn'])
         self.remote_operations.stop_corosync(host['fqdn'])
 
-        self._wait_alerts(['TargetOfflineAlert',
-                           'TargetOfflineAlert',
-                           'TargetOfflineAlert',
-                           'LNetOfflineAlert',
-                           'PacemakerStoppedAlert',
-                           'CorosyncStoppedAlert'],
-                          active=True)
+        self.wait_alerts(['TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'LNetOfflineAlert',
+                          'PacemakerStoppedAlert',
+                          'CorosyncStoppedAlert',
+                          'CorosyncNoPeersAlert'],
+                         active=True)
 
         # Now with Pacemaker/Corosync/LNetDown down the machine is going to have issues and the user would expect
         # to not be able to do things - at least they should expect, so put them back up.
@@ -127,13 +115,14 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.start_corosync(host['fqdn'])
         self.remote_operations.start_pacemaker(host['fqdn'])
 
-        self._wait_alerts(['TargetOfflineAlert',
-                           'TargetOfflineAlert',
-                           'TargetOfflineAlert'],
-                          active=True)
+        self.wait_alerts(['TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'CorosyncNoPeersAlert'],
+                         active=True)
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)
 
         # Check that all the alerts are gone too
-        self._wait_alerts([], active=True)
+        self.wait_alerts([], active=True)

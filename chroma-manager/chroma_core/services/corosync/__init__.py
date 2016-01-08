@@ -30,6 +30,7 @@ from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.job_scheduler import job_scheduler_notify
 #from chroma_core.models import CorosyncUnknownPeersAlert, CorosyncNoPeersAlert, CorosyncToManyPeersAlert
+from chroma_core.models import CorosyncNoPeersAlert
 
 log = log_register(__name__)
 
@@ -133,7 +134,7 @@ class Service(ChromaService):
             if unknown_nodes:
                 log.warning("Unknown nodes in report from %s: %s" % (fqdn, unknown_nodes))
 
-            #CorosyncNoPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) == 1)
+            CorosyncNoPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) == 1)
             #CorosyncToManyPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) > 2)
 
             #  Consider all nodes in the peer group for this reporting agent
