@@ -71,7 +71,12 @@ $(NPM):
 	@echo "Or maybe you don't even have the which(1) command"
 	exit 1
 
-ziplocker: $(NPM)
+$(HOME)/.node-gyp: $(NPM)
+	@echo "copying nodejs headers"; \
+	mkdir -p $HOME/.node-gyp && \
+	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
+
+ziplocker: $(NPM) $(HOME)/.node-gyp
 	@echo "Setting up ziplocker module"; \
 	mkdir -p ui-modules/node_modules && \
 	cd ui-modules/node_modules && \
