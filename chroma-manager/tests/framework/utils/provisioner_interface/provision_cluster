@@ -41,3 +41,5 @@ if ! python chroma/chroma-manager/tests/framework/utils/provisioner_interface/pr
     echo "provisioner_json2test_json.py failed. Input: $(cat provisioner_output.json)"
     exit 1
 fi
+
+cat provisioner_output.json

@@ -13,7 +13,7 @@ curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKIN
 set -x
 
 if [ "$SLAVE" = "rhel6&&ssi" ]; then
-    sed -i -e 's/el6/rhel6/g' provisioner_input.json
+    export TEST_DISTRIBUTION=$(echo $TEST_DISTRIBUTION | sed 's/^el/rhel/')
 fi
 
 # Gather logs from nodes and release the cluster at exit
