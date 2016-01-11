@@ -427,6 +427,8 @@ class ServiceConfig(CommandLine):
                 continue
             valid_username = True
 
+        password = self.get_pass(msg = "Password", empty_allowed = False, confirm_msg = "Confirm password")
+
         valid_email = False
         while not valid_email:
             email = self.get_input(msg = "Email")
@@ -434,9 +436,6 @@ class ServiceConfig(CommandLine):
                 print "Email is not valid"
                 continue
             valid_email = True
-
-        password = self.get_pass(msg = "Password", empty_allowed = False,
-                                 confirm_msg = "Confirm password")
 
         return username, email, password
 
