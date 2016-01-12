@@ -78,7 +78,8 @@ class NodeAudit(BaseAudit, FileSystemMixin):
 
         return {'zfs_installed': not zfs_not_installed,
                 'distro': platform.linux_distribution()[0],
-                'distro_version': float(platform.linux_distribution()[1]),
-                'python_version_major_minor': float("%s.%s" % (platform.python_version_tuple()[0], platform.python_version_tuple()[1])),
+                'distro_version': float('.'.join(platform.linux_distribution()[1].split('.')[:2])),
+                'python_version_major_minor': float("%s.%s" % (platform.python_version_tuple()[0],
+                                                               platform.python_version_tuple()[1])),
                 'python_patchlevel': int(platform.python_version_tuple()[2]),
                 'kernel_version': platform.release()}

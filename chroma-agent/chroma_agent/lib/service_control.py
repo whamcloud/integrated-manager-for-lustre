@@ -20,7 +20,6 @@
 # express and approved by Intel in writing.
 import time
 import platform
-import math
 import abc
 from chroma_agent.chroma_common.lib import util
 from chroma_agent.lib.shell import AgentShell
@@ -117,7 +116,7 @@ class ServiceControl(object):
 
 class ServiceControlRH6(ServiceControl):
 
-    platform_use = 6
+    platform_use = '6'
 
     @property
     def running(self):
@@ -131,15 +130,8 @@ class ServiceControlRH6(ServiceControl):
 
     @classmethod
     def _applicable(cls):
-        if platform.system() == 'Linux':
-            platform_info = platform.linux_distribution()
-            version = math.floor(float(platform_info[1]))
-            if version == cls.platform_use:
-                return True
-            else:
-                return False
-        else:
-            return False
+        return (platform.system() == 'Linux') and \
+               (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
 
     def add(self):
         return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name])
@@ -162,7 +154,7 @@ class ServiceControlRH6(ServiceControl):
 
 class ServiceControlRH7(ServiceControl):
 
-    platform_use = 7
+    platform_use = '7'
 
     @property
     def running(self):
@@ -176,15 +168,8 @@ class ServiceControlRH7(ServiceControl):
 
     @classmethod
     def _applicable(cls):
-        if platform.system() == 'Linux':
-            platform_info = platform.linux_distribution()
-            version = math.floor(float(platform_info[1]))
-            if version == cls.platform_use:
-                return True
-            else:
-                return False
-        else:
-            return False
+        return (platform.system() == 'Linux') and \
+               (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
 
     def add(self):
         pass
