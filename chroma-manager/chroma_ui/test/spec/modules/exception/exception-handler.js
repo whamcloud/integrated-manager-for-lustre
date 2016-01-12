@@ -57,7 +57,7 @@ describe('exception handler', function () {
   it('should only open the dialog once', function () {
     $exceptionHandler(error, cause);
 
-    expect(exceptionDialog.open).toHaveBeenCalledOnce();
+    expect(exceptionDialog.open).toHaveBeenCalledTimes(1);
   });
 
   it('should delegate to the older $exceptionHandler', function () {
@@ -75,6 +75,6 @@ describe('exception handler', function () {
   });
 
   it('should save the client error model', function () {
-    expect(clientErrorModelInstance.$save).toHaveBeenCalledOnce();
+    expect(clientErrorModelInstance.$save).toHaveBeenCalledTimes(1);
   });
 });

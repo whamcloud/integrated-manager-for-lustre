@@ -17,7 +17,7 @@ describe('big green button ctrl', function () {
   }));
 
   it('should invoke the healthModel', function () {
-    expect(healthModel).toHaveBeenCalledOnce();
+    expect(healthModel).toHaveBeenCalledTimes(1);
   });
 
   it('should update the status when health is broadcast', function () {

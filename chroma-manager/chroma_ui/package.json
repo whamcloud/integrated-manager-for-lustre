@@ -2,15 +2,18 @@
   "name": "chroma_ui",
   "version": "0.0.0",
   "description": "",
+  "scripts": {
+    "test": "./node_modules/karma/bin/karma start"
+  },
   "devDependencies": {
-    "karma": "0.11.10",
-    "karma-jasmine": "0.1.5",
-    "karma-firefox-launcher": "0.1.2",
+    "jasmine-core": "2.4.1",
+    "karma": "0.13.19",
+    "karma-chrome-launcher": "0.2.2",
+    "karma-firefox-launcher": "0.1.7",
+    "karma-jasmine": "0.3.6",
+    "karma-junit-reporter": "0.3.8",
     "karma-safari-launcher": "0.1.1",
-    "karma-chrome-launcher": "0.1.2",
-    "karma-junit-reporter": "0.2.1",
-    "karma-script-launcher": "0.1.0",
-    "karma-ng-html2js-preprocessor": "0.1.0"
+    "karma-script-launcher": "0.1.0"
   },
   "jshintConfig": {
     "predef": [
@@ -33,7 +36,6 @@
       "waitsFor",
       "runs"
     ],
-
     "bitwise": true,
     "curly": false,
     "eqeqeq": true,
@@ -52,10 +54,8 @@
     "trailing": true,
     "maxcomplexity": 6,
     "maxlen": 120,
-
     "eqnull": true,
     "multistr": true,
-
     "browser": true,
     "jquery": true
   }

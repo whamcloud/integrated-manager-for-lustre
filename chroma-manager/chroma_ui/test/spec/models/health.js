@@ -63,7 +63,7 @@ describe('Health model', function () {
       expectReqRes();
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.callCount).toBe(1);
+      expect(healthSpy.calls.count()).toBe(1);
     });
 
     it('should emit a health event after each interval', function () {
@@ -75,7 +75,7 @@ describe('Health model', function () {
       interval.flush();
       $httpBackend.flush();
 
-      expect(healthSpy.callCount).toBe(2);
+      expect(healthSpy.calls.count()).toBe(2);
     });
 
     it('should be in error when 1 or more error alerts are active', function () {
@@ -93,7 +93,7 @@ describe('Health model', function () {
       healthModel();
       $httpBackend.flush();
 
-      expect(healthSpy.mostRecentCall.args[1]).toEqual({health: ERROR, count: 2 } );
+      expect(healthSpy.calls.mostRecent().args[1]).toEqual({health: ERROR, count: 2 } );
     });
 
     it('should be in warn when 1 or more warn alerts are active', function () {
@@ -105,7 +105,7 @@ describe('Health model', function () {
 
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toEqual({ health: WARN, count: 1 });
+      expect(healthSpy.calls.mostRecent().args[1]).toEqual({ health: WARN, count: 1 });
     });
 
     it('should obey all the rules: highest error state wins.', function () {
@@ -122,7 +122,7 @@ describe('Health model', function () {
 
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toEqual({ health: ERROR, count: 2 });
+      expect(healthSpy.calls.mostRecent().args[1]).toEqual({ health: ERROR, count: 2 });
     });
   });
 });

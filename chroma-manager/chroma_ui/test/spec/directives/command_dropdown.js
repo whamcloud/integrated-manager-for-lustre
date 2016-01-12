@@ -65,11 +65,11 @@
       var $window = $injector.get('$window');
 
       $window.LiveObject = {
-        resourceType: jasmine.createSpy('resourceType').andReturn('host')
+        resourceType: jasmine.createSpy('resourceType').and.returnValue('host')
       };
 
       $window.CommandNotification = {
-        uriIsWriteLocked: jasmine.createSpy('uriIsWriteLocked').andCallFake(function (uri) {
+        uriIsWriteLocked: jasmine.createSpy('uriIsWriteLocked').and.callFake(function (uri) {
           return uri === 'bar';
         })
       };
@@ -155,7 +155,7 @@
       var $event = {};
       $scope.transitionClicked($event);
 
-      expect($scope.commandClick).toHaveBeenCalledOnceWith({
+      expect($scope.commandClick).toHaveBeenCalledWith({
         $event: $event,
         data: data,
         done: jasmine.any(Function)

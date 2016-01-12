@@ -22,7 +22,7 @@ describe('Exception interceptor', function () {
     response = {
       data: {},
       status: 500,
-      headers: jasmine.createSpy('headers').andCallFake(function () {
+      headers: jasmine.createSpy('headers').and.callFake(function () {
         return {};
       }),
       config: {

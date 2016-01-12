@@ -39,29 +39,14 @@ module.exports = function(config) {
       'test/mocks/mock.js',
       'test/mocks/**/*.js',
       'test/mocks/register-mocks.js',
-      'test/lib/matchers.js',
       'test/spec/**/*.js',
-      'test/leak/**/*.js',
-      'test/templates/*.html'
+      'test/leak/**/*.js'
     ],
-
-    preprocessors: {
-      '**/*.html': ['ng-html2js']
-    },
-
-    ngHtml2JsPreprocessor: {
-      moduleName: 'templates',
-      cacheIdFromPath: function (filepath) {
-        return filepath
-          .replace(/^test\/templates\//, '');
-      }
-
-    },
 
     // test results reporter to use
     // possible values: dots, progress, junit, growl, coverage
 
-    reporters: ['dots', 'growl'],
+    reporters: ['dots'],
 
     junitReporter: {
       suite: 'karma-tests (old ui)'
@@ -77,7 +62,7 @@ module.exports = function(config) {
     logLevel: config.LOG_WARN,
 
     // enable / disable watching file and executing tests whenever any file changes
-    autoWatch: true,
+    autoWatch: false,
 
     // Start these browsers, currently available:
     // - Chrome
@@ -86,14 +71,10 @@ module.exports = function(config) {
     // - Opera
     // - Safari
     // - PhantomJS
-    browsers: ['Chrome', 'Safari', 'Firefox'],
+    browsers: ['Chrome', 'Firefox'],
 
     // Continuous Integration mode
     // if true, it capture browsers, run tests and exit
-    singleRun: false,
-
-    // cli runner port
-    runnerPort: 9100
-
+    singleRun: true
   });
 };

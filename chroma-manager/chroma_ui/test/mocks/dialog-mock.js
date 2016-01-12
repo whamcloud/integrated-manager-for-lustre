@@ -10,7 +10,7 @@ mock.register({name: '$dialog', type: 'decorator', setup: function ($delegate) {
   window.spyOn(Dialog.prototype, 'isOpen');
   window.spyOn(Dialog.prototype, 'close');
 
-  $delegate.dialog = jasmine.createSpy('$dialog.dialog').andCallFake(function (opts) {
+  $delegate.dialog = jasmine.createSpy('$dialog.dialog').and.callFake(function (opts) {
     return new Dialog(opts);
   });
 

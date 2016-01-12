@@ -3,13 +3,13 @@ mock.register('replay', function ($q) {
 
   var replay = {
     hasPending: true,
-    isIdempotent: jasmine.createSpy('isIdempotent').andCallFake(this.isIdempotent || function () {
+    isIdempotent: jasmine.createSpy('isIdempotent').and.callFake(this.isIdempotent || function () {
       return true;
     }),
-    add: jasmine.createSpy('add').andCallFake(this.add || function () {
+    add: jasmine.createSpy('add').and.callFake(this.add || function () {
       return $q.defer().promise;
     }),
-    go: jasmine.createSpy('go').andCallFake(this.go || function () {
+    go: jasmine.createSpy('go').and.callFake(this.go || function () {
       replay.goDeferred = $q.defer();
 
       return replay.goDeferred.promise;

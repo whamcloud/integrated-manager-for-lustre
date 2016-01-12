@@ -1,24 +1,26 @@
 describe('Power Control', function () {
   'use strict';
 
-  var $scope;
+  var $scope, dialogInstance;
 
   beforeEach(module('controllers', 'ui.bootstrap'));
 
   beforeEach(module(function ($provide) {
     function getModelMock(name) {
       return {
-        query: jasmine.createSpy(name).andReturn([])
+        query: jasmine.createSpy(name).and.returnValue([])
       };
     }
 
     // Mock out deps.
     $provide.value('hostModel', getModelMock('hostModel'));
     $provide.value('PowerControlDeviceModel', getModelMock('PowerControlDeviceModel'));
+
+    dialogInstance = {
+      open: jasmine.createSpy('dialogOpen')
+    };
     $provide.value('$dialog', {
-      dialog: jasmine.createSpy('dialog').andReturn({
-        open: jasmine.createSpy('dialogOpen')
-      })
+      dialog: jasmine.createSpy('dialog').and.returnValue(dialogInstance)
     });
     $provide.value('pageTitle', {
       set: jasmine.createSpy('set')
@@ -41,19 +43,19 @@ describe('Power Control', function () {
 
   it('should instantiate the pdu dialog', inject(function ($dialog) {
     $scope.config = {
-      asStatic: jasmine.createSpy('asStatic').andReturn('foo')
+      asStatic: jasmine.createSpy('asStatic').and.returnValue('foo')
     };
 
     $scope.powerCtrl.createPdu();
 
     expect($dialog.dialog).toHaveBeenCalled();
-    expect($dialog.dialog.plan().open).toHaveBeenCalledWith('foo', 'CreatePduCtrl');
+    expect(dialogInstance.open).toHaveBeenCalledWith('foo', 'CreatePduCtrl');
   }));
 
   it('should delete a pdu', inject(function () {
     var device = {
-      $delete: jasmine.createSpy('$delete').andReturn({
-        then: jasmine.createSpy('then').andCallFake(function (arg) {
+      $delete: jasmine.createSpy('$delete').and.returnValue({
+        then: jasmine.createSpy('then').and.callFake(function (arg) {
           arg();
         })
       })

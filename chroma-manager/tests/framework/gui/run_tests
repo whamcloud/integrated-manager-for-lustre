@@ -26,6 +26,7 @@ NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-man
 # Run angular-modules
 cd \$NODE_MODULES/intel-angular-modules
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
+cd ./test-results
 for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/NG_MODULES_\$filename"; done;
 
 # Run Karma GUI unit tests (new ui)

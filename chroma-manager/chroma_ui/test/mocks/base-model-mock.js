@@ -7,5 +7,5 @@ mock.register('baseModel', function () {
 
   spyOn(obj, 'BaseModel');
 
-  return jasmine.createSpy('baseModel').andReturn(obj.BaseModel);
+  return jasmine.createSpy('baseModel').and.returnValue(obj.BaseModel);
 });

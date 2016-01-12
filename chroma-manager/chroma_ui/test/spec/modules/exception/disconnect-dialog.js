@@ -13,7 +13,7 @@ describe('disconnect dialog', function () {
     dialogOpen = jasmine.createSpy('$dialog.dialog.open');
 
     $dialog = {
-      dialog: jasmine.createSpy('$dialog.dialog').andReturn({
+      dialog: jasmine.createSpy('$dialog.dialog').and.returnValue({
         open: dialogOpen
       })
     };
@@ -38,21 +38,21 @@ describe('disconnect dialog', function () {
   });
 
   it('should add an unload event listener to window', function () {
-    expect($window.addEventListener).toHaveBeenCalledOnceWith('beforeunload', jasmine.any(Function));
+    expect($window.addEventListener).toHaveBeenCalledWith('beforeunload', jasmine.any(Function));
   });
 
   it('should call the original open listener', function () {
     disconnectDialog.open();
 
-    expect(dialogOpen).toHaveBeenCalledOnce();
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
   });
 
   it('should not open the modal if window has unloaded', function () {
-    var cb = $window.addEventListener.mostRecentCall.args[1];
+    var cb = $window.addEventListener.calls.mostRecent().args[1];
 
     cb();
     disconnectDialog.open();
 
-    expect(dialogOpen).not.toHaveBeenCalledOnce();
+    expect(dialogOpen).not.toHaveBeenCalledTimes(1);
   });
 });

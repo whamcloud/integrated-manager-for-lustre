@@ -47,7 +47,7 @@ describe('Base Model', function () {
   });
 
   it('should provide a way to intercept a response', function () {
-    var interceptor = jasmine.createSpy('interceptor').andCallFake(function (resp) {
+    var interceptor = jasmine.createSpy('interceptor').and.callFake(function (resp) {
       resp.resource.foo = 'bar';
 
       return resp;
@@ -76,7 +76,7 @@ describe('Base Model', function () {
   });
 
   it('should provide a way to execute methods on data', inject(function (baseModel, $httpBackend) {
-    var spy = jasmine.createSpy('squareFoo').andCallFake(function () {
+    var spy = jasmine.createSpy('squareFoo').and.callFake(function () {
       return this.foo * 2;
     });
 

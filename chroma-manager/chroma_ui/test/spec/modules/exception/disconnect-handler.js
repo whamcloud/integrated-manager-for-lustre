@@ -75,7 +75,7 @@ describe('disconnect handler', function () {
 
       $rootScope.$digest();
 
-      expect(replay.go.callCount).toBe(2);
+      expect(replay.go.calls.count()).toBe(2);
     });
 
     it('should not call replay::go again if it has not been resolved/rejected', function () {
@@ -87,7 +87,7 @@ describe('disconnect handler', function () {
 
       $rootScope.$digest();
 
-      expect(replay.go.callCount).toBe(1);
+      expect(replay.go.calls.count()).toBe(1);
     });
   });
 });
