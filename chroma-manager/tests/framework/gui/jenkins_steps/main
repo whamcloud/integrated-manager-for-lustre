@@ -60,23 +60,6 @@ echo
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json selenium_cluster_config.json
 cat selenium_cluster_config.json
 
-# --------------------------------------------------------------------
-# Fix up the chroma repo URL (distro=el6.3 should just be "distro=el6)
-# --------------------------------------------------------------------
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py selenium_cluster_config.json)
-ssh root@$CHROMA_MANAGER "set -xe
-set +x
-echo \"+ sed -i -e 's/\(distro=el6\).3\//\1\//' -e 's/Aitahd9u/$JENKINS_PULL/g' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' /etc/yum.repos.d/autotest.repo\"
-sed -i -e 's/\(distro=el6\).3\//\1\//' -e 's/Aitahd9u/$JENKINS_PULL/g' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' /etc/yum.repos.d/autotest.repo
-set -x
-cd /etc/yum.repos.d/
-for f in *.repo; do
-  sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' \$f
-done
-yum --disablerepo=\* --enablerepo=chroma makecache
-# Disable EPEL
-yum-config-manager --disable EPEL-6-x86_64"
-
 #---------------------------
 # Install Chroma on the node
 #---------------------------
@@ -91,29 +74,3 @@ WORKSPACE=$WORKSPACE \
 CLUSTER_CONFIG=selenium_cluster_config.json \
 MEASURE_COVERAGE=$MEASURE_COVERAGE \
 chroma/chroma-manager/tests/framework/gui/run_tests
-
-#-------------------------
-# Process coverage reports
-#-------------------------
-if $MEASURE_COVERAGE; then
-  cd $WORKSPACE
-  ls .coverage*
-echo "
-[paths]
-source =
-    $WORKSPACE/chroma_test_env/chroma/chroma-manager/
-    /usr/share/chroma-manager/
-
-[report]
-include =
-    $WORKSPACE/chroma_test_env/chroma/*
-    /usr/share/chroma-manager/*
-omit =
-    *junk.py
-    */tests/*
-" > .coveragerc
-
-  coverage combine
-  coverage report -m
-  coverage xml --ignore-errors
-fi

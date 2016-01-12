@@ -14,9 +14,24 @@ for server in config["lustre_servers"]:
     else:
         servers.append(server["address"])
 
-all_nodes = [config["chroma_managers"][0]["address"]] + servers
+all_nodes = servers[:]
 
-print "CHROMA_MANAGER=\"%s\"" % config["chroma_managers"][0]["address"]
+if len(config['chroma_managers']) > 0:
+    chroma_manager = config['chroma_managers'][0]
+
+    all_nodes.insert(0, chroma_manager["address"])
+    print "CHROMA_MANAGER=\"%s\"" % chroma_manager["address"]
+
+    user = chroma_manager["users"][0]
+    print "CHROMA_USER=\"%s\"" % user["username"]
+    print "CHROMA_PASS=\"%s\"" % user["password"]
+
+    if user.get("email"):
+        print "CHROMA_EMAIL=\"%s\"" % user["email"]
+
+    if chroma_manager.get("ntp_server"):
+        print "CHROMA_NTP_SERVER=\"%s\"" % chroma_manager["ntp_server"]
+
 print "STORAGE_APPLIANCES=(%s)" % " ".join(servers)
 print "WORKERS=(%s)" % " ".join(workers)
 
@@ -32,11 +47,4 @@ print "HOST_IP=\"%s\"" % config["hosts"].values()[0]['ip_address']  # This will 
 
 print "ALL_NODES=\"%s\"" % " ".join(list(set(all_nodes)))
 
-chroma_manager = config["chroma_managers"][0]
-user = chroma_manager["users"][0]
-print "CHROMA_USER=\"%s\"" % user["username"]
-print "CHROMA_PASS=\"%s\"" % user["password"]
-if user.get("email"):
-    print "CHROMA_EMAIL=\"%s\"" % user["email"]
-if chroma_manager.get("ntp_server"):
-    print "CHROMA_NTP_SERVER=\"%s\"" % chroma_manager["ntp_server"]
+print "INSTALLER_PATH=\"%s\"" % config.get('installer_path', '/tmp')
