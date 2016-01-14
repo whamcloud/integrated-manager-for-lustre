@@ -101,8 +101,9 @@ class Service(ChromaService):
         super(Service, self).run()
 
         # Cancel anything that's left behind from a previous run
-        Command.objects.filter(complete = False).update(complete = True, cancelled = True)
-        Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
+        for command in Command.objects.filter(complete=False):
+            command.completed(True, True)
+        Job.objects.filter(~Q(state='complete')).update(state='complete', cancelled=True)
 
         self._job_scheduler = JobScheduler()
         self._queue_thread = ServiceThread(QueueHandler(self._job_scheduler))
