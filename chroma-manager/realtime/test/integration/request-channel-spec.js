@@ -1,9 +1,29 @@
 'use strict';
 
 var getClient = require('./util/get-client');
+var registerMock = require('./util/register-mock');
 
 describe('request channel', function () {
   var client, spark;
+
+  beforeEach(function (done) {
+    registerMock({
+      request: {
+        method: 'GET',
+        url: '/api/host/',
+        data: {},
+        headers: {}
+      },
+      response: {
+        status: 200,
+        data: {},
+        headers: {
+          'content-type': 'application/json'
+        }
+      },
+      expires: 0
+    }, done);
+  });
 
   beforeEach(function () {
     client = getClient();

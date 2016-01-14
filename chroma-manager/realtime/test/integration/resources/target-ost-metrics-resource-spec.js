@@ -1,9 +1,48 @@
 'use strict';
 
 var getClient = require('../util/get-client');
+var registerMock = require('../util/register-mock');
 
 describe('target ost metrics channel', function () {
   var client, targetOstMetricsChannel, params;
+
+  beforeEach(function (done) {
+    registerMock({
+      request: {
+        method: 'GET',
+        url: '/api/target/metric/',
+        data: {},
+        headers: {}
+      },
+      response: {
+        status: 200,
+        data: {},
+        headers: {
+          'content-type': 'application/json'
+        }
+      },
+      expires: 0
+    }, done);
+  });
+
+  beforeEach(function (done) {
+    registerMock({
+      request: {
+        method: 'GET',
+        url: '/api/target/',
+        data: {},
+        headers: {}
+      },
+      response: {
+        status: 200,
+        data: {},
+        headers: {
+          'content-type': 'application/json'
+        }
+      },
+      expires: 0
+    }, done);
+  });
 
   beforeEach(function () {
     client = getClient();

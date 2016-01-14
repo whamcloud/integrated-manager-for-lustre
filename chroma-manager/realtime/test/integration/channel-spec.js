@@ -4,9 +4,32 @@ require('jasmine-n-matchers');
 
 var getClient = require('./util/get-client');
 var _ = require('lodash-mixins');
+var registerMock = require('./util/register-mock');
 
 describe('channel', function () {
   var client, channel;
+
+  beforeEach(function (done) {
+    registerMock({
+      request: {
+        method: 'GET',
+        url: '/api/host/metric/?latest=true&metrics=stats_close',
+        data: {
+          latest: true,
+          metrics: 'stats_close'
+        },
+        headers: {}
+      },
+      response: {
+        status: 200,
+        data: {},
+        headers: {
+          'content-type': 'application/json'
+        }
+      },
+      expires: 0
+    }, done);
+  });
 
   beforeEach(function () {
     client = getClient();

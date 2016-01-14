@@ -1,14 +1,36 @@
 'use strict';
 
-var Primus = require('primus'),
-  multiplex = require('primus-multiplex'),
-  Emitter = require('primus-emitter'),
-  conf = require('../../conf');
+var Primus = require('primus');
+var multiplex = require('primus-multiplex');
+var Emitter = require('primus-emitter');
+var conf = require('../../conf');
+var registerMock = require('./util/register-mock');
 
 require('https').globalAgent.options.rejectUnauthorized = false;
 
 describe('notifications channel', function () {
   var client, notificationsChannel;
+
+  beforeEach(function (done) {
+    registerMock({
+      request: {
+        method: 'GET',
+        url: '/api/alert/',
+        data: {},
+        headers: {}
+      },
+      response: {
+        status: 200,
+        data: {
+          objects: []
+        },
+        headers: {
+          'content-type': 'application/json'
+        }
+      },
+      expires: 0
+    }, done);
+  });
 
   beforeEach(function () {
     var Socket = Primus.createSocket({parser: 'JSON', transformer: 'socket.io', plugin: {

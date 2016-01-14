@@ -46,12 +46,19 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/socket-router
 cd \$HOME/chroma_test_env/chroma/chroma-manager
 cat << EOF > ./realtime/conf.json
 {
-  "SERVER_HTTP_URL": "https://$CHROMA_MANAGER/",
+  "SERVER_HTTP_URL": "https://localhost:8000/",
   "PRIMUS_PORT": 8888
 }
 EOF
+cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy
+node ./ --overrides.port=8000 > /dev/null &
+STUB_DADDY_ID=\$!
 cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
+node ./ > /dev/null &
+REALTIME_ID=\$!
 ./node_modules/.bin/jasmine-node --verbose --captureExceptions --junitreport --output \$HOME/test_reports/ ./test/ || true
+kill -9 \$REALTIME_ID
+kill -9 \$STUB_DADDY_ID
 
 # Run srcmap-reverse tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/srcmap-reverse
