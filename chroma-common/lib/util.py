@@ -29,8 +29,8 @@ ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
 
 
 class ExpiringList(MutableSequence):
-    """Special implementation of a python list which
-     invalidate its elements after a specified 'grace_period'
+    """Special implementation of a python list which invalidate its elements after a specified
+    'grace_period'
     """
 
     def __init__(self, grace_period):
@@ -117,3 +117,16 @@ def all_subclasses(klass):
     """
     return klass.__subclasses__() + [child for subclass in klass.__subclasses__() for child in
                                      all_subclasses(subclass)]
+
+
+def enum(*sequential, **named):
+    """Return enumerated type object from list of keyword and positional arguments
+    Reverse access to Enum identifiers available through 'reverse_mapping' member
+    :param sequential: positional arguments
+    :param named: keyword arguments
+    :return: Enum type object with numbered (sequential) or explicit value (keyword) attributes
+    """
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    reverse = dict((value, key) for key, value in enums.iteritems())
+    enums['reverse_mapping'] = reverse
+    return type('Enum', (), enums)

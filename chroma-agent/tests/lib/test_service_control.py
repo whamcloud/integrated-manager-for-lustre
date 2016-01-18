@@ -1,12 +1,16 @@
 import mock
 
-from chroma_agent.lib.service_control import ServiceControl, ServiceControlRH7
+from chroma_agent.lib.service_control import ServiceControl, ServiceControlEL7
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
-class TestServiceStateRH6(CommandCaptureTestCase):
+class TestServiceStateEL6(CommandCaptureTestCase):
+    """Test the base class and EL6 subclass functionality, base class only needs to be tested in
+    this class, features like retry and callback registration exist in base class
+    """
+
     def setUp(self):
-        super(TestServiceStateRH6, self).setUp()
+        super(TestServiceStateEL6, self).setUp()
 
         mock.patch('chroma_agent.lib.service_control.platform.system', return_value="Linux").start()
         mock.patch('chroma_agent.lib.service_control.platform.linux_distribution', return_value=('CentOS', '6.6', 'Final')).start()
@@ -19,6 +23,18 @@ class TestServiceStateRH6(CommandCaptureTestCase):
                           CommandCaptureCommand(('/sbin/service', 'test_service', 'status')))
 
         response = self.test_service.start(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, None)
+        self.assertEqual(self.commands_ran_count, 2)
+
+    # Test that the service stops successfully when the stop method is called
+    def test_service_stop_success(self):
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'stop'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'),
+                                                rc=1, executions_remaining=1))
+
+        response = self.test_service.stop(retry_time=0.1, validate_time=0.1)
 
         self.assertEqual(response, None)
         self.assertEqual(self.commands_ran_count, 2)
@@ -84,8 +100,7 @@ class TestServiceStateRH6(CommandCaptureTestCase):
         self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'stop'), executions_remaining=1),
                           CommandCaptureCommand(('/sbin/service', 'test_service', 'status'), rc=1, executions_remaining=1),
                           CommandCaptureCommand(('/sbin/service', 'test_service', 'start'), executions_remaining=1),
-                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'), executions_remaining=1)
-                          )
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'), executions_remaining=1))
 
         response = self.test_service.restart(retry_time=0.1, validate_time=0.1)
         self.assertEqual(response, None)
@@ -116,16 +131,146 @@ class TestServiceStateRH6(CommandCaptureTestCase):
         self.assertEqual(response, None)
         self.assertEqual(self.commands_ran_count, 1)
 
+    # example callback function
+    def example_func(self, service, action_code):
+        self.received_codes.append((service,
+                                    ServiceControl.ServiceState.reverse_mapping[action_code]))
+        return None
 
-class TestServiceStateRH7(CommandCaptureTestCase):
+    # Test that callback can be registered and that correct messages are received
+    def test_service_register_listener_and_receive_success(self):
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'start'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'stop'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'),
+                                                rc=1, executions_remaining=1))
+
+        self.received_codes = []
+
+        ServiceControl.register_listener('test_service', self.example_func)
+
+        response = self.test_service.start(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, None)
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTARTING'),
+                                                   ('test_service', 'SERVICESTARTED')])
+
+        self.received_codes = []
+        response = self.test_service.stop(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, None)
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTOPPING'),
+                                                   ('test_service', 'SERVICESTOPPED')])
+
+    # Test that callback can be registered and that correct messages are received on control fail
+    def test_service_register_listener_and_receive_fail_validation(self):
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'start')),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'),
+                                                rc=1))
+
+        self.received_codes = []
+
+        ServiceControl.register_listener('test_service', self.example_func)
+
+        response = self.test_service.start(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, 'Service test_service is not running after being started')
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTARTING'),
+                                                   ('test_service', 'SERVICESTARTERROR')])
+
+        # reset so we can test both stop and start fail validation within same test
+        self.reset_command_capture()
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'stop')),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'status'),
+                                                rc=0))
+        self.received_codes = []
+        response = self.test_service.stop(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, 'Service test_service is still running after being stopped')
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTOPPING'),
+                                                   ('test_service', 'SERVICESTOPERROR')])
+
+    # Test that callback can be registered and that correct messages are received on control fail
+    def test_service_register_listener_and_receive_fail_initial(self):
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'start'),
+                                                rc=1, stderr='Service Failed To Start',
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'start'),
+                                                rc=1, stderr='Service Failed To Start',
+                                                executions_remaining=1))
+
+        self.received_codes = []
+
+        ServiceControl.register_listener('test_service', self.example_func)
+
+        response = self.test_service.start(retry_time=0.1, validate_time=0.1, retry_count=1)
+
+        self.assertEqual(response, "Error (1) running '/sbin/service test_service start': '' 'Service Failed To Start'")
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTARTING'),
+                                                   ('test_service', 'SERVICESTARTERROR')])
+
+        # reset so we can test both stop and start fail validation within same test
+        self.reset_command_capture()
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service', 'stop'),
+                                                rc=1, stderr='Service Failed To Stop',
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service', 'stop'),
+                                                rc=1, stderr='Service Failed To Stop',
+                                                executions_remaining=1))
+
+        self.received_codes = []
+        response = self.test_service.stop(retry_time=0.1, validate_time=0.1, retry_count=1)
+
+        self.assertEqual(response, "Error (1) running '/sbin/service test_service stop': '' 'Service Failed To Stop'")
+        self.assertListEqual(self.received_codes, [('test_service', 'SERVICESTOPPING'),
+                                                   ('test_service', 'SERVICESTOPERROR')])
+
+    # Test registering a callback on a service before any ServiceControl instantiated for that
+    # service. Also tests unregistering callback function from service notifications.
+    def test_register_before_instance(self):
+        ServiceControl.register_listener('test_service_2', self.example_func)
+
+        test_service_2 = ServiceControl.create('test_service_2')
+
+        self.add_commands(CommandCaptureCommand(('/sbin/service', 'test_service_2', 'start'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service_2', 'status'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service_2', 'stop'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/service', 'test_service_2', 'status'),
+                                                rc=1, executions_remaining=1))
+
+        self.received_codes = []
+
+        response = test_service_2.start(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, None)
+        self.assertListEqual(self.received_codes, [('test_service_2', 'SERVICESTARTING'),
+                                                   ('test_service_2', 'SERVICESTARTED')])
+
+        self.received_codes = []
+
+        ServiceControl.unregister_listener('test_service_2', self.example_func)
+
+        response = test_service_2.stop(retry_time=0.1, validate_time=0.1)
+
+        self.assertEqual(response, None)
+        self.assertListEqual(self.received_codes, [])
+
+
+class TestServiceStateEL7(CommandCaptureTestCase):
     def setUp(self):
-        super(TestServiceStateRH7, self).setUp()
+        super(TestServiceStateEL7, self).setUp()
 
         mock.patch('chroma_agent.lib.service_control.platform.system', return_value="Linux").start()
         mock.patch('chroma_agent.lib.service_control.platform.linux_distribution',
                    return_value=('CentOS', '7.2', 'Final')).start()
 
-        self.test = ServiceControlRH7('test_service')
+        self.test = ServiceControlEL7('test_service')
 
     # Test the start method
     def test_service_start(self):
@@ -182,4 +327,3 @@ class TestServiceStateRH7(CommandCaptureTestCase):
         self.test.disable()
         self.assertEqual(('systemctl', 'disable', 'test_service'), self._commands_history[0])
         self.assertEqual(self.commands_ran_count, 1)
-

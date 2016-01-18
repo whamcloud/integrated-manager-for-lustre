@@ -21,14 +21,23 @@
 import time
 import platform
 import abc
+from collections import defaultdict
+from collections import namedtuple
 from chroma_agent.chroma_common.lib import util
 from chroma_agent.lib.shell import AgentShell
 
 
 class ServiceControl(object):
-
     class_override = None
     __metaclass__ = abc.ABCMeta
+
+    # dict to map service names to registered listener callbacks functions
+    callbacks = defaultdict(list)
+
+    ActionCode = namedtuple('ActionCode', ['before', 'after', 'error'])
+
+    ServiceState = util.enum('SERVICESTARTING', 'SERVICESTARTED', 'SERVICESTARTERROR',
+                             'SERVICESTOPPING', 'SERVICESTOPPED', 'SERVICESTOPERROR')
 
     def __init__(self, service_name):
         self.service_name = service_name
@@ -36,28 +45,45 @@ class ServiceControl(object):
     @classmethod
     def create(cls, service_name):
         try:
-            required_class = next(class_ for class_ in util.all_subclasses(cls) if class_._applicable())
+            required_class = next(
+                class_ for class_ in util.all_subclasses(cls) if class_._applicable())
 
             return required_class(service_name)
         except StopIteration:
             raise RuntimeError('Current platform version not applicable')
 
-    def _retried_action(self, action, validate, error_message, retry_count, retry_time, validate_time):
+    def _retried_action(self,
+                        action,
+                        action_codes,
+                        validate,
+                        error_message,
+                        retry_count,
+                        retry_time,
+                        validate_time):
+        """Try action fixed number of times and notify registered listeners with action
+        before, after and error codes
+        """
         error = None
-        retries = retry_count + 1
-        while retries > 0:
+        self.notify(self.service_name, action_codes.before)
+        while retry_count > -1:
             error = action()
             if error is None:
                 time.sleep(validate_time)
                 if validate():
+                    self.notify(self.service_name, action_codes.after)
                     return None
                 error = error_message % self.service_name
-            retries -= 1
+            retry_count -= 1
             time.sleep(retry_time)
+        # notify error if retries exceeded without success
+        self.notify(self.service_name, action_codes.error)
         return error
 
     def start(self, retry_count=5, retry_time=1, validate_time=5):
         return self._retried_action(lambda: self._start(),
+                                    self.ActionCode(self.ServiceState.SERVICESTARTING,
+                                                    self.ServiceState.SERVICESTARTED,
+                                                    self.ServiceState.SERVICESTARTERROR),
                                     lambda: self.running,
                                     'Service %s is not running after being started',
                                     retry_count,
@@ -66,6 +92,9 @@ class ServiceControl(object):
 
     def stop(self, retry_count=5, retry_time=1, validate_time=5):
         return self._retried_action(lambda: self._stop(),
+                                    self.ActionCode(self.ServiceState.SERVICESTOPPING,
+                                                    self.ServiceState.SERVICESTOPPED,
+                                                    self.ServiceState.SERVICESTOPERROR),
                                     lambda: not self.running,
                                     'Service %s is still running after being stopped',
                                     retry_count,
@@ -73,12 +102,45 @@ class ServiceControl(object):
                                     validate_time)
 
     def restart(self, retry_count=5, retry_time=1, validate_time=1):
-
         error = self.stop(retry_count, retry_time, validate_time)
         if error is None:
             error = self.start(retry_count, retry_time, validate_time)
 
         return error
+
+    @classmethod
+    def register_listener(cls, service, callback):
+        """register a listening callback function to receive event notifications for a
+        particular service's control events, applied through ServiceControl class instances
+        """
+        if not hasattr(callback, '__call__'):
+            raise RuntimeError('callback parameter provided is not callable')
+        # don't want duplicates in list of registered callbacks for a particular service
+        if callback not in cls.callbacks[service]:
+            cls.callbacks[service].append(callback)
+        else:
+            raise RuntimeError('callback already registered for service %s (%s)' % (service,
+                                                                                    str(callback)))
+
+    @classmethod
+    def unregister_listener(cls, service, callback):
+        """unregister a listening callback function to stop receive event notifications for a
+        particular service's control events, applied through ServiceControl class instances
+        """
+        if not hasattr(callback, '__call__'):
+            raise RuntimeError('callback parameter provided is not callable')
+        # don't clear other callbacks registered for this service
+        try:
+            cls.callbacks[service].remove(callback)
+        except ValueError:
+            raise RuntimeError('callback function is not registered for service %s and cannot be '
+                               'removed (%s)' % (service, str(callback)))
+
+    @classmethod
+    def notify(cls, service, action_code):
+        """call registered callbacks for a particular service/action pair"""
+        for callback in cls.callbacks[service]:
+            callback(service, action_code)
 
     @abc.abstractproperty
     def running(self):
@@ -114,7 +176,7 @@ class ServiceControl(object):
         raise NotImplementedError
 
 
-class ServiceControlRH6(ServiceControl):
+class ServiceControlEL6(ServiceControl):
 
     platform_use = '6'
 
@@ -152,7 +214,7 @@ class ServiceControlRH6(ServiceControl):
         return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'stop'])
 
 
-class ServiceControlRH7(ServiceControl):
+class ServiceControlEL7(ServiceControl):
 
     platform_use = '7'
 
@@ -190,12 +252,13 @@ class ServiceControlRH7(ServiceControl):
         return AgentShell.run_canned_error_message(['systemctl', 'stop', self.service_name])
 
 
-class ServiceControlOSX(ServiceControlRH6):
+class ServiceControlOSX(ServiceControlEL6):
     """ Just a stub class so that running on OSX things can be made to work.
 
-    We make OSX behave like RH6 because that historically is what happened. So
+    We make OSX behave like EL6 because that historically is what happened. So
     this class provides for backwards compatibility.
     """
+
     @classmethod
     def _applicable(cls):
         return platform.system() == 'Darwin'
