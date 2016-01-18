@@ -45,5 +45,9 @@ export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
 export BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
 export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
 export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
-export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
+if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" ]; then
+    export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el7.2"}
+else
+    export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
+fi
 export CLUSTER_CONFIG="cluster_cfg.json"
