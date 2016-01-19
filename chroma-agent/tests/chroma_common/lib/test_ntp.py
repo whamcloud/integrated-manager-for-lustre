@@ -104,7 +104,7 @@ class BaseTest:
             mock_open.return_value.readlines.return_value = self._get_lines('iml')
             mock.patch('__builtin__.open', mock_open, create=True).start()
 
-            server = self.ntp.get_configured_server()
+            server = self.ntp.get_configured_server(markers=None)
             self.assertEqual(server, self.existing_server)
 
         def test_get_server_localhost(self):
@@ -119,7 +119,7 @@ class BaseTest:
             mock_open.return_value.readlines.return_value = self._get_lines('local-ip')
             mock.patch('__builtin__.open', mock_open, create=True).start()
 
-            server = self.ntp.get_configured_server()
+            server = self.ntp.get_configured_server(markers=None)
             self.assertEqual(server, 'localhost')
 
         def test_get_server_from_empty_config(self):
@@ -134,7 +134,7 @@ class BaseTest:
             mock_open.return_value.readlines.return_value = self._get_lines('pre-iml')
             mock.patch('__builtin__.open', mock_open, create=True).start()
 
-            server = self.ntp.get_configured_server()
+            server = self.ntp.get_configured_server(markers=None)
             self.assertEqual(server, None)
 
         def test_add_remove_configured(self):

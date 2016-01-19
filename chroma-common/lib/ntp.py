@@ -46,15 +46,14 @@ class BaseNTPConfig(object):
         self.config_path = config_file
         self.lines = []       # lines to be read in from config file
 
-    def get_configured_server(self, markers=None):
+    def get_configured_server(self, markers):
         """Return the IML-configured server found in the ntp conf file
 
         if IML did not set the server or if any error occurs return None.
-        If IML did set the server and it is found between IML sentinels, return that value
+        If IML did set the server and IML-markers are found, return server value
 
-        Note: this will not return servers configured using older versions of this code,
-        only those using Markers 'IML_EDITv1', lines with the marker at the beginning should
-        also not be processed for server name
+        Additional markers can be added as a list parameter, these will then be used to
+        determine if the config file has IML edits
 
         :return: IML-set server found in config, None if no IML-configured server or IOError
         """
@@ -171,15 +170,18 @@ class BaseNTPConfig(object):
         directive_index = self._index_containing_directive()
 
         if directive_index is not None:
-            # Mark the index of the first directive we find, this is where we want add server
+            # Mark the index of the first directive we find, this is where we want add the server
             first_directive_index = directive_index
+
             # remove this server directive and comment subsequent ones
             line_to_replace = self.lines.pop(directive_index)
             directive_index = self._index_containing_directive()
+
             # while server directive directive_found in lines, comment out line with marker
             while directive_index is not None:
                 self.lines[directive_index] = ' '.join([self.MARKER, self.lines[directive_index]])
                 directive_index = self._index_containing_directive()
+
             # once all server directives have been commented out, add ours where the first one was
             self.lines.insert(first_directive_index, ' '.join([new_directive, self.MARKER,
                                                                line_to_replace]))
@@ -219,8 +221,7 @@ class ManagerNTPConfig(BaseNTPConfig):
         :param markers: list of sentinels to look for
         :return: configured server name if successful, None if not
         """
-        return super(ManagerNTPConfig, self).get_configured_server(markers=['# Added by '
-                                                                            'chroma-manager\n'])
+        return super(ManagerNTPConfig, self).get_configured_server(markers=['# Added by chroma-manager\n'])
 
     def add(self, server):
         """If no server in config then append given hostname in directive at end of file
@@ -237,9 +238,9 @@ class ManagerNTPConfig(BaseNTPConfig):
         if (error is None) and server:
             if server == 'localhost':
                 if self._index_containing_directive() is None:
-                    [self.lines.append(line) for line in [
-                        'server 127.127.1.0     {0} local clock\n'.format(self.MARKER),
-                        'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.MARKER)]]
+                    for line in ['server 127.127.1.0     {0} local clock\n'.format(self.MARKER),
+                                 'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.MARKER)]:
+                        self.lines.append(line)
                 else:
                     self._log('not overriding existing server directive with localhost, '
                               'no changes made to ntp.conf', 'debug')

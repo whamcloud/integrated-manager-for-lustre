@@ -33,7 +33,7 @@ def unconfigure_ntp():
 
     :return: Value using simple return protocol
     """
-    configure_ntp(None)
+    return configure_ntp(None)
 
 
 def configure_ntp(ntp_server):
@@ -41,8 +41,7 @@ def configure_ntp(ntp_server):
 
     :return: Value using simple return protocol
     """
-    ntp = AgentNTPConfig()
-    return agent_ok_or_error(ntp.add(ntp_server))
+    return agent_ok_or_error(AgentNTPConfig().add(ntp_server))
 
 
 ACTIONS = [configure_ntp, unconfigure_ntp]

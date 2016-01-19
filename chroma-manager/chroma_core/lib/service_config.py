@@ -274,7 +274,7 @@ num  target     prot opt source               destination
         which server they would like to use.
         """
         ntp = ManagerNTPConfig(logger=log)
-        existing_server = ntp.get_configured_server()
+        existing_server = ntp.get_configured_server(markers=None)
 
         if not server:
             if existing_server:
@@ -292,7 +292,6 @@ num  target     prot opt source               destination
                                                                                    error))
             raise RuntimeError("Failure when writing ntp config: %s" % error)
         self._add_firewall_rule(123, "udp", "ntp")
-        # TODO: always restart service, should we find a way to return if config file was changed
         self.try_shell(["chkconfig", "ntpd", "on"])
         log.info("Restarting ntp")
         self.try_shell(['service', 'ntpd', 'restart'])
