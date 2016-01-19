@@ -43,7 +43,7 @@ console_log = logging.getLogger('console')
 
 logging_in_debug_mode = os.path.exists("/tmp/chroma-agent-debug")
 
-if  logging_in_debug_mode or 'nosetests' in sys.argv[0]:
+if logging_in_debug_mode or 'nosetests' in sys.argv[0]:
     daemon_log.setLevel(logging.DEBUG)
     copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)

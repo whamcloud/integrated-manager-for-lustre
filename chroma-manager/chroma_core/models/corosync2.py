@@ -26,13 +26,15 @@ from collections import defaultdict
 from django.utils.timezone import now
 from django.db import models
 
+from chroma_core.services import log_register
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import corosync_common
 from chroma_core.lib.job import Step
 from chroma_core.services.job_scheduler import job_scheduler_notify
 
-
 peer_mcast_ports = {}
+
+logging = log_register('corosync2')
 
 
 def _corosync_peers(new_fqdn, mcast_port):
@@ -60,7 +62,7 @@ def _corosync_peers(new_fqdn, mcast_port):
     # Do this at the end because this could be different from the DB if this is an update.
     peer_mcast_ports[new_fqdn] = mcast_port
 
-    # Return list of peers, but peers do not include oursevles.
+    # Return list of peers, but peers do not include ourselves.
     peers = [match_fqdn for match_fqdn, match_mcast_port in peer_mcast_ports.items() if match_mcast_port == mcast_port]
     peers.remove(new_fqdn)
 
@@ -125,12 +127,18 @@ class AutoConfigureCorosyncStep(Step):
                                          'ring1_ipaddr': ring1_config['ipaddr'],
                                          'ring1_prefix': ring1_config['prefix']})
 
+        logging.debug("Node %s returned corosync configuration %s" % (corosync_configuration.host.fqdn,
+                                                                     config))
+
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
         with peer_mcast_ports_configuration_lock[config['mcast_port']]:
             from chroma_core.models import ManagedHost
 
             corosync_peers = _corosync_peers(corosync_configuration.host.fqdn, config['mcast_port'])
+
+            logging.debug("Node %s has corosync peers %s" % (corosync_configuration.host.fqdn,
+                                                            ",".join(corosync_peers)))
 
             # If we are adding then we action on a host that is already part of the cluster
             # otherwise we have to action on the host we are adding because it is the first node in the cluster
@@ -155,6 +163,8 @@ class AutoConfigureCorosyncStep(Step):
                                              'new_node_fqdn': corosync_configuration.host.fqdn,
                                              'mcast_port': config['mcast_port'],
                                              'create_cluster': actioning_host_fqdn == corosync_configuration.host.fqdn})
+
+            logging.debug("Node %s corosync configuration complete" % corosync_configuration.host.fqdn)
 
         job_scheduler_notify.notify(corosync_configuration,
                                     now(),

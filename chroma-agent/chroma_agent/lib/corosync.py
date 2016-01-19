@@ -29,12 +29,19 @@ from netaddr.core import AddrFormatError
 from chroma_agent import node_admin, config
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
+
 from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.lib import networking
+from chroma_agent.lib.talker_thread import TalkerThread
 from jinja2 import Environment, PackageLoader
 
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
 firewall_control = FirewallControl.create(logger=console_log)
+
+talker_thread = None                    # Used to make noise on ring1 to enable corosync detection.
+
 
 
 class RingDetectionError(Exception):
@@ -171,12 +178,12 @@ def find_unused_port(ring0, timeout = 10):
     firewall_control.add_rule(0, 'tcp', 'find unused port', persist=False, address=ring0.mcastaddr)
 
     try:
-        subscribe_multicast(ring0)
+        networking.subscribe_multicast(ring0)
         console_log.debug("Sniffing for packets to %s on %s" % (dest_addr, ring0.name))
-        cap = start_cap(ring0, timeout, "host %s and udp" % dest_addr)
+        cap = networking.start_cap(ring0, timeout, "host %s and udp" % dest_addr)
 
         def recv_packets(header, data):
-            tgt_port = get_dport_from_packet(data)
+            tgt_port = networking.get_dport_from_packet(data)
 
             try:
                 ports.remove(tgt_port)
@@ -200,103 +207,72 @@ def find_unused_port(ring0, timeout = 10):
     return choice(ports)
 
 
-def create_talker_thread(ring1):
-    """
-    To reduce races and improve the chances of ring1 detection, we start
-    a multicast "talker" thread which just sprays its multicast port
-    at the multicast group. The idea is to fill in the "dead air" until
-    one of the peers starts corosync.
-    """
-    import threading
+def _corosync_listener(service, action):
+    if service == 'corosync' and action == ServiceControl.ServiceState.SERVICESTARTED:
+        console_log.debug("Corosync has been started by this node")
+        _stop_talker_thread()
 
-    class TalkerThread(threading.Thread):
-        def __init__(self, interface):
-            super(TalkerThread, self).__init__()
-            self._stop = threading.Event()
-            self.interface = interface
 
-        def stop(self):
-            console_log.debug("Stopping talker thread")
-            self._stop.set()
+def _start_talker_thread(interface):
+    global talker_thread
 
-        def run(self):
-            console_log.debug("Starting talker thread")
-            sock = subscribe_multicast(self.interface)
-            while not self._stop.is_set():
-                sock.sendto("%d\n\0" % self.interface.mcastport,
-                            (self.interface.mcastaddr, self.interface.mcastport))
-                self._stop.wait(0.25)
+    if talker_thread is None:
+        console_log.debug("Starting talker thread")
+        talker_thread = TalkerThread(interface, console_log)
+        talker_thread.start()
+        ServiceControl.register_listener('corosync', _corosync_listener)
 
-    return TalkerThread(ring1)
+
+def _stop_talker_thread():
+    global talker_thread
+
+    if talker_thread is not None:
+        console_log.debug("Stopping talker thread")
+        talker_thread.stop()
+        talker_thread = None
+        ServiceControl.unregister_listener('corosync', _corosync_listener)
 
 
 def discover_existing_mcastport(ring1, timeout = 10):
     console_log.debug("Sniffing for packets to %s on %s (%s)" % (ring1.mcastaddr, ring1.name, ring1.ipv4_address))
-    subscribe_multicast(ring1)
-    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr,
-                                                                                               ring1.ipv4_address))
+
+    console_log.debug("Sniffing for packets to %s on %s" % (ring1.mcastaddr, ring1.name))
+    networking.subscribe_multicast(ring1)
+
+    cap = networking.start_cap(ring1,
+                               timeout / 10,
+                               "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr,
+                                                                                     ring1.ipv4_address))
+
+    # Stop the talker thread if it is running.
+    _stop_talker_thread()
+
+    ring1_original_mcast_port = ring1.mcastport
 
     def recv_packets(header, data):
-        ring1.mcastport = get_dport_from_packet(data)
+        ring1.mcastport = networking.get_dport_from_packet(data)
         console_log.debug("Sniffed multicast traffic on %d" % ring1.mcastport)
-
-    talker_thread = create_talker_thread(ring1)
 
     try:
         packet_count = 0
-        start_time = current_time = time.time()
-        while packet_count < 1 and current_time < start_time + timeout:
+        start_time = time.time()
+        while packet_count < 1 and time.time() < start_time + timeout:
             try:
                 packet_count += cap.dispatch(1, recv_packets)
             except Exception, e:
                 raise RuntimeError("Error reading from the network: %s" %
                                    str(e))
 
-            # If we haven't seen anything yet, start blathering...
-            if packet_count < 1 and not talker_thread.is_alive():
-                talker_thread.start()
-            current_time = time.time()
+            # If we haven't seen anything yet, make sure we are blathering...
+            if packet_count < 1:
+                _start_talker_thread(ring1)
 
-        console_log.debug("Finished after %d seconds, sniffed: %d" % (current_time -
-                                                                      start_time, packet_count))
+        console_log.debug("Finished after %d seconds, sniffed: %d" % (time.time() - start_time, packet_count))
     finally:
-        if talker_thread.is_alive():
-            talker_thread.stop()
-            talker_thread.join()
-            console_log.debug("Stopped talker thread")
-
-
-def subscribe_multicast(interface):
-    # subscribe to the mcast addr
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface.ipv4_address))
-    mreq = socket.inet_aton(interface.mcastaddr) + socket.inet_aton(interface.ipv4_address)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-    sock.bind(('', 52122))
-    return sock
-
-
-def start_cap(interface, timeout, filter):
-    import pcapy
-    try:
-        cap = pcapy.open_live(interface.name, 64, True, timeout * 1000)
-        cap.setfilter(filter)
-    except Exception, e:
-        raise RuntimeError("Error doing open_live() / setfilter(): %s" % e)
-    return cap
-
-
-def get_dport_from_packet(data):
-    import impacket
-    import impacket.ImpactDecoder
-    decoder = impacket.ImpactDecoder.EthDecoder()
-    try:
-        packet = decoder.decode(data)
-        return packet.child().child().get_uh_dport()
-    except Exception, e:
-        raise RuntimeError("Error decoding network packet: %s" %
-                           str(e))
+        # If we heard someone else talking (ring1_original_mcast_post != ring1.mcast_post)
+        # then stop the talker thread, otherwise we should continue to fill the dead air until we start corosync.
+        if ring1_original_mcast_port != ring1.mcastport:
+            _stop_talker_thread()
 
 
 def render_config(interfaces):
