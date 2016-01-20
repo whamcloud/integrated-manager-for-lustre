@@ -47,7 +47,9 @@ export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
 export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" ]; then
     export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el7.2"}
+    export JENKINS_DISTRO="el7.1"
 else
     export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.7"}
+    export JENKINS_DISTRO="el6.4"
 fi
 export CLUSTER_CONFIG="cluster_cfg.json"

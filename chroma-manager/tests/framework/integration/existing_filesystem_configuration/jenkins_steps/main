@@ -30,7 +30,7 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 fi
 pushd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+  sed -i -e 's/distro=el6\.[0-9]/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
 done
 popd
 

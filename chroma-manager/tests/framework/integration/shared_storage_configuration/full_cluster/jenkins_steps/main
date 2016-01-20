@@ -63,7 +63,7 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 fi
 cd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e 's/distro=el6.[0-9]/distro=el6.4/' \$f
+  sed -i -e 's/distro=el6\.[0-9]/distro=el6.4/' \$f
 done" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

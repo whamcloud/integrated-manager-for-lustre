@@ -52,8 +52,8 @@ fi
 # first fetch and install chroma 2.3.0.0
 BUILD_JOB=chroma-blessed
 BUILD_NUM=117
-IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
+IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
 # Install and setup old chroma manager
 scp $IEEL_FROM_VERSION $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
