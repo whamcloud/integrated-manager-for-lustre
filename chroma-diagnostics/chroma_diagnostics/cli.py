@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # INTEL CONFIDENTIAL
 #
@@ -22,7 +21,7 @@
 
 
 from collections import defaultdict
-
+from chroma_diagnostic_actions import cd_actions
 import logging
 import subprocess
 from datetime import datetime, timedelta
@@ -40,12 +39,6 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 log.addHandler(handler)
 
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
-
-PACKAGES = ['chroma-agent',
-            'chroma-agent-management',
-            'chroma-manager',
-            'chroma-manager-cli',
-            'chroma-manager-libs']
 
 # Always exclude these tables from DB output
 EXCLUDED_TABLES = ['chroma_core_logmessage', 'chroma_core_series', 'chroma_core_sample_*']
@@ -247,77 +240,13 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
 
-    if save_command_output('detected_devices', ['chroma-agent', 'device_plugin', '--plugin=linux'], output_directory):
-        log.info("Detected devices")
-    elif args.verbose > 0:
-        log.info("Failed to detect Linux system devices")
+    for cd_action in cd_actions():
 
-    if save_command_output('monitored_devices', ['chroma-agent', 'detect_scan'], output_directory):
-        log.info("Devices monitored")
-    elif args.verbose > 0:
-        log.info("Failed to detect devices containing Lustre components")
+        if save_command_output(cd_action.log_filename, cd_action.cmd, output_directory):
+            log.info(cd_action.cmd_desc)
 
-    if save_command_output('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p', 'chromavhost'], output_directory):
-        log.info("Inspected rabbit queues")
-    elif args.verbose > 0:
-        log.info("Failed to inspect rabbit queues")
-
-    if save_command_output('rpm_packges_installed', ['rpm', '-qa'], output_directory):
-        log.info("Listed installed packages")
-    elif args.verbose > 0:
-        log.info("Failed to list installed packages")
-
-    if save_command_output('pacemaker-cib', ['cibadmin', '--query'], output_directory):
-        log.info("Listed cibadmin --query")
-    elif args.verbose > 0:
-        log.info("Failed to list cibadmin --query")
-
-    if save_command_output('pacemaker-pcs-config-show', ['pcs', 'config', 'show'], output_directory):
-        log.info("Listed: pcs config show")
-    elif args.verbose > 0:
-        log.info("Failed to list pcs config show")
-
-    if save_command_output('pacemaker-crm-mon-1', ['crm_mon', '-1r', ], output_directory):
-        log.info("Listed: crm_mon -1r")
-    elif args.verbose > 0:
-        log.info("Failed to list crm_mon -1r")
-
-    if save_command_output('chroma-config-validate', ['chroma-config',
-                                                      'validate'], output_directory):
-        log.info("Validated Intel Manager for Lustre installation")
-    elif args.verbose > 0:
-        log.info("Failed to run Intel Manager for Lustre installation validation")
-
-    if save_command_output('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
-        log.info("Finger printed Intel Manager for Lustre installation")
-    elif args.verbose > 0:
-        log.info("Failed to finger print Intel Manager for Lustre installation")
-
-    if save_command_output('ps', ['ps', '-ef', '--forest'], output_directory):
-        log.info("Listed running processes")
-    elif args.verbose > 0:
-        log.info("Failed to list running processes: ps")
-
-    if save_command_output('lspci', ['lspci', '-v'], output_directory):
-        log.info("listed PCI devices")
-    elif args.verbose > 0:
-        log.info("Failed to list PCI devices: lspci")
-
-    if save_command_output('df', ['df', '--all'], output_directory):
-        log.info("listed file system disk space.")
-    elif args.verbose > 0:
-        log.info("Failed to list file system disk space : df")
-
-    for proc in ['cpuinfo', 'meminfo', 'mounts', 'partitions']:
-        if save_command_output(proc, ['cat', '/proc/%s' % proc], output_directory):
-            log.info("listed cat /proc/%s" % proc)
         elif args.verbose > 0:
-            log.info("Failed to list cat /proc/%s" % proc)
-
-    if save_command_output('etc_hosts', ['cat', '/etc/hosts', ], output_directory):
-        log.info("Listed hosts")
-    elif args.verbose > 0:
-        log.info("Failed to list hosts: /etc/hosts")
+            log.info(cd_action.error_message)
 
     log_count = copy_logrotate_logs(output_directory, args.days_back, args.verbose)
     if log_count > 0:
