@@ -154,7 +154,7 @@ class JobSchedulerClient(object):
         JobSchedulerRpc().cancel_job(job_id)
 
     @classmethod
-    def create_host_ssh(cls, address, server_profile, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(cls, address, server_profile, root_pw, pkey, pkey_pw):
         """
         Create a host which will be set up using SSH
 

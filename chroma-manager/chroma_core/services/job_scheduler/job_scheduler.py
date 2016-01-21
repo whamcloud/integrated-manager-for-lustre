@@ -1185,7 +1185,7 @@ class JobScheduler(object):
 
         return [x.id for x in targets], command.id
 
-    def create_host_ssh(self, address, profile, target_state, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(self, address, profile, root_pw, pkey, pkey_pw):
         """
         Create a ManagedHost object and deploy the agent to its address using SSH.
 
