@@ -97,7 +97,7 @@ class CopytoolEventView(ValidatedClientView):
             return HttpResponseBadRequest("Unknown copytool: %s" % body['copytool'])
 
         copytool_log.debug("Received %d events from %s on %s" %
-                  (len(events), copytool, copytool.host))
+                           (len(events), copytool, copytool.host))
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
@@ -386,7 +386,7 @@ def setup(request, key):
     for bundle in Bundle.objects.all():
         repos += """[%s]
 name=%s
-baseurl={0}/%s
+baseurl={0}/%s/$releasever/
 enabled=0
 gpgcheck=0
 sslverify = 1

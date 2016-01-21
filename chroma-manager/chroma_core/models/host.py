@@ -247,7 +247,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         from chroma_core.models import Nid
 
         # Check we at least have a @
-        if not "@" in nid_string:
+        if "@" not in nid_string:
             raise ManagedHost.DoesNotExist()
 
         nid = Nid.split_nid_string(nid_string)
@@ -403,11 +403,10 @@ class Volume(models.Model):
         # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
         # know at least where the primary mount should be)
         return queryset.filter(volumenode__host__not_deleted = True).\
-            annotate(
-                any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
-                has_primary = BoolOr('volumenode__primary'),
-                num_volumenodes = Count('volumenode')
-            ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
+            annotate(any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
+                     has_primary = BoolOr('volumenode__primary'),
+                     num_volumenodes = Count('volumenode')
+                     ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
 
     def get_kind(self):
         if not hasattr(self, 'kind'):
@@ -934,12 +933,12 @@ class SetHostProfileStep(Step):
         self.invoke_agent_expect_result(host, 'update_profile', {"profile": server_profile.as_dict})
 
         job_scheduler_notify.notify(host,
-                                  tznow(),
-                                  {'server_profile_id': server_profile.id})
+                                    tznow(),
+                                    {'server_profile_id': server_profile.id})
 
         job_scheduler_notify.notify(host,
-                                  tznow(),
-                                  {'immutable_state': not server_profile.managed})
+                                    tznow(),
+                                    {'immutable_state': not server_profile.managed})
 
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
@@ -1270,14 +1269,13 @@ class ShutdownHostJob(AdvertisedJob):
     @classmethod
     def can_run(cls, host):
         return (host.is_managed and
-               host.state not in ['removed', 'undeployed', 'unconfigured'] and
+                host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
                     active = True,
                     alert_type__in = [
                         HostOfflineAlert.__name__,
                         HostContactAlert.__name__
-                    ]
-                ).exists())
+                    ]).exists())
 
     def description(self):
         return "Initiate an orderly shutdown on host %s" % self.host
@@ -1406,7 +1404,7 @@ class UpdateJob(Job):
         for bundle in Bundle.objects.all():
             repo_file_contents += """[%s]
 name=%s
-baseurl=%s/%s
+baseurl=%s/%s/$releasever
 enabled=0
 gpgcheck=0
 sslverify = 1
@@ -1415,8 +1413,7 @@ sslclientkey = {1}
 sslclientcert = {2}
 proxy=_none_
 
-""" % (bundle.bundle_name, bundle.description,
-       base_repo_url, bundle.bundle_name)
+""" % (bundle.bundle_name, bundle.description, base_repo_url, bundle.bundle_name)
 
         return [(UpdatePackagesStep, {'host': self.host,
                                       'bundles': ['iml-agent'],

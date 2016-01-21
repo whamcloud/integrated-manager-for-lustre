@@ -89,6 +89,11 @@ fi
 
 # Install a client
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
+IEEL_VER="${IEEL_FROM_VERSION#*-}"
+IEEL_VER="${IEEL_VER%.tar.gz}"
+if [ ${IEEL_VER//./} -lt 3000 ]; then
+    OLD_CLIENT=true
+fi
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 echo "Create and exercise a filesystem..."

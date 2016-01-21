@@ -18,6 +18,7 @@ chroma-bundles/*/repo
 chroma-bundles/ieel-*.tar.gz
 chroma-dependencies/*/.last_built
 chroma-dependencies/*/6.[345]
+chroma-dependencies/*/7.1.1503
 chroma-dependencies/*/*.zip
 chroma-dependencies/*/*.tgz
 chroma-dependencies/*/*.tar.gz
@@ -29,6 +30,8 @@ chroma-dependencies/*/*.spec
 chroma-dependencies/*/*.spec.orig
 chroma-dependencies/*/*.spec.last_built
 chroma-dependencies/*/*.patch
+chroma-dependencies/repodata
+chroma-dependencies/robinhood/lustre
 chroma-dependencies/python-django/simplejson-init.py
 chroma-dependencies/rabbitmq-server/rabbitmq-script-wrapper
 chroma-dependencies/rabbitmq-server/rabbitmq-server.init

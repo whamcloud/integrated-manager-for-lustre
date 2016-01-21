@@ -3,6 +3,7 @@ BUNDLE_RPMS := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXC
 VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
+DISTRO      := $(shell rpm --eval %dist | sed -e 's/\.\(el[0-9][0-9]*\).*/\1/')
 
 all: decruftinate $(BUNDLE_NAME).tar.gz install
 
@@ -28,7 +29,7 @@ decruftinate:
 $(BUNDLE_NAME).tar.gz: $(patsubst %,repo/%.rpm,$(BUNDLE_RPMS)) $(patsubst %,repo/%,$(OTHER))
 	rm -f *.tar.gz
 	cd repo && createrepo --pretty .
-	echo "{\"name\": \"$(NAME)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
+	echo "{\"name\": \"$(NAME)\", \"distro\": \"$(DISTRO)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
 	tar -C repo -czvf $@ ./meta ./repodata $(patsubst repo/%,./%,$^)
 
 repo:

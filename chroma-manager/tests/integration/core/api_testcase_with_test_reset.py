@@ -3,6 +3,7 @@ import os
 import requests
 import shutil
 import sys
+import platform
 
 import logging
 import time
@@ -434,8 +435,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def set_value(self, uri, value_name, value, verify_successful=VERIFY_SUCCESS_INSTANT, msg=None):
         logger.debug("set_%s %s %s%s" % (value_name, uri, value, ": %s" % msg if msg else ""))
         object = self.get_json_by_uri(uri)
-        object.pop('state', None)                       # We do this because some objects will presume a put with 'state' is a state change.
-                                                        # Do it before the object value setting so that if state is being set we don't break it.
+        # We do this because some objects will presume a put with 'state' is a state change.
+        # Do it before the object value setting so that if state is being set we don't break it.
+        object.pop('state', None)
         object[value_name] = value
 
         response = self.chroma_manager.put(uri, body = object)
@@ -640,7 +642,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             # Register the default bundles and profile again
             result = self.remote_command(
                 chroma_manager['address'],
-                "for bundle_meta in /var/lib/chroma/repo/*/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log",
+                "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log" % platform.dist()[1][0:1],
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status

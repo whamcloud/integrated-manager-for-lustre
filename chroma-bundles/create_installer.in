@@ -7,7 +7,7 @@ usage() {
 }
 
 ldiskfs_installer() {
-    tar -xzf ../e2fsprogs-*-bundle.tar.gz
+    tar -xzf ../$DISTRO/e2fsprogs-*-bundle.tar.gz
 
     rm -rf meta repodata lustre-osd-zfs-* lustre-dkms-*
 
@@ -43,7 +43,7 @@ EOF
 zfs_installer() {
     ZFS_VERSION=@ZFS_VERSION@
 
-    tar -xzf ../zfs-*-bundle.tar.gz
+    tar -xzf ../$DISTRO/zfs-*-bundle.tar.gz
 
     rm -rf meta repodata kernel-* lustre-osd-ldiskfs-* lustre-modules-*
 
@@ -78,15 +78,20 @@ case $1 in
     ;;
 esac
 
-mkdir -p lustre-$1
-cd lustre-$1
+for DISTRO in el6 el7; do
+    if [ ! -d $DISTRO ]; then
+        continue
+    fi
+    mkdir -p lustre-$1
+    cd lustre-$1
 
-tar -xzf ../lustre-[0-9]*-bundle.tar.gz
-${1}_installer
+    tar -xzf ../$DISTRO/lustre-[0-9]*-bundle.tar.gz
+    ${1}_installer
 
-chmod 755 install
-cd ..
+    chmod 755 install
+    cd ..
 
-tar czf lustre-$1-installer.tar.gz lustre-$1
+    tar czf lustre-$1-$DISTRO-installer.tar.gz lustre-$1
 
-rm -rf lustre-$1
+    rm -rf lustre-$1-$DISTRO
+done
