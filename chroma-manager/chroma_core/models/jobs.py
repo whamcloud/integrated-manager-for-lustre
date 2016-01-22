@@ -54,6 +54,9 @@ class StatefulObject(models.Model):
     immutable_state = models.BooleanField(default=False)
     states = None
     initial_state = None
+    route_map = None
+    transition_map = None
+    job_class_map = None
 
     reverse_deps = {}
 
@@ -84,20 +87,27 @@ class StatefulObject(models.Model):
         return DependAll()
 
     @staticmethod
-    def so_child(klass):
-        """Find the ancestor of klass which is a direct descendent of StatefulObject"""
+    def so_root(klass):
+        """
+        We looked for two things to find first class that contains its own route_map. This is basically the parent
+        of the tree of objects. If we don't find that then we find the ancestor of klass which is a direct descendent
+        of StatefulObject
+        """
+
         # We do this because if I'm e.g. a ManagedMgs, I need to get my parent ManagedTarget
         # class in order to find out what jobs are applicable to me.
+        # However if a child wants to actually have its own jobs it can do this by defining its own class method
+        # route_map
         assert(issubclass(klass, StatefulObject))
 
-        if StatefulObject in klass.__bases__:
+        if StatefulObject in klass.__bases__ or 'route_map' in klass.__dict__:
             return klass
         else:
             for b in klass.__bases__:
                 if hasattr(b, '_meta') and b._meta.abstract:
                     continue
                 if issubclass(b, StatefulObject):
-                    return StatefulObject.so_child(b)
+                    return StatefulObject.so_root(b)
             # Fallthrough: got as close as we're going
             return klass
 
@@ -105,10 +115,14 @@ class StatefulObject(models.Model):
     def _build_maps(cls):
         """Populate route_map and transition_map attributes by introspection of
            this class and related StateChangeJob classes.  It is legal to call this
-           twice or concurrently."""
-        cls_ = StatefulObject.so_child(cls)
+           twice or concurrently.
+        """
+        if cls.route_map is not None:
+            return
 
-        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition[0] == cls_]
+        cls_ = StatefulObject.so_root(cls)
+
+        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition.class_ == cls_]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
@@ -178,8 +192,7 @@ class StatefulObject(models.Model):
             if not s in cls.states:
                 raise SchedulingError("%s not legal state for %s, legal states are %s" % (s, cls, cls.states))
 
-        if not hasattr(cls, 'route_map'):
-            cls._build_maps()
+        cls._build_maps()
 
         try:
             return cls.route_map[(begin_state, end_state)]
@@ -196,7 +209,7 @@ class StatefulObject(models.Model):
             if not begin_state in self.states:
                 raise SchedulingError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
 
-            if not hasattr(self, 'transition_map'):
+            if self.transition_map is None:
                 self.__class__._build_maps()
 
             return list(set(self.transition_map[begin_state]))
@@ -224,8 +237,7 @@ class StatefulObject(models.Model):
         is the last job in the list of jobs required.
         """
 
-        if not hasattr(self, 'route_map') or not hasattr(self, 'job_class_map'):
-            self._build_maps()
+        self._build_maps()
 
         if last_job_in_route:
             route = self.route_map[(begin_state, end_state)]
@@ -249,7 +261,7 @@ class StatefulObject(models.Model):
                     reverse_deps_map[so_class].append(lookup_fn)
             StatefulObject.reverse_deps_map = reverse_deps_map
 
-        klass = StatefulObject.so_child(self.__class__)
+        klass = StatefulObject.so_root(self.__class__)
 
         from itertools import chain
         lookup_fns = StatefulObject.reverse_deps_map[klass]
@@ -500,6 +512,7 @@ class StateChangeJob(Job):
 
     StateTransition = namedtuple('StateTransition', ['class_', 'old_state', 'new_state'])
     state_transition = None
+
     # Name of an attribute which is a ForeignKey to a StatefulObject
     stateful_object = None
     # Terse human readable verb, e.g. "Change this" (for buttons)

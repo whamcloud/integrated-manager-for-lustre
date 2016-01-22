@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -32,7 +32,8 @@ class ObjectCache(object):
 
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
-        from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, NTPConfiguration, RSyslogConfiguration
+        from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, Corosync2Configuration
+        from chroma_core.models import NTPConfiguration, RSyslogConfiguration
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
         from chroma_core.models.copytool import Copytool
         self.objects = defaultdict(dict)
@@ -44,7 +45,7 @@ class ObjectCache(object):
         self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost,
                                ManagedTargetMount, LustreClientMount, LNetConfiguration,
                                Copytool, PacemakerConfiguration, CorosyncConfiguration,
-                               NTPConfiguration, RSyslogConfiguration]
+                               Corosync2Configuration, NTPConfiguration, RSyslogConfiguration]
 
         for klass in self._cached_models:
             args = filter_args.get(klass, {})

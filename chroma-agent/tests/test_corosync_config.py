@@ -74,7 +74,8 @@ class TestConfigureCorosync(unittest.TestCase):
 
         self.write_ifcfg = mock.patch('chroma_agent.node_admin.write_ifcfg').start()
 
-        self.write_config_to_file = mock.patch('chroma_agent.action_plugins.manage_corosync.write_config_to_file').start()
+        self.write_config_to_file = mock.patch(
+            'chroma_agent.action_plugins.manage_corosync.write_config_to_file').start()
 
         mock.patch('chroma_agent.action_plugins.manage_pacemaker.unconfigure_pacemaker').start()
 
@@ -85,12 +86,14 @@ class TestConfigureCorosync(unittest.TestCase):
                 self.interfaces[obj.name]['ipv4_address'] = address
                 self.interfaces[obj.name]['ipv4_netmask'] = prefix
             old_set_address(obj, address, prefix)
-        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.set_address', set_address).start()
+        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.set_address',
+                   set_address).start()
 
         @property
         def has_link(obj):
             return self.interfaces[obj.name]['link_up']
-        self.link_patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link', has_link)
+        self.link_patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link',
+                                       has_link)
         self.link_patcher.start()
 
         mock.patch('chroma_agent.lib.corosync.find_unused_port', return_value = 4242).start()

@@ -99,7 +99,10 @@ class DependOn(Dependable):
         return self.stateful_object.__class__._base_manager.get(pk = self.stateful_object.pk)
 
     def satisfied(self):
-        depended_object = self.get_stateful_object()
+        try:
+            depended_object = self.get_stateful_object()
+        except:
+            self.stateful_object.__class__._base_manager.get(pk = self.stateful_object.pk)
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning("DependOn not satisfied: %s in state %s, not one of %s (preferred %s)" %

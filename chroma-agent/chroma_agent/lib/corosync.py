@@ -37,6 +37,10 @@ env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 firewall_control = FirewallControl.create(logger=console_log)
 
 
+class RingDetectionError(Exception):
+    pass
+
+
 def get_all_interfaces():
     import ethtool
     # Not sure how robust this will be; need to test with real gear.
@@ -84,6 +88,12 @@ def get_ring0():
 
 def detect_ring1(ring0, ring1_address, ring1_prefix):
     all_interfaces = get_all_interfaces()
+
+    if len(all_interfaces) < 2:
+        raise RingDetectionError("Corosync requires at least 2 network interaces, "
+                                 "one of which my be unconfigured and dedicated to HA monitoring."
+                                 "Only %s interfaces found" % len(all_interfaces))
+
     ring1_candidates = []
 
     # If the specified ring1 address is not already configured, get
@@ -101,8 +111,8 @@ def detect_ring1(ring0, ring1_address, ring1_prefix):
         console_log.info("Chose %s for corosync ring1" % iface.name)
         iface.set_address(ring1_address, ring1_prefix)
     elif len(ring1_candidates) > 1:
-        raise RuntimeError("Unable to autodetect ring1: found %d unconfigured interfaces with "
-                           "link" % len(ring1_candidates))
+        raise RingDetectionError("Unable to autodetect ring1: found %d unconfigured interfaces with link" %
+                                 len(ring1_candidates))
 
     # Now, go back and look through the list of all interfaces again for
     # our ring1 address. We do it this way in order to handle the situation
@@ -127,6 +137,8 @@ def detect_ring1(ring0, ring1_address, ring1_prefix):
         console_log.info("Decided on %d for multicast port" % iface.mcastport)
 
         return iface
+
+    raise RingDetectionError("Failed to detect ring1 interface")
 
 
 def find_subnet(network, prefixlen):

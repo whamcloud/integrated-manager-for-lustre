@@ -20,19 +20,14 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-import logging
-
 from django.utils.timezone import now
 from django.db import models
 
-from chroma_core.models import AlertStateBase
-from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
-from chroma_core.models import StateChangeJob
 from chroma_core.models import NetworkInterface
-from chroma_core.models.jobs import Job, StateLock
-from chroma_core.lib.job import DependOn, DependAll, Step
-from chroma_help.help import help_text
+from chroma_core.models import CorosyncStoppedAlert
+from chroma_core.models import corosync_common
+from chroma_core.lib.job import Step
 from chroma_core.services.job_scheduler import job_scheduler_notify
 
 
@@ -48,6 +43,52 @@ class CorosyncConfiguration(DeletableStatefulObject):
     corosync_reported_up = models.BooleanField(default=False,
                                                help_text="True if corosync on a node in this node's "
                                                          "cluster reports that this node is online")
+
+    record_type = models.CharField(max_length = 128, default="CorosyncConfiguration")
+
+    # THIS IS A TEMP HACK SO I DON'T HAVE TO DEVELOP THIS ON A BIG STACK OF PATCHES
+    # IT WILL MAKE USE OF THE SPARSEMODEL TECHNOLOGY EVENTUALLY BUT FOR NOW WE SORT OF EMULATE IT.
+    @classmethod
+    def __new__(cls, *args, **kwargs):
+        try:
+            import chroma_core
+            if kwargs != {}:
+                if 'record_type' not in kwargs:
+                    kwargs['record_type'] = cls.__name__
+                required_class = getattr(chroma_core.models, kwargs['record_type'])
+            else:
+                if len(args) == 1:
+                    required_class = cls
+                else:
+                    # The args will be in the order of the fields, but we add 1 because the cls is appended on the front.
+                    record_type_index = [field.attname for field in cls._meta.fields].index('record_type') + 1
+                    try:
+                        required_class = getattr(chroma_core.models, args[record_type_index])
+                    except:
+                        pass
+
+            if (cls != required_class):
+                args = (required_class,) + args[1:]
+                instance = required_class.__new__(*args, **kwargs)
+
+                # We have to call init because python won't because we are returning a different type.
+                instance.__init__(*args[1:], **kwargs)
+            else:
+                instance = super(CorosyncConfiguration, cls).__new__(cls)
+
+            return instance
+        except StopIteration:
+            raise RuntimeError("CorosyncConfiguration %s unknown" % cls)
+
+    def __init__(self, *args, **kwargs):
+        if kwargs and 'record_type' not in kwargs:
+            kwargs['record_type'] = self.__class__.__name__
+
+        super(CorosyncConfiguration, self).__init__(*args, **kwargs)
+
+        # Megahack, because we are on two tables for now.
+        if hasattr(self, 'corosyncconfiguration_ptr_id'):
+            self.corosyncconfiguration_ptr_id = self.id
 
     def __str__(self):
         return "%s Corosync configuration" % self.host
@@ -95,109 +136,9 @@ class CorosyncConfiguration(DeletableStatefulObject):
         for interface in host_interfaces:
             interface.save()
 
-
-class CorosyncUnknownPeersAlert(AlertStateBase):
-    """Alert should be raised when a Host has an unknown Peer.
-
-    When a corosync agent reports a peer that we do not know, we should raise an alert.
-    """
-
-    # This is worse than INFO because it *could* indicate that
-    # networking is misconfigured..
-    default_severity = logging.WARNING
-
-    def message(self):
-        return "Host has unknown peer %s" % self.alert_item.host
-
-    class Meta:
-        app_label = 'chroma_core'
-        db_table = AlertStateBase.table_name
-
     @property
-    def affected_objects(self):
-        """
-        :return: A list of objects that are affected by this alert
-        """
-        return [self.alert_item.host]
-
-
-class CorosyncToManyPeersAlert(AlertStateBase):
-    """Alert should be raised when a Host has an unknown Peer.
-
-    When a corosync agent reports a peer that we do not know, we should raise an alert.
-    """
-
-    # This is worse than INFO because it *could* indicate that
-    # networking is misconfigured..
-    default_severity = logging.WARNING
-
-    def message(self):
-        return "Host %s has to many failover pears" % self.alert_item.host
-
-    class Meta:
-        app_label = 'chroma_core'
-        db_table = AlertStateBase.table_name
-
-    @property
-    def affected_objects(self):
-        """
-        :return: A list of objects that are affected by this alert
-        """
-        return [self.alert_item.host]
-
-
-class CorosyncNoPeersAlert(AlertStateBase):
-    """Alert should be raised when a Host has an unknown Peer.
-
-    When a corosync agent reports a peer that we do not know, we should raise an alert.
-    """
-
-    # This is worse than INFO because it *could* indicate that
-    # networking is misconfigured..
-    default_severity = logging.WARNING
-
-    def message(self):
-        return "Host %s no failover peers" % self.alert_item.host
-
-    class Meta:
-        app_label = 'chroma_core'
-        db_table = AlertStateBase.table_name
-
-    @property
-    def affected_objects(self):
-        """
-        :return: A list of objects that are affected by this alert
-        """
-        return [self.alert_item.host]
-
-
-class CorosyncStoppedAlert(AlertStateBase):
-    # Corosync being down is never solely responsible for a filesystem
-    # being unavailable: if a target is offline we will get a separate
-    # ERROR alert for that.  Corosync being offline may indicate a configuration
-    # fault, but equally could just indicate that the host hasn't booted up that far yet.
-    default_severity = logging.INFO
-
-    def message(self):
-        return "Corosync stopped on server %s" % self.alert_item.host
-
-    class Meta:
-        app_label = 'chroma_core'
-        db_table = AlertStateBase.table_name
-
-    def end_event(self):
-        return AlertEvent(
-            message_str = "Corosync started on server '%s'" % self.alert_item.host,
-            alert_item = self.alert_item.host,
-            alert = self,
-            severity = logging.WARNING)
-
-    @property
-    def affected_objects(self):
-        """
-        :return: A list of objects that are affected by this alert
-        """
-        return [self.alert_item.host]
+    def configure_job_name(self):
+        return "ConfigureCorosyncJob"
 
 
 class AutoConfigureCorosyncStep(Step):
@@ -225,41 +166,16 @@ class AutoConfigureCorosyncStep(Step):
                                      'network_interfaces': [ring0_name, ring1_name]})
 
 
-class AutoConfigureCorosyncJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'unconfigured', 'stopped')
-    stateful_object = 'corosync_configuration'
+class AutoConfigureCorosyncJob(corosync_common.AutoConfigureCorosyncJob):
+    state_transition = corosync_common.AutoConfigureCorosyncJob.StateTransition(CorosyncConfiguration, 'unconfigured', 'stopped')
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    state_verb = 'Configure Corosync'
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 30
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["configure_corosync"]
-
-    def description(self):
-        return help_text['configure_corosync_on'] % self.corosync_configuration.host
-
     def get_steps(self):
         return [(AutoConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration})]
-
-    def get_deps(self):
-        '''
-        Before Corosync operations are possible some dependencies are need, basically the host must have had its packages installed.
-        Maybe we need a packages object, but this routine at least keeps the detail in one place.
-
-        Or maybe we need an unacceptable_states lists.
-        :return:
-        '''
-        if self.corosync_configuration.host.state in ['unconfigured', 'undeployed']:
-            return DependOn(self.corosync_configuration.host, 'packages_installed')
-        else:
-            return DependAll()
 
 
 class UnconfigureCorosyncStep(Step):
@@ -269,25 +185,13 @@ class UnconfigureCorosyncStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "unconfigure_corosync")
 
 
-class UnconfigureCorosyncJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'stopped', 'unconfigured')
-    stateful_object = 'corosync_configuration'
+class UnconfigureCorosyncJob(corosync_common.UnconfigureCorosyncJob):
+    state_transition = corosync_common.UnconfigureCorosyncJob.StateTransition(CorosyncConfiguration, 'stopped', 'unconfigured')
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    state_verb = 'Unconfigure Corosync'
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 30
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["unconfigure_corosync"]
-
-    def description(self):
-        return "Unconfigure Corosync on %s" % self.corosync_configuration.host
 
     def get_steps(self):
         return [(UnconfigureCorosyncStep, {'host': self.corosync_configuration.host})]
@@ -300,25 +204,13 @@ class StartCorosyncStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "start_corosync")
 
 
-class StartCorosyncJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'stopped', 'started')
-    stateful_object = 'corosync_configuration'
+class StartCorosyncJob(corosync_common.StartCorosyncJob):
+    state_transition = corosync_common.StartCorosyncJob.StateTransition(CorosyncConfiguration, 'stopped', 'started')
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    state_verb = 'Start Corosync'
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 30
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["start_corosync"]
-
-    def description(self):
-        return "Start Corosync on %s" % self.corosync_configuration.host
 
     def get_steps(self):
         return [(StartCorosyncStep, {'host': self.corosync_configuration.host})]
@@ -331,84 +223,16 @@ class StopCorosyncStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "stop_corosync")
 
 
-class StopCorosyncJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(CorosyncConfiguration, 'started', 'stopped')
-    stateful_object = 'corosync_configuration'
+class StopCorosyncJob(corosync_common.StopCorosyncJob):
+    state_transition = corosync_common.StopCorosyncJob.StateTransition(CorosyncConfiguration, 'started', 'stopped')
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    state_verb = 'Stop Corosync'
-
-    display_group = Job.JOB_GROUPS.RARE
-    display_order = 100
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["stop_corosync"]
-
-    def description(self):
-        return "Stop Corosync on %s" % self.corosync_configuration.host
 
     def get_steps(self):
         return [(StopCorosyncStep, {'host': self.corosync_configuration.host})]
-
-    def get_deps(self):
-        return DependOn(self.corosync_configuration.host.pacemaker_configuration, 'stopped', unacceptable_states=['started'])
-
-
-class GetCorosyncStateStep(Step):
-    idempotent = True
-
-    # FIXME: using database=True to do the alerting update inside .set_state but
-    # should do it in a completion
-    database = True
-
-    def run(self, kwargs):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        host = kwargs['host']
-
-        try:
-            lnet_data = self.invoke_agent(host, "device_plugin", {'plugin': 'linux_network'})['linux_network']['lnet']
-            host.set_state(lnet_data['state'])
-            host.save()
-        except TypeError:
-            self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
-        except AgentException as e:
-            self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
-
-
-class GetCorosyncStateJob(Job):
-    corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    requires_confirmation = False
-    verb = "Get Corosync state"
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    def create_locks(self):
-        return [StateLock(
-            job = self,
-            locked_item = self.corosync_configuration,
-            write = True
-        )]
-
-    @classmethod
-    def get_args(cls, corosync_configuration):
-        return {'host': corosync_configuration.host}
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text['corosync_state']
-
-    def description(self):
-        return "Get Corosync state for %s" % self.corosync_configuration.host
-
-    def get_steps(self):
-        return [(GetCorosyncStateStep, {'host': self.corosync_configuration.host})]
 
 
 class ConfigureCorosyncStep(Step):
@@ -430,22 +254,12 @@ class ConfigureCorosyncStep(Step):
                                      'network_interfaces': [kwargs['ring0_name'], kwargs['ring1_name']]})
 
 
-class ConfigureCorosyncJob(Job):
+class ConfigureCorosyncJob(corosync_common.ConfigureCorosyncJob):
     corosync_configuration = models.ForeignKey(CorosyncConfiguration)
-    network_interface_0 = models.ForeignKey(NetworkInterface, related_name='interface_0')
-    network_interface_1 = models.ForeignKey(NetworkInterface, related_name='interface_1')
-    mcast_port = models.IntegerField(null = True)
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text['configure_corosync_on'] % stateful_object.host.fqdn
-
-    def description(self):
-        return help_text['configure_corosync']
 
     def get_steps(self):
         steps = [(ConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration,
@@ -454,6 +268,3 @@ class ConfigureCorosyncJob(Job):
                                           'mcast_port': self.mcast_port})]
 
         return steps
-
-    def get_deps(self):
-        return DependOn(self.corosync_configuration, 'stopped')

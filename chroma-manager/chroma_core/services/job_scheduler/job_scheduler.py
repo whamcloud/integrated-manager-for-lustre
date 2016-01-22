@@ -54,6 +54,7 @@ from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, 
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
+from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
@@ -837,6 +838,10 @@ class JobScheduler(object):
         :param new_state: Hypothetical new value of the 'state' attribute
 
         """
+        # Corosync2Configuration is needed by the line below although not directly referenced,
+        # so reference to remove warnings.
+        Corosync2Configuration
+
         stateful_object = ObjectCache.get_by_id(getattr(sys.modules[__name__], stateful_object_class), stateful_object_id)
 
         return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
@@ -955,12 +960,13 @@ class JobScheduler(object):
             with transaction.commit_on_success():
                 # For now we only support 1 or 2 network configurations, jobs aren't so helpful at supporting lists
                 corosync_configuration = CorosyncConfiguration.objects.get(id=corosync_configuration_id)
+
                 assert len(network_interface_ids) == 1 or len(network_interface_ids) == 2
                 network_interface_0 = NetworkInterface.objects.get(id = network_interface_ids[0])
                 network_interface_1 = None if len(network_interface_ids) == 1 else NetworkInterface.objects.get(id = network_interface_ids[1])
 
                 command_id = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs_preserve_states(
-                    [{"class_name": "ConfigureCorosyncJob",
+                    [{"class_name": corosync_configuration.configure_job_name,
                       "args": {"corosync_configuration": corosync_configuration,
                                "mcast_port": mcast_port,
                                "network_interface_0": network_interface_0,

@@ -641,11 +641,17 @@ class FakeServer(utils.Persisted):
             self.save()
             return agent_result_ok
 
+    def start_corosync2(self):
+        return self.start_corosync()
+
     def stop_corosync(self):
         with self._lock:
             self.state['corosync'].state = 'stopped'
             self.save()
             return agent_result_ok
+
+    def stop_corosync2(self):
+        return self.stop_corosync()
 
     def configure_corosync(self,
                            ring0_name,
@@ -653,6 +659,18 @@ class FakeServer(utils.Persisted):
                            ring1_name=None,
                            ring0_ipaddr=None, ring0_prefix=None,
                            ring1_ipaddr=None, ring1_prefix=None):
+        with self._lock:
+            self.state['corosync'].mcast_port = mcast_port
+            self.save()
+            return agent_result_ok
+
+    def configure_corosync2(self,
+                            peer_fqdns,
+                            ring0_name,
+                            mcast_port,
+                            ring1_name=None,
+                            ring0_ipaddr=None, ring0_prefix=None,
+                            ring1_ipaddr=None, ring1_prefix=None):
         with self._lock:
             self.state['corosync'].mcast_port = mcast_port
             self.save()

@@ -211,6 +211,8 @@ def create_synthetic_device_info(host, mock_server, plugin):
 def _create_simple_synthetic_object(class_, host):
     synthetic_object = class_(host=host)
     synthetic_object.save()
+    ObjectCache.add(class_, synthetic_object)
+
     return synthetic_object
 
 

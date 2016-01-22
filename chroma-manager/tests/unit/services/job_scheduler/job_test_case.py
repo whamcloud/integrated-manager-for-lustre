@@ -4,7 +4,10 @@ from contextlib import contextmanager
 from itertools import chain
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import Command, ManagedTarget, ManagedTargetMount, LNetConfiguration, Nid
+from chroma_core.models import Command
+from chroma_core.models import ManagedTarget
+from chroma_core.models import ManagedTargetMount
+from chroma_core.models import Nid
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
@@ -245,17 +248,12 @@ class JobTestCaseWithHost(JobTestCase):
     def setUp(self):
         super(JobTestCaseWithHost, self).setUp()
 
-        from chroma_core.models import ManagedHost
         self.hosts = []
         for address, info in self.mock_servers.items():
-            host = synthetic_host(
-                address=address,
-                fqdn=info['fqdn'],
-                nids=info['nids'],
-                nodename=info['nodename']
-            )
-            ObjectCache.add(ManagedHost, host)
-            ObjectCache.add(LNetConfiguration, host.lnet_configuration)
+            host = synthetic_host(address=address,
+                                  fqdn=info['fqdn'],
+                                  nids=info['nids'],
+                                  nodename=info['nodename'])
             self.hosts.append(host)
 
         # Handy if you're only using one

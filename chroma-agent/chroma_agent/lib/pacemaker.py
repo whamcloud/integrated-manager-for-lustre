@@ -293,6 +293,10 @@ def cibadmin(command_args, timeout = 120):
         elif rc not in RETRY_CODES:
             break
 
+    # Add some harmless diagnostics which will be visible in the logs.
+    AgentShell.run(['service', 'corosync', 'status'])
+    AgentShell.run(['service', 'pacemaker', 'status'])
+
     if rc in RETRY_CODES:
         raise PacemakerError("%s timed out after %d seconds: rc: %s, stderr: %s"
                              % (" ".join(command_args), timeout, rc, stderr))

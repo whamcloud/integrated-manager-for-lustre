@@ -30,7 +30,9 @@ from ntp import *
 from network_interface import *
 from client_certificate import *
 from log import *
+from corosync_common import *
 from corosync import *
+from corosync2 import *
 from pacemaker import *
 from rsyslog import *
 from server_profile import *

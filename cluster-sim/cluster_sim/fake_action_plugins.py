@@ -107,7 +107,7 @@ class FakeActionPlugins():
                 return agent_result_ok
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
-            elif cmd in ['unconfigure_corosync']:
+            elif cmd in ['unconfigure_corosync', 'unconfigure_corosync2']:
                 return agent_result_ok
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
                          'enable_pacemaker']:

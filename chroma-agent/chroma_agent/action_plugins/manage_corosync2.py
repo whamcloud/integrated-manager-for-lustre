@@ -29,45 +29,34 @@ from collections import namedtuple
 import errno
 import re
 
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
-
+from chroma_agent.chroma_common.lib import shell
+from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
+
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
 
 
-corosync_service = ServiceControl.create('corosync')
-firewall_control = FirewallControl.create()
+def start_corosync2():
+    error = shell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
+
+    if error:
+        return agent_error(error)
+    else:
+        return agent_result_ok
 
 
-def start_corosync():
-    return agent_ok_or_error(corosync_service.start())
-
-
-def stop_corosync():
-
-    return agent_ok_or_error(corosync_service.stop())
-
-
-def restart_corosync():
-    return agent_ok_or_error(corosync_service.restart())
-
-
-def check_corosync_enabled():
-    return corosync_service.enabled
-
-
-def enable_corosync():
-    return agent_ok_or_error(corosync_service.enable())
+def stop_corosync2():
+    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
 
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
 
 
-def configure_corosync(ring0_name,
-                       mcast_port,
-                       ring1_name=None,
-                       ring0_ipaddr=None, ring0_prefix=None,
-                       ring1_ipaddr=None, ring1_prefix=None):
+def configure_corosync2(peer_fqdns,
+                        ring0_name,
+                        mcast_port,
+                        ring1_name=None,
+                        ring0_ipaddr=None, ring0_prefix=None,
+                        ring1_ipaddr=None, ring1_prefix=None):
 
     interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name,
                                                       ringnumber=0,
@@ -90,36 +79,33 @@ def configure_corosync(ring0_name,
 
     write_config_to_file("/etc/corosync/corosync.conf", config)
 
-    error = firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True)
+    add_firewall_rule(mcast_port, "udp", "corosync")
 
-    if error:
-        return agent_error(error)
-
-    error = corosync_service.enable()
-
+    error = shell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
     if error:
         return agent_error(error)
 
     return agent_result_ok
 
 
-def unconfigure_corosync():
-    """
-      Unconfigure the corosync application.
+def unconfigure_corosync2():
+    '''
+    Unconfigure the corosync application.
 
-      Return: Value using simple return protocol
-    """
-    corosync_service.stop()
-    corosync_service.disable()
-    mcast_port = None
+    Return: Value using simple return protocol
+    '''
+
+    shell.try_run(['service', 'corosync', 'stop'])
+    shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
+    mcastport = None
 
     with open("/etc/corosync/corosync.conf") as f:
         for line in f.readlines():
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
-                mcast_port = match.group(1)
+                mcastport = match.group(1)
                 break
-    if mcast_port is None:
+    if mcastport is None:
         return agent_error("Failed to find mcastport in corosync.conf")
 
     try:
@@ -130,13 +116,10 @@ def unconfigure_corosync():
     except:
         return agent_error("Failed to remove corosync.conf")
 
-    error = firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True)
-
-    if error:
-        return agent_error(error)
+    del_firewall_rule(mcastport, "udp", "corosync")
 
     return agent_result_ok
 
 
-ACTIONS = [start_corosync, stop_corosync,
-           configure_corosync, unconfigure_corosync]
+ACTIONS = [start_corosync2, stop_corosync2,
+           configure_corosync2, unconfigure_corosync2]

@@ -45,6 +45,7 @@ from chroma_core.models import ServerProfile
 from chroma_core.models import AlertStateBase
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import CorosyncConfiguration
+#from chroma_core.models import Corosync2Configuration
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import RSyslogConfiguration
 from chroma_core.models import Job
@@ -762,10 +763,11 @@ class SetupHostJob(NullStateChangeJob):
         if self.target_object.pacemaker_configuration is None:
             pacemaker_configuration, _ = PacemakerConfiguration.objects.get_or_create(host=self.target_object)
             corosync_configuration, _ = CorosyncConfiguration.objects.get_or_create(host=self.target_object)
+            #corosync_configuration, _ = Corosync2Configuration.objects.get_or_create(host=self.target_object)
             ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
             rsyslog_configuration, _ = RSyslogConfiguration.objects.get_or_create(host=self.target_object)
 
-            ObjectCache.add(CorosyncConfiguration, corosync_configuration)
+            ObjectCache.add(type(corosync_configuration), corosync_configuration)
             ObjectCache.add(PacemakerConfiguration, pacemaker_configuration)
             ObjectCache.add(NTPConfiguration, ntp_configuration)
             ObjectCache.add(RSyslogConfiguration, rsyslog_configuration)

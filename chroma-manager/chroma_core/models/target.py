@@ -33,6 +33,7 @@ from chroma_core.models import AlertStateBase
 from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models import StatefulObject
+from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
@@ -918,15 +919,19 @@ class StartTargetJob(StateChangeJob):
         return "Start target %s" % self.target
 
     def get_deps(self):
-        lnet_deps = []
+        deps = []
         # Depend on at least one targetmount having lnet up
         mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
-        for tm in mtms:
+        for target_mount in mtms:
             from chroma_core.models import LNetConfiguration
 
-            lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == tm.host_id)
-            lnet_deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state = 'unmounted'))
-        return DependAny(lnet_deps)
+            lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == target_mount.host_id)
+            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state = 'unmounted'))
+
+            pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id)
+            deps.append(DependOn(pacemaker_configuration, 'started', fix_state = 'unmounted'))
+
+        return DependAny(deps)
 
     def get_steps(self):
         return [(MountStep, {"target": self.target, "host": self.target.best_available_host()})]
@@ -1238,13 +1243,12 @@ class FailbackTargetJob(MigrateTargetJob):
         return help_text['failback_target']
 
     def description(self):
-        FailbackTargetJob.long_description(None)
+        return FailbackTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll(
-            [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.primary_host.lnet_configuration, 'lnet_up')]
-        )
+        return DependAll([DependOn(self.target, 'mounted'),
+                          DependOn(self.target.primary_host.lnet_configuration, 'lnet_up'),
+                          DependOn(self.target.primary_host.pacemaker_configuration, 'started')])
 
     def on_success(self):
         # Persist the update to active_target_mount
@@ -1294,13 +1298,12 @@ class FailoverTargetJob(MigrateTargetJob):
         return help_text['failover_target']
 
     def description(self):
-        FailoverTargetJob.long_description(None)
+        return FailoverTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll(
-            [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.failover_hosts[0].lnet_configuration, 'lnet_up')]
-        )
+        return DependAll([DependOn(self.target, 'mounted'),
+                          DependOn(self.target.failover_hosts[0].lnet_configuration, 'lnet_up'),
+                          DependOn(self.target.failover_hosts[0].pacemaker_configuration, 'started')])
 
     def on_success(self):
         # Persist the update to active_target_mount
