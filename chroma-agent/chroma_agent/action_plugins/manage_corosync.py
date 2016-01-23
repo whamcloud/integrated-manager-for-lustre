@@ -33,7 +33,7 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
 from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1
-from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result, agent_ok_or_error
 
 

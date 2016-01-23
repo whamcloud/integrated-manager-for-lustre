@@ -1,6 +1,6 @@
 import mock
 
-from chroma_agent.lib.service_control import ServiceControl, ServiceControlEL7
+from chroma_agent.chroma_common.lib.service_control import ServiceControl, ServiceControlEL7
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
@@ -12,8 +12,9 @@ class TestServiceStateEL6(CommandCaptureTestCase):
     def setUp(self):
         super(TestServiceStateEL6, self).setUp()
 
-        mock.patch('chroma_agent.lib.service_control.platform.system', return_value="Linux").start()
-        mock.patch('chroma_agent.lib.service_control.platform.linux_distribution', return_value=('CentOS', '6.6', 'Final')).start()
+        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.system', return_value="Linux").start()
+        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.linux_distribution',
+                   return_value=('CentOS', '6.6', 'Final')).start()
 
         self.test_service = ServiceControl.create('test_service')
 
@@ -266,8 +267,9 @@ class TestServiceStateEL7(CommandCaptureTestCase):
     def setUp(self):
         super(TestServiceStateEL7, self).setUp()
 
-        mock.patch('chroma_agent.lib.service_control.platform.system', return_value="Linux").start()
-        mock.patch('chroma_agent.lib.service_control.platform.linux_distribution',
+        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.system',
+                   return_value="Linux").start()
+        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.linux_distribution',
                    return_value=('CentOS', '7.2', 'Final')).start()
 
         self.test = ServiceControlEL7('test_service')

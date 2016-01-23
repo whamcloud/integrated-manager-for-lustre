@@ -22,7 +22,7 @@
 
 from chroma_agent.chroma_common.lib.ntp import AgentNTPConfig
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
-from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
 
 
 ntp_service = ServiceControl.create('ntp')

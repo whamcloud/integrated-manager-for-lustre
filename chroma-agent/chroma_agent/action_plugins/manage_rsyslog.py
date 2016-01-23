@@ -24,7 +24,7 @@ import os
 
 from chroma_agent.device_plugins.syslog import SYSLOG_PORT
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
-from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
 
 rsyslog_service = ServiceControl.create('rsyslog')
 

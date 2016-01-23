@@ -23,8 +23,14 @@ import platform
 import abc
 from collections import defaultdict
 from collections import namedtuple
-from chroma_agent.chroma_common.lib import util
-from chroma_agent.lib.shell import AgentShell
+from . import util
+
+# Temporary hack to enable service_control to be located in chroma-common
+# we shouldn't be aware of Agent within common code
+try:
+    from chroma_agent.lib.shell import AgentShell
+except ImportError:
+    from .shell import Shell as AgentShell
 
 
 class ServiceControl(object):
@@ -65,18 +71,26 @@ class ServiceControl(object):
         """
         error = None
         self.notify(self.service_name, action_codes.before)
+
         while retry_count > -1:
             error = action()
+
             if error is None:
                 time.sleep(validate_time)
+
+                # action completed successfully, validate the change
                 if validate():
                     self.notify(self.service_name, action_codes.after)
                     return None
+
+                # validation failed so populate error message
                 error = error_message % self.service_name
             retry_count -= 1
             time.sleep(retry_time)
+
         # notify error if retries exceeded without success
         self.notify(self.service_name, action_codes.error)
+
         return error
 
     def start(self, retry_count=5, retry_time=1, validate_time=5):
@@ -258,7 +272,6 @@ class ServiceControlOSX(ServiceControlEL6):
     We make OSX behave like EL6 because that historically is what happened. So
     this class provides for backwards compatibility.
     """
-
     @classmethod
     def _applicable(cls):
         return platform.system() == 'Darwin'

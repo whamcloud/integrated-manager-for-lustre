@@ -34,7 +34,7 @@ from chroma_agent.crypto import Crypto
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
-from chroma_agent.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
 
