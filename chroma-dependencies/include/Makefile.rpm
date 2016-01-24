@@ -3,19 +3,16 @@ include $(TOP)/include/Makefile.meta
 
 # there's probably a better way to do this directly in make but I couldn't
 # find any suitable string handling functions
-RPM_NAME     := $(shell a="$(LOCATION)"; a=$${a\#\#*/}; a=$${a/.src.rpm/}; echo $$a)
-RPM_RELEASE  := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
-RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_RELEASE)/}; echo $$a)
-RPM_VERSION  := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
-RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_VERSION)/}; echo $$a)
-SRPM         := $(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).src.rpm
-LAST_BUILT   := $(shell [ -f .last_built ] && ! grep -q '*.src.rpm' .last_built && cat .last_built)
-SRPMS        := $(SRPM)
-ifneq ($(SRPM),$(LAST_BUILT))
-SRPMS        += $(LAST_BUILT)
-endif
-NAME         ?= $(patsubst python-%,%,$(RPM_NAME))
-REQUIREMENT  ?= $(NAME)==$(RPM_VERSION)
+RPM_NAME        := $(shell a="$(LOCATION)"; a=$${a\#\#*/}; a=$${a/.src.rpm/}; echo $$a)
+RPM_RELEASE     := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
+RPM_NAME        := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_RELEASE)/}; echo $$a)
+RPM_VERSION     := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
+RPM_NAME        := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_VERSION)/}; echo $$a)
+SRPM            := $(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).src.rpm
+LAST_BUILT      := $(shell [ -f .last_built ] && ! grep -q '*.src.rpm' .last_built && cat .last_built)
+LAST_BUILT_SRPM := $(shell [ -f .last_built_srpm ] && cat .last_built_srpm)
+NAME            ?= $(patsubst python-%,%,$(RPM_NAME))
+REQUIREMENT     ?= $(NAME)==$(RPM_VERSION)
 
 rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
 	if $(PLAT_BUILD_OK); then                                                                               \
@@ -26,6 +23,7 @@ rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
 		for dep in $(DEPS); do                                                                          \
 			$(MAKE) -C ../$$dep pkg_uninstall;                                                      \
 		done;                                                                                           \
+		echo $(SRPM) > .last_build_srpm;                                                                \
 	fi
 
 install pkg_install: rpms
@@ -41,28 +39,28 @@ uninstall pkg_uninstall:
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
-$(TOP)/../chroma-externals/$(SRPMS):
+$(TOP)/../chroma-externals/$(SRPM):
 	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 src" $(LOCATION); \
 
 $(RPM_NAME).spec: $(TOP)/../chroma-externals/$(SRPM) spec.ed
 	# if we are building a different version than last time, clean
 	# everything up
-	if [ -n "$(LAST_BUILT)" -a                                      \
-		     "$(LAST_BUILT)" != "$(SRPM)" ]; then               \
+	if [ -n "$(LAST_BUILT_SRPM)" -a                                      \
+		     "$(LAST_BUILT_SRPM)" != "$(SRPM)" ]; then               \
 	    touch $(RPM_NAME).spec;                                     \
 	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean; \
 	fi
 	rm -f $@
 	rpm2cpio < $(TOP)/../chroma-externals/$(SRPM) | cpio -id
 	cp $(RPM_NAME).spec{,.orig}
-	(cat spec.ed ; echo -e "w\nq") | ed $(RPM_NAME).spec
+	(cat spec.ed; echo -e "w\nq") | ed $(RPM_NAME).spec
 
 spec.ed:
 	# make an empty one if it doesn't exist already
 	touch spec.ed
 
-download: $(TOP)/../chroma-externals/$(SRPMS)
+download: $(TOP)/../chroma-externals/$(SRPM)
 
 clean: $(LAST_BUILT) $(RPM_NAME).spec
 	cp $(RPM_NAME).spec.last_built $(RPM_NAME).spec || true
