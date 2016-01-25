@@ -1,4 +1,4 @@
-EL_MAJOR = $(shell rpm --eval '%{?rhel}')
+include ../include/Makefile.distro
 
 ifeq ($(EL_MAJOR), 7)
 LOCATION := https://dl.fedoraproject.org/pub/epel/7/SRPMS/p/python-anyjson-0.3.3-3.el7.src.rpm

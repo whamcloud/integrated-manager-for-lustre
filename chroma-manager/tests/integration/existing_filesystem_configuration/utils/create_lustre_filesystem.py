@@ -163,7 +163,7 @@ class CreateLustreFilesystem(UtilityTestCase):
     def _execute_commands(self, commands, target, debug_message):
         for command in commands:
             result = self.remote_command(target, command)
-            logger.info("%s command %s output:\n %s" % (debug_message, command, result.stdout))
+            logger.info("%s command %s exit_status %s output:\n %s" % (debug_message, command, result.exit_status, result.stdout))
 
     def _execute_simultaneous_commands(self, commands, targets, debug_message):
         threads = []

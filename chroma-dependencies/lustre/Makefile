@@ -1,4 +1,4 @@
-DISTRO			:= el6.6
+include ../include/Makefile.distro
 include ../include/Makefile.lustre_build_meta
 
 LUSTRE_KERNEL_RELEASE	 = $(KERNEL_RELEASE)_lustre.x86_64
@@ -16,9 +16,12 @@ ALL_RPMS		 = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELE
 			   lustre-osd-zfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
 			   lustre-osd-zfs-mount-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
 			   kernel-$(LUSTRE_KERNEL_RELEASE).rpm \
-			   kernel-firmware-$(LUSTRE_KERNEL_RELEASE).rpm \
 			   kernel-headers-$(LUSTRE_KERNEL_RELEASE).rpm \
 			   kernel-devel-$(LUSTRE_KERNEL_RELEASE).rpm
+
+ifeq ($(EL_MAJOR), 6)
+ALL_RPMS		+= kernel-firmware-$(LUSTRE_KERNEL_RELEASE).rpm
+endif
 NO_REQUIREMENT		 = lustre lustre-dkms lustre-modules lustre-osd-ldiskfs lustre-osd-ldiskfs-mount lustre-osd-zfs lustre-osd-zfs-mount kernel kernel-firmware kernel-devel kernel-headers
 
 include ../include/Makefile.fetch-from-repo

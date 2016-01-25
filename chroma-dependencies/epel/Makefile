@@ -1,4 +1,4 @@
-EL_MAJOR = $(shell rpm --eval '%{?rhel}')
+include ../include/Makefile.distro
 
 SRC_REPO = http://dl.fedoraproject.org/pub/epel/$(EL_MAJOR)/x86_64/
 

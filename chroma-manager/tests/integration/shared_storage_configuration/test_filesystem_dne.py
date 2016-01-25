@@ -131,7 +131,7 @@ class TestFilesystemDNE(StatsTestCaseMixin):
                 # at this calculation then it would be great. The calc works for 1 mdt.
                 # self.assertEqual(diff_stat['stats_rmdir'], len(mdt_indexes) + no_of_files_per_mdt[index])
             else:
-                self.assertEqual(diff_stat['stats_mkdir'], no_of_files_per_mdt[index])                             # We created one directories for each file
+                self.assertEqual(diff_stat['stats_mkdir'], 1 + no_of_files_per_mdt[index])                             # We created one directories for each file, plus one lfs mkdir
                 self.assertEqual(diff_stat['stats_open'], (2 * no_of_files_per_mdt[index]) + 1)                    # Directory creation is a open
                 self.assertEqual(diff_stat['stats_rmdir'], 1 + no_of_files_per_mdt[index])                         # We then remove the directory
 

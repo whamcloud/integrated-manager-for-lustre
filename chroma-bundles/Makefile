@@ -1,4 +1,4 @@
-ZFS_DISTRO=el6.6
+ZFS_DISTRO=el6.7
 TOP := $(CURDIR)
 include $(TOP)/../include/Makefile.version
 include $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(ZFS_DISTRO)

@@ -1,4 +1,4 @@
-EL_MAJOR = $(shell rpm --eval '%{?rhel}')
+include ../include/Makefile.distro
 
 SRC_REPO = http://mirror.centos.org/centos/$(EL_MAJOR)/extras/x86_64/Packages/
 
