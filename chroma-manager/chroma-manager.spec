@@ -211,7 +211,11 @@ sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
 
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
-chkconfig nginx on
+%if 0%{?rhel} > 6
+    systemctl enable nginx
+%else if 0%{?rhel} < 7
+    chkconfig nginx on
+%endif
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/chroma
@@ -237,25 +241,34 @@ else
 fi
 
 
-if ! out=$(service iptables status) || [ "$out" = "Table: filter
+%if 0%{?rhel} > 6
+    if [ $(systemctl is-active firewalld) == "active" ]; then 
+        for port in 80 443; do
+            firewall-cmd --permanent --add-port=$port/tcp
+            firewall-cmd --add-port=$port/tcp
+        done
+    fi    
+%else if 0%{?rhel} < 7
+    if ! out=$(service iptables status) || [ "$out" = "Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
-
+  
 Chain FORWARD (policy ACCEPT)
 num  target     prot opt source               destination
-
+  
 Chain OUTPUT (policy ACCEPT)
 num  target     prot opt source               destination         " ]; then
-    arg="-n"
-else
-    arg=""
-fi
-if [ $1 -lt 2 ]; then
-    # open ports in the firewall for access to the manager
-    for port in 80 443; do
-        lokkit $arg -p $port:tcp
-    done
-fi
+        arg="-n"
+    else
+        arg=""
+    fi
+    if [ $1 -lt 2 ]; then
+        # open ports in the firewall for access to the manager
+        for port in 80 443; do
+            lokkit $arg -p $port:tcp
+        done
+    fi
+%endif
 
 echo "Thank you for installing Chroma.  To complete your installation, please"
 echo "run \"chroma-config setup\""
@@ -273,14 +286,21 @@ fi
 
 %postun
 if [ $1 -lt 1 ]; then
-    # close previously opened ports in the firewall for access to the manager
-    sed -i \
-        -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT/d'\
-        -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT/d' \
-        -e '/INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT/d' \
-        /etc/sysconfig/iptables
-    sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
-           -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
+    %if 0%{?rhel} > 6
+        for port in 80 443 123; do
+            firewall-cmd --permanent --remove-port=$port/tcp
+            firewall-cmd --remove-port=$port/tcp
+        done
+    %else if 0%{?rhel} < 7
+        # close previously opened ports in the firewall for access to the manager
+        sed -i \
+            -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT/d'\
+            -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT/d' \
+            -e '/INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT/d' \
+            /etc/sysconfig/iptables
+        sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
+               -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
+    %endif
 
     # clean out /var/lib/chroma
     if [ -d /var/lib/chroma ]; then
