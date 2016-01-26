@@ -55,10 +55,10 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   python-lockfile-0.8-3.el6.noarch.rpm \
                   python-meld3-0.6.7-1.el6.x86_64.rpm \
                   python-ordereddict-1.1-2.el6.noarch.rpm \
-                  v8-3.14.5.10-14.el6.x86_64.rpm \
-                  nodejs-0.10.33-1.el6.x86_64.rpm \
+                  v8-3.14.5.10-17.el6.x86_64.rpm \
+                  nodejs-0.10.36-3.el6.x86_64.rpm \
                   http-parser-2.0-4.20121128gitcd01361.el6.x86_64.rpm \
-                  libuv-0.10.29-1.el6.x86_64.rpm \
+                  libuv-0.10.34-1.el6.x86_64.rpm \
                   c-ares19-1.9.1-5.el6.3.x86_64.rpm \
                   python-gunicorn-18.0-1.el6.noarch.rpm
 REQUIREMENTS   += python-daemon==1.5.2
