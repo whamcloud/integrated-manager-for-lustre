@@ -135,3 +135,10 @@ class TestYumUpdate(TestCreateFilesystem):
         # the buttons to install updates is available as we don't do a kind "rolling upgrade".
         filesystem = self.get_filesystem_by_name(self.fs_name)
         self.stop_filesystem(filesystem['id'])
+
+    def test_no_retired_repos(self):
+        "Test that no retired repos exist after an upgrade"
+        retired_repos = ['xeon-phi-client']
+        current_repos = self.remote_operations.get_chroma_repos()
+        for repo in retired_repos:
+            self.assertFalse(repo in current_repos, "Unexpectedly found repo '%s' in %s" % (repo, current_repos))

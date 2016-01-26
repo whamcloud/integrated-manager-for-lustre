@@ -1120,3 +1120,10 @@ iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
         stdout = r.stdout.rstrip()
 
         return stdout
+
+    def get_chroma_repos(self):
+        result = self._ssh_address(
+            config['chroma_managers'][0]['address'],
+            "ls /var/lib/chroma/repo/"
+        )
+        return result.stdout.split()
