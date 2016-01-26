@@ -24,6 +24,7 @@ import subprocess
 import re
 import os
 import platform
+import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
@@ -32,30 +33,39 @@ from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent.lib.yum_utils import yum_util, yum_check_update
-from chroma_agent.device_plugins.lustre import REPO_PATH
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_error, agent_result_ok
 
-REPO_CONTENT = """
-[Intel Lustre Manager]
-name=Intel Lustre Manager updates
-baseurl={0}
-enabled=1
-gpgcheck=0
-sslverify = 1
-sslcacert = {1}
-sslclientkey = {2}
-sslclientcert = {3}
-"""
+REPO_PATH = '/etc/yum.repos.d'
 
 
-def configure_repo(remote_url, repo_path=REPO_PATH):
+def configure_repo(filename, file_contents):
     crypto = Crypto(config.path)
-    open(repo_path, 'w').write(REPO_CONTENT.format(remote_url, crypto.AUTHORITY_FILE, crypto.PRIVATE_KEY_FILE, crypto.CERTIFICATE_FILE))
+    full_filename = os.path.join(REPO_PATH, filename)
+    temp_full_filename = full_filename + '.tmp'
+
+    file_contents = file_contents.format(crypto.AUTHORITY_FILE, crypto.PRIVATE_KEY_FILE, crypto.CERTIFICATE_FILE)
+
+    try:
+        file_handle = os.fdopen(os.open(temp_full_filename, os.O_WRONLY | os.O_CREAT, 0644), 'w')
+        file_handle.write(file_contents)
+        file_handle.close()
+        os.rename(temp_full_filename, full_filename)
+    except OSError as error:
+        return agent_error(str(error))
+
+    return agent_result_ok
 
 
-def unconfigure_repo(repo_path=REPO_PATH):
-    if os.path.exists(repo_path):
-        os.remove(repo_path)
+def unconfigure_repo(filename):
+    full_filename = os.path.join(REPO_PATH, filename)
+
+    try:
+        os.remove(full_filename)
+    except OSError as error:
+        if error.errno != errno.ENOENT:
+            return agent_error(str(error))
+
+    return agent_result_ok
 
 
 def update_profile(profile):
@@ -259,5 +269,7 @@ def restart_agent():
     raise CallbackAfterResponse(None, _shutdown)
 
 
-ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent, update_profile]
+ACTIONS = [configure_repo, unconfigure_repo, update_packages,
+           install_packages, kernel_status, restart_agent,
+           update_profile]
 CAPABILITIES = ['manage_updates']

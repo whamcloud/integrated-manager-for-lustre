@@ -21,6 +21,7 @@
 # express and approved by Intel in writing.
 
 
+import os
 import json
 import logging
 from collections import defaultdict
@@ -51,6 +52,7 @@ from chroma_core.models import RSyslogConfiguration
 from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
+from chroma_core.models import Bundle
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
@@ -64,6 +66,9 @@ from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
 
 import settings
+
+REPO_PATH = '/etc/yum.repos.d/'
+REPO_FILENAME = 'Intel-Lustre-Agent.repo'
 
 
 # Max() worked on mysql's NullBooleanField because the DB value is stored
@@ -1372,6 +1377,14 @@ class UpdatePackagesStep(RebootIfNeededStep):
                 AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
 
 
+class UpdateYumFileStep(RebootIfNeededStep):
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs['host'],
+                                        'configure_repo',
+                                        {'filename': kwargs['filename'],
+                                         'file_contents': kwargs['file_contents']})
+
+
 class UpdateJob(Job):
     host = models.ForeignKey(ManagedHost)
 
@@ -1383,20 +1396,37 @@ class UpdateJob(Job):
         return "Update packages on server %s" % self.host
 
     def get_steps(self):
-        # Two stage update, first update the agent - then update everything. This means that when the packages are
-        # updated the new agent is used.
-        return [
-            (UpdatePackagesStep, {
-                'host': self.host,
-                'bundles': ['iml-agent'],
-                'packages': [],
-            }),
-            (UpdatePackagesStep, {
-                'host': self.host,
-                'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
-                'packages': list(self.host.server_profile.packages)
-            })
-        ]
+        # Three stage update, first update the agent, then the yum file and then update everything. This means that
+        #  when the packages are updated the new agent and yum file is used.
+        repo_file_contents = ""
+
+        # The base url of the repo.
+        base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), 'repo')
+
+        for bundle in Bundle.objects.all():
+            repo_file_contents += """[%s]
+name=%s
+baseurl=%s/%s
+enabled=0
+gpgcheck=0
+sslverify = 1
+sslcacert = {0}
+sslclientkey = {1}
+sslclientcert = {2}
+proxy=_none_
+
+""" % (bundle.bundle_name, bundle.description,
+       base_repo_url, bundle.bundle_name)
+
+        return [(UpdatePackagesStep, {'host': self.host,
+                                      'bundles': ['iml-agent'],
+                                      'packages': []}),
+                (UpdateYumFileStep, {'host': self.host,
+                                     'filename': REPO_FILENAME,
+                                     'file_contents': repo_file_contents}),
+                (UpdatePackagesStep, {'host': self.host,
+                                      'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
+                                      'packages': list(self.host.server_profile.packages)})]
 
     def create_locks(self):
         locks = [StateLock(
