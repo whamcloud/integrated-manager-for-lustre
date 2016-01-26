@@ -28,7 +28,14 @@ import linecache
 from chroma_core.services import ServiceThread
 import os
 from optparse import make_option
-from daemon.pidlockfile import PIDLockFile
+
+# PIDLockFile was split out of daemon into it's own package in daemon-1.6
+try:
+    from daemon.pidlockfile import PIDLockFile
+    assert PIDLockFile  # Silence Pyflakes
+except ImportError:
+    from lockfile.pidlockfile import PIDLockFile
+
 from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
