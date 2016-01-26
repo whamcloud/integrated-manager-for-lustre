@@ -654,7 +654,7 @@ def bundle(operation, path=None):
                                   version=version,
                                   location=path,
                                   description=meta['description'])
-    else:
+    elif operation == 'delete':
         # remove bundle record
         try:
             bundle = Bundle.objects.get(location=path)
@@ -662,6 +662,8 @@ def bundle(operation, path=None):
         except Bundle.DoesNotExist:
             # doesn't exist anyway, so just exit silently
             return
+    else:
+        raise RuntimeError("Received unknown bundle operation '%s'" % operation)
 
 
 def register_profile(profile_file):

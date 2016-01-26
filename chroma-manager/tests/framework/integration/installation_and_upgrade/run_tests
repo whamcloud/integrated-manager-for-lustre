@@ -213,7 +213,7 @@ echo "Test existing filesystem is still there"
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS/test_update_with_yum.py:TestYumUpdate.test_yum_update $TESTS/test_create_filesystem.py:TestExistsFilesystem.test_exists"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS/test_update_with_yum.py:TestYumUpdate.test_no_retired_repos $TESTS/test_update_with_yum.py:TestYumUpdate.test_yum_update $TESTS/test_create_filesystem.py:TestExistsFilesystem.test_exists"
 
 # test that removing the chroma-manager RPM removes /var/lib/chroma
 ssh root@$CHROMA_MANAGER "set -xe
