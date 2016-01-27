@@ -22,6 +22,7 @@
 
 import time
 import threading
+import platform
 from collections import namedtuple
 from collections import MutableSequence
 
@@ -130,3 +131,41 @@ def enum(*sequential, **named):
     reverse = dict((value, key) for key, value in enums.iteritems())
     enums['reverse_mapping'] = reverse
     return type('Enum', (), enums)
+
+
+PlatformInfo = namedtuple('PlatformInfo', ['system',
+                                           'distro',
+                                           'distro_version',
+                                           'distro_version_full',
+                                           'python_version_major_minor',
+                                           'python_patchlevel',
+                                           'kernel_version'])
+
+"""A more readable version of the standard platform commands. Using a named tuple the
+usage should be much easier to fathom. Caches the value for speed which presumes
+the contents are constant for a given execution.
+
+For a Mac it pretends to be Centos 6.7.
+
+:return: PlatformInfo named tuple
+"""
+if platform.system() == 'Linux':
+    platform_info = PlatformInfo(platform.system(),
+                                 platform.linux_distribution()[0],
+                                 float('.'.join(platform.linux_distribution()[1].split('.')[:2])),
+                                 platform.linux_distribution()[1],
+                                 float("%s.%s" % (platform.python_version_tuple()[0],
+                                                  platform.python_version_tuple()[1])),
+                                 int(platform.python_version_tuple()[2]),
+                                 platform.release())
+elif platform.system() == 'Darwin':
+    platform_info = PlatformInfo('Linux',
+                                 'CentOS',
+                                 6.7,
+                                 6.7,
+                                 float("%s.%s" % (platform.python_version_tuple()[0],
+                                                  platform.python_version_tuple()[1])),
+                                 int(platform.python_version_tuple()[2]),
+                                 '2.6.32-504.12.2.el6.x86_64')
+else:
+    raise RuntimeError('Unknown system type %s' % platform.system())

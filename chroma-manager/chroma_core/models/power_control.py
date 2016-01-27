@@ -31,6 +31,7 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils.timezone import now as tznow
 
+from chroma_core.chroma_common.lib.util import platform_info
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
@@ -118,7 +119,10 @@ def create_default_power_types(app, **kwargs):
     import json
     import chroma_core
     chroma_core = os.path.abspath(os.path.dirname(chroma_core.__file__))
-    with open(os.path.join(chroma_core, "fixtures/default_power_types.json")) as f:
+
+    power_types_filename = "fixtures/default_power_types_el%s.json" % int(platform_info.distro_version)
+
+    with open(os.path.join(chroma_core, power_types_filename)) as f:
         default_types = json.load(f)
 
     for power_type in default_types:
