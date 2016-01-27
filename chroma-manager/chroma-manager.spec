@@ -217,16 +217,25 @@ chkconfig nginx on
 mkdir -p /var/log/chroma
 chown -R nginx:nginx /var/log/chroma
 
-# This is required for opening connections between
-# nginx and rabbitmq-server
-setsebool -P httpd_can_network_connect 1 2>/dev/null
+# Only issue SELinux related commands if SELinux is enabled
+sestatus| grep enabled &> /dev/null
+if [ $(echo $?) == '0' ]; then
+    echo "SELinux is enabled!"
 
-# This is required because of bad behaviour in python's 'uuid'
-# module (see HYD-1475)
-setsebool -P httpd_tmp_exec 1 2>/dev/null
+    # This is required for opening connections between
+    # nginx and rabbitmq-server
+    setsebool -P httpd_can_network_connect 1 2>/dev/null
 
-# This is required for nginx to serve HTTP_API_PORT
-semanage port -a -t http_port_t -p tcp 8001
+    # This is required because of bad behaviour in python's 'uuid'
+    # module (see HYD-1475)
+    setsebool -P httpd_tmp_exec 1 2>/dev/null
+
+    # This is required for nginx to serve HTTP_API_PORT
+    semanage port -a -t http_port_t -p tcp 8001
+else
+    echo "SELinux is disabled!"
+fi
+
 
 if ! out=$(service iptables status) || [ "$out" = "Table: filter
 Chain INPUT (policy ACCEPT)
