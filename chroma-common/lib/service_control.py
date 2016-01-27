@@ -202,7 +202,7 @@ class ServiceControlEL6(ServiceControl):
     @property
     def enabled(self):
         # Returns True if the service is enabled. "chkconfig servicename"
-        return AgentShell.run(['/sbin/chkconfig', self.service_name, 'status'])[0] == 0
+        return AgentShell.run(['/sbin/chkconfig', self.service_name])[0] == 0
 
     @classmethod
     def _applicable(cls):
@@ -234,12 +234,12 @@ class ServiceControlEL7(ServiceControl):
 
     @property
     def running(self):
-        # Returns True if the service is running. "service servicename status"
+        # Returns True if the service is running.
         return AgentShell.run(['systemctl', 'is-active', self.service_name])[0] == 0
 
     @property
     def enabled(self):
-        # Returns True if the service is enabled. "chkconfig servicename"
+        # Returns True if the service is enabled.
         return AgentShell.run(['systemctl', 'is-enabled', self.service_name])[0] == 0
 
     @classmethod

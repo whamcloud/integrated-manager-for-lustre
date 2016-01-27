@@ -42,16 +42,15 @@ from django.core.exceptions import ValidationError
 
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
-from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage, ServerProfileValidation
+from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
 from chroma_core.chroma_common.lib.ntp import ManagerNTPConfig
 from chroma_core.chroma_common.lib.firewall_control import FirewallControl
-
+from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL6
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
-
 
 firewall_control = FirewallControl.create()
 
@@ -73,21 +72,24 @@ class SupervisorStatus(object):
 
         self._xmlrpc = xmlrpclib.ServerProxy(
             'http://127.0.0.1',
-            transport = SupervisorTransport(username, password, url)
+            transport=SupervisorTransport(username, password, url)
         )
 
     def get_all_process_info(self):
         return self._xmlrpc.supervisor.getAllProcessInfo()
 
-    def get_non_running_services(self):
-        return [p['name'] for p in SupervisorStatus().get_all_process_info() if p['statename'] != 'RUNNING']
+    @staticmethod
+    def get_non_running_services():
+        return [p['name'] for p in SupervisorStatus().get_all_process_info()
+                if p['statename'] != 'RUNNING']
 
 
 class ServiceConfig(CommandLine):
     def __init__(self):
         self.verbose = False
 
-    def _check_name_resolution(self):
+    @staticmethod
+    def _check_name_resolution():
         """
         Check:
          * that the hostname is not localhost
@@ -103,7 +105,8 @@ class ServiceConfig(CommandLine):
         try:
             hostname = socket.gethostname()
         except socket.error:
-            log.error("Error: Unable to get the servers hostname. Please correct the hostname resolution.")
+            log.error("Error: Unable to get the servers hostname. "
+                      "Please correct the hostname esolution.")
             return False
 
         if hostname == "localhost":
@@ -131,7 +134,8 @@ class ServiceConfig(CommandLine):
 
         return True
 
-    def _db_accessible(self):
+    @staticmethod
+    def _db_accessible():
         """Discover whether we have a working connection to the database"""
         from psycopg2 import OperationalError
         from django.db import connection
@@ -193,7 +197,7 @@ class ServiceConfig(CommandLine):
         which server they would like to use.
         """
         ntp = ManagerNTPConfig(logger=log)
-        existing_server = ntp.get_configured_server(markers=None)
+        existing_server = ntp.get_configured_server()
 
         if not server:
             if existing_server:
@@ -212,24 +216,39 @@ class ServiceConfig(CommandLine):
                                                                                    error))
             raise RuntimeError("Failure when writing ntp config: %s" % error)
 
-        error = firewall_control.add_rule("123", "udp", "ntpd", persist=True)
+        error = firewall_control.add_rule("123", "udp", "ntpd")
         if error:
             log.error("firewall command failed:\n%s" % error)
             raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
 
         log.info("Restarting ntp")
-        self.try_shell(['service', 'ntpd', 'restart'])
-        self.try_shell(["chkconfig", "ntpd", "on"])
+        ntp_service = ServiceControl.create("ntpd")
+
+        error = ntp_service.restart()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+
+        # checking services have been enabled will be validated in self.validate()
+        ntp_service.add()
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
-        self.try_shell(["chkconfig", "rabbitmq-server", "on"])
+        # special case where service requires legacy service control
+        rabbit_service = ServiceControlEL6("rabbitmq-server")
+
+        error = rabbit_service.enable()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+
         # FIXME: HYD_640: there's really no sane reason to have to set the stderr and
         #        stdout to None here except that subprocess.PIPE ends up
         #        blocking subprocess.communicate().
         #        we need to figure out why
+        # FIXME: this should also be converted to use the common Shell utility class
         self.try_shell(["service", "rabbitmq-server", "restart"],
-                       mystderr = None, mystdout = None)
+                       mystderr=None, mystdout=None)
 
     def _setup_rabbitmq_credentials(self):
         RABBITMQ_USER = "chroma"
@@ -251,7 +270,8 @@ class ServiceConfig(CommandLine):
         log.info("Creating RabbitMQ vhost...")
         self.try_shell(sudo + ["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
 
-        self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST,
+                               RABBITMQ_USER, ".*", ".*", ".*"])
 
         # Enable use of the management plugin if its available, else this tag is just ignored.
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", RABBITMQ_USER, "management"])
@@ -259,9 +279,10 @@ class ServiceConfig(CommandLine):
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
             os.makedirs(settings.CRYPTO_FOLDER)
+
+        # FIXME: tidy up Crypto, some of its methods are no longer used
         crypto = Crypto()
         # The server_cert attribute is created on read
-        # FIXME: tidy up Crypto, some of its methods are no longer used
         crypto.server_cert
 
     CONTROLLED_SERVICES = ['chroma-supervisor', 'nginx']
@@ -269,30 +290,51 @@ class ServiceConfig(CommandLine):
     def _enable_services(self):
         log.info("Enabling daemons")
         for service in self.CONTROLLED_SERVICES:
-            self.try_shell(['chkconfig', '--add', service])
+            controller = ServiceControl.create(service)
+
+            error = controller.add()
+            if error:
+                log.error(error)
+                raise RuntimeError(error)
+
+            error = controller.enable()
+            if error:
+                log.error(error)
+                raise RuntimeError(error)
 
     def _start_services(self):
         log.info("Starting daemons")
         for service in self.CONTROLLED_SERVICES:
-            self.try_shell(['service', service, 'start'])
+            controller = ServiceControl.create(service)
+
+            error = controller.start()
+            if error:
+                log.error(error)
+                raise RuntimeError(error)
 
         SUPERVISOR_START_TIMEOUT = 10
         t = 0
         while True:
-            if set([p['statename'] for p in SupervisorStatus().get_all_process_info()]) == set(['RUNNING']):
+            if not SupervisorStatus().get_non_running_services():
                 break
             else:
                 time.sleep(1)
                 t += 1
                 if t > SUPERVISOR_START_TIMEOUT:
-                    msg = "Some services failed to start: %s" % ", ".join(SupervisorStatus().get_non_running_services())
+                    msg = "Some services failed to start: %s" % \
+                          ", ".join(SupervisorStatus().get_non_running_services())
                     log.error(msg)
                     raise RuntimeError(msg)
 
     def _stop_services(self):
         log.info("Stopping daemons")
         for service in self.CONTROLLED_SERVICES:
-            self.try_shell(['service', service, 'stop'])
+            controller = ServiceControl.create(service)
+
+            error = controller.stop()
+            if error:
+                log.error(error)
+                raise RuntimeError(error)
 
         # Wait for supervisord to stop running
         SUPERVISOR_STOP_TIMEOUT = 20
@@ -315,7 +357,8 @@ class ServiceConfig(CommandLine):
                 break
             else:
                 if t > SUPERVISOR_STOP_TIMEOUT:
-                    raise RuntimeError("chroma-supervisor failed to stop after %s seconds" % SUPERVISOR_STOP_TIMEOUT)
+                    raise RuntimeError("chroma-supervisor failed to stop after %s seconds" %
+                                       SUPERVISOR_STOP_TIMEOUT)
                 else:
                     t += 1
                     time.sleep(1)
@@ -332,7 +375,8 @@ class ServiceConfig(CommandLine):
         # Only mess with auth if we've freshly initialized the db
         self._config_pgsql_auth(database)
 
-    def _config_pgsql_auth(self, database):
+    @staticmethod
+    def _config_pgsql_auth(database):
         auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
         os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
         with open(auth_cfg_file, "w") as cfg:
@@ -344,8 +388,9 @@ class ServiceConfig(CommandLine):
     def _setup_pgsql(self, database):
         log.info("Setting up PostgreSQL service...")
         self._init_pgsql(database)
-        self.try_shell(["service", "postgresql", "restart"])
-        self.try_shell(["chkconfig", "postgresql", "on"])
+        postgresql_service = ServiceControl.create("postgresql")
+        postgresql_service.restart()
+        postgresql_service.enable()
 
         tries = 0
         while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
@@ -358,17 +403,22 @@ class ServiceConfig(CommandLine):
             log.info("Creating database owner '%s'...\n" % database['USER'])
 
             # Enumerate existing roles
-            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select rolname from pg_roles;'"])
+            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select "
+                                                                      "rolname from pg_roles;'"])
             roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
 
             # Create database['USER'] role if not found
             if not database['USER'] in roles:
-                self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database['USER']])
+                self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER "
+                                                        "CREATEDB NOCREATEROLE INHERIT LOGIN;'" %
+                                                        database['USER']])
 
             log.info("Creating database '%s'...\n" % database['NAME'])
-            self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'], database['NAME'])])
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'],
+                                                                            database['NAME'])])
 
-    def get_input(self, msg, empty_allowed = True, password = False, default = ""):
+    @staticmethod
+    def get_input(msg, empty_allowed=True, password=False, default=""):
         if msg == "":
             raise RuntimeError("Calling get_input, msg must not be empty")
 
@@ -394,21 +444,22 @@ class ServiceConfig(CommandLine):
 
         return answer
 
-    def get_pass(self, msg = "", empty_allowed = True, confirm_msg = ""):
+    def get_pass(self, msg="", empty_allowed=True, confirm_msg=""):
         while True:
-            pass1 = self.get_input(msg = msg, empty_allowed = empty_allowed,
-                                   password = True)
+            pass1 = self.get_input(msg=msg, empty_allowed=empty_allowed,
+                                   password=True)
 
-            pass2 = self.get_input(msg = confirm_msg,
-                                   empty_allowed = empty_allowed,
-                                   password = True)
+            pass2 = self.get_input(msg=confirm_msg,
+                                   empty_allowed=empty_allowed,
+                                   password=True)
 
             if pass1 != pass2:
                 print "Passwords do not match!"
             else:
                 return pass1
 
-    def validate_email(self, email):
+    @staticmethod
+    def validate_email(email):
         try:
             validate_email(email)
         except ValidationError:
@@ -421,17 +472,17 @@ class ServiceConfig(CommandLine):
 
         valid_username = False
         while not valid_username:
-            username = self.get_input(msg = "Username", empty_allowed = False)
+            username = self.get_input(msg="Username", empty_allowed=False)
             if username.find(" ") > -1:
                 print "Username cannot contain spaces"
                 continue
             valid_username = True
 
-        password = self.get_pass(msg = "Password", empty_allowed = False, confirm_msg = "Confirm password")
+        password = self.get_pass(msg="Password", empty_allowed=False, confirm_msg="Confirm password")
 
         valid_email = False
         while not valid_email:
-            email = self.get_input(msg = "Email")
+            email = self.get_input(msg="Email")
             if email and not self.validate_email(email):
                 print "Email is not valid"
                 continue
@@ -449,7 +500,7 @@ class ServiceConfig(CommandLine):
         else:
             log.info("Database tables already OK")
 
-    def _setup_database(self, username = None, password = None):
+    def _setup_database(self, username=None, password=None):
         if not self._db_accessible():
             # For the moment use the builtin configuration
             # TODO: this is where we would establish DB name and credentials
@@ -481,7 +532,7 @@ class ServiceConfig(CommandLine):
             args = args + ["--verbosity", "0"]
         ManagementUtility(args).execute()
 
-    def setup(self, username = None, password = None, ntp_server = None):
+    def setup(self, username=None, password=None, ntp_server=None):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
 
@@ -505,27 +556,20 @@ class ServiceConfig(CommandLine):
     def stop(self):
         self._stop_services()
 
-    def _service_config(self, interesting_services = None):
-        """Interrogate the current status of services"""
+    @staticmethod
+    def _service_config(interesting_services=None):
+        """Interrogate the current status of services, it should be noted that el7 calls to
+        systemctl through ServiceControl will redirect to chkconfig if the specified service is
+        not native (SysV style init as opposed to systemd unit init file)
+        """
         log.info("Checking service configuration...")
 
-        rc, out, err = self.try_shell(['chkconfig', '--list'])
         services = {}
-        for line in out.split("\n"):
-            if not line:
-                continue
+        for service_name in interesting_services:
+            controller = ServiceControl.create(service_name)
+            services[service_name] = {'enabled': controller.enabled, 'running': controller.running}
 
-            tokens = line.split()
-            service_name = tokens[0]
-            if interesting_services and service_name not in interesting_services:
-                continue
-
-            enabled = (tokens[4][2:] == 'on')
-
-            rc, out, err = self.shell(['service', service_name, 'status'])
-            running = (rc == 0)
-
-            services[service_name] = {'enabled': enabled, 'running': running}
+        log.info('debug services: %s' % str(services))
         return services
 
     def validate(self):
@@ -552,15 +596,18 @@ class ServiceConfig(CommandLine):
 
         # Check supervisor-controlled services are up
         if 'chroma-supervisor' not in service_config:
-            errors.append("Service supervisor is not configured. Please run the command: 'chroma-config setup' prior")
+            errors.append("Service supervisor is not configured. Please run the command: "
+                          "'chroma-config setup' prior")
         elif service_config['chroma-supervisor']['running']:
             for process in SupervisorStatus().get_all_process_info():
                 if process['statename'] != 'RUNNING':
-                    errors.append("Service %s is not running (status %s)" % (process['name'], process['statename']))
+                    errors.append("Service %s is not running (status %s)" % (process['name'],
+                                                                             process['statename']))
 
         return errors
 
-    def _write_local_settings(self, databases):
+    @staticmethod
+    def _write_local_settings(databases):
         # Build a local_settings file
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
         local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
@@ -574,7 +621,8 @@ class ServiceConfig(CommandLine):
             databases['default']['NAME'])
 
         # Usefully, a JSON dict looks a lot like python
-        local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace("null", "None")
+        local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace(
+            "null", "None")
 
         # Dump local_settings_str to local_settings
         open(local_settings, 'w').write(local_settings_str)
@@ -609,7 +657,7 @@ def bundle(operation, path=None):
     else:
         # remove bundle record
         try:
-            bundle = Bundle.objects.get(location = path)
+            bundle = Bundle.objects.get(location=path)
             bundle.delete()
         except Bundle.DoesNotExist:
             # doesn't exist anyway, so just exit silently
@@ -658,7 +706,8 @@ def register_profile(profile_file):
     data = dict(default_profile.items() + data.items())
 
     if missing_bundles:
-        log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
+        log.error("Bundles not found for profile '%s': %s" % (data['name'],
+                                                              ", ".join(missing_bundles)))
         sys.exit(-1)
 
     calculated_profile_fields = set(['packages', 'name', 'bundles', 'validation'])
@@ -787,7 +836,7 @@ def chroma_config():
         service_config.start()
     elif command == 'bundle':
         operation = sys.argv[2]
-        bundle(operation, path = sys.argv[3])
+        bundle(operation, path=sys.argv[3])
     elif command == 'profile':
         operation = sys.argv[2]
         if operation == 'register':
