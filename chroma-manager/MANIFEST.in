@@ -15,6 +15,7 @@ include chroma_ui/templates/new/*
 include tests/sample_data/*
 include tests/integration/run_tests
 include tests/integration/*/*.json
+include tests/integration/core/clear_ha_el?.sh
 graft ui-modules/node_modules/intel-view-server
 graft ui-modules/node_modules/intel-realtime
 graft licenses
