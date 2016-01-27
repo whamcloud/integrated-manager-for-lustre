@@ -1,0 +1,2 @@
+/setup.py install -O1/s/-O1/-O0/
+
