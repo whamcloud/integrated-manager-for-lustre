@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -78,7 +78,10 @@ setup(
                         "static/webhelp/*.css", "static/webhelp/*.jpg",
                         "static/webhelp/*.png", "static/webhelp/*.swf"],
         'polymorphic': ["COPYING"],
-        'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
+        'tests': ["integration/run_tests",
+                  "integration/*/*.json",
+                  "sample_data/*",
+                  "integration/core/clear_ha_el?.sh"],
         'ui-modules': [
             "node_modules/intel-view-server/*.js",
             "node_modules/intel-view-server/lib/*.js",

@@ -5,6 +5,7 @@ import socket
 import time
 import paramiko
 import re
+import os
 
 from testconfig import config
 from tests.chroma_common.lib.util import ExceptionThrowingThread
@@ -225,6 +226,9 @@ class SimulatorRemoteOperations(RemoteOperations):
 
     def unmount_clients(self):
         self._simulator.unmount_lustre_clients()
+
+    def unmount_lustre_targets(self, server):
+        pass
 
     def remove_config(self, *args):
         pass
@@ -822,6 +826,16 @@ class RealRemoteOperations(RemoteOperations):
                 self._test_case.assertNotRegexpMatches(result.stdout,
                                                        " type lustre")
 
+    def unmount_lustre_targets(self, server):
+        """
+        Unmount all the lustre targets on the server passed.
+
+        :param server: Target server
+        :return: Exception on failure.
+        """
+        self._ssh_address(server['address'],
+                          'umount -t lustre -a')
+
     def is_worker(self, server):
         workers = [w['address'] for w in
                    config['lustre_servers'] if 'worker' in w.get('profile', "")]
@@ -931,42 +945,19 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             if self.is_worker(server):
                 logger.info("%s is configured as a worker -- skipping." % server['address'])
-                break
+                continue
 
             if self.has_pacemaker(server):
                 if config.get('pacemaker_hard_reset', False):
-                    result = self._ssh_address(
-                        server['address'],
+                    clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                        "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
+
+                    with open(clear_ha_script_file, 'r') as clear_ha_script:
+                        self._ssh_address(server['address'],
+                                          clear_ha_script.read())
+
+                    self._ssh_address(server['address'],
                         '''set -ex
-                        service pacemaker stop &
-                        pid=$!
-                        timeout=120
-                        while kill -0 $pid && [ $timeout -gt 0 ]; do
-                            sleep 1
-                            let timeout=$timeout-1 || true
-                        done
-                        if kill -0 $pid; then
-                            # first see what is still running
-                            echo "bug: HYD-2552" >&2
-                            ps axf >&2
-                            exit 1
-                            # now start getting all medevil on it
-                            killall crmd
-                            timeout=5
-                            while killall -0 crmd && [ $timeout -gt 0 ]; do
-                                sleep 1
-                                let timeout=$timeout-1 || true
-                            done
-                            if killall -0 crmd; then
-                                # hrm.  what to do now?
-                                echo "even killing crmd didn't work" >&2
-                            fi
-                        fi
-                        service corosync stop
-                        ifconfig eth1 0.0.0.0 down
-                        rm -f /etc/sysconfig/network-scripts/ifcfg-eth1
-                        rm -f /etc/corosync/corosync.conf
-                        rm -f /var/lib/pacemaker/cib/* /var/lib/corosync/*
                         cat << EOF > /etc/sysconfig/system-config-firewall
 --enabled
 --port=22:tcp
@@ -974,25 +965,9 @@ class RealRemoteOperations(RemoteOperations):
 EOF
                         lokkit -n >&2
                         service iptables restart >&2
-                        if grep lustre /proc/mounts >&2; then
-                            if ! service pacemaker status >&2; then
-                                rc=${PIPESTATUS[0]}
-                            else
-                                rc=0
-                            fi
-                            echo $rc >&2
-                            if [ $rc = 3 ]; then
-                                # pacemaker is actually stopped, stop lustre targets
-                                umount -t lustre -a >&2
-                            else
-                                ps axf >&2
-                                exit $rc
-                            fi
-                        fi
-                        ''', None
-                    )
-                    logger.info(result.stderr)
-                    self._test_case.assertEqual(result.exit_status, 0)
+                        ''')
+
+                    self.unmount_lustre_targets(server)
                 else:
                     crm_targets = self.get_pacemaker_targets(server)
 
