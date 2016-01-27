@@ -18,23 +18,72 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     of tests, please see the *_testcase_mixin modules in this same directory.
     """
 
-    def get_host_profile(self, address):
-        try:
-            host = [h for h in config['lustre_servers']
-                    if h['address'] == address][0]
-            return self.chroma_manager.get("/api/server_profile/?name=%s" % host['profile']).json['objects'][0]
-        except KeyError:
-            profiles = self.chroma_manager.get("/api/server_profile/?user_selectable=true&managed=%s&worker=false" %
-                                               config.get("managed", False)).json['objects']
+    def get_named_profile(self, profile_name):
+        all_profiles = self.chroma_manager.get('/api/server_profile/').json['objects']
+        filtered_profile = [profile for profile in all_profiles if profile['name'] == profile_name]
 
-            # This will be extended in the future to deal with picking the correct profile for the
-            # OS it is running on, primarily to deal with 7.2 testing for today just pick the 6.x profile.
-            if config.get("managed", False):
-                return next(profile for profile in profiles if profile['name'] == 'base_managed')
-            else:
-                return profiles[0]
-        except IndexError:
-            raise RuntimeError("No host in config with address %s" % address)
+        assert len(filtered_profile) == 1
+
+        return filtered_profile[0]
+
+    def get_current_host_profile(self, host):
+        """Return the profile currently running on the host.
+        """
+        return self.chroma_manager.get('/api/server_profile/?name=%s' % host['server_profile']['name']).json['objects'][0]
+
+    def get_best_host_profile(self, address):
+        """Return the most suitable profile for the host.
+
+        This suitability is done using the profile validation rules.
+        """
+        host = next(h for h in config['lustre_servers'] if h['address'] == address)
+
+        # If the host actually specified a profile in the configuration, then I think it's fair
+        # to say that must be the best one.
+        if host.get('profile'):
+            return self.get_named_profile(host['profile'])
+
+        all_profiles = self.chroma_manager.get('/api/server_profile/').json['objects']
+
+        # It can take a while before the hosts resolves a valid profile. We see this in the GUI where the
+        # profiles are all red while the agents start up. So keep trying for 60 seconds - although each agent
+        # could try for 60 seconds the reality is it is happening in parallel, so the first might take a while
+        # but the others should be quick.
+        self.wait_for_assert(lambda: self.assertTrue(self.get_host_validations(host).valid))
+
+        all_validations = self.chroma_manager.get('/api/host_profile').json['objects']
+
+        # Get the one for this host.
+        host_validations = next(validation['host_profiles']['profiles']
+                                for validation in all_validations
+                                if validation['host_profiles']['address'] == host['address'])
+
+        # Merge the two so we have single list.
+        for profile in all_profiles:
+            profile['validations'] = host_validations[profile['name']]
+
+        # Filter by managed.
+        filtered_profile = [profile
+                            for profile in all_profiles
+                            if (profile['managed'] == config.get("managed", False) and
+                                profile['worker'] is False and
+                                profile['user_selectable'] is True)]
+
+        # Finally get one that pass all the tests, get the whole list and validate there is only one choice
+        filtered_profile = [profile
+                            for profile in filtered_profile
+                            if self._validation_passed(profile['validations'])]
+
+        assert len(filtered_profile) == 1
+
+        return filtered_profile[0]
+
+    def _validation_passed(self, validations):
+        for validation in validations:
+            if validation['pass'] is False:
+                return False
+
+        return True
 
     HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
 
@@ -69,8 +118,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 self.assertTrue(response.successful, response.text)
                 host_info = response.json['step_results'].values()[0]
                 address = host_info.pop('address')
-                for server_validation, result in host_info.iteritems():
-                    self.assertTrue(result, "Expected %s to be true for %s, but instead found %s. JSON for host: %s" % (server_validation, address, result, response.json))
+                for result in host_info['status']:
+                    self.assertTrue(result['value'],
+                                    "Expected %s to be true for %s, but instead found %s. JSON for host: %s" %
+                                    (result['name'], address, result['value'], response.json))
 
     def deploy_agents(self, addresses, auth_type='existing_keys_choice'):
         """Deploy the agent to the addresses provided"""
@@ -112,7 +163,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         response = self.chroma_manager.post(
             '/api/host_profile/',
             body = {
-                'objects': [{'host': h['id'], 'profile': self.get_host_profile(h['address'])['name']} for h in hosts]
+                'objects': [{'host': h['id'], 'profile': self.get_best_host_profile(h['address'])['name']} for h in hosts]
             }
         )
         self.assertEqual(response.successful, True, response.text)
@@ -147,16 +198,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     def register_simulated_hosts(self, addresses):
         host_create_command_ids = {}
         for host_address in addresses:
-            # Find the fqdn for the host
-            fqdn = None
-            for lustre_server in config['lustre_servers']:
-                if lustre_server['address'] == host_address:
-                    fqdn = lustre_server['fqdn']
-            self.assertTrue(fqdn, "Could not find lustre_server in config with address %s" % host_address)
+            host = next(h for h in config['lustre_servers'] if h['address'] == host_address)
 
             # POST to the /registration_token/ REST API resource to acquire
             # permission to add a server
-            profile = self.get_host_profile(host_address)
+            profile = self.get_named_profile(host.get('profile', 'base_managed'))
             response = self.chroma_manager.post(
                 '/api/registration_token/',
                 body={
@@ -168,20 +214,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             token = response.json
 
             # Pass our token to the simulator to register a server
-            registration_result = self.simulator.register(fqdn, token['secret'])
+            registration_result = self.simulator.register(host['fqdn'], token['secret'])
             host_create_command_ids[host_address] = registration_result['command_id']
 
         self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
-        return self._fetch_help(lambda: self._add_hosts(addresses, auth_type),
-                                ['chris.gearing@intel.com'],
-                                "Add hosts failed in %s" % self._testMethodName)
-
-    def _add_hosts(self, addresses, auth_type='existing_keys_choice'):
-        """
-        Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
-        """
+        """Add a list of lustre servers to chroma and ensure lnet ends in the correct state."""
         if hasattr(self, 'simulator'):
             self.register_simulated_hosts(addresses)
         else:
@@ -195,13 +234,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         for host in new_hosts:
             # Deal with pre-3.0 versions.
             if host['state'] in ['lnet_up', 'lnet_down', 'lnet_unloaded']:
-                if self.get_host_profile(host['address'])['name'] == 'base_managed':
+                if self.get_current_host_profile(host)['name'] == 'base_managed':
                     self.assertEqual(host['state'], 'lnet_up', host)
                 else:
                     self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'], host)
             else:
                 self.assertEqual(host['state'],
-                                 self.get_host_profile(host['address'])['initial_state'],
+                                 self.get_current_host_profile(host)['initial_state'],
                                  host)
 
         # Make sure the agent config is flushed to disk

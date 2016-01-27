@@ -34,6 +34,7 @@ from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log
 from manage_corosync import start_corosync, stop_corosync
 from chroma_agent.lib.pacemaker import pacemaker_running
+from chroma_agent.lib.pacemaker import PacemakerError
 from chroma_agent.lib.corosync import corosync_running
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
@@ -123,9 +124,12 @@ def _configure_pacemaker():
     '''
     pc = PacemakerConfig()
 
-    if not pc.is_dc:
-        daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
-        return agent_result_ok
+    try:
+        if not pc.is_dc:
+            daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
+            return agent_result_ok
+    except PacemakerError as pacemaker_error:
+        return agent_error("Pacemaker experienced an unexpected error: %s" % pacemaker_error)
 
     daemon_log.info("Configuring (global) pacemaker configuration because I am the DC")
 
