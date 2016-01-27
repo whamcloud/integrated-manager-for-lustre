@@ -33,7 +33,7 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
             # otherwise we need to use the old way of adding hosts
             host_create_command_ids = []
             for host_address in addresses:
-                profile = self.get_host_profile(host_address)
+                profile = self.get_best_host_profile(host_address)
                 response = self.chroma_manager.post(
                     '/api/test_host/',
                     body = {
