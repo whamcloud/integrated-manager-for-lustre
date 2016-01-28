@@ -192,7 +192,8 @@ class UnconfigureCorosyncStep(Step):
     def run(self, kwargs):
         self.invoke_agent_expect_result(kwargs['host'],
                                         "unconfigure_corosync2",
-                                        {'host_fqdn': kwargs['host'].fqdn})
+                                        {'host_fqdn': kwargs['host'].fqdn,
+                                         'mcast_port': kwargs['mcast_port']})
 
 
 class UnconfigureCorosync2Job(corosync_common.UnconfigureCorosyncJob):
@@ -204,7 +205,8 @@ class UnconfigureCorosync2Job(corosync_common.UnconfigureCorosyncJob):
         ordering = ['id']
 
     def get_steps(self):
-        return [(UnconfigureCorosyncStep, {'host': self.corosync_configuration.host})]
+        return [(UnconfigureCorosyncStep, {'host': self.corosync_configuration.host,
+                                           'mcast_port': self.corosync_configuration.mcast_port})]
 
 
 class StartCorosyncStep(Step):

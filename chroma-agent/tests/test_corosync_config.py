@@ -1,5 +1,8 @@
+import os
+import shutil
 import sys
 import mock
+import tempfile
 
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
@@ -166,6 +169,28 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         mcast_port = "4242"
         new_node_fqdn = 'servera.somewhere.org'
 
+        # example output from 'iptables -L' or 'service iptables status'
+        chain_output = """Table: filter
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination
+1    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
+2    ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0
+3    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+4    ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:123
+5    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22
+6    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:80
+7    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:443
+8    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain FORWARD (policy ACCEPT)
+num  target     prot opt source               destination
+1    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination
+
+"""
+
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
                           CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
@@ -174,6 +199,10 @@ class TestConfigureCorosync(CommandCaptureTestCase):
                           CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
                           CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
                           CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
+                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
+                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
+                          CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
+                                                 'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')),
                           CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "lustre"])))
 
         # now a two-step process! first network...
@@ -188,18 +217,18 @@ class TestConfigureCorosync(CommandCaptureTestCase):
 
         # add shell commands to be expected populated with ring interface info
         self.add_command(("pcs", "cluster", "setup",
-                                                       "--name", "lustre-ha-cluster",
-                                                       "--force", new_node_fqdn,
-                                                       "--transport", "udp",
-                                                       "--rrpmode", "passive",
-                                                       "--addr0", str(r0.bindnetaddr),
-                                                       "--mcast0", str(r0.mcastaddr),
-                                                       "--mcastport0", str(r0.mcastport),
-                                                       "--addr1", str(r1.bindnetaddr),
-                                                       "--mcast1", str(r1.mcastaddr),
-                                                       "--mcastport1", str(r1.mcastport),
-                                                       "--token", "5000",
-                                                       "--fail_recv_const", "10"))
+                         "--name", "lustre-ha-cluster",
+                         "--force", new_node_fqdn,
+                         "--transport", "udp",
+                         "--rrpmode", "passive",
+                         "--addr0", str(r0.bindnetaddr),
+                         "--mcast0", str(r0.mcastaddr),
+                         "--mcastport0", str(r0.mcastport),
+                         "--addr1", str(r1.bindnetaddr),
+                         "--mcast1", str(r1.mcastaddr),
+                         "--mcastport1", str(r1.mcastport),
+                         "--token", "5000",
+                         "--fail_recv_const", "10"))
 
         # ...then corosync / pcsd
         configure_corosync2_stage_1()
@@ -207,7 +236,10 @@ class TestConfigureCorosync(CommandCaptureTestCase):
 
         self.assertRanAllCommandsInOrder()
 
-    def test_unconfigure_corosync2(self):
+    @mock.patch.object(tempfile, 'mkstemp')
+    @mock.patch.object(shutil, 'move')
+    @mock.patch.object(os, 'fdopen')
+    def test_unconfigure_corosync2(self, mock_mkstemp, mock_move, mock_fdopen):
 
         from sys import version_info
         if version_info[0] == 2:
@@ -216,14 +248,18 @@ class TestConfigureCorosync(CommandCaptureTestCase):
             import builtins  # pylint:disable=import-error
 
         host_fqdn = "serverb.somewhere.org"
+        mcast_port = "4242"
 
         # add shell commands to be expected
-        self.add_command(('/sbin/chkconfig', 'corosync', 'off'))
-        self.add_command(('pcs', 'cluster', 'node', 'remove', host_fqdn))
+        self.add_commands(CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'off')),
+                          CommandCaptureCommand(('pcs', 'cluster', 'node', 'remove', host_fqdn)),
+                          CommandCaptureCommand(('service', 'iptables', 'status')),
+                          CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
+                                                 'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')))
 
         # mock built-in 'open' to avoid trying to read local filesystem
         with mock.patch.object(builtins, 'open', mock.mock_open(read_data='mock data')):
-            unconfigure_corosync2(host_fqdn)
+            unconfigure_corosync2(host_fqdn, mcast_port)
 
         self.assertRanAllCommandsInOrder()
 

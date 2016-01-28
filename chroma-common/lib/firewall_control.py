@@ -37,11 +37,10 @@ class FirewallControl(object):
     class_override = None
     __metaclass__ = abc.ABCMeta
 
-    firewall_rule = namedtuple('firewall_rule', ('port',
-                                                 'protocol',
-                                                 'description',
-                                                 'persist',
-                                                 'address'))
+    firewall_rule = namedtuple('firewall_rule', ('port', 'protocol', 'description', 'persist', 'address'))
+
+    # identifiers for results of firewall operations
+    SuccessCode = util.enum('UPDATED', 'DUPLICATE', 'NOTRUNNING', 'NORULES')
 
     platform_use = None
 
@@ -79,23 +78,25 @@ class FirewallControl(object):
         """
         self._log('Opening firewall for %s' % desc, 'info')
         if address:
-            assert port == 0, 'opening a specific port on a source address is not '\
-                              'supported, port value must be 0 (ANY)'
+            assert port == 0, 'opening a specific port on a source address ' \
+                              'is not supported, port value must be 0 (ANY)'
 
-            assert persist is False, 'opening all ports on a source address permanently is not ' \
-                                     'currently supported'
+            assert persist is False, 'opening all ports on a source address ' \
+                                     'permanently is not currently supported'
 
-            error = self._add_address(address, proto)
+            retval = self._add_address(address, proto)
         else:
             assert persist is True, 'opening a single port temporarily is not currently supported'
 
-            error = self._add_port(port, proto)
+            retval = self._add_port(port, proto)
 
-        if error is None and (self.firewall_rule(port, proto, desc, persist, address) not in \
-                self.rules):
+        if (retval == self.SuccessCode.UPDATED) and (self.firewall_rule(port, proto, desc, persist, address)
+                                                     not in self.rules):
+            # only add to list if rule successfully added
             self.rules.append(self.firewall_rule(port, proto, desc, persist, address))
 
-        return error
+        # if success return code received, return None on success, otherwise return error string
+        return None if (retval in self.SuccessCode.reverse_mapping.keys()) else retval
 
     def remove_rule(self, port, proto, desc, persist=True, address=None):
         """"Close port(s) in firewall
@@ -113,19 +114,21 @@ class FirewallControl(object):
             assert persist is False, 'closing all ports on a source address permanently is not ' \
                                      'currently supported'
 
-            error = self._remove_address(address, proto)
+            retval = self._remove_address(address, proto)
         else:
             assert persist is True, 'closing a single port temporarily is not currently supported'
 
-            error = self._remove_port(port, proto)
+            retval = self._remove_port(port, proto)
 
-        if error is None:
+        if retval == self.SuccessCode.UPDATED:
+            # only try to remove from list if rule successfully deleted
             try:
                 self.rules.remove(self.firewall_rule(port, proto, desc, persist, address))
             except ValueError:
                 pass
 
-        return error
+        # if success return code received, return None on success, otherwise return error string
+        return None if (retval in self.SuccessCode.reverse_mapping.keys()) else retval
 
     @abc.abstractmethod
     def _add_port(self, port, proto):
@@ -156,7 +159,9 @@ class FirewallControlEL6(FirewallControl):
     """ concrete subclass of FirewallControl abstract base class for EL7 firewall control """
 
     platform_use = '6'
-    not_running_msg = 'iptables: Firewall is not running.'
+
+    # return code for 'iptables: Firewall is not running.'
+    not_running_rc = 3
 
     def iptables(self, op, chain, args_in):
         """Verify tables are configured and services running, add supplied arguments to
@@ -191,8 +196,9 @@ num  target     prot opt source               destination
 """:
             # if we are inserting rule into input chain and not specifying an IP address,
             # we want to check if an identical rule exists before adding
-            if op_arg == '-I' and chain == 'INPUT' and not \
-                    set(['-s', '--source', '-d', '--destination']).intersection(set(args_in)):
+            if op_arg == '-I' \
+                    and chain == 'INPUT' \
+                    and not set(['-s', '--source', '-d', '--destination']).intersection(set(args_in)):
                 # parse rule args_in
                 rule_idx = args_in[0]
                 state = args_in[args_in.index('--state') + 1].upper()
@@ -209,38 +215,30 @@ num  target     prot opt source               destination
                 rule = lines[input_chain_idx + int(rule_idx)]
                 if re.search(pattern, rule):
                     # rule already exists at the expected index, don't add again
-                    return None
+                    return self.SuccessCode.DUPLICATE
 
             cmdlist = ['/sbin/iptables', op_arg, chain]
             cmdlist.extend(args_in)
             rc, stdout, stderr, timeout = Shell.run(cmdlist)
 
             if rc:
-                retval = 'iptables returned unexpected error!'
-                if stderr:
-                    retval = stderr
-                elif stdout:
-                    retval = stdout
-
-                self._log('iptables rule could not be written %s %s' % (str(cmdlist), retval),
-                          'error')
-                return retval
+                return stderr or stdout or 'iptables returned unexpected error!'
             else:
                 self._log('rule added to iptables: %s' % str(cmdlist), 'debug')
-                return None
+                return self.SuccessCode.UPDATED
 
         else:
             # indicates firewall un-configured, failed or inactive
             if rc == 0:
                 # status returns okay but no rules in chains, un-configured
                 self._log('iptables is configured with no rules!', 'warning')
-            elif rc == 3 or stdout == self.not_running_msg:
+                return self.SuccessCode.NORULES
+            elif rc == self.not_running_rc:
                 # the IP tables service is not running
                 self._log('iptables service is not running!', 'warning')
+                return self.SuccessCode.NOTRUNNING
             else:
                 return 'service iptables status returned unexpected error!'
-
-            return None
 
     def _add_port(self, port, proto):
         """ EL6 implementation of opening port on firewall using linux shell """
@@ -311,8 +309,11 @@ class FirewallControlEL7(FirewallControl):
 
     platform_use = '7'
 
-    @staticmethod
-    def _port_rule(act, port, proto):
+    # return code for 'FirewallD is not running'
+    not_running_rc = 252
+    duplicate_msg = 'Warning: ALREADY_ENABLED\n'
+
+    def _port_rule(self, act, port, proto):
         """Wrapper for port-rule firewall-cmd shell invocations. Command issued twice, once WITH
         the --permanent flag to store persistent settings, and once WITHOUT for immediate effect
         This is the recommended procedure as documented by man page
@@ -320,16 +321,25 @@ class FirewallControlEL7(FirewallControl):
         Note: rule is activated on the default zone which is assumed is bound to public
         facing interfaces
         """
-        error = Shell.run_canned_error_message(['/usr/bin/firewall-cmd',
-                                                '--%s-port=%s/%s' % (act, port, proto),
-                                                '--permanent'])
-        if error is None:
-            return Shell.run_canned_error_message(['/usr/bin/firewall-cmd',
-                                                   '--%s-port=%s/%s' % (act, port, proto)])
-        return error
+        arg_list = ['/usr/bin/firewall-cmd', '--%s-port=%s/%s' % (act, port, proto)]
 
-    @staticmethod
-    def _address_rule(act, daddress, proto):
+        result = Shell.run(arg_list)
+
+        if result.rc:
+            if result.rc == self.not_running_rc:
+                # firewall service is not running, this is not an error
+                return self.SuccessCode.NOTRUNNING
+
+            return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list), result.stdout, result.stderr)
+
+        if result.stdout == self.duplicate_msg:
+            return self.SuccessCode.DUPLICATE
+
+        error = Shell.run_canned_error_message(arg_list + ['--permanent'])
+
+        return error or self.SuccessCode.UPDATED
+
+    def _address_rule(self, act, daddress, proto):
         """Wrapper for address-rule firewall-cmd shell invocations. Command issued only for
         immediate effect, in the case of this address rule for EL7 the setting is not persistent
         as white listing all ports on a specific destination address should only be a temporary
@@ -345,8 +355,21 @@ class FirewallControlEL7(FirewallControl):
         # when constructing the "rich rule" instruction parameter for firewall-cmd we don't have
         # to encapsulate the rule spec in single quotes as you would in bash because Shell.run
         # implicitly assumes it is a value for a single keyword argument
-        return Shell.run_canned_error_message(['/usr/bin/firewall-cmd', '--%s-rich-rule=%s' %
-                                               (act, rich_rule_spec)])
+        arg_list = ['/usr/bin/firewall-cmd', '--%s-rich-rule=%s' % (act, rich_rule_spec)]
+
+        result = Shell.run(arg_list)
+
+        if result.rc:
+            if result.rc == self.not_running_rc:
+                # firewall service is not running, this is not an error
+                return self.SuccessCode.NOTRUNNING
+
+            return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list), result.stdout, result.stderr)
+
+        if result.stdout == self.duplicate_msg:
+            return self.SuccessCode.DUPLICATE
+
+        return self.SuccessCode.UPDATED
 
     def _add_port(self, port, proto):
         """ EL7 implementation of opening port on firewall using linux shell """

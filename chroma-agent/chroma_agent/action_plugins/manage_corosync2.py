@@ -28,16 +28,17 @@ from os import remove
 import errno
 
 from chroma_agent.lib.shell import AgentShell
-#from chroma_agent.lib.system import del_firewall_rule_el7, add_firewall_rule_el7
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.lib.corosync import CorosyncRingInterface
 from chroma_agent.action_plugins.manage_corosync_common import InterfaceInfo
 
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_ok_or_error
 
 
 corosync_service = ServiceControl.create('corosync')
 pscd_service = ServiceControl.create('pcsd')
+firewall_control = FirewallControl.create()
 
 
 PCS_USER = 'hacluster'
@@ -101,14 +102,13 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
         'mcastport1': interfaces[1].corosync_iface.mcastport
     }
 
-    # TODO: re-enable firewall when corosync el7 is working
-    # add_firewall_rule_el7(mcast_port, "udp", "corosync")
+    error = firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True)
+    if error:
+        return agent_error(error)
 
     # authenticate nodes in cluster
-    authenticate_nodes_in_cluster_command = ['pcs', 'cluster', 'auth'] + \
-                                            [new_node_fqdn] + \
-                                            ['-u', PCS_USER,
-                                             '-p', PCS_PASSWORD]
+    authenticate_nodes_in_cluster_command = ['pcs', 'cluster', 'auth', new_node_fqdn,
+                                             '-u', PCS_USER, '-p', PCS_PASSWORD]
 
     # build command string for setup of cluster which will result in corosync.conf rather than
     # writing from template, note we don't start the cluster here as services are managed
@@ -120,13 +120,13 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
             # pull this value from the dictionary using parameter keyword
             cluster_setup_command.extend(["--" + param, str(config_params[param])])
     else:
-        cluster_setup_command = ['pcs', 'cluster', 'node', 'add'] + [new_node_fqdn]
+        cluster_setup_command = ['pcs', 'cluster', 'node', 'add', new_node_fqdn]
 
     return agent_ok_or_error(AgentShell.run_canned_error_message(authenticate_nodes_in_cluster_command) or \
                              AgentShell.run_canned_error_message(cluster_setup_command))
 
 
-def unconfigure_corosync2(host_fqdn):
+def unconfigure_corosync2(host_fqdn, mcast_port):
     """Unconfigure the corosync application.
     For corosync2 don't disable pcsd, just remove host node from cluster and disable corosync from
     auto starting (service should already be stopped by state machine)
@@ -149,10 +149,7 @@ def unconfigure_corosync2(host_fqdn):
         if (type(e) is not OSError) or (e.errno != errno.ENOENT):
             return agent_error("Failed to remove corosync.conf")
 
-    # TODO: re-enable firewall when corosync el7 is working
-    # del_firewall_rule_el7(mcastport, "udp", "corosync")
-
-    return agent_result_ok
+    return agent_ok_or_error(firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True))
 
 
 ACTIONS = [start_corosync2, stop_corosync2,

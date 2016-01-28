@@ -244,7 +244,7 @@ num  target     prot opt source               destination
 
         self.assertRanAllCommandsInOrder()
 
-    @mock.patch.object(FirewallControlEL6, '_remove_port', return_value=None)
+    @mock.patch.object(FirewallControlEL6, '_remove_port', return_value=0)
     def test_close_removes_rule(self, mock__remove_port):
         # test closing a port removes a rule from the class instance 'rules' list,
         # this is additionally required because test_close_port exits remove() before rule is
@@ -350,6 +350,8 @@ num  target     prot opt source               destination
 
 class TestFirewallControlEL7(BaseTestFC.BaseTestFirewallControl):
 
+    not_running_msg = 'FirewallD is not running'
+
     def __init__(self, *args, **kwargs):
         super(TestFirewallControlEL7, self).__init__(*args, **kwargs)
         self.init_firewall('7.2')
@@ -360,10 +362,10 @@ class TestFirewallControlEL7(BaseTestFC.BaseTestFirewallControl):
         self.assertEqual(len(self.test_firewall.rules), 0)
         self.add_commands(
             CommandCaptureCommand(('/usr/bin/firewall-cmd',
-                                   '--add-port=%s/%s' % (self.port, self.proto),
-                                   '--permanent')),
+                                   '--add-port=%s/%s' % (self.port, self.proto))),
             CommandCaptureCommand(('/usr/bin/firewall-cmd',
-                                   '--add-port=%s/%s' % (self.port, self.proto))))
+                                   '--add-port=%s/%s' % (self.port, self.proto),
+                                   '--permanent')))
 
         response = self.test_firewall.add_rule(self.port, self.proto, self.desc, persist=True)
 
@@ -384,10 +386,10 @@ class TestFirewallControlEL7(BaseTestFC.BaseTestFirewallControl):
 
         self.add_commands(
             CommandCaptureCommand(('/usr/bin/firewall-cmd',
-                                   '--remove-port=%s/%s' % (self.port, self.proto),
-                                   '--permanent')),
+                                   '--remove-port=%s/%s' % (self.port, self.proto))),
             CommandCaptureCommand(('/usr/bin/firewall-cmd',
-                                   '--remove-port=%s/%s' % (self.port, self.proto))))
+                                   '--remove-port=%s/%s' % (self.port, self.proto),
+                                   '--permanent')))
 
         response = self.test_firewall.remove_rule(self.port, self.proto, self.desc, persist=True)
 
@@ -433,11 +435,25 @@ class TestFirewallControlEL7(BaseTestFC.BaseTestFirewallControl):
                                                             'protocol value="%s" '
                                                             'accept' % (self.address, self.proto))))
 
-        response = self.test_firewall.remove_rule(0, self.proto, self.desc, persist=False,
-                                                  address=self.address)
+        response = self.test_firewall.remove_rule(0, self.proto, self.desc, persist=False, address=self.address)
 
         # None return value indicates success
         self.assertEqual(response, None)
         # rule should have been removed from list
         self.assertEqual(len(self.test_firewall.rules), 0)
+        self.assertRanAllCommandsInOrder()
+
+    def test_firewall_not_running(self):
+        # if the firewall is not running, add_rule should silently exit while logging a warning
+        # test that we return None in this situation
+        self.assertEqual(len(self.test_firewall.rules), 0)
+        self.add_command(('/usr/bin/firewall-cmd', '--add-port=%s/%s' % (self.port, self.proto)),
+                         rc=252, stdout=self.not_running_msg)
+
+        response = self.test_firewall.add_rule(self.port, self.proto, self.desc, persist=True)
+
+        # class instance should have record of added rule
+        self.assertEqual(len(self.test_firewall.rules), 0)
+        # None return value indicates success
+        self.assertEqual(response, None)
         self.assertRanAllCommandsInOrder()
