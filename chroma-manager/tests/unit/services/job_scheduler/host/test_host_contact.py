@@ -2,7 +2,8 @@ import json
 
 import mock
 
-from chroma_core.models import Job, StepResult
+from chroma_core.models import Job
+from chroma_core.models import StepResult
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tests.unit.chroma_core.helpers import MockAgentRpc, MockAgentSsh
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase

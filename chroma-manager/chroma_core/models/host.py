@@ -53,6 +53,7 @@ from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
 from chroma_core.models import Bundle
+from chroma_core.models import AlertEvent
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
@@ -1672,6 +1673,13 @@ class HostOfflineAlert(AlertStateBase):
 
     def message(self):
         return "Host is offline %s" % self.alert_item
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Host is back online %s" % self.alert_item,
+            alert_item = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
 
 
 class HostRebootEvent(AlertStateBase):

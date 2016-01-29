@@ -87,23 +87,34 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
         },
         'chroma_core.alertevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'AlertEvent', '_ormbases': ['chroma_core.Event']},
-            'alert': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.AlertState']"}),
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
-            'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
-        },
-        'chroma_core.alertstate': {
-            'Meta': {'ordering': "['id']", 'unique_together': "(('alert_item_type', 'alert_item_id', 'alert_type', 'active'),)", 'object_name': 'AlertState'},
+            'Meta': {'object_name': 'AlertEvent', 'db_table': "'chroma_core_alertstate'"},
             'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
             'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'alertstate_alert_item_type'", 'to': "orm['contenttypes.ContentType']"}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
             'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'begin': ('django.db.models.fields.DateTimeField', [], {}),
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'end': ('django.db.models.fields.DateTimeField', [], {}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'})
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
+        },
+        'chroma_core.alertstate': {
+            'Meta': {'object_name': 'AlertState'},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.alertsubscription': {
             'Meta': {'ordering': "['id']", 'object_name': 'AlertSubscription'},
@@ -143,21 +154,89 @@ class Migration(SchemaMigration):
             'serial': ('django.db.models.fields.CharField', [], {'max_length': '16'})
         },
         'chroma_core.clientconnectevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ClientConnectEvent', '_ormbases': ['chroma_core.Event']},
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
+            'Meta': {'object_name': 'ClientConnectEvent', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
-            'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.command': {
             'Meta': {'ordering': "['id']", 'object_name': 'Command'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'complete': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'errored': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'jobs': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['chroma_core.Job']", 'symmetrical': 'False'}),
             'message': ('django.db.models.fields.CharField', [], {'max_length': '512'})
+        },
+        'chroma_core.commandcancelledalert': {
+            'Meta': {'object_name': 'CommandCancelledAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
+        },
+        'chroma_core.commanderroredalert': {
+            'Meta': {'object_name': 'CommandErroredAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
+        },
+        'chroma_core.commandrunningalert': {
+            'Meta': {'object_name': 'CommandRunningAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
+        },
+        'chroma_core.commandsuccessfulalert': {
+            'Meta': {'object_name': 'CommandSuccessfulAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.configurecopytooljob': {
             'Meta': {'ordering': "['id']", 'object_name': 'ConfigureCopytoolJob'},
@@ -193,7 +272,7 @@ class Migration(SchemaMigration):
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.configurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -205,7 +284,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.configurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})
@@ -277,20 +356,64 @@ class Migration(SchemaMigration):
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.corosyncnopeersalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'CorosyncNoPeersAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'CorosyncNoPeersAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.corosyncstoppedalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'CorosyncStoppedAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'CorosyncStoppedAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.corosynctomanypeersalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'CorosyncToManyPeersAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'CorosyncToManyPeersAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.corosyncunknownpeersalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'CorosyncUnknownPeersAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'CorosyncUnknownPeersAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.deployhostjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'DeployHostJob'},
@@ -308,15 +431,6 @@ class Migration(SchemaMigration):
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
-        },
-        'chroma_core.event': {
-            'Meta': {'ordering': "['id']", 'object_name': 'Event'},
-            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']", 'null': 'True', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'severity': ('django.db.models.fields.IntegerField', [], {})
         },
         'chroma_core.failbacktargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'FailbackTargetJob'},
@@ -382,17 +496,49 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.hostcontactalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'HostContactAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'HostContactAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.hostofflinealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'HostOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'HostOfflineAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.hostrebootevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'HostRebootEvent', '_ormbases': ['chroma_core.Event']},
-            'boot_time': ('django.db.models.fields.DateTimeField', [], {}),
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'HostRebootEvent', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.installhostpackagesjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'InstallHostPackagesJob'},
@@ -401,8 +547,19 @@ class Migration(SchemaMigration):
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.ipmibmcunavailablealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'IpmiBmcUnavailableAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'IpmiBmcUnavailableAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.job': {
             'Meta': {'ordering': "['id']", 'object_name': 'Job'},
@@ -417,10 +574,19 @@ class Migration(SchemaMigration):
             'wait_for_json': ('django.db.models.fields.TextField', [], {})
         },
         'chroma_core.learnevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'LearnEvent', '_ormbases': ['chroma_core.Event']},
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
-            'learned_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'learned_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"})
+            'Meta': {'object_name': 'LearnEvent', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.lnetconfiguration': {
             'Meta': {'ordering': "['id']", 'object_name': 'LNetConfiguration'},
@@ -433,12 +599,34 @@ class Migration(SchemaMigration):
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.lnetnidschangedalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'LNetNidsChangedAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'LNetNidsChangedAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.lnetofflinealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'LNetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'LNetOfflineAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.loadlnetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'LoadLNetJob'},
@@ -613,8 +801,19 @@ class Migration(SchemaMigration):
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.pacemakerstoppedalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'PacemakerStoppedAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'PacemakerStoppedAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.package': {
             'Meta': {'object_name': 'Package'},
@@ -664,8 +863,19 @@ class Migration(SchemaMigration):
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'})
         },
         'chroma_core.powercontroldeviceunavailablealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'PowerControlDeviceUnavailableAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'PowerControlDeviceUnavailableAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.powercontroltype': {
             'Meta': {'unique_together': "(('agent', 'make', 'model', 'not_deleted'),)", 'object_name': 'PowerControlType'},
@@ -716,10 +926,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 11, 26, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2016, 2, 1, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'6996E1B499392B1656EBD787FE7AF02A'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'0217E486ABE25EB5B135E860167F4807'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -871,8 +1081,8 @@ class Migration(SchemaMigration):
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"})
         },
-        'chroma_core.setupworkertjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'SetupWorkertJob'},
+        'chroma_core.setupworkerjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'SetupWorkerJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"})
@@ -1014,10 +1224,19 @@ class Migration(SchemaMigration):
             'module_name': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.storageresourcealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alert_class': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'}),
-            'attribute': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'})
+            'Meta': {'object_name': 'StorageResourceAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.storageresourceattributereference': {
             'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceAttributeReference'},
@@ -1047,13 +1266,34 @@ class Migration(SchemaMigration):
             'resource_class': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceClass']"})
         },
         'chroma_core.storageresourcelearnevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceLearnEvent', '_ormbases': ['chroma_core.Event']},
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
-            'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']", 'on_delete': 'models.PROTECT'})
+            'Meta': {'object_name': 'StorageResourceLearnEvent', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.storageresourceoffline': {
-            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceOffline', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'StorageResourceOffline', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.storageresourcerecord': {
             'Meta': {'ordering': "['id']", 'unique_together': "(('storage_id_str', 'storage_id_scope', 'resource_class'),)", 'object_name': 'StorageResourceRecord'},
@@ -1073,22 +1313,64 @@ class Migration(SchemaMigration):
             'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']", 'on_delete': 'models.PROTECT'})
         },
         'chroma_core.syslogevent': {
-            'Meta': {'ordering': "['id']", 'object_name': 'SyslogEvent', '_ormbases': ['chroma_core.Event']},
-            'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
+            'Meta': {'object_name': 'SyslogEvent', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
-            'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.targetfailoveralert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'TargetFailoverAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'TargetFailoverAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.targetofflinealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'TargetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'TargetOfflineAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.targetrecoveryalert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'TargetRecoveryAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'TargetRecoveryAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.targetrecoveryinfo': {
             'Meta': {'ordering': "['id']", 'object_name': 'TargetRecoveryInfo'},
@@ -1121,7 +1403,7 @@ class Migration(SchemaMigration):
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.unconfigurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -1133,7 +1415,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.unconfigurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})
@@ -1171,8 +1453,19 @@ class Migration(SchemaMigration):
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.updatesavailablealert': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UpdatesAvailableAlert', '_ormbases': ['chroma_core.AlertState']},
-            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+            'Meta': {'object_name': 'UpdatesAvailableAlert', 'db_table': "'chroma_core_alertstate'"},
+            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
+            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.userprofile': {
             'Meta': {'object_name': 'UserProfile'},

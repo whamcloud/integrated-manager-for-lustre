@@ -37,6 +37,19 @@ class TestOverrides(BaseStorageResource):
     write = statistics.Gauge()
 
 
+class TestDefaultAndOptional(BaseStorageResource):
+    class Meta:
+        identifier = GlobalId('name')
+
+    name = attributes.String()
+    name_not_optional_not_default = attributes.String()
+    name_optional = attributes.String(optional=True)
+    name_optional_trumps_default = attributes.String(optional=True, default="never used")
+    name_default_value = attributes.String(default="default value")
+    name_default_callable = attributes.String(default=lambda storage_dict: "default callable")
+    name_default_callable_bob = attributes.String(default=lambda storage_dict: storage_dict['name'])
+
+
 class TestDisplayNames(IMLUnitTestCase):
     def test_defaults(self):
         td1 = TestDefaults1(name = "foo")
@@ -55,3 +68,15 @@ class TestDisplayNames(IMLUnitTestCase):
         self.assertEqual(to.get_label(), "Bravo")
         self.assertEqual(to._meta.label, "Alpha")
         self.assertEqual(len(to.get_charts()), 1)
+
+    def test_default_and_optional(self):
+        """Test the default works for the cases of None, callable and value"""
+        test_defaults_and_optional = TestDefaultAndOptional(name="Bob")
+
+        self.assertEqual(test_defaults_and_optional.name, "Bob")
+        self.assertRaises(AttributeError, lambda: test_defaults_and_optional.name_not_optional_not_default)
+        self.assertEqual(test_defaults_and_optional.name_optional, None)
+        self.assertEqual(test_defaults_and_optional.name_optional_trumps_default, None)
+        self.assertEqual(test_defaults_and_optional.name_default_value, "default value")
+        self.assertEqual(test_defaults_and_optional.name_default_callable, "default callable")
+        self.assertEqual(test_defaults_and_optional.name_default_callable_bob, "Bob")

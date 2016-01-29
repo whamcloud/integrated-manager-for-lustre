@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -37,10 +37,11 @@ class BaseResourceAttribute(object):
     model_class = StorageResourceAttributeSerialized
 
     def __init__(self,
-                 optional = False,
-                 label = None,
-                 hidden = False,
-                 user_read_only = False):
+                 optional=False,
+                 label=None,
+                 hidden=False,
+                 user_read_only=False,
+                 default=None):
         """
         :param optional: If this is True, the attribute may be left unassigned (i.e. null).  Otherwise,
             a non-null value must be provided for all instances.
@@ -52,8 +53,12 @@ class BaseResourceAttribute(object):
             by the user.  For example, a controller might have some attributes entered by the user, and some
             read from the hardware: those read from the hardware would be marked `user_read_only`.  Attributes
             which are `user_read_only` must also be `optional`.
+        :param default: If not None then this default value will be used in the case of a non-optional value
+            missing. Generally used in the case of upgrades to supply previous records. default maybe callable
+            or a fixed value.
         """
         self.optional = optional
+        self.default = default
         self.label = label
         self.hidden = hidden
         self.user_read_only = user_read_only

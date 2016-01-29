@@ -61,7 +61,7 @@ class AlertEvent(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    variant_fields = [VariantDescriptor('message_str', str, None, None, 0),
+    variant_fields = [VariantDescriptor('message_str', str, None, None, ''),
                       VariantDescriptor('alert',
                                         AlertState,
                                         lambda self_: AlertState.objects.get(id=self_.get_variant('alert_id', None, int)),

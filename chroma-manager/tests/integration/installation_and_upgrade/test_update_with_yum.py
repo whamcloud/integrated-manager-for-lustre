@@ -1,61 +1,10 @@
 from testconfig import config
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
-from tests.integration.installation_and_upgrade.test_create_filesystem \
-    import TestCreateFilesystem
+from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
 
 
-class TestYumUpdate(TestCreateFilesystem):
-    def test_create(self):
-        """ Test that a filesystem can be created"""
-
-        self.assertGreaterEqual(len(config['lustre_servers']), 4)
-
-        self.hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address'],
-            config['lustre_servers'][2]['address'],
-            config['lustre_servers'][3]['address']
-        ])
-
-        volumes = self.wait_for_shared_volumes(4, 4)
-
-        mgt_volume = volumes[0]
-        mdt_volume = volumes[1]
-        ost1_volume = volumes[2]
-        ost2_volume = volumes[3]
-        self.set_volume_mounts(mgt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
-        self.set_volume_mounts(mdt_volume, self.hosts[1]['id'], self.hosts[0]['id'])
-        self.set_volume_mounts(ost1_volume, self.hosts[2]['id'], self.hosts[3]['id'])
-        self.set_volume_mounts(ost2_volume, self.hosts[3]['id'], self.hosts[2]['id'])
-
-        # By providing mdts and mdt we can cope with 2.2 and 2.3. 2.2 required a single mdt, 2.3 required mdts.
-        self.filesystem_id = self.create_filesystem({
-            'name': self.fs_name,
-            'mgt': {'volume_id': mgt_volume['id']},
-            'mdt': {
-                'volume_id': mdt_volume['id'],
-                'conf_params': {}
-            },
-            'mdts': [{
-                'volume_id': mdt_volume['id'],
-                'conf_params': {}
-
-            }],
-            'osts': [{
-                'volume_id': ost1_volume['id'],
-                'conf_params': {}
-            }, {
-                'volume_id': ost2_volume['id'],
-                'conf_params': {}
-            }],
-            'conf_params': {}
-        })
-
-        self._exercise_simple(self.filesystem_id)
-
-        self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
-
+class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
         """ Test for lustre kernel is set to boot after yum update"""
 

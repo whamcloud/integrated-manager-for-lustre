@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
-import datetime
+from django.db import DatabaseError
 from south.db import db
 from south.v2 import SchemaMigration
-from django.db import models
+
+import json
+from collections import namedtuple
+
+from chroma_core.models import AlertState
+
+EventRecord = namedtuple('EventRecord', ['id', 'created_at', 'severity', 'host_id' , 'content_type_id'])
+FieldInfo = namedtuple('FieldInfo', ['name', 'type_'])
 
 
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        db.start_transaction()
+
         # Adding field 'AlertStateBase.record_type'
         db.add_column('chroma_core_alertstate', 'record_type',
                       self.gf('django.db.models.fields.CharField')(default='', max_length=128),
@@ -29,30 +38,186 @@ class Migration(SchemaMigration):
                       self.gf('django.db.models.fields.IntegerField')(null=True),
                       keep_default=False)
 
-        db.delete_table('chroma_core_corosyncnopeersalert')
-        db.delete_table('chroma_core_corosyncstoppedalert')
-        db.delete_table('chroma_core_corosynctomanypeersalert')
-        db.delete_table('chroma_core_corosyncunknownpeersalert')
-        db.delete_table('chroma_core_hostcontactalert')
-        db.delete_table('chroma_core_hostofflinealert')
-        db.delete_table('chroma_core_ipmibmcunavailablealert')
-        db.delete_table('chroma_core_lnetnidschangedalert')
-        db.delete_table('chroma_core_lnetofflinealert')
-        db.delete_table('chroma_core_pacemakerstoppedalert')
-        db.delete_table('chroma_core_powercontroldeviceunavailablealert')
-        db.delete_table('chroma_core_storageresourcealert')
-        db.delete_table('chroma_core_targetfailoveralert')
-        db.delete_table('chroma_core_targetofflinealert')
-        db.delete_table('chroma_core_targetrecoveryalert')
-        db.delete_table('chroma_core_updatesavailablealert')
-        db.delete_table('chroma_core_storageresourcelearnevent')
-        db.delete_table('chroma_core_alertevent')
-        db.delete_table('chroma_core_clientconnectevent')
-        db.delete_table('chroma_core_event')
-        db.delete_table('chroma_core_hostrebootevent')
-        db.delete_table('chroma_core_learnevent')
-        db.delete_table('chroma_core_syslogevent')
+        db.delete_column('chroma_core_alertstate',
+                         'content_type_id')
 
+        db.commit_transaction()
+
+        def migrate_alert(alert_name, fields_info, source_is_alert_table):
+            """Alerts have been collapsed into a single table. The additional variables required for some old tables
+            are now stored as json. This routine takes those additional variables from the child tables and turns
+            them into the json.
+
+            Additionally the events have disappeared and been rolled into the single event table.
+
+            This function first of all rolls events into alerts and then for any existing alerts/events with
+            additional variables (fields_info) converts the fixed field into json fields.
+            """
+
+            assert type(alert_name) is str
+            assert type(fields_info) is list
+            assert type(source_is_alert_table) is bool
+            for field_info in fields_info:
+                assert type(field_info) is FieldInfo
+
+            table_name = 'chroma_core_' + alert_name.lower()
+
+            alert_ids = []
+            event_ids = []
+
+
+            if source_is_alert_table:
+                # Fetch and unpack the records for any alerts of this type.
+                alert_ids = db.execute("select alertstate_ptr_id from %s" % table_name)
+                alert_ids = [alert_id[0] for alert_id in alert_ids]
+            else:
+                # Fetch and unpack the records for any events of this type.
+                event_ids = db.execute("select event_ptr_id from %s" % table_name)
+                event_ids = [event_id[0] for event_id in event_ids]
+
+            event_alert_ids={}
+
+            # If we have event records then these need to be converted to alert records.
+            for event_id in event_ids:
+                # All alert_items for events are hosts.
+                host_content_type_id = db.execute("select id from django_content_type where model='managedhost'")[0][0]
+
+                event_record = db.execute('select id,created_at,severity,host_id,content_type_id '
+                                          'from chroma_core_event where id=%s' % event_id)[0]
+
+                event_record = EventRecord(*event_record)
+
+                db.execute('insert into chroma_core_alertstate '
+                           '(begin, "end", severity, alert_type, alert_item_id, alert_item_type_id, variant, record_type)'
+                           'values (%s, %s, %s, %s, %s, %s, %s, %s)' %
+                           ("'%s'" % event_record.created_at,
+                            "'%s'" % event_record.created_at,
+                            event_record.severity,
+                            "'%s'" % alert_name,
+                            event_record.host_id,
+                            host_content_type_id,
+                            "''",
+                            "''"))
+
+                alert_record_id = db.execute("SELECT currval('chroma_core_alertstate_id_seq')")[0][0]
+
+                event_alert_ids[alert_record_id] = event_id
+                alert_ids.append(alert_record_id)
+
+            # If we have records and variants
+            if len(alert_ids) > 0 and len(fields_info) > 0:
+                # Validate we have the correct number of variants. It should match the number
+                # of fields in the old table + the id.
+                if source_is_alert_table:
+                    record = db.execute("select * from %s where alertstate_ptr_id = %s" % (table_name,
+                                                                                           alert_ids[0]))[0]
+                else:
+                    record = db.execute("select * from %s where event_ptr_id = %s" % (table_name,
+                                                                                      event_alert_ids[alert_ids[0]]))[0]
+                assert len(record) == len(fields_info) + 1, "Variant definitions doesn't match old table field count"
+
+                # Now convert each row
+                for alert_id in alert_ids:
+                    variant = {}
+
+                    if source_is_alert_table:
+                        record = db.execute("select %s from %s where alertstate_ptr_id = %s" %
+                                            (','.join([field_info.name for field_info in fields_info]),
+                                             table_name,
+                                             alert_id))[0]
+                    else:
+                        record = db.execute("select %s from %s where event_ptr_id = %s" %
+                                            (','.join([field_info.name for field_info in fields_info]),
+                                             table_name,
+                                             event_alert_ids[alert_id]))[0]
+
+                    for index, field_info in enumerate(fields_info):
+                        variant[field_info.name] = field_info.type_(record[index])
+
+                    AlertState.objects.filter(id=alert_id).update(variant=json.dumps(variant))
+
+            db.delete_table(table_name, 'unused_%s' % table_name)
+
+            # Finally set the record_type to be the alert_type
+            db.execute("update chroma_core_alertstate set record_type=alert_type where alert_type='%s'" % alert_name)
+
+        alert_record_count = db.execute('select count(*) from chroma_core_alertstate')[0][0]
+        event_record_count = db.execute('select count(*) from chroma_core_event')[0][0]
+
+        migrate_alert('CorosyncNoPeersAlert', [], True)
+        migrate_alert('CorosyncStoppedAlert', [], True)
+        migrate_alert('CorosyncToManyPeersAlert', [], True)
+        migrate_alert('CorosyncUnknownPeersAlert', [], True)
+        migrate_alert('HostContactAlert', [], True)
+        migrate_alert('HostOfflineAlert', [], True)
+        migrate_alert('IpmiBmcUnavailableAlert', [], True)
+        migrate_alert('LNetNidsChangedAlert', [], True)
+        migrate_alert('LNetOfflineAlert', [], True)
+        migrate_alert('PacemakerStoppedAlert', [], True)
+        migrate_alert('PowerControlDeviceUnavailableAlert', [], True)
+        migrate_alert('StorageResourceAlert',
+                      [FieldInfo('alert_class', str),
+                       FieldInfo('attribute', str)],
+                      True)
+        migrate_alert('TargetFailoverAlert', [], True)
+        migrate_alert('TargetOfflineAlert', [], True)
+        migrate_alert('TargetRecoveryAlert', [], True)
+        migrate_alert('UpdatesAvailableAlert', [], True)
+        migrate_alert('StorageResourceLearnEvent',
+                      [FieldInfo('storage_resource_id', int)],
+                      False)
+        migrate_alert('AlertEvent',
+                      [FieldInfo('message_str', str),
+                       FieldInfo('alert_id', int)],
+                      False)
+        migrate_alert('HostRebootEvent',
+                      [FieldInfo('boot_time', str)],
+                      False),
+        migrate_alert('LearnEvent',
+                      [FieldInfo('learned_item_id', int),
+                       FieldInfo('content_id', int)],
+                      False)
+
+        # This last two are special because they have the additional fixed field of lustre_pid that needs copying.
+        for table in ['chroma_core_clientconnectevent', 'chroma_core_syslogevent']:
+            db.execute('update chroma_core_alertstate '
+                       'set lustre_pid = %s.lustre_pid '
+                       'from %s '
+                       'where id = %s.event_ptr_id' %
+                       (table, table, table))
+
+        migrate_alert('ClientConnectEvent',
+                      [FieldInfo('message_str', str)],
+                      False,)
+        migrate_alert('SyslogEvent', [], False)
+
+        # event no longer exists so we can delete this.
+        db.rename_table('chroma_core_event', 'unused_chroma_core_event')
+
+        # Check all the records where converted
+        new_alert_record__count = db.execute('select count(*) from chroma_core_alertstate')[0][0]
+
+        assert (alert_record_count + event_record_count) == new_alert_record__count, "Not all records converted %s != %s" % \
+                                                                                      ((alert_record_count + event_record_count),
+                                                                                       new_alert_record__count)
+
+
+        # LNetOfflineAlert used to take the host as the affected item, but now it is the lnet configuration so this needs
+        # to be fixed up.
+        lnet_configuration_content_type_id = db.execute("select id from django_content_type where model='lnetconfiguration'")[0][0]
+
+        lnet_offline_alert_ids = db.execute("select id from chroma_core_alertstate where alert_type='LNetOfflineAlert'")
+        lnet_offline_alert_ids = [lnet_offline_alert_id[0] for lnet_offline_alert_id in lnet_offline_alert_ids]
+
+        for lnet_offline_alert_id in lnet_offline_alert_ids:
+            host_id = db.execute("select alert_item_id from chroma_core_alertstate where id=%s" % lnet_offline_alert_id)[0][0]
+            lnet_configuration_id = db.execute("select id from chroma_core_lnetconfiguration where host_id=%s" % host_id)[0][0]
+
+            db.execute('update chroma_core_alertstate set '
+                       'alert_item_id=%s, '
+                       'alert_item_type_id=%s '
+                       'where id = %s' %
+                       (lnet_configuration_id, lnet_configuration_content_type_id, lnet_offline_alert_id))
 
     def backwards(self, orm):
         raise RuntimeError("Cannot reverse this migration.")
@@ -265,7 +430,7 @@ class Migration(SchemaMigration):
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.configurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -277,7 +442,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.configurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})
@@ -1368,7 +1533,7 @@ class Migration(SchemaMigration):
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.unconfigurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -1380,7 +1545,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.unconfigurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})

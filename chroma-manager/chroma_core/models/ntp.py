@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -55,7 +55,7 @@ class NTPConfiguration(DeletableStatefulObject):
     }
 
 
-class ConfigureNtpStep(Step):
+class ConfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
@@ -67,7 +67,7 @@ class ConfigureNtpStep(Step):
         self.invoke_agent_expect_result(kwargs['ntp_configuration'].host, "configure_ntp", {'ntp_server': ntp_server})
 
 
-class ConfigureNtpJob(StateChangeJob):
+class ConfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'unconfigured', 'configured')
     stateful_object = 'ntp_configuration'
     ntp_configuration = models.ForeignKey(NTPConfiguration)
@@ -88,7 +88,7 @@ class ConfigureNtpJob(StateChangeJob):
         return "Configure NTP on %s" % self.ntp_configuration.host
 
     def get_steps(self):
-        return [(ConfigureNtpStep, {'ntp_configuration': self.ntp_configuration})]
+        return [(ConfigureNTPStep, {'ntp_configuration': self.ntp_configuration})]
 
     def get_deps(self):
         '''
@@ -104,14 +104,14 @@ class ConfigureNtpJob(StateChangeJob):
             return DependAll()
 
 
-class UnconfigureNtpStep(Step):
+class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         self.invoke_agent_expect_result(kwargs['ntp_configuration'].host, "unconfigure_ntp")
 
 
-class UnconfigureNtpJob(StateChangeJob):
+class UnconfigureNTPJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'configured', 'unconfigured')
     stateful_object = 'ntp_configuration'
     ntp_configuration = models.ForeignKey(NTPConfiguration)
@@ -132,4 +132,4 @@ class UnconfigureNtpJob(StateChangeJob):
         return "Unconfigure Ntp on %s" % self.ntp_configuration.host
 
     def get_steps(self):
-        return [(UnconfigureNtpStep, {'ntp_configuration': self.ntp_configuration})]
+        return [(UnconfigureNTPStep, {'ntp_configuration': self.ntp_configuration})]

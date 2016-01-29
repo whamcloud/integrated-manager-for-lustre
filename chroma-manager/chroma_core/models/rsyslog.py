@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -51,14 +51,14 @@ class RSyslogConfiguration(DeletableStatefulObject):
     }
 
 
-class ConfigureRSyslogStep(Step):
+class ConfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         self.invoke_agent_expect_result(kwargs['rsyslog_configuration'].host, 'configure_rsyslog')
 
 
-class ConfigureRSyslogJob(StateChangeJob):
+class ConfigureRsyslogJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(RSyslogConfiguration, 'unconfigured', 'configured')
     stateful_object = 'rsyslog_configuration'
     rsyslog_configuration = models.ForeignKey(RSyslogConfiguration)
@@ -79,7 +79,7 @@ class ConfigureRSyslogJob(StateChangeJob):
         return "Configure RSyslog on %s" % self.rsyslog_configuration.host
 
     def get_steps(self):
-        return [(ConfigureRSyslogStep, {'rsyslog_configuration': self.rsyslog_configuration})]
+        return [(ConfigureRsyslogStep, {'rsyslog_configuration': self.rsyslog_configuration})]
 
     def get_deps(self):
         '''
@@ -95,14 +95,14 @@ class ConfigureRSyslogJob(StateChangeJob):
             return DependAll()
 
 
-class UnconfigureRSyslogStep(Step):
+class UnconfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         self.invoke_agent_expect_result(kwargs['rsyslog_configuration'].host, "unconfigure_rsyslog")
 
 
-class UnconfigureRSyslogJob(StateChangeJob):
+class UnconfigureRsyslogJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(RSyslogConfiguration, 'configured', 'unconfigured')
     stateful_object = 'rsyslog_configuration'
     rsyslog_configuration = models.ForeignKey(RSyslogConfiguration)
@@ -123,4 +123,4 @@ class UnconfigureRSyslogJob(StateChangeJob):
         return "Unconfigure RSyslog on %s" % self.rsyslog_configuration.host
 
     def get_steps(self):
-        return [(UnconfigureRSyslogStep, {'rsyslog_configuration': self.rsyslog_configuration})]
+        return [(UnconfigureRsyslogStep, {'rsyslog_configuration': self.rsyslog_configuration})]

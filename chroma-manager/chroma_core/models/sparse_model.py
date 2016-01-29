@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -140,30 +140,22 @@ class SparseModel(models.Model):
         super(SparseModel, self).__init__(*args, **kwargs)
 
     def get_variant(self, name, default, type_):
-        try:
-            assert isinstance(name, str)
-            assert isinstance(type_, type)
-            assert isinstance(default, type_)
-        except:
-            pass
+        assert isinstance(name, str)
+        assert isinstance(type_, type)
+        assert default is None or isinstance(default, type_)
 
         value = json.loads(self.variant).get(name, default)
-        try:
-            value = type_(value)
-        except:
-            pass
+
+        value = type_(value)
+
         return value
 
     def set_variant(self, name, type_, value):
-        try:
-            assert isinstance(name, str)
-            assert isinstance(type_, type)
-        except:
-            pass
-        try:
-            value = type_(value)
-        except:
-            pass
+        assert isinstance(name, str)
+        assert isinstance(type_, type)
+
+        value = type_(value)
+
         new_variant = json.loads(self.variant)
         new_variant[name] = value
         self.variant = json.dumps(new_variant)

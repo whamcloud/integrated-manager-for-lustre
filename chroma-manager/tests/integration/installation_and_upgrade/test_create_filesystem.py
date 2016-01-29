@@ -1,27 +1,10 @@
 
 
 from testconfig import config
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
+from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
 
 
-class TestCreateFilesystem(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:4]
-    fs_name = "testfs"
-
-    def setUp(self):
-        # connect the remote operations but otherwise...
-        if config.get('simulator', False):
-            self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
-        else:
-            self.remote_operations = RealRemoteOperations(self)
-
-        # Enable agent debugging
-        self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
-
-        self.wait_until_true(self.supervisor_controlled_processes_running)
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
-
+class TestCreateFilesystem(TestInstallationAndUpgrade):
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         # Override add hosts functionality for older APIs
 

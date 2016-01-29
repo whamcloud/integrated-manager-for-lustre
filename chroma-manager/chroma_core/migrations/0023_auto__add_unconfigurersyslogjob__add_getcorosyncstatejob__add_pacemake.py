@@ -8,13 +8,13 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'UnconfigureRSyslogJob'
+        # Adding model 'UnconfigureRsyslogJob'
         db.create_table('chroma_core_unconfigurersyslogjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('rsyslog_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.RSyslogConfiguration'])),
         ))
-        db.send_create_signal('chroma_core', ['UnconfigureRSyslogJob'])
+        db.send_create_signal('chroma_core', ['UnconfigureRsyslogJob'])
 
         # Adding model 'GetCorosyncStateJob'
         db.create_table('chroma_core_getcorosyncstatejob', (
@@ -36,13 +36,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['GetPacemakerStateJob'])
 
-        # Adding model 'UnconfigureNtpJob'
+        # Adding model 'UnconfigureNTPJob'
         db.create_table('chroma_core_unconfigurentpjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('ntp_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.NTPConfiguration'])),
         ))
-        db.send_create_signal('chroma_core', ['UnconfigureNtpJob'])
+        db.send_create_signal('chroma_core', ['UnconfigureNTPJob'])
 
         # Adding model 'UnconfigurePacemakerJob'
         db.create_table('chroma_core_unconfigurepacemakerjob', (
@@ -74,13 +74,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['SetupWorkerJob'])
 
-        # Adding model 'ConfigureRSyslogJob'
+        # Adding model 'ConfigureRsyslogJob'
         db.create_table('chroma_core_configurersyslogjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('rsyslog_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.RSyslogConfiguration'])),
         ))
-        db.send_create_signal('chroma_core', ['ConfigureRSyslogJob'])
+        db.send_create_signal('chroma_core', ['ConfigureRsyslogJob'])
 
         # Adding model 'PacemakerConfiguration'
         db.create_table('chroma_core_pacemakerconfiguration', (
@@ -160,13 +160,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['CorosyncToManyPeersAlert'])
 
-        # Adding model 'ConfigureNtpJob'
+        # Adding model 'ConfigureNTPJob'
         db.create_table('chroma_core_configurentpjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('ntp_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.NTPConfiguration'])),
         ))
-        db.send_create_signal('chroma_core', ['ConfigureNtpJob'])
+        db.send_create_signal('chroma_core', ['ConfigureNTPJob'])
 
         # Adding model 'StopPacemakerJob'
         db.create_table('chroma_core_stoppacemakerjob', (
@@ -255,7 +255,7 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
-        # Deleting model 'UnconfigureRSyslogJob'
+        # Deleting model 'UnconfigureRsyslogJob'
         db.delete_table('chroma_core_unconfigurersyslogjob')
 
         # Deleting model 'GetCorosyncStateJob'
@@ -267,7 +267,7 @@ class Migration(SchemaMigration):
         # Deleting model 'GetPacemakerStateJob'
         db.delete_table('chroma_core_getpacemakerstatejob')
 
-        # Deleting model 'UnconfigureNtpJob'
+        # Deleting model 'UnconfigureNTPJob'
         db.delete_table('chroma_core_unconfigurentpjob')
 
         # Deleting model 'UnconfigurePacemakerJob'
@@ -282,7 +282,7 @@ class Migration(SchemaMigration):
         # Deleting model 'SetupWorkerJob'
         db.delete_table('chroma_core_setupworkerjob')
 
-        # Deleting model 'ConfigureRSyslogJob'
+        # Deleting model 'ConfigureRsyslogJob'
         db.delete_table('chroma_core_configurersyslogjob')
 
         # Deleting model 'PacemakerConfiguration'
@@ -312,7 +312,7 @@ class Migration(SchemaMigration):
         # Deleting model 'CorosyncToManyPeersAlert'
         db.delete_table('chroma_core_corosynctomanypeersalert')
 
-        # Deleting model 'ConfigureNtpJob'
+        # Deleting model 'ConfigureNTPJob'
         db.delete_table('chroma_core_configurentpjob')
 
         # Deleting model 'StopPacemakerJob'
@@ -467,7 +467,7 @@ class Migration(SchemaMigration):
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.configurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -479,7 +479,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.configurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})
@@ -1375,7 +1375,7 @@ class Migration(SchemaMigration):
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.unconfigurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -1387,7 +1387,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.unconfigurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})

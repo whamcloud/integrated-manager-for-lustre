@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -49,7 +49,8 @@ from chroma_core.models import ManagedHost
 from chroma_core.models import ManagedMdt
 from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
-from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult
+from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
+from chroma_core.models import StepResult
 from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool

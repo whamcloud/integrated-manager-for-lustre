@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -267,6 +267,11 @@ class BaseStorageResource(object):
                 attr = self._meta.storage_attributes[key]
                 if attr.optional:
                     return None
+                elif attr.default is not None:
+                    if callable(attr.default):
+                        return attr.default(self._storage_dict)
+                    else:
+                        return attr.default
                 else:
                     log.error("Missing attribute %s, %s" % (key, self._storage_dict))
                     raise AttributeError("attribute %s not found" % key)
