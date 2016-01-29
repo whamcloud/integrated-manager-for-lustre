@@ -77,8 +77,7 @@ def stop_pacemaker():
 
 
 def enable_pacemaker():
-    return agent_ok_or_error(pacemaker_service.add() or
-                             pacemaker_service.enable())
+    return agent_ok_or_error(pacemaker_service.enable())
 
 
 def configure_pacemaker():

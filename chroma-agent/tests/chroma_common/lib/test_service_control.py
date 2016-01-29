@@ -118,17 +118,18 @@ class TestServiceStateEL6(CommandCaptureTestCase):
 
     # Test that the expected outcome is correct when enabling the service
     def test_service_enable_success(self):
-        self.add_commands(CommandCaptureCommand(('/sbin/chkconfig', 'test_service', 'on'),
+        self.add_commands(CommandCaptureCommand(('/sbin/chkconfig', '--add', 'test_service'),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('/sbin/chkconfig', 'test_service', 'on'),
                                                 executions_remaining=1),
                           CommandCaptureCommand(('/sbin/chkconfig', 'test_service'),
-                                                rc=0, executions_remaining=1))
+                                                executions_remaining=1))
 
         response = self.test_service.enable()
         self.assertEqual(response, None)
 
         response = self.test_service.enabled
         self.assertEqual(response, True)
-        self.assertEqual(self.commands_ran_count, 2)
         self.assertRanAllCommandsInOrder()
 
     # Test that the expected outcome is correct when disabling the service
@@ -143,7 +144,6 @@ class TestServiceStateEL6(CommandCaptureTestCase):
 
         response = self.test_service.enabled
         self.assertEqual(response, False)
-        self.assertEqual(self.commands_ran_count, 2)
         self.assertRanAllCommandsInOrder()
 
     # example callback function

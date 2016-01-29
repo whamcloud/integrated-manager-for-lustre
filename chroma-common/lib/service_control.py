@@ -209,11 +209,9 @@ class ServiceControlEL6(ServiceControl):
         return (platform.system() == 'Linux') and \
                (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
 
-    def add(self):
-        return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name])
-
     def enable(self):
-        return AgentShell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'on'])
+        return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name]) or\
+               AgentShell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'on'])
 
     def reload(self):
         return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'reload'])
@@ -246,9 +244,6 @@ class ServiceControlEL7(ServiceControl):
     def _applicable(cls):
         return (platform.system() == 'Linux') and \
                (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
-
-    def add(self):
-        pass
 
     def enable(self):
         return AgentShell.run_canned_error_message(['systemctl', 'enable', self.service_name])

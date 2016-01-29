@@ -206,7 +206,9 @@ num  target     prot opt source               destination
                                                  'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
                           CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
                           CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
+                          CommandCaptureCommand(('/sbin/chkconfig', '--add', 'corosync')),
                           CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
+                          CommandCaptureCommand(('/sbin/chkconfig', '--add', 'pcsd')),
                           CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
                           CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "lustre"])))
 

@@ -229,8 +229,7 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-        # checking services have been enabled will be validated in self.validate()
-        ntp_service.add()
+        ntp_service.enable()
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
@@ -291,11 +290,6 @@ class ServiceConfig(CommandLine):
         log.info("Enabling daemons")
         for service in self.CONTROLLED_SERVICES:
             controller = ServiceControl.create(service)
-
-            error = controller.add()
-            if error:
-                log.error(error)
-                raise RuntimeError(error)
 
             error = controller.enable()
             if error:
