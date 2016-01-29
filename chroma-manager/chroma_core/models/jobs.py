@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # INTEL CONFIDENTIAL
 #
@@ -26,7 +27,6 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import now
 
-from picklefield.fields import PickledObjectField
 from polymorphic.models import DowncastMetaclass
 from chroma_core.models.utils import DeletableDowncastableMetaclass
 
@@ -466,43 +466,6 @@ class Job(models.Model):
             return "%s (Job %s)" % (self.description(), id)
         except NotImplementedError:
             return "<Job %s>" % id
-
-
-class StepResult(models.Model):
-    job = models.ForeignKey(Job)
-    step_klass = PickledObjectField()
-    args = PickledObjectField(help_text = 'Dictionary of arguments to this step')
-
-    step_index = models.IntegerField(help_text = "Zero-based index of this step within the steps of\
-            a job.  If a step is retried, then two steps can have the same index for the same job.")
-    step_count = models.IntegerField(help_text = "Number of steps in this job")
-
-    log = models.TextField(help_text = "Human readable summary of progress during execution.")
-
-    console = models.TextField(help_text = "Combined standard out and standard error from all\
-            subprocesses run while completing this step.  This includes output from successful\
-            as well as unsuccessful commands, and may be very verbose.")
-    backtrace = models.TextField(help_text = "Backtrace of an exception, if one occurred")
-
-    # FIXME: we should have a 'cancelled' state for when a step is running while its job is cancelled
-    state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
-
-    modified_at = models.DateTimeField(auto_now = True)
-    created_at = models.DateTimeField(auto_now_add = True)
-
-    result = models.TextField(null = True,
-                              help_text = "Arbitrary result data.")
-
-    def step_klass_name(self):
-        """Template helper"""
-        return self.step_klass.__name__
-
-    def describe(self):
-        return self.step_klass.describe(self.args)
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
 
 
 class StateChangeJob(Job):

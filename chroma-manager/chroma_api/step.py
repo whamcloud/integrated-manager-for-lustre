@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.models.jobs import StepResult
+from chroma_core.models.step_result import StepResult
 from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
@@ -58,7 +58,7 @@ class StepResource(ModelResource):
     class_name = fields.CharField(help_text = "Name of the class representing this step")
 
     def dehydrate_class_name(self, bundle):
-        return bundle.obj.step_klass_name()
+        return bundle.obj.step_class.__name__
 
     args = fields.DictField()
 

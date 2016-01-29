@@ -306,7 +306,7 @@ class Migration(SchemaMigration):
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.configurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -318,7 +318,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.configurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})
@@ -1432,7 +1432,7 @@ class Migration(SchemaMigration):
             'target_object': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"})
         },
         'chroma_core.unconfigurentpjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNtpJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureNTPJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'ntp_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.NTPConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
@@ -1444,7 +1444,7 @@ class Migration(SchemaMigration):
             'pacemaker_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.PacemakerConfiguration']"})
         },
         'chroma_core.unconfigurersyslogjob': {
-            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRSyslogJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnconfigureRsyslogJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'rsyslog_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.RSyslogConfiguration']"})

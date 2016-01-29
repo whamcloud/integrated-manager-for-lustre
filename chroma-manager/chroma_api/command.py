@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -36,7 +36,8 @@ from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
 
 from chroma_core.models import Command
-from chroma_core.models.jobs import SchedulingError, StepResult
+from chroma_core.models import SchedulingError
+from chroma_core.models import StepResult
 from long_polling_api import LongPollingAPI
 
 

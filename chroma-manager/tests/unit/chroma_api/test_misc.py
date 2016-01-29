@@ -7,7 +7,8 @@ from chroma_core.models import VolumeNode
 from chroma_core.models import ForceRemoveHostJob
 from chroma_core.models import StopLNetJob
 from chroma_core.models import HostOfflineAlert
-from chroma_core.models import Command, StepResult
+from chroma_core.models import Command
+from chroma_core.models import StepResult
 from chroma_core.models import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import synthetic_host

@@ -28,7 +28,7 @@ UPGRADE_INSTALL_DIR=upgrade_install
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-TESTS=${TESTS:-"tests/integration/installation_and_upgrade/"}
+TESTS_DIR="tests/integration/installation_and_upgrade/"
 
 trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"" EXIT
 
@@ -98,10 +98,13 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 
 echo "Create and exercise a filesystem..."
 
+TESTS="$TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
+       $TESTS_DIR/test_create_filesystem.py:TestCreateFilesystem.test_create"
+
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS/../shared_storage_configuration/test_cluster_setup.py $TESTS/test_update_with_yum.py:TestYumUpdate.test_create"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS"
 
 echo "Now upgrade IML..."
 
@@ -210,10 +213,15 @@ echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
+TESTS="$TESTS_DIR/test_data_consistancy.py \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_no_retired_repos \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
+       $TESTS_DIR/test_create_filesystem.py:TestExistsFilesystem.test_exists"
+
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS/test_update_with_yum.py:TestYumUpdate.test_no_retired_repos $TESTS/test_update_with_yum.py:TestYumUpdate.test_yum_update $TESTS/test_create_filesystem.py:TestExistsFilesystem.test_exists"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS"
 
 # test that removing the chroma-manager RPM removes /var/lib/chroma
 ssh root@$CHROMA_MANAGER "set -xe

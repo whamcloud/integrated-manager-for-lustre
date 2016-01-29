@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -52,7 +52,7 @@ class HostNetworkInterface(resources.NetworkInterface):
 
     name = attributes.String()
     inet4_address = attributes.String()
-    inet4_prefix = attributes.Integer()
+    inet4_prefix = attributes.Integer(default=0)
     type = attributes.String()
     up = attributes.Boolean()
 
@@ -68,7 +68,7 @@ class Nid(resources.LNETInterface):
     name = attributes.String()                  # This is only used to scope it.
     host_id = attributes.Integer()              # Need so we uniquely identify it.
     lnd_network = attributes.Integer()
-    lnd_type = attributes.String()
+    lnd_type = attributes.String(default=lambda storage_dict: 'o2ib' if storage_dict['lnd_network'] == 'o2ib' else 'tcp')
 
 
 class LNetState(resources.LNETModules):
