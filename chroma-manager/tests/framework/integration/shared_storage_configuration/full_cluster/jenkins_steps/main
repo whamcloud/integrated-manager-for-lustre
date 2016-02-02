@@ -6,7 +6,8 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
 # Gather logs from nodes and release the cluster at exit
@@ -78,6 +79,8 @@ echo "Automated test run complete."
 # Combine coverage reports from the different nodes.
 if $MEASURE_COVERAGE; then
   ls .coverage*
+  # https://github.com/pypa/virtualenv/issues/355
+  python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
   echo "
 [paths]
 source1 =
@@ -85,7 +88,7 @@ source1 =
     /usr/share/chroma-manager/
 source2 =
     $WORKSPACE/chroma/chroma-agent/chroma_agent/
-    /usr/lib/python2.6/site-packages/chroma_agent/
+    /usr/lib/python$python_version/site-packages/chroma_agent/
 
 [report]
 include =

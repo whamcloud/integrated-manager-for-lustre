@@ -20,7 +20,7 @@ set -ex
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets npm patch
 # don't need EPEL any more
-yum-config-manager --disable addon-epel6-x86_64
+yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -116,7 +116,9 @@ data_file = /var/tmp/.coverage
 parallel = True
 source = /home/chromatest/chroma_test_env/chroma
 EOC
-  cat <<EOC  > /home/chromatest/chroma_test_env/lib/python2.6/site-packages/sitecustomize.py
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
+  cat <<EOC  > /home/chromatest/chroma_test_env/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
 cov = coverage.coverage(config_file='/home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc', auto_data=True)
 cov.start()

@@ -21,8 +21,15 @@ cd $WORKSPACE/chroma_unit_test_env/chroma/chroma-manager
 make requirements
 python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
+#
 # patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff
-pushd $WORKSPACE/chroma_unit_test_env/lib/python2.6/site-packages
+#
+# you'd think that site.getsitepackages() was the right way to do this,
+# right?  well, you'd be correct except that life in a virtualenv is not
+# quite like life outside of it.
+# https://github.com/pypa/virtualenv/issues/355
+python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
+pushd $WORKSPACE/chroma_unit_test_env/lib/python$python_version/site-packages
 patch -R -p1 <<"EOF" || true
 diff --git a/behave/model.py b/behave/model.py
 index 1183e1b..371c8dd 100644

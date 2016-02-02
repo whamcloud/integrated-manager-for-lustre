@@ -7,7 +7,8 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -k -O -u $JENKINS_USER:********* \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
+curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
 # Release the provisioned cluster (at exit of this script)
@@ -35,7 +36,7 @@ done
 popd
 
 # Disable EPEL
-yum-config-manager --disable EPEL-6-x86_64" | dshbak -c
+yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -100,6 +101,8 @@ echo "Automated efs run complete."
 # Combine coverage reports from the different nodes.
 if $MEASURE_COVERAGE; then
   ls .coverage*
+  # https://github.com/pypa/virtualenv/issues/355
+  python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
   echo "
 [paths]
 source1 =
@@ -107,7 +110,7 @@ source1 =
     /usr/share/chroma-manager/
 source2 =
     $WORKSPACE/chroma/chroma-agent/chroma_agent/
-    /usr/lib/python2.6/site-packages/chroma_agent/
+    /usr/lib/python$python_version/site-packages/chroma_agent/
 
 [report]
 include =

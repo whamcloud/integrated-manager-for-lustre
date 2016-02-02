@@ -78,7 +78,9 @@ EOF1"
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 # Ensure that coverage is disabled
-rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 
 if $USE_FENCE_XVM; then
     # fence_xvm support

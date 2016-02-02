@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [[ $slave = rhel6\&\&* ]]; then
+if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
     RHEL=true
 else
     RHEL=false
@@ -35,7 +35,9 @@ trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
 # Ensure that coverage is disabled
-rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 
 if $USE_FENCE_XVM; then
     # fence_xvm support
@@ -52,10 +54,17 @@ fi
 # first fetch and install chroma 2.4.1.2
 BUILD_JOB=chroma-blessed
 BUILD_NUM=125
+set +x
+echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
+++ sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
 IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+set -x
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
+set +x
+echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE\""
 curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE"
+set -x
 
 # Install and setup old chroma manager
 scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
@@ -179,7 +188,7 @@ echo \"Now with EPEL configured\"
 cat <<EOF > /etc/yum.repos.d/epel.repo
 [epel]
 name=epel
-baseurl=http://${COBBLER_SERVER:-10.14.80.6}/cobbler/repo_mirror/EPEL-6-x86_64/
+baseurl=http://${COBBLER_SERVER:-10.14.80.10}/cobbler/repo_mirror/addon-epel\$(rpm --eval %rhel)-x86_64/
 enabled=1
 priority=1
 gpgcheck=0
@@ -196,11 +205,11 @@ rm -f /etc/yum.repos.d/epel.repo
 
 if $RHEL; then
     release=\$(lsb_release -sr || sed -n -e '1s/.* release \(.*\) .*/\1/p' /etc/issue)
-    yum-config-manager --disable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
+    yum-config-manager --disable  rhel-\$(rpm --eval %rhel)-server-optional-rpms,RHEL-\$release-optional-x86_64
     # let's also remove any local RH optional repo
-    if grep \"RHEL-6\.[0-9]-optional-x86_64\" /etc/yum.repos.d/cobbler-config.repo; then
+    if grep \"RHEL-\$(rpm --eval %rhel)\.[0-9]-optional-x86_64\" /etc/yum.repos.d/cobbler-config.repo; then
         ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
-/\[RHEL-6\.[0-9]-optional-x86_64\]/;/^$/d
+/\[RHEL-\$(rpm --eval %rhel)\.[0-9]-optional-x86_64\]/;/^$/d
 wq
 EOF
     fi
@@ -232,7 +241,9 @@ $LOCAL_SETTINGS
 EOF1
 
 # Ensure that coverage is disabled
-rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*"
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 
 echo "End upgrade and setup."
 

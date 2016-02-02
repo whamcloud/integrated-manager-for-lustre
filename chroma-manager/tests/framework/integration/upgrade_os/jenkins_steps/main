@@ -67,6 +67,8 @@ echo "Automated test run complete."
 # Combine coverage reports from the different nodes.
 if $MEASURE_COVERAGE; then
   ls .coverage*
+  # https://github.com/pypa/virtualenv/issues/355
+  python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
   echo "
 [paths]
 source1 =
@@ -74,7 +76,7 @@ source1 =
     /usr/share/chroma-manager/
 source2 =
     $WORKSPACE/chroma/chroma-agent/chroma_agent/
-    /usr/lib/python2.6/site-packages/chroma_agent/
+    /usr/lib/python$python_version/site-packages/chroma_agent/
 
 [report]
 include =
