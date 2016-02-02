@@ -295,7 +295,7 @@ def _new_bundles():
             description=meta['description']
         ))
         meta['filename'] = bundle_file
-        bundles[meta['name']] = meta
+        bundles[meta['name'] + "-" + meta['distro']] = meta
 
     return bundles
 
@@ -327,15 +327,15 @@ def _old_bundles():
             version=meta['version'],
             description=meta['description']
         ))
-        bundles[meta['name']] = meta
+        bundles[meta['name'] + "-" + meta.get('distro', 'el6')] = meta
 
     return bundles
 
 def _create_manager_repo():
     manager_repo_dir = tempfile.mkdtemp()
     log.debug("Temporary yum repo at %s" % manager_repo_dir)
-    log.info("Unpacking installation package")
     manager_tarball = glob.glob("el" + platform.dist()[1][0:1] + '/*-manager-*%s' % ARCHIVE_SUFFIX)[0]
+    log.info("Unpacking installation package %s" % manager_tarball)
     _unpack_repo(manager_tarball, manager_repo_dir)
 
     manager_repo_file = tempfile.NamedTemporaryFile(dir="/etc/yum.repos.d/", suffix=".repo", delete=False)

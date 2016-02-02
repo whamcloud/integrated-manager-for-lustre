@@ -587,7 +587,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if config.get('managed'):
             self._fetch_help(lambda: self.remote_operations.clear_ha(self.TEST_SERVERS),
                              ['chris.gearing@intel.com'],
-                             'hard clear ha failure in test class' % self)
+                             'hard clear ha failure in test class %s' % self)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):
