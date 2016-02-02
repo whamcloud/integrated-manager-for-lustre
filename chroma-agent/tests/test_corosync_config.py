@@ -192,8 +192,8 @@ num  target     prot opt source               destination
 """
 
         # add shell commands to be expected
-        self.add_commands(CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
-                          CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
+        self.add_commands(CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
+                          CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
                           CommandCaptureCommand(("bash", "-c", "echo lustre | passwd --stdin hacluster")),
                           CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
                           CommandCaptureCommand(("/sbin/service", "pcsd", "status")),

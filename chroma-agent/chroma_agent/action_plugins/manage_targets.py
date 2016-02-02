@@ -155,6 +155,14 @@ def get_resource_locations():
         # throw away any extra
         # credit it goes to Aric Coady for this little trick
         rsc_id, type, status, host = (line.lstrip().split() + [None])[:4]
+
+        # In later pacemakers a new entry is added for stopped servers
+        # MGS_424f74	(ocf::chroma:Target):	(target-role:Stopped) Stopped
+        # (target-role:Stopped) is new.
+        if host == 'Stopped' and 'Stopped' in status:
+            status = host
+            host = None
+
         locations[rsc_id] = host
 
     return locations

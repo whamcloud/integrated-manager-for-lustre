@@ -43,7 +43,6 @@ firewall_control = FirewallControl.create(logger=console_log)
 talker_thread = None                    # Used to make noise on ring1 to enable corosync detection.
 
 
-
 class RingDetectionError(Exception):
     pass
 
@@ -333,16 +332,11 @@ class CorosyncRingInterface(object):
         console_log.info("Set %s (%s) up" % (self.name, ifaddr))
 
         if self.ipv4_address != ipv4_address:
-            # use replace rather than add to set the address, sets and  address is one isn't
-            # present and replaces it if one is. add fails if an address exists. Bring the link up
-            # to activate address change
-
-            AgentShell.try_run(['/sbin/ip', 'addr', 'add', ifaddr, 'dev', self.name])
             AgentShell.try_run(['/sbin/ip', 'link', 'set', 'dev', self.name, 'up'])
-            self.refresh()
+            AgentShell.try_run(['/sbin/ip', 'addr', 'add', ifaddr, 'dev', self.name])
 
-            # The link address change is asynchronous, so we need to wait for the address to stick of we have
-            # a race condition.
+            # The link address change is asynchronous, so we need to wait for the
+            # address to stick of we have a race condition.
             timeout = 30
             while self.ipv4_address != ipv4_address and timeout != 0:
                 self.refresh()

@@ -24,13 +24,16 @@
 import json
 from chroma_core.services import log_register
 import dateutil.parser
+
 from django.db import transaction
+from django.db.models import Q
 
 from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler import job_scheduler_notify
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
 import chroma_core.models.package
 from chroma_core.services.stats import StatsQueue
@@ -243,7 +246,7 @@ class UpdateScan(object):
                     active_mount = None
                 else:
                     try:
-                        host = ManagedHost.objects.get(nodename = node_name)
+                        host = ManagedHost.objects.get(Q(nodename=node_name) | Q(fqdn=node_name))
                         try:
                             active_mount = ManagedTargetMount.objects.get(target = target, host = host)
                         except ManagedTargetMount.DoesNotExist:

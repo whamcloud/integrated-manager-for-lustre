@@ -23,6 +23,7 @@
 from collections import namedtuple, defaultdict
 from dateutil import parser
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from chroma_core.models import ManagedHost, HostOfflineAlert
@@ -114,19 +115,20 @@ class Service(ChromaService):
                     log.warning("Invalid date or tz string from corosync plugin: %s" % dt)
                     raise
 
-            def is_new(peer_nodename):
-                return (peer_nodename not in self._host_status or
-                        self._host_status[peer_nodename].datetime < dt)
+            def is_new(peer_node_identifier):
+                return (peer_node_identifier not in self._host_status or
+                        self._host_status[peer_node_identifier].datetime < dt)
 
             peers_str = "; ".join(["%s: online=%s, new=%s" %
-                                    (peer_nodename, data['online'], is_new(peer_nodename))
-                                    for peer_nodename, data in nodes.items()])
+                                    (peer_node_identifier, data['online'], is_new(peer_node_identifier))
+                                    for peer_node_identifier, data in nodes.items()])
             log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
             # NB: This will ignore any unknown peers in the report.
-            cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(nodename__in=nodes.keys())
+            cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(Q(nodename__in=nodes.keys()) |
+                                                                                          Q(fqdn__in=nodes.keys()))
 
-            unknown_nodes = set(nodes.keys()) ^ set([h.nodename for h in cluster_nodes])
+            unknown_nodes = set(nodes.keys()) - set([h.nodename for h in cluster_nodes]) - set([h.fqdn for h in cluster_nodes])
 
             # Leaving this out for now - because they raise issue caused by limitations in the simulator and
             # test system as a whole. Difficult to know if they will or won't be raised it all depends on the past.
@@ -139,12 +141,16 @@ class Service(ChromaService):
 
             #  Consider all nodes in the peer group for this reporting agent
             for host in cluster_nodes:
-                data = nodes[host.nodename]
+                try:
+                    data = nodes[host.nodename]
+                    node_identifier = host.nodename
+                except KeyError:
+                    data = nodes[host.fqdn]
+                    node_identifier = host.fqdn
 
-                cluster_peer_keys = sorted([node.pk for node in cluster_nodes
-                                                if node is not host])
+                cluster_peer_keys = sorted([node.pk for node in cluster_nodes if node is not host])
 
-                if is_new(host.nodename) and host.corosync_configuration:
+                if is_new(node_identifier) and host.corosync_configuration:
                     host_reported_online = data['online'] == 'true'
 
                     log.debug("Corosync processing "
@@ -172,7 +178,7 @@ class Service(ChromaService):
                                                     {'ha_cluster_peers': cluster_peer_keys})
 
                     #  Keep internal track of the hosts state.
-                    self._host_status[host.nodename] = self.HostStatus(status=host_reported_online,
+                    self._host_status[node_identifier] = self.HostStatus(status=host_reported_online,
                                                                        datetime=dt)
 
     def run(self):

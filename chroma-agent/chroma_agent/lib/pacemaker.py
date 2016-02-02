@@ -233,7 +233,7 @@ class PacemakerConfig(object):
 
     def get_node(self, node_name):
         try:
-            return [n for n in self.nodes if n.name == node_name][0]
+            return next(n for n in self.nodes if socket.getfqdn(n.name) == socket.getfqdn(node_name))
         except IndexError:
             raise PacemakerError("%s does not exist in pacemaker" % node_name)
 

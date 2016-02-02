@@ -125,9 +125,12 @@ class ManagedTarget(StatefulObject):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
         try:
-            started_on = ObjectCache.get_one(ManagedHost, lambda mh: mh.nodename == nodename)
+            started_on = ObjectCache.get_one(ManagedHost,
+                                             lambda mh: (mh.nodename == nodename) or
+                                                        (mh.fqdn == nodename))
         except ManagedHost.DoesNotExist:
             raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
+
         try:
             job_log.debug("Started %s on %s" % (self.ha_label, started_on))
             target_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id)

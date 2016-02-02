@@ -399,18 +399,6 @@ class FirewallControlOSX(FirewallControlEL6):
     this class provides for backwards compatibility.
     """
 
-    def _add_address(self, address, proto):
-        pass
-
-    def _remove_address(self, address, proto):
-        pass
-
-    def _remove_port(self, port, proto):
-        pass
-
-    def _add_port(self, port, proto):
-        pass
-
     # override method to allow source to run on OSX
     @classmethod
     def _applicable(cls):
