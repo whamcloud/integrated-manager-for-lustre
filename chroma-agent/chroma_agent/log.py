@@ -81,7 +81,7 @@ def decrease_loglevel(signal, frame):
 # set them up after daemonization
 def daemon_log_setup():
     handler = logging.FileHandler("/var/log/chroma-agent.log")
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    handler.setFormatter(logging.Formatter('[%(asctime)s] daemon %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
     daemon_log.addHandler(handler)
 
 
@@ -112,5 +112,5 @@ def copytool_log_setup():
 
 def console_log_setup():
     handler = logging.FileHandler("/var/log/chroma-agent-console.log")
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    handler.setFormatter(logging.Formatter('[%(asctime)s] console %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
     console_log.addHandler(handler)

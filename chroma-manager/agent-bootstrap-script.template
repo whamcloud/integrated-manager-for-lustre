@@ -5,8 +5,28 @@
 import subprocess
 ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
-import sys, httplib, urllib2, shlex, base64, json, os, socket, ssl, tempfile, json, traceback, signal
-from subprocess import Popen, PIPE
+import sys
+import httplib
+import urllib2
+import shlex
+import os
+import platform
+import socket
+import ssl
+import tempfile
+import json
+import traceback
+import signal
+import logging
+
+# create Logger with a single file handler
+bootstrap_log = logging.getLogger('bootstrap')
+bootstrap_log.setLevel(logging.DEBUG)
+
+handler = logging.FileHandler('/var/log/chroma-agent.log')
+handler.setLevel(logging.DEBUG)
+handler.setFormatter(logging.Formatter('[%(asctime)s] bootstrap %(name)s %(levelname)s %(message)s'))
+bootstrap_log.addHandler(handler)
 
 SSL_DIR = "/var/lib/chroma/"
 
@@ -19,10 +39,7 @@ AGENT_CERT = os.path.join(SSL_DIR, 'self.crt')
 # The root certificate used to authenticate the manager
 AUTHORITY_CERT = os.path.join(SSL_DIR, 'authority.crt')
 
-
 REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
-
-
 
 base_url = "{base_url}"
 reg_url = "{reg_url}"
@@ -53,11 +70,19 @@ class VerifiedHTTPSHandler(urllib2.HTTPSHandler):
 
 def launch_command(cmd):
     args = shlex.split(cmd)
-    p = Popen(args, stdout=PIPE)
-    stdout = p.communicate()[0]
+    debug = 'Command returned %d: stdout: "%s" stderr: "%s"'
+
+    bootstrap_log.info('Executing shell command with arguments: %s' % args)
+
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+
+    bootstrap_log.debug(debug % (p.returncode, out, err))
+
     if p.returncode != 0:
-        raise Exception("Error running command: %s" % cmd)
-    return stdout.strip()
+        raise Exception(debug % (p.returncode, out, err))
+
+    return out.strip()
 
 
 def setup_keys():
@@ -96,8 +121,8 @@ def reg_manager():
         open(AGENT_CERT, 'w').write(json_resp['certificate'])
         return json_resp
     except urllib2.URLError, e:
-        print traceback.format_exc()
-        sys.exit("Cannot reach host/url %s: %s" % (reg_url, e))
+        log.exception("Cannot reach host/url %s: %s" % (reg_url, e))
+        raise
 
 
 def create_repo():
@@ -134,25 +159,38 @@ def kill_zombies():
             # Don't bail if this fails -- it's not critical
             pass
 
+def main():
+    try:
+        bootstrap_log.info('Agent bootstrap started...')
+
+        # Get a clean deployment environment
+        kill_zombies()
+
+        # Set up SSL keys and register with the manager using our
+        # embedded registration token
+        setup_keys()
+        registration_response = reg_manager()
+
+        # Now that we're registered, we can download packages
+        create_repo()
+        install_agent()
+
+        # Persist the agent configuration file so that it can connect
+        # to the manager
+        configure_server()
+
+        bootstrap_log.info('Agent bootstrap completed, starting agent...')
+
+        # Finally start the agent, it will take it from here.
+        start_agent()
+
+        print json.dumps({{'host_id': registration_response['host_id'], 'command_id': registration_response['command_id']}})
+
+        return 0
+
+    except Exception, err:
+        bootstrap_log.exception('Error from agent-bootstrap-script main():')
+        return 1
 
 if __name__ == '__main__':
-    # Get a clean deployment environment
-    kill_zombies()
-
-    # Set up SSL keys and register with the manager using our
-    # embedded registration token
-    setup_keys()
-    registration_response = reg_manager()
-
-    # Now that we're registered, we can download packages
-    create_repo()
-    install_agent()
-
-    # Persist the agent configuration file so that it can connect
-    # to the manager
-    configure_server()
-
-    # Finally start the agent, it will take it from here.
-    start_agent()
-
-    print json.dumps({{'host_id': registration_response['host_id'], 'command_id': registration_response['command_id']}})
+    sys.exit(main())
