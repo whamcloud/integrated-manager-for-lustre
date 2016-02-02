@@ -45,9 +45,12 @@ export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
 export BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
 export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
 export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
-if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" ]; then
+if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" -o \
+     "$distro" = "ssi-el7" -o \
+     "$distro" = "el7" ] || \
+   [[ $slave =~ 7.*\&\&ssi ]]; then
     export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el7.2"}
-    export JENKINS_DISTRO="el7.1"
+    export JENKINS_DISTRO="el7"
 else
     export TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.7"}
     export JENKINS_DISTRO="el6.4"

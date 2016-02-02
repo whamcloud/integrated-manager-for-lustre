@@ -1,2 +1,5 @@
 node-gyp-headers
-nginx-*.el6.ngx.x86_64.rpm
+ui-modules/node_modules/intel-ziplocker
+ui-modules/node_modules/intel-realtime
+ui-modules/node_modules/intel-view-server
+nginx-*.el?.ngx.x86_64.rpm

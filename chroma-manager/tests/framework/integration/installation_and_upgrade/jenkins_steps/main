@@ -9,7 +9,8 @@ SLAVE=${slave:?"Need to set slave"}
 cd $WORKSPACE
 
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$CURRENT_IEEL_VERSION.tar.gz"
+echo "+ curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:********* \"$JOB_URL/ieel-$CURRENT_IEEL_VERSION.tar.gz\""
+curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$CURRENT_IEEL_VERSION.tar.gz"
 set -x
 
 if [ "$SLAVE" = "rhel6&&ssi" ]; then

@@ -36,12 +36,17 @@ yumdownloader lustre-client lustre-client-modules
 # other dependencies and the 'kernel = ' at the beggining of the line.
 KERNEL_VERSION_AND_RELEASE=\"\$(rpm -qpR lustre-client-modules-* | sed -n -e '/^kernel =/s/.* = //p')\";
 
-yumdownloader kernel-\$KERNEL_VERSION_AND_RELEASE kernel-firmware-\$KERNEL_VERSION_AND_RELEASE  # Have to install explicitly to avoid getting kernel-debug in the automatic dependency resolution
+if [[ $(lsb_release -sr) =~ 7.* ]]; then
+    yumdownloader kernel-firmware-\$KERNEL_VERSION_AND_RELEASE
 
-if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
-    rpm -Uvh --oldpackage kernel-firmware-*.rpm
+    if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
+        rpm -Uvh --oldpackage kernel-firmware-*.rpm
+    fi
+    rm kernel-firmware-*.rpm
 fi
-rm kernel-firmware-*.rpm
+
+yumdownloader kernel-\$KERNEL_VERSION_AND_RELEASE # Have to install explicitly to avoid getting kernel-debug in the automatic dependency resolution
+
 if ! rpm -q \$(rpm -qp kernel-*.rpm); then
     rpm -ivh --oldpackage kernel*.rpm
 fi
@@ -53,4 +58,5 @@ yum install -y lustre-client-modules-*.rpm lustre-client-*.rpm
 # Removed and installed a kernel, so need a reboot
 sync
 sync
-init 6"
+nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0"
+

@@ -80,6 +80,8 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
     cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
@@ -87,7 +89,7 @@ data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
 EOF1
-    cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+    cat <<\"EOF1\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
@@ -96,7 +98,7 @@ cov._warn_unimported_source = False
 EOF1
 else
     # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 fi"
 
 # Install and setup chroma software storage appliances
@@ -123,33 +125,38 @@ timeout=180
 EOF
     $PROXY yum install -y python-setuptools
     $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
-    $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel kernel-firmware
-    if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
-        rpm -Uvh --oldpackage kernel-firmware-*.rpm
+    if [[ \$(lsb_release -sr) =~ 6.* ]]; then
+        $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel-firmware
+        if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
+            rpm -Uvh --oldpackage kernel-firmware-*.rpm
+        fi
+        rm kernel-firmware-*.rpm
     fi
-    rm kernel-firmware-*.rpm
+    $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel
     if ! rpm -q \$(rpm -qp kernel-*.rpm); then
         rpm -ivh --oldpackage kernel*.rpm
     fi
     yum -y install lustre-modules lustre lustre-osd-ldiskfs
 fi
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
-source = /usr/lib/python2.6/site-packages/chroma_agent/
+source = /usr/lib/python\$python_version/site-packages/chroma_agent/
 EOF
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
+cov = coverage.coverage(config_file='/usr/lib/python\$python_version/site-packages/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 EOF
 else
     # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 fi
 
 if $USE_FENCE_XVM; then
@@ -161,7 +168,7 @@ fi
 # Removed and installed a kernel, so need a reboot
 sync
 sync
-init 6" | dshbak -c
+nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

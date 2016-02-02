@@ -23,7 +23,9 @@ if $MEASURE_COVERAGE; then
     ssh root@$CHROMA_MANAGER chroma-config stop
 
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
-      rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+      # https://github.com/pypa/virtualenv/issues/355
+      python_version=$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+      rm -f /usr/lib/python$python_ver/site-packages/sitecustomize.py*
       cd /var/tmp/
       coverage combine
 # when putting the pdcp below back, might need to install pdsh first

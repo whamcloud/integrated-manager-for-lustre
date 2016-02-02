@@ -80,6 +80,8 @@ LOG_LEVEL = logging.DEBUG
 $LOCAL_SETTINGS
 EOF1
 
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
     cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
@@ -87,7 +89,7 @@ data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
 EOF1
-    cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+    cat <<\"EOF1\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
@@ -96,7 +98,7 @@ cov._warn_unimported_source = False
 EOF1
 else
     # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 fi"
 
 
@@ -107,23 +109,25 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
 fi
 
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
-source = /usr/lib/python2.6/site-packages/chroma_agent/
+source = /usr/lib/python\$python_version/site-packages/chroma_agent/
 EOF
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
+cov = coverage.coverage(config_file='/usr/lib/python\$python_version/site-packages/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 EOF
 else
     # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
 fi
 
 if $USE_FENCE_XVM; then

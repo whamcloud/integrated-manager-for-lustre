@@ -23,13 +23,15 @@ scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
 if $MEASURE_COVERAGE; then
     ssh root@$CHROMA_MANAGER chroma-config stop
 
-    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
-      rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) \"set -x
+      # https://github.com/pypa/virtualenv/issues/355
+      python_version=\\\$(python -c 'import platform; print \\\".\\\".join(platform.python_version_tuple()[0:2])')
+      rm -f /usr/lib/python$python_version/site-packages/sitecustomize.py*
       cd /var/tmp/
       coverage combine
 # when putting the pdcp below back, might need to install pdsh first
 #      yum -y install pdsh
-' | dshbak -c
+\" | dshbak -c
     if [ \${PIPESTATUS[0]} != 0 ]; then
         exit 1
     fi
@@ -41,8 +43,7 @@ if $MEASURE_COVERAGE; then
     done
 
     ssh root@$CHROMA_MANAGER chroma-config start
-fi
-" EXIT
+fi" EXIT
 
 echo "Begin running tests..."
 

@@ -50,37 +50,35 @@ if __name__ == '__main__':
 
     test_runs = []
     downstream_jobs_names = build.job.get_downstream_job_names()
-    fingerprint_data = build.get_data("%s?depth=2&tree=runs[fingerprint[fileName,usage[name,ranges[ranges[end]]]]]" % build.python_api_url(build.baseurl))
-    for run in fingerprint_data['runs']:
-        fingerprints = run['fingerprint']
-        for fingerprint in fingerprints:
-            if fingerprint['fileName'] == 'build_info.txt':
-                usage = fingerprint['usage']
-                for use in usage:
-                    job_name = use['name'].split('/')[0]
-                    if job_name in downstream_jobs_names and job_name in valid_test_jobs:
-                        build_nums = []
-                        for k, ranges in use['ranges'].iteritems():
-                            for range in ranges:
-                                build_nums.append(range['end'] - 1)
-                        latest_build = max(build_nums)
-                        try:
-                            if job_name == use['name']:
-                                # Job is not multiconfiguration
-                                test_runs.append(jenkins.get_job(job_name).get_build(latest_build))
-                            else:
-                                # Job is multiconfiguration
-                                master_job = jenkins.get_job(job_name)
-                                master_build = master_job.get_build(latest_build)
-                                for run in master_build.get_matrix_runs():
-                                    test_runs.append(run)
-                            logging.info("Added '%s' build num '%s' to the list of test runs" % (job_name, latest_build))
-                        except Exception, e:
-                            # Can happen for things like old disabled jobs.
-                            # Any real missing builds will be caught by the
-                            # check for required runs below.
-                            logging.warning("Exception trying to get '%s' build num '%s': '%s'" % (job_name, latest_build, e))
-                            raise e
+    fingerprint_data = build.get_data("%s?depth=2&tree=fingerprint[fileName,usage[name,ranges[ranges[end]]]]" % build.python_api_url(build.baseurl))
+    for fingerprint in fingerprint_data['fingerprint']:
+        if fingerprint['fileName'] == 'build_info.txt':
+            usage = fingerprint['usage']
+            for use in usage:
+                job_name = use['name'].split('/')[0]
+                if job_name in downstream_jobs_names and job_name in valid_test_jobs:
+                    build_nums = []
+                    for k, ranges in use['ranges'].iteritems():
+                        for range in ranges:
+                            build_nums.append(range['end'] - 1)
+                    latest_build = max(build_nums)
+                    try:
+                        if job_name == use['name']:
+                            # Job is not multiconfiguration
+                            test_runs.append(jenkins.get_job(job_name).get_build(latest_build))
+                        else:
+                            # Job is multiconfiguration
+                            master_job = jenkins.get_job(job_name)
+                            master_build = master_job.get_build(latest_build)
+                            for run in master_build.get_matrix_runs():
+                                test_runs.append(run)
+                        logging.info("Added '%s' build num '%s' to the list of test runs" % (job_name, latest_build))
+                    except Exception, e:
+                        # Can happen for things like old disabled jobs.
+                        # Any real missing builds will be caught by the
+                        # check for required runs below.
+                        logging.warning("Exception trying to get '%s' build num '%s': '%s'" % (job_name, latest_build, e))
+                        raise e
 
     # Double check all jobs have finished running
     for test_run in test_runs:
