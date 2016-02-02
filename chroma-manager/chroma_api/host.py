@@ -21,6 +21,7 @@
 
 import re
 from collections import defaultdict
+from collections import namedtuple
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services import log_register
 from tastypie.validation import Validation
@@ -146,7 +147,6 @@ class ClientMountResource(ModelResource):
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         list_allowed_methods = ['get', 'post']
-
 
         filtering = {'host': ['exact'], 'filesystem': ['exact']}
 
@@ -426,6 +426,8 @@ class HostProfileResource(Resource, BulkResourceOperation):
     def full_dehydrate(self, bundle):
         return bundle.obj
 
+    HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
+
     def get_profiles(self, host, request):
         properties = json.loads(host.properties)
 
@@ -451,7 +453,7 @@ class HostProfileResource(Resource, BulkResourceOperation):
                         test = False
 
                 tests.append({'pass': bool(test), 'test': validation.test, 'description': validation.description, 'error': str(error)})
-        return result
+        return self.HostProfiles(result, properties != {})
 
     def _set_profile(self, host_id, profile):
         server_profile = get_object_or_404(ServerProfile, pk=profile)
@@ -471,18 +473,32 @@ class HostProfileResource(Resource, BulkResourceOperation):
 
         return map(dehydrate_command, commands)
 
+    def _host_profiles_object(self, host, request):
+        host_profiles = self.get_profiles(host, request)
+
+        return {'host': host.id,
+                'address': host.address,
+                'profiles_valid': host_profiles.valid,
+                'profiles': host_profiles.profiles,
+                'resource_uri': self.get_resource_uri(host)}
+
     def obj_get(self, request, pk=None):
-        return self.get_profiles(get_object_or_404(ManagedHost, pk=pk), request)
+        host = get_object_or_404(ManagedHost, pk=pk)
+
+        return self._host_profiles_object(host, request)
 
     def obj_get_list(self, request):
         ids = request.GET.getlist('id__in')
         filters = {'id__in': ids} if ids else {}
-        return [{'host_profiles': {'host': host.id,
-                                   'address': host.address,
-                                   'profiles': self.get_profiles(host, request),
-                                   'resource_uri': self.get_resource_uri(host)},
-                 "error": None,
-                 "traceback": None} for host in ManagedHost.objects.filter(**filters)]
+
+        result = []
+
+        for host in ManagedHost.objects.filter(**filters):
+            result.append({'host_profiles': self._host_profiles_object(host, request),
+                           "error": None,
+                           "traceback": None})
+
+        return result
 
     def obj_create(self, bundle, request, **kwargs):
         def _create_action(self, data, request, **kwargs):

@@ -36,6 +36,22 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         except IndexError:
             raise RuntimeError("No host in config with address %s" % address)
 
+    HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
+
+    def get_host_validations(self, host):
+        all_validations = self.chroma_manager.get('/api/host_profile').json['objects']
+
+        # Return the one for this host.
+        validation = next(validation['host_profiles']
+                          for validation in all_validations
+                          if validation['host_profiles']['address'] == host['address'])
+
+        # Old API's don't have profiles_valid, so return work out the answer.
+        if 'profiles_valid' not in validation:
+            validation['profiles_valid'] = (self.chroma_manager.get('api/host/%s' % validation['host']).json['properties'] != '{}')
+
+        return self.HostProfiles(validation['profiles'], validation['profiles_valid'])
+
     def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
         """Verify server checks pass for provided addresses"""
         response = self.chroma_manager.post(
@@ -84,6 +100,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             self.assertEqual(response.successful, True, response.text)
             host = response.json
             self.assertEqual(host['address'], host_address)
+
+            # At this point the validations should be invalid the host is added but not deployed yet.
+            self.assertFalse(self.get_host_validations(host).valid)
 
         # Wait for deployment to complete
         self.wait_for_commands(self.chroma_manager, command_ids)

@@ -266,11 +266,17 @@ class TestHostResource(ChromaApiTestCase):
             validation['error'] = 'Result unavailable while host agent starts'
 
         response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
-        self.assertHttpOK(response)
         content = json.loads(response.content)
-        content['test_profile'].sort()
+        self.assertHttpOK(response)
+        test_profile_validations = content['profiles']['test_profile']
+        test_profile_validations.sort()
         validations.sort()
-        self.assertEqual(content['test_profile'], validations)
+        self.assertEqual(test_profile_validations, validations)
+
+        # Test host info correct.
+        self.assertEqual(content['host'], hosts[0].id)
+        self.assertEqual(content['address'], hosts[0].address)
+        self.assertEqual(content['resource_uri'], '/api/host_profile/{0}/'.format(hosts[0].id))
 
         # Now set the first property = variable1 = 1
         for host in hosts:
@@ -285,10 +291,10 @@ class TestHostResource(ChromaApiTestCase):
 
         response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
         self.assertHttpOK(response)
-        content = json.loads(response.content)
-        content['test_profile'].sort()
+        test_profile_validations = json.loads(response.content)['profiles']['test_profile']
+        test_profile_validations.sort()
         validations.sort()
-        self.assertEqual(content['test_profile'], validations)
+        self.assertEqual(test_profile_validations, validations)
 
         for data in ({}, {'id__in': [hosts[0].id, 0]}):
             response = self.api_client.get('/api/host_profile/?', data=data)
@@ -305,6 +311,7 @@ class TestHostResource(ChromaApiTestCase):
                                           'traceback': None,
                                           'host_profiles': {'profiles': {'test_profile': validations,
                                                                          'test_profile_2': validations},
+                                                            'profiles_valid': True,
                                                             'host': hosts[host_index].id,
                                                             'address': hosts[host_index].address,
                                                             'resource_uri': '/api/host_profile/%s/' % hosts[host_index].id}})
@@ -378,12 +385,12 @@ class TestHostResource(ChromaApiTestCase):
         # Check we can filter results and select a host
         response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
         self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(len(content), len(ServerProfile.objects.all()))
+        profiles = json.loads(response.content)['profiles']
+        self.assertEqual(len(profiles), len(ServerProfile.objects.all()))
         response = self.api_client.get('/api/host_profile/{0}/?server_profile__name=test_profile_2'.format(hosts[0].id))
         self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(len(content), 1)
+        profiles = json.loads(response.content)['profiles']
+        self.assertEqual(len(profiles), 1)
 
         # Check we can filter results when fetching a list.
         response = self.api_client.get('/api/host_profile/')
