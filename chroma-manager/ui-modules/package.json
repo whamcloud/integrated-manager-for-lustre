@@ -9,22 +9,8 @@
   "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "intel-angular-modules": "1.0.3",
-    "intel-dirp": "1.0.5",
-    "intel-extract-api": "1.0.2",
-    "intel-fp": "3.6.0",
-    "intel-furp": "5.0.2",
-    "intel-gui": "4.2.0",
-    "intel-math": "3.0.0",
-    "intel-natural-sort": "1.0.2",
-    "intel-obj": "4.0.0",
+    "intel-gui": "4.4.0",
     "intel-realtime": "4.0.1",
-    "intel-req": "1.0.8",
-    "intel-router": "4.1.0",
-    "intel-socket-worker": "2.0.0",
-    "intel-srcmap-reverse": "1.1.2",
-    "intel-stub-daddy": "2.0.1",
-    "intel-through": "1.0.8",
     "intel-view-server": "4.0.0",
     "intel-ziplocker": "3.0.2"
   }

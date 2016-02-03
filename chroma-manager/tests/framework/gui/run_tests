@@ -23,12 +23,6 @@ NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-man
 # New UI Tests
 #######################################
 
-# Run angular-modules
-cd \$NODE_MODULES/intel-angular-modules
-./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
-cd ./test-results
-for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/NG_MODULES_\$filename"; done;
-
 # Run Karma GUI unit tests (new ui)
 cd \$NODE_MODULES/intel-gui
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
@@ -40,19 +34,7 @@ cd \$NODE_MODULES/intel-gui/gulp
 \$NODE_MODULES/intel-ziplocker/node_modules/npm/bin/npm-cli.js t
 mv gulp-results.xml \$HOME/test_reports/
 
-MODULES_TO_TEST="intel-dirp
-intel-extract-api
-intel-furp
-intel-fp
-intel-natural-sort
-intel-obj
-intel-realtime
-intel-req
-intel-router
-intel-socket-worker
-intel-srcmap-reverse
-intel-stub-daddy
-intel-through
+MODULES_TO_TEST="intel-realtime
 intel-view-server
 intel-ziplocker"
 
@@ -76,7 +58,7 @@ for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/OLD_\$filen
 
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=22
+NUM_EXPECTED_TEST_REPORTS=8
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."
