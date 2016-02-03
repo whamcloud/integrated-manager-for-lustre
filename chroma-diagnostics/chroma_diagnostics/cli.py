@@ -177,7 +177,7 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
                 cmd = ['cat', log_file, '>>', output_file_name, ]
             subprocess.Popen(' '.join(cmd), shell=True)
         if verbose > 1:
-            log.info("copied logs: " % "\t\n".join(ordered_log_files))
+            log.info("copied logs: %s" % "\t\n".join(ordered_log_files))
 
     return len(collected_files)
 
