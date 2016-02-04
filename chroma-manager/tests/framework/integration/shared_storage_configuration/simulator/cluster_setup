@@ -17,12 +17,16 @@ echo "Beginning installation and setup..."
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
-
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel telnet python-ethtool rabbitmq-server erlang-inets nodejs patch gcc-c++
 
+# don't need EPEL any more
+yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
+
 # Create a user so we can run chroma as non-root
-useradd chromatest
+if ! id chromatest; then
+    useradd chromatest
+fi
 su chromatest
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
@@ -75,11 +79,12 @@ done;
 echo "counter: \$COUNTER, trials: \$MAX_TRIALS"
 [[ \$COUNTER -eq \$MAX_TRIALS ]] && { echo "RabbitMQ cannot receive messages!"; exit 1; }
 
-
 # Configure postgres
 chkconfig postgresql on
 service postgresql initdb
 service postgresql start
+# TODO: sleeping is racy.  should check for up-ness, not just assume it
+#       will happen within 5 seconds
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'
@@ -90,8 +95,8 @@ EOF
 
 # Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
 # We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
-virtualenv --relocatable .
-(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/test_dependencies)) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; cd chroma_test_env; tar -xizf -"
+TEST_DEPS="chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/test_dependencies"
+(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < $TEST_DEPS); tar -czf - chroma/chroma-externals/*.zip chroma/chroma-externals/*.tar.*) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; tar -C chroma_test_env -xizf -"
 
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
@@ -102,10 +107,11 @@ EOF
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex
-cd chroma_test_env
-virtualenv --no-site-packages .
-source bin/activate
-cd chroma/chroma-manager/
+virtualenv --no-site-packages chroma_test_env
+source chroma_test_env/bin/activate
+cd chroma_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc
@@ -114,8 +120,8 @@ data_file = /var/tmp/.coverage
 parallel = True
 source = /home/chromatest/chroma_test_env/chroma
 EOC
-# https://github.com/pypa/virtualenv/issues/355
-python_version=\$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
+  # https://github.com/pypa/virtualenv/issues/355
+  python_version=\$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
   cat <<EOC  > /home/chromatest/chroma_test_env/lib/python\$python_version/site-packages/sitecustomize.py
 import coverage
 cov = coverage.coverage(config_file='/home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc', auto_data=True)
@@ -124,8 +130,6 @@ cov._warn_no_data = False
 cov._warn_unimported_source = False
 EOC
 fi
-
-cd ~/chroma_test_env/chroma/chroma-manager
 
 # Enable DEBUG logging
 cat <<"EOF1" > local_settings.py

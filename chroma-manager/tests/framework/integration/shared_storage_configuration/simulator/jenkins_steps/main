@@ -10,8 +10,6 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 scripts/update_chroma-externals.py
 
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
-make requirements
-python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
 # Release the provisioned cluster (at the exit of this script)
 trap "chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
