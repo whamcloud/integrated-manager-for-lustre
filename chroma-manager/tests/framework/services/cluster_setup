@@ -27,7 +27,9 @@ ed -s /etc/sysconfig/httpd <<< $',s/#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr
 yum-config-manager --disable addon-epel6-x86_64
 
 # Create a user so we can run chroma as non-root
-useradd chromatest
+if ! id chromatest; then
+    useradd chromatest
+fi
 su chromatest
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
@@ -97,15 +99,16 @@ EOF
 
 # Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
 # We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
-virtualenv --relocatable .
-(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < chroma/chroma-manager/tests/framework/services/test_dependencies)) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; cd chroma_test_env; tar -xizf -"
+TEST_DEPS="chroma/chroma-manager/tests/framework/services/test_dependencies"
+(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < $TEST_DEPS); tar -czf - chroma/chroma-externals/*.zip chroma/chroma-externals/*.tar.*) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; tar -C chroma_test_env -xizf -"
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex
-cd chroma_test_env
-virtualenv --no-site-packages .
-source bin/activate
-cd chroma/chroma-manager/
+virtualenv --no-site-packages chroma_test_env
+source chroma_test_env/bin/activate
+cd chroma_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc
@@ -122,8 +125,6 @@ cov._warn_no_data = False
 cov._warn_unimported_source = False
 EOC
 fi
-
-cd ~/chroma_test_env/chroma/chroma-manager
 
 # Enable DEBUG logging
 cat <<"EOF1" > local_settings.py
