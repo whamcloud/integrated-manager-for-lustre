@@ -13,6 +13,7 @@
     var $inodes_text;
     var $charts;
 
+    var detail = RouteUtils.detail_page.bind(RouteUtils, 'configure/server');
 
     /**
      * Takes an array of tables, freezes them and abstracts their prototype methods to run on each table in the array.
@@ -92,7 +93,10 @@
             mDataProp: 'primary_server_name',
             bSortable: false,
             fnRender: function renderPrimaryServer (row) {
-              return RouteUtils.uri_properties_link(row.aData.primary_server, row.aData.primary_server_name);
+              return detail(
+                RouteUtils.extract_api_id(row.aData.primary_server),
+                row.aData.primary_server_name
+              );
             }
           },
           {
@@ -100,7 +104,10 @@
             mDataProp: 'failover_server_name',
             bSortable: false,
             fnRender: function renderFailoverServer (row) {
-              return RouteUtils.uri_properties_link(row.aData.failover_servers[0], row.aData.failover_server_name);
+              return detail(
+                RouteUtils.extract_api_id(row.aData.failover_servers[0]),
+                row.aData.failover_server_name
+              );
             }
           },
           {
@@ -414,11 +421,16 @@
         filesystem = filesystem_data;
         angular.element('html').injector().get('pageTitle').set('Configuration - File Systems - %s'.sprintf(filesystem.label));
 
-
         /* FS summary fields */
         $('#ost_count').html(filesystem.osts.length);
         $('#mdt_count').html(filesystem.mdts.length);
-        $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
+        $('#mgs_name')
+          .html(
+            detail(
+              RouteUtils.extract_api_id(filesystem.mgt.primary_server),
+              filesystem.mgt.primary_server_name
+          )
+        );
         $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
         $('#fs_name').html(filesystem.name);
 

@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2015 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -31,6 +31,8 @@ var RouteUtils = function() {
 
     if (resource == 'filesystem') {
       return "/configure/filesystem/detail/" + id + "/"
+    } else if (resource == 'host') {
+      return "configure/server/" + id + "/";
     } else {
       return "/" + resource + "/" + id + "/";
     }
@@ -67,6 +69,12 @@ var RouteUtils = function() {
   {
     if (resource_uri) {
       var url = api_path_to_ui_path(resource_uri);
+
+      if (resource_uri.indexOf('host') !== -1) {
+        var absoluteUrl = '/ui/' + url;
+        return "<a href='" + absoluteUrl + "'>" + label + "</a>";
+      }
+
       return "<a class='navigation' href='" + url + "'>" + label + "</a>"
     } else {
       return ""
@@ -81,12 +89,27 @@ var RouteUtils = function() {
     return uri_properties_link(object.resource_uri, label);
   }
 
+  function extract_api_id(path) {
+    var regexp = /^[\/]?api\/[^\/]+\/(\d+)[\/]?$/;
+
+    var results = regexp.exec(path);
+    if (results != null)
+      return results[1];
+  }
+
+  function detail_page (a, b, c) {
+    return '<a href="/ui/%s/%s">%s</a>'
+      .sprintf(a, b, c);
+  }
+
   return {
     'api_path_to_ui_path': api_path_to_ui_path,
     'detail_path_to_list_path': detail_path_to_list_path,
     'uri_properties_link': uri_properties_link,
     'object_properties_link': object_properties_link,
-    'current_path': current_path
+    'current_path': current_path,
+    'extract_api_id': extract_api_id,
+    'detail_page': detail_page
   }
 }();
 
