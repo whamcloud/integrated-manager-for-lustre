@@ -195,14 +195,18 @@ num  target     prot opt source               destination
         self.add_commands(CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
                           CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
                           CommandCaptureCommand(("bash", "-c", "echo lustre | passwd --stdin hacluster")),
-                          CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
-                          CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
-                          CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
-                          CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
                           CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
                           CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
                           CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
                                                  'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')),
+                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '2224:tcp')),
+                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
+                          CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
+                                                 'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
+                          CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
+                          CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
+                          CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
+                          CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
                           CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "lustre"])))
 
         # now a two-step process! first network...
@@ -231,7 +235,7 @@ num  target     prot opt source               destination
                          "--fail_recv_const", "10"))
 
         # ...then corosync / pcsd
-        configure_corosync2_stage_1()
+        configure_corosync2_stage_1(mcast_port)
         configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, True)
 
         self.assertRanAllCommandsInOrder()

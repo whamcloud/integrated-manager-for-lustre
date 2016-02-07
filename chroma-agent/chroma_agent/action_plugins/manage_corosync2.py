@@ -36,6 +36,8 @@ from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_ok_or_error
 
 
+PCS_TCP_PORT = 2224
+
 corosync_service = ServiceControl.create('corosync')
 pscd_service = ServiceControl.create('pcsd')
 firewall_control = FirewallControl.create()
@@ -54,7 +56,7 @@ def stop_corosync2():
     return agent_ok_or_error(corosync_service.stop())
 
 
-def configure_corosync2_stage_1():
+def configure_corosync2_stage_1(mcast_port):
     # need to use user "hacluster" which is created on install of "pcs" package,
     # WARNING: clear text password
     set_password_command = ['bash', '-c', 'echo %s | passwd --stdin %s' %
@@ -62,6 +64,8 @@ def configure_corosync2_stage_1():
                                            PCS_USER)]
 
     return agent_ok_or_error(AgentShell.run_canned_error_message(set_password_command) or
+                             firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True) or
+                             firewall_control.add_rule(PCS_TCP_PORT, "tcp", "pcs", persist=True) or
                              pscd_service.start() or
                              corosync_service.enable() or
                              pscd_service.enable())
@@ -101,10 +105,6 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
         'mcastport0': interfaces[0].corosync_iface.mcastport,
         'mcastport1': interfaces[1].corosync_iface.mcastport
     }
-
-    error = firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True)
-    if error:
-        return agent_error(error)
 
     # authenticate nodes in cluster
     authenticate_nodes_in_cluster_command = ['pcs', 'cluster', 'auth', new_node_fqdn,

@@ -153,7 +153,8 @@ class AutoConfigureCorosyncStep(Step):
 
             # Stage 1 configures pcsd on the host being added, sets the password, enables and starts it etc.
             self.invoke_agent_expect_result(corosync_configuration.host,
-                                            "configure_corosync2_stage_1")
+                                            "configure_corosync2_stage_1",
+                                            {'mcast_port': config['mcast_port']})
 
             # Stage 2 configures the cluster either by creating it or adding a node to it.
             self.invoke_agent_expect_result(actioning_host,
