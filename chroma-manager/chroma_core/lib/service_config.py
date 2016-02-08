@@ -569,7 +569,6 @@ class ServiceConfig(CommandLine):
             controller = ServiceControl.create(service_name)
             services[service_name] = {'enabled': controller.enabled, 'running': controller.running}
 
-        log.info('debug services: %s' % str(services))
         return services
 
     def validate(self):
