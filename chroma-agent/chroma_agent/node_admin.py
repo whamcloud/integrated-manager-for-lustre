@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,9 @@
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
+from chroma_common.lib.util import platform_info
+from chroma_agent.lib.shell import AgentShell
+
 
 def write_ifcfg(device, mac_address, ipv4_address, ipv4_netmask):
     ifcfg_tmpl = env.get_template('ifcfg-nic')
@@ -31,3 +34,20 @@ def write_ifcfg(device, mac_address, ipv4_address, ipv4_netmask):
         f.write(ifcfg_tmpl.render(device = device, mac_address = mac_address,
                                   ipv4_address = ipv4_address,
                                   ipv4_netmask = ipv4_netmask))
+
+    return ifcfg_path
+
+
+def unmanage_network(device, mac_address):
+    """Rewrite the network configuration file to set NM_CONTROLLED="no"
+    TODO: This is destructive and overwrites the file loosing all settings.
+    This needs to be fixed up.
+    """
+    ifcfg_path = write_ifcfg(device, mac_address, None, None)
+
+    if platform_info.distro_version >= 7.0:
+        try:
+            AgentShell.try_run(['nmcli', 'con', 'load', ifcfg_path])
+        except AgentShell.CommandExecutionError as cee:
+            if cee.result.rc != 127:            # The user may have uninstalled network manager.
+                raise

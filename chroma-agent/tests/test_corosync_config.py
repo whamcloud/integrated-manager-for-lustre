@@ -76,6 +76,7 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         sys.modules['ethtool'] = ethtool
 
         self.write_ifcfg = mock.patch('chroma_agent.node_admin.write_ifcfg').start()
+        self.unmanage_network = mock.patch('chroma_agent.node_admin.unmanage_network').start()
 
         self.write_config_to_file = mock.patch(
             'chroma_agent.action_plugins.manage_corosync.write_config_to_file').start()
@@ -148,8 +149,8 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         configure_network(ring0_name, ring1_name=ring1_name,
                           ring1_ipaddr=ring1_ipaddr, ring1_prefix=ring1_netmask)
 
-        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42',
-                                            '255.255.255.0')
+        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
+        self.unmanage_network.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af')
 
         # ...then corosync
         configure_corosync(ring0_name, ring1_name, mcast_port)
