@@ -216,7 +216,7 @@ class MockAgentRpc(object):
                      'configure_ntp', 'unconfigure_ntp',
                      'set_profile', 'update_profile',
                      'failover_target', 'failback_target',
-                     'configure_network']:
+                     'configure_network', 'open_firewall', 'close_firewall']:
             return agent_result_ok
         elif cmd == 'get_corosync_autoconfig':
             return agent_result({'interfaces': {'eth0': {'dedicated': False,

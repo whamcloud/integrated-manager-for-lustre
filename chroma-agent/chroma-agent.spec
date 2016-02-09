@@ -49,7 +49,6 @@ Requires: pcapy
 Requires: python-impacket
 Requires: system-config-firewall-base
 Requires: ed
-Requires: at
 
 %if 0%{?rhel} < 7
 Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6
@@ -138,38 +137,6 @@ fi
 
 %post management
 chkconfig rsyslog on
-chkconfig atd on
-service atd start
-if [ $1 -lt 2 ]; then
-    # install
-    # open ports in the firewall for access to Lustre
-    for port in 988; do
-        # don't allow lokkit to re-install the firewall due to RH #1024557
-        lokkit -n -p $port:tcp
-        # instead live update the firewall
-        iptables -I INPUT 4 -m state --state new -p tcp --dport $port -j ACCEPT
-    done
-elif [ $1 -gt 1 ]; then
-    # upgrade
-    # do nothing, the manager will restart pacemaker after the updates
-    # are complete
-    :
-fi
-
-%postun management
-if [ $1 -lt 1 ]; then
-    # close previously opened ports in the firewall for access to Lustre
-    ed /etc/sysconfig/iptables <<EOF
-/-A INPUT -m state --state NEW -m tcp -p udp --dport 988 -j ACCEPT/d
-w
-q
-EOF
-    ed /etc/sysconfig/system-config-firewall <<EOF
-/--port=988:tcp/d
-w
-q
-EOF
-fi
 
 # when a kernel is installed, make sure that our kernel is reset back to
 # being the preferred boot kernel

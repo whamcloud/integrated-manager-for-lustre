@@ -121,8 +121,7 @@ class TestAgentConfiguration(FencingTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test_node_standby(self):
-        self.add_command(('crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever')
-)
+        self.add_command(('crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'))
         set_node_standby(self.fake_node_hostname)
 
         self.assertRanAllCommands()

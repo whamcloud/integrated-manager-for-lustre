@@ -149,7 +149,8 @@ def unconfigure_corosync2(host_fqdn, mcast_port):
         if (type(e) is not OSError) or (e.errno != errno.ENOENT):
             return agent_error("Failed to remove corosync.conf")
 
-    return agent_ok_or_error(firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True))
+    return agent_ok_or_error(firewall_control.remove_rule(PCS_TCP_PORT, "tcp", "pcs", persist=True) or
+                             firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True))
 
 
 ACTIONS = [start_corosync2, stop_corosync2,

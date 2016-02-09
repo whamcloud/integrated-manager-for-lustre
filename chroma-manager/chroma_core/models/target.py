@@ -697,6 +697,23 @@ class GenerateHaLabelStep(Step):
         job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
 
+class OpenLustreFirewallStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs['host'],
+                                        'open_firewall',
+                                        {'port': 988,
+                                         'address': None,
+                                         'proto': "tcp",
+                                         'description': 'lustre',
+                                         'persist': True})
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['opening_lustre_firewall_port'] % kwargs['host']
+
+
 class ConfigureTargetStoreStep(Step):
     idempotent = True
 
@@ -788,22 +805,23 @@ class ConfigureTargetJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            steps.append((ConfigureTargetStoreStep, {
-                'host': target_mount.host,
-                'target': target_mount.target,
-                'target_mount': target_mount,
-                'backfstype': target_mount.volume_node.volume.filesystem_type,
-                'volume_node': target_mount.volume_node
-            }))
+        target_mounts = list(self.target.managedtargetmount_set.all().order_by('-primary'))
 
-        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            steps.append((AddTargetToPacemakerConfigStep, {
-                'host': target_mount.host,
-                'target': target_mount.target,
-                'target_mount': target_mount,
-                'volume_node': target_mount.volume_node
-            }))
+        for target_mount in target_mounts:
+            steps.append((OpenLustreFirewallStep, {'host': target_mount.host}))
+
+        for target_mount in target_mounts:
+            steps.append((ConfigureTargetStoreStep, {'host': target_mount.host,
+                                                     'target': target_mount.target,
+                                                     'target_mount': target_mount,
+                                                     'backfstype': target_mount.volume_node.volume.filesystem_type,
+                                                     'volume_node': target_mount.volume_node}))
+
+        for target_mount in target_mounts:
+            steps.append((AddTargetToPacemakerConfigStep, {'host': target_mount.host,
+                                                           'target': target_mount.target,
+                                                           'target_mount': target_mount,
+                                                           'volume_node': target_mount.volume_node}))
 
         return steps
 
