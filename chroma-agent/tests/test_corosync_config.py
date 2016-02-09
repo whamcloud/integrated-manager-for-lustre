@@ -259,6 +259,9 @@ num  target     prot opt source               destination
                           CommandCaptureCommand(('pcs', 'cluster', 'node', 'remove', host_fqdn)),
                           CommandCaptureCommand(('service', 'iptables', 'status')),
                           CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
+                                                 'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
+                          CommandCaptureCommand(('service', 'iptables', 'status')),
+                          CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
                                                  'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')))
 
         # mock built-in 'open' to avoid trying to read local filesystem

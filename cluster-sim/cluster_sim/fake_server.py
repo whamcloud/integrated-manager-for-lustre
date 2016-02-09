@@ -824,6 +824,12 @@ class FakeServer(utils.Persisted):
 
         return {'label': label}
 
+    def open_firewall(self, port, address, proto, description, persist):
+        return agent_result_ok
+
+    def close_firewall(self, port, address, proto, description, persist):
+        return agent_result_ok
+
     def configure_target_ha(self, primary, device, ha_label, uuid, mount_point):
         return agent_result(self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point))
 

@@ -24,6 +24,7 @@
 help_text = {
     'mount_lustre_filesystems': 'Mount all associated Lustre filesystems on this worker.',
     'unmount_lustre_filesystems': 'Unmount all associated Lustre filesystems on this worker.',
+    'opening_lustre_firewall_port': 'Opening Lustre firewall port (988:tcp) on %s',
     'mount_lustre_filesystem': 'Mount a Lustre filesystem on this worker.',
     'unmount_lustre_filesystem': 'Unmount a Lustre filesystem on this worker.',
     'remove_lustre_client_mount': 'Remove this Lustre client entry from the configuration.',
