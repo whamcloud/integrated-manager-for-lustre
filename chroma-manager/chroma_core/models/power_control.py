@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -95,7 +95,7 @@ class PowerControlType(DeletablePowerControlModel):
     poweroff_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for switching an outlet off", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s")
     monitor_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for checking that a PDU is responding", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor")
     outlet_query_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for querying an individual outlet's state", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s")
-    outlet_list_template = models.CharField(null = True, blank = True, max_length = 512, help_text = "Command template for listing all outlets on a PDU", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o list")
+    outlet_list_template = models.CharField(null = True, blank = True, max_length = 512, help_text = "Command template for listing all outlets on a PDU", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o %(list_parameter)s")
 
     def display_name(self):
         make = self.make if self.make != "" else "Unknown Make"
@@ -120,9 +120,7 @@ def create_default_power_types(app, **kwargs):
     import chroma_core
     chroma_core = os.path.abspath(os.path.dirname(chroma_core.__file__))
 
-    power_types_filename = "fixtures/default_power_types_el%s.json" % int(platform_info.distro_version)
-
-    with open(os.path.join(chroma_core, power_types_filename)) as f:
+    with open(os.path.join(chroma_core, "fixtures/default_power_types.json")) as f:
         default_types = json.load(f)
 
     for power_type in default_types:
@@ -256,7 +254,8 @@ class PowerControlDevice(DeletablePowerControlModel):
                 'password': self.password,
                 'identifier': identifier,
                 'options': self.options,
-                'home': expanduser("~")
+                'home': expanduser("~"),
+                'list_parameter': 'list-status' if platform_info.distro_version >= 7.0 else 'list'
             }
         return re.split(r'\s+', cmd_str)
 
