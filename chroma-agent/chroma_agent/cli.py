@@ -100,6 +100,31 @@ def _register_function(parser, name, fn):
                 p.add_argument('--%s' % arg, required = False)
 
 
+def _codify_args(args):
+    """When the use specifies --parameter=None (or True, of False) etc on the command
+    line this routine turns it into a real value.
+
+    Simple but effective routine, not designed to be clever or dangerous.
+    """
+    conversions = {'None': None,
+                   'True': True,
+                   'False': False}
+
+    for key, value in args.items():
+        try:
+            args[key] = conversions[value]
+        except KeyError:
+            try:
+                # We never have a case where the command would expect a string of valid json, so if it loads as
+                # valid json it was a descriptor of a dict. This can only be exercised as by someone logged onto
+                # the server and doesn't get executed at a privilege higher than the person executing it so anything
+                # they could achieve with bad json they could achieve directly.
+                if type(value) == str:
+                    args[key] = json.loads(value)
+            except ValueError:
+                pass
+
+
 def main():
     configure_logging()
 
@@ -112,6 +137,9 @@ def main():
     try:
         AgentShell.thread_state.enable_save()
         args = parser.parse_args()
+
+        _codify_args(vars(args))
+
         result = args.func(args)
         try:
             print result['raw_result']

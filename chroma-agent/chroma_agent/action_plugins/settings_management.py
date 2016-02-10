@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -29,12 +29,10 @@ from chroma_agent.config_store import ConfigKeyExistsError
 
 
 def set_profile(profile_json):
-    profile = json.loads(profile_json)
-
     try:
-        config.set('settings', 'profile', profile)
+        config.set('settings', 'profile', profile_json)
     except ConfigKeyExistsError:
-        config.update('settings', 'profile', profile)
+        config.update('settings', 'profile', profile_json)
 
 
 def set_server_url(url):

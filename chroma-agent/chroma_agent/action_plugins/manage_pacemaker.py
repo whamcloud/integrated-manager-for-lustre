@@ -25,7 +25,6 @@ Corosync verification
 """
 
 import socket
-import json
 import time
 import threading
 
@@ -185,10 +184,6 @@ def configure_fencing(agents):
     node = pc.get_node(socket.gethostname())
 
     node.clear_fence_attributes()
-
-    if isinstance(agents, basestring):
-        # For CLI debugging
-        agents = json.loads(agents)
 
     for idx, agent in enumerate(agents):
         node.set_fence_attributes(idx, agent)
