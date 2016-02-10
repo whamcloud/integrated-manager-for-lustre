@@ -44,8 +44,7 @@ setup(
     # that setuptools wants to strip the first character off the filename.
     package_data = {
         '': [".chroma-manager.py", ".production_supervisord.conf", ".chroma-manager.conf.template", ".mime.types"],
-        'chroma_core': ["fixtures/default_power_types_el6.json",
-                        "fixtures/default_power_types_el7.json"],
+        'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/select-box-it/select-box-it.js",
                       "static/js/lib/select-box-it/select-box-it.css",

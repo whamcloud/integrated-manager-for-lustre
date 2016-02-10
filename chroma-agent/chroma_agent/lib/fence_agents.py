@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -40,13 +40,13 @@ class FenceAgent(object):
         AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', state])
 
     def list(self):
-        AgentShell.try_run(self.base_cmd + ['-a', 'list'])
-
-    def status(self):
         if platform_info.distro_version >= 7.0:
             AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'list-status'])
         else:
-            AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'status'])
+            AgentShell.try_run(self.base_cmd + ['-a', 'list'])
+
+    def status(self):
+        AgentShell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'status'])
 
     def off(self):
         self.toggle_outlet('off')

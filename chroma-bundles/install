@@ -400,7 +400,9 @@ def _install_or_upgrade_packages():
         # Best we can do without better yum diagnostics is to splash up a
         # big warning and hope someone's paying attention.
         if (old_version, old_release) == (new_version, new_release):
-            log.warning("\n\nWARNING: The installed version (%s.%s) did not change. This is OK if the installer was intentionally re-run with the same version. Otherwise, please contact support with details from %s.\n\n" % (old_version, old_release, LOG_FILE))
+            log.warning("\n\nWARNING: The installed version (%s.%s) did not change.\n"
+                        "This is OK if the installer was intentionally re-run with the same version.\n"
+                        "Otherwise, please contact support with details from %s.\n\n" % (old_version, old_release, LOG_FILE))
     elif not any([old_version, old_release, new_version, new_release]):
         # This really didn't work out, did it?
         log.error("The installation failed. Please contact support with details from %s." % LOG_FILE)

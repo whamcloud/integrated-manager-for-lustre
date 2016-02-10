@@ -60,6 +60,10 @@ Requires: pacemaker-iml = 1.1.12-4.wc1.el6
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 %endif
 
+%if 0%{?rhel} > 6
+Requires: fence-agents
+Requires: fence-virsh
+%endif
 
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.

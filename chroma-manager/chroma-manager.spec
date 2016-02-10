@@ -99,6 +99,11 @@ Obsoletes: nodejs-zeparser
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 %endif
 
+%if 0%{?rhel} > 6
+Requires: fence-agents
+Requires: fence-virsh
+%endif
+
 %description
 This is the Intel Manager for Lustre Monitoring and Administration Interface
 

@@ -3,7 +3,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -36,7 +36,7 @@ def fatal(msg):
 try:
     from chroma_core.models import PowerControlType, PowerControlDevice
 except ImportError:
-    fatal("Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma?")
+    fatal("Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma-manager ?")
 try:
     from django.db import transaction
 except ImportError:
