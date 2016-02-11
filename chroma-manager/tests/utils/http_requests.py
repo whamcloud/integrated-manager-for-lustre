@@ -2,6 +2,7 @@ import json
 import sys
 import os
 import requests
+from requests import adapters
 from urlparse import urljoin, urlparse
 
 
@@ -23,6 +24,11 @@ class HttpRequests(object):
         self.session.headers = {"Accept": "application/json",
                                 "Content-type": "application/json"}
         self.session.verify = False
+
+        # Increase the number of pool connections so we can test large numbers
+        # of connections to the api.
+        adapter = adapters.HTTPAdapter(pool_connections=2000, pool_maxsize=2000)
+        self.session.mount('http://', adapter)
 
     def _action(self, callable, url, **kwargs):
         try:

@@ -3,6 +3,7 @@ import logging
 
 from tests.integration.core.long_polling_testing import LongPollingThread
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.chroma_common.lib.util import ExceptionThrowingThread
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -12,18 +13,90 @@ class LongPollingTestCase(ChromaIntegrationTestCase):
     def set_long_polling_endpoint(self, endpoint):
         self.long_polling_end_point = LongPollingThread("/api/host/", self)
 
-    def _wait_response_count(self, count):
-        self.wait_until_true(lambda: self.long_polling_end_point.response_count == count,
+    def _wait_response_count(self, count, long_polling_end_point=None):
+        if long_polling_end_point == None:
+            long_polling_end_point = self.long_polling_end_point
+
+        def check_long_polling_state(long_polling_end_point):
+            if long_polling_end_point.error:
+                raise Exception(long_polling_end_point.error)
+
+            return long_polling_end_point.response_count == count
+
+        self.wait_until_true(lambda: check_long_polling_state(long_polling_end_point),
                              error_message=lambda: ('Expected count {0}\n'
                                                     'Actual Count {1}\n'
                                                     'Polling Data {2}').format(count,
-                                                                              self.long_polling_end_point.response_count,
-                                                                              self.long_polling_end_point))
+                                                                               long_polling_end_point.response_count,
+                                                                               long_polling_end_point))
+
+
+class TestScaleLongPolling(LongPollingTestCase):
+    def test_host_long_polling_ddos(self):
+        def fetch_like_hell(self_, test_uri):
+            while not self_.exit:
+                self_.get_by_uri(test_uri,
+                                 args={'limit': 0},
+                                 verify_successful=True)
+
+        threads = []
+        self.exit = False
+
+        # Hardly ddos but for today we only allow 100 connections to the db.
+        # TODO: Increase the connections so we can have realistic numbers.
+        for index in range(0, 64):
+            thread = ExceptionThrowingThread(target=fetch_like_hell,
+                                             args=(self, '/api/host'))
+            thread.start()
+            threads.append(thread)
+
+        # Just let them run for 30 seconds.
+        time.sleep(1)
+
+        self.exit = True
+
+        ExceptionThrowingThread.wait_for_threads(threads)
+
+    def test_host_long_polling(self):
+        """Test long polling works with large numbers of outstanding requests"""
+
+        # Add one host
+        host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
+
+        long_polling_end_points = []
+
+        # Hardly excessive (32) but for today we only allow 100 connections to the db.
+        # TODO: Increase the connections so we can have realistic numbers.
+        for end_point in ['/api/host', '/api/lnet_configuration']:
+            long_polling_end_points.extend([LongPollingThread(end_point, self) for index in range(0, 32)])
+
+        for long_polling_end_point in long_polling_end_points:
+            self._wait_response_count(1, long_polling_end_point)
+
+        self.get_by_uri('/api/host/',
+                        verify_successful=False)
+
+        for long_polling_end_point in long_polling_end_points:
+            self._wait_response_count(1, long_polling_end_point)
+
+        # Stop LNet and the response should change.
+        self.remote_operations.stop_lnet(host['fqdn'])
+
+        for long_polling_end_point in long_polling_end_points:
+            self._wait_response_count(2, long_polling_end_point)
+            long_polling_end_point.exit = True
+
+        # Start LNet and the response should change.
+        self.remote_operations.start_lnet(host['fqdn'])
+
+        for long_polling_end_point in long_polling_end_points:
+            self._wait_response_count(3, long_polling_end_point)
+            long_polling_end_point.join()
 
 
 class TestHostLongPolling(LongPollingTestCase):
     def test_host_long_polling(self):
-        """Test long polling for alerts responds correctly."""
+        """Test long polling for alerts responds correctly"""
 
         # Add one host
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
@@ -57,7 +130,7 @@ class TestHostLongPolling(LongPollingTestCase):
 
 class TestLNetLongPolling(LongPollingTestCase):
     def test_lnet_long_polling(self):
-        """Test long polling for alerts responds correctly."""
+        """Test long polling for alerts responds correctly"""
 
         # Add one host
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]

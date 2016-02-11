@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -70,7 +70,7 @@ class AnonymousAuthentication(CsrfAuthentication):
         if not super(AnonymousAuthentication, self).is_authenticated(request, object):
             return False
 
-        return request.user.is_authenticated() or settings.ALLOW_ANONYMOUS_READ
+        return settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated()
 
     def get_identifier(self, request):
         if request.user.is_authenticated():

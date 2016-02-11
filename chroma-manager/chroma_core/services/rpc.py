@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -110,6 +110,11 @@ class RpcTimeout(Exception):
 class RunOneRpc(threading.Thread):
     """Handle a single incoming RPC in a new thread, and send the
     response (result or exception) from the execution thread."""
+
+    _outstanding = 0
+    _throttle_limit = 5
+    _throttled_locks = []
+
     def __init__(self, rpc, body, response_conn_pool):
         super(RunOneRpc, self).__init__()
         self.rpc = rpc
@@ -117,7 +122,20 @@ class RunOneRpc(threading.Thread):
         self._response_conn_pool = response_conn_pool
 
     def run(self):
+        # We do not throttle rpcs that do not hit the database.
+        rpc_throttle = self.body['method'] not in ['wait_table_change']
+
         try:
+            if rpc_throttle:
+                if RunOneRpc._outstanding > RunOneRpc._throttle_limit:
+                    rpc_complete_event = threading.Event()
+                    RunOneRpc._throttled_locks.append(rpc_complete_event)
+                    log.info("Throttled rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
+                    rpc_complete_event.wait()
+                    log.info("Released rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
+
+                RunOneRpc._outstanding += 1
+
             result = {
                 'result': self.rpc._local_call(self.body['method'], *self.body['args'], **self.body['kwargs']),
                 'request_id': self.body['request_id'],
@@ -145,6 +163,14 @@ class RunOneRpc(threading.Thread):
                 'traceback': backtrace
             }
             log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
+        finally:
+            if rpc_throttle:
+                try:
+                    rpc_complete_event = RunOneRpc._throttled_locks.pop(0)
+                    rpc_complete_event.set()
+                except IndexError:
+                    pass
+                RunOneRpc._outstanding -= 1
 
         django.db.connection.close()
 
@@ -467,6 +493,12 @@ class RpcClientFactory(object):
 
     @classmethod
     def get_client(cls, queue_name):
+        # This is code to disable _lightweight threads. Because we are past FF I am not removing the
+        # code however the patch for on going master and so I don't want the risk of pulling out the
+        # lightweight code.
+        if cls._lightweight:
+            cls.initialize_threads()
+
         if cls._lightweight:
             if not cls._lightweight_initialized:
                 # connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
@@ -544,11 +576,7 @@ class ServiceRpcInterface(object):
             transaction.commit()
 
         # If the caller specified rcp_timeout then fetch it from the args and remove.
-        if 'rpc_timeout' in kwargs:
-            rpc_timeout = kwargs['rpc_timeout']
-            del kwargs['rpc_timeout']
-        else:
-            rpc_timeout = RESPONSE_TIMEOUT
+        rpc_timeout = kwargs.pop('rpc_timeout', RESPONSE_TIMEOUT)
 
         request_id = uuid.uuid4().__str__()
         request = {
@@ -557,7 +585,7 @@ class ServiceRpcInterface(object):
             'kwargs': kwargs,
             'request_id': request_id}
 
-        log.info("Starting rpc: %s, id: %s " % (fn_name, request_id))
+        log.debug("Starting rpc: %s, id: %s " % (fn_name, request_id))
         log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
 
         rpc_client = RpcClientFactory.get_client(self.__class__.__name__)
@@ -582,7 +610,7 @@ class ServiceRpcInterface(object):
             else:
                 result_str = result
 
-            log.info("Completed rpc: %s, id: %s, result: %s" % (fn_name, request_id, result_str))
+            log.debug("Completed rpc: %s, id: %s, result: %s" % (fn_name, request_id, result_str))
 
             return result['result']
 

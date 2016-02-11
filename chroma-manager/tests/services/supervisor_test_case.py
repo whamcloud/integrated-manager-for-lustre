@@ -108,12 +108,23 @@ class SupervisorTestCase(TestCase):
             raise
 
     def tearDown(self):
+        # You can't import this gobally because DJANGO_SETTINGS_MODULE is not initialized yet for some
+        # reason, but maybe by the time the code meanders its way to here it will work.
+        from chroma_core.services.rpc import RpcClientFactory
+
         test_failed = (sys.exc_info() != (None, None, None))
 
         if test_failed:
             log.info(self._xmlrpc.system.listMethods())
             log_chunk = self._xmlrpc.supervisor.readLog(0, 4096)
             log.error("Supervisor log: %s" % log_chunk)
+
+        # Shutdown any RPC Threads if they were started. Bit of horrible insider knowledge here.
+        if RpcClientFactory._lightweight is False:
+            RpcClientFactory.shutdown_threads()
+            RpcClientFactory._lightweight = True
+            RpcClientFactory._available = True
+            RpcClientFactory._instances = {}
 
         if self._supervisor is not None:
             try:
