@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,6 +22,7 @@
 
 import os
 import re
+import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
@@ -59,7 +60,13 @@ class DmsetupTable(DeviceHelper):
         self._parse_dm_table(stdout)
 
     def _get_vgs(self):
-        out = AgentShell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
+        try:
+            out = AgentShell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
+        except AgentShell.CommandExecutionError as cee:
+            # If no vgs in stall then no volume groups
+            if cee.result.rc == errno.ENOENT:
+                return
+            raise
 
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
@@ -68,7 +75,13 @@ class DmsetupTable(DeviceHelper):
             yield (name, uuid, size)
 
     def _get_lvs(self, vg_name):
-        out = AgentShell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
+        try:
+            out = AgentShell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
+        except AgentShell.CommandExecutionError as cee:
+            # If no lvs in stall then no logical volumes
+            if cee.result.rc == errno.ENOENT:
+                return
+            raise
 
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
@@ -241,20 +254,24 @@ class DmsetupTable(DeviceHelper):
                         # No trailing p\d+, therefore not a partition
                         console_log.error("Cannot handle devicemapper device %s: it doesn't look like an LV or a partition" % name)
             elif dm_type == 'multipath':
-                major_minors = self._parse_multipath_params(tokens[4:])
-                devices = [self.block_devices.block_device_nodes[i] for i in major_minors]
                 if name in self.mpaths:
                     raise RuntimeError("Duplicated mpath device %s" % name)
+
+                major_minors = self._parse_multipath_params(tokens[4:])
+
+                # multipath devices might reference devices that don't exist (maybe did and the removed) so
+                # becareful about missing keys.
+                devices = [self.block_devices.block_device_nodes[major_minor]
+                           for major_minor in major_minors
+                           if major_minor in self.block_devices.block_device_nodes]
 
                 # Add this devices to the canonical path list.
                 for device in devices:
                     ndp.add_normalized_device(device['path'], "%s/%s" % (self.MAPPERPATH, name))
 
-                self.mpaths[name] = {
-                    "name": name,
-                    "block_device": block_device,
-                    "nodes": devices
-                }
+                self.mpaths[name] = {"name": name,
+                                     "block_device": block_device,
+                                     "nodes": devices}
             else:
                 continue
 
