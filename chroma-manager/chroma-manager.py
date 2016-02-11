@@ -39,6 +39,8 @@ import settings
 
 bind = "127.0.0.1:%s" % settings.HTTP_API_PORT
 
+pidfile = settings.GUNICORN_PID_PATH
+
 errorlog = os.path.join(settings.LOG_PATH, 'gunicorn-error.log')
 accesslog = os.path.join(settings.LOG_PATH, 'gunicorn-access.log')
 
