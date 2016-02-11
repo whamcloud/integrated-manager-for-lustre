@@ -48,10 +48,10 @@ class LongPollingThread(Thread):
                 elif response.status_code == 304:                    # 304 Not Modified
                     assert (time.time() - request_time) >= LONG_POLL_TIMEOUT_SECONDS, 'Endpoint responded with 304 before long polling timeout'
                 else:
-                    raise 'Unexpected return code %s' % response.status_code
+                    raise Exception('Unexpected return code %s\nresponse %s' % (response.status_code, response._content))
             except Exception as e:
                 self.error = e
-                logger.warning('LongPollingThread exited unexpectedly with %s' % e.message)
+                logger.warning('LongPollingThread exited unexpectedly with %s' % e)
                 break
 
     @property

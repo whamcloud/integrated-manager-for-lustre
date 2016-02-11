@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -66,8 +66,9 @@ class LongPollingAPI(object):
                 if request.GET.get('last_modified') is not None:
                     # Expensive but reliable method, this is only used when a user types from a browser
                     # and only works for json, but that is all we support and the real method is the ETag
+                    # take out the spaces because it makes copy-paste debug easier.
                     content_data = json.loads(response.content)
-                    content_data['meta']['last_modified'] = json.dumps(table_timestamps)
+                    content_data['meta']['last_modified'] = json.dumps(table_timestamps).replace(' ', '')
                     response.content = json.dumps(content_data)
 
                 response['ETag'] = json.dumps(table_timestamps)

@@ -81,11 +81,15 @@ class UtilityTestCase(TestCase):
 
         running_time = 0
         lambda_result = None
+        wait_time = 0.01
         while not lambda_result and running_time < timeout:
             lambda_result = lambda_expression()
             logger.debug("%s evaluated to %s" % (inspect.getsource(lambda_expression), lambda_result))
-            time.sleep(1)
-            running_time += 1
+
+            if not lambda_result:
+                time.sleep(wait_time)
+                wait_time = min(1, wait_time * 10)
+                running_time += wait_time
 
         if hasattr(error_message, '__call__'):
             error_message = error_message()

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,6 +27,9 @@ is used for updates received from agent reports.  Access to both of these, along
 non-remote functionality is wrapped in JobSchedulerClient.
 
 """
+
+from django import db
+
 from chroma_core.services import log_register
 from chroma_core.services.rpc import ServiceRpcInterface
 from chroma_core.models import ManagedHost, Command
@@ -190,7 +193,13 @@ class JobSchedulerClient(object):
 
     @classmethod
     def wait_table_change(cls, last_timestamp, tables_list, timeout):
-        return JobSchedulerRpc().wait_table_change(last_timestamp, tables_list, timeout, rpc_timeout = timeout + 5)
+        # This can be a long time so we don't want to hang onto any database connection
+        db.connection.close()
+
+        return JobSchedulerRpc().wait_table_change(last_timestamp,
+                                                   tables_list,
+                                                   timeout,
+                                                   rpc_timeout=timeout + 5)
 
     @classmethod
     def update_lnet_configuration(cls, lnet_configuration_list):
