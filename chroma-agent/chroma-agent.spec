@@ -61,7 +61,7 @@ Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 
 %if 0%{?rhel} > 6
 Requires: fence-agents
-Requires: fence-virsh
+Requires: fence-agents-virsh
 %endif
 
 %description management
