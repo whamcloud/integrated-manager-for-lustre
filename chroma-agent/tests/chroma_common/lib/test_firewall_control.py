@@ -184,6 +184,28 @@ num  target     prot opt source               destination
 
 """
 
+    # example output from 'iptables -L' or 'service iptables status' with matching rule at different index
+    different_index_output = """Table: filter
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination
+1    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
+2    ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0
+3    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
+4    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22
+5    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:80
+6    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:443
+7    ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:123
+8    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain FORWARD (policy ACCEPT)
+num  target     prot opt source               destination
+1    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination
+
+"""
+
     # example output from 'iptables -L' or 'service iptables status' if firewall not configured
     not_configured_output = """Table: filter
 Chain INPUT (policy ACCEPT)
@@ -312,6 +334,19 @@ num  target     prot opt source               destination
         self.add_commands(
             CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:%s' % ('123', 'udp'))),
             CommandCaptureCommand(('service', 'iptables', 'status'), stdout=self.chain_output))
+
+        response = self.test_firewall.add_rule('123', 'udp', 'test_service', persist=True)
+
+        # None return value indicates success or no action performed
+        self.assertEqual(response, None)
+        self.assertRanAllCommandsInOrder()
+
+    def test_add_existing_port_rule_different_index(self):
+        # rules are analysed to check they don't match existing entries at different index,
+        # test that additional rules are not added
+        self.add_commands(
+            CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:%s' % ('123', 'udp'))),
+            CommandCaptureCommand(('service', 'iptables', 'status'), stdout=self.different_index_output))
 
         response = self.test_firewall.add_rule('123', 'udp', 'test_service', persist=True)
 

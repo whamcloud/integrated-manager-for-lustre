@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -200,22 +200,23 @@ num  target     prot opt source               destination
                     and chain == 'INPUT' \
                     and not set(['-s', '--source', '-d', '--destination']).intersection(set(args_in)):
                 # parse rule args_in
-                rule_idx = args_in[0]
                 state = args_in[args_in.index('--state') + 1].upper()
                 proto = args_in[args_in.index('-p') + 1]
                 port = args_in[args_in.index('--dport') + 1]
                 action = args_in[args_in.index('-j') + 1]
 
                 # separate existing rules
-                lines = stdout.split('\n')
                 # identify the beginning index of the table, 0 referencing row with table headers
-                input_chain_idx = lines.index('Chain INPUT (policy ACCEPT)') + 1
-                pattern = '%s +%s +%s +.*state %s %s dpt:%s' % (rule_idx, action, proto, state,
-                                                                proto, port)
-                rule = lines[input_chain_idx + int(rule_idx)]
-                if re.search(pattern, rule):
-                    # rule already exists at the expected index, don't add again
-                    return self.SuccessCode.DUPLICATE
+                lines = stdout.split('\n')
+                index = lines.index('Chain INPUT (policy ACCEPT)') + 1
+
+                pattern = ' +%s +%s +.*state %s %s dpt:%s' % (action, proto, state, proto, port)
+
+                while lines[index] != "":
+                    if re.search(pattern, lines[index]):
+                        # rule already exists at the expected index, don't add again
+                        return self.SuccessCode.DUPLICATE
+                    index += 1
 
             cmdlist = ['/sbin/iptables', op_arg, chain]
             cmdlist.extend(args_in)
