@@ -64,10 +64,10 @@ class PipInstallRequirements(object):
                         print "Failed to install %s" % package.rsplit('/', 1)[-1]
                         sys.exit(1)
                 else:
-                    exit_status = subprocess.call(['pip', 'install',
+                    rc = subprocess.call(['pip', 'install',
                                                    '--build', build_dir, '--no-index', '--pre',
                                                    '--find-links', 'file://%s' % self.pip_packages_dir, package])
-                    if not exit_status == 0:
+                    if not rc == 0:
                         print "Failed to install %s" % package
                         sys.exit(1)
 

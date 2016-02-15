@@ -8,10 +8,13 @@ import re
 import os
 
 from testconfig import config
+
 from tests.chroma_common.lib.util import ExceptionThrowingThread
-from tests.integration.core.constants import TEST_TIMEOUT, LONG_TEST_TIMEOUT
+from tests.chroma_common.lib.shell import Shell
+from tests.utils.remote_firewall_control import RemoteFirewallControl
+from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
-from tests.integration.core.utility_testcase import RemoteCommandResult
 
 
 logger = logging.getLogger('test')
@@ -268,6 +271,7 @@ class SimulatorRemoteOperations(RemoteOperations):
 
 
 class RealRemoteOperations(RemoteOperations):
+
     def __init__(self, test_case):
         self._test_case = test_case
 
@@ -284,6 +288,10 @@ class RealRemoteOperations(RemoteOperations):
         #  * Use a firewall rule to drop manager->agent TCP streams after N bytes to cause responses
         #    to be mangled.
         raise NotImplementedError()
+
+    def _ssh_address_no_check(self, address, command_string):
+        """ pass _ssh_address expected_return_code=None, so exception not raised on nonzero return code """
+        return self._ssh_address(address, command_string, expected_return_code=None)
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
@@ -346,14 +354,14 @@ class RealRemoteOperations(RemoteOperations):
         # or else reading from stdout/stderr will return an empty string.
         stdout = channel.makefile('rb').read()
         stderr = channel.makefile_stderr('rb').read()
-        exit_status = channel.recv_exit_status()
+        rc = channel.recv_exit_status()
         channel.close()
 
         # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
-            self._test_case.assertEqual(exit_status, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
+            self._test_case.assertEqual(rc, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
 
-        return RemoteCommandResult(exit_status, stdout, stderr)
+        return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
     def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
         address = None
@@ -683,9 +691,9 @@ class RealRemoteOperations(RemoteOperations):
             logger.debug("Connection unexpectedly killed while checking %s" % address)
             return False
 
-        if not result.exit_status == 0:
+        if not result.rc == 0:
             # Wait, what?  echo returned !0?  How is that possible?
-            logger.debug("exit status %d from echo on %s: inconceivable!" % (result.exit_status, address))
+            logger.debug("exit status %d from echo on %s: inconceivable!" % (result.rc, address))
             return False
 
         return True
@@ -859,7 +867,7 @@ class RealRemoteOperations(RemoteOperations):
             'which crmadmin',
             expected_return_code = None
         )
-        return result.exit_status == 0
+        return result.rc == 0
 
     def get_pacemaker_targets(self, server, running = False):
         """
@@ -951,29 +959,24 @@ class RealRemoteOperations(RemoteOperations):
         """
 
         for server in server_list:
+            address = server['address']
+
             if self.is_worker(server):
                 logger.info("%s is configured as a worker -- skipping." % server['address'])
                 continue
 
             if self.has_pacemaker(server):
+                firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
+
                 if config.get('pacemaker_hard_reset', False):
                     clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(server['address'],
-                                          clear_ha_script.read())
+                        self._ssh_address(address, clear_ha_script.read())
 
-                    self._ssh_address(server['address'],
-                        '''set -ex
-                        cat << EOF > /etc/sysconfig/system-config-firewall
---enabled
---port=22:tcp
---port=988:tcp
-EOF
-                        lokkit -n >&2
-                        service iptables restart >&2
-                        ''')
+                    self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
+                    self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
 
                     self.unmount_lustre_targets(server)
                 else:
@@ -981,36 +984,39 @@ EOF
 
                     # Stop targets and delete targets
                     for target in crm_targets:
-                        self._ssh_address(server['address'], 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
+                        self._ssh_address(address, 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
                     for target in crm_targets:
                         self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                        self._ssh_address(server['address'], 'pcs resource delete %s' % target)
-                        self._ssh_address(server['address'], 'crm_resource -C -r %s' % target)
+                        self._ssh_address(address, 'pcs resource delete %s' % target)
+                        self._ssh_address(address, 'crm_resource -C -r %s' % target)
 
                     # Verify no more targets
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
 
-                    # remove firewall rules added for corosync
+                    # remove firewall rules previously added for corosync
                     mcast_port = self.get_corosync_port(server['fqdn'])
                     if mcast_port:
-                        self.del_firewall_rule(server, mcast_port, "udp")
+                        self._ssh_address(
+                            address,
+                            firewall.remote_remove_port_cmd(mcast_port, 'udp')
+                        )
 
-                rpm_q_result = self._ssh_address(server['address'], "rpm -q chroma-agent", expected_return_code=None)
-                if rpm_q_result.exit_status == 0:
+                rpm_q_result = self._ssh_address(address, "rpm -q chroma-agent", expected_return_code=None)
+                if rpm_q_result.rc == 0:
                     # Stop the agent
                     self._ssh_address(
-                        server['address'],
+                        address,
                         'service chroma-agent stop'
                     )
                     self._ssh_address(
-                        server['address'],
+                        address,
                         '''
                         rm -rf /var/lib/chroma/*;
                         ''',
                         expected_return_code = None  # Keep going if it failed - may be none there.
                     )
             else:
-                logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
+                logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % address)
 
     def clear_lnet_config(self, server_list):
         """
@@ -1028,7 +1034,7 @@ EOF
                               reboot &&
                               sleep 20
                               ''',
-                              expected_return_code = None)              # Keep going if it failed - may be none there.
+                              expected_return_code=None)              # Keep going if it failed - may be none there.
 
         # Now ensure they have all comeback to life
         for server in server_list:
@@ -1040,26 +1046,6 @@ EOF
     def get_package_version(self, fqdn, package):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
 
-    def get_iptables_rules(self, server):
-        rules = []
-        for line in filter(None, self._ssh_address(server['address'],
-                                      "iptables -L INPUT -nv").stdout.split('\n'))[2:]:
-            logger.info(line.rstrip())
-            rule = {}
-            try:
-                # 0 0 ACCEPT udp  -- * * 0.0.0.0/0 0.0.0.0/0 state NEW udp dpt:123
-                (rule["pkts"], rule["bytes"], rule["target"], rule["prot"],
-                 rule["opt"], rule["in"], rule["out"], rule["source"],
-                 rule["destination"], rule["details"]) = line.rstrip().split(None, 9)
-            except ValueError:
-                # 0 0 ACCEPT icmp -- * * 0.0.0.0/0 0.0.0.0/0
-                (rule["pkts"], rule["bytes"], rule["target"], rule["prot"],
-                 rule["opt"], rule["in"], rule["out"], rule["source"],
-                 rule["destination"]) = line.rstrip().split()
-            rules.append(rule)
-
-        return rules
-
     def get_corosync_port(self, fqdn):
         mcast_port = None
         for line in self._ssh_address(fqdn,
@@ -1069,28 +1055,16 @@ EOF
                 mcast_port = match.group(1)
                 break
 
-        return int(mcast_port)
+        return int(mcast_port) if mcast_port is not None else None
 
     def grep_file(self, server, string, file):
-        result = self._ssh_address(server['address'],
-                                   "grep -e \"%s\" %s || true" %
+        result = self._ssh_address(server['address'], "grep -e \"%s\" %s || true" %
                                    (string, file)).stdout
         return result
 
     def get_file_content(self, server, file):
-        result = self._ssh_address(server['address'], "cat \"%s\" || true" %
-                                                      file).stdout
+        result = self._ssh_address(server['address'], "cat \"%s\" || true" % file).stdout
         return result
-
-    def del_firewall_rule(self, server, port, proto):
-        # it really bites that lokkit has no "delete" functionality
-        self._ssh_address(server['address'], """set -ex
-if service iptables status && iptables -L INPUT -nv | grep 'state NEW %s dpt:%s'; then
-    iptables -D INPUT -m state --state new -p %s --dport %s -j ACCEPT
-fi
-sed -i -e '/-A INPUT -m state --state NEW -m %s -p %s --dport %s -j ACCEPT/d' /etc/sysconfig/iptables
-sed -i -e '/--port=%s:%s/d' /etc/sysconfig/system-config-firewall""" %
-                          (proto, port, proto, port, proto, proto, port, port, proto))
 
     def enable_agent_debug(self, server_list):
         for server in server_list:
@@ -1103,12 +1077,18 @@ sed -i -e '/--port=%s:%s/d' /etc/sysconfig/system-config-firewall""" %
                               "rm -f /tmp/chroma-agent-debug")
 
     def omping(self, server, servers, count=5, timeout=30):
-        r = self._ssh_address(server['address'], """exec 2>&1
-iptables -I INPUT -p udp --dport 4321 -j ACCEPT
-omping -T %s -c %s %s
-iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
-                              " ".join([s['nodename'] for s in servers])))
-        return r.stdout
+        firewall = RemoteFirewallControl.create(server['address'], self._ssh_address_no_check)
+
+        self._ssh_address(server['address'], firewall.remote_add_port_cmd(4321, 'udp'))
+
+        result = self._ssh_address(server['address'],
+                                   'exec 2>&1; omping -T %s -c %s %s' % (timeout,
+                                                                         count,
+                                                                         " ".join([s['nodename'] for s in servers])))
+
+        self._ssh_address(server['address'], firewall.remote_remove_port_cmd(4321, 'udp'))
+
+        return result.stdout
 
     def yum_update(self, server):
         self._ssh_address(server['address'], "yum -y update")

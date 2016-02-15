@@ -45,7 +45,7 @@ class UtilityTestCase(TestCase):
     help_fetched_list = []
 
     def setUp(self):
-        self.maxDiff = None                                     # By default show the complete diff on errors.
+        self.maxDiff = None                  # By default show the complete diff on errors.
 
     def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
         """

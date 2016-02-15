@@ -54,9 +54,7 @@ class TestClusterSetup(TestCase):
         import json
 
         def run_omping(pipe, server, num_requests):
-            response = self.remote_operations.omping(server,
-                                                     self.config_servers,
-                                                     count=num_requests)
+            response = self.remote_operations.omping(server, self.config_servers, count=num_requests)
             pipe.send(json.dumps(response))
 
         num_requests = 5

@@ -30,12 +30,12 @@ def _check_status(address, additional_check_items):
 
                 remote_command_result = remote_ops._ssh_address(address, command, None)
 
-                if remote_command_result.exit_status == 0:
+                if remote_command_result.rc == 0:
                     logger.debug("%s on %s\n%s" % (action, address, remote_command_result.stdout.read()))
                 else:
                     logger.debug("Error capturing %s on %s: result %s, stdout %s, stderr %s" % (action,
                                                                                                 address,
-                                                                                                remote_command_result.exit_status,
+                                                                                                remote_command_result.rc,
                                                                                                 remote_command_result.stdout.read(),
                                                                                                 remote_command_result.stderr.read()))
         else:

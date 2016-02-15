@@ -29,20 +29,19 @@ from .shell import Shell
 
 
 class FirewallControl(object):
-    """ Class for issuing shell commands for managing the firewall, this abstract base
-    class is subclassed to provide concrete implementations of the abstract methods containing
-    the distribution specific command parameters
+    """Class for issuing shell commands for managing the firewall, this abstract base class is subclassed to
+    provide concrete implementations of the abstract methods containing the distribution specific command parameters
     """
 
     class_override = None
     __metaclass__ = abc.ABCMeta
 
+    platform_use = None
+
     firewall_rule = namedtuple('firewall_rule', ('port', 'protocol', 'description', 'persist', 'address'))
 
     # identifiers for results of firewall operations
     SuccessCode = util.enum('UPDATED', 'DUPLICATE', 'NOTRUNNING', 'NORULES')
-
-    platform_use = None
 
     def __init__(self, logger=None):
         self.logger = logger
@@ -199,6 +198,7 @@ num  target     prot opt source               destination
             if op_arg == '-I' \
                     and chain == 'INPUT' \
                     and not set(['-s', '--source', '-d', '--destination']).intersection(set(args_in)):
+
                 # parse rule args_in
                 state = args_in[args_in.index('--state') + 1].upper()
                 proto = args_in[args_in.index('-p') + 1]
@@ -206,16 +206,22 @@ num  target     prot opt source               destination
                 action = args_in[args_in.index('-j') + 1]
 
                 # separate existing rules
-                # identify the beginning index of the table, 0 referencing row with table headers
                 lines = stdout.split('\n')
+                # identify the beginning index of the table, 0 referencing row with table headers
                 index = lines.index('Chain INPUT (policy ACCEPT)') + 1
 
-                pattern = ' +%s +%s +.*state %s %s dpt:%s' % (action, proto, state, proto, port)
+                # additionally match against 'all' protocol identifier in rule spec which would allow traffic of all
+                # protocols
+                pattern = ' +%s +(%s|all) +.*state %s (%s|all) dpt:%s' % (action, proto, state, proto, port)
 
-                while lines[index] != "":
+                # process all rules within the input chain table until any 'REJECT' rules as we can't reliably
+                # assume 'ACCEPT' rules after a 'REJECT' rule will behave as we expect without further analysis
+                while lines[index].strip() != '' and lines[index].split()[1] != 'REJECT':
+
                     if re.search(pattern, lines[index]):
                         # rule already exists at the expected index, don't add again
                         return self.SuccessCode.DUPLICATE
+
                     index += 1
 
             cmdlist = ['/sbin/iptables', op_arg, chain]
