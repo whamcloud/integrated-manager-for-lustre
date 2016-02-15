@@ -1,65 +1,72 @@
-
-from collections import defaultdict
-
 from testconfig import config
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from django.utils.unittest import skipIf
+
+from tests.utils.remote_firewall_control import RemoteFirewallControl
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class TestFirewall(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
+
+    def setUp(self):
+        super(TestFirewall, self).setUp()
+        self.remote_operations = RealRemoteOperations(self)
 
     @skipIf(config.get('simulator'), "Can't be simulated")
     def test_manager(self):
         """ Test that the manager has the required selinux setting and firewall access rules installed"""
         chroma_manager = config['chroma_managers'][0]
 
-        contents = self.remote_operations.get_file_content(chroma_manager,
-                                                           "/selinux/enforce")
-        self.assertEqual(contents, "1")
+        self.assertEqual('Enforcing\n',
+                         self.remote_operations._ssh_address(chroma_manager['address'], 'getenforce').stdout)
 
         # TODO: refactor reset_cluster/reset_chroma_manager_db so that previous
         # state can be cleaned up without initializing the DB
         # then we can do a before/after firewall state comparison where
         # before and after are before chroma-config setup and after it
-        found = 0
         # XXX: this assumes there is only one chroma manager
-        for rule in self.remote_operations.get_iptables_rules(chroma_manager):
-            if rule["target"] == "ACCEPT" and \
-               rule["source"] == "0.0.0.0/0" and \
-               rule["destination"] == "0.0.0.0/0" and \
-               (rule["prot"] == "udp" or rule["prot"] == "tcp") and \
-               ((rule["details"] == "state NEW udp dpt:123" and
-                 chroma_manager.get('ntp_server', "localhost") ==
-                 "localhost") or
-               rule["details"] == "state NEW tcp dpt:80" or
-               rule["details"] == "state NEW tcp dpt:443"):
-                    found += 1
+        iml_port_proto_filter = [(80, 'tcp'), (443, 'tcp')]
 
         if chroma_manager.get('ntp_server', "localhost") == "localhost":
-            self.assertEqual(found, 3)
+            iml_port_proto_filter.append((123, 'udp'))
+
+        iml_rules = self._process_ip_rules(chroma_manager, iml_port_proto_filter)
+
+        self.assertEqual(len(iml_rules), len(iml_port_proto_filter))
+
+    def _process_ip_rules(self, server, port_proto_filter=None):
+        """
+        Retrieve matching rules or entire set from given server
+
+        :param server: target server we wish to retrieve rules from
+        :param port_proto_filter: optional list of port/proto pairs to look for
+        :return: RemoteFirewallControl.rules list of matching active firewall rules
+        """
+        # process rules on remote firewall in current state
+        firewall = RemoteFirewallControl.create(server['address'], self.remote_operations._ssh_address_no_check)
+        firewall.process_rules()
+
+        if port_proto_filter:
+            # we want to match firewall rules stored in member list 'firewall.rules' with those supplied in
+            # port/proto tuples list 'port_proto_filter'. We also want to match rules with proto == 'all' (iptables).
+            rules = []
+            for rule in firewall.rules:
+                if (int(rule.port), rule.protocol) in port_proto_filter:
+                    rules.append(rule)
+                elif rule.protocol == 'any' and int(rule.port) in [f[0] for f in port_proto_filter]:
+                    rules.append(rule)
+            return rules
+
         else:
-            self.assertEqual(found, 2)
-
-    def _find_ip_rules(self, server):
-        rules_found = defaultdict(int)
-
-        for rule in self.remote_operations.get_iptables_rules(server):
-            if rule["target"] == "ACCEPT" and \
-                            rule["source"] == "0.0.0.0/0" and \
-                            rule["destination"] == "0.0.0.0/0" and \
-                            rule["prot"] in ["udp", "tcp"]:
-                rules_found[rule["details"]] += 1
-
-        return rules_found
+            return firewall.rules
 
     @skipIf(config.get('simulator'), "Can't be simulated")
     def test_agent(self):
-        """Test that when hosts are added and a filesytem is created, that all required firewall accesses are installed"""
-
-        for server in self.TEST_SERVERS:
-            self.remote_operations.get_iptables_rules(server)
-
+        """
+        Test that when hosts are added and a filesytem is created, that all required firewall accesses are
+        installed
+        """
         self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
 
         self.hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
@@ -96,23 +103,17 @@ class TestFirewall(ChromaIntegrationTestCase):
         mcast_ports = {}
 
         for server in self.TEST_SERVERS:
-
-            contents = self.remote_operations.get_file_content(server,
-                                                               "/selinux/enforce")
-            self.assertEqual(contents, "")
+            self.assertNotEqual('Enforcing\n',
+                                self.remote_operations._ssh_address(server['address'], 'getenforce').stdout)
 
             mcast_port = self.remote_operations.get_corosync_port(server['fqdn'])
             self.assertIsNotNone(mcast_port)
 
             mcast_ports[server['address']] = mcast_port
 
-            rules_found = self._find_ip_rules(server)
+            matching_rules = self._process_ip_rules(server, [(mcast_port, 'udp'), (988, 'tcp')])
 
-            self.assertEqual(rules_found["state NEW udp dpt:%s" % mcast_port], 1)
-
-            # HYD-5448 means we get more than 1 copy, fixing that will make this line
-            # self.assertEqual(rules_found["state NEW tcp dpt:988"], 1)
-            self.assertNotEqual(rules_found["state NEW tcp dpt:988"], 0)
+            self.assertEqual(len(matching_rules), 2)
 
         # tear it down and make sure firewall rules are cleaned up
         self.graceful_teardown(self.chroma_manager)
@@ -120,16 +121,16 @@ class TestFirewall(ChromaIntegrationTestCase):
         for server in self.TEST_SERVERS:
             mcast_port = mcast_ports[server['address']]
 
-            rules_found = self._find_ip_rules(server)
+            matching_rules = self._process_ip_rules(server, [(mcast_port, 'udp')])
 
-            self.assertEqual(rules_found["state NEW udp dpt:%s" % mcast_port], 0)
+            self.assertEqual(len(matching_rules), 0)
 
-            line = self.remote_operations.grep_file(server,
-                                                    "--dport %s" % mcast_port,
-                                                    "/etc/sysconfig/iptables")
-            self.assertEqual(line, "")
+            # retrieve command string compatible with this server target
+            firewall = RemoteFirewallControl.create(server['address'], self.remote_operations._ssh_address_no_check)
 
-            line = self.remote_operations.grep_file(server,
-                                                    "--port=%s" % mcast_port,
-                                                    "/etc/sysconfig/system-config-firewall")
-            self.assertEqual(line, "")
+            # run the command on the target and store the result
+            result = self.remote_operations._ssh_address(server['address'],
+                                                         firewall.remote_validate_persistent_rule_cmd(mcast_port))
+
+            # test that the remote firewall configuration doesn't include rules to enable the mcast_port
+            self.assertEqual(result.stdout, '')

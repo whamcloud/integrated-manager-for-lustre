@@ -2,7 +2,8 @@ import tempfile
 import mock
 import abc
 
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControl, FirewallControlEL6
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
@@ -22,8 +23,8 @@ class BaseTestFC:
         address = '192.168.1.100'
 
         # create example named tuple to compare with objects in rules list
-        example_port_rule = FirewallControl.firewall_rule(port, proto, desc, True, None)
-        example_address_rule = FirewallControl.firewall_rule(0, proto, desc, False, address)
+        example_port_rule = FirewallControl.firewall_rule(port, proto, desc, persist=True, address=None)
+        example_address_rule = FirewallControl.firewall_rule(0, proto, desc, persist=False, address=address)
 
         # base expected error strings
         assert_address_with_port_msg = 'ing a specific port on a source address is not ' \
@@ -51,8 +52,7 @@ class BaseTestFC:
             # test opening a given port on a specific address, AssertionError should be
             # thrown and no commands issued
             try:
-                self.test_firewall.add_rule(1234, self.proto, self.desc, persist=True,
-                                            address=self.address)
+                self.test_firewall.add_rule(1234, self.proto, self.desc, persist=True, address=self.address)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -67,8 +67,7 @@ class BaseTestFC:
             # test closing a given port on a specific address, AssertionError should be
             # thrown and no commands issued
             try:
-                self.test_firewall.remove_rule(1234, self.proto, self.desc, persist=True,
-                                               address=self.address)
+                self.test_firewall.remove_rule(1234, self.proto, self.desc, persist=True, address=self.address)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -83,8 +82,7 @@ class BaseTestFC:
             # test opening all ports on a specific address permanently, AssertionError
             # should be thrown and no commands issued
             try:
-                self.test_firewall.add_rule(0, self.proto, self.desc, persist=True,
-                                            address=self.address)
+                self.test_firewall.add_rule(0, self.proto, self.desc, persist=True, address=self.address)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -99,8 +97,7 @@ class BaseTestFC:
             # test closing all ports on a specific address permanently, AssertionError
             # should be thrown and no commands issued
             try:
-                self.test_firewall.remove_rule(0, self.proto, self.desc, persist=True,
-                                               address=self.address)
+                self.test_firewall.remove_rule(0, self.proto, self.desc, persist=True, address=self.address)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -115,8 +112,7 @@ class BaseTestFC:
             # test opening port on a specific address temporarily, AssertionError
             # should be thrown and no commands issued
             try:
-                self.test_firewall.add_rule(1234, self.proto, self.desc, persist=False,
-                                            address=None)
+                self.test_firewall.add_rule(1234, self.proto, self.desc, persist=False, address=None)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -131,8 +127,7 @@ class BaseTestFC:
             # test closing port on a specific address temporarily, AssertionError
             # should be thrown and no commands issued
             try:
-                self.test_firewall.remove_rule(1234, self.proto, self.desc, persist=False,
-                                            address=None)
+                self.test_firewall.remove_rule(1234, self.proto, self.desc, persist=False, address=None)
                 # shouldn't get here
                 self.assertTrue(False)
             except AssertionError as e:
@@ -295,8 +290,7 @@ num  target     prot opt source               destination
                                    'NEW', '-m', self.proto, '-p', self.proto, '-d', self.address,
                                    '-j', 'ACCEPT')))
 
-        response = self.test_firewall.add_rule(0, self.proto, self.desc, persist=False,
-                                               address=self.address)
+        response = self.test_firewall.add_rule(0, self.proto, self.desc, persist=False, address=self.address)
 
         # class instance should have record of added rule
         self.assertEqual(len(self.test_firewall.rules), 1)
@@ -319,8 +313,7 @@ num  target     prot opt source               destination
                                    'NEW', '-m', self.proto, '-p', self.proto, '-d', self.address,
                                    '-j', 'ACCEPT')))
 
-        response = self.test_firewall.remove_rule(0, self.proto, self.desc, persist=False,
-                                                  address=self.address)
+        response = self.test_firewall.remove_rule(0, self.proto, self.desc, persist=False, address=self.address)
 
         # None return value indicates success
         self.assertEqual(response, None)
@@ -359,8 +352,7 @@ num  target     prot opt source               destination
         # test that we return None in this situation
         self.add_commands(
             CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:%s' % ('123', 'udp'))),
-            CommandCaptureCommand(('service', 'iptables', 'status'),
-                                  stdout=self.not_running_msg, rc=3))
+            CommandCaptureCommand(('service', 'iptables', 'status'), stdout=self.not_running_msg, rc=3))
 
         response = self.test_firewall.add_rule('123', 'udp', 'test_service', persist=True)
 
@@ -373,8 +365,7 @@ num  target     prot opt source               destination
         # test that we return None in this situation
         self.add_commands(
             CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:%s' % ('123', 'udp'))),
-            CommandCaptureCommand(('service', 'iptables', 'status'),
-                                  stdout=self.not_configured_output, rc=3))
+            CommandCaptureCommand(('service', 'iptables', 'status'), stdout=self.not_configured_output, rc=3))
 
         response = self.test_firewall.add_rule('123', 'udp', 'test_service', persist=True)
 
