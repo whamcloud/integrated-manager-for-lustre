@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -39,7 +39,6 @@ handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H
 log.addHandler(handler)
 
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
-
 # Always exclude these tables from DB output
 EXCLUDED_TABLES = ['chroma_core_logmessage', 'chroma_core_series', 'chroma_core_sample_*']
 
@@ -48,22 +47,7 @@ EXCLUDED_TABLES = ['chroma_core_logmessage', 'chroma_core_series', 'chroma_core_
 # the current file is copied, gzipped and renamed
 # with the extention "-<date>.gz"
 logrotate_logs = {
-    '/var/log/chroma/': ['job_scheduler.log',
-                         'http.log',
-                         'corosync.log',
-                         'http_agent.log',
-                         'lustre_audit.log',
-                         'plugin_runner.log',
-                         'power_control.log',
-                         'stats.log',
-                         'supervisord.log',
-                         'install.log',
-                         'client_errors.log',
-                         'realtime.log',
-                         'gunicorn-access.log',
-                         'gunicorn-error.log',
-                         'view_server.log'
-                         ],
+    '/var/log/chroma/': [],
     '/var/log/nginx': ['error.log',
                        'access.log'
                        ],
@@ -141,6 +125,11 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
 
     # Collect all suitable files
     for path, log_names_to_collect in logrotate_logs.items():
+        if log_names_to_collect == []:
+            for log_file in os.listdir(path):
+                if log_file.endswith(".log"):
+                    log_names_to_collect.append(log_file)
+
         if os.path.exists(path):
             for file_name in os.listdir(path):
                 _dash = file_name.rfind('-')
@@ -201,12 +190,17 @@ def export_postgres_chroma_db(parent_directory):
 
 def main():
 
+    default_output_directory = DEFAULT_OUTPUT_DIRECTORY
+
     desc = ("Run this to save a tar-file collection of logs and diagnostic output.\n"
             "The tar-file created is compressed with lzma.\n"
             "Sample output:  %sdiagnostics_<date>_<fqdn>.tar.lzma"
-            % DEFAULT_OUTPUT_DIRECTORY)
+            % default_output_directory)
 
     parser = argparse.ArgumentParser(description=desc, formatter_class=RawTextHelpFormatter)
+    parser.add_argument('--alt-dir', '-a', action='store', dest='directory', type=basestring, required=False,
+                        help="Specify output location for diagnostics.")
+
     parser.add_argument('--verbose', '-v', action='count', required=False,
                         help="More output for troubleshooting.")
 
@@ -234,17 +228,17 @@ def main():
     hostname_process = run_command_output_piped(['hostname', '-f'])
     if hostname_process:
         output_fn = '%s_%s' % (output_fn, hostname_process.stdout.read().strip())
+    if args.directory:
+        default_output_directory = args.directory
 
-    output_directory = os.path.join(DEFAULT_OUTPUT_DIRECTORY, output_fn)
+    output_directory = os.path.join(default_output_directory, output_fn)
     os.mkdir(output_directory)
 
     log.info("\nCollecting diagnostic files\n")
-
-    for cd_action in cd_actions():
-
+    run_sos = args.verbose > 0
+    for cd_action in cd_actions(run_sos):
         if save_command_output(cd_action.log_filename, cd_action.cmd, output_directory):
             log.info(cd_action.cmd_desc)
-
         elif args.verbose > 0:
             log.info(cd_action.error_message)
 
@@ -259,11 +253,17 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to export the manager system database, or none exists.  None exists on target servers.")
 
+    if run_sos:
+        if run_command_output_piped(['sosreport', '--build', '--tmp-dir', output_directory]):
+            log.info("Running sosreport")
+        else:
+            log.info("Failed to run command sosreport")
+
     archive_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
     # then tar.lzma'ing just the output dir
     log.info("Compressing diagnostics into LZMA (archive)")
-    run_command_output_piped(['tar', '--lzma', '-cf', archive_path, '-C', DEFAULT_OUTPUT_DIRECTORY, output_fn])
+    run_command_output_piped(['tar', '--lzma', '-cf', archive_path, '-C', default_output_directory, output_fn])
 
     log.info("\nDiagnostic collection is completed.")
     log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
