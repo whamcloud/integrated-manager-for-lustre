@@ -40,6 +40,7 @@ Requires: pygobject2
 Requires: postgresql-server
 Requires: python-psycopg2
 Requires: rabbitmq-server
+Requires: ntp
 Requires: Django >= 1.4
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.11
