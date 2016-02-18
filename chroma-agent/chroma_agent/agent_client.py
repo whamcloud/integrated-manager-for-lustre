@@ -64,8 +64,6 @@ class CryptoClient(object):
         if cert:
             kwargs['cert'] = (cert, key)
 
-        daemon_log.error("*************** Sending request %s" % method)
-
         try:
             response = requests.request(method, self.url,
                 # FIXME: set verify to true if we have a CA bundle
