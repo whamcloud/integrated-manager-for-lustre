@@ -225,12 +225,12 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     def get_available_states(self, begin_state):
         if begin_state == 'undeployed':
             return [self.server_profile.initial_state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
-
-        if self.immutable_state:
-            if begin_state in ['undeployed', 'unconfigured', 'packages_installed']:
-                return ['removed', 'monitored', 'managed', 'working']
-            else:
-                return ['removed']
+        elif begin_state in ['undeployed', 'unconfigured']:
+            return ['removed', 'packages_installed', 'monitored', 'managed', 'working']
+        elif begin_state in ['packages_installed']:
+            return ['removed', 'monitored', 'managed', 'working']
+        elif self.immutable_state:
+            return ['removed']
         else:
             return super(ManagedHost, self).get_available_states(begin_state)
 
@@ -707,7 +707,10 @@ class InstallHostPackagesJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, 'unconfigured', 'packages_installed')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
-    state_verb = None
+    state_verb = help_text['continue_server_configuration']
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 20
 
     class Meta:
         app_label = 'chroma_core'
@@ -748,6 +751,10 @@ class InstallHostPackagesJob(StateChangeJob):
             ])
 
         return steps
+
+    @classmethod
+    def can_run(cls, host):
+        return host.state == 'unconfigured'
 
 
 class SetupHostJob(NullStateChangeJob):
@@ -808,7 +815,7 @@ class SetupHostJob(NullStateChangeJob):
 
     @classmethod
     def can_run(cls, host):
-        return host.is_managed and not host.is_worker
+        return host.is_managed and not host.is_worker and (host.state != 'unconfigured')
 
 
 class SetupMonitoredHostJob(NullStateChangeJob):
@@ -830,7 +837,7 @@ class SetupMonitoredHostJob(NullStateChangeJob):
 
     @classmethod
     def can_run(cls, host):
-        return host.is_monitored
+        return host.is_monitored and (host.state != 'unconfigured')
 
 
 class SetupWorkerJob(NullStateChangeJob):
@@ -851,7 +858,7 @@ class SetupWorkerJob(NullStateChangeJob):
 
     @classmethod
     def can_run(cls, host):
-        return host.is_managed and host.is_worker
+        return host.is_managed and host.is_worker and (host.state != 'unconfigured')
 
 
 class DetectTargetsStep(Step):

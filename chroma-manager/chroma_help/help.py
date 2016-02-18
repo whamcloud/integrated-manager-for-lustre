@@ -67,6 +67,7 @@ help_text = {
     'setup_worker_host': 'Setup this worker host',
     'setup_worker_host_on': 'Setup worker host %s',
     'install_packages_on_host_long': 'Install packages on this server',
+    'continue_server_configuration': 'Continue Server Configuration',
     'install_packages_on_host': 'Install packages on server %s',
     'Change lnet state of %s to unconfigured': 'Change lnet state of %s to unconfigured',
     'Stop monitoring lnet on %s': 'Stop monitoring lnet on %s',
