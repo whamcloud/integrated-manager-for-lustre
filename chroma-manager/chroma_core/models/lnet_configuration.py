@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -131,6 +131,19 @@ class LNetNidsChangedAlert(AlertStateBase):
         return [self.alert_item.lnet_configuration]
 
 
+class LNetStateChangeJob(StateChangeJob):
+    """
+    Simple class to allow us to have one place for the standard parts of LNet StateChangeJobs
+    """
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def can_run(cls, lnet_configuration):
+        return lnet_configuration.host.is_managed
+
+
 class ConfigureLNetStep(Step):
     idempotent = True
 
@@ -234,14 +247,20 @@ class UnconfigureLNetStep(Step):
 class UnconfigureLNetJob(NullStateChangeJob):
     target_object = models.ForeignKey(LNetConfiguration)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_unloaded', 'unconfigured')
-    _long_description = help_text['change_state_of_lnet_to_unconfigured']
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
     def description(self):
-        return "Change lnet state of %s to unconfigured " % self.target_object.host
+        return self.long_description(self.target_object)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        if stateful_object.host.is_managed:
+            return help_text['Change lnet state of %s to unconfigured'] % stateful_object.host
+        else:
+            return help_text['Stop monitoring lnet on %s'] % stateful_object.host
 
     def get_steps(self):
         return [(UnconfigureLNetStep, {'host': self.target_object.host})]
@@ -250,14 +269,20 @@ class UnconfigureLNetJob(NullStateChangeJob):
 class EnableLNetJob(NullStateChangeJob):
     target_object = models.ForeignKey(LNetConfiguration)
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'unconfigured', 'lnet_unloaded')
-    _long_description = help_text['enable_lnet']
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
     def description(self):
-        return "Enable LNet on %s" % self.target_object.host
+        return self.long_description(self.target_object)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        if stateful_object.host.is_managed:
+            return help_text['Enable LNet on %s'] % stateful_object.host
+        else:
+            return help_text['Start monitoring LNet on %s'] % stateful_object.host
 
     def get_deps(self):
         '''
@@ -280,7 +305,7 @@ class LoadLNetStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "load_lnet")
 
 
-class LoadLNetJob(StateChangeJob):
+class LoadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_unloaded', 'lnet_down')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
@@ -312,7 +337,7 @@ class StartLNetStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "start_lnet")
 
 
-class StartLNetJob(StateChangeJob):
+class StartLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_down', 'lnet_up')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
@@ -344,7 +369,7 @@ class StopLNetStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "stop_lnet")
 
 
-class StopLNetJob(StateChangeJob):
+class StopLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_up', 'lnet_down')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
@@ -376,7 +401,7 @@ class UnloadLNetStep(Step):
         self.invoke_agent_expect_result(kwargs['host'], "unload_lnet")
 
 
-class UnloadLNetJob(StateChangeJob):
+class UnloadLNetJob(LNetStateChangeJob):
     state_transition = StateChangeJob.StateTransition(LNetConfiguration, 'lnet_down', 'lnet_unloaded')
     stateful_object = 'lnet_configuration'
     lnet_configuration = models.ForeignKey(LNetConfiguration)
