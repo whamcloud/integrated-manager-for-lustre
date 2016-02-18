@@ -1,6 +1,8 @@
-SRC_REPO = https://kojipkgs.fedoraproject.org/packages/dkms/2.2.0.3/28.git.7c3e7c5.el6/noarch
+include ../include/Makefile.distro
 
-ALL_RPMS = dkms-2.2.0.3-28.git.7c3e7c5.el6.noarch.rpm
+SRC_REPO = https://kojipkgs.fedoraproject.org/packages/dkms/2.2.0.3/28.git.7c3e7c5.$(DISTRO_TAG)/noarch
+
+ALL_RPMS = dkms-2.2.0.3-28.git.7c3e7c5.$(DISTRO_TAG).noarch.rpm
 NO_REQUIREMENT = dkms
 
 include ../include/Makefile.fetch-from-repo

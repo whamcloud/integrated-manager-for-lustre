@@ -9,7 +9,7 @@ override REPO          := $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
 CHROMA_EXTERNALS_SUBDIR := lustre
 SRC_REPO		 = $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=$(DISTRO),ib_stack=inkernel/artifact/artifacts
 ALL_RPMS		 = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
-			   lustre-dkms-$(LUSTRE_RELEASE)-1.el6.noarch.rpm \
+			   lustre-dkms-$(LUSTRE_RELEASE)-1.$(DISTRO_TAG).noarch.rpm \
 			   lustre-modules-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
 			   lustre-osd-ldiskfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
 			   lustre-osd-ldiskfs-mount-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \

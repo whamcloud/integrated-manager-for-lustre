@@ -7,6 +7,8 @@ usage() {
 }
 
 ldiskfs_installer() {
+    local DISTRO=$1
+
     tar -xzf ../$DISTRO/e2fsprogs-*-bundle.tar.gz
 
     rm -rf meta repodata lustre-osd-zfs-* lustre-dkms-*
@@ -41,6 +43,8 @@ EOF
 }
 
 zfs_installer() {
+    local DISTRO=$1
+
     ZFS_VERSION=@ZFS_VERSION@
 
     tar -xzf ../$DISTRO/zfs-*-bundle.tar.gz
@@ -51,22 +55,24 @@ zfs_installer() {
     cat <<EOF > install
 #!/bin/sh
 
+
 yum -y install rpm-build zlib-devel libuuid-devel gcc
-rpmbuild --rebuild spl-$ZFS_VERSION.el6.src.rpm
-rpmbuild --rebuild zfs-$ZFS_VERSION.el6.src.rpm
+rpmbuild --rebuild spl-$ZFS_VERSION.$DISTRO.src.rpm
+rpmbuild --rebuild zfs-$ZFS_VERSION.$DISTRO.src.rpm
 _rpmdir=\$(rpm --eval %_rpmdir)
-yum -y install dkms-*.el6.noarch.rpm \
+dist=\$(rpm --eval %dist)
+yum -y install dkms-*.$DISTRO.noarch.rpm \
                zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
                lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
                lustre-osd-zfs-mount-[0-9]*.rpm lustre-[0-9]*.rpm \
                kernel-devel-\$(uname -r) kernel-headers-\$(uname -r) \
-               \$_rpmdir/x86_64/spl-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/libnvpair1-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/libuutil1-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/libzfs2-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/libzpool2-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/zfs-$ZFS_VERSION.el6.x86_64.rpm \
-               \$_rpmdir/x86_64/zfs-dracut-$ZFS_VERSION.el6.x86_64.rpm
+               \$_rpmdir/x86_64/spl-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/libnvpair1-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/libuutil1-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/libzfs2-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/libzpool2-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/zfs-$ZFS_VERSION\$dist.x86_64.rpm \
+               \$_rpmdir/x86_64/zfs-dracut-$ZFS_VERSION\$dist.x86_64.rpm
 EOF
 
 }
@@ -82,11 +88,12 @@ for DISTRO in el6 el7; do
     if [ ! -d $DISTRO ]; then
         continue
     fi
+    rm -rf lustre-$1
     mkdir -p lustre-$1
     cd lustre-$1
 
     tar -xzf ../$DISTRO/lustre-[0-9]*-bundle.tar.gz
-    ${1}_installer
+    ${1}_installer "$DISTRO"
 
     chmod 755 install
     cd ..
