@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -68,7 +68,10 @@ help_text = {
     'setup_worker_host_on': 'Setup worker host %s',
     'install_packages_on_host_long': 'Install packages on this server',
     'install_packages_on_host': 'Install packages on server %s',
-    'change_state_of_lnet_to_unconfigured': 'Unconfiguring LNet',
+    'Change lnet state of %s to unconfigured': 'Change lnet state of %s to unconfigured',
+    'Stop monitoring lnet on %s': 'Stop monitoring lnet on %s',
+    'Enable LNet on %s': 'Enable LNet on %s',
+    'Start monitoring LNet on %s': 'Start monitoring LNet on %s',
     'reboot_host': 'Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting.',
     'shutdown_host': 'Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.',
     'poweron_host': 'Switch on power to this server.',
@@ -131,7 +134,6 @@ help_text = {
     'local_diff': 'This row has changed locally. Click to reset value to %(initial)s',
     'remote_diff': 'This row has changed remotely. Click to set value to %(remote)s.',
     'configure_lnet': 'Configure LNet on this host.',
-    'enable_lnet': 'Enable LNet on this host.',
     'change_host_profile': 'Changing host %s to profile %s',
     'change_host_state': 'Changing host %s to state %s',
 

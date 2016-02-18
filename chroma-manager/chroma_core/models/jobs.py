@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -122,7 +122,8 @@ class StatefulObject(models.Model):
 
         cls_ = StatefulObject.so_root(cls)
 
-        transition_classes = [s for s in all_subclasses(StateChangeJob) if s.state_transition.class_ == cls_]
+        transition_classes = [s for s in all_subclasses(StateChangeJob) if ((s.state_transition is not None) and
+                                                                            (s.state_transition.class_ == cls_))]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
