@@ -9,8 +9,8 @@
   "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "intel-gui": "4.4.0",
-    "intel-realtime": "4.0.1",
+    "intel-gui": "4.4.1",
+    "intel-realtime": "4.0.2",
     "intel-view-server": "4.0.0",
     "intel-ziplocker": "3.0.2"
   }
