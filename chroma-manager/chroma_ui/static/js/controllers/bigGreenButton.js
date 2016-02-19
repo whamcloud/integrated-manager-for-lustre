@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -48,6 +48,14 @@ angular.module('controllers').controller('BigGreenButtonCtrl', ['$scope', 'healt
        */
       get aboveLimit () {
         return this.status.count > LIMIT;
+      },
+      get link () {
+        var link = '/ui/status/';
+
+        if (this.status.health !== 'GOOD')
+          link += '?severity__in=WARNING&severity__in=ERROR&active=true';
+
+        return link;
       }
     };
 
