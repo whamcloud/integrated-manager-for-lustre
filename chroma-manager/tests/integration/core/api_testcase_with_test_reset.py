@@ -476,6 +476,19 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                               self.VERIFY_SUCCESS_INSTANT if verify_successful else self.VERIFY_SUCCESS_NO,
                               msg)
 
+    def set_state_dry_run(self, uri, state):
+        stateful_object = self.get_json_by_uri(uri)
+
+        stateful_object['state'] = state
+        stateful_object['dry_run'] = True
+
+        response = self.chroma_manager.put(uri,
+                                           body=stateful_object)
+
+        self.assertEquals(response.status_code, 200, response.content)
+
+        return response.json
+
     def delete_by_uri(self, uri, verify_successful=True):
         response = self.chroma_manager.delete(uri)
 

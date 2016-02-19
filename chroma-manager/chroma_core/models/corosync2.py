@@ -56,7 +56,7 @@ class Corosync2Configuration(CorosyncConfiguration):
         return "corosync2 configuration"
 
     reverse_deps = {
-        'ManagedHost': lambda mh: Corosync2Configuration.objects.filter(host_id = mh.id),
+        'PacemakerConfiguration': lambda pc: Corosync2Configuration.objects.filter(host_id = pc.host.id),
     }
 
     # This is temporary, although will work perfectly functionally. Once landed we will move to

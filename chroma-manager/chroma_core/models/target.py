@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -235,8 +235,12 @@ class ManagedTarget(StatefulObject):
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
             host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
+
             lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
             deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
+
+            pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
+            deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -268,6 +272,7 @@ class ManagedTarget(StatefulObject):
         'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
         'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
         'LNetConfiguration': lambda lc: ObjectCache.host_targets(lc.host.id),
+        'PacemakerConfiguration': lambda pc: ObjectCache.host_targets(pc.host.id),
         'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id),
         'Copytool': lambda ct: ObjectCache.client_mount_copytools(ct.id)
     }

@@ -53,7 +53,7 @@ class TestCreateFilesystem(TestInstallationAndUpgrade):
 
     def test_create(self):
         """ Test that a filesystem can be created"""
-        filesystem_id = self.create_filesystem_standard()
+        filesystem_id = self.create_filesystem_standard(config['lustre_servers'][0:4])
 
         self._exercise_simple(filesystem_id)
 

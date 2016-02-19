@@ -116,3 +116,11 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         self.set_state(self.host['lnet_configuration'], state)
 
         return state
+
+    def test_lnet_reverse_dependencies(self):
+        response = self.set_state_dry_run(self.host['lnet_configuration'], 'lnet_down')
+
+        self.assertEqual(len(response['dependency_jobs']), 3)
+
+        for dependency_job in response['dependency_jobs']:
+            self.assertEqual(dependency_job['class'], 'StopTargetJob')
