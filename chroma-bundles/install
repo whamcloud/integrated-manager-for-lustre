@@ -23,6 +23,9 @@ import platform
 import itertools
 import traceback
 import socket
+# without GNU readline, raw_input prompt goes to stderr
+import readline
+assert readline
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
 ARCHIVE_SUFFIX = ".tar.gz"
@@ -162,6 +165,7 @@ def _run(args, passthrough=False, drain_stdin=False):
     :param passthrough: If true, pass stdin+stdout through to the user rather
     than capturing them.
     """
+
     log.debug("Running %s" % args)
     if drain_stdin:
         while len(select.select([sys.stdin.fileno()], [], [], 0.0)[0])>0:
@@ -172,7 +176,11 @@ def _run(args, passthrough=False, drain_stdin=False):
     # present a traceback to the end user.
     try:
         if passthrough:
-            p = subprocess.Popen(args)
+            # when pipes are not used to connect subprocess, exceptions will not be caught within this routine,
+            # to avoid tracebacks being printed on the commandline, redirect stderr to logfile.
+            # raw_input requires GNU readlines to print prompt to stdout (rather than stderr)
+            with open(LOG_FILE, 'a') as f:
+                p = subprocess.Popen(args, stderr=f)
         else:
             p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError, e:
