@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -29,6 +29,9 @@ import xmlrpclib
 import time
 import os
 import json
+# without GNU readline, raw_input prompt goes to stderr
+import readline
+assert readline
 
 from chroma_core.lib.util import chroma_settings
 
@@ -49,7 +52,12 @@ from chroma_core.chroma_common.lib.firewall_control import FirewallControl
 from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL6
 
 log = logging.getLogger('installation')
-log.addHandler(logging.StreamHandler())
+try:
+    # python2.7
+    log.addHandler(logging.StreamHandler(stream=sys.stdout))
+except TypeError:
+    # python2.6
+    log.addHandler(logging.StreamHandler(strm=sys.stdout))
 log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
