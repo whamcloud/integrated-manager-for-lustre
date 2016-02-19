@@ -191,3 +191,17 @@ class TestCorosync(ChromaIntegrationTestCase):
 
         for server in self.server_configs:
             self.wait_for_assert(lambda: self.assertNoAlerts(server['resource_uri'], of_type='HostOfflineAlert'))
+
+    def test_corosync_reverse_dependencies(self):
+        filesystem_id = self.create_filesystem_standard(config['lustre_servers'][0:4])
+
+        filesystem = self.get_json_by_uri("/api/filesystem", args={'id': filesystem_id})['objects'][0]
+
+        mgt = self.get_json_by_uri(filesystem['mgt']['active_host'])
+
+        response = self.set_state_dry_run(mgt['corosync_configuration'], 'stopped')
+
+        self.assertEqual(len(response['dependency_jobs']), 2)
+
+        for required_dependency_job in ['StopTargetJob', 'StopPacemakerJob']:
+            next(dependency_job for dependency_job in response['dependency_jobs'] if dependency_job['class'] == required_dependency_job)

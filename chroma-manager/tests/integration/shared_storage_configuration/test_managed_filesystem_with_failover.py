@@ -11,7 +11,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
     TEST_SERVERS = config['lustre_servers'][0:4]
 
     def _test_create_filesystem_with_failover(self):
-        filesystem_id = self.create_filesystem_standard()
+        filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)
         filesystem = self.get_filesystem(filesystem_id)
 
         # Define where we expect targets for volumes to be started on depending on our failover state.

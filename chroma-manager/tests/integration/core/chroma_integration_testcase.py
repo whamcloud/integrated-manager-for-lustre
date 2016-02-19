@@ -331,13 +331,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             }
         return self._standard_filesystem_layout
 
-    def create_filesystem_standard(self):
+    def create_filesystem_standard(self, test_servers):
         """Create a standard, basic filesystem configuration.
         One MGT, one MDT, in an active/active pair
         Two OSTs in an active/active pair"""
         # Add hosts as managed hosts
-        self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
-        servers = [s['address'] for s in self.TEST_SERVERS][:4]
+        self.assertGreaterEqual(len(test_servers), 4)
+        servers = [s['address'] for s in test_servers][:4]
         self.add_hosts(servers)
 
         # Set up power control for fencing -- needed to ensure that

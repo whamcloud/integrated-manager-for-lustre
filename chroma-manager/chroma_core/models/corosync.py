@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -111,7 +111,7 @@ class CorosyncConfiguration(DeletableStatefulObject):
             CorosyncStoppedAlert.notify(self, self.state != 'started')
 
     reverse_deps = {
-        'ManagedHost': lambda mh: CorosyncConfiguration.objects.filter(host_id = mh.id),
+        'PacemakerConfiguration': lambda pc: CorosyncConfiguration.objects.filter(host_id = pc.host.id),
     }
 
     @property
