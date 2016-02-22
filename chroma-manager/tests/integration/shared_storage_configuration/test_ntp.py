@@ -55,15 +55,16 @@ class TestNtpSync(ChromaIntegrationTestCase):
                              timeout=self.NTP_SYNC_PERIOD)
 
         # Now test time synchronisation if un/configure_ntp is called through agent cli
-        self.remote_operations._ssh_address(self.agent_address, 'chroma-agent unconfigure_ntp')
+        self.remote_operations.remote_command(self.agent_address, 'chroma-agent unconfigure_ntp')
 
         self._change_agent_time()
 
         self.assertFalse(self._check_agent_time())
 
         # Now agent is now out of sync with manager, configure ntp
-        self.remote_operations._ssh_address(self.agent_address,
-                                            'chroma-agent configure_ntp --ntp_server %s' % self.manager_fqdn)
+        self.remote_operations.remote_command(self.agent_address,
+                                              'chroma-agent configure_ntp --ntp_server %s' %
+                                              self.manager_fqdn)
 
         self.wait_until_true(self._check_agent_time,
                              error_message='agent time not synchronised with manager after configure_ntp()',

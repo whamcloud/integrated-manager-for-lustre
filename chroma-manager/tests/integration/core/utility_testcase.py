@@ -1,11 +1,9 @@
 import inspect
 import logging
-import paramiko
 import os
 import subprocess
 import time
 import socket
-import threading
 
 from django.utils.unittest import TestCase
 from testconfig import config
@@ -20,43 +18,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# paramiko.transport logger spams nose log collection so we're quieting it down
-paramiko_logger = logging.getLogger('paramiko.transport')
-paramiko_logger.setLevel(logging.WARN)
-
-
-class ExceptionThread(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(ExceptionThread, self).__init__(*args, **kwargs)
-        self._exception_value = None
-
-    def run(self):
-        try:
-            return super(ExceptionThread, self).run()
-        except BaseException as e:
-            self._exception_value = e
-
-    def join(self):
-        super(ExceptionThread, self).join()
-        if self._exception_value:
-            raise self._exception_value
-
-
-class RemoteCommandResult(object):
-    """
-    Conveniently stores the various output of a remotely executed command.
-    """
-
-    def __init__(self, exit_status, stdout, stderr, *args, **kwargs):
-        super(RemoteCommandResult, self).__init__(*args, **kwargs)
-        self.exit_status = exit_status
-        self.stdout = stdout
-        self.stderr = stderr
-
 
 class UtilityTestCase(TestCase):
-    """Adds a few non-api specific utility functions for the integration tests.
-    """
+    """ Adds a few non-api specific utility functions for the integration tests. """
 
     # Allows us to not fetch help repeatedly for the same error buy keeping track of
     # those things we have fetched help for.
@@ -64,55 +28,6 @@ class UtilityTestCase(TestCase):
 
     def setUp(self):
         self.maxDiff = None                  # By default show the complete diff on errors.
-
-    def execute_commands(self, commands, target, debug_message, expected_return_code=0):
-        stdout = []
-        for command in commands:
-            result = self.remote_command(target, command, expected_return_code=expected_return_code)
-            logger.info("%s command %s exit_status %s output:\n %s" % (debug_message, command, result.exit_status, result.stdout))
-
-            stdout.append(result.stdout)
-
-        return stdout
-
-    def execute_simultaneous_commands(self, commands, targets, debug_message, expected_return_code=0):
-        threads = []
-        for target in targets:
-            command_thread = ExceptionThread(target=self.execute_commands,
-                                             args=(commands,
-                                                   target,
-                                                   '%s: %s' % (target, debug_message),
-                                                   expected_return_code))
-            command_thread.start()
-            threads.append(command_thread)
-
-        map(lambda th: th.join(), threads)
-
-    def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
-        """
-        Executes a command on a remote server over ssh.
-
-        Sends a command over ssh to a remote machine and returns the stdout,
-        stderr, and exit status. It will verify that the exit status of the
-        command matches expected_return_code unless expected_return_code=None.
-
-        FIXME: Extreme redundancy with _ssh_address in RealRemoteOperations.
-        """
-        logger.debug("remote_command[%s]: %s" % (server, command))
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(server, **{'username': 'root'})
-        transport = ssh.get_transport()
-        transport.set_keepalive(20)
-        channel = transport.open_session()
-        channel.settimeout(timeout)
-        channel.exec_command(command)
-        exit_status = channel.recv_exit_status()
-        stdout = channel.makefile('rb').read()
-        stderr = channel.makefile_stderr('rb').read()
-        if expected_return_code is not None:
-            self.assertEqual(exit_status, expected_return_code, stderr)
-        return RemoteCommandResult(exit_status, stdout, stderr)
 
     def wait_until_true(self, lambda_expression, error_message='', timeout=TEST_TIMEOUT):
         """Evaluates lambda_expression once/1s until True or hits timeout."""

@@ -4,7 +4,6 @@ import mock
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.utils.remote_firewall_control import RemoteFirewallControlIpTables
 from tests.utils.remote_firewall_control import RemoteFirewallControlFirewallCmd
-from tests.integration.core.remote_operations import RealRemoteOperations as RRO
 from tests.chroma_common.lib.shell import Shell
 
 
@@ -64,10 +63,7 @@ num  target     prot opt source               destination
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_ssh = mock.patch('tests.integration.core.remote_operations.RealRemoteOperations._ssh_address').start()
-
-    def tearDown(self):
-        self.mock_ssh.stop()
+        self.mock_remote_command = mock.Mock()
 
     def test_create(self):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(1, '', '', False),
@@ -76,9 +72,9 @@ num  target     prot opt source               destination
         def side_effect(address, cmd):
             return values[cmd]
 
-        self.mock_ssh.side_effect = side_effect
+        self.mock_remote_command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', RRO(None)._ssh_address)
+        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
 
         self.assertEquals(type(new_controller), RemoteFirewallControlIpTables)
 
@@ -174,10 +170,7 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_ssh = mock.patch('tests.integration.core.remote_operations.RealRemoteOperations._ssh_address').start()
-
-    def tearDown(self):
-        self.mock_ssh.stop()
+        self.mock_remote_command = mock.Mock()
 
     def test_create(self):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(0, '', '', False),
@@ -186,9 +179,9 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         def side_effect(address, cmd):
             return values[cmd]
 
-        self.mock_ssh.side_effect = side_effect
+        self.mock_remote_command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', RRO(None)._ssh_address)
+        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
 
         self.assertTrue(type(new_controller) == RemoteFirewallControlFirewallCmd)
 
@@ -199,9 +192,9 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         def side_effect(address, cmd):
             return values[cmd]
 
-        self.mock_ssh.side_effect = side_effect
+        self.mock_remote_command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', RRO(None)._ssh_address)
+        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
 
         self.assertTrue(type(new_controller) == RemoteFirewallControlFirewallCmd)
 
@@ -212,10 +205,10 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         def side_effect(address, cmd):
             return values[cmd]
 
-        self.mock_ssh.side_effect = side_effect
+        self.mock_remote_command.side_effect = side_effect
 
         with self.assertRaises(RuntimeError):
-            RemoteFirewallControl.create('0.0.0.0', RRO(None)._ssh_address)
+            RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
 
     def test_remote_add_port(self):
         # should return a string representing remote command to add a port rule

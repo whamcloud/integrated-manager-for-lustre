@@ -22,6 +22,7 @@ from tests.integration.core.remote_operations import SimulatorRemoteOperations, 
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import INSTALL_TIMEOUT
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
 
@@ -636,71 +637,70 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             superuser = [u for u in chroma_manager['users'] if u['super']][0]
 
             # Stop all manager services
-            result = self.remote_command(
+            result = self.remote_operations.remote_command(
                 chroma_manager['address'],
                 'chroma-config stop',
                 expected_return_code = None
             )
-            if not result.exit_status == 0:
-                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout, result.stderr))
+            if not result.rc == 0:
+                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.rc, result.stdout, result.stderr))
 
             # Wait for all of the manager services to stop
             running_time = 0
             services = ['chroma-supervisor']
             while services and running_time < TEST_TIMEOUT:
                 for service in services:
-                    result = self.remote_command(
+                    result = self.remote_operations.remote_command(
                         chroma_manager['address'],
                         'service %s status' % service,
                         expected_return_code = None
                     )
-                    if result.exit_status == 3:
+                    if result.rc == 3:
                         services.remove(service)
                 time.sleep(1)
                 running_time += 1
             self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
 
             # Completely nuke the database to start from a clean state.
-            self.remote_command(
+            self.remote_operations.remote_command(
                 chroma_manager['address'],
                 'service postgresql stop && rm -fr /var/lib/pgsql/data/*'
             )
 
             # Run chroma-config setup to recreate the database and start the manager.
-            result = self.remote_command(
+            result = self.remote_operations.remote_command(
                 chroma_manager['address'],
                 "chroma-config setup %s %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost"), "--no-dbspace-check"),
-                expected_return_code = None
+                expected_return_code=None,
+                timeout=INSTALL_TIMEOUT
             )
-            chroma_config_exit_status = result.exit_status
-            if not chroma_config_exit_status == 0:
-                result = self.remote_command(
+            if result.rc != 0:
+                result = self.remote_operations.remote_command(
                     chroma_manager['address'],
                     "cat config_setup.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout)
+                self.assertEqual(0, result.rc, "chroma-config setup failed: '%s'" % result.stdout)
 
             # Register the default bundles and profile again
-            result = self.remote_command(
+            result = self.remote_operations.remote_command(
                 chroma_manager['address'],
                 "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log" % platform.dist()[1][0:1],
                 expected_return_code = None
             )
-            chroma_config_exit_status = result.exit_status
-            if not chroma_config_exit_status == 0:
-                result = self.remote_command(
+            if result.rc != 0:
+                result = self.remote_operations.remote_command(
                     chroma_manager['address'],
                     "cat config_bundle.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout)
+                self.assertEqual(0, result.rc, "chroma-config bundle register failed: '%s'" % result.stdout)
 
-            result = self.remote_command(
+            result = self.remote_operations.remote_command(
                 chroma_manager['address'],
                 "ls /tmp/ee-*/",
                 expected_return_code = None
             )
             installer_contents = result.stdout
-            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr))
+            self.assertEqual(0, result.rc, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr))
 
             logger.debug("Installer contents: %s" % installer_contents)
 
@@ -708,18 +708,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             profiles = " ".join([line for line in installer_contents.split("\n")
                                  if 'profile' in line])
             logger.debug("Found these profiles: %s" % profiles)
-            result = self.remote_command(
+            result = self.remote_operations.remote_command(
                 chroma_manager['address'],
                 "for profile_pat in %s; do chroma-config profile register /tmp/ee-*/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
-            chroma_config_exit_status = result.exit_status
-            if not chroma_config_exit_status == 0:
-                result = self.remote_command(
+            if result.rc != 0:
+                result = self.remote_operations.remote_command(
                     chroma_manager['address'],
                     "cat config_profile.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config profile register failed: '%s'" % result.stdout)
+                self.assertEqual(0, result.rc, "chroma-config profile register failed: '%s'" % result.stdout)
 
     def graceful_teardown(self, chroma_manager):
         """
@@ -916,10 +915,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
         try:
-            self.execute_simultaneous_commands(TestBlockDeviceZfs.zfs_install_commands(),
-                                               [server['fqdn'] for server in test_servers],
-                                               'checking for zfs presence',
-                                               expected_return_code=None)
+            self.remote_operations.execute_simultaneous_commands(TestBlockDeviceZfs.zfs_install_commands(),
+                                                                 [server['fqdn'] for server in test_servers],
+                                                                 'checking for zfs presence',
+                                                                 expected_return_code=None)
         except AssertionError:
             return
 
@@ -937,32 +936,31 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
                 zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
 
-                self.execute_simultaneous_commands(zfs_device.release_commands,
+                self.remote_operations.execute_simultaneous_commands(zfs_device.release_commands,
                                                    [server['fqdn'] for server in test_servers],
                                                    'export zfs device %s' % zfs_device,
                                                    expected_return_code=None)
 
                 try:
-                    self.execute_commands(zfs_device.capture_commands,
-                                          first_test_server['fqdn'],
-                                          'import zfs device %s' % zfs_device,
-                                          expected_return_code=0 if devices_must_exist else None)
-                    imported_zpools.append(zfs_device)
+                    self.remote_operations.execute_commands(zfs_device.capture_commands,
+                                                            first_test_server['fqdn'],
+                                                            'import zfs device %s' % zfs_device,
+                                                            expected_return_code=0 if devices_must_exist else None)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
                     if action & self.CZP_REMOVEZPOOLS:
                         ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
-                        self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
-                                                           [first_test_server['fqdn']],
-                                                           'clearing disk because zfs import failed %s' % ldiskfs_device,
-                                                           expected_return_code=0)
+                        self.remote_operations.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
+                                                                             [first_test_server['fqdn']],
+                                                                             'clearing disk because zfs import failed %s' % ldiskfs_device,
+                                                                             expected_return_code=0)
                     else:
                         raise
 
         if zpool_datasets is None:
-            zpool_datasets = self.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
+            zpool_datasets = self.remote_operations.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
                                                    first_test_server['fqdn'],
                                                    'listing zfs devices')[0].split()
 
@@ -981,18 +979,18 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     if remove_dataset == ('/' in zpool_dataset):
                         zfs_device = TestBlockDevice('zfs', zpool_dataset)
 
-                        self.execute_commands(zfs_device.destroy_commands,
-                                              first_test_server['fqdn'],
-                                              'destroy zfs device %s' % zfs_device)
+                        self.remote_operations.execute_commands(zfs_device.destroy_commands,
+                                                                first_test_server['fqdn'],
+                                                                'destroy zfs device %s' % zfs_device)
 
         if action & self.CZP_CREATEZPOOLS:
             for lustre_device in config['lustre_devices']:
                 if lustre_device['backend_filesystem'] == 'zfs':
                     zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
 
-                    self.execute_commands(zfs_device.prepare_device_commands,
-                                          first_test_server['fqdn'],
-                                          'create zfs device %s' % zfs_device)
+                    self.remote_operations.execute_commands(zfs_device.prepare_device_commands,
+                                                            first_test_server['fqdn'],
+                                                            'create zfs device %s' % zfs_device)
 
         if action & self.CZP_EXPORTPOOLS:
             for zfs_device in imported_zpools:
@@ -1018,7 +1016,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if lustre_device['backend_filesystem'] == 'linux':
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
-                self.execute_simultaneous_commands(linux_device.destroy_commands,
+                self.remote_operations.execute_simultaneous_commands(linux_device.destroy_commands,
                                                    [server['fqdn'] for server in test_servers],
                                                    'clear block device %s' % linux_device)
 

@@ -28,16 +28,16 @@ def _check_status(address, additional_check_items):
             for action, command in check_items:
                 logger.debug("#" * 40)
 
-                remote_command_result = remote_ops._ssh_address(address, command, None)
+                result = remote_ops.remote_command(address, command, None)
 
-                if remote_command_result.rc == 0:
-                    logger.debug("%s on %s\n%s" % (action, address, remote_command_result.stdout.read()))
+                if result.rc == 0:
+                    logger.debug("%s on %s\n%s" % (action, address, result.stdout.read()))
                 else:
                     logger.debug("Error capturing %s on %s: result %s, stdout %s, stderr %s" % (action,
                                                                                                 address,
-                                                                                                remote_command_result.rc,
-                                                                                                remote_command_result.stdout.read(),
-                                                                                                remote_command_result.stderr.read()))
+                                                                                                result.rc,
+                                                                                                result.stdout.read(),
+                                                                                                result.stderr.read()))
         else:
             logger.debug("Host %s was not contactable via SSH")
     except:

@@ -3,6 +3,8 @@ import json
 import sys
 
 from testconfig import config
+from tests.integration.core.constants import INSTALL_TIMEOUT
+from tests.integration.core.remote_operations import RealRemoteOperations
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
@@ -20,6 +22,8 @@ class CreateLustreFilesystem(UtilityTestCase):
     """
     def setUp(self):
         super(CreateLustreFilesystem, self).setUp()
+
+        self.remote_operations = RealRemoteOperations(self)
 
         self._setup_ha_config()
 
@@ -87,16 +91,16 @@ class CreateLustreFilesystem(UtilityTestCase):
 
     def _clear_current_target_devices(self):
         for server in config['lustre_servers']:
-            self.remote_command(
+            self.remote_operations.remote_command(
                 server['address'],
                 'umount -t lustre -a'
             )
 
             self.umount_devices(server['nodename'])
 
-            self.execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
-                                  server['address'],
-                                  'clear command')
+            self.remote_operations.execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
+                                                    server['address'],
+                                                    'clear command')
 
         # Wipe the start of the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
@@ -105,22 +109,22 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.dd_devices(server['nodename'])
 
-            self.remote_command(server['address'],
-                                'reboot',
-                                expected_return_code = None)    # Sometimes reboot hangs, sometimes it doesn't
+            self.remote_operations.remote_command(server['address'],
+                                                  'reboot',
+                                                  expected_return_code = None)    # Sometimes reboot hangs, sometimes it doesn't
 
         def host_alive(hostname):
             try:
-                return self.remote_command(hostname,
-                                           'hostname',
-                                           expected_return_code = None).exit_status == 0
+                return self.remote_operations.remote_command(hostname,
+                                                             'hostname',
+                                                             expected_return_code = None).rc == 0
             except:
                 return False
 
         for server in config['lustre_servers']:
             self.wait_until_true(lambda: host_alive(server['address']))
 
-            self.remote_command(
+            self.remote_operations.remote_command(
                 server['address'],
                 'modprobe lnet; lctl network up; modprobe lustre'
             )
@@ -177,7 +181,7 @@ class CreateLustreFilesystem(UtilityTestCase):
             self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--reformat', '--ost'])
 
         for server in config['lustre_servers']:
-            self.remote_command(
+            self.remote_operations.remote_command(
                 server['address'],
                 'partprobe; sync; sync'
             )
@@ -203,18 +207,18 @@ class CreateLustreFilesystem(UtilityTestCase):
     def umount_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
-            self.remote_command(
+            self.remote_operations.remote_command(
                 server_name,
                 "if mount | grep %s; then umount %s; fi;" % (device, device))
 
-        self.remote_command(
+        self.remote_operations.remote_command(
             server_name,
             "sed -i '/lustre/d' /etc/fstab")
 
     def dd_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
-            self.remote_command(
+            self.remote_operations.remote_command(
                 server_name,
                 "dd if=/dev/zero of=%s bs=512 count=1" % device)
 
@@ -228,15 +232,15 @@ class CreateLustreFilesystem(UtilityTestCase):
         #
         # When this routine is called the target must be accessible from the primary_target
         if (target.get('failover_mode') == 'failnode') and (target.get('mount_server') == 'secondary_server'):
-            self.remote_command(
+            self.remote_operations.remote_command(
                 target['primary_server'],
                 'mkdir -p %s' % target['mount_path']
             )
-            self.remote_command(
+            self.remote_operations.remote_command(
                 target['primary_server'],
                 'mount -t lustre %s %s' % (device, target['mount_path'])
             )
-            self.remote_command(
+            self.remote_operations.remote_command(
                 target['primary_server'],
                 'umount %s' % target['mount_path']
             )
@@ -245,22 +249,22 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         # If we are going to mount on the secondary the move the block device from the primary to the secondary.
         if target.get('mount_server') == 'secondary_server':
-            self.execute_commands(block_device.release_commands,
-                                  target['primary_server'],
-                                  'Release device')
-            self.execute_commands(block_device.capture_commands,
-                                  target['secondary_server'],
-                                  'Capture device')
+            self.remote_operations.execute_commands(block_device.release_commands,
+                                                    target['primary_server'],
+                                                    'Release device')
+            self.remote_operations.execute_commands(block_device.capture_commands,
+                                                    target['secondary_server'],
+                                                    'Capture device')
 
-        self.remote_command(
+        self.remote_operations.remote_command(
             target_server,
             'mkdir -p %s' % target['mount_path']
         )
-        self.remote_command(
+        self.remote_operations.remote_command(
             target_server,
             'mount -t lustre %s %s' % (device, target['mount_path'])
         )
-        self.remote_command(
+        self.remote_operations.remote_command(
             target_server,
             "echo '%s   %s  lustre  defaults,_netdev    0 0' >> /etc/fstab" % (device, target['mount_path'])
         )
@@ -282,26 +286,27 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         block_device = TestBlockDevice(device_type, device_path)
 
-        self.execute_simultaneous_commands(block_device.install_packages_commands,
-                                           targets.values(),
-                                           'install blockdevice packages')
+        self.remote_operations.execute_simultaneous_commands(block_device.install_packages_commands,
+                                                             targets.values(),
+                                                             'install blockdevice packages',
+                                                             timeout=INSTALL_TIMEOUT)
 
-        self.execute_commands(block_device.prepare_device_commands,
-                              targets['primary_server'],
-                              'prepare device')
+        self.remote_operations.execute_commands(block_device.prepare_device_commands,
+                                                targets['primary_server'],
+                                                'prepare device')
 
         filesystem = TestFileSystem(block_device.preferred_fstype, block_device.device_path)
 
-        self.execute_simultaneous_commands(filesystem.install_packages_commands,
-                                           targets.values(),
-                                           'install filesystem packages')
+        self.remote_operations.execute_simultaneous_commands(filesystem.install_packages_commands,
+                                                             targets.values(),
+                                                             'install filesystem packages')
 
-        result = self.remote_command(targets['primary_server'],
-                                     filesystem.mkfs_command(target,
-                                                             target_type,
-                                                             fsname,
-                                                             mgs_nids,
-                                                             mkfs_options))
+        result = self.remote_operations.remote_command(targets['primary_server'],
+                                                       filesystem.mkfs_command(target,
+                                                                               target_type,
+                                                                               fsname,
+                                                                               mgs_nids,
+                                                                               mkfs_options))
 
         logger.info("mkfs.lustre output:\n %s" % result.stdout)
 

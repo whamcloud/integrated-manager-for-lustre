@@ -114,10 +114,10 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
 
     def _compare_files(self, address, path1, path2, length_bytes):
         try:
-            self.remote_command(address, 'diff %s %s' % (path1, path2))
+            self.remote_operations.command(address, 'diff %s %s' % (path1, path2))
         except AssertionError:
             for path in [path1, path2]:
-                result = self.remote_command(address, 'wc -c %s' % path)
+                result = self.remote_operations.command(address, 'wc -c %s' % path)
                 logger.debug('file %s contains %s bytes, expected %s' % (path, result.stdout.split()[0], length_bytes))
             raise
 
@@ -145,7 +145,7 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         # Make sure client cache is flushed and stats up to date
         self.remote_operations.unmount_filesystem(client, filesystem)
         self.remote_operations.mount_filesystem(client, filesystem)
-        result = self.remote_command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)
+        result = self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)
         if result.exit_status == 0:
             # file was removed so we need to flush to make sure stats are up-to-date
             self.remote_operations.unmount_filesystem(client, filesystem)
@@ -182,13 +182,13 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
 
         # Copy/write file of random data to fs
         expected_kbytes_written = min(int(starting_bytes_free * 0.9), 100 * constants.MEGABYTES) / 1024
-        result = self.remote_command(client,
-                                     "dd if=/dev/urandom of=/tmp/%s bs=1024 count=%s" % (filename,
-                                                                                         expected_kbytes_written))
+        result = self.remote_operations.command(client,
+                                                "dd if=/dev/urandom of=/tmp/%s bs=1024 count=%s" % (filename,
+                                                                                                    expected_kbytes_written))
         self.assertTrue('%s bytes ' % (expected_kbytes_written * 1024) in result.stderr,
                         'Unexpected number of bytes written to file')
 
-        self.remote_command(client, "cp /tmp/%s /mnt/%s/" % (filename, filesystem_name))
+        self.remote_operations.command(client, "cp /tmp/%s /mnt/%s/" % (filename, filesystem_name))
 
         # Re-mount to flush changes and verify client count
         self.remote_operations.unmount_filesystem(client, filesystem)
@@ -212,4 +212,4 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         self.wait_for_assert(lambda: self._check_within_range(filesystem_id, 'bytes_total', bytes_total, range_in_bytes))
 
         # Remove test file copied to mounted fs
-        self.remote_command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)
+        self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)

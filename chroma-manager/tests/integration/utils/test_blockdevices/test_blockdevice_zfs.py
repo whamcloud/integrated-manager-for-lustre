@@ -72,7 +72,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def remove_packages_commands(self):
-        return ["yum remove -y zfs libzfs2 zfs-dkms spl lustre-osd-zfs*",
+        return ["yum remove -y zfs libzfs2 zfs-dkms spl spl-dkms lustre-osd-zfs lustre-osd-zfs-mount",
                 "if [ -e /etc/zfs ]; then rm -rf /etc/zfs; else exit 0; fi"]
 
     @property

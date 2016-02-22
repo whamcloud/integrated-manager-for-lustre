@@ -14,7 +14,7 @@ class TestStorageServerAuthentication(ChromaIntegrationTestCase):
 
             self.host = self.add_hosts([self.SERVER['address']])
             self.remote_operations.copy_file(self.SERVER['address'], '%s/private.pem' % self.SECURITY_FILE_DIR, '%s/private.pem.save' % self.SECURITY_FILE_DIR)
-            self.remote_operations._ssh_address(self.SERVER['address'], 'sed -i "2s/$/XCXXXXCVDS/" %s/private.pem' % self.SECURITY_FILE_DIR)
+            self.remote_operations.remote_command(self.SERVER['address'], 'sed -i "2s/$/XCXXXXCVDS/" %s/private.pem' % self.SECURITY_FILE_DIR)
 
             active_lost_contact_filter = {'active': True,
                                           'alert_type': 'HostContactAlert'}
