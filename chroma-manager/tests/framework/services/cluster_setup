@@ -18,7 +18,7 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel libcurl-devel
 
 # Turn on worker
 ed -s /etc/sysconfig/httpd <<< $',s/#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr\/sbin\/httpd.worker/g\nw'

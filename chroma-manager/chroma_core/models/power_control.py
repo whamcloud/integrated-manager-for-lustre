@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -69,22 +69,22 @@ class DeletablePowerControlModel(models.Model):
 
 class PowerControlType(DeletablePowerControlModel):
     agent = models.CharField(null = False, blank = False, max_length = 255,
-            choices = [(a, a) for a in settings.SUPPORTED_FENCE_AGENTS],
-            help_text = "Fencing agent (e.g. fence_apc, fence_ipmilan, etc.)")
+                             choices = [(a, a) for a in settings.SUPPORTED_FENCE_AGENTS],
+                             help_text = "Fencing agent (e.g. fence_apc, fence_ipmilan, etc.)")
     make = models.CharField(null = True, blank = True, max_length = 50,
-            help_text = "Device manufacturer string")
+                            help_text = "Device manufacturer string")
     model = models.CharField(null = True, blank = True, max_length = 50,
-            help_text = "Device model string")
+                             help_text = "Device model string")
     max_outlets = models.PositiveIntegerField(default = 0, blank = True,
-            help_text = "The maximum number of outlets which may be associated with an instance of this device type (0 is unlimited)")
+                                              help_text = "The maximum number of outlets which may be associated with an instance of this device type (0 is unlimited)")
     default_port = models.PositiveIntegerField(default = 23, blank = True,
-            help_text = "Network port used to access power control device")
+                                               help_text = "Network port used to access power control device")
     default_username = models.CharField(null = True, blank = True,
-            max_length = 128, help_text = "Factory-set admin username")
+                                        max_length = 128, help_text = "Factory-set admin username")
     default_password = models.CharField(null = True, blank = True,
-            max_length = 128, help_text = "Factory-set admin password")
+                                        max_length = 128, help_text = "Factory-set admin password")
     default_options = models.CharField(null = True, blank = True, max_length = 255,
-            help_text = "Default set of options to be passed when invoking fence agent")
+                                       help_text = "Default set of options to be passed when invoking fence agent")
     # These defaults have been verified with fence_apc, but should work with
     # most fence agents. Some adjustments may be required (e.g. fence_xvm
     # wants -H <domain> rather than -n).
@@ -93,7 +93,7 @@ class PowerControlType(DeletablePowerControlModel):
     poweroff_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for switching an outlet off", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s")
     monitor_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for checking that a PDU is responding", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor")
     outlet_query_template = models.CharField(blank = True, max_length = 512, help_text = "Command template for querying an individual outlet's state", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s")
-    outlet_list_template = models.CharField(null = True, blank = True, max_length = 512, help_text = "Command template for listing all outlets on a PDU", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o list")
+    outlet_list_template = models.CharField(null = True, blank = True, max_length = 512, help_text = "Command template for listing all outlets on a PDU", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o list-status")
 
     def display_name(self):
         make = self.make if self.make != "" else "Unknown Make"
@@ -117,6 +117,7 @@ def create_default_power_types(app, **kwargs):
     import json
     import chroma_core
     chroma_core = os.path.abspath(os.path.dirname(chroma_core.__file__))
+
     with open(os.path.join(chroma_core, "fixtures/default_power_types.json")) as f:
         default_types = json.load(f)
 
@@ -181,20 +182,20 @@ class IpmiBmcUnavailableAlert(AlertState):
 class PowerControlDevice(DeletablePowerControlModel):
     device_type = models.ForeignKey('PowerControlType', related_name = 'instances')
     name = models.CharField(null = False, blank = True, max_length = 50,
-            help_text = "Optional human-friendly display name (defaults to address)")
+                            help_text = "Optional human-friendly display name (defaults to address)")
     # We need to work with a stable IP address, not a hostname. STONITH must
     # work even if DNS doesn't!
     address = models.IPAddressField(null = False, blank = False,
-            help_text = "IP address of power control device")
+                                    help_text = "IP address of power control device")
     port = models.PositiveIntegerField(default = 23, blank = True,
-            help_text = "Network port used to access power control device")
+                                       help_text = "Network port used to access power control device")
     username = models.CharField(null = False, blank = True,
-            max_length= 64, help_text = "Username for device administration")
+                                max_length= 64, help_text = "Username for device administration")
     # FIXME: (HYD-1913) Don't store these passwords in plaintext!
     password = models.CharField(null = False, blank = True,
-            max_length= 64, help_text = "Password for device administration")
+                                max_length= 64, help_text = "Password for device administration")
     options = models.CharField(null = True, blank = True, max_length = 255,
-            help_text = "Custom options to be passed when invoking fence agent")
+                               help_text = "Custom options to be passed when invoking fence agent")
 
     def __str__(self):
         return self.name
@@ -242,15 +243,15 @@ class PowerControlDevice(DeletablePowerControlModel):
         from os.path import expanduser
 
         cmd_str = getattr(self.device_type, "%s_template" % template) % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'identifier': identifier,
-                'options': self.options,
-                'home': expanduser("~")
-            }
+            'agent': self.device_type.agent,
+            'address': self.address,
+            'port': self.port,
+            'username': self.username,
+            'password': self.password,
+            'identifier': identifier,
+            'options': self.options,
+            'home': expanduser("~")
+        }
         return re.split(r'\s+', cmd_str)
 
     def poweron_command(self, identifier):
@@ -308,9 +309,9 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
     device = models.ForeignKey('PowerControlDevice', related_name = 'outlets')
     # http://www.freesoft.org/CIE/RFC/1035/9.htm (max dns name == 255 octets)
     identifier = models.CharField(null = False, blank = False,
-            max_length = 254, help_text = "A string by which the associated device can identify the controlled resource (e.g. PDU outlet number, libvirt domain name, ipmi mgmt address, etc.)")
+                                  max_length = 254, help_text = "A string by which the associated device can identify the controlled resource (e.g. PDU outlet number, libvirt domain name, ipmi mgmt address, etc.)")
     host = models.ForeignKey('ManagedHost', related_name = 'outlets',
-            null = True, blank = True, help_text = "Optional association with a ManagedHost instance")
+                             null = True, blank = True, help_text = "Optional association with a ManagedHost instance")
     has_power = models.NullBooleanField(help_text = "Outlet power status (On, Off, Unknown)")
 
     def clean(self):
@@ -327,12 +328,12 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         # now.
         if self.host and self.host.outlets.count() > 0:
             devices = [o.device for o in self.host.outlets.all()] + [self.device]
-            if (any([d.is_ipmi for d in devices])
-                and not all([d.is_ipmi for d in devices])):
+            if (any([d.is_ipmi for d in devices]) and
+                not all([d.is_ipmi for d in devices])):
                 raise ValidationError("Mixing of IPMI and PDU power control is not supported.")
 
-        if (self.device.is_ipmi
-            and self.device.device_type.agent != "fence_virsh"):
+        if (self.device.is_ipmi and
+            self.device.device_type.agent != "fence_virsh"):
             # Special-case for IPMI "outlets". The identifier is the BMC
             # address.
             self.identifier = self.validate_inet_address(self.identifier)
@@ -428,7 +429,7 @@ class PoweronHostJob(AdvertisedJob):
         # 3. None of the associated outlets are On
         return (host.outlets.count()
                 and any([True if o.has_power in [True, False] else False
-                            for o in host.outlets.all()])
+                         for o in host.outlets.all()])
                 and not any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
@@ -474,7 +475,7 @@ class PoweroffHostJob(AdvertisedJob):
         # 3. At least one of the associated outlets is On
         return (host.outlets.count()
                 and all([True if o.has_power in [True, False] else False
-                            for o in host.outlets.all()])
+                         for o in host.outlets.all()])
                 and any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
@@ -602,8 +603,7 @@ class ConfigureHostFencingStep(Step):
                 'password': outlet.device.password
             }
             # IPMI fencing config doesn't need most of these attributes.
-            if (outlet.device.is_ipmi
-                and outlet.device.device_type.agent != 'fence_virsh'):
+            if (outlet.device.is_ipmi and outlet.device.device_type.agent != 'fence_virsh'):
                 fence_kwargs['ipaddr'] = outlet.identifier
                 fence_kwargs['lanplus'] = '2.0' in outlet.device.device_type.model  # lanplus
             else:

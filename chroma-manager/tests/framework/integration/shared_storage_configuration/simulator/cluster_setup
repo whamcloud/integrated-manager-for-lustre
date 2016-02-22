@@ -18,7 +18,7 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server erlang-inets npm patch httpd-devel
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server erlang-inets npm patch httpd-devel libcurl-devel
 
 # don't need EPEL any more
 yum-config-manager --disable addon-epel6-x86_64
@@ -107,6 +107,7 @@ virtualenv --no-site-packages chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/chroma/chroma-manager
 make requirements
+export PYCURL_SSL_LIBRARY=nss
 python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
 
 if $MEASURE_COVERAGE; then

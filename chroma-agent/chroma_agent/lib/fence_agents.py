@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -31,11 +31,15 @@ from chroma_agent.chroma_common.lib import shell
 
 
 class FenceAgent(object):
+    def __init__(self, plug, base_cmd):
+        self.plug = plug
+        self.base_cmd = base_cmd
+
     def toggle_outlet(self, state):
         shell.try_run(self.base_cmd + ['-n', self.plug, '-o', state])
 
     def list(self):
-        shell.try_run(self.base_cmd + ['-a', 'list'])
+        shell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'list-status'])
 
     def status(self):
         shell.try_run(self.base_cmd + ['-n', self.plug, '-o', 'status'])
@@ -52,32 +56,33 @@ class FenceAgent(object):
 
 class fence_apc(FenceAgent):
     def __init__(self, agent, login, password, ipaddr, plug, ipport=23):
-        self.plug = plug
-        self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password]
+        super(fence_apc, self).__init__(plug,
+                                        [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password])
 
 
 class fence_apc_snmp(FenceAgent):
     def __init__(self, agent, login, password, ipaddr, plug, ipport=161):
-        self.plug = plug
-        self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password]
+        super(fence_apc_snmp, self).__init__(plug,
+                                             [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password])
 
 
 class fence_virsh(FenceAgent):
     def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file="%s/.ssh/id_rsa" % expanduser("~")):
-        self.plug = plug
         if identity_file and isfile(identity_file):
             auth = ['-k', identity_file]
         elif password:
             auth = ['-p', password]
         else:
             raise RuntimeError("Neither password nor identity_file were supplied")
-        self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth
+
+        super(fence_virsh, self).__init__(plug,
+                                          [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth)
 
     def on(self):
         """Override super.on to wait 15 seconds then process as usual.
 
         Real servers start slower then virtual ones do.  This simulates the production
-        environment more closely.  This was introduced to prevent HYD-2889 from occuring
+        environment more closely.  This was introduced to prevent HYD-2889 from occurring
         in the testing.
         """
 
@@ -91,9 +96,12 @@ class fence_virsh(FenceAgent):
 class fence_ipmilan(FenceAgent):
     def __init__(self, agent, login, password, ipaddr, lanplus=False):
         if lanplus:
-            self.base_cmd = [agent, '-P', '-a', ipaddr, '-l', login, '-p', password]
+            base_cmd = [agent, '-P', '-a', ipaddr, '-l', login, '-p', password]
         else:
-            self.base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
+            base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
+
+        super(fence_ipmilan, self).__init__("",
+                                            base_cmd)
 
     def toggle_outlet(self, state):
         shell.try_run(self.base_cmd + ['-o', state])

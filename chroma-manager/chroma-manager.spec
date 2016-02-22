@@ -52,7 +52,6 @@ Requires: chroma-manager-cli = %{version}-%{release}
 Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
 Requires: python-gevent >= 1.0.1
-Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 Requires: system-config-firewall-base
 Requires: nodejs >= 0.10.33-1
 Conflicts: chroma-agent
@@ -92,6 +91,9 @@ Obsoletes: nodejs-di
 Obsoletes: nodejs-mv
 Obsoletes: nodejs-json-mask
 Obsoletes: nodejs-zeparser
+
+Obsoletes: fence-agents-iml
+Requires: fence-agents >= 4.0.15-12.el6
 
 %description
 This is the Intel Manager for Lustre Monitoring and Administration Interface
