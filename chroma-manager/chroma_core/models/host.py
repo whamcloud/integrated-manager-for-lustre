@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -844,8 +844,7 @@ class SetupWorkerJob(NullStateChangeJob):
         ordering = ['id']
 
     def get_deps(self):
-        # Moving out of unconfigured will mean that lnet will start monitoring and responding to the state.
-        return DependOn(self.target_object.lnet_configuration, 'lnet_unloaded', unacceptable_states=['unconfigured'])
+        return DependOn(self.target_object.lnet_configuration, 'lnet_up')
 
     def description(self):
         return help_text['setup_worker_host_on'] % self.target_object
@@ -1060,8 +1059,8 @@ class DeleteHostStep(Step):
             host.state = 'removed'
 
 
-class RemoveHostJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(ManagedHost, ['unconfigured', 'managed', 'monitored', 'working'], 'removed')
+class CommonRemoveHostJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(None, None, None)
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -1072,24 +1071,41 @@ class RemoveHostJob(StateChangeJob):
     display_order = 120
 
     class Meta:
+        abstract = True
+
+    def get_confirmation_string(self):
+        return self.long_description(self.host)
+
+    def description(self):
+        return "Remove host %s from configuration" % self.host
+
+    def get_steps(self):
+        return [(RemoveServerConfStep, {'host': self.host}),
+                (DeleteHostStep, {'host': self.host, 'force': False})]
+
+
+class RemoveHostJob(CommonRemoveHostJob):
+    state_transition = StateChangeJob.StateTransition(ManagedHost, ['unconfigured', 'monitored'], 'removed')
+
+    class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
     @classmethod
     def long_description(cls, host):
-        if host.is_monitored:
-            return help_text['remove_monitored_configured_server']
+        return help_text['remove_monitored_configured_server']
 
-        if host.is_managed:
-            return help_text['remove_configured_server']
 
-        raise NotImplemented("Host is of unknown configuration")
+class RemoveManagedHostJob(CommonRemoveHostJob):
+    state_transition = StateChangeJob.StateTransition(ManagedHost, ['managed', 'working'], 'removed')
 
-    def get_confirmation_string(self):
-        return RemoveHostJob.long_description(self.host)
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
 
-    def description(self):
-        return "Remove host %s from configuration" % self.host
+    @classmethod
+    def long_description(cls, host):
+        return help_text['remove_configured_server']
 
     def get_deps(self):
         deps = []
@@ -1107,10 +1123,6 @@ class RemoveHostJob(StateChangeJob):
             deps.append(DependOn(self.host.rsyslog_configuration, 'unconfigured'))
 
         return DependAll(deps)
-
-    def get_steps(self):
-        return [(RemoveServerConfStep, {'host': self.host}),
-                (DeleteHostStep, {'host': self.host, 'force': False})]
 
 
 class ForceRemoveHostJob(AdvertisedJob):
