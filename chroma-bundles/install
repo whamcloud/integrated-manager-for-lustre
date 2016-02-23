@@ -36,6 +36,7 @@ MAIN_PACKAGE = "chroma-manager"
 
 BUNDLE_ROOT = "/var/lib/chroma/repo"
 BUNDLE_BACKUP = "/var/lib/chroma/repo.previous"
+REPO_ALIASES = [ "{0}Server" ]
 LOG_DIR = "/var/log/chroma"
 LOG_FILE = os.path.join(LOG_DIR, "install.log")
 
@@ -482,6 +483,19 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             # Extract the new bundle
             _mkdir_p(install_location)
             _unpack_repo(meta['filename'], install_location)
+            # While CentOS uses just the numerical version, RHEL appends the
+            # installation type, so allow aliases and create a symlink pointing the
+            # alias at our repo
+            for alias in REPO_ALIASES:
+                link_path = os.path.join(BUNDLE_ROOT, meta['name'], alias.format(meta['distro_version']))
+                try:
+                    os.symlink(meta['distro_version'], link_path)
+                except OSError, e:
+                   if e.errno != errno.EEXIST:
+                       log.debug("Unhandled exception: %s" % traceback.format_exc())
+                   elif e.errno == errno.EEXIST and not os.path.islink(link_path):
+                       log.error("%s exists but is not a directory" % link_path)
+                   raise e
             if need_compat:
                 # We need to be repo compatible with older releases that won't
                 # know to find RPMs in a $releasever subdir
