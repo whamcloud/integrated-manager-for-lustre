@@ -138,17 +138,12 @@ Requires: %{name} = %{version}-%{release}
 This package contains the .py files stripped out of the production build.
 
 %pre
-lsof -n -i :443
-if [ $? -eq 0 ]; then
-    echo "To install, port 443 cannot be bound. Do you have Apache running in SSL mode?"
-    exit -1
-fi
-
-lsof -n -i :80
-if [ $? -eq 0 ]; then
-    echo "To install, port 80 cannot be bound. do you have Apache running?"
-    exit -1
-fi
+for port in 80 443; do
+    if lsof -n -i :$port -s TCP:LISTEN; then
+        echo "To install, port $port cannot be bound. Do you have Apache or some other web server running?"
+        exit 1
+    fi
+done
 
 %prep
 %setup -n %{name}-%{version}
