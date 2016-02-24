@@ -11,13 +11,7 @@ class TestNTPConfig(unittest.TestCase):
 
         self.ntp = NTPConfig()
 
-        # each time we run _reset_and_read_conf, pre-chroma config file is reloaded and config reset
-        mock.patch.object(self.ntp, '_reset_and_read_conf', return_value=None,
-                          side_effect=self._reset_lines).start()
-        mock.patch.object(self.ntp, '_write_conf', return_value=None).start()
-
-        self.addCleanup(mock.patch.stopall)
-
+        # Static assignments for use in tests
         self.existing_server = 'iml.ntp.com'
         self.existing_directive = self._directive(self.existing_server)
 
@@ -26,8 +20,19 @@ class TestNTPConfig(unittest.TestCase):
         self.manager_marker = '# Added by chroma-manager\n'
         self.manager_comment = '# Commented out by chroma-manager: '
 
-    def _reset_lines(self):
-        self.ntp.lines = self._get_lines('pre-iml')
+        # each time we run _reset_and_read_conf, config file edits are removed and config reset
+        self.mock_open = mock.mock_open()
+        self.mock_open.return_value.readlines.return_value = self._get_lines('iml')
+        mock.patch('__builtin__.open', self.mock_open, create=True).start()
+
+        mock.patch.object(self.ntp, '_write_conf', return_value=None).start()
+
+        self.addCleanup(mock.patch.stopall)
+
+    @staticmethod
+    def _directive(hostname):
+        """ helper method to return config file server directive """
+        return 'server {0} iburst'.format(hostname)
 
     def _get_lines(self, variant):
         lines = {
@@ -56,12 +61,20 @@ class TestNTPConfig(unittest.TestCase):
                 '{0} server 2.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
                 '{0} server 3.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
                 '\n'],
+            'iml-append': [
+                '# Use public servers from the pool.ntp.org project.\n',
+                '# Please consider joining the pool (http://www.pool.ntp.org/join.html).\n',
+                '#server 0.centos.pool.ntp.org iburst\n',
+                '#server 1.centos.pool.ntp.org iburst\n',
+                '#server 2.centos.pool.ntp.org iburst\n',
+                '#server 3.centos.pool.ntp.org iburst\n',
+                '\n',
+                '{0} {1} \n'.format(self.existing_directive, self.ntp.MARKER)],
             'local-ip-insert': [
                 '# Use public servers from the pool.ntp.org project.\n',
                 '# Please consider joining the pool (http://www.pool.ntp.org/join.html).\n',
-                'server  127.127.1.0 {0} local clock\n'.format(self.ntp.MARKER),
-                'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.ntp.MARKER),
-                '{0} server 0.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
+                'server  127.127.1.0 {0}\n'.format(self.ntp.MARKER),
+                'fudge   127.127.1.0 stratum 10 {0} server 0.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
                 '{0} server 1.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
                 '{0} server 2.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
                 '{0} server 3.centos.pool.ntp.org iburst\n'.format(self.ntp.MARKER),
@@ -74,8 +87,8 @@ class TestNTPConfig(unittest.TestCase):
                 '#server 2.centos.pool.ntp.org iburst\n',
                 '#server 3.centos.pool.ntp.org iburst\n',
                 '\n',
-                'server  127.127.1.0 {0} local clock\n'.format(self.ntp.MARKER),
-                'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.ntp.MARKER)],
+                'server  127.127.1.0 {0}\n'.format(self.ntp.MARKER),
+                'fudge   127.127.1.0 stratum 10 {0} \n'.format(self.ntp.MARKER)],
             'iml-manager-old': [
                 '# Use public servers from the pool.ntp.org project.\n',
                 '# Please consider joining the pool (http://www.pool.ntp.org/join.html).\n',
@@ -111,11 +124,6 @@ class TestNTPConfig(unittest.TestCase):
                 '\n']}
         return lines[variant]
 
-    @staticmethod
-    def _directive(hostname):
-        """ helper method to return config file server directive """
-        return 'server {0} iburst'.format(hostname)
-
     def test_get_server(self):
         """
         test fetching server hostname from ntp config,
@@ -125,15 +133,17 @@ class TestNTPConfig(unittest.TestCase):
         we need to mock open explicitly and make the return file object return a specific
         list of strings on readlines() call
         """
-        mock_open = mock.mock_open()
-        mock_open.return_value.readlines.return_value = self._get_lines('iml')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
+        server = self.ntp.get_configured_server(markers=None)
+        self.assertEqual(server, self.existing_server)
+
+        # now test with config with appended server directive
+        self.mock_open.return_value.readlines.return_value = self._get_lines('iml-append')
 
         server = self.ntp.get_configured_server(markers=None)
         self.assertEqual(server, self.existing_server)
 
         # now test with old style config syntax for compatibility with legacy IML config files
-        mock_open.return_value.readlines.return_value = self._get_lines('iml-manager-old')
+        self.mock_open.return_value.readlines.return_value = self._get_lines('iml-manager-old')
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, self.existing_server)
@@ -147,24 +157,22 @@ class TestNTPConfig(unittest.TestCase):
         we need to mock open explicitly and make the return file object return a specific
         list of strings on readlines() call
         """
-        mock_open = mock.mock_open()
-        mock_open.return_value.readlines.return_value = self._get_lines('local-ip-insert')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
+        self.mock_open.return_value.readlines.return_value = self._get_lines('local-ip-insert')
 
         server = self.ntp.get_configured_server(markers=None)
         self.assertEqual(server, 'localhost')
 
-        mock_open.return_value.readlines.return_value = self._get_lines('local-ip-insert-manager-old')
+        self.mock_open.return_value.readlines.return_value = self._get_lines('local-ip-insert-manager-old')
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, 'localhost')
 
-        mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append')
+        self.mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append')
 
         server = self.ntp.get_configured_server(markers=None)
         self.assertEqual(server, 'localhost')
 
-        mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append-manager-old')
+        self.mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append-manager-old')
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, 'localhost')
@@ -178,9 +186,7 @@ class TestNTPConfig(unittest.TestCase):
         we need to mock open explicitly and make the return file object return a specific
         list of strings on readlines() call
         """
-        mock_open = mock.mock_open()
-        mock_open.return_value.readlines.return_value = self._get_lines('pre-iml')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
+        self.mock_open.return_value.readlines.return_value = self._get_lines('pre-iml')
 
         server = self.ntp.get_configured_server(markers=None)
         self.assertEqual(server, None)
@@ -189,10 +195,9 @@ class TestNTPConfig(unittest.TestCase):
         self.assertEqual(server, None)
 
     def test_add_remove_configured(self):
-        """
-        test adding and then removing IML configuration from ntp config content
-        by restoring previous configuration
-        """
+        """ test adding to un-configured content and then removing IML configurations """
+        self.mock_open.return_value.readlines.return_value = self._get_lines('pre-iml')
+
         # add desired line to config
         error = self.ntp.add(self.existing_server)
         self.assertEqual(error, None)
@@ -203,12 +208,31 @@ class TestNTPConfig(unittest.TestCase):
         self.assertEqual(error, None)
         self.assertListEqual(self.ntp.lines, self._get_lines('pre-iml'))
 
+    def test_add_remove_append_configured(self):
+        """
+        test adding and then removing IML configuration from ntp config content with commented server directives
+        by removing previous configuration
+        """
+        self.mock_open.return_value.readlines.return_value = self._get_lines('no-servers')
+
+        # add desired line to config
+        error = self.ntp.add(self.existing_server)
+        self.assertEqual(error, None)
+        self.assertListEqual(self.ntp.lines, self._get_lines('iml-append'))
+
+        # remove any iml configuration
+        error = self.ntp.add(None)
+        self.assertEqual(error, None)
+        self.assertListEqual(self.ntp.lines, self._get_lines('no-servers'))
+
     def test_add_localhost(self):
         """
         test adding localhost to ntp config content
         if server directives exist, replace the first one with local clock fudge,
         if no server directives exist, append local clock fudge to end of file
         """
+        self.mock_open.return_value.readlines.return_value = self._get_lines('pre-iml')
+
         self.ntp.add('localhost')
         self.assertListEqual(self.ntp.lines, self._get_lines('local-ip-insert'))
 
@@ -217,10 +241,27 @@ class TestNTPConfig(unittest.TestCase):
         test adding localhost to ntp config content with no active server directives
         IP address and local clock 'fudge' directives should be appended when applying localhost
         """
-        self.ntp.lines = self._get_lines('no-servers')
-
-        # we don't want _reset_and_read_conf to reload 'iml' lines, override the mock patch
-        mock.patch.object(self.ntp, '_reset_and_read_conf', return_value=None).start()
+        self.mock_open.return_value.readlines.return_value = self._get_lines('no-servers')
 
         self.ntp.add('localhost')
         self.assertListEqual(self.ntp.lines, self._get_lines('local-ip-append'))
+
+    def test_add_and_reset_iml_edits(self):
+        """
+        test resetting previous IML edits in config file contents then adding again
+        """
+        for lines_out, lines_in, server in [('iml', 'pre-iml', self.existing_server),
+                                            ('iml-append', 'no-servers', self.existing_server),
+                                            ('local-ip-insert', 'pre-iml', 'localhost'),
+                                            ('local-ip-append', 'no-servers', 'localhost')]:
+            self.mock_open.return_value.readlines.return_value = self._get_lines(lines_in)
+
+            self.ntp.add(server)
+
+            self.assertListEqual(self.ntp.lines, self._get_lines(lines_out))
+
+            self.mock_open.return_value.readlines.return_value = self._get_lines(lines_out)
+
+            self.ntp.add(None)
+
+            self.assertListEqual(self.ntp.lines, self._get_lines(lines_in))
