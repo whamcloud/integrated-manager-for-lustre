@@ -1,6 +1,6 @@
 # Define the job/build that should be used for Lustre packages
 JENKINS_JOB_NAME	:= lustre-b_ieel3_0
-JENKINS_BUILD_NUMBER	:= 40
+JENKINS_BUILD_NUMBER	:= 55
 #JENKINS_JOB_NAME	:= lustre-b_ieel-reviews
 #JENKINS_BUILD_NUMBER	:= 733
 
