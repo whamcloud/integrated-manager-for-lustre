@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,11 +20,7 @@
 # express and approved by Intel in writing.
 
 
-import os
-from tempfile import mkstemp
-
-from chroma_agent.chroma_common.lib.ntp import AgentNTPConfig
-from chroma_agent.lib.shell import AgentShell
+from chroma_agent.chroma_common.lib.ntp import NTPConfig
 from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 
@@ -33,7 +29,8 @@ ntp_service = ServiceControl.create('ntp')
 
 
 def unconfigure_ntp():
-    """Unconfigure the ntp client
+    """
+    Unconfigure the ntp client
 
     :return: Value using simple return protocol
     """
@@ -41,11 +38,12 @@ def unconfigure_ntp():
 
 
 def configure_ntp(ntp_server):
-    """Change the ntp configuration file to use the server passed
+    """
+    Change the ntp configuration file to use the server passed
 
     :return: Value using simple return protocol
     """
-    return agent_ok_or_error(AgentNTPConfig().add(ntp_server))
+    return agent_ok_or_error(NTPConfig().add(ntp_server))
 
 
 ACTIONS = [configure_ntp, unconfigure_ntp]

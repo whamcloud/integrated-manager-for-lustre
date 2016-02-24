@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,15 +19,14 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import os
 import shutil
 import tempfile
-import abc
 
 
-class BaseNTPConfig(object):
-    """Base class for NTP configuration with abstract methods"""
-    __metaclass__ = abc.ABCMeta
+class NTPConfig(object):
+    """ Class to enable IML to automatically configure NTP """
 
     DEFAULT_CONFIG_FILE = '/etc/ntp.conf'
     PRE_CHROMA_CONFIG_FILE = '/etc/ntp.conf.pre-chroma'
@@ -37,7 +36,8 @@ class BaseNTPConfig(object):
     IBURST = 'iburst'
 
     def __init__(self, config_file=DEFAULT_CONFIG_FILE, logger=None):
-        """Init configures instance variables
+        """
+        Init configures instance variables
 
         :param config_file: destination directory for resultant config file
         :param logger: external logger to write messages to
@@ -47,7 +47,8 @@ class BaseNTPConfig(object):
         self.lines = []       # lines to be read in from config file
 
     def get_configured_server(self, markers):
-        """Return the IML-configured server found in the ntp conf file
+        """
+        Return the IML-configured server found in the ntp conf file
 
         if IML did not set the server or if any error occurs return None.
         If IML did set the server and IML-markers are found, return server value
@@ -94,20 +95,14 @@ class BaseNTPConfig(object):
             return 'localhost'
         return server
 
-    @abc.abstractmethod
-    def add(self, server):
-        """Add server directive to the ntp config file, this may differ subtly for agent
-        and manager NTP configuration. Must implement in subclass, can make use of _add() fn
-        """
-        return 'NotImplemented'  # pragma: no cover
-
     def _log(self, msg, level='info'):
         """ utility function for using reference to an external logger """
         if self.logger and hasattr(self.logger, level):
             getattr(self.logger, level)('{0}: {1}'.format(self.__class__.__name__, msg))
 
     def _reset_and_read_conf(self):
-        """Read the contents of the config file into list of strings/lines, because we are using a
+        """
+        Read the contents of the config file into list of strings/lines, because we are using a
         pre-configured file there should be no IML changes and only standard ntp (v4) formatting
 
         :return: None for success, error string otherwise
@@ -129,7 +124,8 @@ class BaseNTPConfig(object):
             return e.message
 
     def _write_conf(self):
-        """Create and open temporary file and write new config content, rename to config
+        """
+        Create and open temporary file and write new config content, rename to config
         destination file. Close any open files and file descriptors
 
         :return: None for success, error string otherwise
@@ -145,8 +141,8 @@ class BaseNTPConfig(object):
             self._log(e.message, level='error')
             return e.message
 
-    def _index_containing_directive(self):
-        """ Helper method to return first index of string containing substring in list """
+    def _get_prefix_index(self):
+        """ Helper method to return first index of string starting with prefix in list """
         try:
             return next(idx for idx, value in enumerate(self.lines) if
                         value.startswith(self.PREFIX + ' '))
@@ -154,7 +150,8 @@ class BaseNTPConfig(object):
             return None
 
     def _add(self, server):
-        """Replace server directive in ntp config file data, new server at the same index as the
+        """
+        Replace server directive in ntp config file data, new server at the same index as the
         first server directive found.
         Appends directive to file if no active server is found in config file.
 
@@ -162,41 +159,53 @@ class BaseNTPConfig(object):
 
         :input: server    replacement server to add in config file directive
         """
-        if server == 'localhost':
-            new_directive = ' '.join([self.PREFIX, server])
-        else:
-            new_directive = ' '.join([self.PREFIX, server, self.IBURST])
+        prefix_index = self._get_prefix_index()
+        first_prefix_index = None
+        line_to_replace = None
 
-        directive_index = self._index_containing_directive()
-
-        if directive_index is not None:
+        if prefix_index is not None:
             # Mark the index of the first directive we find, this is where we want add the server
-            first_directive_index = directive_index
+            first_prefix_index = prefix_index
 
             # remove this server directive and comment subsequent ones
-            line_to_replace = self.lines.pop(directive_index)
-            directive_index = self._index_containing_directive()
+            line_to_replace = self.lines.pop(prefix_index)
+            prefix_index = self._get_prefix_index()
 
-            # while server directive directive_found in lines, comment out line with marker
-            while directive_index is not None:
-                self.lines[directive_index] = ' '.join([self.MARKER, self.lines[directive_index]])
-                directive_index = self._index_containing_directive()
+            # while server directive found in lines, comment out line with marker
+            while prefix_index is not None:
+                self.lines[prefix_index] = ' '.join([self.MARKER, self.lines[prefix_index]])
+                prefix_index = self._get_prefix_index()
 
-            # once all server directives have been commented out, add ours where the first one was
-            self.lines.insert(first_directive_index, ' '.join([new_directive, self.MARKER,
-                                                               line_to_replace]))
+        if server == 'localhost':
+            for line in ['server  127.127.1.0 {0} local clock\n'.format(self.MARKER),
+                         'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.MARKER)]:
+
+                # if no server directives found in file, append local clock fudge to the end of the file contents
+                # otherwise, once all server directives have been commented out, add it where the first server was
+                if first_prefix_index is None:
+                    self.lines.append(line)
+                else:
+                    self.lines.insert(first_prefix_index, line)
+                    first_prefix_index += 1
+
+            if first_prefix_index:
+                self.lines.insert(first_prefix_index, '{0} {1}'.format(self.MARKER, line_to_replace))
+
         else:
-            # no server directives found in file, append ours to the end of the file contents
-            self.lines.append(''.join([new_directive, ' ', self.MARKER, '\n']))
+            new_directive = ' '.join([self.PREFIX, server, self.IBURST])
+            line = ' '.join([new_directive, self.MARKER])
 
-
-class AgentNTPConfig(BaseNTPConfig):
-    """ Concrete implementation for the agent NTP configuration """
+            # if no server directives found in file, append ours to the end of the file contents
+            # otherwise, once all server directives have been commented out, add ours where the first one was
+            self.lines.append(line + '\n') if first_prefix_index is None \
+                                           else self.lines.insert(first_prefix_index, line + ' ' + line_to_replace)
 
     def add(self, server):
-        """If no server in config then append given hostname in directive at end of file,
-        otherwise, replace existing server directive with that provided
-        Comment any additional server directives
+        """
+        Add server directive to the ntp config file, if no server in config then append given hostname in directive
+        at end of file, otherwise, replace existing server directive with that provided
+
+        Comment out any additional server directives
 
         If server parameter is empty/None, reinstate saved backup file to reset any IML changes
 
@@ -207,46 +216,6 @@ class AgentNTPConfig(BaseNTPConfig):
         # proceed if we have no error and server name has been provided
         if (error is None) and server:
             self._add(server)
-            error = self._write_conf()
-
-        return error
-
-
-class ManagerNTPConfig(BaseNTPConfig):
-    """ Concrete implementation for the manager NTP configuration """
-
-    def get_configured_server(self, markers=None):
-        """Override base method to look for old-style sentinel in config file
-
-        :param markers: list of sentinels to look for
-        :return: configured server name if successful, None if not
-        """
-        return super(ManagerNTPConfig, self).get_configured_server(markers=['# Added by chroma-manager\n'])
-
-    def add(self, server):
-        """If no server in config then append given hostname in directive at end of file
-        Localhost can be used with local clock as the reference, but don't override existing
-        server with localhost
-
-        If server parameter is empty/None, reinstate saved backup file to reset any IML changes
-
-        :return: None for success, error string otherwise
-        """
-        error = self._reset_and_read_conf()
-
-        # proceed if we have no error and server name has been provided
-        if (error is None) and server:
-            if server == 'localhost':
-                if self._index_containing_directive() is None:
-                    for line in ['server 127.127.1.0     {0} local clock\n'.format(self.MARKER),
-                                 'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.MARKER)]:
-                        self.lines.append(line)
-                else:
-                    self._log('not overriding existing server directive with localhost, '
-                              'no changes made to ntp.conf', 'debug')
-                    return None
-            else:
-                self._add(server)
             error = self._write_conf()
 
         return error

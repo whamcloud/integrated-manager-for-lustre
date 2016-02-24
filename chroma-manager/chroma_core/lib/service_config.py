@@ -47,7 +47,7 @@ from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
-from chroma_core.chroma_common.lib.ntp import ManagerNTPConfig
+from chroma_core.chroma_common.lib.ntp import NTPConfig
 from chroma_core.chroma_common.lib.firewall_control import FirewallControl
 from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL6
 
@@ -203,14 +203,17 @@ class ServiceConfig(CommandLine):
 
         If no server is passed then use the existing setting and if there is no existing setting ask the user
         which server they would like to use.
+
+        Enable NTPConfig to recognise legacy line marker used in previous IML manager NTP configurations routines by
+        passing it as a parameter to the get_configured_server method call
         """
-        ntp = ManagerNTPConfig(logger=log)
-        existing_server = ntp.get_configured_server()
+        ntp = NTPConfig(logger=log)
+        existing_server = ntp.get_configured_server(markers=['# Added by chroma-manager\n'])
 
         if not server:
             if existing_server:
                 server = existing_server
-                log.info("Using existing ntp server: %s" % existing_server)
+                log.info("Using existing (chroma configured) ntp server: %s" % existing_server)
             else:
                 # Only if you haven't already set it
                 server = self.get_input(msg="NTP Server", default='localhost')
