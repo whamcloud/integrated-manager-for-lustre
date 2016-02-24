@@ -29,7 +29,6 @@ class NTPConfig(object):
     """ Class to enable IML to automatically configure NTP """
 
     DEFAULT_CONFIG_FILE = '/etc/ntp.conf'
-    PRE_CHROMA_CONFIG_FILE = '/etc/ntp.conf.pre-chroma'
     # use only a single marker for replace, comment and insert actions on config file
     MARKER = '# IML_EDITv1'
     PREFIX = 'server'
@@ -88,7 +87,7 @@ class NTPConfig(object):
         try:
             server = next(line.split()[1] for line in lines if line.startswith('server '))
         except StopIteration:
-            self._log('no configured server found in iml-modified ntp config file', level='debug')
+            self._log('no configured server found in chroma-modified ntp config file', level='debug')
             return None
         if server == '127.127.1.0':
             # ntp configured to use local clock
@@ -104,42 +103,33 @@ class NTPConfig(object):
         """
         Read the contents of the config file into list of strings/lines, because we are using a
         pre-configured file there should be no IML changes and only standard ntp (v4) formatting
-
-        :return: None for success, error string otherwise
         """
-        try:
-            # if pre-iml config file exists, revert back to using it (remove iml configuration)
-            if os.path.exists(self.PRE_CHROMA_CONFIG_FILE):
-                shutil.copyfile(self.PRE_CHROMA_CONFIG_FILE, self.config_path)
-            else:
-                # otherwise backup the starting point before changes are made
-                shutil.copyfile(self.config_path, self.PRE_CHROMA_CONFIG_FILE)
+        # read in file content
+        with open(self.config_path, 'r') as f:
+            original_lines = f.readlines()
 
-            # read in file content
-            with open(self.config_path, 'r') as f:
-                self.lines = f.readlines()
-            return None
-        except IOError as e:
-            self._log(e.message, level='error')
-            return e.message
+        self.lines = []
+
+        for line in original_lines:
+            if self.MARKER in line:
+                # retrieve commented out directive from line
+                line = line[line.find(self.MARKER) + len(self.MARKER) + 1:]
+                # don't append edited lines not replacing an old directive
+                if line.strip() != "":
+                    self.lines.append(line)
+            else:
+                self.lines.append(line)
 
     def _write_conf(self):
         """
         Create and open temporary file and write new config content, rename to config
         destination file. Close any open files and file descriptors
-
-        :return: None for success, error string otherwise
         """
-        try:
-            tmp_fd, tmp_name = tempfile.mkstemp(dir='/etc')
-            os.write(tmp_fd, ''.join(self.lines))
-            os.close(tmp_fd)
-            os.chmod(tmp_name, 0644)
-            shutil.move(tmp_name, self.config_path)
-            return None
-        except (IOError, OSError) as e:
-            self._log(e.message, level='error')
-            return e.message
+        tmp_fd, tmp_name = tempfile.mkstemp(dir='/etc')
+        os.write(tmp_fd, ''.join(self.lines))
+        os.close(tmp_fd)
+        os.chmod(tmp_name, 0644)
+        shutil.move(tmp_name, self.config_path)
 
     def _get_prefix_index(self):
         """ Helper method to return first index of string starting with prefix in list """
@@ -161,7 +151,7 @@ class NTPConfig(object):
         """
         prefix_index = self._get_prefix_index()
         first_prefix_index = None
-        line_to_replace = None
+        line_to_replace = '\n'
 
         if prefix_index is not None:
             # Mark the index of the first directive we find, this is where we want add the server
@@ -176,29 +166,23 @@ class NTPConfig(object):
                 self.lines[prefix_index] = ' '.join([self.MARKER, self.lines[prefix_index]])
                 prefix_index = self._get_prefix_index()
 
+        # now we have stored the first server directive and commented out others, add the new content
         if server == 'localhost':
-            for line in ['server  127.127.1.0 {0} local clock\n'.format(self.MARKER),
-                         'fudge   127.127.1.0 stratum 10 {0}\n'.format(self.MARKER)]:
-
-                # if no server directives found in file, append local clock fudge to the end of the file contents
-                # otherwise, once all server directives have been commented out, add it where the first server was
-                if first_prefix_index is None:
-                    self.lines.append(line)
-                else:
-                    self.lines.insert(first_prefix_index, line)
-                    first_prefix_index += 1
-
-            if first_prefix_index:
-                self.lines.insert(first_prefix_index, '{0} {1}'.format(self.MARKER, line_to_replace))
-
+            # add local clock to config
+            content = ['server  127.127.1.0 %s\n' % self.MARKER,
+                       'fudge   127.127.1.0 stratum 10 %s %s' % (self.MARKER, line_to_replace)]
         else:
-            new_directive = ' '.join([self.PREFIX, server, self.IBURST])
-            line = ' '.join([new_directive, self.MARKER])
+            content = [' '.join([self.PREFIX, server, self.IBURST, self.MARKER, line_to_replace])]
 
-            # if no server directives found in file, append ours to the end of the file contents
-            # otherwise, once all server directives have been commented out, add ours where the first one was
-            self.lines.append(line + '\n') if first_prefix_index is None \
-                                           else self.lines.insert(first_prefix_index, line + ' ' + line_to_replace)
+        for line in content:
+            # if no server directives found in file, append content to the end of the file
+            # otherwise, once all server directives have been commented out, add content where the first server was
+            if first_prefix_index is None:
+                self.lines.append(line)
+            else:
+                self.lines.insert(first_prefix_index, line)
+                # increment indexed to preserve order of content list in config file
+                first_prefix_index += 1
 
     def add(self, server):
         """
@@ -209,13 +193,19 @@ class NTPConfig(object):
 
         If server parameter is empty/None, reinstate saved backup file to reset any IML changes
 
-        :return: None for success, error string otherwise
+        :return: None on success, error string otherwise
         """
-        error = self._reset_and_read_conf()
+        try:
+            self._reset_and_read_conf()
 
-        # proceed if we have no error and server name has been provided
-        if (error is None) and server:
-            self._add(server)
-            error = self._write_conf()
+            # proceed if we have no error and server name has been provided
+            if server:
+                self._add(server)
 
-        return error
+            self._write_conf()
+        except (IOError, OSError) as e:
+            self._log(e.message, level='error')
+
+            return e.message
+
+        return None
