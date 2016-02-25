@@ -27,12 +27,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         return filtered_profile[0]
 
     def get_current_host_profile(self, host):
-        """Return the profile currently running on the host.
-        """
+        """Return the profile currently running on the host."""
         return self.chroma_manager.get('/api/server_profile/?name=%s' % host['server_profile']['name']).json['objects'][0]
 
     def get_best_host_profile(self, address):
-        """Return the most suitable profile for the host.
+        """
+        Return the most suitable profile for the host.
 
         This suitability is done using the profile validation rules.
         """
@@ -45,18 +45,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         all_profiles = self.chroma_manager.get('/api/server_profile/').json['objects']
 
-        # It can take a while before the hosts resolves a valid profile. We see this in the GUI where the
-        # profiles are all red while the agents start up. So keep trying for 60 seconds - although each agent
-        # could try for 60 seconds the reality is it is happening in parallel, so the first might take a while
-        # but the others should be quick.
-        self.wait_for_assert(lambda: self.assertTrue(self.get_host_validations(host).valid))
-
-        all_validations = self.chroma_manager.get('/api/host_profile').json['objects']
-
         # Get the one for this host.
-        host_validations = next(validation['host_profiles']['profiles']
-                                for validation in all_validations
-                                if validation['host_profiles']['address'] == host['address'])
+        host_validations = self.get_valid_host_validations(host).profiles
 
         # Merge the two so we have single list.
         for profile in all_profiles:
@@ -88,6 +78,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
 
     def get_host_validations(self, host):
+        """
+        Returns the host validations for the host passed.
+
+        :param host: Host to get profiles for.
+        :return: HostProfiles named tuple.
+        """
+
         all_validations = self.chroma_manager.get('/api/host_profile').json['objects']
 
         # Return the one for this host.
@@ -100,6 +97,18 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             validation['profiles_valid'] = (self.chroma_manager.get('api/host/%s' % validation['host']).json['properties'] != '{}')
 
         return self.HostProfiles(validation['profiles'], validation['profiles_valid'])
+
+    def get_valid_host_validations(self, host):
+        """
+        Returns the host validations for the host passed. The routine will wait for the validations to be valid
+        before returning. If they do not become valid it will assert.
+
+        :param host: Host to get profiles for.
+        :return: HostProfiles named tuple.
+        """
+        self.wait_for_assert(lambda: self.assertTrue(self.get_host_validations(host).valid))
+
+        return self.get_host_validations(host)
 
     def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
         """Verify server checks pass for provided addresses"""
