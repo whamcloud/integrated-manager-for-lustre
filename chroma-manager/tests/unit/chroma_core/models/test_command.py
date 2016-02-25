@@ -30,10 +30,10 @@ class TestCommand(IMLUnitTestCase):
                 self.assertEqual(command.errored, errored)
                 self.assertEqual(command.cancelled, cancelled)
 
-                if command.cancelled:
-                    expected_alert_class = CommandCancelledAlert
-                elif command.errored:
+                if command.errored:
                     expected_alert_class = CommandErroredAlert
+                elif command.cancelled:
+                    expected_alert_class = CommandCancelledAlert
                 else:
                     expected_alert_class = CommandSuccessfulAlert
 

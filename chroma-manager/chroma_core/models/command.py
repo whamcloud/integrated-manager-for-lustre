@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -146,12 +146,12 @@ class Command(models.Model):
             if type(command_alert) != CommandRunningAlert:
                 command_alert.cast(CommandRunningAlert)
         else:
-            if self.cancelled:
-                if type(command_alert) != CommandCancelledAlert:
-                    command_alert = command_alert.cast(CommandCancelledAlert)
-            elif self.errored:
+            if self.errored:
                 if type(command_alert) != CommandErroredAlert:
                     command_alert = command_alert.cast(CommandErroredAlert)
+            elif self.cancelled:
+                if type(command_alert) != CommandCancelledAlert:
+                    command_alert = command_alert.cast(CommandCancelledAlert)
             else:
                 if type(command_alert) != CommandSuccessfulAlert:
                     command_alert = command_alert.cast(CommandSuccessfulAlert)
