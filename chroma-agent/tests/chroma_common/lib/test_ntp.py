@@ -7,6 +7,7 @@ class TestNTPConfig(unittest.TestCase):
     """ Test class for NTPConfig """
 
     def setUp(self):
+        super(TestNTPConfig, self).setUp()
 
         self.ntp = NTPConfig()
 
@@ -133,7 +134,6 @@ class TestNTPConfig(unittest.TestCase):
 
         # now test with old style config syntax for compatibility with legacy IML config files
         mock_open.return_value.readlines.return_value = self._get_lines('iml-manager-old')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, self.existing_server)
@@ -155,19 +155,16 @@ class TestNTPConfig(unittest.TestCase):
         self.assertEqual(server, 'localhost')
 
         mock_open.return_value.readlines.return_value = self._get_lines('local-ip-insert-manager-old')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, 'localhost')
 
         mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
 
         server = self.ntp.get_configured_server(markers=None)
         self.assertEqual(server, 'localhost')
 
         mock_open.return_value.readlines.return_value = self._get_lines('local-ip-append-manager-old')
-        mock.patch('__builtin__.open', mock_open, create=True).start()
 
         server = self.ntp.get_configured_server(markers=[self.manager_marker])
         self.assertEqual(server, 'localhost')
