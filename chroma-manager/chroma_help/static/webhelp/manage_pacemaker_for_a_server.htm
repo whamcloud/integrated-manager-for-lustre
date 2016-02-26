@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>View History</title>
+   <title>Reconfiguring Corosync and Pacemaker for a server</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="At the Command bar, click History to open the History page and see the history of event messages. Filter these messages for Host, Severity and Event type. See History page." />
+   <meta name="description" content="Pacemaker and Corosync configuration is required for each server if you are creating or expanding a high-availability file system. &nbsp;Intel® Manager for Lustre* software..." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -42,18 +42,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "view_logs.htm",
-   prevP: "view_commmands.htm",
-   currP: "view_history.htm",
+   nextP: "configure_nids_for_a_server.htm",
+   prevP: "reboot__power-off__or_remove_a.htm",
+   currP: "manage_pacemaker_for_a_server.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "View History",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View History",
-   sharesubject: "Intel® Manager for Lustre* software - View History",
+   titleP: "Reconfiguring Corosync and Pacemaker for a server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Reconfiguring Corosync and Pacemaker for a server",
+   sharesubject: "Intel® Manager for Lustre* software - Reconfiguring Corosync and Pacemaker for a server",
    simplesubject: "Documentation%20Feedback",
-   mailid: "View_History",
-   mailpath: "Monitoring Lustre* file systems &gt; View History /",
+   mailid: "Manage_Pacemaker_for_a_server",
+   mailpath: "Performing maintenance for HA file systems &gt; Reconfiguring Corosync and Pacemaker for a server /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -110,7 +110,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View History").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Reconfiguring Corosync and Pacemaker for a server").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -122,7 +122,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <script type="text/javascript" src="hmtopic.js"></script>
 
    <script type="text/javascript">
-     HMSyncTOC("index.html", "view_history.htm");
+     HMSyncTOC("index.html", "manage_pacemaker_for_a_server.htm");
    </script>
    <script type="text/javascript" src="highlight.js"></script>
    <script type="text/javascript">
@@ -135,13 +135,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>View History</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Reconfiguring Corosync and Pacemaker for a server</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">View History</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Reconfiguring Corosync and Pacemaker for a server</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -154,7 +154,9 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p><span class="f_BodyText">At the Command bar, click </span><span class="f_BodyText" style="font-weight: bold;">History</span><span class="f_BodyText"> to open the Hi</span><span class="f_BodyText">story</span><span class="f_BodyText"> page and see the history of event messages. Filter these messages </span><span class="f_BodyText">for </span><span class="f_BodyText" style="font-weight: bold;">Host</span><span class="f_BodyText">, </span><span class="f_BodyText" style="font-weight: bold;">Severity</span><span class="f_BodyText"> and </span><span class="f_BodyText" style="font-weight: bold;">Event</span><span class="f_BodyText"> type</span><span class="f_BodyText">. See <a href="history_page.htm" class="topiclink">History page</a>.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Pacemaker and Corosync configuration is required for each server if you are creating or expanding a high-availability file system. &nbsp;Intel® Manager for Lustre* software automatically configures Corosync and Pacemaker for each managed HA server that you add, so that manual configuration of Pacemaker and Corosync should not normally be required. See <a href="configure_storage_servers.htm" class="topiclink">Add one or more HA servers</a>. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">An administrator may need to reset or configure Pacemaker or Corosync when performing maintenance on a server, altering the server's configuration, or troubleshooting problems with those services. &nbsp;See <a href="server_detail_page.htm#pacemaker_config_para" class="topiclink">Pacemaker configuration</a> and<a href="server_detail_page.htm#corosync_config_para" class="topiclink"> Corosync configuration</a> for more information.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 
 <!--ZOOMSTOP-->
 

@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>MGTs page</title>
+   <title>MGTs window</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="management target (MGT),management target (MGT) capacity,management target (MGT) failback,management target (MGT) failover,management target (MGT) MGT tab,MGTs tab" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="At the MGT tab, you can do the following: View your existing management target (if configured). Here you can determine the Capacity, Type, and high availability (HA) Status of..." />
+   <meta name="description" content="At the MGT window, you can do the following: View your existing management target (if configured). Here you can determine the Capacity, Type, and high availability (HA) Status..." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -42,18 +42,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "alerts_page.htm",
+   nextP: "logs_page.htm",
    prevP: "volumes_tab.htm",
    currP: "mgts_tab.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "MGTs page",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - MGTs page",
-   sharesubject: "Intel® Manager for Lustre* software - MGTs page",
+   titleP: "MGTs window",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - MGTs window",
+   sharesubject: "Intel® Manager for Lustre* software - MGTs window",
    simplesubject: "Documentation%20Feedback",
    mailid: "MGTs_Tab",
-   mailpath: "Graphical User Interface - windows and pages &gt; Configuration menu &gt; MGTs page /",
+   mailpath: "Graphical User Interface &gt; Configuration menu &gt; MGTs window /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -110,7 +110,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - MGTs page").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - MGTs window").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -135,13 +135,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>MGTs page</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>MGTs window</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">MGTs page</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">MGTs window</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -154,9 +154,9 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">At the MGT tab, you can do the following:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">View your existing management target (if configured). Here you can determine the Capacity, Type, and high availability (HA) Status of the MGT. If this is an HA target, then the primary and secondary servers are identified. A green check mark </span><img src="check_mark.png" width="18" height="17" alt="check_mark" style="border:none" /><span class="f_BodyText"> indicates this target and server are functioning normally.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Select storage for a new MGT and then create a new MGT. This task is not common; MGTs are created when you click </span><span class="f_BodyText" style="font-weight: bold;">Create File System </span><span class="f_BodyText">at the </span><span class="f_BodyText" style="font-style: italic;">Configuration</span><span class="f_BodyText"> &gt; </span><span class="f_BodyText" style="font-style: italic;">File Systems</span><span class="f_BodyText"> tab.</span></p><p class="p_BodyText"><span class="f_BodyText">Under MGT Configuration for an existing MGT, you can perform these actions under </span><span class="f_BodyText" style="font-weight: bold;">Actions</span><span class="f_BodyText">:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText" style="font-weight: bold;">Stop</span><span class="f_BodyText">: Stop the MGT. When an MGT is stopped, clients are unable to make new connections to the file systems using this MGT. However, the MDT and OST(s) stay up if they were started before this MGT was stopped, and can be stopped and restarted while this MGT is stopped.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText" style="font-weight: bold;">Failover</span><span class="f_BodyText">: Clicking Failover will forcibly migrate the target to its failover server. Clients attempting to access data on the target while the migration is in process may experience delays until the migration completes. If this button is not displayed, then the MGT has already failed-over and this button will display as Failback. Otherwise, a secondary server has not been configured. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText" style="font-weight: bold;">Failback</span><span class="f_BodyText">: Migrate the target back to its primary server. Clients attempting to access data on the target while the migration is in process may experience delays until the migration completes. This button is displayed only after a target has failed-over.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">At the MGT window, you can do the following:</span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText">View your existing management target (if configured). Here you can determine the Capacity, Type, and high availability (HA) Status of the MGT. If this is an HA target, then the primary and secondary servers are identified. A green check mark </span><img src="check_mark.png" width="18" height="17" alt="check_mark" style="width:18px;height:17px;border:none" /><span class="f_BodyText"> indicates this target and server are functioning normally.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText">Select storage for a new MGT and then create a new MGT. This task is not common; MGTs are created when you click </span><span class="f_BodyText" style="font-weight: bold;">Create File System </span><span class="f_BodyText">at the </span><span class="f_BodyText" style="font-style: italic;">Configuration</span><span class="f_BodyText"> &gt; </span><span class="f_BodyText" style="font-style: italic;">File Systems</span><span class="f_BodyText"> window.</span></td></tr></table></div><p class="p_BodyText"><span class="f_BodyText">Under MGT Configuration for an existing MGT, you can perform these actions under </span><span class="f_BodyText" style="font-weight: bold;">Actions</span><span class="f_BodyText">:</span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText" style="font-weight: bold;">Stop</span><span class="f_BodyText">: Stop the MGT. When an MGT is stopped, clients are unable to make new connections to the file systems using this MGT. However, the MDT and OST(s) stay up if they were started before this MGT was stopped, and can be stopped and restarted while this MGT is stopped.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText" style="font-weight: bold;">Failover</span><span class="f_BodyText">: Clicking Failover will forcibly migrate the target to its failover server. Clients attempting to access data on the target while the migration is in process may experience delays until the migration completes. If this action is not displayed, then the MGT has already failed-over and this button will display as Failback. Otherwise, a secondary server has not been configured. </span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText" style="font-weight: bold;">Failback</span><span class="f_BodyText">: Migrate the target back to its primary server. Clients attempting to access data on the target while the migration is in process may experience delays until the migration completes. This action is displayed only after a target has failed-over.</span></td></tr></table></div>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

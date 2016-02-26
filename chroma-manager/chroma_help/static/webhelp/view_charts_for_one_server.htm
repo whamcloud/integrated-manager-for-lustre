@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>View charts for one server</title>
+   <title>View charts for one or all servers</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="To view charts for a single server: If it is not displayed, click Dashboard to access the Dashboard page. Click Filter View. Under Type, click Server. &nbsp;Under Server, select the" />
+   <meta name="description" content="When you first login, the Dashboard displays six charts for all file systems combined.&nbsp;" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -42,18 +42,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "view_charts_for_a_metadata_tar.htm",
+   nextP: "view_charts_for_an_ost.htm",
    prevP: "view_charts_for_one_or_all_fil.htm",
    currP: "view_charts_for_one_server.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "View charts for one server",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View charts for one server",
-   sharesubject: "Intel® Manager for Lustre* software - View charts for one server",
+   titleP: "View charts for one or all servers",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View charts for one or all servers",
+   sharesubject: "Intel® Manager for Lustre* software - View charts for one or all servers",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_charts_for_one_server",
-   mailpath: "Monitoring Lustre* file systems &gt; View charts on the Dashboard &gt; View charts for one server /",
+   mailpath: "Monitoring Lustre* file systems &gt; View charts on the Dashboard &gt; View charts for one or all servers /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -110,7 +110,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View charts for one server").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View charts for one or all servers").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -135,13 +135,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>View charts for one server</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>View charts for one or all servers</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">View charts for one server</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">View charts for one or all servers</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -154,9 +154,12 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">To view charts for a single server:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">If it is not displayed, click </span><span class="f_BodyText" style="font-weight: bold;">Dashboard</span><span class="f_BodyText"> to access the Dashboard page.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Click</span><span class="f_BodyText" style="font-weight: bold;"> Filter View.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">Under </span><span class="f_BodyText">Type</span><span class="f_BodyText">, click </span><span class="f_BodyText" style="font-weight: bold;">Server.</span><span class="f_BodyText"> </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">Under </span><span class="f_BodyText">Server</span><span class="f_BodyText">, select the server you want examine. </span><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: If you select </span><span class="f_BodyText" style="font-weight: bold;">All Servers</span><span class="f_BodyText">, then the six charts for all file systems are displayed.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText">Leave Target set at </span><span class="f_BodyText" style="font-weight: bold;">All Targets</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Update</span><span class="f_BodyText">.</span></p><p class="p_BodyText"><span class="f_BodyText">The following charts are displayed. Click on the links here to learn about these charts. </span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="read_write_bandwidth_chart.htm" class="topiclink">Read/Write Bandwidth</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="cpu_usage.htm" class="topiclink">CPU Usage</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="memory_usage_chart.htm" class="topiclink">Memory Usage</a></span></p>
+<p class="p_BodyText"><span class="f_BodyText">When you first login, the Dashboard displays six charts for all file systems combined. </span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">View charts for all servers combined</span></h2>
+<p class="p_BodyText"><span class="f_BodyText">Viewing charts for all servers is the same thing as viewing charts for all file systems. To do this:</span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">1.</span></td><td style="border:none"><span class="f_BodyText">On the Dashboard, click </span><span class="f_BodyText" style="font-weight: bold;">Configure Dashboard</span><span class="f_BodyText">.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">2.</span></td><td style="border:none"><span class="f_BodyText">Leave All Servers selected in the </span><span class="f_BodyText" style="font-weight: bold;">Server </span><span class="f_BodyText">drop-down menu.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">3.</span></td><td style="border:none"><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Update</span><span class="f_BodyText">.</span></td></tr></table></div><h2 class="p_Heading2"><span class="f_Heading2">View charts for an individual server</span></h2>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">4.</span></td><td style="border:none"><span class="f_BodyText">On the Dashboard, click </span><span class="f_BodyText" style="font-weight: bold;">Configure Dashboard</span><span class="f_BodyText">.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">5.</span></td><td style="border:none"><span class="f_BodyText">Select </span><span class="f_BodyText" style="font-weight: bold;">Server</span><span class="f_BodyText">.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">6.</span></td><td style="border:none"><span class="f_BodyText">Under Server, select the server of interest and click </span><span class="f_BodyText" style="font-weight: bold;">Update</span><span class="f_BodyText">.</span></td></tr></table></div><p class="p_BodyText"><span class="f_BodyText">The following charts are displayed for an individual server. Click on the links here to learn about these charts. </span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText"><a href="read_write_bandwidth_chart.htm" class="topiclink">Read/Write Bandwidth</a></span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText"><a href="cpu_usage.htm" class="topiclink">CPU Usage</a></span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:13px"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;">&#8226;</span></td><td style="border:none"><span class="f_BodyText"><a href="memory_usage_chart.htm" class="topiclink">Memory Usage</a></span></td></tr></table></div>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

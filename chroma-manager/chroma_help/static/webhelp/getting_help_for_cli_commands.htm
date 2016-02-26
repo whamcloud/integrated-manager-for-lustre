@@ -170,14 +170,14 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span style="font-family: 'Courier New';"> </span><span class="f_BodyText" style="font-family: 'Courier New';">{volume,fs,target,tgt,vol,cfg,oss,mgt,ost,nid,server,mgs,srv,</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> filesystem,mds,configuration,mdt}</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> configuration (cfg)</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;dump, load</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> dump, load</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> filesystem (fs) list, show, add, remove, start, stop, </span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;detect, mountspec</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> nid &nbsp;update, relearn</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> detect, mountspec</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> nid update, relearn</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> server (srv, mgs, mds, oss)</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;show, list, add, remove</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> show, list, add, remove</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> target (tgt, mgt, mdt, ost)</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;list, show, add, remove, start, stop</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> list, show, add, remove, start, stop</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> volume (vol) list, show</span></p>
 <p>&nbsp;</p>
 <p class="p_BodyText"><span class="f_BodyText">optional arguments:</span></p>
@@ -185,31 +185,30 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> --username USERNAME Chroma username</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> --password PASSWORD Chroma password</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> --output, -o {human,json,xls,yaml,csv,tsv,html,xlsx,ods}</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;Output format</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> Output format</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> --nowait, -n Don't wait for jobs to complete</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> --help, -h Show this help message and exit</span></p>
-<p>&nbsp;</p>
 <p>&nbsp;</p>
 <p class="p_BodyText"><span class="f_BodyText">To view the command options available specific to a file system, enter:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma filesystem --help</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">usage: chroma filesystem [-h]</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">  </span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;{detect,show,list,stop,remove,start,add,</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;context,mountspec}</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;...</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">&nbsp;</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> {detect,show,list,stop,remove,start,add,</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> context,mountspec}</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> ...</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">positional arguments:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText"> </span><span class="f_BodyText" style="font-family: 'Courier New';">{detect,show,list,stop,remove,start,add,context,mountspec}</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> list list all file systems</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> show show a filesystem</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> add &nbsp;add a filesystem</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> add add a filesystem</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> remove remove a filesystem</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> start start a filesystem</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> stop stop a filesystem</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> detect detect all file systems</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> mountspec mountspec for filesystem</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> context filesystem_name action (e.g. ost-list, </span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> &nbsp;vol-list, etc.)</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> vol-list, etc.)</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">optional arguments:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText"> </span><span class="f_BodyText" style="font-family: 'Courier New';">-h, --help show this help message and exit</span></p>
@@ -223,7 +222,6 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">optional arguments:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"> -h, --help show this help message and exit</span></p>
-<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 
 <!--ZOOMSTOP-->
 
