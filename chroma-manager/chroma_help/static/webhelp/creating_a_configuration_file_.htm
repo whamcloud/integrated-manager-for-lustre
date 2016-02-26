@@ -156,15 +156,14 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">Although a superuser can enter a login name and password on the command line each time the Intel® Manager for Lustre* CLI is used, accessing login information in a configuration file is more convenient and more secure. </span></p>
 <p class="p_BodyText"><span class="f_BodyText">To set up an optional configuration file, complete these steps:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Create a configuration file $HOME/.chroma on the server hosting Intel® Manager for Lustre* software.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Edit the file to include content as shown below:</span><br />
-<span class="f_BodyText">&nbsp;</span></p><p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">[chroma]</span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">1.</span></td><td style="border:none"><span class="f_BodyText">Create a configuration file $HOME/.chroma on the server hosting Intel® Manager for Lustre* software.</span></td></tr></table></div><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 14px;"><table border="0" cellpadding="0" cellspacing="0" style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr valign="baseline" style="vertical-align:baseline"><td style="border:none;width:18px"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;">2.</span></td><td style="border:none"><span class="f_BodyText">Edit the file to include content as shown below:</span><br />
+<span class="f_BodyText">&nbsp;</span></td></tr></table></div><p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">[chroma]</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">username = &lt;user name of file system administrator&gt;</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">password = &lt;password&gt;</span></p>
 <p>&nbsp;</p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: To minimize security risks, modify the permissions of the .chroma file to allow only the file owner to read from and write to it, using:</span><br />
 <span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">$ chmod 0600 ~/.chroma</span></p>
-<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 
 <!--ZOOMSTOP-->
 

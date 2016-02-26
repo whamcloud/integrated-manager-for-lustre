@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>History window</title>
+   <title>Reconfiguring NIDs for a server</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
-   <meta name="keywords" content="History page" />
+   <meta name="keywords" content="" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="The History page display events. The History page provides a finer level of event filtering than the listing of events displayed on the Status page." />
+   <meta name="description" content="Intel® Manager for Lustre* software automatically configures NIDs for each managed server that you add, so that manual NID configuration should not normally be required...." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -42,18 +42,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "logs_page.htm",
-   prevP: "alerts_page.htm",
-   currP: "history_page.htm",
+   nextP: "decommissioning_a_server_for_a.htm",
+   prevP: "manage_pacemaker_for_a_server.htm",
+   currP: "configure_nids_for_a_server.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "History window",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - History window",
-   sharesubject: "Intel® Manager for Lustre* software - History window",
+   titleP: "Reconfiguring NIDs for a server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Reconfiguring NIDs for a server",
+   sharesubject: "Intel® Manager for Lustre* software - Reconfiguring NIDs for a server",
    simplesubject: "Documentation%20Feedback",
-   mailid: "History_Page",
-   mailpath: "Graphical User Interface - windows and pages &gt; History window /",
+   mailid: "Configure_NIDs_for_a_server",
+   mailpath: "Performing maintenance for HA file systems &gt; Reconfiguring NIDs for a server /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -110,7 +110,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - History window").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Reconfiguring NIDs for a server").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -122,7 +122,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <script type="text/javascript" src="hmtopic.js"></script>
 
    <script type="text/javascript">
-     HMSyncTOC("index.html", "history_page.htm");
+     HMSyncTOC("index.html", "configure_nids_for_a_server.htm");
    </script>
    <script type="text/javascript" src="highlight.js"></script>
    <script type="text/javascript">
@@ -135,13 +135,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>History window</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Reconfiguring NIDs for a server</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">History window</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Reconfiguring NIDs for a server</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -154,9 +154,8 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">The </span><span class="f_BodyText" style="font-style: italic;">History</span><span class="f_BodyText"> page display events. The </span><span class="f_BodyText" style="font-style: italic;">History</span><span class="f_BodyText"> page provides a finer level of event filtering than the listing of events displayed on the </span><span class="f_BodyText" style="font-style: italic;">Status</span><span class="f_BodyText"> page.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">On this page, you can filter to view:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Up to the last 100 events</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Events occurring on all servers or one selected server.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Any, or one of three levels of severity: Info, Warning, or Error.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Any, or one of four possible event types: Autodetection, Alert, Syslog, or Storage resource detection. See also <a href="alerts__events__and_informatio.htm" class="topiclink">View alert and event status messages</a></span><a href="alerts__events__and_informatio.htm" class="topiclink">.</a></p>
+<p><span class="f_BodyText">Intel® Manager for Lustre* software automatically configures NIDs for each managed server that you add, so that manual NID configuration should not normally be required. However, a</span><span class="f_BodyText">n administrator may need to reconfigure NIDs for a server when performing maintenance on a server, altering the server's configuration, or troubleshooting problems network interfaces. &nbsp;See <a href="server_detail_page.htm#nid_config_para" class="topiclink">NID Configuration</a>.</span></p>
+
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

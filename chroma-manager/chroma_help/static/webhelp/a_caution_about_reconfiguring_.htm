@@ -157,7 +157,6 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p><span style="font-weight: bold;">Caution: </span>After you have created a Lustre file system using Intel® Manager for Lustre software, <span style="font-weight: bold;">you should NOT make any configuration changes to file system servers or their respective targets outside of Intel® Manager for Lustre software</span>. Doing so will defeat the ability of Intel® Manager for Lustre software to monitor the file system, and will make the file system unavailable to clients.</p>
 <p>&nbsp;</p>
 <p><span style="font-weight: bold;">Caution</span>: A known issue (HYD-2517) can result in a server being made unavailable. This can happen if the server has been added to a Lustre file system, (using Intel® Manager for Lustre* software) and then the user decides to Force Remove the server from the file system. The Force Remove command should only be performed if the Remove command has been unsuccessful. Force Remove will remove the server from the Intel® Manager for Lustre configuration, but not remove Intel® Manager for Lustre software from the server. All targets that depend on the server will also be removed without any attempt to unconfigure them. To completely remove the Intel® Manager for Lustre software from the server (allowing it to be added to another Lustre file system), first contact technical support.</p>
-<p>&nbsp;</p>
 
 <!--ZOOMSTOP-->
 

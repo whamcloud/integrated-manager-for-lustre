@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Power Control page</title>
+   <title>Power Control window</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="Power Control tab,STONITH" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="The PDU tab lets you configure and manager power distribution units. At this tab you can add a detected PDU and then assign specific PDU outlets to specific servers. Once..." />
+   <meta name="description" content="The Power Control window lets you configure and manager power distribution units. At this window you can add a detected PDU and then assign specific PDU outlets to specific..." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -43,17 +43,17 @@ var hmHeaderTopic = true;
 var tVars = {
    hmHelpPage: "index.html",
    nextP: "file_systems_tab.htm",
-   prevP: "server_tab.htm",
+   prevP: "server_detail_page.htm",
    currP: "power_control_tab.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Power Control page",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Power Control page",
-   sharesubject: "Intel® Manager for Lustre* software - Power Control page",
+   titleP: "Power Control window",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Power Control window",
+   sharesubject: "Intel® Manager for Lustre* software - Power Control window",
    simplesubject: "Documentation%20Feedback",
    mailid: "Power_Control_Tab",
-   mailpath: "Graphical User Interface - windows and pages &gt; Configuration menu &gt; Power Control page /",
+   mailpath: "Graphical User Interface &gt; Configuration menu &gt; Power Control window /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -110,7 +110,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Power Control page").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Power Control window").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -135,13 +135,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Power Control page</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Power Control window</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Power Control page</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Power Control window</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -154,7 +154,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">The PDU tab lets you configure and manager power distribution units. At this tab you can add a detected PDU and then assign specific PDU outlets to specific servers. Once configured, this feature lets you check the status of PDUs and individual outlets. Based on server power requirements and your failover configuration, you may want to assign more than one outlet to a server. For improved failover performance, assign the failover outlet from a different PDU than the primary outlet. When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured. Note that primary and secondary servers for each target must first be configured on the </span><span class="f_BodyText" style="font-style: italic;">Volumes</span><span class="f_BodyText"> tab.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The </span><span class="f_BodyText" style="font-style: italic;">Power Control</span><span class="f_BodyText"> window lets you configure and manager power distribution units. At this window you can add a detected PDU and then assign specific PDU outlets to specific servers. Once configured, this feature lets you check the status of PDUs and individual outlets. Based on server power requirements and your failover configuration, you may want to assign more than one outlet to a server. For improved failover performance, assign the failover outlet from a different PDU than the primary outlet. When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured. Note that primary and secondary servers for each target must first be configured on the </span><span class="f_BodyText" style="font-style: italic;">Volumes</span><span class="f_BodyText"> window.</span></p>
 <p class="p_BodyText"><span class="f_BodyText">See <a href="configure_power_distribution_u.htm" class="topiclink">Add power distribution units</a>.</span></p>
 
 <!--ZOOMSTOP-->
