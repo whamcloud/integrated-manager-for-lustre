@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -91,7 +91,10 @@ def safe_eval(expression, properties):
                     return binOps[type(ops[0])](_eval(comparators[0]), _eval(comparators[1]))
                 return binOps[type(ops[0])](_eval(comparators[0]), _compare(ops[1:], comparators[1:]))
             return _compare(node.ops, [node.left] + node.comparators)
+        elif isinstance(node, ast.Name):
+            # handle instances of ast.Name, this indicates unrecognised variables in expression
+            raise ValueError('Unrecognised variable "{0}"'.format(node.id))
         else:
-            raise Exception('Unsupported type {}'.format(node))
+            raise TypeError('Unsupported type "{0}"'.format(node.__class__))
 
     return _eval(node.body)
