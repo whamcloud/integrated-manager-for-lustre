@@ -62,10 +62,10 @@ class TestEvaluator(IMLUnitTestCase):
                       "variable__three": variable__three}
         expression_exceptions = [("1 / 0", ZeroDivisionError),
                                  ("rubbish", ValueError),
-                                 ('eval("ls .")', ValueError),
+                                 ('eval("ls .")', TypeError),
                                  ("var1 / (var1 - var1)", ZeroDivisionError),
                                  ("var1 / (var1 - var1", SyntaxError),
-                                 ("variable_three == TestCase", ValueError)]
+                                 ("variable_three == 'TestCase'", ValueError)]
 
         for expression_exception in expression_exceptions:
             with self.assertRaises(expression_exception[1]):

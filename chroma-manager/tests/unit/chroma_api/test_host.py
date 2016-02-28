@@ -287,13 +287,14 @@ class TestHostResource(ChromaApiTestCase):
         self.assertEqual(validations[0]['test'], 'variable1 == 1')
         validations[0]['pass'] = True
         validations[0]['error'] = ''
-        validations[1]['error'] = 'zero length field name in format'
+        validations[1]['error'] = 'Unrecognised variable "variable2"'
 
         response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
         self.assertHttpOK(response)
         test_profile_validations = json.loads(response.content)['profiles']['test_profile']
         test_profile_validations.sort()
         validations.sort()
+
         self.assertEqual(test_profile_validations, validations)
 
         for data in ({}, {'id__in': [hosts[0].id, 0]}):
@@ -307,6 +308,7 @@ class TestHostResource(ChromaApiTestCase):
                 for validation in object['host_profiles']['profiles'].values():
                     validation.sort()
                 validations.sort()
+
                 self.assertEqual(object, {'error': None,
                                           'traceback': None,
                                           'host_profiles': {'profiles': {'test_profile': validations,
