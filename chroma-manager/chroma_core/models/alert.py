@@ -283,6 +283,17 @@ class AlertSubscription(models.Model):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    @property
+    def alert_type_name(self):
+        """
+        Pre 3.0 we stored the needed the ContentType but now we need the alert_type as a string
+        :return: Alert type as a string
+        """
+        name = self.alert_type.name
+
+        # Turn bobs big alert into BobsBigAlert
+        return ''.join(["%s%s" % (element[0].upper(), element[1:].lower()) for element in name.split(' ')])
+
 
 class AlertEmail(models.Model):
     """Record of which alerts an email has been emitted for"""

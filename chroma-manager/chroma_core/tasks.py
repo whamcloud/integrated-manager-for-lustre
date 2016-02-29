@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -69,8 +69,8 @@ def send_alerts_email(id):
 
     for user in User.objects.annotate(num_subscriptions = Count('alert_subscriptions')).filter(num_subscriptions__gt = 0):
         alert_messages = []
-        subscriptions = [s.alert_type for s in user.alert_subscriptions.all()]
-        for alert in AlertState.objects.filter(id__in = alert_email.alerts.all(), content_type__in = subscriptions):
+        subscriptions = [subscription.alert_type_name for subscription in user.alert_subscriptions.all()]
+        for alert in AlertState.objects.filter(id__in = alert_email.alerts.all(), record_type__in = subscriptions):
             alert_message = "%s %s" % (alert.begin, alert.message())
             if alert.active:
                 alert_message += "  Alert state is currently active"
