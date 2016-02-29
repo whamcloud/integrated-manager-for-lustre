@@ -1644,6 +1644,13 @@ class HostContactAlert(AlertStateBase):
         for tm in tms:
             affect_target(tm.target)
 
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Re-established contact with host %s" % self.alert_item,
+            alert_item = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
+
 
 class HostOfflineAlert(AlertStateBase):
     """Alert should be raised when a Host is known to be down.
