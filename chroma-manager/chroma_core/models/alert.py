@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -230,9 +230,9 @@ class AlertStateBase(SparseModel):
             # We optionally emit an event when alerts are lowered: we don't do that
             # for the beginning because that is implicit in the alert itself, whereas
             # the end can reasonably have a different message.
-            ee = alert_state.end_event()
-            if ee:
-                ee.save()
+            end_event = alert_state.end_event()
+            if end_event:
+                end_event.register_event(end_event.alert_item, severity=end_event.severity)
         except cls.DoesNotExist:
             alert_state = None
 
