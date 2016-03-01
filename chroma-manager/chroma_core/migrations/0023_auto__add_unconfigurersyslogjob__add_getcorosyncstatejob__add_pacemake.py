@@ -232,7 +232,17 @@ class Migration(SchemaMigration):
         # Deleting field 'ManagedHost.corosync_reported_up'
         db.delete_column('chroma_core_managedhost', 'corosync_reported_up')
 
-        # Now create the new chroma_core_rsyslogconfiguration,  chroma_core_corosyncconfiguration, chroma_core_ntpconfiguration
+        def create_action_record(model_name, state, host_id):
+            app_name = 'chroma_core'
+            ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(model=model_name.lower(),
+                                                                          app_label=app_name,
+                                                                          defaults=dict(name=model_name))
+
+            db.execute("insert into chroma_core_%s (state_modified_at, state, immutable_state, content_type_id, host_id) "
+                       "values ('%s', '%s', 'f', %s, %s)" % (model_name, datetime.datetime.now(), state, ct.id, host_id))
+
+
+        # Now create the new chroma_core_corosyncconfiguration, chroma_core_ntpconfiguration
         # and chroma_core_pacemakerconfiguration for managed servers.
         table_rows = db.execute("select chroma_core_managedhost.id from chroma_core_managedhost, chroma_core_serverprofile "
                                 "where chroma_core_managedhost.server_profile_id = chroma_core_serverprofile.name and "
@@ -240,18 +250,20 @@ class Migration(SchemaMigration):
 
         # Setup the new stateful objects, we presume that they were all successfully configured before hand, if this was
         # not the case the user would need to manually do it in the gui.
-        # Most other state the mcastport will be read by the agents.
+        # Most other state like mcastport will be read by the agents.
         for host_id, in table_rows:
-            for model_name, state in [('rsyslogconfiguration', 'configured'),
-                                      ('corosyncconfiguration', 'started'),
+            for model_name, state in [('corosyncconfiguration', 'started'),
                                       ('ntpconfiguration', 'configured'),
                                       ('pacemakerconfiguration', 'started')]:
-                app_name = 'chroma_core'
-                ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(
-                    model=model_name.lower(), app_label=app_name, defaults=dict(name=model_name))
+                create_action_record(model_name, state, host_id)
 
-                db.execute("insert into chroma_core_%s (state_modified_at, state, immutable_state, content_type_id, host_id) values ('%s', '%s', 'f', %s, %s)" % \
-                           (model_name, datetime.datetime.now(), state, ct.id, host_id))
+        # Now create the new chroma_core_rsyslogconfiguration for all hosts.
+        table_rows = db.execute("select id from chroma_core_managedhost")
+
+        # Setup the new stateful objects, we presume that they were all successfully configured before hand, if this was
+        # not the case the user would need to manually do it in the gui.
+        for host_id, in table_rows:
+            create_action_record('rsyslogconfiguration', 'configured', host_id)
 
 
     def backwards(self, orm):

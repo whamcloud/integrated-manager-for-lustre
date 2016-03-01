@@ -72,6 +72,25 @@ class LNetConfiguration(DeletableStatefulObject):
         'ManagedHost': lambda mh: LNetConfiguration.objects.filter(host_id = mh.id),
     }
 
+    @property
+    def is_managed(self):
+        """
+        :return: True if the lnet_configuration is managed, as a proxy we just use state of the host to decide.
+        """
+        return self.host.is_managed
+
+    def filter_steps(self, steps):
+        """
+        Simple helper, if the lnet_configuration is not managed then we never do anything and so now steps.
+
+        This can be used as a safety net as well by using it on steps that should never be requested by for
+        monitor mode - just to be sure they are not.
+
+        :param steps: steps to filter
+        :return: filtered steps
+        """
+        return steps if self.is_managed else []
+
 
 class LNetOfflineAlert(AlertStateBase):
     # LNET being offline is never solely responsible for a filesystem
@@ -141,7 +160,7 @@ class LNetStateChangeJob(StateChangeJob):
 
     @classmethod
     def can_run(cls, lnet_configuration):
-        return lnet_configuration.host.is_managed
+        return lnet_configuration.is_managed
 
 
 class ConfigureLNetStep(Step):
@@ -211,10 +230,10 @@ class ConfigureLNetJob(Job):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['configure_lnet']
+        return help_text['configure_lnet'] % stateful_object.host
 
     def description(self):
-        return "Configure LNet for %s" % self.lnet_configuration.host
+        return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
         # The get_deps means the lnet is always placed into the unloaded state in preparation for the change in
@@ -229,7 +248,7 @@ class ConfigureLNetJob(Job):
 
         steps.append((GetLNetStateStep, {'host': self.lnet_configuration.host}))
 
-        return steps
+        return self.lnet_configuration.filter_steps(steps)
 
     def get_deps(self):
         return DependOn(self.lnet_configuration, 'lnet_unloaded')
@@ -239,9 +258,7 @@ class UnconfigureLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent_expect_result(host, "unconfigure_lnet")
+        self.invoke_agent_expect_result(kwargs['host'], "unconfigure_lnet")
 
 
 class UnconfigureLNetJob(NullStateChangeJob):
@@ -257,13 +274,13 @@ class UnconfigureLNetJob(NullStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        if stateful_object.host.is_managed:
+        if stateful_object.is_managed:
             return help_text['Change lnet state of %s to unconfigured'] % stateful_object.host
         else:
             return help_text['Stop monitoring lnet on %s'] % stateful_object.host
 
     def get_steps(self):
-        return [(UnconfigureLNetStep, {'host': self.target_object.host})]
+        return self.target_object.filter_steps([(UnconfigureLNetStep, {'host': self.target_object.host})])
 
 
 class EnableLNetJob(NullStateChangeJob):
@@ -279,7 +296,7 @@ class EnableLNetJob(NullStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        if stateful_object.host.is_managed:
+        if stateful_object.is_managed:
             return help_text['Enable LNet on %s'] % stateful_object.host
         else:
             return help_text['Start monitoring LNet on %s'] % stateful_object.host
@@ -320,14 +337,17 @@ class LoadLNetJob(LNetStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["load_lnet"]
+        if stateful_object.is_managed:
+            return help_text["load_lnet"]
+        else:
+            return help_text['Start monitoring lnet on %s'] % stateful_object.host
 
     def description(self):
-        return "Load LNet module on %s" % self.lnet_configuration.host
+        return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
-        return [(LoadLNetStep, {'host': self.lnet_configuration.host}),
-                (GetLNetStateStep, {'host': self.lnet_configuration.host})]
+        return self.lnet_configuration.filter_steps([(LoadLNetStep, {'host': self.lnet_configuration.host}),
+                                                     (GetLNetStateStep, {'host': self.lnet_configuration.host})])
 
 
 class StartLNetStep(Step):
@@ -352,14 +372,17 @@ class StartLNetJob(LNetStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["start_lnet"]
+        if stateful_object.is_managed:
+            return help_text["start_lnet"]
+        else:
+            return help_text['Start monitoring lnet on %s'] % stateful_object.host
 
     def description(self):
-        return "Start LNet on %s" % self.lnet_configuration.host
+        return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
-        return [(StartLNetStep, {'host': self.lnet_configuration.host}),
-                (GetLNetStateStep, {'host': self.lnet_configuration.host})]
+        return self.lnet_configuration.filter_steps([(StartLNetStep, {'host': self.lnet_configuration.host}),
+                                                     (GetLNetStateStep, {'host': self.lnet_configuration.host})])
 
 
 class StopLNetStep(Step):
@@ -384,14 +407,17 @@ class StopLNetJob(LNetStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["stop_lnet"]
+        if stateful_object.is_managed:
+            return help_text["stop_lnet"]
+        else:
+            return help_text['Stop monitoring lnet on %s'] % stateful_object.host
 
     def description(self):
-        return "Stop LNet on %s" % self.lnet_configuration.host
+        return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
-        return [(StopLNetStep, {'host': self.lnet_configuration.host}),
-                (GetLNetStateStep, {'host': self.lnet_configuration.host})]
+        return self.lnet_configuration.filter_steps([(StopLNetStep, {'host': self.lnet_configuration.host}),
+                                                     (GetLNetStateStep, {'host': self.lnet_configuration.host})])
 
 
 class UnloadLNetStep(Step):
@@ -416,14 +442,17 @@ class UnloadLNetJob(LNetStateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["unload_lnet"]
+        if stateful_object.is_managed:
+            return help_text["unload_lnet"]
+        else:
+            return help_text['Stop monitoring lnet on %s'] % stateful_object.host
 
     def description(self):
-        return "Unload LNet module on %s" % self.lnet_configuration.host
+        return self.long_description(self.lnet_configuration)
 
     def get_steps(self):
-        return [(UnloadLNetStep, {'host': self.lnet_configuration.host}),
-                (GetLNetStateStep, {'host': self.lnet_configuration.host})]
+        return self.lnet_configuration.filter_steps([(UnloadLNetStep, {'host': self.lnet_configuration.host}),
+                                                     (GetLNetStateStep, {'host': self.lnet_configuration.host})])
 
 
 class GetLNetStateStep(Step):

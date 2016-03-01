@@ -111,17 +111,17 @@ class TestSortingActions(ChromaApiTestCase):
     def test_add_verb(self):
         """Test that add verb turns the jobs into the correct dictionary"""
 
-        host = synthetic_host()
+        lnet_configuration = synthetic_host().lnet_configuration
 
         def _mock_get_job_class(begin_state, end_state, last_job_in_route=False):
             return ConfigureLNetJob  # a StateChangeJob
-        host.get_job_class = _mock_get_job_class
+        lnet_configuration.get_job_class = _mock_get_job_class
 
-        self.assertTrue(host.get_job_class(host.state, 'ignored') == ConfigureLNetJob)
-        self.assertTrue(hasattr(host.get_job_class(host.state, 'ignored'), 'state_verb'))
+        self.assertTrue(lnet_configuration.get_job_class(lnet_configuration.state, 'ignored') == ConfigureLNetJob)
+        self.assertTrue(hasattr(lnet_configuration.get_job_class(lnet_configuration.state, 'ignored'), 'state_verb'))
 
         # NB: JobScheduler._fetch_jobs takes an object, but could take a class
-        jobs = JobScheduler()._add_verbs(host, ['ignored', ])
+        jobs = JobScheduler()._add_verbs(lnet_configuration, ['ignored', ])
 
         job_dict = jobs[0]
         self.assertTrue('verb' in job_dict)

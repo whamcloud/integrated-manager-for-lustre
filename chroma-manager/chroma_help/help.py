@@ -134,7 +134,7 @@ help_text = {
     'conflict_diff': 'This row has changed from %(initial)s locally and %(remote)s remotely. Click to set value to %(remote)s',
     'local_diff': 'This row has changed locally. Click to reset value to %(initial)s',
     'remote_diff': 'This row has changed remotely. Click to set value to %(remote)s.',
-    'configure_lnet': 'Configure LNet on this host.',
+    'configure_lnet': 'Configure LNet for %s',
     'change_host_profile': 'Changing host %s to profile %s',
     'change_host_state': 'Changing host %s to state %s',
 
