@@ -4,7 +4,7 @@
   "worker": false,
   "name": "base_monitored",
   "initial_state": "monitored",
-  "rsyslog": false,
+  "rsyslog": true,
   "ntp": false,
   "corosync": false,
   "corosync2": false,

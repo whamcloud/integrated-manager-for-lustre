@@ -758,17 +758,13 @@ class InstallHostPackagesJob(StateChangeJob):
         return host.state == 'unconfigured'
 
 
-class SetupHostJob(NullStateChangeJob):
+class BaseSetupHostJob(NullStateChangeJob):
     target_object = models.ForeignKey(ManagedHost)
-    state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'managed')
-    _long_description = help_text['setup_managed_host']
-    state_verb = 'Setup managed server'
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        abstract = True
 
-    def get_deps(self):
+    def _common_deps(self, lnet_state_required):
         # It really does not feel right that this is in here, but it does sort of work. These are the things
         # it is dependent on so create them. Also I can't work out with today's state machine anywhere else to
         # put them that works.
@@ -776,7 +772,8 @@ class SetupHostJob(NullStateChangeJob):
             pacemaker_configuration, _ = PacemakerConfiguration.objects.get_or_create(host=self.target_object)
             ObjectCache.add(PacemakerConfiguration, pacemaker_configuration)
 
-        if self.target_object.corosync_configuration is None:
+        if self.target_object.corosync_configuration is None and \
+                (self.target_object.server_profile.corosync or self.target_object.server_profile.corosync2):
             if self.target_object.server_profile.corosync:
                 corosync_configuration, _ = CorosyncConfiguration.objects.get_or_create(host=self.target_object)
             elif self.target_object.server_profile.corosync2:
@@ -787,7 +784,7 @@ class SetupHostJob(NullStateChangeJob):
 
             ObjectCache.add(type(corosync_configuration), corosync_configuration)
 
-        if self.target_object.rsyslog_configuration is None and self.target_object.server_profile.rsyslog:
+        if self.target_object.ntp_configuration is None and self.target_object.server_profile.ntp:
             ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
             ObjectCache.add(NTPConfiguration, ntp_configuration)
 
@@ -798,7 +795,7 @@ class SetupHostJob(NullStateChangeJob):
         deps = []
 
         if self.target_object.lnet_configuration:
-            deps.append(DependOn(self.target_object.lnet_configuration, 'lnet_up'))
+            deps.append(DependOn(self.target_object.lnet_configuration, lnet_state_required))
 
         if self.target_object.pacemaker_configuration:
             deps.append(DependOn(self.target_object.pacemaker_configuration, 'started'))
@@ -811,16 +808,31 @@ class SetupHostJob(NullStateChangeJob):
 
         return DependAll(deps)
 
+
+class SetupHostJob(BaseSetupHostJob):
+    """For historical reasons this is called the original name of SetupHostJob rather than the more
+    obvious SetupManagedHostJob.
+    """
+    state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'managed')
+    _long_description = help_text['setup_managed_host']
+    state_verb = 'Setup managed server'
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
     def description(self):
         return help_text['setup_managed_host_on'] % self.target_object
+
+    def get_deps(self):
+        return self._common_deps('lnet_up')
 
     @classmethod
     def can_run(cls, host):
         return host.is_managed and not host.is_worker and (host.state != 'unconfigured')
 
 
-class SetupMonitoredHostJob(NullStateChangeJob):
-    target_object = models.ForeignKey(ManagedHost)
+class SetupMonitoredHostJob(BaseSetupHostJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'monitored')
     _long_description = help_text['setup_monitored_host']
     state_verb = 'Setup monitored server'
@@ -831,7 +843,7 @@ class SetupMonitoredHostJob(NullStateChangeJob):
 
     def get_deps(self):
         # Moving out of unconfigured will mean that lnet will start monitoring and responding to the state.
-        return DependOn(self.target_object.lnet_configuration, 'lnet_unloaded', unacceptable_states=['unconfigured'])
+        return self._common_deps('lnet_unloaded')
 
     def description(self):
         return help_text['setup_monitored_host_on'] % self.target_object
@@ -841,8 +853,7 @@ class SetupMonitoredHostJob(NullStateChangeJob):
         return host.is_monitored and (host.state != 'unconfigured')
 
 
-class SetupWorkerJob(NullStateChangeJob):
-    target_object = models.ForeignKey(ManagedHost)
+class SetupWorkerJob(BaseSetupHostJob):
     state_transition = StateChangeJob.StateTransition(ManagedHost, 'packages_installed', 'working')
     _long_description = help_text['setup_worker_host']
     state_verb = 'Setup worker node'
@@ -852,7 +863,7 @@ class SetupWorkerJob(NullStateChangeJob):
         ordering = ['id']
 
     def get_deps(self):
-        return DependOn(self.target_object.lnet_configuration, 'lnet_up')
+        return self._common_deps('lnet_up')
 
     def description(self):
         return help_text['setup_worker_host_on'] % self.target_object
@@ -1087,6 +1098,23 @@ class CommonRemoveHostJob(StateChangeJob):
     def description(self):
         return "Remove host %s from configuration" % self.host
 
+    def get_deps(self):
+        deps = []
+
+        if self.host.lnet_configuration:
+            deps.append(DependOn(self.host.lnet_configuration, 'unconfigured'))
+
+        if self.host.corosync_configuration:
+            deps.append(DependOn(self.host.corosync_configuration, 'unconfigured'))
+
+        if self.host.ntp_configuration:
+            deps.append(DependOn(self.host.ntp_configuration, 'unconfigured'))
+
+        if self.host.rsyslog_configuration:
+            deps.append(DependOn(self.host.rsyslog_configuration, 'unconfigured'))
+
+        return DependAll(deps)
+
     def get_steps(self):
         return [(RemoveServerConfStep, {'host': self.host}),
                 (DeleteHostStep, {'host': self.host, 'force': False})]
@@ -1114,23 +1142,6 @@ class RemoveManagedHostJob(CommonRemoveHostJob):
     @classmethod
     def long_description(cls, host):
         return help_text['remove_configured_server']
-
-    def get_deps(self):
-        deps = []
-
-        if self.host.lnet_configuration:
-            deps.append(DependOn(self.host.lnet_configuration, 'unconfigured'))
-
-        if self.host.corosync_configuration:
-            deps.append(DependOn(self.host.corosync_configuration, 'unconfigured'))
-
-        if self.host.ntp_configuration:
-            deps.append(DependOn(self.host.ntp_configuration, 'unconfigured'))
-
-        if self.host.rsyslog_configuration:
-            deps.append(DependOn(self.host.rsyslog_configuration, 'unconfigured'))
-
-        return DependAll(deps)
 
 
 class ForceRemoveHostJob(AdvertisedJob):
