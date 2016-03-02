@@ -163,12 +163,13 @@ class TestConfigureCorosync(CommandCaptureTestCase):
 
     def test_manual_ring1_config_corosync2(self):
 
-        ring0_name = "eth0.1.1?1b34*430"
-        ring1_name = "eth1"
-        ring1_ipaddr = "10.42.42.42"
-        ring1_netmask = "255.255.255.0"
-        mcast_port = "4242"
+        ring0_name = 'eth0.1.1?1b34*430'
+        ring1_name = 'eth1'
+        ring1_ipaddr = '10.42.42.42'
+        ring1_netmask = '255.255.255.0'
+        mcast_port = '4242'
         new_node_fqdn = 'servera.somewhere.org'
+        pcs_password = 'bondJAMESbond'
 
         # example output from 'iptables -L' or 'service iptables status'
         chain_output = """Table: filter
@@ -195,7 +196,7 @@ num  target     prot opt source               destination
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
                           CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
-                          CommandCaptureCommand(("bash", "-c", "echo lustre | passwd --stdin hacluster")),
+                          CommandCaptureCommand(("bash", "-c", "echo bondJAMESbond | passwd --stdin hacluster")),
                           CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
                           CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
                           CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
@@ -208,7 +209,7 @@ num  target     prot opt source               destination
                           CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
                           CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
                           CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
-                          CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "lustre"])))
+                          CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "bondJAMESbond"])))
 
         # now a two-step process! first network...
         configure_network(ring0_name, ring1_name=ring1_name, ring1_ipaddr=ring1_ipaddr,
@@ -236,8 +237,8 @@ num  target     prot opt source               destination
                          "--fail_recv_const", "10"))
 
         # ...then corosync / pcsd
-        configure_corosync2_stage_1(mcast_port)
-        configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, True)
+        configure_corosync2_stage_1(mcast_port, pcs_password)
+        configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, pcs_password, True)
 
         self.assertRanAllCommandsInOrder()
 

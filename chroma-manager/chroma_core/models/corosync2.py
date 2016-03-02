@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,6 +21,8 @@
 # express and approved by Intel in writing.
 
 import threading
+import random
+import string
 from collections import defaultdict
 
 from django.utils.timezone import now
@@ -35,38 +37,6 @@ from chroma_core.services.job_scheduler import job_scheduler_notify
 peer_mcast_ports = {}
 
 logging = log_register('corosync2')
-
-
-def _corosync_peers(new_fqdn, mcast_port):
-    """Because the mcast_ports are deemed to be unique, in fact we work hard to make them
-    unique we can say that all configured (!unconfigured) corosync configurations with the same
-    mcast port and same mcast address are peers
-
-    :param new_fqdn: str The fqdn of the new node we are looking for matching mcast ports.
-    :param mcast_port: int The mcast_port to look up and by inference the mcast_port of the new_fqdn.
-    :return: List of fqdns of the peers.
-    """
-
-    # Need to keep in sync with the DB so update from the DB before anything else.
-    current_db_entries = {}
-    for corosync_configuration in Corosync2Configuration.objects.filter(~models.Q(mcast_port=None)):
-        current_db_entries[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
-        peer_mcast_ports[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
-
-    # Now we need to remove any corosync configurations that have been deleted.
-    for corosync_configuration in Corosync2Configuration._base_manager.filter(not_deleted=None):
-        # Only remove the entries that are not currently in the db - a host may be deleted and re-added
-        if corosync_configuration.host.fqdn not in current_db_entries:
-            peer_mcast_ports.pop(corosync_configuration.host.fqdn, None)
-
-    # Do this at the end because this could be different from the DB if this is an update.
-    peer_mcast_ports[new_fqdn] = mcast_port
-
-    # Return list of peers, but peers do not include ourselves.
-    peers = [match_fqdn for match_fqdn, match_mcast_port in peer_mcast_ports.items() if match_mcast_port == mcast_port]
-    peers.remove(new_fqdn)
-
-    return peers
 
 
 class Corosync2Configuration(CorosyncConfiguration):
@@ -107,6 +77,65 @@ peer_mcast_ports_configuration_lock = defaultdict(lambda: threading.RLock())
 class AutoConfigureCorosyncStep(Step):
     idempotent = True
     database = True
+    _pcs_password_length = 20
+
+    def __init__(self, job, args, log_callback, console_callback, cancel_event):
+        super(AutoConfigureCorosyncStep, self).__init__(job, args, log_callback, console_callback, cancel_event)
+
+        self._parent_console_callback = self._console_callback
+        self._console_callback = self._masking_console_callback
+        self._pcs_password = self._create_pcs_password()
+
+    @classmethod
+    def _corosync_peers(cls, new_fqdn, mcast_port):
+        """Because the mcast_ports are deemed to be unique, in fact we work hard to make them
+        unique we can say that all configured (!unconfigured) corosync configurations with the same
+        mcast port and same mcast address are peers
+
+        :param new_fqdn: str The fqdn of the new node we are looking for matching mcast ports.
+        :param mcast_port: int The mcast_port to look up and by inference the mcast_port of the new_fqdn.
+        :return: List of fqdns of the peers.
+        """
+
+        # Need to keep in sync with the DB so update from the DB before anything else.
+        current_db_entries = {}
+        for corosync_configuration in Corosync2Configuration.objects.filter(~models.Q(mcast_port=None)):
+            current_db_entries[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
+            peer_mcast_ports[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
+
+        # Now we need to remove any corosync configurations that have been deleted.
+        for corosync_configuration in Corosync2Configuration._base_manager.filter(not_deleted=None):
+            # Only remove the entries that are not currently in the db - a host may be deleted and re-added
+            if corosync_configuration.host.fqdn not in current_db_entries:
+                peer_mcast_ports.pop(corosync_configuration.host.fqdn, None)
+
+        # Do this at the end because this could be different from the DB if this is an update.
+        peer_mcast_ports[new_fqdn] = mcast_port
+
+        # Return list of peers, but peers do not include ourselves.
+        peers = [match_fqdn for match_fqdn, match_mcast_port in peer_mcast_ports.items() if match_mcast_port == mcast_port]
+        peers.remove(new_fqdn)
+
+        return peers
+
+    def _masking_console_callback(self, subprocess_output):
+        """
+        We need to mask the password so it doesn't get stored anywhere. This routine simply replaces the password
+        with ******'s before passing it on to the normal logger.
+        :param subprocess_output: String containing the output from each subprocess
+        :return: Value from parents routine
+        """
+        return self._parent_console_callback(subprocess_output.replace(self._pcs_password, '*' * self._pcs_password_length))
+
+    @classmethod
+    def _create_pcs_password(cls):
+        """
+        Create a random password 20 characters long suitable for use as the pcs_password.
+        :return: 20 character upper/lower/numeric password.
+        """
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase +
+                                                    string.ascii_lowercase +
+                                                    string.digits) for _ in range(cls._pcs_password_length))
 
     def run(self, kwargs):
         corosync_configuration = kwargs['corosync_configuration']
@@ -128,17 +157,17 @@ class AutoConfigureCorosyncStep(Step):
                                          'ring1_prefix': ring1_config['prefix']})
 
         logging.debug("Node %s returned corosync configuration %s" % (corosync_configuration.host.fqdn,
-                                                                     config))
+                                                                      config))
 
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
         with peer_mcast_ports_configuration_lock[config['mcast_port']]:
             from chroma_core.models import ManagedHost
 
-            corosync_peers = _corosync_peers(corosync_configuration.host.fqdn, config['mcast_port'])
+            corosync_peers = self._corosync_peers(corosync_configuration.host.fqdn, config['mcast_port'])
 
             logging.debug("Node %s has corosync peers %s" % (corosync_configuration.host.fqdn,
-                                                            ",".join(corosync_peers)))
+                                                             ",".join(corosync_peers)))
 
             # If we are adding then we action on a host that is already part of the cluster
             # otherwise we have to action on the host we are adding because it is the first node in the cluster
@@ -154,7 +183,8 @@ class AutoConfigureCorosyncStep(Step):
             # Stage 1 configures pcsd on the host being added, sets the password, enables and starts it etc.
             self.invoke_agent_expect_result(corosync_configuration.host,
                                             "configure_corosync2_stage_1",
-                                            {'mcast_port': config['mcast_port']})
+                                            {'mcast_port': config['mcast_port'],
+                                             'pcs_password': self._pcs_password})
 
             # Stage 2 configures the cluster either by creating it or adding a node to it.
             self.invoke_agent_expect_result(actioning_host,
@@ -163,6 +193,7 @@ class AutoConfigureCorosyncStep(Step):
                                              'ring1_name': ring1_name,
                                              'new_node_fqdn': corosync_configuration.host.fqdn,
                                              'mcast_port': config['mcast_port'],
+                                             'pcs_password': self._pcs_password,
                                              'create_cluster': actioning_host_fqdn == corosync_configuration.host.fqdn})
 
             logging.debug("Node %s corosync configuration complete" % corosync_configuration.host.fqdn)
@@ -277,8 +308,8 @@ class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
 
     def get_steps(self):
         steps = [(ConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration,
-                                          'peer_fqdns': _corosync_peers(self.corosync_configuration.host.fqdn,
-                                                                        self.corosync_configuration.mcast_port),
+                                          'peer_fqdns': AutoConfigureCorosyncStep._corosync_peers(self.corosync_configuration.host.fqdn,
+                                                                                                  self.corosync_configuration.mcast_port),
                                           'ring0_name': self.network_interface_0.name,
                                           'ring1_name': self.network_interface_1.name,
                                           'mcast_port': self.mcast_port})]

@@ -8,72 +8,64 @@ from django.utils import unittest
 
 class TestWriteconfTarget(CommandCaptureTestCase):
     def test_mdt_tunefs(self):
-        run_args = ('tunefs.lustre', '--mdt', '/dev/foo')
-        self.add_command(run_args)
+        self.add_command(('tunefs.lustre', '--mdt', '/dev/foo'))
 
         writeconf_target(device='/dev/foo',
                             target_types=['mdt'])
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_mgs_tunefs(self):
-        run_args = ("tunefs.lustre", "--mgs", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--mgs", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
                             target_types=['mgs'])
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_ost_tunefs(self):
-        run_args = ("tunefs.lustre", "--ost", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--ost", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
                             target_types=['ost'])
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
-        run_args = ("tunefs.lustre", "--mgs", "--mdt", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--mgs", "--mdt", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
                             target_types=['mgs', 'mdt'])
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_dict_opts(self):
-        run_args = ("tunefs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
             param={'foo': 'bar', 'baz': 'qux thud'})
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_flag_opts(self):
-        run_args = ("tunefs.lustre", "--dryrun", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--dryrun", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
             dryrun=True)
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_other_opts(self):
-        run_args = ("tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
             index='42', mountfsoptions='-x 30 --y --z=83')
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_mgsnode_multiple_nids(self):
-        run_args = ("tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "--writeconf", "/dev/foo")
-        self.add_command(run_args)
+        self.add_command(("tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "--writeconf", "/dev/foo"))
 
         writeconf_target(device='/dev/foo',
                          writeconf = True,
                          erase_params = True,
                          mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
-        self.assertRanCommand(run_args)
+        self.assertRanAllCommands()
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, writeconf_target, unknown='whatever')
@@ -92,14 +84,14 @@ class TestFormatTarget(CommandCaptureTestCase):
         assert "Unknown device type %s" % block_device.device_type
 
     def _setup_run_exceptions(self, block_device, run_args):
-        self._run_args = run_args
+        self._run_command = CommandCaptureCommand(run_args)
 
         self.add_commands(CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"), stdout="Inode size: 1024\nInode count: 1024\n"),
-                       CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"), stdout="%s\n" % block_device.preferred_fstype),
-                       CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"), stdout="123456789\n"),
-                       CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1"), stdout="9845118046416187754"),
-                       CommandCaptureCommand(("modprobe", "osd_%s" % block_device.preferred_fstype)),
-                       CommandCaptureCommand((run_args)))
+                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"), stdout="%s\n" % block_device.preferred_fstype),
+                          CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"), stdout="123456789\n"),
+                          CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1"), stdout="9845118046416187754"),
+                          CommandCaptureCommand(("modprobe", "osd_%s" % block_device.preferred_fstype)),
+                          self._run_command)
 
     def test_mdt_mkfs(self):
         for block_device in self.block_device_list:
@@ -115,7 +107,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           target_types=['mdt'])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_mgs_mkfs(self):
         for block_device in self.block_device_list:
@@ -131,7 +123,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           target_types=['mgs'])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_ost_mkfs(self):
         for block_device in self.block_device_list:
@@ -147,7 +139,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           target_types=['ost'])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_single_mgs_one_nid(self):
         for block_device in self.block_device_list:
@@ -165,7 +157,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           target_types=['ost'],
                           mgsnode=[['1.2.3.4@tcp']])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_mgs_pair_one_nid(self):
         for block_device in self.block_device_list:
@@ -183,7 +175,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp'], ['1.2.3.5@tcp']])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_single_mgs_multiple_nids(self):
         for block_device in self.block_device_list:
@@ -201,7 +193,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1']])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_mgs_pair_multiple_nids(self):
         for block_device in self.block_device_list:
@@ -220,7 +212,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
@@ -238,7 +230,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           target_types=['mgs', 'mdt'])
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_dict_opts(self):
         for block_device in self.block_device_list:
@@ -257,7 +249,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           param={'foo': 'bar', 'baz': 'qux thud'})
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_flag_opts(self):
         for block_device in self.block_device_list:
@@ -273,7 +265,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           dryrun=True)
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_zero_opt(self):
         for block_device in self.block_device_list:
@@ -290,7 +282,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           backfstype = block_device.preferred_fstype,
                           index=0,
                           mkfsoptions='-x 30 --y --z=83')
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_other_opts(self):
         for block_device in self.block_device_list:
@@ -308,7 +300,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                           index=42,
                           mkfsoptions='-x 30 --y --z=83')
 
-            self.assertRanCommand(self._run_args)
+            self.assertRanCommand(self._run_command)
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, format_target, unknown='whatever')

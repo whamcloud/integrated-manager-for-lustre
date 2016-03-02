@@ -57,12 +57,12 @@ class CommandCaptureTestCase(unittest.TestCase):
                 return command
         raise KeyError
 
-    def assertRanCommand(self, args):
+    def assertRanCommand(self, command):
         '''
         assert that the command made up of the args passed was executed.
-        :param args: Tuple of the arguments of the command
+        :param command: The command to check was run.
         '''
-        self._get_executable_command(args)
+        self.assertTrue(command.args in self._commands_history)
 
     def assertRanAllCommandsInOrder(self):
         '''
@@ -82,8 +82,8 @@ class CommandCaptureTestCase(unittest.TestCase):
 
         self.assertEqual(len(self._commands), len(commands_history))
 
-        for args in commands_history:
-            self.assertRanCommand(args)
+        for command in self._commands:
+            self.assertRanCommand(command)
 
     def add_commands(self, *commands):
         '''
