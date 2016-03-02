@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -44,7 +44,6 @@ firewall_control = FirewallControl.create()
 
 
 PCS_USER = 'hacluster'
-PCS_PASSWORD = 'lustre'
 PCS_CLUSTER_NAME = 'lustre-ha-cluster'
 
 
@@ -56,11 +55,11 @@ def stop_corosync2():
     return agent_ok_or_error(corosync_service.stop())
 
 
-def configure_corosync2_stage_1(mcast_port):
+def configure_corosync2_stage_1(mcast_port, pcs_password):
     # need to use user "hacluster" which is created on install of "pcs" package,
     # WARNING: clear text password
     set_password_command = ['bash', '-c', 'echo %s | passwd --stdin %s' %
-                                          (PCS_PASSWORD,
+                                          (pcs_password,
                                            PCS_USER)]
 
     return agent_ok_or_error(AgentShell.run_canned_error_message(set_password_command) or
@@ -71,7 +70,7 @@ def configure_corosync2_stage_1(mcast_port):
                              pscd_service.enable())
 
 
-def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, create_cluster):
+def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, pcs_password, create_cluster):
     """Process configuration including peers and negotiated multicast port, no IP address
     information required
 
@@ -108,7 +107,7 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
 
     # authenticate nodes in cluster
     authenticate_nodes_in_cluster_command = ['pcs', 'cluster', 'auth', new_node_fqdn,
-                                             '-u', PCS_USER, '-p', PCS_PASSWORD]
+                                             '-u', PCS_USER, '-p', pcs_password]
 
     # build command string for setup of cluster which will result in corosync.conf rather than
     # writing from template, note we don't start the cluster here as services are managed

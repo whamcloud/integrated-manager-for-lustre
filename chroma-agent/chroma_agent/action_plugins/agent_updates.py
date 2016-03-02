@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -100,7 +100,7 @@ def update_profile(profile):
         try:
             yum_util(action, enablerepo=["iml-agent"], packages=['chroma-agent-management'])
         except AgentShell.CommandExecutionError as cee:
-            return agent_error("Unable to set profile because yum returned %s" % cee.stdout)
+            return agent_error("Unable to set profile because yum returned %s" % cee.result.stdout)
 
     config.update('settings', 'profile', profile)
 
