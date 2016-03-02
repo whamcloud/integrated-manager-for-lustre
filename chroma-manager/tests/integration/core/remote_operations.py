@@ -9,7 +9,7 @@ import os
 
 from testconfig import config
 from tests.chroma_common.lib.util import ExceptionThrowingThread
-from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.constants import TEST_TIMEOUT, LONG_TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
 from tests.integration.core.utility_testcase import RemoteCommandResult
 
@@ -136,6 +136,9 @@ class SimulatorRemoteOperations(RemoteOperations):
 
     def get_corosync_port(self, fqdn):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
+
+    def run_chroma_diagnostics(self, server, verbose):
+        return RemoteCommandResult(0, "", "")
 
     def backup_cib(*args, **kwargs):
         return []
@@ -402,6 +405,11 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_corosync(self, fqdn):
         self._ssh_fqdn(fqdn, "chroma-agent start_corosync")
+
+    def run_chroma_diagnostics(self, server, verbose):
+        return self._ssh_fqdn(server['fqdn'],
+                              "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
+                              timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
         self._ssh_fqdn(fqdn, "logger \"%s\"" % message)

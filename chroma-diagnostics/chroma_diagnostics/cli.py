@@ -125,12 +125,12 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
 
     # Collect all suitable files
     for path, log_names_to_collect in logrotate_logs.items():
-        if log_names_to_collect == []:
-            for log_file in os.listdir(path):
-                if log_file.endswith(".log"):
-                    log_names_to_collect.append(log_file)
 
         if os.path.exists(path):
+            if log_names_to_collect == []:
+                for log_file in os.listdir(path):
+                    if log_file.endswith(".log"):
+                        log_names_to_collect.append(log_file)
             for file_name in os.listdir(path):
                 _dash = file_name.rfind('-')
                 if _dash < 0 or not file_name.endswith('gz'):
@@ -186,6 +186,19 @@ def export_postgres_chroma_db(parent_directory):
     cmd_export += ['chroma']
 
     return run_command_output_piped(cmd_export)
+
+
+def change_tree_permissions(root_directory, new_permission):
+    """Change the permissions of all the files and directories below and
+    including the root_directory passed.
+    root_directory: Root to directory tree to change permissions of.
+    new_permission: Permission value to set.
+    """
+    for root, dirs, files in os.walk(root_directory):
+        for cd_file in files:
+            path = os.path.join(root, cd_file)
+            if os.path.exists(path):
+                os.chmod(os.path.join(root, cd_file), new_permission)
 
 
 def main():
@@ -254,16 +267,19 @@ def main():
         log.info("Failed to export the manager system database, or none exists.  None exists on target servers.")
 
     if run_sos:
-        if run_command_output_piped(['sosreport', '--build', '--tmp-dir', output_directory]):
+        if run_command_output_piped(['sosreport', '--batch', '--tmp-dir', output_directory]):
             log.info("Running sosreport")
         else:
             log.info("Failed to run command sosreport")
+
+    change_tree_permissions(output_directory, 0644)
 
     archive_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
     # then tar.lzma'ing just the output dir
     log.info("Compressing diagnostics into LZMA (archive)")
-    run_command_output_piped(['tar', '--lzma', '-cf', archive_path, '-C', default_output_directory, output_fn])
+    run_command_output_piped(
+        ['tar', '--lzma', '-cf', archive_path, '-C', default_output_directory, output_fn, '--remove-files'])
 
     log.info("\nDiagnostic collection is completed.")
     log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())

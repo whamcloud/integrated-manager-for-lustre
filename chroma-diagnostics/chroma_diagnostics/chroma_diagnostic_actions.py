@@ -173,7 +173,7 @@ def cd_actions(exclude_actions_in_sos):
                    network_scan_action,
                    sysctl_action,
                    lctl_debug_kernal_action,
-                   lctl_devices_action,
-                   proc_actions]
+                   lctl_devices_action] + proc_actions
+
     # Return action if the action command isnt in sosreport or if sosreport is not going to run
     return [action for action in all_actions if (action.in_sos is False) or (exclude_actions_in_sos is False)]
