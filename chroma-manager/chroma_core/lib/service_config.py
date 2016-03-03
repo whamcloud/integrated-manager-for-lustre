@@ -262,10 +262,6 @@ class ServiceConfig(CommandLine):
                        mystderr=None, mystdout=None)
 
     def _setup_rabbitmq_credentials(self):
-        RABBITMQ_USER = "chroma"
-        RABBITMQ_PASSWORD = "chroma123"
-        RABBITMQ_VHOST = "chromavhost"
-
         # Enable use from dev_setup as a nonroot user on linux
         sudo = []
         if 'linux' in sys.platform and os.geteuid() != 0:
@@ -276,16 +272,16 @@ class ServiceConfig(CommandLine):
         self.try_shell(sudo + ["rabbitmqctl", "start_app"])
 
         log.info("Creating RabbitMQ user...")
-        self.try_shell(sudo + ["rabbitmqctl", "add_user", RABBITMQ_USER, RABBITMQ_PASSWORD])
+        self.try_shell(sudo + ["rabbitmqctl", "add_user", settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD])
 
         log.info("Creating RabbitMQ vhost...")
-        self.try_shell(sudo + ["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
+        self.try_shell(sudo + ["rabbitmqctl", "add_vhost", settings.AMQP_BROKER_VHOST])
 
-        self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST,
-                               RABBITMQ_USER, ".*", ".*", ".*"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", settings.AMQP_BROKER_VHOST,
+                               settings.AMQP_BROKER_USER, ".*", ".*", ".*"])
 
         # Enable use of the management plugin if its available, else this tag is just ignored.
-        self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", RABBITMQ_USER, "management"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
