@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -173,6 +173,11 @@ class BaseStoragePlugin(object):
         self._delta_alerts = set()
         self._alerts = {}
 
+        # Should changes to resources be delta'd so that only changes are reported to the resource manager. This
+        # required because it may be that at boot time (for example) we want all the changes everytime but once the
+        # system is quiescent we only want the deltas.
+        self._calc_changes_delta = True
+
         self._session_open = False
 
         self.update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
@@ -324,7 +329,7 @@ class BaseStoragePlugin(object):
                     assert p._handle != existing._handle
                 return existing, False
             except ResourceNotFound:
-                resource = klass(parents = parents, **attrs)
+                resource = klass(parents=parents, calc_changes_delta=lambda: self._calc_changes_delta, **attrs)
                 self._register_resource(resource)
                 for p in parents:
                     assert p._handle != resource._handle

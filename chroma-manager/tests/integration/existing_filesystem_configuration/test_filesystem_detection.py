@@ -238,3 +238,13 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         targets = response.json['objects']
         for target in targets:
             self.assertEqual('mounted', target['state'])
+
+    def test_lnet_up(self):
+        """
+        Test lnet is reported as up on the test filesystem
+        """
+        lnet_configurations = self.chroma_manager.get('/api/lnet_configuration/',
+                                                      params = {'limit': 0}).json['objects']
+
+        for lnet_configuration in lnet_configurations:
+            self.assertEqual(lnet_configuration['state'], 'lnet_up')

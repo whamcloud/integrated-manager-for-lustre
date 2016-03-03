@@ -80,3 +80,42 @@ class TestDisplayNames(IMLUnitTestCase):
         self.assertEqual(test_defaults_and_optional.name_default_value, "default value")
         self.assertEqual(test_defaults_and_optional.name_default_callable, "default callable")
         self.assertEqual(test_defaults_and_optional.name_default_callable_bob, "Bob")
+
+
+class TestDeltaChanges(IMLUnitTestCase):
+    def test_delta_changes(self):
+        """Test changes are recorded in _delta when they occur."""
+
+        test_delta_changes = TestDefaults1(name="Bob")
+
+        test_delta_changes.name = "Freddie"
+        self.assertEqual(test_delta_changes._delta_attrs, {'name': 'Freddie'})
+
+        # Reset and it should not set again with the same value.
+        test_delta_changes._delta_attrs = {}
+        test_delta_changes.name = "Freddie"
+        self.assertEqual(test_delta_changes._delta_attrs, {})
+
+        # Reset and it should set again with a  different value.
+        test_delta_changes._delta_attrs = {}
+        test_delta_changes.name = "Charlie"
+        self.assertEqual(test_delta_changes._delta_attrs, {'name': 'Charlie'})
+
+    def test_no_delta_changes(self):
+        """Test changes are recorded in _delta when they occur."""
+
+        test_delta_changes = TestDefaults1(name="Bob",
+                                           calc_changes_delta=lambda: False)
+
+        test_delta_changes.name = "Freddie"
+        self.assertEqual(test_delta_changes._delta_attrs, {'name': 'Freddie'})
+
+        # Reset and it should set again even with the same value.
+        test_delta_changes._delta_attrs = {}
+        test_delta_changes.name = "Freddie"
+        self.assertEqual(test_delta_changes._delta_attrs, {'name': 'Freddie'})
+
+        # Reset and it should set again with a  different value.
+        test_delta_changes._delta_attrs = {}
+        test_delta_changes.name = "Charlie"
+        self.assertEqual(test_delta_changes._delta_attrs, {'name': 'Charlie'})
