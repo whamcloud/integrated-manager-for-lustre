@@ -130,16 +130,14 @@ class BaseStorageResource(object):
         self._storage_dict = {}
         self._handle = None
         self._handle_global = None
-        if 'parents' in kwargs:
-            self._parents = list(kwargs['parents'])
-            del kwargs['parents']
-        else:
-            self._parents = []
+
+        self._parents = list(kwargs.pop('parents', []))
 
         # Accumulate changes since last call to flush_deltas()
         self._delta_lock = threading.Lock()
         self._delta_attrs = {}
         self._delta_parents = []
+        self._calc_changes_delta = kwargs.pop('calc_changes_delta', lambda: True)
 
         # Accumulate in between calls to flush_stats()
         self._delta_stats_lock = threading.Lock()
@@ -230,12 +228,13 @@ class BaseStorageResource(object):
 
             # First see if the new val is the same as an existing
             # value if there is an existing value, and if so return.
-            try:
-                old_val = self._storage_dict[key]
-                if old_val == value:
-                    return
-            except KeyError:
-                pass
+            if self._calc_changes_delta():
+                try:
+                    old_val = self._storage_dict[key]
+                    if old_val == value:
+                        return
+                except KeyError:
+                    pass
 
             self._storage_dict[key] = value
             with self._delta_lock:

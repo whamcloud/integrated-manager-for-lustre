@@ -25,6 +25,8 @@ from chroma_core.lib.storage_plugin.api.identifiers import ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
+from chroma_core.models import LNetConfiguration
+
 # This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
 #from chroma_core.lib.storage_plugin.base_resource import HostsideResource
@@ -82,11 +84,23 @@ class LNetState(resources.LNETModules):
 class LinuxNetwork(Plugin):
     internal = True
 
-    def agent_session_continue(self, host_resource, data):
-        self.agent_session_start(host_resource, data)
+    def __init__(self, resource_manager, scannable_id = None):
 
-    def agent_session_start(self, host_id, data):
-        devices = data
+        # For the linux network we want all the info each time until the lnet is not unconfigured. This means we still
+        # get given the state changes once we go into 'monitoring' mode.
+        # We actually need to not calculate delta until the message that arrives after the first case where we
+        # have gone to the lnet configurated state. So like the Two Ronnies sketch we have to answer the question
+        # before last https://www.youtube.com/watch?v=y0C59pI_ypQ
+        self._calc_changes_delta_next = False
+
+        super(LinuxNetwork, self).__init__(resource_manager, scannable_id)
+
+    def agent_session_continue(self, host_resource, devices):
+        self.agent_session_start(host_resource, devices)
+
+    def agent_session_start(self, host_id, devices):
+        self._calc_changes_delta = self._calc_changes_delta_next
+        self._calc_changes_delta_next = (LNetConfiguration.objects.get(host_id = self._root_resource.host_id).state != 'unconfigured')
 
         for expected_item in ['interfaces', 'lnet']:
             if expected_item not in devices:
