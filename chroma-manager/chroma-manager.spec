@@ -289,7 +289,7 @@ service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf %{manager_root}/static
 
-if [ $1 -lt 1]; then
+if [ $1 -lt 1 ]; then
     #reset worker processes
     sed -i '/^worker_processes auto;/d' /etc/nginx/nginx.conf
     sed -i '/^#worker_processes /s/^#//' /etc/nginx/nginx.conf
@@ -301,10 +301,12 @@ rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE4}.gz
 
 if [ $1 -lt 1 ]; then
     %if 0%{?rhel} > 6
-        for port in 80 443 123; do
+        for port in 80 443; do
             firewall-cmd --permanent --remove-port=$port/tcp
             firewall-cmd --remove-port=$port/tcp
         done
+        firewall-cmd --permanent --remove-port=123/udp
+        firewall-cmd --remove-port=123/udp
     %else if 0%{?rhel} < 7
         # close previously opened ports in the firewall for access to the manager
         sed -i \
