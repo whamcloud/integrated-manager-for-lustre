@@ -121,7 +121,14 @@ Group: Applications/System
 %pkg_dependencies
 BuildRequires: libattr-devel
 Requires: %{name}-adm >= %{version}
+
+%if 0%{?rhel} < 7
 Requires: mysql-server
+%else
+Requires: mariadb-server
+# mariadb-devel required because robinhood requires the use of mysql_config
+Requires: mariadb-devel
+%end
 
 %description %{purpose}
 Monitor Lustre usage and trigger file migration and purges.
