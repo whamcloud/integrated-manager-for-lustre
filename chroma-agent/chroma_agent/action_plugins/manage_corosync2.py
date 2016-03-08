@@ -24,24 +24,21 @@
 Corosync verification
 """
 
-from os import remove
-import errno
-
+from chroma_agent.log import console_log
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.corosync import CorosyncRingInterface
 from chroma_agent.action_plugins.manage_corosync_common import InterfaceInfo
 
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_ok_or_error
-
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
 PCS_TCP_PORT = 2224
 
 corosync_service = ServiceControl.create('corosync')
 pscd_service = ServiceControl.create('pcsd')
 firewall_control = FirewallControl.create()
-
 
 PCS_USER = 'hacluster'
 PCS_CLUSTER_NAME = 'lustre-ha-cluster'
@@ -125,10 +122,41 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
                              AgentShell.run_canned_error_message(cluster_setup_command))
 
 
+def _nodes_in_cluster():
+    """
+    Returns the nodes in the corosync cluster
+
+    example output from command 'pcs status corosync':
+    > Corosync Nodes:
+    >  Online:
+    >  Offline: bill.bailey.com bob.marley.com
+
+    :return: a list of all nodes in cluster
+    """
+    nodes = []
+    result = AgentShell.run_new(['pcs', 'status', 'nodes', 'corosync'])
+
+    if result.rc != 0:
+        # log all command errors but always continue to remove node from cluster
+        console_log.warning(result.stderr)
+    else:
+        # nodes are on the right side of lines separated with ':'
+        for line in result.stdout.split('\n'):
+
+            if line.find(':') > 0:
+                nodes.extend(line.split(':')[1].strip().split())
+
+    return nodes
+
+
 def unconfigure_corosync2(host_fqdn, mcast_port):
-    """Unconfigure the corosync application.
+    """
+    Unconfigure the corosync application.
+
     For corosync2 don't disable pcsd, just remove host node from cluster and disable corosync from
-    auto starting (service should already be stopped by state machine)
+    auto starting (service should already be stopped in state transition)
+
+    Note that pcs cluster commands handle editing and removal of the corosync.conf file
 
     Return: Value using simple return protocol
     """
@@ -136,20 +164,27 @@ def unconfigure_corosync2(host_fqdn, mcast_port):
     if error:
         return agent_error(error)
 
-    # will fail with "Error: pcsd is not running on <node fqdn>" if not a valid member of cluster
-    error = AgentShell.run_canned_error_message(["pcs", "cluster", "node", "remove", host_fqdn])
-    if error:
-        return agent_error(error)
+    # Detect if we are the only node in the cluster, we want to do this before next command removes conf file
+    cluster_nodes = _nodes_in_cluster()
 
-    # FIXME: do we need to remove the conf file even though pcs removes the reference to 'this' node and syncs?
-    try:
-        remove("/etc/corosync/corosync.conf")
-    except Exception as e:
-        if (type(e) is not OSError) or (e.errno != errno.ENOENT):
-            return agent_error("Failed to remove corosync.conf")
+    result = AgentShell.run_new(['pcs', '--force', 'cluster', 'node', 'remove', host_fqdn])
 
-    return agent_ok_or_error(firewall_control.remove_rule(PCS_TCP_PORT, "tcp", "pcs", persist=True) or
-                             firewall_control.remove_rule(mcast_port, "udp", "corosync", persist=True))
+    if result.rc != 0:
+
+        if 'No such file or directory' in result.stderr:
+            # we want to return successful if the configuration file does not exist
+            console_log.warning(result.stderr)
+
+        elif 'Error: Unable to update any nodes' in result.stderr:
+            # this error is expected when this is the last node in the cluster
+            if len(cluster_nodes) != 1:
+                return agent_error(result.stderr)
+
+        else:
+            return agent_error(result.stderr)
+
+    return agent_ok_or_error(firewall_control.remove_rule(PCS_TCP_PORT, 'tcp', 'pcs', persist=True) or
+                             firewall_control.remove_rule(mcast_port, 'udp', 'corosync', persist=True))
 
 
 ACTIONS = [start_corosync2, stop_corosync2,
