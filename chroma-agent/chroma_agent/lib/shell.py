@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -82,7 +82,7 @@ class AgentShell(Shell):
     # doing for them
 
     @classmethod
-    def monitor_func(self, process, arg_list, logger):
+    def monitor_func(cls, process, arg_list, logger):
         if AgentShell.thread_state.abort.is_set():
             if logger:
                 logger.warning("Teardown: killing subprocess %s (%s)" % (process.pid, arg_list))
@@ -91,7 +91,8 @@ class AgentShell(Shell):
 
     @classmethod
     def run_new(cls, arg_list):
-        """Run a subprocess, and return a tuple of rc, stdout, stderr.
+        """
+        Run a subprocess, and return a named tuple of rc, stdout, stderr.
         Record subprocesses run and their results in log.
 
         Note: we buffer all output, so do not run subprocesses with large outputs
@@ -106,14 +107,14 @@ class AgentShell(Shell):
 
     @classmethod
     def run(cls, arg_list):
+        """ This method is provided for backwards compatibility only, use run_new() in new code """
         result = AgentShell.run_new(arg_list)
 
         return result.rc, result.stdout, result.stderr
 
     @classmethod
     def try_run(cls, arg_list):
-        """Run a subprocess, and raise an exception if it returns nonzero.  Return
-        stdout string."""
+        """ Run a subprocess, and raise an exception if it returns nonzero.  Return stdout string. """
 
         result = AgentShell.run_new(arg_list)
 
@@ -124,11 +125,11 @@ class AgentShell(Shell):
 
     @classmethod
     def run_canned_error_message(cls, arg_list):
-        '''
+        """
         Run a shell command return None is successful, or User Error message if not
-        :param args:
+
         :return: None if successful or canned user error message
-        '''
+        """
         result = AgentShell.run_new(arg_list)
 
         if result.rc != 0:

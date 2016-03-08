@@ -260,7 +260,8 @@ num  target     prot opt source               destination
 
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'off')),
-                          CommandCaptureCommand(('pcs', 'cluster', 'node', 'remove', host_fqdn)),
+                          CommandCaptureCommand(('pcs', 'status', 'nodes', 'corosync')),
+                          CommandCaptureCommand(('pcs', '--force', 'cluster', 'node', 'remove', host_fqdn)),
                           CommandCaptureCommand(('service', 'iptables', 'status')),
                           CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
                                                  'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
