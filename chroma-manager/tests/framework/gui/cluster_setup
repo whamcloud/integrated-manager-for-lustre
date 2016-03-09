@@ -14,7 +14,7 @@ echo "Beginning installation and setup..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 gcc make tigervnc-server npm git firefox
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 gcc make tigervnc-server git nodejs firefox gcc-c++
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 yum install -y google-chrome-stable
@@ -41,14 +41,17 @@ set -ex
 mkdir $HOME/bin
 
 MANAGER_DIR=${MANAGER_DIR:-"$HOME/chroma_test_env/chroma/chroma-manager"}
-ZIPLOCK_DIR=${ZIPLOCK_DIR:-"$MANAGER_DIR/ui-modules/node_modules/intel-ziplocker"}
 CHROMA_EXTERNALS=${CHROMA_EXTERNALS:-"$HOME/chroma_test_env/chroma/chroma-externals"}
 
 cd chroma_test_env/chroma/chroma-manager
 
 # Install npm-based requirements
-export ZIP_DEV=true
-make ui-modules
+mkdir -p ~/.npm-global
+export NPM_CONFIG_PYTHON=/usr/bin/python
+export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
+export NPM_CONFIG_PREFIX=~/.npm-global
+export PATH=~/.npm-global/bin:$PATH
+make ui-modules-dev
 
 # Configure VNC server
 cd ~

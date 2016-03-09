@@ -121,7 +121,6 @@ jshint_bin_dir = local_node_modules_dir + '/gulp-jshint/node_modules/jshint/bin'
 
 JS_QUALITY_FILES = {
     'match_files': [
-        '.*/chroma_ui_new/.*\.js$',
         '.*/chroma_ui/static/js/.+/[^/]+\.js$',
         '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
         '.*/chroma_ui/static/js/app.js$',
@@ -160,17 +159,6 @@ JS_CS_CHECK = {
     }
 JS_CS_CHECK.update(JS_QUALITY_FILES)
 
-SEMVER_CHECK = {
-        'output': 'Running SEMVER CHECK...',
-        'command': 'chroma-manager/chroma_ui_new/node_modules/.bin/semver-check %s',
-        'match_files': [
-            '.*/chroma_ui_new/package.json',
-            '.*/ui-modules/node/stub-daddy/package.json'
-        ],
-        'single': True,
-        'print_filename': True
-    }
-
 has_js_hint = spawn.find_executable('jshint', path=jshint_bin_dir)
 
 has_js_cs = spawn.find_executable('jscs', path=jscs_bin_dir)
@@ -180,8 +168,6 @@ has_node_js = spawn.find_executable('node')
 (CHECKS if has_js_hint and has_node_js else DISABLED_CHECKS).append(JS_HINT_CHECK)
 
 (CHECKS if has_js_cs and has_node_js else DISABLED_CHECKS).append(JS_CS_CHECK)
-
-(CHECKS if has_node_js else DISABLED_CHECKS).append(SEMVER_CHECK)
 
 if not has_js_hint:
     print "WARNING: skipping JSHint check"

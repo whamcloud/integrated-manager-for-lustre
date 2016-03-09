@@ -19,7 +19,7 @@ set -ex
 # Install non-python/pipable dependencies
 
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel telnet python-ethtool rabbitmq-server erlang-inets npm patch
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel telnet python-ethtool rabbitmq-server erlang-inets nodejs patch gcc-c++
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -131,6 +131,10 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-export NODE_PATH=/usr/lib/node_modules
+mkdir -p ~/.npm-global
+export NPM_CONFIG_PYTHON=/usr/bin/python
+export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
+export NPM_CONFIG_PREFIX=~/.npm-global
+export PATH=\$PATH:~/.npm-global/bin
 make develop
 EOF

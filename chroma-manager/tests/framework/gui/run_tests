@@ -16,6 +16,8 @@ mkdir test_reports
 vncserver :1 -geometry 1024x768
 export DISPLAY=\$(hostname):1
 export RUNNER=CI
+export NPM_CONFIG_PREFIX=~/.npm-global
+export PATH=~/.npm-global/bin:$PATH
 
 NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-manager/ui-modules/node_modules"}
 
@@ -31,18 +33,17 @@ rm -rf ./test-results
 
 # Run gulp Test(s)
 cd \$NODE_MODULES/intel-gui/gulp
-\$NODE_MODULES/intel-ziplocker/node_modules/npm/bin/npm-cli.js t
+npm t
 mv gulp-results.xml \$HOME/test_reports/
 
 MODULES_TO_TEST="intel-realtime
-intel-view-server
-intel-ziplocker"
+intel-view-server"
 
 for module_name in \$MODULES_TO_TEST
 do
     # Run test
     cd \$NODE_MODULES/\$module_name
-    \$NODE_MODULES/intel-ziplocker/node_modules/npm/bin/npm-cli.js t
+    npm t
     mv *-results-*.xml \$HOME/test_reports/test-\$module_name-results.xml
 done
 
@@ -58,7 +59,7 @@ for filename in TESTS-*.xml; do mv "\$filename" "\$HOME/test_reports/OLD_\$filen
 
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=8
+NUM_EXPECTED_TEST_REPORTS=7
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

@@ -15,7 +15,6 @@ run_repo_maintenance()
     # This shouldn't cost much to run every time, but if it winds up being
     # a burden, we could try to randomize it or make it go every N runs.
     git gc
-    npm cache clear
 }
 
 clean_uncommitted_artifacts()
@@ -74,7 +73,11 @@ build_dependencies()
 build()
 {
     export CACHE=/mnt/builder_cache/
-    export NODE_PATH=/usr/lib/node_modules
+    export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
+    mkdir -p ~/.npm-global
+    export NPM_CONFIG_PYTHON=/usr/bin/python
+    export NPM_CONFIG_PREFIX=~/.npm-global
+    export PATH=~/.npm-global/bin:$PATH
     make
     build_dependencies
 }

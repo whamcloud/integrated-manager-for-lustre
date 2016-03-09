@@ -1,6 +1,6 @@
 include ../include/Makefile.version
 
-NPM := $(shell if which npm 2>/dev/null; then true; else echo npm; fi)
+NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
 
 ARCH := $(shell echo $$(uname -m))
 
@@ -66,34 +66,40 @@ develop: version ui-modules
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-$(NPM):
-	@echo "You need to install $@ first... (brew install $@?)"
-	@echo "Or maybe you don't even have the which(1) command"
-	exit 1
-
-$(HOME)/.node-gyp: $(NPM)
+$(HOME)/.node-gyp:
 	@echo "copying nodejs headers"; \
 	mkdir -p $HOME/.node-gyp && \
 	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
 
-ziplocker: $(NPM) $(HOME)/.node-gyp
-	@echo "Setting up ziplocker module"; \
-	mkdir -p ui-modules/node_modules && \
-	cd ui-modules/node_modules && \
-	rm -rf ./* && \
-	cp -r ../../../chroma-externals/ui-modules/node_modules/intel-ziplocker ./ && \
-	cd intel-ziplocker && \
-	npm rebuild
+npm: $(HOME)/.node-gyp
+ifneq ($(NPM), 3.8.2)
+	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.8.2.tgz > /tmp/npm-3.8.2.tgz
+	tar -xzf /tmp/npm-3.8.2.tgz -C /tmp/
+	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.8.2.tgz -d
+endif
 
-ui-modules: ziplocker
-	@echo "Setting up ui-modules zipdev: $(ZIP_DEV)"; \
+ui-modules: npm
+	@echo "Setting up ui-modules"; \
+	export NODE_ENV=production && \
 	cd ui-modules && \
-	node_modules/intel-ziplocker/bin/ziplocker-install$(ZIP_TYPE) --DEST_DIR="$(CURDIR)/../chroma-externals/ui-modules/node_modules/."
+	npm i
+
+ui-modules-dev: npm
+	@echo "Setting up ui-modules for dev"; \
+	cd ui-modules && \
+	npm i && \
+	cd node_modules/intel-gui && \
+	npm i && \
+	cd ../intel-realtime && \
+	npm i && \
+	cd ../intel-view-server && \
+	npm i;
+
 
 gui: ui-modules
 	@echo "Building GUI for deployment"; \
-	cd ui-modules/node_modules/intel-gui/gulp && \
-	../../intel-ziplocker/node_modules/npm/bin/npm-cli.js run build -- --dest-dir='../../../..'
+    cd ui-modules/node_modules/intel-gui/gulp && \
+	npm run build -- --dest-dir='../../../..'
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -247,4 +253,4 @@ docs: requirements version
 	fi; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs download gui ui-modules ziplocker
+.PHONY: docs download gui ui-modules npm

@@ -18,7 +18,7 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets npm patch
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets nodejs patch gcc-c++
 # don't need EPEL any more
 yum-config-manager --disable addon-epel6-x86_64
 
@@ -133,6 +133,10 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-export NODE_PATH=/usr/lib/node_modules
+export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
+export NPM_CONFIG_PYTHON=/usr/bin/python
+mkdir -p ~/.npm-global
+export NPM_CONFIG_PREFIX=~/.npm-global
+export PATH=~/.npm-global/bin:\$PATH
 make develop
 EOF
