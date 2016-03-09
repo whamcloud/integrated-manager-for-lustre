@@ -102,6 +102,11 @@ fi"
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
+# if this node uses the Intel proxies, make sure the agent is doing so
+if [ -f /etc/profile.d/intel_proxy.sh ]; then
+    echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
+fi
+
 if $MEASURE_COVERAGE; then
     cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
 [run]
