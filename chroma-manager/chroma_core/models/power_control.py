@@ -158,7 +158,8 @@ class PowerControlDeviceUnavailableAlert(AlertStateBase):
     def end_event(self):
         return AlertEvent(
             message_str = "Monitoring resumed for power control device %s" % self.alert_item,
-            alert_item = self,
+            alert_item = self.alert_item,
+            alert = self,
             severity = logging.INFO)
 
 
@@ -179,7 +180,8 @@ class IpmiBmcUnavailableAlert(AlertStateBase):
     def end_event(self):
         return AlertEvent(
             message_str = "Monitoring resumed for BMC %s on server %s" % (self.alert_item, self.alert_item.host),
-            alert_item = self,
+            alert_item = self.alert_item.host,
+            alert = self,
             severity = logging.INFO)
 
 
