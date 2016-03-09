@@ -44,8 +44,8 @@ class AlertStateBase(SparseModel):
     table_name = 'chroma_core_alertstate'
     """Records a period of time during which a particular
        issue affected a particular element of the system"""
-    alert_item_type = models.ForeignKey(ContentType)
-    alert_item_id = models.PositiveIntegerField()
+    alert_item_type = models.ForeignKey(ContentType, null=True)
+    alert_item_id = models.PositiveIntegerField(null=True)
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
     alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')

@@ -38,6 +38,16 @@ class Migration(SchemaMigration):
                       self.gf('django.db.models.fields.IntegerField')(null=True),
                       keep_default=False)
 
+        # Changing field 'AlertEvent.alert_item_type'
+        db.alter_column('chroma_core_alertstate',
+                        'alert_item_type_id',
+                        self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True))
+
+        # Changing field 'AlertEvent.alert_item_id'
+        db.alter_column('chroma_core_alertstate',
+                        'alert_item_id',
+                        self.gf('django.db.models.fields.PositiveIntegerField')(null=True))
+
         db.delete_column('chroma_core_alertstate',
                          'content_type_id')
 
@@ -88,16 +98,16 @@ class Migration(SchemaMigration):
                 event_record = EventRecord(*event_record)
 
                 db.execute('insert into chroma_core_alertstate '
-                           '(begin, "end", severity, alert_type, alert_item_id, alert_item_type_id, variant, record_type)'
-                           'values (%s, %s, %s, %s, %s, %s, %s, %s)' %
-                           ("'%s'" % event_record.created_at,
-                            "'%s'" % event_record.created_at,
-                            event_record.severity,
-                            "'%s'" % alert_name,
-                            event_record.host_id,
-                            host_content_type_id,
-                            "''",
-                            "''"))
+                       '(begin, "end", severity, alert_type, alert_item_id, alert_item_type_id, variant, record_type)'
+                       'values (%s, %s, %s, %s, %s, %s, %s, %s)' %
+                       ("'%s'" % event_record.created_at,
+                        "'%s'" % event_record.created_at,
+                        event_record.severity,
+                        "'%s'" % alert_name,
+                        event_record.host_id if event_record.host_id else 'null',
+                        host_content_type_id if event_record.host_id else 'null',
+                        "''",
+                        "''"))
 
                 alert_record_id = db.execute("SELECT currval('chroma_core_alertstate_id_seq')")[0][0]
 
