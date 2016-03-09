@@ -49,18 +49,20 @@ fi
 # first fetch and install chroma 2.3.0.0
 BUILD_JOB=chroma-blessed
 BUILD_NUM=117
-IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
+IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
+IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
+curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE"
 
 # Install and setup old chroma manager
-scp $IEEL_FROM_VERSION $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
 # Install from the installation package
 cd /tmp
-tar xzvf $IEEL_FROM_VERSION
-cd ${IEEL_FROM_VERSION%%.tar.gz}
+tar xzvf $IEEL_FROM_ARCHIVE
+cd ${IEEL_FROM_ARCHIVE%%.tar.gz}
 # hack out the O/S version check in old version so it installs on the new O/S
 ed <<"EOF" install
 /_check_platform()\$/d
@@ -75,6 +77,30 @@ fi"
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
+
+# Install and setup chroma software storage appliances
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+# if this node uses the Intel proxies, make sure the agent is doing so
+if [ -f /etc/profile.d/intel_proxy.sh ]; then
+    echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
+    # IEEL prior to 2.4.2.0 can't set proxies in the chroma-agent environment
+    # so we have to hack that into the repos for (real) RHEL
+    if [ ${IEEL_FROM_VER//./} -lt 2420 -a -f /etc/yum.repos.d/redhat.repo ]; then
+        proxy=\$(sed -ne '/^export http_proxy=/s/.*\"\(.*\)\"\$/\1/p' /etc/profile.d/intel_proxy.sh)
+        # this doesn't actually work due to RHBZ#1315693
+        #subscription-manager repos | sed -n -e 's/^Repo ID:  *//p' | xargs -i -n 1 subscription-manager repo-override --proxy=\$proxy --add=proxy:\$proxy --repo={}
+        # temporary hack until RH can fix their SM bugs
+        # do a global yum.conf proxy configuration and disable local repos
+        ed /etc/yum.conf << EOF
+/^$/i
+proxy=\$proxy
+.
+wq
+EOF
+        sed -i -e \"/^\(\[.*\)\$/s//\1\\\\
+proxy=_none_/\" /etc/yum.repos.d/cobbler-config.repo
+    fi
+fi" | dshbak -c
 
 echo "Create and exercise a filesystem..."
 
