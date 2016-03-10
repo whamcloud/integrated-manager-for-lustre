@@ -1,9 +1,8 @@
 import mock
 import errno
 
-from django.utils import unittest
-
 from chroma_agent.chroma_common.lib.shell import Shell
+from tests.lib.agent_unit_testcase import AgentUnitTestCase
 
 
 class CommandCaptureCommand(object):
@@ -14,8 +13,11 @@ class CommandCaptureCommand(object):
         self.stderr = stderr
         self.executions_remaining = executions_remaining
 
+    def __str__(self):
+        return '"%s" returning %s' % (' '.join(self.args), self.rc)
 
-class CommandCaptureTestCase(unittest.TestCase):
+
+class CommandCaptureTestCase(AgentUnitTestCase):
     CommandNotFound = 123456
 
     def setUp(self):
@@ -101,6 +103,16 @@ class CommandCaptureTestCase(unittest.TestCase):
         :return: No return value
         '''
         for command in commands:
+            self._commands.append(command)
+
+    def single_commands(self, *commands):
+        '''
+        Add a list of commands that are expected to be run only once.
+        :param *commands: CommandCaptureCommand args of commands to be run once
+        :return: No return value
+        '''
+        for command in commands:
+            command.executions_remaining = 1
             self._commands.append(command)
 
     def add_command(self, args, rc = 0, stdout = "", stderr = "", executions_remaining=99999999):

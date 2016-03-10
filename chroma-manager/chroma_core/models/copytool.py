@@ -1,9 +1,7 @@
-
-
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -290,8 +288,8 @@ class StartCopytoolStep(Step):
         host = kwargs['host']
         copytool = kwargs['copytool']
 
-        self.invoke_agent(host, "start_monitored_copytool",
-                          {'id': str(copytool.id)})
+        self.invoke_agent_expect_result(host, "start_monitored_copytool",
+                                        {'id': str(copytool.id)})
 
 
 class StopCopytoolJob(StateChangeJob):
@@ -338,8 +336,8 @@ class StopCopytoolStep(Step):
         host = kwargs['host']
         copytool = kwargs['copytool']
 
-        self.invoke_agent(host, "stop_monitored_copytool",
-                          {'id': str(copytool.id)})
+        self.invoke_agent_expect_result(host, "stop_monitored_copytool",
+                                        {'id': str(copytool.id)})
 
 
 class ConfigureCopytoolJob(StateChangeJob):

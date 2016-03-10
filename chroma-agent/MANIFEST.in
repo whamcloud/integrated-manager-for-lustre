@@ -3,3 +3,5 @@ include Target
 include logrotate.cfg
 include chroma_agent/templates/corosync.conf
 include chroma_agent/templates/ifcfg-nic
+include chroma_agent/templates/chroma-copytool
+include chroma_agent/templates/chroma-copytool-monitor
