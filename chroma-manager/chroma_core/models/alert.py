@@ -218,12 +218,15 @@ class AlertStateBase(SparseModel):
 
     @classmethod
     def low(cls, alert_item, **kwargs):
+        # The caller may provide an end_time rather than wanting now()
+        end_time = kwargs.pop('end_time', timezone.now())
+
         # currently, no attrs are saved when an attr is lowered, so just filter them out of kwargs
         cls._get_attrs_to_save(kwargs)
 
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
-            alert_state.end = timezone.now()
+            alert_state.end = end_time
             alert_state.active = None
             alert_state.save()
 
@@ -232,7 +235,10 @@ class AlertStateBase(SparseModel):
             # the end can reasonably have a different message.
             end_event = alert_state.end_event()
             if end_event:
-                end_event.register_event(end_event.alert_item, severity=end_event.severity)
+                end_event.register_event(end_event.alert_item,
+                                         severity=end_event.severity,
+                                         message_str=end_event.message_str,
+                                         alert=end_event.alert)
         except cls.DoesNotExist:
             alert_state = None
 
@@ -241,8 +247,8 @@ class AlertStateBase(SparseModel):
     @classmethod
     def register_event(cls, alert_item, **kwargs):
         # Events are Alerts with no duration, so just go high/low.
-        cls.high(alert_item, attrs_to_save=kwargs)
-        cls.low(alert_item, attrs_to_save=kwargs)
+        alert_state = cls.high(alert_item, attrs_to_save=kwargs)
+        cls.low(alert_item, end_time=alert_state.begin, attrs_to_save=kwargs)
 
     def cast(self, target_class):
         """
