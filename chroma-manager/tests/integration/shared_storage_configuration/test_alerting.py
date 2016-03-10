@@ -109,6 +109,10 @@ class TestAlerting(ChromaIntegrationTestCase):
                           'CorosyncNoPeersAlert'],
                          active=True)
 
+        alert_end_events_before = {}
+        for alert in self.get_list("/api/alert/", args={'alert_type': 'AlertEvent'}):
+            alert_end_events_before[alert['id']] = alert
+
         # Now with Pacemaker/Corosync/LNetDown down the machine is going to have issues and the user would expect
         # to not be able to do things - at least they should expect, so put them back up.
         self.remote_operations.start_lnet(host['fqdn'])
@@ -120,6 +124,22 @@ class TestAlerting(ChromaIntegrationTestCase):
                           'TargetOfflineAlert',
                           'CorosyncNoPeersAlert'],
                          active=True)
+
+        # And check that we have an AlertEvent for the 3 Alerts that just finished.
+        alert_end_events_new = [alert for alert
+                                in self.get_list("/api/alert/", args={'alert_type': 'AlertEvent'})
+                                if alert['id'] not in alert_end_events_before]
+
+        # Because the cluster can do wobbly things in this time and node might go off/online for example
+        # we might get a number of events we aren't expecting so we can't do a simple did I get 3 AlertEvents
+        # check. So explicitly check it did at least what we wanted it to do.
+        for alert_event_expected in ['Pacemaker started', 'Corosync started', 'LNet started']:
+            alert_event = next(alert_event for alert_event
+                               in alert_end_events_new
+                               if alert_event['message'].startswith(alert_event_expected))
+
+            self.assertEqual(alert_event['alert_item'], host['resource_uri'])
+            self.assertEqual(alert_event['begin'], alert_event['end'])
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)
