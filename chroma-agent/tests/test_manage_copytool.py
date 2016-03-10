@@ -1,9 +1,9 @@
 import tempfile
 import shutil
+import mock
 
-from mock import patch
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, copytool_vars, _copytool_vars
+from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, _copytool_vars
 
 
 class TestCopytoolManagement(CommandCaptureTestCase):
@@ -12,12 +12,14 @@ class TestCopytoolManagement(CommandCaptureTestCase):
 
         from chroma_agent.config_store import ConfigStore
         self.mock_config = ConfigStore(tempfile.mkdtemp())
-        patch('chroma_agent.action_plugins.manage_copytool.config',
-              self.mock_config).start()
-        patch('chroma_agent.copytool_monitor.config',
-              self.mock_config).start()
-        patch('chroma_agent.action_plugins.settings_management.config',
-              self.mock_config).start()
+        mock.patch('chroma_agent.action_plugins.manage_copytool.config', self.mock_config).start()
+        mock.patch('chroma_agent.copytool_monitor.config', self.mock_config).start()
+        mock.patch('chroma_agent.action_plugins.settings_management.config', self.mock_config).start()
+
+        mock.patch('chroma_agent.action_plugins.manage_copytool._write_service_init').start()
+
+        self.mock_os_remove = mock.MagicMock()
+        mock.patch('os.remove', self.mock_os_remove).start()
 
         from chroma_agent.action_plugins.settings_management import reset_agent_config
         reset_agent_config()
@@ -32,10 +34,12 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self._configure_copytool()
         self.ct_vars = _copytool_vars(self.ct_id)
 
-        self.addCleanup(patch.stopall)
+        self.addCleanup(mock.patch.stopall)
 
     def tearDown(self):
         super(TestCopytoolManagement, self).tearDown()
+
+        mock.patch.stopall()
 
         shutil.rmtree(self.mock_config.path)
 
@@ -49,42 +53,68 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                                        self.ct_arguments)
 
     def test_start_monitored_copytool(self):
-        self.add_commands(CommandCaptureCommand(('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/start', 'copytool', 'ct_arguments=%s' % self.ct_vars['ct_arguments'], 'ct_path=%s' % self.ct_bin_path, 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/status', 'copytool', 'id=%s' % self.ct_id)))
+        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'start')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'start')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')))
 
-        start_monitored_copytool(self.ct_id)
-
+        self.assertAgentOK(start_monitored_copytool(self.ct_id))
         self.assertRanAllCommandsInOrder()
 
     def test_stop_monitored_copytool(self):
-        run_args = [('/sbin/stop', 'copytool', 'id=%s' % self.ct_id),
-                    ('/sbin/stop', 'copytool-monitor', 'id=%s' % self.ct_id)]
+        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
 
-        for run_arg in run_args:
-            self.add_command(tuple(run_arg))
-
-        stop_monitored_copytool(self.ct_id)
+        with mock.patch('os.path.exists', return_value = True):
+            self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()
+        self.assertEqual(self.mock_os_remove.call_count, 2)
+        self.mock_os_remove.assert_called_with('/etc/init.d/chroma-copytool-%s' % self.ct_id)
 
     def test_start_should_be_idempotent(self):
-        self.add_commands(CommandCaptureCommand(('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id), rc=1, stdout='/sbin/start', stderr='Job is already running'),
-                          CommandCaptureCommand(('/sbin/restart', 'copytool-monitor', 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/start', 'copytool', u'ct_arguments=--quiet --update-interval 5 --event-fifo /var/spool/lhsmtool_foo-testfs-1-0-events --archive 1 -p /archive/testfs /mnt/testfs', u'ct_path=/usr/sbin/lhsmtool_foo', 'id=%s' % self.ct_id)),
-                          CommandCaptureCommand(('/sbin/status', 'copytool', 'id=%s' % self.ct_id)))
+        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'start')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'start')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')))
 
-        start_monitored_copytool(self.ct_id)
+        self.assertAgentOK(start_monitored_copytool(self.ct_id))
+        self.assertRanAllCommandsInOrder()
+
+    def test_stop_should_be_idempotent1(self):
+        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
+
+        with mock.patch('os.path.exists', return_value = True):
+            self.assertAgentOK(stop_monitored_copytool(self.ct_id))
+
+        with mock.patch('os.path.exists', return_value = False):
+            self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()
 
-    def test_stop_should_be_idempotent(self):
-        self.add_commands(CommandCaptureCommand(('/sbin/stop', 'copytool', 'id=%s' % self.ct_id), rc=1, stderr='Unknown instance'),
-                          CommandCaptureCommand(('/sbin/stop', 'copytool-monitor', 'id=%s' % self.ct_id), rc=1, stderr='Unknown instance'))
+    def test_stop_should_be_idempotent2(self):
+        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
+                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
 
-        stop_monitored_copytool(self.ct_id)
+        with mock.patch('os.path.exists', return_value = True):
+            self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()
 
@@ -97,19 +127,19 @@ class TestCopytoolManagement(CommandCaptureTestCase):
             archive_number = self.ct_archive,
             hsm_arguments = self.ct_arguments
         )
-        with patch('chroma_agent.action_plugins.manage_copytool.update_copytool') as patched_update_copytool:
+        with mock.patch('chroma_agent.action_plugins.manage_copytool.update_copytool') as patched_update_copytool:
             self._configure_copytool()
             patched_update_copytool.assert_called_with(self.ct_id, **expected_kwargs)
 
-    @patch('chroma_agent.action_plugins.manage_copytool.stop_monitored_copytool')
+    @mock.patch('chroma_agent.action_plugins.manage_copytool.stop_monitored_copytool')
     def test_unconfigure_copytool(self, stop_monitored_copytool):
         # NB: configure_copytool is implicitly tested numerous times as
         # part of setUp(). Kind of hacky but whatever.
         unconfigure_copytool(self.ct_id)
         stop_monitored_copytool.assert_called_with(self.ct_id)
 
-    @patch('chroma_agent.action_plugins.manage_copytool.stop_monitored_copytool')
-    @patch('chroma_agent.action_plugins.manage_copytool.start_monitored_copytool')
+    @mock.patch('chroma_agent.action_plugins.manage_copytool.stop_monitored_copytool')
+    @mock.patch('chroma_agent.action_plugins.manage_copytool.start_monitored_copytool')
     def test_update_copytool(self, start_monitored_copytool, stop_monitored_copytool):
         update_copytool(self.ct_id, archive_number=2)
 
@@ -121,10 +151,3 @@ class TestCopytoolManagement(CommandCaptureTestCase):
 
     def test_list_copytools(self):
         self.assertDictEqual(list_copytools(), {'raw_result': self.ct_id})
-
-    def test_copytool_vars(self):
-        # This is really more a test of @raw_result than anything else...
-        result = " ".join(['%s="%s"' % items
-                           for items in _copytool_vars(self.ct_id).items()])
-        self.assertDictEqual(copytool_vars(self.ct_id),
-                             {'raw_result': result})

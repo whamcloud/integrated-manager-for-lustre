@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,57 +20,83 @@
 # express and approved by Intel in writing.
 
 
-import time
+import os
+
 import copy
 
+from jinja2 import Environment, PackageLoader
+
 from chroma_agent import config
-from chroma_agent.lib.shell import AgentShell
 from chroma_agent.config_store import ConfigKeyExistsError
 from chroma_agent.cli import raw_result
 from chroma_agent.copytool_monitor import Copytool, COPYTOOL_PROGRESS_INTERVAL
 from chroma_agent.log import copytool_log
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
+
+
+env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
+
+
+def _init_file_name(service_name, id):
+    return os.path.join('/etc/init.d/', '%s-%s' % (service_name, id))
+
+
+def _write_service_init(service_name, id, ct_path, ct_arguments):
+    init_template = env.get_template(service_name)
+    init_file_name = _init_file_name(service_name, id)
+
+    with open(init_file_name, "w") as f:
+        f.write(init_template.render(id=id,
+                                     ct_path=ct_path,
+                                     ct_arguments=ct_arguments))
+
+    os.chmod(init_file_name, 0700)
+
+    return init_file_name
 
 
 def start_monitored_copytool(id):
     # Start the monitor first so that we have a reader on the FIFO when
-    # the copytool begins emitting events.
-    try:
-        AgentShell.try_run(['/sbin/start', 'copytool-monitor', 'id=%s' % id])
-    except AgentShell.CommandExecutionError as e:
-        if 'is already running' in str(e):
-            copytool_log.warn("Copytool monitor %s was already running -- restarting" % id)
-            AgentShell.try_run(['/sbin/restart', 'copytool-monitor', 'id=%s' % id])
-    time.sleep(1)
-    AgentShell.try_run(['/sbin/status', 'copytool-monitor', 'id=%s' % id])
+    # the copytool begins emitting events. Then start the copytool
 
-    # Next, try to start the copytool, then sleep for a second before checking
-    # its status. This will catch some of the more obvious problems which
-    # result in the process (re-)spawn failing right away.
-    try:
-        AgentShell.try_run(['/sbin/start', 'copytool'] +
-                      ["%s=%s" % item for item in _copytool_vars(id).items()])
-    except AgentShell.CommandExecutionError as e:
-        if 'is already running' in str(e):
-            copytool_log.warn("Copytool %s was already running -- restarting" % id)
-            AgentShell.try_run(['/sbin/restart', 'copytool'] +
-                          ["%s=%s" % item for item in _copytool_vars(id).items()])
-    time.sleep(1)
-    AgentShell.try_run(['/sbin/status', 'copytool', 'id=%s' % id])
+    copytool_vars = _copytool_vars(id)
+
+    for service_name in ['chroma-copytool-monitor', 'chroma-copytool']:
+        _write_service_init(service_name,
+                            copytool_vars['id'],
+                            copytool_vars['ct_path'],
+                            copytool_vars['ct_arguments'])
+
+        service = ServiceControl.create('%s-%s' % (service_name, id))
+
+        if service.running:
+            error = service.restart()
+        else:
+            error = service.start()
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
 
 
 def stop_monitored_copytool(id):
     # Stop the monitor after the copytool so that we can relay the
     # unconfigure event.
-    try:
-        AgentShell.try_run(['/sbin/stop', 'copytool', 'id=%s' % id])
-    except AgentShell.CommandExecutionError as e:
-        if 'Unknown instance' not in str(e):
-            raise e
-    try:
-        AgentShell.try_run(['/sbin/stop', 'copytool-monitor', 'id=%s' % id])
-    except AgentShell.CommandExecutionError as e:
-        if 'Unknown instance' not in str(e):
-            raise e
+
+    for service_name in ['chroma-copytool-monitor', 'chroma-copytool']:
+        service = ServiceControl.create('%s-%s' % (service_name, id))
+
+        if os.path.exists(_init_file_name(service_name, id)) and service.running:
+            error = service.stop()
+
+            if error:
+                return agent_error(error)
+
+            os.remove(_init_file_name(service_name, id))
+
+    return agent_result_ok
 
 
 def configure_copytool(id, index, bin_path, archive_number, filesystem, mountpoint, hsm_arguments):
@@ -160,14 +186,5 @@ def _copytool_vars(id):
     }
 
 
-@raw_result
-def copytool_vars(id):
-    """
-    Return a shell-quoted string suitable for use within the
-    start-copytools upstart task.
-    """
-    return " ".join(['%s="%s"' % items for items in _copytool_vars(id).items()])
-
-
-ACTIONS = [configure_copytool, update_copytool, unconfigure_copytool, start_monitored_copytool, stop_monitored_copytool, list_copytools, copytool_vars]
+ACTIONS = [configure_copytool, update_copytool, unconfigure_copytool, start_monitored_copytool, stop_monitored_copytool, list_copytools]
 CAPABILITIES = ['manage_copytools']

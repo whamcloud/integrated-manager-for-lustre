@@ -11,10 +11,6 @@ Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh
 Source3: logrotate.cfg
-Source4: copytool.conf
-Source5: copytool-monitor.conf
-Source6: start-copytools.conf
-Source7: start-copytool-monitors.conf
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -90,8 +86,6 @@ mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/init
-cp %{SOURCE4} %{SOURCE5} %{SOURCE6} %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/init
 
 # Nuke source code (HYD-1849)
 find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
@@ -103,7 +97,6 @@ cat <<EndOfList>>management.files
 /usr/lib/ocf/resource.d/chroma/Target
 %{_sbindir}/fence_chroma
 %{_sbindir}/chroma-copytool-monitor
-%{_sysconfdir}/init/*
 EndOfList
 
 touch base.files
@@ -126,7 +119,7 @@ chkconfig lustre-modules on
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  disable it currently, also
 echo 0 > /selinux/enforce
-    
+
 if [ $1 -eq 1 ]; then
     # new install; create default agent config
     chroma-agent reset_agent_config

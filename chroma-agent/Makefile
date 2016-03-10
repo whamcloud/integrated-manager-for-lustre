@@ -26,7 +26,7 @@ cleandist:
 	mkdir dist
 
 production:
-	
+
 tarball: version
 	rm -f MANIFEST
 	python setup.py sdist
@@ -36,8 +36,6 @@ rpms: production cleandist tarball
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES
 	cp chroma-agent-init.sh lustre-modules-init.sh logrotate.cfg \
-	   start-copytools.conf copytool.conf                        \
-	   start-copytool-monitors.conf copytool-monitor.conf        \
 	   _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
 	dist=$$(rpm --eval %dist);                             \
