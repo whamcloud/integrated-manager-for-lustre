@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -148,22 +148,23 @@ def get_resource_locations():
             continue
 
         # only interested in Target resources
-        if not "(ocf::chroma:Target)" in line:
+        if "(ocf::chroma:Target)" not in line:
             continue
 
-        # The line can have 3 or 4 arguments so pad it out to at least 4 and
+        # The line can have 3 - 5 arguments so pad it out to at least 5 and
         # throw away any extra
         # credit it goes to Aric Coady for this little trick
-        rsc_id, type, status, host = (line.lstrip().split() + [None])[:4]
+        columns = (line.lstrip().split() + [None, None])[:5]
 
         # In later pacemakers a new entry is added for stopped servers
         # MGS_424f74	(ocf::chroma:Target):	(target-role:Stopped) Stopped
+        # and for started servers:
+        # MGS_424f74	(ocf::chroma:Target):	(target-role:Stopped) Started lotus-13vm6
         # (target-role:Stopped) is new.
-        if host == 'Stopped' and 'Stopped' in status:
-            status = host
-            host = None
+        if "target-role" in columns[2]:
+            del columns[2]
 
-        locations[rsc_id] = host
+        locations[columns[0]] = columns[3]
 
     return locations
 
@@ -449,7 +450,7 @@ def _wait_target(ha_label, started):
     :return: True if successful.
     '''
 
-    # Now wait for it to stop, if a log of things are starting/stopping this can take a long long time.
+    # Now wait for it to stop, if a lot of things are starting/stopping this can take a long long time.
     # So if the number of things started is changing we keep going, but when nothing at all has stopped
     # for 2 minutes we timeout, but an overall timeout of 20 minutes.
     master_timeout = 1200
@@ -459,7 +460,7 @@ def _wait_target(ha_label, started):
     while (master_timeout > 0) and (activity_timeout > 0):
         locations = get_resource_locations()
 
-        if (locations.get(ha_label) != None) == started:
+        if (locations.get(ha_label) is not None) == started:
             return True
 
         current_started_items = reduce(lambda x, y: x + 1 if y is not None else x, [0] + locations.values())
@@ -565,7 +566,7 @@ def _move_target(target_label, dest_node):
 
     # now delete the constraint that crm_resource --move created
     AgentShell.try_run(["crm_resource", "--resource", target_label, "--un-move",
-                   "--node", dest_node])
+                        "--node", dest_node])
     if not migrated:
         return "Failed to fail back target %s" % target_label
 
@@ -577,7 +578,7 @@ def _find_resource_constraint(ha_label, location):
 
     for line in stdout.rstrip().split("\n"):
         match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=[^\s]+ id=%s-%s\)" %
-                        (ha_label, location), line)
+                         (ha_label, location), line)
         if match:
             return match.group(1)
 
