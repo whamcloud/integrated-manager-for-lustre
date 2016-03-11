@@ -49,9 +49,9 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.3.0.0
+# first fetch and install chroma 2.4.1.2
 BUILD_JOB=chroma-blessed
-BUILD_NUM=117
+BUILD_NUM=125
 IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
@@ -84,7 +84,8 @@ if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_
     echo \"Install log:\"
     cat /var/log/chroma/install.log
     exit \$rc
-fi"
+fi
+rpm -qa | sort > /tmp/rpms_before_upgrade"
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -246,6 +247,15 @@ ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS"
+
+# now provide an information inventory of the difference in the RPM
+# catalog after the upgrade
+
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+if [ -f /tmp/rpms_before_upgrade ]; then
+    diff -u /tmp/rpms_before_upgrade <(rpm -qa | sort)
+    rm /tmp/rpms_before_upgrade
+fi" | dshbak -c
 
 # test that removing the chroma-manager RPM removes /var/lib/chroma
 ssh root@$CHROMA_MANAGER "set -xe

@@ -970,6 +970,17 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             self._ssh_address(server, 'sync; sync')
 
+    def catalog_rpms(self, server_list, location, sorted=False):
+        """
+        Runs an 'rpm -qa' on the targeted server(s) redirecting the
+        output into the named file, optionally piped through sort
+        """
+        sort_cmd = ""
+        if sorted:
+            sort_cmd = " | sort"
+        for server in server_list:
+            self._ssh_address(server, 'rpm -qa %s > %s' % (sort_cmd, location))
+
     def clear_ha(self, server_list):
         """
         Stops and deletes all chroma targets for any corosync clusters
