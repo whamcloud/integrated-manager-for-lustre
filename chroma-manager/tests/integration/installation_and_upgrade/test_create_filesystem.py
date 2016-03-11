@@ -39,6 +39,7 @@ class TestCreateFilesystem(TestInstallationAndUpgrade):
 
         self.assertEqual(len(new_hosts), len(addresses), "Hosts found: '%s'" % new_hosts)
         self.remote_operations.sync_disks([h['address'] for h in new_hosts])
+        self.remote_operations.catalog_rpms([h['address'] for h in new_hosts], "/tmp/rpms_before_upgrade", sorted=True)
 
         return new_hosts
 
