@@ -11,7 +11,7 @@
   "dependencies": {
     "intel-gui": "4.4.3",
     "intel-realtime": "4.0.2",
-    "intel-view-server": "4.0.0",
+    "intel-view-server": "4.0.1",
     "intel-ziplocker": "3.0.2"
   }
 }
