@@ -25,7 +25,11 @@ from setuptools import setup, find_packages, findall
 from scm_version import PACKAGE_VERSION
 from re import sub
 
-excludes = ["*docs*"]
+excludes = [
+    "*docs*",
+    "ui-modules/node_modules/intel-view-server/node_modules/path-is-absolute*",
+    "ui-modules/node_modules/intel-realtime/node_modules/path-is-absolute*"
+]
 
 setup(
     name = 'chroma-manager',
