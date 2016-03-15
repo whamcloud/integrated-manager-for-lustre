@@ -26,6 +26,7 @@ import socket
 # without GNU readline, raw_input prompt goes to stderr
 import readline
 assert readline
+import argparse
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
 ARCHIVE_SUFFIX = ".tar.gz"
@@ -41,6 +42,7 @@ LOG_FILE = os.path.join(LOG_DIR, "install.log")
 
 upgrade = False
 
+
 def _check_platform():
     # This is the place to run tests for validating that this is a sane
     # installation target.
@@ -54,7 +56,8 @@ def _check_platform():
     try:
         address = socket.gethostbyname(hostname)
     except socket.gaierror:
-        log.error("'%s' is not a resolvable hostname. Please set the system hostname to a resolvable name and re-run the installer." % hostname)
+        log.error(
+            "'%s' is not a resolvable hostname. Please set the system hostname to a resolvable name and re-run the installer." % hostname)
         sys.exit(-1)
     else:
         if address.startswith('127'):
@@ -83,6 +86,7 @@ def _check_platform():
 
     log.debug("Platform check ... Supported")
 
+
 def _display_eula():
     try:
         p = subprocess.Popen(["less", "-F", "-X", "-e", "-k",
@@ -103,6 +107,7 @@ def _display_eula():
         log.error("EULA declined -- exiting without installation")
         sys.exit(0)
 
+
 def _check_no_epel():
     """Check that the EPEL repository is NOT available
 
@@ -115,10 +120,8 @@ def _check_no_epel():
     #  Most often this check will be enough.
     with open(os.devnull, 'wb') as DEVNULL:
         if (subprocess.call(['rpm', '-q', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) == 0 or
-            subprocess.call(['yum', 'info', 'python-fedora-django'], stdout=DEVNULL, stderr=DEVNULL) == 0):
-            log.error("Detected an incompatible yum repository: EPEL. "
-                      "Please remove the epel-release package and any EPEL repos in /etc/yum.repos.d/. Then re-run the installer.  "
-                      "Note: EPEL must not be available at any time during or after the installation of IML.")
+                    subprocess.call(['yum', 'info', 'python-fedora-django'], stdout=DEVNULL, stderr=DEVNULL) == 0):
+            log.error("Detected an incompatible yum repository: EPEL. Please remove the epel-release package and any EPEL repos in /etc/yum.repos.d/. Then re-run the installer. Note: EPEL must not be available at any time during or after the installation of IML.")
             sys.exit(-1)
 
     log.debug("EPEL check ... Passed")
@@ -374,6 +377,7 @@ enable=0
 
     return manager_repo_dir, manager_repo_file
 
+
 def _install_or_upgrade_packages():
     manager_repo_dir = None
     manager_repo_file = None
@@ -468,6 +472,7 @@ def _backup_repo(old_bundles, bundle, meta):
 
     return need_compat
 
+
 def _install_or_upgrade_bundles(old_bundles, new_bundles):
     all_bundles = old_bundles.copy()
     all_bundles.update(new_bundles)
@@ -498,23 +503,28 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             log.debug("Removing retired bundle %s" % meta['name'])
             _run(['chroma-config', 'bundle', 'delete', install_location])
 
+
 def _install_or_upgrade_profiles(new_profiles):
     log.info("Registering profiles")
 
     for profile in new_profiles:
         _run(['chroma-config', 'profile', 'register', profile])
 
-def _test_repos():
+
+def _check_repos():
 
     class ProxiedTransport(xmlrpclib.Transport):
         def set_proxy(self, proxy):
             self.proxy = proxy
+
         def make_connection(self, host):
             self.realhost = host
             h = httplib.HTTP(self.proxy)
             return h
+
         def send_request(self, connection, handler, request_body):
             connection.putrequest("POST", 'http://%s%s' % (self.realhost, handler))
+
         def send_host(self, connection, host):
             connection.putheader('Host', self.realhost)
 
@@ -523,8 +533,10 @@ def _test_repos():
             urllib2.HTTPSHandler.__init__(self)
             self.k = k
             self.c = c
+
         def https_open(self, r):
             return self.do_open(self.getConnection, r)
+
         def getConnection(self, h, timeout=None):
             return httplib.HTTPSConnection(h, key_file=self.k, cert_file=self.c)
 
@@ -595,15 +607,33 @@ def _test_repos():
 
         if failures == len(urls):
             log.debug("Failed to read information for repository %s." % repo.id)
-            return False, failed_urls
+            log.info("Yum does not seem to be able to find required network resources.  "
+                     "Please check your network and yum configuration and try again.  "
+                     "Perhaps you need to disable some repositories that are not reachable.")
+            log.info("URLs that failed: %s" % ' '.join(urls))
+            sys.exit(1)
 
-    return True, []
 
 def main():
 
-    _check_platform()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no-epel-check', '-e', action='store_false', default=True,
+                        dest='epel_check', required=False)
+    parser.add_argument('--no-repo-check', '-r', action='store_false', default=True,
+                        dest='repo_check',  required=False)
+    parser.add_argument('--no-platform-check', '-p', action='store_false', default=True,
+                        dest='platform_check', required=False)
 
-    _check_no_epel()
+    args = parser.parse_args()
+
+    if args.platform_check:
+        _check_platform()
+
+    if args.epel_check:
+        _check_no_epel()
+
+    if args.repo_check:
+        _check_repos()
 
     _display_eula()
 
@@ -618,12 +648,6 @@ def main():
                                                    action = "upgrade" \
                                                        if upgrade \
                                                        else "installation"))
-
-    yum_ok, urls = _test_repos()
-    if not yum_ok:
-        log.info("Yum does not seem to be able to find required network resources.  Please check your network and yum configuration and try again.  Perhaps you need to disable some repositories that are not reachable.")
-        log.info("URLs that failed: %s" % ' '.join(urls))
-        sys.exit(1)
 
     if upgrade:
         # Tell the user what the old version is
