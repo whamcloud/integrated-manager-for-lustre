@@ -495,12 +495,14 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
                 link_path = os.path.join(BUNDLE_ROOT, meta['name'], alias.format(meta['distro_version']))
                 try:
                     os.symlink(meta['distro_version'], link_path)
-                except OSError, e:
-                   if e.errno != errno.EEXIST:
-                       log.debug("Unhandled exception: %s" % traceback.format_exc())
-                   elif e.errno == errno.EEXIST and not os.path.islink(link_path):
-                       log.error("%s exists but is not a directory" % link_path)
-                   raise e
+                except OSError as e:
+                    if e.errno == errno.EEXIST:
+                        if os.path.islink(link_path):
+                            pass
+                        else:
+                            raise SystemExit("%s exists but is not a symlink as is expected" % link_path)
+                    else:
+                        raise
             if need_compat:
                 # We need to be repo compatible with older releases that won't
                 # know to find RPMs in a $releasever subdir
@@ -700,10 +702,11 @@ def main():
 log = _setup_logging()
 try:
     main()
-except SystemExit:
+except SystemExit as e:
     # Code in main that calls sys.exit()
     # is assumed to be handled, so skipping
     # any more output, but raise to return the returncode
+    log.debug("SystemExit: %s" % e)
     raise
 except:
     log.debug("Unhandled exception: %s" % traceback.format_exc())
