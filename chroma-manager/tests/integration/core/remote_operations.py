@@ -3,6 +3,7 @@
 import logging
 import socket
 import time
+import datetime
 import paramiko
 import re
 import os
@@ -1122,3 +1123,28 @@ class RealRemoteOperations(RemoteOperations):
             "ls /var/lib/chroma/repo/"
         )
         return result.stdout.split()
+
+    def check_time_within_range(self, first_dt, second_dt, minutes):
+        """check if first_dt datetime value is within 'minutes' of the second_dt"""
+        min_dt = second_dt - datetime.timedelta(minutes=minutes)
+        max_dt = second_dt + datetime.timedelta(minutes=minutes)
+
+        return min_dt < first_dt < max_dt
+
+    def get_server_time(self, client_address):
+        """return datetime.datetime from UTC date on client"""
+        _date_get_format = '%Y:%m:%d:%H:%M'
+
+        time_string = self._ssh_address(client_address, 'date -u +%s' % _date_get_format).stdout.strip('\n')
+
+        # create datetime.datetime from linux date utility shell output
+        return datetime.datetime(*[int(element) for element in time_string.split(':')])
+
+    def set_server_time(self, client_address, new_datetime):
+        """set client date & time with date utility, use utility defined format"""
+        _date_set_format = '%Y%m%d %H:%M'
+
+        time_string = new_datetime.strftime(_date_set_format)
+        result = self._ssh_address(client_address, 'date -u --set="%s"' % time_string)
+
+        return result

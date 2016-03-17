@@ -25,7 +25,7 @@ from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 
 
-ntp_service = ServiceControl.create('ntp')
+ntp_service = ServiceControl.create('ntpd')
 
 
 def unconfigure_ntp():
@@ -43,7 +43,11 @@ def configure_ntp(ntp_server):
 
     :return: Value using simple return protocol
     """
-    return agent_ok_or_error(NTPConfig().add(ntp_server))
+    error = NTPConfig().add(ntp_server)
+    if error:
+        return error
+    else:
+        return agent_ok_or_error(ntp_service.restart())
 
 
 ACTIONS = [configure_ntp, unconfigure_ntp]
