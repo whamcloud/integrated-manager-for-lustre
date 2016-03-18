@@ -44,17 +44,18 @@ operation_lock = threading.RLock()
 
 @lock_cache.lock_change_receiver()
 def lock_change_receiver(lock, add_remove):
-    table_change(int(time.time() * util.SECONDSTOMICROSECONDS), lock.locked_item._meta.db_table)
+    tables_changed(int(time.time() * util.SECONDSTOMICROSECONDS), [lock.locked_item._meta.db_table])
 
 
-def table_change(timestamp, table):
+def tables_changed(timestamp, tables):
     assert type(timestamp) == int
 
     with operation_lock:
-        timestamps[table] = timestamp
+        for table in tables:
+            timestamps[table] = max(timestamps[table], timestamp)
 
-        for event in events[table]:
-            event.set()
+            for event in events[table]:
+                event.set()
 
 
 def wait_table_change(table_timestamps, tables_list, timeout):

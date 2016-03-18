@@ -59,7 +59,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'get_locks',
                'update_corosync_configuration',
                'get_transition_consequences',
-               'table_change',
+               'tables_changed',
                'wait_table_change'
                ]
 
@@ -188,8 +188,8 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().update_nids(nid_data)
 
     @classmethod
-    def table_change(cls, timestamp, table):
-        return JobSchedulerRpc().table_change(timestamp, table)
+    def tables_changed(cls, timestamp, tables):
+        return JobSchedulerRpc().tables_changed(timestamp, tables)
 
     @classmethod
     def wait_table_change(cls, last_timestamp, tables_list, timeout):
