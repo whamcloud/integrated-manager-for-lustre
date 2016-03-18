@@ -1,5 +1,5 @@
 E2FSPROGS_VERSION := 1.42.13.wc4
 E2FSPROGS_RHEL_RELEASE := 7
-E2FSPROGS_SLES_RELEASE := 0suse
+E2FSPROGS_SLES_RELEASE := 7suse
 
 URL := https://downloads.hpdd.intel.com/public/e2fsprogs
