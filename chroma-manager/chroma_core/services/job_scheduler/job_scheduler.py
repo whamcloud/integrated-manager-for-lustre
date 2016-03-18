@@ -1558,8 +1558,8 @@ class JobScheduler(object):
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
 
-    def table_change(self, timestamp, table):
-        return long_polling.table_change(timestamp, table)
+    def tables_changed(self, timestamp, tables):
+        return long_polling.tables_changed(timestamp, tables)
 
     def wait_table_change(self, last_change_time, tables_list, timeout):
         return long_polling.wait_table_change(last_change_time, tables_list, timeout)
