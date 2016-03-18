@@ -89,6 +89,7 @@ setup(
         'ui-modules': [
             "node_modules/intel-view-server/*.js",
             "node_modules/intel-view-server/lib/*.js",
+            "node_modules/intel-view-server/supervisor/*.js",
             "node_modules/intel-view-server/middleware/*.js",
             "node_modules/intel-view-server/routes/*.js",
             "node_modules/intel-view-server/package.json",
