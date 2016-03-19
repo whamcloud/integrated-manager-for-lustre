@@ -185,7 +185,7 @@ class Migration(SchemaMigration):
                       False),
         migrate_alert('LearnEvent',
                       [FieldInfo('learned_item_id', int),
-                       FieldInfo('content_id', int)],
+                       FieldInfo('learned_item_type', int)],
                       False)
 
         # This last two are special because they have the additional fixed field of lustre_pid that needs copying.

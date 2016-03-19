@@ -53,6 +53,21 @@ class VariantGenericForeignKey(GenericForeignKey):
             setattr(instance, self.cache_attr, rel_obj)
             return rel_obj
 
+    def __set__(self, instance, value):
+        if instance is None:
+            raise AttributeError(u"%s must be accessed via instance" % self.related.opts.object_name)
+
+        ct = None
+        fk = None
+        if value is not None:
+            ct = self.get_content_type(obj=value)
+            fk = value._get_pk_val()
+
+        setattr(instance, self.ct_field, ct.id)
+        setattr(instance, self.fk_field, fk)
+        setattr(instance, self.cache_attr, value)
+
+
 VariantDescriptor = namedtuple('VariantDescriptor', ['name', 'type', 'getter', 'setter', 'default'])
 
 
