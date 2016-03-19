@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,8 +20,6 @@
 # express and approved by Intel in writing.
 
 
-from django.contrib.contenttypes.models import ContentType
-
 from chroma_core.models.alert import AlertStateBase, AlertState
 from chroma_core.models.sparse_model import VariantGenericForeignKey, VariantDescriptor
 
@@ -29,9 +27,9 @@ from chroma_core.models.sparse_model import VariantGenericForeignKey, VariantDes
 class LearnEvent(AlertStateBase):
     variant_fields = [VariantDescriptor('learned_item_id', int, None, None, 0),
                       VariantDescriptor('learned_item_type',
-                                        ContentType,
-                                        lambda self_: ContentType.objects.get(id=self_.get_variant('content_id', None, int)),
-                                        lambda self_, value: self_.set_variant('content_id', int, value.id),
+                                        int,
+                                        None,
+                                        lambda self_, value: self_.set_variant('learned_item_type', int, value.id),
                                         None)]
 
     learned_item = VariantGenericForeignKey('learned_item_type', 'learned_item_id')

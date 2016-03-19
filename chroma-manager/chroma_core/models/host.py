@@ -764,7 +764,10 @@ class BaseSetupHostJob(NullStateChangeJob):
     class Meta:
         abstract = True
 
-    def _common_deps(self, lnet_state_required):
+    def _common_deps(self,
+                     lnet_state_required,
+                     lnet_acceptable_states,
+                     lnet_unacceptable_states):
         # It really does not feel right that this is in here, but it does sort of work. These are the things
         # it is dependent on so create them. Also I can't work out with today's state machine anywhere else to
         # put them that works.
@@ -795,7 +798,10 @@ class BaseSetupHostJob(NullStateChangeJob):
         deps = []
 
         if self.target_object.lnet_configuration:
-            deps.append(DependOn(self.target_object.lnet_configuration, lnet_state_required))
+            deps.append(DependOn(self.target_object.lnet_configuration,
+                                 lnet_state_required,
+                                 lnet_acceptable_states,
+                                 lnet_unacceptable_states))
 
         if self.target_object.pacemaker_configuration:
             deps.append(DependOn(self.target_object.pacemaker_configuration, 'started'))
@@ -825,7 +831,7 @@ class SetupHostJob(BaseSetupHostJob):
         return help_text['setup_managed_host_on'] % self.target_object
 
     def get_deps(self):
-        return self._common_deps('lnet_up')
+        return self._common_deps('lnet_up', None, None)
 
     @classmethod
     def can_run(cls, host):
@@ -842,8 +848,9 @@ class SetupMonitoredHostJob(BaseSetupHostJob):
         ordering = ['id']
 
     def get_deps(self):
-        # Moving out of unconfigured will mean that lnet will start monitoring and responding to the state.
-        return self._common_deps('lnet_unloaded')
+        # Moving out of unconfigured into lnet_unloaded will mean that lnet will start monitoring and responding to
+        # the state. Once we start monitoring any state other than unconfigured is acceptable.
+        return self._common_deps('lnet_unloaded', None, ['unconfigured'])
 
     def description(self):
         return help_text['setup_monitored_host_on'] % self.target_object
@@ -863,7 +870,7 @@ class SetupWorkerJob(BaseSetupHostJob):
         ordering = ['id']
 
     def get_deps(self):
-        return self._common_deps('lnet_up')
+        return self._common_deps('lnet_up', None, None)
 
     def description(self):
         return help_text['setup_worker_host_on'] % self.target_object
