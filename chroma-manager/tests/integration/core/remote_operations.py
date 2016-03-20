@@ -428,6 +428,24 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(address, "cat %s" % path)
         return result.stdout.strip()
 
+    def cibadmin(self, server, args, buffer=None):
+        # -t 1 == time out after 1 sec. of no response
+        cmd = "cibadmin -t 1 %s" % args
+
+        tries = 300
+        while tries > 0:
+            result = self._ssh_fqdn(server['fqdn'], cmd, expected_return_code=None, buffer=buffer)
+
+            # retry on expected (i.e. waiting for dust to settle, etc.)
+            # failures
+            if result.rc not in [10, 41, 62, 107]:
+                break
+            # don't need a sleep here, the cibadmin timeout provides
+            # us with a delay
+            tries -= 1
+
+        return result
+
     def backup_cib(self, server):
         backup = "/tmp/cib-backup-%s.xml" % server['nodename']
         running_targets = self.get_pacemaker_targets(server, running = True)
@@ -437,8 +455,7 @@ class RealRemoteOperations(RemoteOperations):
         self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
 
         with open(backup, "w") as f:
-            f.write(self._ssh_fqdn(server['fqdn'],
-                    "cibadmin --query").stdout)
+            f.write(self.cibadmin(server, "--query").stdout)
 
         return running_targets
 
@@ -449,16 +466,13 @@ class RealRemoteOperations(RemoteOperations):
                                       server['nodename']).read())
 
         # get the current admin_epoch
-        current_cib = xml.fromstring(
-            self._ssh_fqdn(server['fqdn'],
-                           "cibadmin --query").stdout)
+        current_cib = xml.fromstring(self.cibadmin(server, "--query").stdout)
 
         new_cib.set('admin_epoch', str(int(current_cib.get('admin_epoch')) + 1))
         new_cib.set('epoch', "0")
 
-        self._ssh_fqdn(server['fqdn'],
-                       "cibadmin --replace --xml-pipe",
-                       buffer=xml.tostring(new_cib))
+        self.cibadmin(server, "--replace --xml-pipe",
+                      buffer=xml.tostring(new_cib))
 
         for target in start_targets:
             self.start_target(server['fqdn'], target)
@@ -575,9 +589,7 @@ class RealRemoteOperations(RemoteOperations):
             return False
 
         for host in hosts:
-            result = self._ssh_address(host['address'],
-                                       'cibadmin --query')
-
+            result = self.cibadmin(host, '--query')
             configuration = xml.fromstring(result.stdout)
 
             rsc_locations = configuration.findall('./configuration/constraints/rsc_location')
