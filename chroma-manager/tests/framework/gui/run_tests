@@ -26,15 +26,17 @@ NODE_MODULES=${NODE_MODULES:-"/home/chromatest/chroma_test_env/chroma/chroma-man
 #######################################
 
 # Run Karma GUI unit tests (new ui)
-cd \$NODE_MODULES/intel-gui
-./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
+cd \$NODE_MODULES/intel-gui/gulp
+../node_modules/gulp/bin/gulp.js test:ci
+cd ../
 mv test-results/*.xml \$HOME/test_reports/
 rm -rf ./test-results
 
 # Run gulp Test(s)
-cd \$NODE_MODULES/intel-gui/gulp
-npm t
-mv gulp-results.xml \$HOME/test_reports/
+cd \$NODE_MODULES/intel-gui
+npm run test:gulp
+mv gulp/gulp-results.xml \$HOME/test_reports/
+rm -rf gulp/gulp-results.xml
 
 MODULES_TO_TEST="intel-realtime
 intel-view-server"

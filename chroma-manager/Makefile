@@ -89,17 +89,21 @@ ui-modules-dev: npm
 	cd ui-modules && \
 	npm i && \
 	cd node_modules/intel-gui && \
-	npm i && \
+	npm i --only=dev && \
 	cd ../intel-realtime && \
-	npm i && \
+	npm i --only=dev && \
 	cd ../intel-view-server && \
-	npm i;
+	npm i --only=dev;
 
 
 gui: ui-modules
 	@echo "Building GUI for deployment"; \
-    cd ui-modules/node_modules/intel-gui/gulp && \
-	npm run build -- --dest-dir='../../../..'
+	rm -rf chroma_ui/static/chroma_ui && \
+	mkdir -p chroma_ui/static/chroma_ui && \
+	cp -r ui-modules/node_modules/intel-gui/dist/* chroma_ui/static/chroma_ui/ && \
+	rm -rf chroma_ui/templates/new && \
+	mkdir -p chroma_ui/templates/new && \
+	mv chroma_ui/static/chroma_ui/index.html chroma_ui/templates/new/index.html
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \

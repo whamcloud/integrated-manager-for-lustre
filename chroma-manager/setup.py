@@ -27,8 +27,6 @@ from re import sub
 
 excludes = [
     "*docs*",
-    "ui-modules/node_modules/intel-view-server/node_modules/path-is-absolute*",
-    "ui-modules/node_modules/intel-realtime/node_modules/path-is-absolute*"
 ]
 
 setup(
@@ -71,12 +69,13 @@ setup(
                       "static/images/*.ico", "static/images/*.png",
                       "static/images/*.gif", "templates/*.html", "templates/new/*.html",
                       "static/chroma_ui/bower_components/font-awesome/fonts/*",
-                      "static/chroma_ui/common/login/assets/images/*.png",
-                      "static/chroma_ui/iml/app/assets/images/*",
-                      "static/chroma_ui/styles/imports-*.css",
+                      "static/chroma_ui/source/iml/login/assets/images/*.png",
+                      "static/chroma_ui/source/iml/app/assets/images/*",
+                      "static/chroma_ui/source/styles/imports-*.css",
                       "static/chroma_ui/built-*.js", "static/chroma_ui/built-*.js.map",
-                      "static/chroma_ui/bundle.js",
-                      "static/chroma_ui/bundle.map.json"],
+                      "static/chroma_ui/node_modules/intel-socket-worker/dist/bundle.js",
+                      "static/chroma_ui/node_modules/intel-socket-worker/dist/bundle.js.map",
+                      ],
         'chroma_help': ["static/webhelp/*.htm*",
                         "static/webhelp/*.gif", "static/webhelp/*.js",
                         "static/webhelp/*.css", "static/webhelp/*.jpg",
@@ -86,22 +85,7 @@ setup(
                   "integration/*/*.json",
                   "sample_data/*",
                   "integration/core/clear_ha_el?.sh"],
-        'ui-modules': [
-            "node_modules/intel-view-server/*.js",
-            "node_modules/intel-view-server/lib/*.js",
-            "node_modules/intel-view-server/supervisor/*.js",
-            "node_modules/intel-view-server/middleware/*.js",
-            "node_modules/intel-view-server/routes/*.js",
-            "node_modules/intel-view-server/package.json",
-            "node_modules/intel-realtime/*.js",
-            "node_modules/intel-realtime/reverse-source-map/*.js",
-            "node_modules/intel-realtime/serialize-error/*.js",
-            "node_modules/intel-realtime/socket-router/*.js",
-            "node_modules/intel-realtime/socket-router/middleware/*.js",
-            "node_modules/intel-realtime/socket-router/routes/*.js",
-            "node_modules/intel-realtime/package.json"
-        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/intel-view-server/node_modules')]
-          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/intel-realtime/node_modules')]
+        'ui-modules': [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node_modules/')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {

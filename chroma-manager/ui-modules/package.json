@@ -4,10 +4,9 @@
   "description": "UI Modules",
   "author": "IML Team",
   "license": "MIT",
-  "scripts": {},
   "dependencies": {
-    "intel-gui": "4.4.3",
+    "intel-gui": "5.1.2",
     "intel-realtime": "4.0.3",
-    "intel-view-server": "4.0.2"
+    "intel-view-server": "4.0.3"
   }
 }

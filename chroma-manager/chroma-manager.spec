@@ -329,8 +329,7 @@ fi
 %{manager_root}/mime.types
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
-%{manager_root}/ui-modules/node_modules/intel-view-server/*
-%{manager_root}/ui-modules/node_modules/intel-realtime/*
+%{manager_root}/ui-modules/node_modules/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
