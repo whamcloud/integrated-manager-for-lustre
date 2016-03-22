@@ -25,6 +25,7 @@ import os
 import re
 import tempfile
 import time
+import socket
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
@@ -35,6 +36,7 @@ from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result, agent_result_ok
 from chroma_agent.lib.pacemaker import cibadmin
 from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
+from chroma_agent.chroma_common.lib.util import platform_info
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -383,9 +385,18 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
         score = 10
         preference = "secondary"
 
+    # Hostname. This is a shorterm point fix that will allow us to make HP2 release more functional. Between el6 and el7
+    # (truthfully we should probably be looking at Pacemaker or Corosync versions) Pacemaker started to use fully qualified
+    # domain names rather than just the nodename.  lotus-33vm15.lotus.hpdd.lab.intel.com vs lotus-33vm15. To keep compatiblity
+    # easily we have to make the contraints follow the same fqdn vs node.
+    if platform_info.distro_version >= 7.0:
+        node = socket.getfqdn()
+    else:
+        node = os.uname()[1]
+
     rc, stdout, stderr = cibadmin(["-o", "constraints", "-C", "-X",
                                    "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" %
-                                   (ha_label, preference, os.uname()[1],
+                                   (ha_label, preference, node,
                                     ha_label, score)])
 
     if rc == 76:
