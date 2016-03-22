@@ -98,6 +98,19 @@ class AlertStateBase(SparseModel):
 
     active_bool = property(get_active_bool, set_active_bool)
 
+    def to_dict(self):
+        from chroma_core.lib.util import time_str
+        return {'alert_severity': 'alert',  # FIXME: Still need to figure out weather to pass enum or display string.
+                'alert_item': str(self.alert_item),
+                'alert_message': self.message(),
+                'message': self.message(),
+                'active': bool(self.active),
+                'begin': time_str(self.begin),
+                'end': time_str(self.end) if self.end is not None else time_str(self.begin),
+                'id': self.id,
+                'alert_item_id': self.alert_item_id,
+                'alert_item_content_type_id': self.alert_item_type_id}
+
     @property
     def affected_objects(self):
         """
