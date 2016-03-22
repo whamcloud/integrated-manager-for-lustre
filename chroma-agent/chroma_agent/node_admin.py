@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,7 @@
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
-from chroma_common.lib.util import platform_info
+from chroma_agent.chroma_common.lib.util import platform_info
 from chroma_agent.lib.shell import AgentShell
 
 
