@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -78,9 +78,9 @@ class FileSystemLdiskfs(FileSystem):
 
         if result.rc == 5:
             # HYD-1040: Sometimes we should retry on a failed registration
-            Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
+            result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
 
-        if (result.rc != 0):
+        if result.rc != 0:
             raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
