@@ -95,8 +95,9 @@ class TestBlockDevices(CommandCaptureTestCase):
     def setUp(self):
         super(TestBlockDevices, self).setUp()
 
-        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
-            self.block_devices = BlockDevices()
+        with mock.patch('glob.glob', return_value=[]):
+            with mock.patch('chroma_agent.utils.BlkId', return_value={}):
+                self.block_devices = BlockDevices()
 
         mock.patch('os.path.isfile', self.mock_isfile).start()
         self.existing_files = []
