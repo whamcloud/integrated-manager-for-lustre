@@ -131,19 +131,17 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         return self.conf_template.render(interfaces=self._ring_iface_info())
 
     def test_manual_ring1_config(self):
-        ring0_name = "eth0.1.1?1b34*430"
-        ring1_name = "eth1"
-        ring1_ipaddr = "10.42.42.42"
-        ring1_netmask = "255.255.255.0"
-        mcast_port = "4242"
+        ring0_name = 'eth0.1.1?1b34*430'
+        ring1_name = 'eth1'
+        ring1_ipaddr = '10.42.42.42'
+        ring1_netmask = '255.255.255.0'
+        mcast_port = '4242'
 
         # add shell commands to be expected
-        for s in [
-            "/sbin/ip link set dev %s up" % ring1_name,
-            "/sbin/ip addr add %s dev %s" % ('/'.join([ring1_ipaddr, ring1_netmask]), ring1_name),
-            "/usr/sbin/lokkit -n -p %s:udp" % mcast_port,
-        ]:
-            self.add_command(tuple(s.split()))
+        self.add_commands(CommandCaptureCommand(('/sbin/ip', 'link', 'set', 'dev', ring1_name, 'up')),
+                          CommandCaptureCommand(('/sbin/ip', 'addr', 'add', '%s/%s' % (ring1_ipaddr, ring1_netmask), 'dev', ring1_name)),
+                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
+                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=2))
 
         # now a two-step process! first network...
         configure_network(ring0_name, ring1_name=ring1_name,
@@ -159,7 +157,7 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
 
         # FIXME: doesn't test the last two firewall commands
-        # self.assertRanAllCommandsInOrder()
+        self.assertRanAllCommandsInOrder()
 
     def test_manual_ring1_config_corosync2(self):
 

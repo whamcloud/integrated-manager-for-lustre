@@ -1,4 +1,6 @@
 import mock
+import errno
+
 from django.utils import unittest
 
 from chroma_agent.chroma_common.lib.shell import Shell
@@ -14,9 +16,11 @@ class CommandCaptureCommand(object):
 
 
 class CommandCaptureTestCase(unittest.TestCase):
+    CommandNotFound = 123456
+
     def setUp(self):
         self.reset_command_capture()
-        self._missing_command_err_msg = 'Command attempted was unknown to CommandCaptureTestCase, did you intend this?'
+        self._missing_command_err_msg = 'Command attempted "%s" was unknown to CommandCaptureTestCase, did you intend this?'
 
         assert 'fake' not in str(Shell.run)
         mock.patch('chroma_agent.chroma_common.lib.shell.Shell.run', self._fake_run).start()
@@ -38,9 +42,12 @@ class CommandCaptureTestCase(unittest.TestCase):
             result = self._get_executable_command(args)
             result.executions_remaining -= 1
 
+            if result.rc == self.CommandNotFound:
+                raise OSError(errno.ENOENT, result.stderr)
+
             return Shell.RunResult(result.rc, result.stdout, result.stderr, False)
         except KeyError:
-            return Shell.RunResult(2, "", self._missing_command_err_msg, False)
+            raise OSError(errno.ENOENT, self._missing_command_err_msg % ' '.join(arg_list))
 
     def _get_executable_command(self, args):
         '''

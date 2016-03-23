@@ -72,7 +72,8 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         return zfs_devices
 
     def test_imported_zfs(self):
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
+        self.add_commands(CommandCaptureCommand(('partprobe', )),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
     zfsPool1        1T    1234567890ABCDE    ONLINE
     zfsPool2        1G    111111111111111    OFFLINE\n"""),
                           CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""
@@ -101,6 +102,7 @@ errors: No known data errors)"""),
 
     def test_export_zfs(self):
         self.add_commands(
+            CommandCaptureCommand(("partprobe", )),
             CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
             CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
                                   stdout="""

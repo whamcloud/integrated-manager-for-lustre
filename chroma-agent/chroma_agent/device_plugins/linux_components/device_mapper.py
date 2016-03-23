@@ -62,9 +62,9 @@ class DmsetupTable(DeviceHelper):
     def _get_vgs(self):
         try:
             out = AgentShell.try_run(["vgs", "--units", "b", "--noheadings", "-o", "vg_name,vg_uuid,vg_size"])
-        except AgentShell.CommandExecutionError as cee:
-            # If no vgs in stall then no volume groups
-            if cee.result.rc == errno.ENOENT:
+        except OSError as os_error:
+            # If no vgs installed then no volume groups
+            if os_error.errno == errno.ENOENT:
                 return
             raise
 
@@ -77,9 +77,9 @@ class DmsetupTable(DeviceHelper):
     def _get_lvs(self, vg_name):
         try:
             out = AgentShell.try_run(["lvs", "--units", "b", "--noheadings", "-o", "lv_name,lv_uuid,lv_size,lv_path", vg_name])
-        except AgentShell.CommandExecutionError as cee:
-            # If no lvs in stall then no logical volumes
-            if cee.result.rc == errno.ENOENT:
+        except OSError as os_error:
+            # If no lvs install then no logical volumes
+            if os_error.errno == errno.ENOENT:
                 return
             raise
 
