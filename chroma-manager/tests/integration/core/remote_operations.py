@@ -141,7 +141,7 @@ class SimulatorRemoteOperations(RemoteOperations):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
 
     def run_chroma_diagnostics(self, server, verbose):
-        return RemoteCommandResult(0, "", "")
+        return Shell.RunResult(rc=0, stdout="", stderr="", timeout=False)
 
     def backup_cib(*args, **kwargs):
         return []
