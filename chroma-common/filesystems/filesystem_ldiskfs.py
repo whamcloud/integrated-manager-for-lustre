@@ -32,6 +32,9 @@ class FileSystemLdiskfs(FileSystem):
     # in the read from blkid. But listing both is safe.
     _supported_filesystems = ['ldiskfs', 'ext4']
 
+    RC_MOUNT_SUCCESS = 0
+    RC_MOUNT_INPUT_OUTPUT_ERROR = 5
+
     def __init__(self, fstype, device_path):
         super(FileSystemLdiskfs, self).__init__(fstype, device_path)
 
@@ -76,11 +79,11 @@ class FileSystemLdiskfs(FileSystem):
 
         result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
 
-        if result.rc == 5:
+        if result.rc == self.RC_MOUNT_INPUT_OUTPUT_ERROR:
             # HYD-1040: Sometimes we should retry on a failed registration
             result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
 
-        if result.rc != 0:
+        if result.rc != self.RC_MOUNT_SUCCESS:
             raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
