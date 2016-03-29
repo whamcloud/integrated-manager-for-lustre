@@ -20,7 +20,7 @@ sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
 
 if [ "$SLAVE" = "rhel6&&ssi" ]; then
-    sed -i -e 's/"el6"/"rhel6"/g' provisioner_input.json
+    sed -i -e 's/el6/rhel6/g' provisioner_input.json
 fi
 cat provisioner_input.json
 echo
