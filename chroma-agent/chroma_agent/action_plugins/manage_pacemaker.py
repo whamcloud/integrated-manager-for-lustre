@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -34,7 +34,6 @@ from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log
 from manage_corosync import start_corosync, stop_corosync
 from chroma_agent.lib.pacemaker import pacemaker_running
-from chroma_agent.lib.pacemaker import PacemakerError
 from chroma_agent.lib.corosync import corosync_running
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
@@ -46,6 +45,7 @@ RSRC_FAIL_WINDOW = "20m"
 # before we migrate it
 RSRC_FAIL_MIGRATION_COUNT = "3"
 
+PACEMAKER_CONFIGURE_TIMEOUT = 120
 
 pacemaker_service = ServiceControl.create('pacemaker')
 corosync_service = ServiceControl.create('corosync')
@@ -95,23 +95,12 @@ def configure_pacemaker():
         if error:
             return agent_error(error)
 
-    # enable_pacemaker()
-    # Agent.run_canned_error_message(['/sbin/service', 'pacemaker', 'restart'])
-
     for action in [enable_pacemaker, stop_pacemaker, start_pacemaker, _configure_pacemaker]:
         error = action()
 
         if error != agent_result_ok:
             return error
 
-    # Now check that pacemaker is configured, by looking for our configuration flag.
-    # Allow 1 minute - if nothing then return an error.
-    # for timeout in range(0, 60):
-    #     if PacemakerConfig().get_property_setvalue("intel_manager_for_lustre_configuration", "configured_by"):
-    #         return agent_result_ok
-    #     time.sleep(1)
-    #
-    # return agent_error("pacemaker_configuration_failed")
     time.sleep(1)
     return agent_result_ok
 
@@ -124,15 +113,29 @@ def _configure_pacemaker():
     '''
     pc = PacemakerConfig()
 
-    try:
-        if not pc.is_dc:
-            daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
-            return agent_result_ok
-    except PacemakerError as pacemaker_error:
-        return agent_error("Pacemaker experienced an unexpected error: %s" % pacemaker_error)
+    timeout_time = time.time() + PACEMAKER_CONFIGURE_TIMEOUT
+    error = None
 
-    daemon_log.info("Configuring (global) pacemaker configuration because I am the DC")
+    while (pc.configured is False) and (time.time() < timeout_time):
+        if pc.is_dc:
+            daemon_log.info('Configuring (global) pacemaker configuration because I am the DC')
 
+            error = _do_configure_pacemaker(pc)
+
+            if error:
+                return agent_error(error)
+        else:
+            daemon_log.info('Not configuring (global) pacemaker configuration because I am not the DC')
+
+        time.sleep(10)
+
+    if pc.configured is False:
+        error = 'Failed to configure (global) pacemaker configuration dc=%s' % pc.dc
+
+    return agent_ok_or_error(error)
+
+
+def _do_configure_pacemaker(pc):
     # ignoring quorum should only be done on clusters of 2
     if len(pc.nodes) > 2:
         no_quorum_policy = "stop"
@@ -142,7 +145,7 @@ def _configure_pacemaker():
     error = _unconfigure_fencing()
 
     if error:
-        return agent_error(error)
+        return error
 
     # this could race with other cluster members to make sure
     # any errors are only due to it already existing
@@ -153,9 +156,9 @@ def _configure_pacemaker():
         rc, stdout, stderr = AgentShell.run(['crm_resource', '--locate',
                                              '--resource', "st-fencing"])
         if rc == 0:                     # no need to do the rest if another member is already doing it
-            return agent_result_ok
+            return None
         else:
-            return agent_error(e.message)
+            return e.message
 
     pc.create_update_properyset("cib-bootstrap-options",
                                 {"no-quorum-policy": no_quorum_policy,
@@ -173,18 +176,9 @@ def _configure_pacemaker():
         return AgentShell.run_canned_error_message(["crm_attribute", "--type", "rsc_defaults",
                                                     "--attr-name", name, "--attr-value", value])
 
-    error = set_rsc_default("resource-stickiness", "1000") or \
-            set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW) or \
-            set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
-
-    if error:
-        return agent_error(error)
-
-    # Finally mark who configured it.
-    pc.create_update_properyset("intel_manager_for_lustre_configuration",
-                                {"configured_by": socket.gethostname()})
-
-    return agent_result_ok
+    return set_rsc_default("resource-stickiness", "1000") or \
+           set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW) or \
+           set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
 
 
 def configure_fencing(agents):
@@ -202,10 +196,6 @@ def configure_fencing(agents):
 
     pc.create_update_properyset("cib-bootstrap-options",
                                 {"stonith-enabled": "true" if (len(agents) > 0) else "false"})
-
-    # Finally mark who configured it.
-    pc.create_update_properyset("intel_manager_for_lustre_configuration",
-                                {"stonith_enabled_disabled_by": socket.gethostname()})
 
 
 def set_node_standby(node):

@@ -101,7 +101,6 @@ class TestAgentConfiguration(FencingTestCase):
                 self.add_command(('crm_attribute', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', '%d_fence_%s' % (i, key), '-v', agent[key]))
 
         self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"/>\n'))
-        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="intel_manager_for_lustre_configuration">\n<nvpair id="intel_manager_for_lustre_configuration-stonith_enabled_disabled_by" name="stonith_enabled_disabled_by" value="fake.host.domain"/>\n'))
 
         configure_fencing(agents)
 
@@ -113,7 +112,6 @@ class TestAgentConfiguration(FencingTestCase):
             self.add_command(('crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key))
 
         self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="false"/>\n'))
-        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="intel_manager_for_lustre_configuration">\n<nvpair id="intel_manager_for_lustre_configuration-stonith_enabled_disabled_by" name="stonith_enabled_disabled_by" value="fake.host.domain"/>\n'))
 
         configure_fencing([])
 

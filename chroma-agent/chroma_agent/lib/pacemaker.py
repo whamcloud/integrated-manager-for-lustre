@@ -23,7 +23,6 @@
 import xml.etree.ElementTree as xml
 from xml.parsers.expat import ExpatError as ParseError
 import socket
-import time
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib import fence_agents
@@ -212,20 +211,15 @@ class PacemakerConfig(object):
 
     @property
     def dc(self):
-        timeout = 30
-        dc_uuid = None
-        while not dc_uuid and timeout > 0:
-            dc_uuid = self.root.get('dc-uuid')
-            if dc_uuid:
-                try:
-                    return next(node.name for node in self.nodes if node.uuid == dc_uuid)
-                except StopIteration:
-                    raise PacemakerError("Could not match DC uuid=%s to a node" % dc_uuid)
+        dc_uuid = self.root.get('dc-uuid')
 
-            time.sleep(1)
-            timeout -= 1
+        if dc_uuid:
+            try:
+                return next(node.name for node in self.nodes if node.uuid == dc_uuid)
+            except StopIteration:
+                pass
 
-        raise PacemakerError("Could not determine DC")
+        return None
 
     @property
     def fenceable_nodes(self):
@@ -240,6 +234,13 @@ class PacemakerConfig(object):
     @property
     def is_dc(self):
         return self.dc == self.get_node(socket.gethostname()).name
+
+    @property
+    def configured(self):
+        ''' configured returns True if this node has a pacemaker configuration set by IML.
+        :return: True if configuration present else False
+        '''
+        return 'fence_chroma' in AgentShell.try_run(['cibadmin', '--query', '-o', 'resource'])
 
     def get_property_setvalue(self, property_set_name, value_name):
         '''
