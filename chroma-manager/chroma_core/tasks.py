@@ -48,7 +48,7 @@ def mail_alerts():
 
     if not alerts:
         # no un-e-mailed alerts yet so just bail
-        return
+        return None
 
     alert_email = AlertEmail()
     alert_email.save()
@@ -56,6 +56,8 @@ def mail_alerts():
     alert_email.save()
 
     send_alerts_email.delay(id = alert_email.id)
+
+    return alert_email
 
 
 @task()

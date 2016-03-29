@@ -1654,7 +1654,7 @@ class HostContactAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Lost contact with host %s" % self.alert_item
 
     def affected_targets(self, affect_target):
@@ -1689,7 +1689,7 @@ class HostOfflineAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Host is offline %s" % self.alert_item
 
     def end_event(self):
@@ -1715,7 +1715,7 @@ class HostRebootEvent(AlertStateBase):
     def type_name():
         return "Autodetection"
 
-    def message(self):
+    def alert_message(self):
         return "%s restarted at %s" % (self.alert_item, self.begin)
 
 
@@ -1728,7 +1728,7 @@ class UpdatesAvailableAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Updates are ready for server %s" % self.alert_item
 
 

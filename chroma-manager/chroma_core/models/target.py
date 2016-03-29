@@ -1401,7 +1401,7 @@ class TargetOfflineAlert(AlertStateBase):
     # therefore the filesystem is considered not fully available, therefore it's ERROR.
     default_severity = logging.ERROR
 
-    def message(self):
+    def alert_message(self):
         return "Target %s offline" % (self.alert_item)
 
     class Meta:
@@ -1424,7 +1424,7 @@ class TargetFailoverAlert(AlertStateBase):
     # performance may be degraded, therefore it's worse than INFO, but not as bad as ERROR.
     default_severity = logging.WARNING
 
-    def message(self):
+    def alert_message(self):
         return "Target %s running on secondary server" % self.alert_item
 
     class Meta:
@@ -1448,7 +1448,7 @@ class TargetRecoveryAlert(AlertStateBase):
     # Therefore it's WARNING.
     default_severity = logging.WARNING
 
-    def message(self):
+    def alert_message(self):
         return "Target %s in recovery" % self.alert_item
 
     class Meta:

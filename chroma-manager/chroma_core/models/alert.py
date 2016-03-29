@@ -59,6 +59,10 @@ class AlertStateBase(SparseModel):
             time when we last checked an offline target was still not offline)",
                                null=True)
 
+    _message = models.TextField(db_column='message',
+                                null=True,
+                                help_text='Message associated with the Alert. Created at Alert creation time')
+
     # Note: use True and None instead of True and False so that
     # unique-together constraint only applied to active alerts
     active = models.NullBooleanField()
@@ -82,7 +86,7 @@ class AlertStateBase(SparseModel):
     default_severity = logging.INFO
 
     # For historical compatibility anything called Alert will send and alert email and anything else won't.
-    # This can obviously be overridden by any particular event but gives us a like for behavour.
+    # This can obviously be overridden by any particular event but gives us a like for behaviour.
     @property
     def require_mail_alert(self):
         return "Alert\'>" in str(type(self))
@@ -121,8 +125,22 @@ class AlertStateBase(SparseModel):
     def end_event(self):
         return None
 
-    def message(self):
+    def alert_message(self):
         raise NotImplementedError()
+
+    def message(self):
+        # The first time this is call __message will be none, so we have to call alert_message to
+        # create the message and then save it. This will occur once for each message.
+        # In the future for new alerts we will try and create them when the Alert is created but
+        # at the time this patch is produced that is tricky.
+        # The purpose of this is to make it so that Alerts can continue to operate when the data required
+        # to create the message no longer exists.
+        # It's a small step for HYD-5736 and a move towards a more efficient model.
+        if self._message is None:
+            self._message = self.alert_message()
+            self.save()
+
+        return self._message
 
     def affected_targets(self, affect_target):
         pass

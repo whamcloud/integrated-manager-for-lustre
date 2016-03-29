@@ -40,7 +40,7 @@ class CommandRunningAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Command %s running" % self.alert_item.message
 
     @property
@@ -59,7 +59,7 @@ class CommandSuccessfulAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Command %s successful" % self.alert_item.message
 
     @property
@@ -78,7 +78,7 @@ class CommandCancelledAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Command %s cancelled" % self.alert_item.message
 
 
@@ -89,7 +89,7 @@ class CommandErroredAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Command %s failed" % self.alert_item.message
 
 

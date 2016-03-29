@@ -42,7 +42,7 @@ class LearnEvent(AlertStateBase):
     def type_name():
         return "Autodetection"
 
-    def message(self):
+    def alert_message(self):
         from chroma_core.models import ManagedTarget, ManagedFilesystem, ManagedTargetMount
         if isinstance(self.learned_item, ManagedTargetMount):
             return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
@@ -70,7 +70,7 @@ class AlertEvent(AlertStateBase):
     def type_name():
         return "Alert"
 
-    def message(self):
+    def alert_message(self):
         return self.message_str
 
 
@@ -85,7 +85,7 @@ class SyslogEvent(AlertStateBase):
     def type_name():
         return "Syslog"
 
-    def message(self):
+    def alert_message(self):
         return self.message_str
 
 
@@ -96,7 +96,7 @@ class ClientConnectEvent(AlertStateBase):
 
     variant_fields = [VariantDescriptor('message_str', str, None, None, 0)]
 
-    def message(self):
+    def alert_message(self):
         return self.message_str
 
     @staticmethod

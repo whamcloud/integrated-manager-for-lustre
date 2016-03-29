@@ -370,7 +370,7 @@ class StorageResourceOffline(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "%s not contactable" % self.alert_item.alias_or_name()
 
     def end_event(self):
@@ -393,7 +393,7 @@ class StorageResourceAlert(AlertStateBase):
     def __str__(self):
         return "<%s:%s %s>" % (self.alert_class, self.attribute, self.pk)
 
-    def message(self):
+    def alert_message(self):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
         return msg
@@ -437,7 +437,7 @@ class StorageResourceLearnEvent(AlertStateBase):
     def type_name():
         return "Storage resource detection"
 
-    def message(self):
+    def alert_message(self):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         class_name, instance_name = ResourceQuery().record_class_and_instance_string(self.storage_resource)
         return "Discovered %s '%s'" % (class_name, instance_name)

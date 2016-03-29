@@ -1071,7 +1071,17 @@ class ResourceManager(object):
     def _persist_alert(self, record_pk, active, severity, alert_class, attribute):
         assert isinstance(alert_class, str)
         record = StorageResourceRecord.objects.get(pk=record_pk)
-        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, severity=severity, alert_type="StorageResourceAlert_%s" % alert_class)
+        alert_state = StorageResourceAlert.notify(record,
+                                                  active,
+                                                  alert_class=alert_class,
+                                                  attribute=attribute,
+                                                  severity=severity,
+                                                  alert_type="StorageResourceAlert_%s" % alert_class)
+
+        # I we created an alert then cause the message to be persistently created because HYD-5736
+        if alert_state is not None:
+            alert_state.message()
+
         return alert_state
 
     @transaction.commit_on_success
@@ -1258,12 +1268,13 @@ class ResourceManager(object):
         StorageAlertPropagated.delayed.flush()
 
         for sra in victim_sras:
-            StorageResourceAlert.delayed.delete(int(sra['id']))
-        StorageResourceAlert.delayed.flush()
-
-        for sra in victim_sras:
-            AlertState.delayed.delete(int(sra['id']))
-        AlertState.delayed.flush()
+            storage_resource_alert = StorageResourceAlert.objects.get(id=sra['id'])
+            if storage_resource_alert.active:
+                StorageResourceAlert.notify(storage_resource_alert.alert_item,
+                                            False,
+                                            alert_class=storage_resource_alert.alert_class,
+                                            attribute=storage_resource_alert.attribute,
+                                            alert_type=storage_resource_alert.alert_type)
 
         with StorageResourceStatistic.delayed as srs_delayed:
             for srs in StorageResourceStatistic.objects.filter(storage_resource__in = ordered_for_deletion):
