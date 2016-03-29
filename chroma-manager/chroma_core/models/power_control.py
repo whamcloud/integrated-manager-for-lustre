@@ -152,7 +152,7 @@ class PowerControlDeviceUnavailableAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Unable to monitor power control device %s" % self.alert_item
 
     def end_event(self):
@@ -174,7 +174,7 @@ class IpmiBmcUnavailableAlert(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    def message(self):
+    def alert_message(self):
         return "Unable to monitor BMC %s on server %s" % (self.alert_item, self.alert_item.host)
 
     def end_event(self):

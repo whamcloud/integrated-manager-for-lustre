@@ -99,7 +99,7 @@ class LNetOfflineAlert(AlertStateBase):
     # fault, but equally could just indicate that the host hasn't booted up that far yet.
     default_severity = logging.INFO
 
-    def message(self):
+    def alert_message(self):
         return "LNet offline on server %s" % self.alert_item
 
     class Meta:
@@ -127,7 +127,7 @@ class LNetNidsChangedAlert(AlertStateBase):
     # be available if a failover server is not in this condition.
     default_severity = logging.WARNING
 
-    def message(self):
+    def alert_message(self):
         msg = "NIDs changed on server %s - see manual for details."
         return msg % self.alert_item
 
