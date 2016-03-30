@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,6 +25,7 @@ import threading
 import platform
 from collections import namedtuple
 from collections import MutableSequence
+import sys
 
 ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
 
@@ -136,7 +137,7 @@ def enum(*sequential, **named):
 PlatformInfo = namedtuple('PlatformInfo', ['system',
                                            'distro',
                                            'distro_version',
-                                           'distro_version_full',
+                                           'distro_version_full',  # note this returns a string e.g. '6.7.1455'
                                            'python_version_major_minor',
                                            'python_patchlevel',
                                            'kernel_version'])
@@ -149,7 +150,16 @@ For a Mac it pretends to be Centos 6.7.
 
 :return: PlatformInfo named tuple
 """
-if platform.system() == 'Linux':
+if 'nosetests' in sys.argv[0]:
+    # default platform_info attributes for agent unit tests (el6)
+    platform_info = PlatformInfo('Linux',
+                                 'CentOS',
+                                 6.7,
+                                 '6.7.1552',
+                                 2.6,
+                                 6,
+                                 '2.6.32-504.12.2.el6.x86_64')
+elif platform.system() == 'Linux':
     platform_info = PlatformInfo(platform.system(),
                                  platform.linux_distribution()[0],
                                  float('.'.join(platform.linux_distribution()[1].split('.')[:2])),
@@ -162,7 +172,7 @@ elif platform.system() == 'Darwin':
     platform_info = PlatformInfo('Linux',
                                  'CentOS',
                                  6.7,
-                                 6.7,
+                                 '6.7',
                                  float("%s.%s" % (platform.python_version_tuple()[0],
                                                   platform.python_version_tuple()[1])),
                                  int(platform.python_version_tuple()[2]),

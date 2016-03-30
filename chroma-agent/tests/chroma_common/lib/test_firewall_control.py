@@ -2,9 +2,11 @@ import tempfile
 import mock
 import abc
 
+from chroma_agent.chroma_common.lib import util
 from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureCommand
 
 
 class BaseTestFC:
@@ -23,8 +25,8 @@ class BaseTestFC:
         address = '192.168.1.100'
 
         # create example named tuple to compare with objects in rules list
-        example_port_rule = FirewallControl.firewall_rule(port, proto, desc, persist=True, address=None)
-        example_address_rule = FirewallControl.firewall_rule(0, proto, desc, persist=False, address=address)
+        example_port_rule = FirewallControl.FirewallRule(port, proto, desc, persist=True, address=None)
+        example_address_rule = FirewallControl.FirewallRule(0, proto, desc, persist=False, address=address)
 
         # base expected error strings
         assert_address_with_port_msg = 'ing a specific port on a source address is not ' \
@@ -39,14 +41,18 @@ class BaseTestFC:
         def setUp(self):
             super(BaseTestFC.BaseTestFirewallControl, self).setUp()
 
-            mock.patch('chroma_agent.chroma_common.lib.firewall_control.platform.system',
-                       return_value='Linux').start()
-            mock.patch('chroma_agent.chroma_common.lib.firewall_control.platform.linux_distribution',
-                       return_value=('CentOS', self.el_version, 'Final')).start()
+            mock.patch.object(util, 'platform_info', util.PlatformInfo('Linux',
+                                                                       'CentOS',
+                                                                       0.0,
+                                                                       self.el_version,
+                                                                       0.0,
+                                                                       0,
+                                                                       '')).start()
 
             self.test_firewall = FirewallControl.create()
 
-            #self.addCleanup(mock.patch.stopall())
+            # Guaranteed cleanup with unittest2
+            self.addCleanup(mock.patch.stopall)
 
         def test_open_address_incorrect_port(self):
             # test opening a given port on a specific address, AssertionError should be

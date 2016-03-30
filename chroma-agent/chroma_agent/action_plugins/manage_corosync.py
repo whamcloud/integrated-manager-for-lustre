@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -34,7 +34,6 @@ from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
-
 
 corosync_service = ServiceControl.create('corosync')
 firewall_control = FirewallControl.create()
