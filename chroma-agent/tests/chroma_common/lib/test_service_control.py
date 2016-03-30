@@ -1,7 +1,9 @@
 import mock
 
-from chroma_agent.chroma_common.lib.service_control import ServiceControl, ServiceControlEL7
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib import util
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureCommand
 
 
 class TestServiceStateEL6(CommandCaptureTestCase):
@@ -12,9 +14,13 @@ class TestServiceStateEL6(CommandCaptureTestCase):
     def setUp(self):
         super(TestServiceStateEL6, self).setUp()
 
-        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.system', return_value="Linux").start()
-        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.linux_distribution',
-                   return_value=('CentOS', '6.6', 'Final')).start()
+        mock.patch.object(util, 'platform_info', util.PlatformInfo('Linux',
+                                                                   'CentOS',
+                                                                   0.0,
+                                                                   '6.6',
+                                                                   0.0,
+                                                                   0,
+                                                                   '')).start()
 
         self.test_service = ServiceControl.create('test_service')
 
@@ -281,12 +287,15 @@ class TestServiceStateEL7(CommandCaptureTestCase):
     def setUp(self):
         super(TestServiceStateEL7, self).setUp()
 
-        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.system',
-                   return_value="Linux").start()
-        mock.patch('chroma_agent.chroma_common.lib.service_control.platform.linux_distribution',
-                   return_value=('CentOS', '7.2', 'Final')).start()
+        mock.patch.object(util, 'platform_info', util.PlatformInfo('Linux',
+                                                                   'CentOS',
+                                                                   0.0,
+                                                                   '7.2',
+                                                                   0.0,
+                                                                   0,
+                                                                   '')).start()
 
-        self.test = ServiceControlEL7('test_service')
+        self.test = ServiceControl.create('test_service')
 
     # Test the start method
     def test_service_start(self):

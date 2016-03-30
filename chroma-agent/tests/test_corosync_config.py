@@ -4,13 +4,14 @@ import sys
 import mock
 import tempfile
 
+from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureCommand
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
 from chroma_agent.action_plugins.manage_corosync2 import unconfigure_corosync2
 from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class FakeEtherInfo(object):

@@ -19,6 +19,8 @@ class CommandCaptureTestCase(unittest.TestCase):
     CommandNotFound = 123456
 
     def setUp(self):
+        super(CommandCaptureTestCase, self).setUp()
+
         self.reset_command_capture()
         self._missing_command_err_msg = 'Command attempted "%s" was unknown to CommandCaptureTestCase, did you intend this?'
 

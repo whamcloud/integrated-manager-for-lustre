@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -18,6 +18,8 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
+
 import time
 import platform
 import abc
@@ -206,8 +208,8 @@ class ServiceControlEL6(ServiceControl):
 
     @classmethod
     def _applicable(cls):
-        return (platform.system() == 'Linux') and \
-               (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
+        return util.platform_info.system == 'Linux' and \
+               cls.platform_use == util.platform_info.distro_version_full.split('.')[0]
 
     def enable(self):
         return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name]) or\
@@ -242,8 +244,8 @@ class ServiceControlEL7(ServiceControl):
 
     @classmethod
     def _applicable(cls):
-        return (platform.system() == 'Linux') and \
-               (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
+        return util.platform_info.system == 'Linux' and \
+               cls.platform_use == util.platform_info.distro_version_full.split('.')[0]
 
     def enable(self):
         return AgentShell.run_canned_error_message(['systemctl', 'enable', self.service_name])

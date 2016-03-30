@@ -38,7 +38,7 @@ class FirewallControl(object):
 
     platform_use = None
 
-    firewall_rule = namedtuple('firewall_rule', ('port', 'protocol', 'description', 'persist', 'address'))
+    FirewallRule = namedtuple('FirewallRule', ('port', 'protocol', 'description', 'persist', 'address'))
 
     # identifiers for results of firewall operations
     SuccessCode = util.enum('UPDATED', 'DUPLICATE', 'NOTRUNNING', 'NORULES')
@@ -54,8 +54,8 @@ class FirewallControl(object):
 
     @classmethod
     def _applicable(cls):
-        return cls.platform_use and (platform.system() == 'Linux') and \
-               (platform.linux_distribution()[1]).split('.')[0] == cls.platform_use
+        return cls.platform_use and (util.platform_info.system == 'Linux') and \
+               cls.platform_use == util.platform_info.distro_version_full.split('.')[0]
 
     @classmethod
     def create(cls, logger=None):
@@ -89,10 +89,10 @@ class FirewallControl(object):
 
             retval = self._add_port(port, proto)
 
-        if (retval == self.SuccessCode.UPDATED) and (self.firewall_rule(port, proto, desc, persist, address)
+        if (retval == self.SuccessCode.UPDATED) and (self.FirewallRule(port, proto, desc, persist, address)
                                                      not in self.rules):
             # only add to list if rule successfully added
-            self.rules.append(self.firewall_rule(port, proto, desc, persist, address))
+            self.rules.append(self.FirewallRule(port, proto, desc, persist, address))
 
         # if success return code received, return None on success, otherwise return error string
         return None if (retval in self.SuccessCode.reverse_mapping.keys()) else retval
@@ -122,7 +122,7 @@ class FirewallControl(object):
         if retval == self.SuccessCode.UPDATED:
             # only try to remove from list if rule successfully deleted
             try:
-                self.rules.remove(self.firewall_rule(port, proto, desc, persist, address))
+                self.rules.remove(self.FirewallRule(port, proto, desc, persist, address))
             except ValueError:
                 pass
 
