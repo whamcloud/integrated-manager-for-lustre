@@ -24,6 +24,8 @@ import os
 import shutil
 import tempfile
 
+from ...chroma_common.lib.util import PreserveFileAttributes
+
 
 class NTPConfig(object):
     """ Class to enable IML to automatically configure NTP """
@@ -125,11 +127,11 @@ class NTPConfig(object):
         Create and open temporary file and write new config content, rename to config
         destination file. Close any open files and file descriptors
         """
-        tmp_fd, tmp_name = tempfile.mkstemp(dir='/etc')
-        os.write(tmp_fd, ''.join(self.lines))
-        os.close(tmp_fd)
-        os.chmod(tmp_name, 0644)
-        shutil.move(tmp_name, self.config_path)
+        with PreserveFileAttributes(self.config_path):
+            tmp_fd, tmp_name = tempfile.mkstemp(dir='/etc')
+            os.write(tmp_fd, ''.join(self.lines))
+            os.close(tmp_fd)
+            shutil.move(tmp_name, self.config_path)
 
     def _get_prefix_index(self):
         """ Helper method to return first index of string starting with prefix in list """

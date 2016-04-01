@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+import os
 import time
 import threading
 import platform
@@ -179,3 +180,18 @@ elif platform.system() == 'Darwin':
                                  '2.6.32-504.12.2.el6.x86_64')
 else:
     raise RuntimeError('Unknown system type %s' % platform.system())
+
+
+class PreserveFileAttributes(object):
+
+    def __init__(self, target):
+        self.target = target
+
+    def __enter__(self):
+        self.orig_perm = os.stat(self.target).st_mode & 0777
+        self.orig_uid = os.stat(self.target).st_uid
+        self.orig_gid = os.stat(self.target).st_gid
+
+    def __exit__(self, exception_type, value, _traceback):
+        os.chmod(self.target, self.orig_perm)
+        os.chown(self.target, self.orig_uid, self.orig_gid)
