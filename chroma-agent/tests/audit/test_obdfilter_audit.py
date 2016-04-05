@@ -1,6 +1,6 @@
 import unittest
 import os
-from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MdsAudit, MgsAudit, ObdfilterAudit, LustreAudit
+from chroma_agent.device_plugins.audit.lustre import ObdfilterAudit
 
 from tests.test_utils import PatchedContextTestCase
 
@@ -48,12 +48,12 @@ class TestObdfilterAuditReadingJobStats(unittest.TestCase):
         #  This sample stats file output for next 2 tests
         self.audit._read_job_stats_yaml_file = lambda target_name: [{'job_id': 16,
                                                         'snapshot_time': 1416616379,
-                                                        'read': {'samples': 0,
+                                                        'read_bytes': {'samples': 0,
                                                                    'unit': 'bytes',
                                                                     'min': 0,
                                                                     'max': 0,
                                                                     'sum': 0},
-                                                         'write': {'samples': 1,
+                                                         'write_bytes': {'samples': 1,
                                                                      'unit': 'bytes',
                                                                      'min': 102400,
                                                                      'max': 102400,
@@ -73,12 +73,12 @@ class TestObdfilterAuditReadingJobStats(unittest.TestCase):
         #  Simulate new job stats proc file was updated with new snapshot_time for job 16
         self.audit._read_job_stats_yaml_file = lambda target_name: [{'job_id': 16,
                                                          'snapshot_time': 1416616599,
-                                                         'read': {'samples': 0,
+                                                         'read_bytes': {'samples': 0,
                                                                    'unit': 'bytes',
                                                                    'min': 0,
                                                                    'max': 0,
                                                                    'sum': 0},
-                                                         'write': {'samples': 1,
+                                                         'write_bytes': {'samples': 1,
                                                                     'unit': 'bytes',
                                                                     'min': 102400,
                                                                     'max': 102400,
@@ -97,12 +97,12 @@ class TestObdfilterAuditReadingJobStats(unittest.TestCase):
 
         self.audit._read_job_stats_yaml_file = lambda target_name: [{'job_id': 16,
                                                          'snapshot_time': 1416616379,
-                                                         'read': {'samples': 0,
+                                                         'read_bytes': {'samples': 0,
                                                                    'unit': 'bytes',
                                                                    'min': 0,
                                                                    'max': 0,
                                                                    'sum': 0},
-                                                         'write': {'samples': 1,
+                                                         'write_bytes': {'samples': 1,
                                                                     'unit': 'bytes',
                                                                     'min': 102400,
                                                                     'max': 102400,
@@ -116,12 +116,12 @@ class TestObdfilterAuditReadingJobStats(unittest.TestCase):
         #  This situation can happen in Lustre does an autoclear between these to samples, and 16 has nothing to report.
         self.audit._read_job_stats_yaml_file = lambda target_name: [{'job_id': 17,
                                                          'snapshot_time': 1416616399,
-                                                         'read': {'samples': 0,
+                                                         'read_bytes': {'samples': 0,
                                                                    'unit': 'bytes',
                                                                    'min': 0,
                                                                    'max': 0,
                                                                    'sum': 0},
-                                                         'write': {'samples': 1,
+                                                         'write_bytes': {'samples': 1,
                                                                     'unit': 'bytes',
                                                                     'min': 102400,
                                                                     'max': 102400,

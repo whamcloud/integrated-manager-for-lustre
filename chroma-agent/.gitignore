@@ -2,3 +2,4 @@ MANIFEST
 chroma-agent.spec
 setup.py
 dist/
+.dev_config_store/

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -516,7 +516,7 @@ class ObdfilterAudit(TargetAudit):
         """Try to read and return the contents of /proc/fs/lustre/obdfilter/<target>/job_stats
 
         Attempt to read the proc file, parse, and find up to the top few jobs in the report
-        ranked by "write sum" + "read.sum"
+        ranked by "write.sum" + "read.sum"
 
         Only return newly found job stats as determined by snapshot time provided by Lustre in the job_stats proc file.
         In an active system, this ought to give meaning results, while in a quiet system, the top X stats may
@@ -538,6 +538,10 @@ class ObdfilterAudit(TargetAudit):
 
         stats_to_return = []
         for stat in stats:
+            # Convert to a format expected in other parts of the application.
+            stat['read'] = stat.pop('read_bytes')
+            stat['write'] = stat.pop('write_bytes')
+
             #  Record that we know about this stat
             latest_job_stat_snapshot_times[stat['job_id']] = stat['snapshot_time']
 
