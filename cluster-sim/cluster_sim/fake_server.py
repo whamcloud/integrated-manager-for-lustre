@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -661,12 +661,13 @@ class FakeServer(utils.Persisted):
 
     def configure_corosync(self,
                            ring0_name,
-                           mcast_port,
+                           old_mcast_port,
+                           new_mcast_port,
                            ring1_name=None,
                            ring0_ipaddr=None, ring0_prefix=None,
                            ring1_ipaddr=None, ring1_prefix=None):
         with self._lock:
-            self.state['corosync'].mcast_port = mcast_port
+            self.state['corosync'].mcast_port = new_mcast_port
             self.save()
             return agent_result_ok
 
@@ -676,6 +677,12 @@ class FakeServer(utils.Persisted):
     def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, mcast_port, create_cluster):
         with self._lock:
             self.state['corosync'].mcast_port = mcast_port
+            self.save()
+            return agent_result_ok
+
+    def change_mcast_port(self, old_mcast_port, new_mcast_port):
+        with self._lock:
+            self.state['corosync'].mcast_port = new_mcast_port
             self.save()
             return agent_result_ok
 

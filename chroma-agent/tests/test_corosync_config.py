@@ -136,12 +136,13 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         ring1_name = 'eth1'
         ring1_ipaddr = '10.42.42.42'
         ring1_netmask = '255.255.255.0'
-        mcast_port = '4242'
+        old_mcast_port = None
+        new_mcast_port = '4242'
 
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(('/sbin/ip', 'link', 'set', 'dev', ring1_name, 'up')),
                           CommandCaptureCommand(('/sbin/ip', 'addr', 'add', '%s/%s' % (ring1_ipaddr, ring1_netmask), 'dev', ring1_name)),
-                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
+                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % new_mcast_port)),
                           CommandCaptureCommand(('service', 'iptables', 'status'), rc=2))
 
         # now a two-step process! first network...
@@ -152,12 +153,11 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         self.unmanage_network.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af')
 
         # ...then corosync
-        configure_corosync(ring0_name, ring1_name, mcast_port)
+        configure_corosync(ring0_name, ring1_name, old_mcast_port, new_mcast_port)
 
         test_config = self._render_test_config()
         self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
 
-        # FIXME: doesn't test the last two firewall commands
         self.assertRanAllCommandsInOrder()
 
     def test_manual_ring1_config_corosync2(self):

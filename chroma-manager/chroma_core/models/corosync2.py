@@ -279,7 +279,7 @@ class StopCorosync2Job(corosync_common.StopCorosyncJob):
         return [(StopCorosyncStep, {'host': self.corosync_configuration.host})]
 
 
-class ConfigureCorosyncStep(Step):
+class ChangeMcastPortStep(Step):
     idempotent = True
     database = True
 
@@ -287,16 +287,13 @@ class ConfigureCorosyncStep(Step):
         corosync_configuration = kwargs['corosync_configuration']
 
         self.invoke_agent_expect_result(corosync_configuration.host,
-                                        "configure_corosync2",
-                                        {'peer_fqdns': kwargs['peer_fqdns'],
-                                         'ring0_name': kwargs['ring0_name'],
-                                         'ring1_name': kwargs['ring1_name'],
-                                         'mcast_port': kwargs['mcast_port']})
+                                        "change_mcast_port",
+                                        {'old_mcast_port': kwargs['old_mcast_port'],
+                                         'new_mcast_port': kwargs['new_mcast_port']})
 
         job_scheduler_notify.notify(corosync_configuration,
                                     now(),
-                                    {'mcast_port': kwargs['mcast_port'],
-                                     'network_interfaces': [kwargs['ring0_name'], kwargs['ring1_name']]})
+                                    {'mcast_port': kwargs['new_mcast_port']})
 
 
 class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
@@ -307,11 +304,8 @@ class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
         ordering = ['id']
 
     def get_steps(self):
-        steps = [(ConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration,
-                                          'peer_fqdns': AutoConfigureCorosyncStep._corosync_peers(self.corosync_configuration.host.fqdn,
-                                                                                                  self.corosync_configuration.mcast_port),
-                                          'ring0_name': self.network_interface_0.name,
-                                          'ring1_name': self.network_interface_1.name,
-                                          'mcast_port': self.mcast_port})]
+        steps = [(ChangeMcastPortStep, {'corosync_configuration': self.corosync_configuration,
+                                        'old_mcast_port': self.corosync_configuration.mcast_port,
+                                        'new_mcast_port': self.mcast_port})]
 
         return steps
