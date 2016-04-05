@@ -7,6 +7,7 @@ import datetime
 import paramiko
 import re
 import os
+import json
 
 from testconfig import config
 
@@ -35,6 +36,16 @@ class RemoteOperations(object):
                 return server
 
         raise RuntimeError('Unable to resolve %s as a server fqdn' % address)
+
+    def distro_version(self, host):
+        """
+        :return: floating point x.y version of distro running. Works for hosts from the api and for the
+                 'lustre_servers' type entries in config
+        """
+        if 'distro' in host:
+            return float(re.match('.*([0-9].[0-9])', host['distro']).group(1))
+        else:
+            return float(json.loads(host['properties'])['distro_version'])
 
 
 class SimulatorRemoteOperations(RemoteOperations):
@@ -538,9 +549,10 @@ class RealRemoteOperations(RemoteOperations):
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
+        hostname = host['fdqn'] if self.distro_version(host) >= 7 else host['nodename']
         result = self._ssh_address(
             host['address'],
-            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, host['nodename'])
+            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname)
         )
         self._test_case.assertRegexpMatches(
             result.stdout,
