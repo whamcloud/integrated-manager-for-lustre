@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -171,9 +171,9 @@ class PacemakerConfig(object):
 
     @property
     def root(self):
-        rc, raw, stderr = cibadmin(["--query"])
+        result = cibadmin(["--query"])
         try:
-            return xml.fromstring(raw)
+            return xml.fromstring(result.stdout)
         except ParseError:
             raise PacemakerConfigurationError()
 
@@ -269,8 +269,8 @@ class PacemakerConfig(object):
         return result
 
 
-def cibadmin(command_args, timeout = 120):
-    rc = 10
+def cibadmin(command_args, timeout=120):
+    assert timeout > 0, 'timeout must be greater than zero'
 
     # I think these are "errno" values, but I'm not positive
     # but going forward, any additions to this should try to be informative
@@ -286,25 +286,26 @@ def cibadmin(command_args, timeout = 120):
     # NB: This isn't a "true" timeout, in that it won't forcibly stop the
     # subprocess after a timeout. We'd need more invasive changes to
     # shell._run() for that.
-    for index in wait(timeout):
-        rc, stdout, stderr = AgentShell.run(command_args)
-        if rc == 0:
-            return rc, stdout, stderr
-        elif rc not in RETRY_CODES:
+    for _ in wait(timeout):
+        result = AgentShell.run_new(command_args)
+
+        if result.rc == 0:
+            return result
+        elif result.rc not in RETRY_CODES:
             break
 
     # Add some harmless diagnostics which will be visible in the logs.
     AgentShell.run(['service', 'corosync', 'status'])
     AgentShell.run(['service', 'pacemaker', 'status'])
 
-    if rc in RETRY_CODES:
+    if result.rc in RETRY_CODES:
         raise PacemakerError("%s timed out after %d seconds: rc: %s, stderr: %s"
-                             % (" ".join(command_args), timeout, rc, stderr))
+                             % (" ".join(command_args), timeout, result.rc, result.stderr))
     else:
-        raise AgentShell.CommandExecutionError(rc, command_args, stdout, stderr)
+        raise AgentShell.CommandExecutionError(result, command_args)
 
 
 def pacemaker_running():
-    rc, stdout, stderr = AgentShell.run(['service', 'pacemaker', 'status'])
+    result = AgentShell.run_new(['service', 'pacemaker', 'status'])
 
-    return rc == 0
+    return result.rc == 0

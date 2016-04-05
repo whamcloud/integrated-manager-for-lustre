@@ -304,19 +304,14 @@ def unconfigure_target_ha(primary, ha_label, uuid):
             return agent_error("cannot unconfigure-ha: %s is still running " % ha_label)
 
         if primary:
-            rc, stdout, stderr = cibadmin(["-D", "-X",
-                                           "<rsc_location id=\"%s-primary\">" %
-                                           ha_label])
-            rc, stdout, stderr = cibadmin(["-D", "-X", "<primitive id=\"%s\">" %
-                                           ha_label])
+            result = cibadmin(["-D", "-X", "<rsc_location id=\"%s-primary\">" % ha_label])
+            result = cibadmin(["-D", "-X", "<primitive id=\"%s\">" % ha_label])
 
-            if rc != 0 and rc != 234:
-                return agent_error("Error %s trying to cleanup resource %s" % (rc, ha_label))
+            if result.rc != 0 and result.rc != 234:
+                return agent_error("Error %s trying to cleanup resource %s" % (result.rc, ha_label))
 
         else:
-            rc, stdout, stderr = cibadmin(["-D", "-X",
-                                           "<rsc_location id=\"%s-secondary\">" %
-                                           ha_label])
+            result = cibadmin(["-D", "-X", "<rsc_location id=\"%s-secondary\">" % ha_label])
 
         return agent_result_ok
 
@@ -394,12 +389,11 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     else:
         node = os.uname()[1]
 
-    rc, stdout, stderr = cibadmin(["-o", "constraints", "-C", "-X",
-                                   "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" %
-                                   (ha_label, preference, node,
-                                    ha_label, score)])
+    result = cibadmin(["-o", "constraints", "-C", "-X",
+                       "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" %
+                       (ha_label, preference, node, ha_label, score)])
 
-    if rc == 76:
+    if result.rc == 76:
         return agent_error("A constraint with the name %s-%s already exists" % (ha_label, preference))
 
     _mkdir_p_concurrent(mount_point)
