@@ -90,6 +90,29 @@ class BaseResourceAttribute(object):
     def decode(self, value):
         return value
 
+    def encrypt(self, value):
+        """The encryption function will be called by the manager server when processing user input (e.g.
+        when a resource is added in the UI).  The obfuscated text will be seen by
+        the plugin when the resource is retrieved.
+
+        :param value: value to encrypt
+        :return: encrypted value
+
+        """
+
+        return value
+
     def to_markup(self, value):
         from django.utils.html import conditional_escape
         return conditional_escape(value)
+
+    def cast(self, value):
+        """Cast a value to the correct type for the ResourceAttribute.
+
+        Will throw an exception if the value cannot be cast. (in child classes)
+
+        An example of usage is that when values come from the rest interface they may not be of the correct type.
+        :param value: Value to be cast.
+        """
+
+        return value

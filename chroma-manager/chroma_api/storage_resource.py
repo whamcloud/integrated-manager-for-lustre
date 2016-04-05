@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -303,12 +303,12 @@ class StorageResourceResource(MetricResource, ModelResource):
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(bundle.data['plugin_name'], bundle.data['class_name'])
         attrs = {}
         input_attrs = bundle.data['attrs']
-        for name, properties in resource_class.get_all_attribute_properties():
-            if isinstance(properties, attributes.Password) and name in input_attrs:
-                attrs[name] = properties.encrypt(input_attrs[name])
-            elif name in input_attrs:
-                attrs[name] = input_attrs[name]
-            elif not properties.optional:
+        for name, property in resource_class.get_all_attribute_properties():
+            if name in input_attrs:
+                attrs[name] = property.encrypt(property.cast(input_attrs[name]))
+            elif property.default:
+                attrs[name] = property.default
+            elif not property.optional:
                 # TODO: proper validation
                 raise RuntimeError("%s not optional" % name)
 
@@ -335,12 +335,9 @@ class StorageResourceResource(MetricResource, ModelResource):
         input_attrs = bundle.data
         attrs = {}
         resource_class = record.resource_class.get_class()
-        for name, properties in resource_class.get_all_attribute_properties():
+        for name, property in resource_class.get_all_attribute_properties():
             if name in bundle.data:
-                if isinstance(properties, attributes.Password):
-                    attrs[name] = properties.encrypt(input_attrs[name])
-                else:
-                    attrs[name] = input_attrs[name]
+                attrs[name] = property.encrypt(property.cast(input_attrs[name]))
 
         if len(attrs):
             # NB this operation is done inside the storage daemon, because it is

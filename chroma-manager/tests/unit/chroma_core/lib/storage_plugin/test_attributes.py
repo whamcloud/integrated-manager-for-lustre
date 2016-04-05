@@ -23,11 +23,15 @@ class TestAttributes(IMLUnitTestCase):
         with self.assertRaisesRegexp(ValueError, "Value '%s' too long" % toolong):
             str.validate(toolong)
 
+        self.assertEqual(str.cast('string'), 'string')
+
     def test_integer_nolimits(self):
         i = attributes.Integer()
         i.validate(-1000)
         i.validate(1024 * 1024 * 1024)
         i.validate(0)
+
+        self.assertEqual(i.cast('1'), 1)
 
     def test_integer_limits(self):
         i = attributes.Integer(min_val = 10, max_val = 20)
@@ -37,10 +41,14 @@ class TestAttributes(IMLUnitTestCase):
         with self.assertRaisesRegexp(ValueError, "Value 22 too high"):
             i.validate(22)
 
+        self.assertEqual(i.cast('1'), 1)
+
     def test_bytes(self):
         b = attributes.Bytes()
         self.assertEqual(b.to_markup(1024), "1.0KB")
         # NB no more thorough checks here because it's just a call through to sizeof_fmt
+
+        self.assertEqual(b.cast('1'), 1)
 
     def test_enum(self):
         e = attributes.Enum('alpha', 'bravo')
@@ -56,6 +64,8 @@ class TestAttributes(IMLUnitTestCase):
         with self.assertRaises(ValueError):
             e = attributes.Enum()
 
+        self.assertEqual(e.cast('enum'), 'enum')
+
     def test_uuid(self):
         u = attributes.Uuid()
         u.validate('BACBE363-A1D4-4C1A-9A08-5B47DE17AB73')
@@ -63,13 +73,17 @@ class TestAttributes(IMLUnitTestCase):
         with self.assertRaises(ValueError):
             u.validate('deadbeef')
 
+        self.assertEqual(u.cast('BACBE363A1D44C1A9A085B47DE17AB73'), 'BACBE363A1D44C1A9A085B47DE17AB73')
+
     def test_hostname(self):
-        attr = attributes.Hostname()
+        hostname = attributes.Hostname()
         for value in ('intel.com', '127.0.0.1', 'my-laptop'):
-            attr.validate(value)
+            hostname.validate(value)
         for value in ('intel.-com', 'my_laptop', 'x.' * 128, 'x' * 64):
             with self.assertRaises(ValueError):
-                attr.validate(value)
+                hostname.validate(value)
+
+        self.assertEqual(hostname.cast('host.intel.com'), 'host.intel.com')
 
 
 class TestReferenceAttribute(IMLUnitTestCase):

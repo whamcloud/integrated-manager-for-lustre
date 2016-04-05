@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -37,11 +37,13 @@ class String(BaseResourceAttribute):
     """A unicode string.  A maximum length may optionally be specified in the
     constructor using the ``max_length`` keyword argument"""
     def __init__(self, max_length = None, *args, **kwargs):
+        assert (type(max_length) is int) or (max_length is None), "max_length is not an integer or None: %s" % max_length
+
         self.max_length = max_length
         super(String, self).__init__(*args, **kwargs)
 
     def validate(self, value):
-        if self.max_length != None and len(value) > self.max_length:
+        if (self.max_length is not None) and (len(value) > self.max_length):
             raise ValueError("Value '%s' too long (max %s)" % (value, self.max_length))
 
 
@@ -58,6 +60,8 @@ class Password(String):
 
         Password(encrypt_fn)"""
     def __init__(self, encrypt_fn, *args, **kwargs):
+        assert hasattr(encrypt_fn, '__call__'), "encrypt_fn must be callable: %s" % encrypt_fn
+
         self.encrypt_fn = encrypt_fn
         super(Password, self).__init__(*args, **kwargs)
 
@@ -68,29 +72,36 @@ class Password(String):
 class Boolean(BaseResourceAttribute):
     """A True/False value.  Any truthy value may be assigned to this, but it will be
     stored as True or False."""
-    pass
+
+    def cast(self, value):
+        return bool(value)
 
 
 class Integer(BaseResourceAttribute):
     """An integer.  This may optionally be bounded by setting the inclusive
     ``min_val`` and/or ``max_val`` keyword arguments to the constructor."""
     def __init__(self, min_val = None, max_val = None, *args, **kwargs):
-        self.min_val = min_val
-        self.max_val = max_val
+        self.min_val = self.cast(min_val)
+        self.max_val = self.cast(max_val)
         super(Integer, self).__init__(*args, **kwargs)
 
     def validate(self, value):
-        if self.min_val != None and value < self.min_val:
+        value = self.cast(value)
+
+        if (self.min_val is not None) and (value < self.min_val):
             raise ValueError("Value %s too low (min %s)" % (value, self.min_val))
-        if self.max_val != None and value > self.max_val:
+        if (self.max_val is not None) and (value > self.max_val):
             raise ValueError("Value %s too high (max %s)" % (value, self.max_val))
+
+    def cast(self, value):
+        return None if value is None else int(value)
 
 
 # TODO: This is useful if the caller can give you an exact number of bytes
 # , but where the caller has a "10GB" or somesuch, that's rounded
 # and we should have an explicitly inexact Bytes class which would take
 # a string and parse it to a rounded number of bytes.
-class Bytes(BaseResourceAttribute):
+class Bytes(Integer):
     """An exact size in bytes.  This will be formatted with appropriate units
     and rounding when presented to the user, and should be used in preference to
     storing values in kilobytes/megabytes, etc., wherever possible."""
@@ -175,7 +186,7 @@ class ResourceReference(BaseResourceAttribute):
 
     def to_markup(self, value):
         from chroma_core.models import StorageResourceRecord
-        if value == None:
+        if value is None:
             return ""
 
         record = StorageResourceRecord.objects.get(pk = value._handle)
@@ -191,9 +202,9 @@ class ResourceReference(BaseResourceAttribute):
         return mark_safe("%s" % name)
 
     def validate(self, value):
-        if value == None and self.optional:
+        if value is None and self.optional:
             return
-        elif value == None and not self.optional:
+        elif (value is None) and (not self.optional):
             raise ValueError("ResourceReference set to None but not optional")
         elif not isinstance(value, BaseStorageResource):
             raise ValueError("Cannot take ResourceReference to %s" % value)
