@@ -91,7 +91,6 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
     config_params = {
         'token': '5000',
         'fail_recv_const': '10',
-        'name': 'imltest',
         'transport': 'udp',
         'rrpmode': 'passive',
         'addr0': interfaces[0].corosync_iface.bindnetaddr,
@@ -149,6 +148,20 @@ def _nodes_in_cluster():
     return nodes
 
 
+def change_mcast_port(old_mcast_port, new_mcast_port):
+    """
+    Update corosync configuration with a new mcast_port on this managed server (not all the nodes in the cluster)
+    Corosync will read the updated value in the configuration file, which it is polling for updates.
+
+    Return: Value using simple return protocol
+    """
+    file_edit_args = ['sed', '-i.bak', 's/mcastport:.*/mcastport: %s/g' % new_mcast_port, '/etc/corosync/corosync.conf']
+
+    return agent_ok_or_error(firewall_control.remove_rule(old_mcast_port, "udp", "corosync", persist=True) or
+                             firewall_control.add_rule(new_mcast_port, "udp", "corosync", persist=True) or
+                             AgentShell.run_canned_error_message(file_edit_args))
+
+
 def unconfigure_corosync2(host_fqdn, mcast_port):
     """
     Unconfigure the corosync application.
@@ -189,4 +202,4 @@ def unconfigure_corosync2(host_fqdn, mcast_port):
 
 ACTIONS = [start_corosync2, stop_corosync2,
            configure_corosync2_stage_1, configure_corosync2_stage_2,
-           unconfigure_corosync2]
+           change_mcast_port, unconfigure_corosync2]

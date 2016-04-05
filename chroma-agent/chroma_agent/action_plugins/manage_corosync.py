@@ -62,35 +62,43 @@ def enable_corosync():
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
 
 
-def configure_corosync(ring0_name, ring1_name, mcast_port):
+def configure_corosync(ring0_name, ring1_name, old_mcast_port, new_mcast_port):
     """
     Process configuration including negotiated multicast port, no IP address information required
+
     :param ring0_name:
     :param ring1_name:
-    :param mcast_port:
-    :return:
+    :param old_mcast_port: None if we are configuring corosync for the first-time, present if changing mcast port
+    :param new_mcast_port: desired corosync multicast port as configured by user
+    :return: Value using simple return protocol
     """
 
-    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name, ringnumber=0, mcastport=mcast_port), None, None),
-                  InterfaceInfo(CorosyncRingInterface(name=ring1_name, ringnumber=1, mcastport=mcast_port), None, None)]
+    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name, ringnumber=0, mcastport=new_mcast_port),
+                                None,
+                                None),
+                  InterfaceInfo(CorosyncRingInterface(name=ring1_name, ringnumber=1, mcastport=new_mcast_port),
+                                None,
+                                None)]
 
     config = render_config([interface.corosync_iface for interface in interfaces])
 
     write_config_to_file("/etc/corosync/corosync.conf", config)
 
-    error = firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True)
+    if old_mcast_port is not None:
+        error = firewall_control.remove_rule(old_mcast_port, "udp", "corosync", persist=True)
 
-    if error:
-        return agent_error(error)
+        if error:
+            return agent_error(error)
 
-    return agent_ok_or_error(corosync_service.enable())
+    return agent_ok_or_error(firewall_control.add_rule(new_mcast_port, "udp", "corosync", persist=True) or
+                             corosync_service.enable())
 
 
 def unconfigure_corosync():
     """
-      Unconfigure the corosync application.
+    Unconfigure the corosync application.
 
-      Return: Value using simple return protocol
+    :return: Value using simple return protocol
     """
     corosync_service.stop()
     corosync_service.disable()

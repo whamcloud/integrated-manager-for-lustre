@@ -163,7 +163,8 @@ class AutoConfigureCorosyncStep(Step):
                                         "configure_corosync",
                                         {'ring0_name': ring0_name,
                                          'ring1_name': ring1_name,
-                                         'mcast_port': config['mcast_port']})
+                                         'old_mcast_port': corosync_configuration.mcast_port,
+                                         'new_mcast_port': config['mcast_port']})
 
         job_scheduler_notify.notify(corosync_configuration,
                                     now(),
@@ -251,11 +252,12 @@ class ConfigureCorosyncStep(Step):
                                         "configure_corosync",
                                         {'ring0_name': kwargs['ring0_name'],
                                          'ring1_name': kwargs['ring1_name'],
-                                         'mcast_port': kwargs['mcast_port']})
+                                         'old_mcast_port': kwargs['old_mcast_port'],
+                                         'new_mcast_port': kwargs['new_mcast_port']})
 
         job_scheduler_notify.notify(corosync_configuration,
                                     now(),
-                                    {'mcast_port': kwargs['mcast_port'],
+                                    {'mcast_port': kwargs['new_mcast_port'],
                                      'network_interfaces': [kwargs['ring0_name'], kwargs['ring1_name']]})
 
 
@@ -270,6 +272,7 @@ class ConfigureCorosyncJob(corosync_common.ConfigureCorosyncJob):
         steps = [(ConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration,
                                           'ring0_name': self.network_interface_0.name,
                                           'ring1_name': self.network_interface_1.name,
-                                          'mcast_port': self.mcast_port})]
+                                          'old_mcast_port': self.corosync_configuration.mcast_port,
+                                          'new_mcast_port': self.mcast_port})]
 
         return steps
