@@ -4,7 +4,6 @@ import os
 import shutil
 from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
-from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 from tests.test_utils import PatchedContextTestCase
 from tests.command_capture_testcase import CommandCaptureTestCase
@@ -378,7 +377,7 @@ class TestObdfilterMetrics(PatchedContextTestCase):
 
 class TestJobStats(PatchedContextTestCase):
     def setUp(self):
-        self.test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.3/oss'))
+        self.test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.7/oss'))
         super(TestJobStats, self).setUp()
         audit = ObdfilterAudit()
         self.metrics = audit.metrics()['raw']['lustre']
