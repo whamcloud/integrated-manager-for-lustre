@@ -494,8 +494,7 @@ class RealRemoteOperations(RemoteOperations):
         )
         self._test_case.assertRegexpMatches(
             result.stdout,
-            "%s on /mnt/%s " % (filesystem['mount_path'], filesystem['name'])
-        )
+            " on /mnt/%s " % filesystem['name'])
 
     def _unmount_filesystem(self, client, filesystem_name):
         """
