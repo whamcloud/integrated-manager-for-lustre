@@ -545,39 +545,38 @@ class RealRemoteOperations(RemoteOperations):
     def check_ha_config(self, hosts, filesystem_name):
         import xml.etree.ElementTree as xml
 
-        def host_has_location(items, host):
+        def host_has_location(items, test_host):
             for p in items:
-                if p.attrib['node'] == host:
+                # Pacemaker shifted from nodename to fqdn after el6.
+                if socket.getfqdn(p.attrib['node']) == test_host['fqdn']:
                     return True
+
             return False
 
-        def has_primitive(items, filesystem_name):
+        def has_primitive(items, fs_name):
             for p in items:
                 if p.attrib['class'] == "ocf" and \
                    p.attrib['provider'] == "chroma" and \
                    p.attrib['type'] == "Target" and \
-                   p.attrib['id'].startswith("%s-" % filesystem_name):
+                   p.attrib['id'].startswith("%s-" % fs_name):
                     return True
             return False
 
         for host in hosts:
-            result = self._ssh_address(
-                host['address'],
-                'cibadmin --query'
-            )
+            result = self._ssh_address(host['address'],
+                                       'cibadmin --query')
+
             configuration = xml.fromstring(result.stdout)
 
-            self._test_case.assertTrue(
-                host_has_location(
-                    configuration.findall(
-                        './configuration/constraints/rsc_location'),
-                    host['nodename']), configuration)
+            rsc_locations = configuration.findall('./configuration/constraints/rsc_location')
+            self._test_case.assertTrue(host_has_location(rsc_locations,
+                                                         host),
+                                       configuration)
 
-            self._test_case.assertTrue(
-                has_primitive(
-                    configuration.findall(
-                        './configuration/resources/primitive'),
-                    filesystem_name), configuration)
+            primatives = configuration.findall('./configuration/resources/primitive')
+            self._test_case.assertTrue(has_primitive(primatives,
+                                                     filesystem_name),
+                                       configuration)
 
     def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
         """
