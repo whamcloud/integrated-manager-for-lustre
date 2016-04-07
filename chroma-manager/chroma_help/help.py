@@ -103,6 +103,7 @@ help_text = {
     'openssl': 'Indicates if OpenSSL is working as expected.',
     'rewrite_target_configuration-dialog': 'Select all servers for which the NIDs were re-read by clicking the <strong>Rescan NIDs</strong> button.  Then click <b>Run</b> to rewrite the Lustre target configuration for targets associated with the selected servers.',
     'rewrite_target_configuration-tooltip': 'Update each target with the current NID for the server with which it is associated.',
+    'remove_target_XXXX_from_filesystem': 'Remove target %s from the filesystem\n*** WARNING *** this is destructive to your filesystem and irreversible',
     'install_updates_dialog': 'Installs updated software on the selected servers. </br> Select the servers to include in this update operation. Then, click Run to install the updated packages on those servers. <b>Any server that belongs to an active file system is not selectable.</b>',
     'install_updates_configuration-tooltip': 'Install updated software on the selected servers.',
     'server_waiting_title': 'Add Server - Loading',
