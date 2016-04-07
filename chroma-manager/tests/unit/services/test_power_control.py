@@ -15,6 +15,8 @@ class PowerControlTestCase(IMLUnitTestCase):
 
         PowerControlManager.check_device_availability = mock.Mock()
 
+        self.threads_at_start = set(threading.enumerate())
+
         self.power_manager = PowerControlManager()
         monitor_daemon = PowerMonitorDaemon(self.power_manager)
 
@@ -38,8 +40,9 @@ class PowerControlTestCase(IMLUnitTestCase):
         self.md_thread.join()
         super(PowerControlTestCase, self).tearDown()
 
-        stray_threads = [name for name in self.thread_class_names if name != "_MainThread"]
-        assert len(stray_threads) == 0, "Stray threads after test: %s" % stray_threads
+        hanging_threads = self.threads_at_start - set(threading.enumerate())
+
+        assert len(hanging_threads) == 0, "Stray threads after test: %s" % hanging_threads
 
     @property
     def thread_class_names(self):
