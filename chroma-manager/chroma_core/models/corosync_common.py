@@ -197,6 +197,17 @@ class UnconfigureCorosyncJob(StateChangeJob):
     def description(self):
         return "Unconfigure Corosync on %s" % self.corosync_configuration.host
 
+    @classmethod
+    def can_run(cls, instance):
+        """We don't want people to unconfigure corosync on a node that has a ManagedTargetMount so make the command
+        available only when that is not the case.
+        :param instance: CorosyncConfiguration instance being queried
+        :return: True if no ManagedTargetMounts exist on the host in question.
+        """
+        from chroma_core.models import ManagedTargetMount
+
+        return len(ManagedTargetMount.objects.filter(host=instance.host)) == 0
+
 
 class StartCorosyncJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(None, None, None)

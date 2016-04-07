@@ -260,11 +260,16 @@ class ManagedTarget(StatefulObject):
             target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
             for tm in target_mounts:
                 host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
+                fix_state = 'forgotten' if self.immutable_state else 'removed'
+
                 lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
-                if self.immutable_state:
-                    deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states = ['unconfigured'], fix_state = 'forgotten'))
-                else:
-                    deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states = ['unconfigured'], fix_state = 'removed'))
+                deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
+
+                try:
+                    pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
+                    deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'], fix_state=fix_state))
+                except PacemakerConfiguration.DoesNotExist:
+                    pass
 
         return DependAll(deps)
 
@@ -578,7 +583,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         ordering = ['id']
 
     def description(self):
-        return "Remove target %s from configuration" % (self.target)
+        return help_text['remove_target_XXXX_from_filesystem'] % self.target
 
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
@@ -621,7 +626,7 @@ class RemoveTargetJob(StateChangeJob):
                                                     ManagedMgs: help_text["remove_mgt"]})
 
     def description(self):
-        return "Remove target %s from configuration" % (self.target)
+        return help_text['remove_target_XXXX_from_filesystem'] % self.target
 
     def get_confirmation_string(self):
         if self.target.state == 'registered':

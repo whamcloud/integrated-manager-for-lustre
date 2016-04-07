@@ -208,8 +208,8 @@ def create_synthetic_device_info(host, mock_server, plugin):
     return {plugin: result}
 
 
-def _create_simple_synthetic_object(class_, host):
-    synthetic_object = class_(host=host)
+def _create_simple_synthetic_object(class_, **kwargs):
+    synthetic_object = class_(**kwargs)
     synthetic_object.save()
     ObjectCache.add(class_, synthetic_object)
 
@@ -218,22 +218,22 @@ def _create_simple_synthetic_object(class_, host):
 
 def synthetic_rsyslog_configuration(host):
     assert host.rsyslog_configuration == None
-    return _create_simple_synthetic_object(RSyslogConfiguration, host)
+    return _create_simple_synthetic_object(RSyslogConfiguration, host=host)
 
 
 def synthetic_ntp_configuration(host):
     assert host.ntp_configuration == None
-    return _create_simple_synthetic_object(NTPConfiguration, host)
+    return _create_simple_synthetic_object(NTPConfiguration, host=host)
 
 
 def synthetic_corosync_configuration(host):
     assert host.corosync_configuration == None
-    return _create_simple_synthetic_object(CorosyncConfiguration, host)
+    return _create_simple_synthetic_object(CorosyncConfiguration, host=host)
 
 
 def synthetic_pacemaker_configuration(host):
     assert host.pacemaker_configuration == None
-    return _create_simple_synthetic_object(PacemakerConfiguration, host)
+    return _create_simple_synthetic_object(PacemakerConfiguration, host=host, state='started')
 
 
 def parse_synthentic_device_info(host_id, data):
