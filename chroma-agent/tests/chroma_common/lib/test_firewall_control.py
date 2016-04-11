@@ -267,7 +267,7 @@ num  target     prot opt source               destination
 
         self.assertRanAllCommandsInOrder()
 
-    @mock.patch.object(FirewallControlEL6, '_remove_port', return_value=0)
+    @mock.patch.object(FirewallControlEL6, '_remove_port', return_value=FirewallControl.SuccessCode.UPDATED)
     def test_close_removes_rule(self, mock__remove_port):
         # test closing a port removes a rule from the class instance 'rules' list,
         # this is additionally required because test_close_port exits remove() before rule is

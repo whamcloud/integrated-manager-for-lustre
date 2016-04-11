@@ -37,11 +37,12 @@ from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 PCS_TCP_PORT = 2224
 
 corosync_service = ServiceControl.create('corosync')
-pscd_service = ServiceControl.create('pcsd')
+pcsd_service = ServiceControl.create('pcsd')
 firewall_control = FirewallControl.create()
 
 PCS_USER = 'hacluster'
 PCS_CLUSTER_NAME = 'lustre-ha-cluster'
+COROSYNC_CONF_PATH = '/etc/corosync/corosync.conf'
 
 
 def start_corosync2():
@@ -62,9 +63,9 @@ def configure_corosync2_stage_1(mcast_port, pcs_password):
     return agent_ok_or_error(AgentShell.run_canned_error_message(set_password_command) or
                              firewall_control.add_rule(mcast_port, "udp", "corosync", persist=True) or
                              firewall_control.add_rule(PCS_TCP_PORT, "tcp", "pcs", persist=True) or
-                             pscd_service.start() or
+                             pcsd_service.start() or
                              corosync_service.enable() or
-                             pscd_service.enable())
+                             pcsd_service.enable())
 
 
 def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, pcs_password, create_cluster):
@@ -117,7 +118,7 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
     else:
         cluster_setup_command = ['pcs', 'cluster', 'node', 'add', new_node_fqdn]
 
-    return agent_ok_or_error(AgentShell.run_canned_error_message(authenticate_nodes_in_cluster_command) or \
+    return agent_ok_or_error(AgentShell.run_canned_error_message(authenticate_nodes_in_cluster_command) or
                              AgentShell.run_canned_error_message(cluster_setup_command))
 
 
@@ -155,7 +156,7 @@ def change_mcast_port(old_mcast_port, new_mcast_port):
 
     Return: Value using simple return protocol
     """
-    file_edit_args = ['sed', '-i.bak', 's/mcastport:.*/mcastport: %s/g' % new_mcast_port, '/etc/corosync/corosync.conf']
+    file_edit_args = ['sed', '-i.bak', 's/mcastport:.*/mcastport: %s/g' % new_mcast_port, COROSYNC_CONF_PATH]
 
     return agent_ok_or_error(firewall_control.remove_rule(old_mcast_port, "udp", "corosync", persist=True) or
                              firewall_control.add_rule(new_mcast_port, "udp", "corosync", persist=True) or

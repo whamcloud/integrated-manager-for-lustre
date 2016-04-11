@@ -1,17 +1,19 @@
-import os
-import shutil
 import sys
 import mock
-import tempfile
 
 from tests.command_capture_testcase import CommandCaptureTestCase
 from tests.command_capture_testcase import CommandCaptureCommand
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
+from chroma_agent.action_plugins.manage_corosync2 import change_mcast_port
 from chroma_agent.action_plugins.manage_corosync2 import unconfigure_corosync2
+from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
 from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
+from chroma_agent.chroma_common.lib.service_control import ServiceControlEL6
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class FakeEtherInfo(object):
@@ -107,6 +109,26 @@ class TestConfigureCorosync(CommandCaptureTestCase):
 
         self.conf_template = env.get_template('corosync.conf')
 
+        # mock out firewall control calls and check with assert_has_calls in tests
+        self.mock_add_port = mock.patch.object(FirewallControlEL6, '_add_port', return_value=None).start()
+        self.mock_remove_port = mock.patch.object(FirewallControlEL6, '_remove_port', return_value=None).start()
+
+        # mock out service control objects with ServiceControlEL6 spec and check with assert_has_calls in tests
+        # this assumes, quite rightly, that manage_corosync and manage_corosync2 will not both be used in the same test
+        self.mock_corosync_service = mock.create_autospec(ServiceControlEL6)
+        self.mock_corosync_service.enable.return_value = None
+        self.mock_corosync_service.disable.return_value = None
+        mock.patch('chroma_agent.action_plugins.manage_corosync.corosync_service',
+                   self.mock_corosync_service).start()
+        mock.patch('chroma_agent.action_plugins.manage_corosync2.corosync_service',
+                   self.mock_corosync_service).start()
+
+        self.mock_pcsd_service = mock.create_autospec(ServiceControlEL6)
+        self.mock_pcsd_service.enable.return_value = None
+        self.mock_pcsd_service.start.return_value = None
+        mock.patch('chroma_agent.action_plugins.manage_corosync2.pcsd_service',
+                   self.mock_pcsd_service).start()
+
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)
 
@@ -114,7 +136,7 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         if self.old_ethtool:
             sys.modules['ethtool'] = self.old_ethtool
 
-    def _ring_iface_info(self):
+    def _ring_iface_info(self, mcast_port):
         from netaddr import IPNetwork
         interfaces = []
         for name in sorted(self.interfaces.keys()):
@@ -125,11 +147,11 @@ class TestConfigureCorosync(CommandCaptureTestCase):
             interfaces.append(FakeEtherInfo({'ringnumber': ringnumber,
                                              'bindnetaddr': bindnetaddr,
                                              'mcastaddr': "226.94.%s.1" % ringnumber,
-                                             'mcastport': 4242}))
+                                             'mcastport': mcast_port}))
         return interfaces
 
-    def _render_test_config(self):
-        return self.conf_template.render(interfaces=self._ring_iface_info())
+    def _render_test_config(self, mcast_port):
+        return self.conf_template.render(interfaces=self._ring_iface_info(mcast_port))
 
     def test_manual_ring1_config(self):
         ring0_name = 'eth0.1.1?1b34*430'
@@ -141,24 +163,52 @@ class TestConfigureCorosync(CommandCaptureTestCase):
 
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(('/sbin/ip', 'link', 'set', 'dev', ring1_name, 'up')),
-                          CommandCaptureCommand(('/sbin/ip', 'addr', 'add', '%s/%s' % (ring1_ipaddr, ring1_netmask), 'dev', ring1_name)),
-                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % new_mcast_port)),
-                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=2))
+                          CommandCaptureCommand(('/sbin/ip', 'addr', 'add', '%s/%s' % (ring1_ipaddr, ring1_netmask),
+                                                 'dev', ring1_name)))
 
         # now a two-step process! first network...
-        configure_network(ring0_name, ring1_name=ring1_name,
-                          ring1_ipaddr=ring1_ipaddr, ring1_prefix=ring1_netmask)
+        self.assertEqual(agent_result_ok,
+                         configure_network(ring0_name,
+                                           ring1_name=ring1_name,
+                                           ring1_ipaddr=ring1_ipaddr,
+                                           ring1_prefix=ring1_netmask))
 
         self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
         self.unmanage_network.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af')
 
         # ...then corosync
-        configure_corosync(ring0_name, ring1_name, old_mcast_port, new_mcast_port)
+        self.assertEqual(agent_result_ok,
+                         configure_corosync(ring0_name, ring1_name, old_mcast_port, new_mcast_port))
 
-        test_config = self._render_test_config()
+        test_config = self._render_test_config(new_mcast_port)
         self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
 
+        # check correct firewall and service calls were made
+        self.mock_add_port.assert_has_calls([mock.call(new_mcast_port, 'udp')])
+        self.mock_remove_port.assert_not_called()
+        self.mock_corosync_service.enable.assert_called_once_with()
+
         self.assertRanAllCommandsInOrder()
+
+        self.mock_remove_port.reset_mock()
+        self.mock_add_port.reset_mock()
+        self.mock_corosync_service.reset_mock()
+
+        # ...now change corosync mcast port
+        old_mcast_port = '4242'
+        new_mcast_port = '4246'
+
+        self.assertEqual(agent_result_ok,
+                         configure_corosync(ring0_name, ring1_name, old_mcast_port, new_mcast_port))
+
+        test_config = self._render_test_config(new_mcast_port)
+        # check we try to write template with new_mcast_port value
+        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+
+        # check correct firewall and service calls were made
+        self.mock_remove_port.assert_has_calls([mock.call(old_mcast_port, 'udp')])
+        self.mock_add_port.assert_has_calls([mock.call(new_mcast_port, 'udp')])
+        self.mock_corosync_service.enable.assert_called_once_with()
 
     def test_manual_ring1_config_corosync2(self):
 
@@ -170,57 +220,24 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         new_node_fqdn = 'servera.somewhere.org'
         pcs_password = 'bondJAMESbond'
 
-        # example output from 'iptables -L' or 'service iptables status'
-        chain_output = """Table: filter
-Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination
-1    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
-2    ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0
-3    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0
-4    ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0           state NEW udp dpt:123
-5    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:22
-6    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:80
-7    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           state NEW tcp dpt:443
-8    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
-
-Chain FORWARD (policy ACCEPT)
-num  target     prot opt source               destination
-1    REJECT     all  --  0.0.0.0/0            0.0.0.0/0           reject-with icmp-host-prohibited
-
-Chain OUTPUT (policy ACCEPT)
-num  target     prot opt source               destination
-
-"""
-
         # add shell commands to be expected
         self.add_commands(CommandCaptureCommand(("/sbin/ip", "link", "set", "dev", ring1_name, "up")),
                           CommandCaptureCommand(("/sbin/ip", "addr", "add", '/'.join([ring1_ipaddr, ring1_netmask]), "dev", ring1_name)),
                           CommandCaptureCommand(("bash", "-c", "echo bondJAMESbond | passwd --stdin hacluster")),
-                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '%s:udp' % mcast_port)),
-                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
-                          CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
-                                                 'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')),
-                          CommandCaptureCommand(('/usr/sbin/lokkit', '-n', '-p', '2224:tcp')),
-                          CommandCaptureCommand(('service', 'iptables', 'status'), rc=0, stdout=chain_output),
-                          CommandCaptureCommand(('/sbin/iptables', '-I', 'INPUT', '4', '-m', 'state', '--state',
-                                                 'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
-                          CommandCaptureCommand(("/sbin/service", "pcsd", "start")),
-                          CommandCaptureCommand(("/sbin/service", "pcsd", "status")),
-                          CommandCaptureCommand(('/sbin/chkconfig', '--add', 'corosync')),
-                          CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'on')),
-                          CommandCaptureCommand(('/sbin/chkconfig', '--add', 'pcsd')),
-                          CommandCaptureCommand(('/sbin/chkconfig', 'pcsd', 'on')),
                           CommandCaptureCommand(tuple(["pcs", "cluster", "auth"] + [new_node_fqdn] + ["-u", "hacluster", "-p", "bondJAMESbond"])))
 
         # now a two-step process! first network...
-        configure_network(ring0_name, ring1_name=ring1_name, ring1_ipaddr=ring1_ipaddr,
-                          ring1_prefix=ring1_netmask)
+        self.assertEqual(agent_result_ok,
+                         configure_network(ring0_name,
+                                           ring1_name=ring1_name,
+                                           ring1_ipaddr=ring1_ipaddr,
+                                           ring1_prefix=ring1_netmask))
 
         self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42',
                                             '255.255.255.0')
 
         # fetch ring info
-        r0, r1 = self._ring_iface_info()
+        r0, r1 = self._ring_iface_info(mcast_port)
 
         # add shell commands to be expected populated with ring interface info
         self.add_command(("pcs", "cluster", "setup",
@@ -238,39 +255,61 @@ num  target     prot opt source               destination
                          "--fail_recv_const", "10"))
 
         # ...then corosync / pcsd
-        configure_corosync2_stage_1(mcast_port, pcs_password)
-        configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_port, pcs_password, True)
+        self.assertEqual(agent_result_ok,
+                         configure_corosync2_stage_1(mcast_port, pcs_password))
+        self.assertEqual(agent_result_ok,
+                         configure_corosync2_stage_2(ring0_name,
+                                                     ring1_name,
+                                                     new_node_fqdn,
+                                                     mcast_port,
+                                                     pcs_password,
+                                                     True))
+
+        # check correct firewall and service calls were made
+        self.mock_add_port.assert_has_calls([mock.call(mcast_port, 'udp'), mock.call(PCS_TCP_PORT, 'tcp')])
+        self.mock_remove_port.assert_not_called()
+        self.mock_pcsd_service.start.assert_called_once_with()
+        self.mock_corosync_service.enable.assert_called_once_with()
+        self.mock_pcsd_service.enable.assert_called_once_with()
+
+        self.mock_remove_port.reset_mock()
+        self.mock_add_port.reset_mock()
+        self.mock_corosync_service.reset_mock()
+
+        # ...now change corosync mcast port
+        old_mcast_port = '4242'
+        new_mcast_port = '4246'
+
+        # add shell command to be expected when updating corosync.conf file with new mcast port value
+        self.add_command(('sed',
+                          '-i.bak',
+                          's/mcastport:.*/mcastport: %s/g' % new_mcast_port,
+                          '/etc/corosync/corosync.conf'))
+
+        self.assertEqual(agent_result_ok,
+                         change_mcast_port(old_mcast_port, new_mcast_port))
+
+        # check correct firewall and service calls were made
+        self.mock_add_port.assert_has_calls([mock.call(new_mcast_port, 'udp')])
+        self.mock_remove_port.assert_has_calls([mock.call(old_mcast_port, 'udp')])
+        with self.assertRaises(AssertionError):
+            self.mock_corosync_service.enable.assert_any_call()
 
         self.assertRanAllCommandsInOrder()
 
-    @mock.patch.object(tempfile, 'mkstemp')
-    @mock.patch.object(shutil, 'move')
-    @mock.patch.object(os, 'fdopen')
-    def test_unconfigure_corosync2(self, mock_mkstemp, mock_move, mock_fdopen):
-
-        from sys import version_info
-        if version_info[0] == 2:
-            import __builtin__ as builtins  # pylint:disable=import-error
-        else:
-            import builtins  # pylint:disable=import-error
-
+    def test_unconfigure_corosync2(self):
         host_fqdn = "serverb.somewhere.org"
         mcast_port = "4242"
 
         # add shell commands to be expected
-        self.add_commands(CommandCaptureCommand(('/sbin/chkconfig', 'corosync', 'off')),
-                          CommandCaptureCommand(('pcs', 'status', 'nodes', 'corosync')),
-                          CommandCaptureCommand(('pcs', '--force', 'cluster', 'node', 'remove', host_fqdn)),
-                          CommandCaptureCommand(('service', 'iptables', 'status')),
-                          CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
-                                                 'new', '-p', 'tcp', '--dport', '2224', '-j', 'ACCEPT')),
-                          CommandCaptureCommand(('service', 'iptables', 'status')),
-                          CommandCaptureCommand(('/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
-                                                 'new', '-p', 'udp', '--dport', mcast_port, '-j', 'ACCEPT')))
+        self.add_commands(CommandCaptureCommand(('pcs', 'status', 'nodes', 'corosync')),
+                          CommandCaptureCommand(('pcs', '--force', 'cluster', 'node', 'remove', host_fqdn)))
 
-        # mock built-in 'open' to avoid trying to read local filesystem
-        with mock.patch.object(builtins, 'open', mock.mock_open(read_data='mock data')):
-            unconfigure_corosync2(host_fqdn, mcast_port)
+        self.assertEqual(agent_result_ok,
+                         unconfigure_corosync2(host_fqdn, mcast_port))
+
+        self.mock_corosync_service.disable.assert_called_once_with()
+        self.mock_remove_port.assert_has_calls([mock.call(PCS_TCP_PORT, 'tcp'), mock.call(mcast_port, 'udp')])
 
         self.assertRanAllCommandsInOrder()
 
