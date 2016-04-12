@@ -539,7 +539,7 @@ class RealRemoteOperations(RemoteOperations):
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
-        hostname = host['fdqn'] if self.distro_version(host) >= 7 else host['nodename']
+        hostname = host['fqdn'] if self.distro_version(host) >= 7 else host['nodename']
         result = self._ssh_address(
             host['address'],
             'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname)
