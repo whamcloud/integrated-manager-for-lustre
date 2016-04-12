@@ -291,7 +291,13 @@ class AlertStateBase(SparseModel):
         # If the save fails for some reason then this change will have no affect.
         self.alert_type = target_class._meta.object_name
 
-        return super(AlertStateBase, self).cast(target_class)
+        new_alert = super(AlertStateBase, self).cast(target_class)
+
+        # The message may well have changed so regenerate it.
+        new_alert._message = None
+        new_alert.message()
+
+        return new_alert
 
 
 class AlertState(AlertStateBase):
