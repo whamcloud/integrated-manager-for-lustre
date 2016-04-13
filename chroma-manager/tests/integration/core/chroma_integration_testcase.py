@@ -3,7 +3,7 @@ import logging
 from collections import namedtuple
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
-from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import LONG_TEST_TIMEOUT, INSTALL_TIMEOUT
 from tests.utils.check_server_host import check_nodes_status
 
 logger = logging.getLogger('test')
@@ -102,7 +102,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             for object in response.json['objects']:
                 for command in object['commands']:
                     command_ids.append(command['id'])
-            self.wait_for_commands(self.chroma_manager, command_ids, timeout=1200)
+            self.assertTrue(command_ids)
+            self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT)
         except AssertionError as e:
             # Debugging added for HYD-2849, must not impact normal exception handling
             check_nodes_status(config)
