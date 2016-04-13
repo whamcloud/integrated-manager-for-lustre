@@ -70,6 +70,8 @@ def start_monitored_copytool(id):
 
         service = ServiceControl.create('%s-%s' % (service_name, id))
 
+        service.daemon_reload()
+
         if service.running:
             error = service.restart()
         else:
@@ -95,6 +97,8 @@ def stop_monitored_copytool(id):
                 return agent_error(error)
 
             os.remove(_init_file_name(service_name, id))
+
+        service.daemon_reload()         # Finally cause the system agents to see our changes.
 
     return agent_result_ok
 

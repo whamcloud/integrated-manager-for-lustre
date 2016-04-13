@@ -2,6 +2,8 @@ import mock
 
 from chroma_agent.chroma_common.lib import util
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControlEL6
+from chroma_agent.chroma_common.lib.service_control import ServiceControlEL7
 from tests.command_capture_testcase import CommandCaptureTestCase
 from tests.command_capture_testcase import CommandCaptureCommand
 
@@ -23,6 +25,7 @@ class TestServiceStateEL6(CommandCaptureTestCase):
                                                                    '')).start()
 
         self.test_service = ServiceControl.create('test_service')
+        self.assertEqual(type(self.test_service), ServiceControlEL6)
 
     # Test that the service starts successfully when the start method is called
     def test_service_start_success(self):
@@ -150,6 +153,16 @@ class TestServiceStateEL6(CommandCaptureTestCase):
         response = self.test_service.enabled
         self.assertEqual(response, False)
         self.assertEqual(self.commands_ran_count, 2)
+        self.assertRanAllCommandsInOrder()
+
+    def test_service_daemon_reload(self):
+        """
+        Test the daemon_reload function for ServiceControl.
+
+        By default when using el6 as the test vehicle is does nothing.
+        """
+        self.test_service.daemon_reload()
+        self.assertEqual(self.commands_ran_count, 0)
         self.assertRanAllCommandsInOrder()
 
     # example callback function
@@ -296,6 +309,7 @@ class TestServiceStateEL7(CommandCaptureTestCase):
                                                                    '')).start()
 
         self.test = ServiceControl.create('test_service')
+        self.assertEqual(type(self.test), ServiceControlEL7)
 
     # Test the start method
     def test_service_start(self):
@@ -336,6 +350,18 @@ class TestServiceStateEL7(CommandCaptureTestCase):
         self.test.enable()
         self.assertEqual(('systemctl', 'enable', 'test_service'), self._commands_history[0])
         self.assertEqual(self.commands_ran_count, 1)
+
+    def test_service_daemon_reload(self):
+        """
+        Test the daemon_reload function for ServiceControl on el7.
+
+        When using el7 it should issue systemctl daemon-reload command.
+        """
+        self.add_commands(CommandCaptureCommand(('systemctl', 'daemon-reload'), executions_remaining=1))
+
+        self.test.daemon_reload()
+        self.assertEqual(self.commands_ran_count, 1)
+        self.assertRanAllCommandsInOrder()
 
         # Test the reload method
     def test_service_reload(self):
