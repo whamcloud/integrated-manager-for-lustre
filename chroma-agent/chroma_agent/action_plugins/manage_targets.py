@@ -117,13 +117,20 @@ def get_resource_location(resource_name):
             continue
 
         # only interested in Target resources
-        if not "(ocf::chroma:Target)" in line:
+        if "(ocf::chroma:Target)" not in line:
             continue
 
         # The line can have 3 or 4 arguments so pad it out to at least 4 and
         # throw away any extra
         # credit it goes to Aric Coady for this little trick
         rsc_id, type, status, host = (line.rstrip().lstrip().split() + [None])[:4]
+
+        # In later pacemakers a new entry is added for stopped servers
+        # MGS_424f74   (ocf::chroma:Target):   (target-role:Stopped) Stopped
+        # (target-role:Stopped) is new.
+        if host == 'Stopped' and 'Stopped' in status:
+            status = host
+            host = None
 
         if rsc_id == resource_name:
             # host will be None if it's not started due to the trick above
@@ -162,13 +169,21 @@ def get_resource_locations():
             continue
 
         # only interested in Target resources
-        if not "(ocf::chroma:Target)" in line:
+        if "(ocf::chroma:Target)" not in line:
             continue
 
         # The line can have 3 or 4 arguments so pad it out to at least 4 and
         # throw away any extra
         # credit it goes to Aric Coady for this little trick
         rsc_id, type, status, host = (line.lstrip().split() + [None])[:4]
+
+        # In later pacemakers a new entry is added for stopped servers
+        # MGS_424f74   (ocf::chroma:Target):   (target-role:Stopped) Stopped
+        # (target-role:Stopped) is new.
+        if host == 'Stopped' and 'Stopped' in status:
+            status = host
+            host = None
+
         locations[rsc_id] = host
 
     return locations
@@ -538,7 +553,7 @@ def find_resource_constraint(ha_label, disp):
 
     for line in stdout.rstrip().split("\n"):
         match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=\d+, id=%s-%s\)" %
-                        (ha_label, disp), line)
+                         (ha_label, disp), line)
         if match:
             return match.group(1)
 
@@ -581,29 +596,29 @@ def _get_target_config(uuid):
     return info
 
 
-# FIXME: these appear to be unused, remove?
-#def migrate_target(ha_label, node):
-#    # a migration scores at 500 to force it higher than stickiness
-#    score = 500
-#    shell.try_run(["crm", "configure", "location", "%s-migrated" % ha_label, ha_label, "%s:" % score, "%s" % node])
+#  FIXME: these appear to be unused, remove?
+# def migrate_target(ha_label, node):
+#     # a migration scores at 500 to force it higher than stickiness
+#     score = 500
+#     shell.try_run(["crm", "configure", "location", "%s-migrated" % ha_label, ha_label, "%s:" % score, "%s" % node])
 #
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Stopped'])
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Started'])
+#     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
+#                    '-m', '-v', 'Stopped'])
+#     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
+#                    '-m', '-v', 'Started'])
 #
 #
-#def unmigrate_target(ha_label):
-#    from time import sleep
+# def unmigrate_target(ha_label):
+#     from time import sleep
 #
-#    # just remove the migration constraint
-#    shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % ha_label])
-#    sleep(1)
+#     # just remove the migration constraint
+#     shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % ha_label])
+#     sleep(1)
 #
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Stopped'])
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Started'])
+#     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
+#                    '-m', '-v', 'Stopped'])
+#     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
+#                    '-m', '-v', 'Started'])
 
 
 def target_running(uuid):
@@ -673,5 +688,5 @@ ACTIONS = [purge_configuration, register_target, configure_target_ha,
            start_target, stop_target, format_target, check_block_device,
            writeconf_target, failback_target,
            failover_target, target_running,
-           #migrate_target, unmigrate_target,
+           # migrate_target, unmigrate_target,
            clear_targets, configure_target_store, unconfigure_target_store]
