@@ -160,6 +160,11 @@ class ServiceConfig(CommandLine):
             connection._rollback()
             return False
 
+    def print_usage_message(self):
+        rc, out, err = self.try_shell(['man', '-P', 'cat', 'chroma-config'])
+
+        return out
+
     def _db_populated(self):
         """Discover whether the database has this application's tables"""
         from django.db.utils import DatabaseError
@@ -830,21 +835,25 @@ def chroma_config():
 
     """
     service_config = ServiceConfig()
+
     try:
         command = sys.argv[1]
     except IndexError:
-        log.error("Usage: %s <setup|validate|start|restart|stop>" % sys.argv[0])
+        log.error('%s' % service_config.print_usage_message())
         sys.exit(-1)
 
     if command in ('stop', 'start', 'restart') and os.geteuid():
-        log.error("You must be root to run this command.")
+        log.error('You must be root to run this command.')
         sys.exit(-1)
+
+    if command in ('-h', '--help'):
+        log.info('%s' % service_config.print_usage_message())
 
     def print_errors(errors):
         if errors:
-            log.error("Errors found:")
+            log.error('Errors found:')
             for error in errors:
-                log.error("  * %s" % error)
+                log.error('  * %s' % error)
         else:
             log.info("OK.")
 

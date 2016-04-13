@@ -6,6 +6,7 @@
 # The install directory for the manager
 %{?!manager_root: %define manager_root /usr/share/chroma-manager}
 
+
 Summary: The Intel Manager for Lustre Monitoring and Administration Interface
 Name: %{name}
 Version: %{version}
@@ -14,6 +15,7 @@ Source0: %{name}-%{version}.tar.gz
 Source1: chroma-supervisor-init.sh
 Source2: chroma-host-discover-init.sh
 Source3: logrotate.cfg
+Source4: chroma-config.1.gz
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -168,6 +170,8 @@ mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
+mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
+install %{SOURCE4} $RPM_BUILD_ROOT/usr/share/man/man1
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
@@ -208,6 +212,8 @@ rm -rf $RPM_BUILD_ROOT
 %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.pyc \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
+# Create chroma-config MAN Page
+makewhatis
 
 # set worker_processes to auto
 sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
@@ -246,20 +252,20 @@ fi
 
 
 %if 0%{?rhel} > 6
-    if [ $(systemctl is-active firewalld) == "active" ]; then 
+    if [ $(systemctl is-active firewalld) == "active" ]; then
         for port in 80 443; do
             firewall-cmd --permanent --add-port=$port/tcp
             firewall-cmd --add-port=$port/tcp
         done
-    fi    
+    fi
 %else if 0%{?rhel} < 7
     if ! out=$(service iptables status) || [ "$out" = "Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
-  
+
 Chain FORWARD (policy ACCEPT)
 num  target     prot opt source               destination
-  
+
 Chain OUTPUT (policy ACCEPT)
 num  target     prot opt source               destination         " ]; then
         arg="-n"
@@ -289,6 +295,9 @@ if [ $1 -lt 1]; then
 fi
 
 %postun
+# Remove chroma-config MAN Page
+rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE4}.gz
+
 if [ $1 -lt 1 ]; then
     %if 0%{?rhel} > 6
         for port in 80 443 123; do
@@ -320,6 +329,7 @@ fi
 /etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
+%attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf

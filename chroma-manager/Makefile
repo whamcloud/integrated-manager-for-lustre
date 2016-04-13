@@ -217,7 +217,8 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
-	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg _topdir/SOURCES
+	gzip -c chroma-config.1 > chroma-config.1.gz
+	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	dist=$$(rpm --eval %dist);                             \
 	dist=$${dist/.centos/};                                \
