@@ -162,6 +162,15 @@ class ServiceControl(object):
     def running(self):
         raise NotImplementedError
 
+    @classmethod
+    @abc.abstractmethod
+    def daemon_reload(cls):
+        """
+        Only really applicable to systemctl, this cause the os system to reload the configuration of
+        the controls, causes new or modified files to be re-read.
+        """
+        raise NotImplementedError
+
     @abc.abstractproperty
     def enabled(self):
         raise NotImplementedError
@@ -211,6 +220,10 @@ class ServiceControlEL6(ServiceControl):
         return util.platform_info.system == 'Linux' and \
                cls.platform_use == util.platform_info.distro_version_full.split('.')[0]
 
+    @classmethod
+    def daemon_reload(cls):
+        pass
+
     def enable(self):
         return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name]) or\
                AgentShell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'on'])
@@ -246,6 +259,10 @@ class ServiceControlEL7(ServiceControl):
     def _applicable(cls):
         return util.platform_info.system == 'Linux' and \
                cls.platform_use == util.platform_info.distro_version_full.split('.')[0]
+
+    @classmethod
+    def daemon_reload(cls):
+        AgentShell.run(['systemctl', 'daemon-reload'])
 
     def enable(self):
         return AgentShell.run_canned_error_message(['systemctl', 'enable', self.service_name])
