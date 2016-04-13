@@ -110,7 +110,8 @@ EOF
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex
-virtualenv --no-site-packages chroma_test_env
+
+virtualenv chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/chroma/chroma-manager
 make requirements
