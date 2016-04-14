@@ -34,8 +34,6 @@ from chroma_core.models import corosync_common
 from chroma_core.lib.job import Step
 from chroma_core.services.job_scheduler import job_scheduler_notify
 
-peer_mcast_ports = {}
-
 logging = log_register('corosync2')
 
 
@@ -78,6 +76,7 @@ class AutoConfigureCorosyncStep(Step):
     idempotent = True
     database = True
     _pcs_password_length = 20
+    peer_mcast_ports = {}
 
     def __init__(self, job, args, log_callback, console_callback, cancel_event):
         super(AutoConfigureCorosyncStep, self).__init__(job, args, log_callback, console_callback, cancel_event)
@@ -99,21 +98,23 @@ class AutoConfigureCorosyncStep(Step):
 
         # Need to keep in sync with the DB so update from the DB before anything else.
         current_db_entries = {}
-        for corosync_configuration in Corosync2Configuration.objects.filter(~models.Q(mcast_port=None)):
+        for corosync_configuration in Corosync2Configuration.objects.all():
             current_db_entries[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
-            peer_mcast_ports[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
+
+            if corosync_configuration.mcast_port is not None:
+                cls.peer_mcast_ports[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
 
         # Now we need to remove any corosync configurations that have been deleted.
         for corosync_configuration in Corosync2Configuration._base_manager.filter(not_deleted=None):
             # Only remove the entries that are not currently in the db - a host may be deleted and re-added
             if corosync_configuration.host.fqdn not in current_db_entries:
-                peer_mcast_ports.pop(corosync_configuration.host.fqdn, None)
+                cls.peer_mcast_ports.pop(corosync_configuration.host.fqdn, None)
 
         # Do this at the end because this could be different from the DB if this is an update.
-        peer_mcast_ports[new_fqdn] = mcast_port
+        cls.peer_mcast_ports[new_fqdn] = mcast_port
 
         # Return list of peers, but peers do not include ourselves.
-        peers = [match_fqdn for match_fqdn, match_mcast_port in peer_mcast_ports.items() if match_mcast_port == mcast_port]
+        peers = [match_fqdn for match_fqdn, match_mcast_port in cls.peer_mcast_ports.items() if match_mcast_port == mcast_port]
         peers.remove(new_fqdn)
 
         return peers
