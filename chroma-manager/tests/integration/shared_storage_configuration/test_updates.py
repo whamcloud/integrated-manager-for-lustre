@@ -1,10 +1,10 @@
-from django.utils.unittest.case import skipIf
+from django.utils.unittest import skipIf
 from testconfig import config
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skipIf(not config.get('simulator', False), "Automated test of upgrades is HYD-1739")
+@skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
 class TestUpdates(ChromaIntegrationTestCase):
     TEST_SERVERS = [config['lustre_servers'][0]]
 
