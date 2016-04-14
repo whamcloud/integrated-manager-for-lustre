@@ -99,7 +99,7 @@ num  target     prot opt source               destination
         response = self.test_firewall.remote_validate_persistent_rule_cmd(123)
 
         self.assertEqual(response,
-                         'grep -e \"--dport 123\|--port=123\" /etc/sysconfig/iptables /etc/sysconfig/system-config-firewall || true')
+                         'grep -e \"--dport 123\|--port=123\" /etc/sysconfig/iptables /etc/sysconfig/system-config-firewall')
 
     def test_process_rules_empty_ruleset(self):
         # firewall is active but with no matching rules
