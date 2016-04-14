@@ -7,7 +7,7 @@ PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 #--------------------------------------------------------------------------
 # Get the chroma-externals repo as pip is going to need it
 #--------------------------------------------------------------------------
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 #--------------------------------------------------------------------------
 # Fetch the IEEL installation package from the upstream job

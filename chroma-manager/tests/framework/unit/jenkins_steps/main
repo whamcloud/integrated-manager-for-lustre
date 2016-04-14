@@ -14,7 +14,7 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
 # Get the chroma-externals repo as pip is going to need it
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 # Pip install requirements
 cd $WORKSPACE/chroma_unit_test_env/chroma/chroma-manager

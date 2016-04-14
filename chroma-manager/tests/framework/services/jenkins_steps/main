@@ -18,7 +18,7 @@ WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
 
 # Get the chroma-externals repo as pip is going to need it
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
 make requirements

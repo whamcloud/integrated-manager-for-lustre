@@ -8,7 +8,7 @@ PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
 # Get the chroma-externals repo as pip is going to need it
-. scripts/update_chroma-externals.sh
+scripts/update_chroma-externals.py
 
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
 make requirements
