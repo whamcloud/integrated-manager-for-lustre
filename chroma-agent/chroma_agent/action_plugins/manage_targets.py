@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -102,43 +102,18 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
 
 
 def get_resource_location(resource_name):
-    # FIXME: this may break on non-english systems or new versions of pacemaker
-    rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
-    if rc != 0:
+    '''
+    Given a resource name testfs-MDT0000_f64edc for example, return the host it is mounted on
+    :param resource_name: Name of resource to find.
+    :return: host currently mounted on or None if not mounted.
+    '''
+    locations = get_resource_locations()
+
+    if type(locations) is not dict:
         # Pacemaker not running, or no resources configured yet
         return None
 
-    before_resources = True
-    for line in lines_text.split("\n"):
-        # skip down to the resources part
-        if before_resources:
-            if line.startswith("Full list of resources:"):
-                before_resources = False
-            continue
-
-        # only interested in Target resources
-        if "(ocf::chroma:Target)" not in line:
-            continue
-
-        # The line can have 3 or 4 arguments so pad it out to at least 4 and
-        # throw away any extra
-        # credit it goes to Aric Coady for this little trick
-        rsc_id, type, status, host = (line.rstrip().lstrip().split() + [None])[:4]
-
-        # In later pacemakers a new entry is added for stopped servers
-        # MGS_424f74   (ocf::chroma:Target):   (target-role:Stopped) Stopped
-        # (target-role:Stopped) is new.
-        if host == 'Stopped' and 'Stopped' in status:
-            status = host
-            host = None
-
-        if rsc_id == resource_name:
-            # host will be None if it's not started due to the trick above
-            # because the host only shows up as the 4th item when it's
-            # started and gets the padded value of None above when it's not
-            return host
-
-    return None
+    return locations.get(resource_name)
 
 
 @exceptionSandBox(console_log, None)
@@ -172,19 +147,20 @@ def get_resource_locations():
         if "(ocf::chroma:Target)" not in line:
             continue
 
-        # The line can have 3 or 4 arguments so pad it out to at least 4 and
+        # The line can have 3 - 5 arguments so pad it out to at least 5 and
         # throw away any extra
         # credit it goes to Aric Coady for this little trick
-        rsc_id, type, status, host = (line.lstrip().split() + [None])[:4]
+        columns = (line.lstrip().split() + [None, None])[:5]
 
         # In later pacemakers a new entry is added for stopped servers
         # MGS_424f74   (ocf::chroma:Target):   (target-role:Stopped) Stopped
+        # and for started servers:
+        # MGS_424f74	(ocf::chroma:Target):	(target-role:Stopped) Started lotus-13vm6
         # (target-role:Stopped) is new.
-        if host == 'Stopped' and 'Stopped' in status:
-            status = host
-            host = None
+        if "target-role" in columns[2]:
+            del columns[2]
 
-        locations[rsc_id] = host
+        locations[columns[0]] = columns[3]
 
     return locations
 
