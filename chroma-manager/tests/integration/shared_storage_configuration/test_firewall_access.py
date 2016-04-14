@@ -8,6 +8,7 @@ from tests.integration.core.remote_operations import RealRemoteOperations
 
 class TestFirewall(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
+    GREP_NOTFOUND_RC = 1
 
     def setUp(self):
         super(TestFirewall, self).setUp()
@@ -128,9 +129,7 @@ class TestFirewall(ChromaIntegrationTestCase):
             # retrieve command string compatible with this server target
             firewall = RemoteFirewallControl.create(server['address'], self.remote_operations._ssh_address_no_check)
 
-            # run the command on the target and store the result
-            result = self.remote_operations._ssh_address(server['address'],
-                                                         firewall.remote_validate_persistent_rule_cmd(mcast_port))
-
             # test that the remote firewall configuration doesn't include rules to enable the mcast_port
-            self.assertEqual(result.stdout, '')
+            self.remote_operations._ssh_address(server['address'],
+                                                firewall.remote_validate_persistent_rule_cmd(mcast_port),
+                                                expected_return_code=self.GREP_NOTFOUND_RC)

@@ -172,9 +172,11 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
     @staticmethod
     def remote_validate_persistent_rule_cmd(port):
         """ return string representation of bash command to check for existence of port entry in firewall config """
-        return 'grep -e \"{0}{1}\|{2}{1}\" {3} {4} || true'.format('--dport ', port, '--port=',
-                                                                   '/etc/sysconfig/iptables',
-                                                                   '/etc/sysconfig/system-config-firewall')
+        return 'grep -e \"{0}{1}\|{2}{1}\" {3} {4}'.format('--dport ',
+                                                           port,
+                                                           '--port=',
+                                                           '/etc/sysconfig/iptables',
+                                                           '/etc/sysconfig/system-config-firewall')
 
 
 class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
