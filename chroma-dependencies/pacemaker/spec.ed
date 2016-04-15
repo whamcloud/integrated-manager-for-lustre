@@ -2,7 +2,7 @@
 /^Name:/c
 Name:          pacemaker-iml
 .
-/^Release:/s/^\(.*\)\(%{?dist}\)$/\1.wc1\2/
+/^Release:/s/^\(.*\)\(%{?dist}\)$/\1.wc2\2/
 /^Group:/a
 Obsoletes:     pacemaker
 .
@@ -30,6 +30,9 @@ Obsoletes:    pacemaker-doc
 .
 /%setup /s/%{name}/pacemaker/g
 /^%changelog/a
+* Fri Apr 15 2016 Brian J. Murrell <brian.murrell@intel.com> - 1.1.12-4.wc2
+- bump release to force a rebuild to get rebuilt without heartbeat
+  compatibility (HYD-5671)
 * Tue Aug 18 2015 Brian J. Murrell <brian.murrell@intel.com> - 1.1.12-4.wc1
 - Rebuild for Intel Manager for Lustre
   * we need this older version becuase 1.1.12-8 in EL 6.7 has a segfault

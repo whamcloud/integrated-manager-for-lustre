@@ -47,11 +47,11 @@ Requires: system-config-firewall-base
 Requires: ed
 
 %if 0%{?rhel} < 7
-Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6
-Obsoletes: pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6
-Obsoletes: pacemaker-iml-libs <= 1.1.7-6.wc2.el6
-Obsoletes: pacemaker-iml-cli <= 1.1.7-6.wc2.el6
-Requires: pacemaker-iml = 1.1.12-4.wc1.el6
+Obsoletes: pacemaker-iml <= 1.1.12-4.wc1.el6
+Obsoletes: pacemaker-iml-cluster-libs <= 1.1.12-4.wc1.el6
+Obsoletes: pacemaker-iml-libs <= 1.1.12-4.wc1.el6
+Obsoletes: pacemaker-iml-cli <= 1.1.12-4.wc1.el6
+Requires: pacemaker-iml = 1.1.12-4.wc2.el6
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 %endif
 
