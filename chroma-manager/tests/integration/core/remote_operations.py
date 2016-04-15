@@ -786,6 +786,8 @@ class RealRemoteOperations(RemoteOperations):
         monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
         restart_attempted = False
 
+        hostname = boot_server['fqdn'] if self.distro_version(boot_server) >= 7 else boot_server['nodename']
+
         running_time = 0
         while running_time < TEST_TIMEOUT:
             if self.host_contactable(boot_server['address']):
@@ -799,11 +801,11 @@ class RealRemoteOperations(RemoteOperations):
                     )
                     node_status = result.stdout
 
-                    logger.info("Response running crm_mon -1 on %s:  %s" % (boot_server['nodename'], node_status))
+                    logger.info("Response running crm_mon -1 on %s:  %s" % (hostname, node_status))
                     err = result.stderr
                     if err:
                         logger.error("    result.stderr:  %s" % err)
-                    if re.search('Online: \[.* %s .*\]' % boot_server['nodename'], node_status):
+                    if re.search('Online: \[.* %s .*\]' % hostname, node_status):
                         break
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
@@ -834,7 +836,7 @@ class RealRemoteOperations(RemoteOperations):
             )
             self._test_case.assertRegexpMatches(result.stdout,
                                                 'Online: \[.* %s .*\]' %
-                                                boot_server['nodename'])
+                                                hostname)
 
     def unmount_clients(self):
         """
