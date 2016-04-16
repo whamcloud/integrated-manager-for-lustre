@@ -37,10 +37,10 @@ class TestBlockDeviceLvm(TestBlockDevice):
     # Create a lvm on the device.
     @property
     def prepare_device_commands(self):
-        return ["vgcreate %s %s; lvcreate -l 100%%FREE --name %s %s" % (self.vg_name,
-                                                                        self._device_path,
-                                                                        self.lv_name,
-                                                                        self.vg_name)]
+        return ["vgcreate %s %s; lvcreate --wipesignatures n -l 100%%FREE --name %s %s" % (self.vg_name,
+                                                                                           self._device_path,
+                                                                                           self.lv_name,
+                                                                                           self.vg_name)]
 
     @property
     def vg_name(self):
