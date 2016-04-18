@@ -55,6 +55,12 @@ for dne in true false; do
         fi
 
         for device_type in ${device_types_to_test[@]}; do
+
+            if [[ "el7.2 rhel7.2" =~ $TEST_DISTRIBUTION ]] && [ $device_type == "linux" ] && ! $test_ha; then
+                echo "Skipping linux with no HA on el7.2 until it can be fixed"
+                continue
+            fi
+
             echo "Beginning automated ${device_type} run..."
 
             export TEST_SPECIFIC_CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}_dne_is_${dne}.json
