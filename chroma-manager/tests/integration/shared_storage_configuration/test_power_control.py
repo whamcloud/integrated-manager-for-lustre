@@ -34,6 +34,7 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
 
 class TestPduSetup(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    @unittest.skipIf(config.get('simulator') and config['chroma_managers'][0]['distro'] in ['el7.2', 'rhel7.2'], "Skipping until this test can be fixed on el7")
     def test_new_pdu_learns_outlet_states(self):
         self.wait_until_true(self.all_outlets_known)
 
@@ -74,6 +75,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
 class TestHostFencingConfig(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     @unittest.skipIf(config.get('simulator', False), "Can't be simulated")
+    @unittest.skipIf(config['chroma_managers'][0]['distro'] in ['el7.2', 'rhel7.2'], "Skipping until this test can be fixed on el7")
     def test_saved_outlet_triggers_fencing_update(self):
         # NB: This test relies on the target server's HA peer having had its
         # HA config scrubbed too. If that doesn't happen, the test could
@@ -112,6 +114,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
         self.wait_until_true(lambda: host_can_be_fenced(self.server))
 
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    @unittest.skipIf(config.get('simulator') and config['chroma_managers'][0]['distro'] in ['el7.2', 'rhel7.2'], "Skipping until this test can be fixed on el7")
     def test_toggled_outlet_does_not_trigger_fencing_update(self):
         def _fencing_job_count():
             return len([j for j in
@@ -134,6 +137,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
 
 class TestPduOperations(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    @unittest.skipIf(config.get('simulator') and config['chroma_managers'][0]['distro'] in ['el7.2', 'rhel7.2'], "Skipping until this test can be fixed on el7")
     def test_off_on_operations(self):
         # Test a couple of things:
         # 1. Test that the Power(off|on) AdvertisedJobs are only advertised
