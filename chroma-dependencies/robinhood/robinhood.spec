@@ -128,7 +128,7 @@ Requires: mysql-server
 Requires: mariadb-server
 # mariadb-devel required because robinhood requires the use of mysql_config
 Requires: mariadb-devel
-%end
+%endif
 
 %description %{purpose}
 Monitor Lustre usage and trigger file migration and purges.
