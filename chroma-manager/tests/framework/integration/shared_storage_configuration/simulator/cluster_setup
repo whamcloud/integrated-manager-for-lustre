@@ -20,6 +20,9 @@ set -ex
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel telnet python-ethtool rabbitmq-server erlang-inets nodejs patch gcc-c++
 
+# only install (as dependency for pycurl, required by fencing.py) on el7
+[[ \$(rpm --eval %rhel) == 7 ]] && yum install -y libcurl-devel
+
 # don't need EPEL any more
 yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 
@@ -111,6 +114,12 @@ virtualenv --no-site-packages chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/chroma/chroma-manager
 make requirements
+# install pycurl (as required by fencing.py) on el7
+if [[ \$(rpm --eval %rhel) == 7 ]]; then
+    export PYCURL_SSL_LIBRARY=nss
+    pip install --upgrade pip
+    pip install --compile \$(pwd)/../chroma-externals/pycurl-7.43.0.tar.gz
+fi
 python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
 
 if $MEASURE_COVERAGE; then
