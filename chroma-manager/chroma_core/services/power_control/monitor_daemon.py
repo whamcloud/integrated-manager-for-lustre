@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -83,7 +83,7 @@ class PowerDeviceMonitor(threading.Thread):
             # responsive to commands.
             bmc_states = self._manager.check_bmc_availability(self.device)
             for bmc in bmc_states:
-                if bmc_states[bmc] or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
+                if PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
                     IpmiBmcUnavailableAlert.notify(bmc, not bmc_states[bmc])
         else:
             # Check to see if we can log into the PDU and that it's
