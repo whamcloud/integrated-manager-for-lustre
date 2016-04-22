@@ -6,7 +6,7 @@ scripts/update_chroma-externals.py
 # nose has to be installed separately otherwise we get:
 # Download error on https://pypi.python.org/simple/nose/: [Errno 8] _ssl.c:490: EOF occurred in violation of protocol -- Some packages may not be found!
 pip install --no-index --find-links=file://$(pwd)/chroma-externals nose
-pip install --no-index --find-links=file://$(pwd)/chroma-externals jenkinsapi==0.2.16
+pip install --no-index --find-links=file://$(pwd)/chroma-externals jenkinsapi==0.2.28
 
 VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-selenium-tests chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
 REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-selenium-tests chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
