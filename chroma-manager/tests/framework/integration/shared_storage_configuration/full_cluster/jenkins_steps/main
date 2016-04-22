@@ -4,7 +4,8 @@
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \

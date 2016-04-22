@@ -5,7 +5,8 @@
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -k -O -u $JENKINS_USER:********* \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
+curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
@@ -62,7 +63,7 @@ done
 popd
 
 # Disable EPEL
-yum-config-manager --disable EPEL-6-x86_64" | dshbak -c
+yum-config-manager --disable addon-epel6-x86_64" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

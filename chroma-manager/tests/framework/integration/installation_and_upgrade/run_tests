@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [[ $slave = rhel6\&\&* ]]; then
+if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
     RHEL=true
 else
     RHEL=false
@@ -49,10 +49,17 @@ fi
 # first fetch and install chroma 2.3.0.0
 BUILD_JOB=chroma-blessed
 BUILD_NUM=117
+set +x
+echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
+++ sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
 IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+set -x
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
+set +x
+echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE\""
 curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE"
+set -x
 
 # Install and setup old chroma manager
 scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
@@ -150,7 +157,7 @@ echo \"Now with EPEL configured\"
 cat <<EOF > /etc/yum.repos.d/epel.repo
 [epel]
 name=epel
-baseurl=http://${COBBLER_SERVER:-10.14.80.6}/cobbler/repo_mirror/EPEL-6-x86_64/
+baseurl=http://${COBBLER_SERVER:-10.14.80.10}/cobbler/repo_mirror/addon-epel6-x86_64/
 enabled=1
 priority=1
 gpgcheck=0
