@@ -72,17 +72,17 @@ $(HOME)/.node-gyp:
 	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
 
 npm: $(HOME)/.node-gyp
-ifneq ($(NPM), 3.8.5)
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.8.5.tgz > /tmp/npm-3.8.5.tgz
-	tar -xzf /tmp/npm-3.8.5.tgz -C /tmp/
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.8.5.tgz -d
+ifneq ($(NPM), 3.8.8)
+	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.8.8.tgz > /tmp/npm-3.8.8.tgz
+	tar -xzf /tmp/npm-3.8.8.tgz -C /tmp/
+	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.8.8.tgz -d
 endif
 
 ui-modules: npm
 	@echo "Setting up ui-modules"; \
 	export NODE_ENV=production && \
 	cd ui-modules && \
-	npm i && \
+	npm i -d && \
 	npm prune
 
 ui-modules-dev: npm
