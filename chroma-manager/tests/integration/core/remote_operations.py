@@ -935,7 +935,8 @@ class RealRemoteOperations(RemoteOperations):
         # host1,\n
         # host2,\n
         # ...
-        return filter(None, result.stdout.split(',\n'))
+        # List is fqdns on el7, short names on el6, normalised to always contain fqdns
+        return [socket.getfqdn(node) for node in result.stdout.split(',\n') if node]
 
     def remove_config(self, server_list):
         """
