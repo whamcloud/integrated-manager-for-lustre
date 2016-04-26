@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,13 +22,13 @@
 
 from chroma_core.models import Volume, ManagedFilesystem, HaCluster, ManagedHost
 
-from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
 
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -67,7 +67,7 @@ class WrappedAll(object):
     __nonzero__ = __bool__  # for python 2 and 3 compatibility
 
 
-class VolumeResource(ModelResource):
+class VolumeResource(ChromaModelResource):
     """
     A volume represents a unit of storage suitable for use as a Lustre target.  This
     typically corresponds to a SCSI LUN.  Since volumes are frequently accessible from

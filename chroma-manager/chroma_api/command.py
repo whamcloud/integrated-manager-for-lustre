@@ -27,13 +27,13 @@ from django.contrib.contenttypes.models import ContentType
 from tastypie.validation import Validation
 from tastypie.utils import trailing_slash
 from tastypie.api import url
-from tastypie.resources import ModelResource
 from tastypie import fields, http
 
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 from chroma_core.models import Command
 from chroma_core.models import SchedulingError
@@ -70,7 +70,7 @@ class CommandValidation(Validation):
         return errors
 
 
-class CommandResource(ModelResource, LongPollingAPI):
+class CommandResource(ChromaModelResource, LongPollingAPI):
     """
     Asynchronous user-initiated operations which create, remove or modify resources are
     represented by ``command`` objects.  When a PUT, POST, PATCH or DELETE to

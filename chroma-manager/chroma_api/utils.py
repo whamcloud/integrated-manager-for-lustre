@@ -33,7 +33,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.utils import timezone
 
-from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResource, ResourceOptions
+from tastypie.resources import ModelDeclarativeMetaclass, Resource, ResourceOptions
 from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
@@ -43,6 +43,7 @@ from chroma_core.models.target import ManagedMgs
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
 from chroma_core.chroma_common.lib.date_time import IMLDateTime
@@ -172,7 +173,7 @@ class CustomModelDeclarativeMetaclass(ModelDeclarativeMetaclass):
         return new_class
 
 
-class CustomModelResource(ModelResource):
+class CustomModelResource(ChromaModelResource):
     """
     Container for local customizations to tastypie's ModelResource class.
     """
@@ -551,7 +552,7 @@ class MetricResource:
         return self.create_response(request, groups)
 
 
-class SeverityResource(ModelResource):
+class SeverityResource(ChromaModelResource):
     """Handles serverity for subclasses
 
     The basis for this Resource is to add the Severity field and support for

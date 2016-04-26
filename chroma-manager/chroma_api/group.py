@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,10 +24,11 @@ from django.contrib.auth.models import Group
 
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.authorization import ReadOnlyAuthorization
-from tastypie.resources import ModelResource
+
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 
-class GroupResource(ModelResource):
+class GroupResource(ChromaModelResource):
     """
     A user group.  Users inherit the permissions
     of groups of which they are a member.

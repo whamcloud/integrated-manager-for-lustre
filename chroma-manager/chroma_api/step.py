@@ -21,13 +21,14 @@
 
 
 from chroma_core.models.step_result import StepResult
-from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie import fields
 
+from chroma_api.chroma_model_resource import ChromaModelResource
 
-class StepResource(ModelResource):
+
+class StepResource(ChromaModelResource):
     """
     A step belongs to a Job.  Steps execute sequentially, and may be retried.
     A given Job may have multiple 'step 1' records if retries have occurred, in which

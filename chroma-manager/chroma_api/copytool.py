@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,7 +27,6 @@ import re
 from django.core.urlresolvers import resolve
 from tastypie import fields
 import tastypie.http as http
-from tastypie.resources import ModelResource
 from tastypie.validation import Validation
 from tastypie.authorization import DjangoAuthorization
 
@@ -39,6 +38,7 @@ from chroma_api.host import HostResource
 from chroma_api.filesystem import FilesystemResource
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
 
@@ -59,7 +59,7 @@ INVALID_AGENT_ARGUMENTS = {
 }
 
 
-class CopytoolOperationResource(ModelResource):
+class CopytoolOperationResource(ChromaModelResource):
     copytool = fields.ToOneField('chroma_api.copytool.CopytoolResource', 'copytool', full = True, null = True)
     description = fields.CharField()
     active_filter = {'started_at__isnull': False, 'finished_at__isnull': True}

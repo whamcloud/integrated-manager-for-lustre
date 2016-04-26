@@ -27,11 +27,11 @@ from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.alert import AlertSubscription
+from chroma_core.models.utils import STR_TO_SEVERITY
 from chroma_api.urls import api
-from tastypie.resources import ALL_WITH_RELATIONS
 
 from tastypie.utils import trailing_slash
-from tastypie.resources import Resource, ModelResource
+from tastypie.resources import Resource
 from tastypie import fields
 from tastypie.api import url
 from tastypie import http
@@ -40,6 +40,8 @@ from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
+from chroma_api.chroma_model_resource import ChromaModelResource
+from chroma_api.chroma_common.lib import util
 from long_polling_api import LongPollingAPI
 
 
@@ -79,7 +81,7 @@ class AlertSubscriptionAuthorization(DjangoAuthorization):
             return object_list.filter(user = request.user)
 
 
-class AlertSubscriptionResource(ModelResource):
+class AlertSubscriptionResource(ChromaModelResource):
     user = fields.ToOneField("chroma_api.user.UserResource", 'user', help_text="User to which this subscription belongs")
     alert_type = fields.ToOneField("chroma_api.alert.AlertTypeResource", 'alert_type', help_text="Content-type id for this subscription's alert class", full=True)
 
@@ -169,6 +171,17 @@ class AlertResource(LongPollingAPI, SeverityResource):
         help_text = ("A human readable noun describing the object "
                      "that is the subject of the alert"))
 
+    record_type = fields.CharField(attribute='record_type',
+                                   help_text="The type of the alert described as a Python classes",
+                                   enumerations=[class_.__name__ for class_ in util.all_subclasses(AlertStateBase)])
+
+    severity = fields.CharField(attribute='severity',
+                                help_text = ("String indicating the "
+                                             "severity of the alert, "
+                                             "one of %s") %
+                                            STR_TO_SEVERITY.keys(),
+                                enumerations=STR_TO_SEVERITY.keys())
+
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [AlertState, LNetOfflineAlert]
 
@@ -234,11 +247,20 @@ class AlertResource(LongPollingAPI, SeverityResource):
     class Meta:
         queryset = AlertState.objects.order_by('-begin')
         resource_name = 'alert'
-        fields = ['begin', 'end', 'message', 'active', 'dismissed',
-                  'id', 'severity', 'alert_type', 'created_at', 'record_type']
-        filtering = {}
-        for field in AlertState.__dict__['_meta'].fields:
-            filtering.update({field.name: ALL_WITH_RELATIONS})
+
+        filtering = {'begin': SeverityResource.ALL_FILTER_DATE,
+                     'end': SeverityResource.ALL_FILTER_DATE,
+                     'message': SeverityResource.ALL_FILTER_STR,
+                     'active': SeverityResource.ALL_FILTER_BOOL,
+                     'dismissed': SeverityResource.ALL_FILTER_BOOL,
+                     'id': SeverityResource.ALL_FILTER_INT,
+                     'severity': SeverityResource.ALL_FILTER_ENUMERATION,
+                     'created_at': SeverityResource.ALL_FILTER_DATE,
+                     'alert_type': SeverityResource.ALL_FILTER_ENUMERATION,
+                     'alert_item_id': SeverityResource.ALL_FILTER_INT,
+                     'lustre_pid': SeverityResource.ALL_FILTER_INT,
+                     'record_type': SeverityResource.ALL_FILTER_ENUMERATION}
+
         ordering = ['begin', 'end', 'active']
         authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,7 +22,6 @@
 from collections import defaultdict
 
 from tastypie.exceptions import NotFound
-from tastypie.resources import ModelResource
 from django.core.exceptions import ObjectDoesNotExist
 import tastypie.http as http
 from tastypie import fields
@@ -39,6 +38,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
 from chroma_core.models import Nid
 from chroma_api.validation_utils import ChromaValidation
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
 
@@ -96,7 +96,7 @@ class NidValidation(ChromaValidation):
 # Delete
 # https://localhost:8000/api/nid/1/
 # https://localhost:8000/api/nid/
-class NidResource(ModelResource):
+class NidResource(ChromaModelResource):
     """
     Nid information.
     """

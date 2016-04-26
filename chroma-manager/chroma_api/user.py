@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,13 +26,13 @@ from tastypie.bundle import Bundle
 
 from chroma_api.authentication import AnonymousAuthentication
 from tastypie.authorization import DjangoAuthorization
-from tastypie.resources import ModelResource
 from tastypie import fields
 
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 from chroma_core.models import UserProfile
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 
 class ChromaUserChangeForm(UserChangeForm):
@@ -114,7 +114,7 @@ from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpForbidden
 
 
-class UserResource(ModelResource):
+class UserResource(ChromaModelResource):
     """
     A user account
     """

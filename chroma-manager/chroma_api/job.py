@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,7 +22,7 @@
 import json
 
 from django.contrib.contenttypes.models import ContentType
-from tastypie.resources import ModelResource, Resource
+from tastypie.resources import Resource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
@@ -31,6 +31,7 @@ from chroma_api.step import StepResource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Job, StateLock
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 
 class StateLockResource(Resource):
@@ -85,7 +86,7 @@ class JobValidation(Validation):
         return errors
 
 
-class JobResource(ModelResource):
+class JobResource(ChromaModelResource):
     """
     Jobs refer to individual units of work that the server is doing.  Jobs
     may either run as part of a Command, or on their own.  Jobs which are necessary

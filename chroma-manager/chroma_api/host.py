@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -41,7 +41,7 @@ from tastypie.exceptions import ImmediateHttpResponse
 
 
 import tastypie.http as http
-from tastypie.resources import Resource, ModelResource
+from tastypie.resources import Resource
 from tastypie import fields
 from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command, BulkResourceOperation
 from tastypie.authorization import DjangoAuthorization
@@ -49,6 +49,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
 from chroma_common.lib.evaluator import safe_eval
 from chroma_api.utils import filter_fields_to_type
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
 
@@ -120,7 +121,7 @@ def _host_params(data, address=None):
     }
 
 
-class ServerProfileResource(ModelResource):
+class ServerProfileResource(ChromaModelResource):
     class Meta:
         queryset = ServerProfile.objects.all()
         resource_name = 'server_profile'
@@ -134,7 +135,7 @@ class ServerProfileResource(ModelResource):
                      'user_selectable': ['exact']}
 
 
-class ClientMountResource(ModelResource):
+class ClientMountResource(ChromaModelResource):
     # This resource is only used for integration testing.
 
     host = fields.ToOneField('chroma_api.host.HostResource', 'host')

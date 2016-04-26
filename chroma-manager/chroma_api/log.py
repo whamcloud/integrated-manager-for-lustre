@@ -23,11 +23,11 @@
 from chroma_core.lib.util import normalize_nid
 
 from tastypie import fields
-from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.log import LogMessage, MessageClass
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 
 class LogAuthorization(DjangoAuthorization):
@@ -46,18 +46,22 @@ class LogAuthorization(DjangoAuthorization):
             return object_list.filter(message_class__in = [MessageClass.LUSTRE, MessageClass.LUSTRE_ERROR])
 
 
-class LogResource(ModelResource):
+class LogResource(ChromaModelResource):
     """
     syslog messages collected by the manager server.
 
 
 
     """
-    substitutions = fields.ListField(null = True, help_text = """List of dictionaries describing \
-substrings which may be used to decorate the `message` attribute by adding hyperlinks.  Each substitution \
-has `start`, `end`, `label` and `resource_uri` attributes.""")
+    substitutions = fields.ListField(null = True,
+                                     help_text = "List of dictionaries describing substrings which "
+                                                 "may be used to decorate the 'message' attribute by adding "
+                                                 "hyperlinks. Each substitution has `start`, `end`, `label` "
+                                                 "and `resource_uri` attributes.")
 
-    message_class = fields.CharField(attribute = 'message_class', help_text = "Unicode string.  One of %s" % MessageClass.strings())
+    message_class = fields.CharField(attribute='message_class',
+                                     help_text='Unicode string.  One of %s' % MessageClass.strings(),
+                                     enumerations = MessageClass.strings())
 
     def dehydrate_substitutions(self, bundle):
         return self._substitutions(bundle.obj)
@@ -65,11 +69,11 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
     class Meta:
         queryset = LogMessage.objects.all()
         filtering = {
-            'fqdn': ['exact', 'startswith'],
-            'datetime': ['gte', 'lte'],
-            'message': ['icontains', 'startswith', 'contains'],
-            'message_class': ['in', 'exact'],
-            'tag': ['exact', 'in']
+            'fqdn': ChromaModelResource.ALL_FILTER_STR,
+            'datetime': ChromaModelResource.ALL_FILTER_DATE,
+            'message': ChromaModelResource.ALL_FILTER_STR,
+            'message_class': ChromaModelResource.ALL_FILTER_ENUMERATION,
+            'tag': ChromaModelResource.ALL_FILTER_STR,
         }
 
         authorization = LogAuthorization()

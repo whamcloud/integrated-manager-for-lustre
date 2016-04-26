@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,7 +27,8 @@ from chroma_core.models import StorageResourceClass
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
-from tastypie.resources import ModelResource
+
+from chroma_api.chroma_model_resource import ChromaModelResource
 
 
 def filter_class_ids():
@@ -49,7 +50,7 @@ def filter_class_ids():
         return []
 
 
-class StorageResourceClassResource(ModelResource):
+class StorageResourceClassResource(ChromaModelResource):
     """
     Defines a type of ``storage_resource`` that can be created.
 
