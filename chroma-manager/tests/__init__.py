@@ -47,6 +47,7 @@ if nose_installed:
     # Monkey patch TextTestRunner to exit hard if there are hanging threads
 
     def monkeyPatchedRun(self, test):
+        self.descriptions = 0
         threads_at_beginning_of_test_run = threading.enumerate()
         chroma_logger.info("Starting tests with these threads running: '%s'" % threads_at_beginning_of_test_run)
 
