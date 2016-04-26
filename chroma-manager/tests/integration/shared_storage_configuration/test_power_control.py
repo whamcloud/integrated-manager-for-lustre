@@ -75,7 +75,6 @@ class TestPduSetup(ChromaPowerControlTestCase):
 class TestHostFencingConfig(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     @unittest.skipIf(config.get('simulator', False), "Can't be simulated")
-    @unittest.skipIf(config['chroma_managers'][0]['distro'] in ['el7.2', 'rhel7.2'], "Skipping until this test can be fixed on el7")
     def test_saved_outlet_triggers_fencing_update(self):
         # NB: This test relies on the target server's HA peer having had its
         # HA config scrubbed too. If that doesn't happen, the test could
@@ -89,7 +88,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
             # A host can't fence itself, but its name will show up in the
             # list of fenceable nodes.
             nodes = self.remote_operations.get_fence_nodes_list(server['address'])
-            return server['nodename'] in nodes
+            return server['fqdn'] in nodes
 
         # The host should initially be set up for fencing, due to the
         # associations made in setUp()
