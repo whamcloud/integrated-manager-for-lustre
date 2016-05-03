@@ -21,7 +21,7 @@
 
 
 from collections import defaultdict
-from chroma_diagnostic_actions import cd_actions
+import socket
 import logging
 import subprocess
 from datetime import datetime, timedelta
@@ -30,6 +30,8 @@ import argparse
 from argparse import RawTextHelpFormatter
 import os
 import sys
+
+from chroma_diagnostic_actions import cd_actions
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
@@ -104,7 +106,7 @@ def save_command_output(fn, cmd, output_directory):
 def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
     """Go days_back to find compressed logrotate.d type log files to be copied.
 
-    Note:  Chose to use nieve dates here, since this will run on the same
+    Note:  Chose to use naive dates here, since this will run on the same
     host that the file was created they are likely to match.  The server is
     probably in UTC anyway.
     """
@@ -235,12 +237,9 @@ def main():
                         "default is 1.  0 would mean today's logs only.")
     args = parser.parse_args()
 
-    time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-    output_fn = 'diagnostics_%s' % time_stamp
+    output_fn = 'diagnostics_%s_%s' % (socket.gethostname(),
+                                       datetime.now().strftime("%Y%m%dT%H%M%S"))
 
-    hostname_process = run_command_output_piped(['hostname', '-f'])
-    if hostname_process:
-        output_fn = '%s_%s' % (output_fn, hostname_process.stdout.read().strip())
     if args.directory:
         default_output_directory = args.directory
 
