@@ -5,11 +5,13 @@ map $ssl_client_s_dn $ssl_client_s_dn_cn {
 
 server {
     listen {{HTTP_FRONTEND_PORT}};
-    return 301 https://$host:{{HTTPS_FRONTEND_PORT}}$request_uri;
+    return 301 https://$http_host$request_uri;
 }
 
 server {
     listen {{HTTPS_FRONTEND_PORT}} ssl spdy;
+
+    error_page 497 https://$http_host$request_uri;
 
     proxy_read_timeout 330s;
 
@@ -27,7 +29,7 @@ server {
     gzip_comp_level 2;
 
     location /certificate/ {
-        return 301 https://$host:{{HTTPS_FRONTEND_PORT}}/certificate;
+        return 301 https://$http_host/certificate;
     }
 
     location /certificate {
@@ -38,7 +40,7 @@ server {
     }
 
     location ~ ^/$ {
-        return 301 https://$host:{{HTTPS_FRONTEND_PORT}}/ui;
+        return 301 https://$http_host/ui;
     }
 
     location ~ /static/chroma_ui/styles/imports-.+\.css {
