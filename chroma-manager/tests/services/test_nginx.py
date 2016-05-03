@@ -32,12 +32,12 @@ class TestInsecureUrls(NginxTestCase):
     """
 
     def test_http_redirect(self):
-        """Test that connections on the HTTP url are redirected
+        """Test that connections on the HTTP scheme are redirected
            to the HTTPS url"""
 
-        response = requests.get("http://localhost:%s/" % settings.HTTP_FRONTEND_PORT,
-            verify=False, allow_redirects=False)
-        self.assertEqual(response.status_code, 301)
+        response = requests.get("http://localhost:%s/" % settings.HTTPS_FRONTEND_PORT,
+                                verify=False, allow_redirects=False)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers['location'], "https://localhost:%s/" % settings.HTTPS_FRONTEND_PORT)
 
     def test_missing_slash(self):
