@@ -62,13 +62,49 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   http-parser-2.0-4.20121128gitcd01361.el6.x86_64.rpm \
                   libuv-0.10.34-1.el6.x86_64.rpm \
                   c-ares19-1.9.1-5.el6.3.x86_64.rpm \
-                  python-gunicorn-18.0-1.el6.noarch.rpm
+                  python-gunicorn-18.0-1.el6.noarch.rpm \
+                  erlang-erts-R14B-04.3.el6.x86_64.rpm \
+                  erlang-mnesia-R14B-04.3.el6.x86_64.rpm \
+                  erlang-os_mon-R14B-04.3.el6.x86_64.rpm \
+                  erlang-sasl-R14B-04.3.el6.x86_64.rpm \
+                  erlang-xmerl-R14B-04.3.el6.x86_64.rpm \
+                  erlang-asn1-R14B-04.3.el6.x86_64.rpm \
+                  erlang-compiler-R14B-04.3.el6.x86_64.rpm \
+                  erlang-crypto-R14B-04.3.el6.x86_64.rpm \
+                  erlang-hipe-R14B-04.3.el6.x86_64.rpm \
+                  erlang-inets-R14B-04.3.el6.x86_64.rpm \
+                  erlang-kernel-R14B-04.3.el6.x86_64.rpm \
+                  erlang-otp_mibs-R14B-04.3.el6.x86_64.rpm \
+                  erlang-public_key-R14B-04.3.el6.x86_64.rpm \
+                  erlang-runtime_tools-R14B-04.3.el6.x86_64.rpm \
+                  erlang-snmp-R14B-04.3.el6.x86_64.rpm \
+                  erlang-ssl-R14B-04.3.el6.x86_64.rpm \
+                  erlang-stdlib-R14B-04.3.el6.x86_64.rpm \
+                  erlang-syntax_tools-R14B-04.3.el6.x86_64.rpm \
+                  erlang-webtool-R14B-04.3.el6.x86_64.rpm \
+                  erlang-tools-R14B-04.3.el6.x86_64.rpm \
+                  erlang-et-R14B-04.3.el6.x86_64.rpm \
+                  erlang-gs-R14B-04.3.el6.x86_64.rpm \
+                  erlang-wx-R14B-04.3.el6.x86_64.rpm \
+                  erlang-observer-R14B-04.3.el6.x86_64.rpm \
+                  wxBase-2.8.12-1.el6.x86_64.rpm \
+                  wxGTK-2.8.12-1.el6.x86_64.rpm \
+                  wxGTK-gl-2.8.12-1.el6.x86_64.rpm
+
 REQUIREMENTS   += python-daemon==1.5.2
 NO_REQUIREMENT += c-ares19
 else
 $(error "Unknown major el version $(EL_MAJOR)")
 endif
 
-NO_REQUIREMENT += pcapy python-daemon v8 nodejs http-parser libuv
+NO_REQUIREMENT += pcapy python-daemon v8 nodejs http-parser libuv \
+                  erlang-erts erlang-mnesia erlang-os_mon \
+                  erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler \
+                  erlang-crypto erlang-hipe erlang-inets erlang-kernel \
+                  erlang-otp_mibs erlang-public_key erlang-runtime_tools \
+                  erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools \
+                  erlang-webtool erlang-tools erlang-et erlang-gs \
+                  erlang-wx erlang-observer \
+                  wxBase wxGTK wxGTK-gl
 
 include ../include/Makefile.fetch-from-repo
