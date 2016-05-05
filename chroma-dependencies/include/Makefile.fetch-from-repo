@@ -51,6 +51,12 @@ decruftinate:
 		fi;                                          \
 	done
 
+pkg_install: rpms
+	$(MAKE) -C $(REPO) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" $@
+
+pkg_uninstall:
+	$(MAKE) -C $(REPO) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" $@
+
 install: decruftinate $(REPO_TARGETS)
 
 uninstall:

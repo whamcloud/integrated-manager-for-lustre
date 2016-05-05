@@ -10,6 +10,7 @@ ALL_RPMS       := pcapy-0.10.8-5.el7.x86_64.rpm \
                   python-meld3-0.6.10-1.el7.x86_64.rpm \
                   python-ordereddict-1.1-6.el7.noarch.rpm \
                   python-simplejson-3.3.3-1.el7.x86_64.rpm \
+                  python-anyjson-0.3.3-3.el7.noarch.rpm \
                   v8-3.14.5.10-17.el7.x86_64.rpm \
                   nodejs-0.10.36-3.el7.x86_64.rpm \
                   http-parser-2.0-4.20121128gitcd01361.el7.x86_64.rpm \
@@ -47,7 +48,7 @@ NO_REQUIREMENT += python-crypto erlang-erts erlang-mnesia erlang-os_mon \
                   erlang-otp_mibs erlang-public_key erlang-runtime_tools \
                   erlang-snmp erlang-ssl erlang-stdlib erlang-syntax_tools \
                   erlang-tools python-simplejson
-else
+else ifeq ($(EL_MAJOR), 6)
 ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   python-argparse-1.2.1-2.el6.noarch.rpm \
                   python-daemon-1.5.2-1.el6.noarch.rpm \
@@ -55,6 +56,7 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   python-lockfile-0.8-3.el6.noarch.rpm \
                   python-meld3-0.6.7-1.el6.x86_64.rpm \
                   python-ordereddict-1.1-2.el6.noarch.rpm \
+                  python-anyjson-0.3.3-1.el6.noarch.rpm \
                   v8-3.14.5.10-17.el6.x86_64.rpm \
                   nodejs-0.10.36-3.el6.x86_64.rpm \
                   http-parser-2.0-4.20121128gitcd01361.el6.x86_64.rpm \
@@ -62,7 +64,9 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   c-ares19-1.9.1-5.el6.3.x86_64.rpm \
                   python-gunicorn-18.0-1.el6.noarch.rpm
 REQUIREMENTS   += python-daemon==1.5.2
-NO_REQUIREMENT += c-ares19 
+NO_REQUIREMENT += c-ares19
+else
+$(error "Unknown major el version $(EL_MAJOR)")
 endif
 
 NO_REQUIREMENT += pcapy python-daemon v8 nodejs http-parser libuv
