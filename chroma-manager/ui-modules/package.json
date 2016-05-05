@@ -5,7 +5,7 @@
   "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "intel-gui": "5.2.0",
+    "intel-gui": "5.4.0",
     "intel-realtime": "5.0.0",
     "intel-view-server": "5.0.2"
   }
