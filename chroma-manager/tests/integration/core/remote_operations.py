@@ -382,23 +382,18 @@ class RealRemoteOperations(RemoteOperations):
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
         cmd = "cibadmin -t 1 %s" % args
-        if buffer:
-            cmd = '''%s << "EOF"
-%s
-EOF''' % (cmd, buffer)
 
         tries = 300
         while tries > 0:
-            result = self._ssh_fqdn(server['fqdn'], cmd)
+            result = self._ssh_fqdn(server['fqdn'], cmd, expected_return_code=None, buffer=buffer)
 
             # retry on expected (i.e. waiting for dust to settle, etc.)
             # failures
-            if result.exit_status in [10, 41, 62, 107]:
-                tries -= 1
-                # don't need a sleep here, the cibadmin timeout provides
-                # us with a delay
-            else:
+            if result.exit_status not in [10, 41, 62, 107]:
                 break
+            # don't need a sleep here, the cibadmin timeout provides
+            # us with a delay
+            tries -= 1
 
         return result
 
