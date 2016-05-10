@@ -1077,11 +1077,6 @@ class ResourceManager(object):
                                                   attribute=attribute,
                                                   severity=severity,
                                                   alert_type="StorageResourceAlert_%s" % alert_class)
-
-        # I we created an alert then cause the message to be persistently created because HYD-5736
-        if alert_state is not None:
-            alert_state.message()
-
         return alert_state
 
     @transaction.commit_on_success
@@ -1452,11 +1447,6 @@ class ResourceManager(object):
                 # Record a user-visible event
                 log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
 
-                if hasattr(session, 'host_id'):
-                    StorageResourceLearnEvent.register_event(severity=logging.INFO,
-                                                             alert_item=ManagedHost.objects.get(id=getattr(session, 'host_id')),
-                                                             storage_resource = record)
-
             creations[resource] = (record, created)
 
             # Add the new record to the index so that future records and resolve their
@@ -1582,3 +1572,12 @@ class ResourceManager(object):
                     ancestors.remove(descendent_ld)
                     if len(ancestors) == 1:
                         Volume.objects.filter(storage_resource = descendent_ld).update(label = self.get_label(ld_id))
+
+        # Create StorageResourceLearnEvent for anything we found new
+        for resource in creations:
+            record, created = creations[resource]
+
+            if created and hasattr(session, 'host_id'):
+                StorageResourceLearnEvent.register_event(severity=logging.INFO,
+                                                         alert_item=ManagedHost.objects.get(id=getattr(session, 'host_id')),
+                                                         storage_resource=record)

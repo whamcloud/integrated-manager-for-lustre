@@ -234,6 +234,7 @@ class AlertStateBase(SparseModel):
                               alert_item = alert_item,
                               **kwargs)
             try:
+                alert_state._message = alert_state.alert_message()
                 alert_state.save()
                 job_log.info("AlertState: Raised %s on %s "
                              "at severity %s" % (cls,

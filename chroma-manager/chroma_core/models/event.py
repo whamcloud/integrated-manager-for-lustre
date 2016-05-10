@@ -75,7 +75,7 @@ class AlertEvent(AlertStateBase):
 
 
 class SyslogEvent(AlertStateBase):
-    variant_fields = [VariantDescriptor('message_str', str, None, None, 0)]
+    variant_fields = [VariantDescriptor('message_str', str, None, None, '')]
 
     class Meta:
         app_label = 'chroma_core'
@@ -94,7 +94,7 @@ class ClientConnectEvent(AlertStateBase):
         app_label = 'chroma_core'
         db_table = AlertStateBase.table_name
 
-    variant_fields = [VariantDescriptor('message_str', str, None, None, 0)]
+    variant_fields = [VariantDescriptor('message_str', str, None, None, '')]
 
     def alert_message(self):
         return self.message_str

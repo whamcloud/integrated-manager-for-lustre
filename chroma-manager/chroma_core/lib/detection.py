@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -75,7 +75,10 @@ class DetectScan(object):
         # Assign a valid primary mount point,
         # and remove any targets which don't have a primary mount point
         for target in self.created_mgss + self.created_targets:
-            if not self.learn_primary_target(target):
+            if self.learn_primary_target(target):
+                for tm in target.managedtargetmount_set.all():
+                    self._learn_event(tm.host, target)
+            else:
                 self.log(help_text["found_no_primary_mount_point_for_target"] % (target.target_type(), target))
                 target.mark_deleted()
 
@@ -100,6 +103,9 @@ class DetectScan(object):
                     if set([t.state for t in fs.get_targets()]) == set(['mounted']):
                         fs.state = 'available'
                     fs.save()
+
+                    first_target = fs.get_filesystem_targets()[0]
+                    self._learn_event(first_target.primary_host, first_target)
 
         if not self.created_mgss:
             self.log(help_text['discovered_no_new_target'] % ManagedMgs().target_type().upper())
@@ -341,8 +347,7 @@ class DetectScan(object):
                     self.created_filesystems.append(filesystem)
                     filesystem.immutable_state = True
                     filesystem.save()
-                    log.info("Learned filesystem '%s'" % fsname)
-                    self._learn_event(host, filesystem)
+                    log.info("Found filesystem '%s'" % fsname)
                     ObjectCache.add(ManagedFilesystem, filesystem)
 
                 try:
@@ -356,8 +361,7 @@ class DetectScan(object):
                     target.save()
                     log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])
                     log.info("%s %s %s" % (mgs.id, name, device_node_paths))
-                    log.info("Learned %s %s" % (klass.__name__, name))
-                    self._learn_event(host, target)
+                    log.info("Found %s %s" % (klass.__name__, name))
                     self.created_targets.append(target)
                     ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
 
