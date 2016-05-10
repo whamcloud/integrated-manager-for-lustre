@@ -18,7 +18,7 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets nodejs patch gcc-c++
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++
 # don't need EPEL any more
 yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 
@@ -100,6 +100,10 @@ TEST_DEPS="chroma/chroma-manager/tests/framework/services/test_dependencies"
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 cd /home/chromatest/chroma_test_env/chroma/chroma-dependencies/nginx
+RPM_FILE="\$(make rpm_file)"
+yum localinstall -y "/home/chromatest/chroma_test_env/chroma/chroma-externals/\$RPM_FILE"
+
+cd /home/chromatest/chroma_test_env/chroma/chroma-dependencies/nodejs
 RPM_FILE="\$(make rpm_file)"
 yum localinstall -y "/home/chromatest/chroma_test_env/chroma/chroma-externals/\$RPM_FILE"
 EOF

@@ -49,6 +49,13 @@ run_pre_commit_hook()
     fi
 }
 
+update_nodejs_version()
+{
+  sudo yum -y erase nodejs;
+  major=$(rpm --eval %rhel)
+  sudo yum -y install $PWD/chroma-externals/nodejs-*.el$major.*.rpm
+}
+
 pre_build()
 {
     run_repo_maintenance
@@ -58,6 +65,7 @@ pre_build()
     # update modules
     scripts/update_chroma-externals.py
     run_pre_commit_hook
+    update_nodejs_version
 }
 
 build_dependencies()

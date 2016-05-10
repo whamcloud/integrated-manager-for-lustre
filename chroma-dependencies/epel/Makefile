@@ -11,10 +11,6 @@ ALL_RPMS       := pcapy-0.10.8-5.el7.x86_64.rpm \
                   python-ordereddict-1.1-6.el7.noarch.rpm \
                   python-simplejson-3.3.3-1.el7.x86_64.rpm \
                   python-anyjson-0.3.3-3.el7.noarch.rpm \
-                  v8-3.14.5.10-17.el7.x86_64.rpm \
-                  nodejs-0.10.36-3.el7.x86_64.rpm \
-                  http-parser-2.0-4.20121128gitcd01361.el7.x86_64.rpm \
-                  libuv-0.10.34-1.el7.x86_64.rpm \
                   python-paramiko-1.15.1-1.el7.noarch.rpm \
                   python-crypto-2.6.1-1.el7.x86_64.rpm \
                   python-ecdsa-0.11-3.el7.noarch.rpm \
@@ -57,11 +53,6 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   python-meld3-0.6.7-1.el6.x86_64.rpm \
                   python-ordereddict-1.1-2.el6.noarch.rpm \
                   python-anyjson-0.3.3-1.el6.noarch.rpm \
-                  v8-3.14.5.10-17.el6.x86_64.rpm \
-                  nodejs-0.10.36-3.el6.x86_64.rpm \
-                  http-parser-2.0-4.20121128gitcd01361.el6.x86_64.rpm \
-                  libuv-0.10.34-1.el6.x86_64.rpm \
-                  c-ares19-1.9.1-5.el6.3.x86_64.rpm \
                   python-gunicorn-18.0-1.el6.noarch.rpm \
                   erlang-erts-R14B-04.3.el6.x86_64.rpm \
                   erlang-mnesia-R14B-04.3.el6.x86_64.rpm \
@@ -92,12 +83,11 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   wxGTK-gl-2.8.12-1.el6.x86_64.rpm
 
 REQUIREMENTS   += python-daemon==1.5.2
-NO_REQUIREMENT += c-ares19
 else
 $(error "Unknown major el version $(EL_MAJOR)")
 endif
 
-NO_REQUIREMENT += pcapy python-daemon v8 nodejs http-parser libuv \
+NO_REQUIREMENT += pcapy python-daemon \
                   erlang-erts erlang-mnesia erlang-os_mon \
                   erlang-sasl erlang-xmerl erlang-asn1 erlang-compiler \
                   erlang-crypto erlang-hipe erlang-inets erlang-kernel \
