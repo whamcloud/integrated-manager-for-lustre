@@ -14,7 +14,7 @@ echo "Beginning installation and setup..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 gcc make tigervnc-server npm git firefox
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 gcc make tigervnc-server git firefox
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 yum install -y google-chrome-stable
