@@ -10,7 +10,7 @@ class TestCreateFilesystem(TestInstallationAndUpgrade):
 
         # if the host_profile api endpoint exists or using simulator, can use current logic
         response = self.chroma_manager.get('/api/host_profile/')
-        if response.successful or hasattr(self, 'simulator'):
+        if response.successful or self.simulator:
             new_hosts = super(TestCreateFilesystem, self).add_hosts(addresses, auth_type)
         else:
             # otherwise we need to use the old way of adding hosts

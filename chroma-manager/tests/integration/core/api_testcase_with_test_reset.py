@@ -4,6 +4,7 @@ import requests
 import shutil
 import sys
 import platform
+import tempfile
 
 import logging
 import time
@@ -52,6 +53,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     _chroma_manager = None
 
+    def __init__(self, methodName='runTest'):
+        super(ApiTestCaseWithTestReset, self).__init__(methodName)
+        self.remote_operations = None
+        self.simulator = None
+        self.down_node_expected = False
+
     def setUp(self):
         super(ApiTestCaseWithTestReset, self).setUp()
 
@@ -66,8 +73,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             except ImportError:
                 raise ImportError("Cannot import agent, do you need to do a 'setup.py develop' of it?")
 
-            import mock
-            import tempfile
+            import mock         # Mock is only available when running the simulator, hence local inclusion
             self.mock_config = ConfigStore(tempfile.mkdtemp())
             mock.patch('chroma_agent.config', self.mock_config).start()
             from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
@@ -155,12 +161,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def tearDown(self):
-        if hasattr(self, 'simulator'):
+        if self.simulator:
             self.simulator.stop()
             self.simulator.join()
 
             # Clean up the temp agent config
-            import mock
+            import mock  # Mock is only available when running the simulator, hence local inclusion
             mock.patch.stopall()
             shutil.rmtree(self.mock_config.path)
 
@@ -168,29 +174,26 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if passed:
                 shutil.rmtree(self.simulator.folder)
         else:
-            if hasattr(self, 'remote_operations'):
+            if self.remote_operations:
                 # Check that all servers are up and available after the test
                 down_nodes = []
                 for server in self.TEST_SERVERS:
                     if not self.remote_operations.host_contactable(server['address']):
                         down_nodes.append(server['address'])
                     else:
-                        self.remote_operations.inject_log_message(
-                            server['fqdn'], "==== stopping test %s =====" %
-                            self
-                        )
+                        self.remote_operations.inject_log_message(server['fqdn'],
+                                                                  "==== stopping test %s =====" % self)
 
-                if len(down_nodes):
+                if len(down_nodes) and (self.down_node_expected is False):
+                    self._fetch_help(lambda: 1 / 0,
+                                     ['chris.gearing@intel.com'],
+                                     "After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
-                    if not getattr(self, 'down_node_expected', False):
-                        raise RuntimeError("AWOL servers after test: %s" %
-                                           ", ".join(down_nodes))
+                    raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
 
         self.assertTrue(self.supervisor_controlled_processes_running())
-        self.assertEqual(
-            self.initial_supervisor_controlled_process_start_times,
-            self.get_supervisor_controlled_process_start_times()
-        )
+        self.assertEqual(self.initial_supervisor_controlled_process_start_times,
+                         self.get_supervisor_controlled_process_start_times())
 
     @property
     def config_servers(self):

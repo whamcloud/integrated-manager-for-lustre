@@ -230,7 +230,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         """Add a list of lustre servers to chroma and ensure lnet ends in the correct state."""
-        if hasattr(self, 'simulator'):
+        if self.simulator:
             self.register_simulated_hosts(addresses)
         else:
             self.validate_hosts(addresses, auth_type)
