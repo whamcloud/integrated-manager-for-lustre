@@ -139,7 +139,7 @@ class UtilityTestCase(TestCase):
             if host['nodename'] == nodename:
                 return host
 
-    def _fetch_help(self, assert_test, tell_who, message, callback=lambda: True, timeout=1800):
+    def _fetch_help(self, assert_test, tell_who, message=None, callback=lambda: True, timeout=1800):
         """When an error occurs that we want to hold the cluster for until someone logs in then this function will do that.
 
         The file /tmp/waiting_help is used as an exit switch along with time. Deleting this file will cause the test to
@@ -148,7 +148,7 @@ class UtilityTestCase(TestCase):
         :param assert_test: test that if it occurs will fetch the help
         :param callback: optional but if present returning False will cause the routine to not fetch help.
         :param tell_who: list of email addresses to contact about the issue
-        :param message: message to deliver to those people, can be a callable returning a string.
+        :param message: message to deliver to those people, can be a callable returning a string, or None to use the exception.
         :param timeout: How long to wait before continuing.
         :return: None
 
@@ -167,7 +167,7 @@ class UtilityTestCase(TestCase):
 
         try:
             return assert_test()
-        except:
+        except Exception as exception:
             if callback() == False or assert_test in self.help_fetched_list:
                 raise
 
@@ -175,7 +175,9 @@ class UtilityTestCase(TestCase):
 
             key_file = '/tmp/waiting_help'
 
-            if hasattr(message, '__call__'):
+            if message is None:
+                message = str(exception)
+            elif hasattr(message, '__call__'):
                 message = message()
 
             # First create the file, errors in here do destroy the original, but will be reported by the test framework
