@@ -22,7 +22,6 @@
 
 import json
 
-from collections import namedtuple
 from django.db import models
 from django.contrib.contenttypes.generic import GenericForeignKey
 
@@ -68,7 +67,19 @@ class VariantGenericForeignKey(GenericForeignKey):
         setattr(instance, self.cache_attr, value)
 
 
-VariantDescriptor = namedtuple('VariantDescriptor', ['name', 'type', 'getter', 'setter', 'default'])
+class VariantDescriptor(object):
+    def __init__(self, name, type_, getter, setter, default):
+        assert isinstance(name, str)
+        assert isinstance(type_, type)
+        assert getter is None or hasattr(getter, '__call__')
+        assert setter is None or hasattr(setter, '__call__')
+        assert default is None or isinstance(default, type_)
+
+        self.name = name
+        self.type_ = type_
+        self.getter = getter
+        self.setter = setter
+        self.default = default
 
 
 class SparseManager(models.Manager):
@@ -186,8 +197,8 @@ class SparseModel(models.Model):
             '''
             setattr(cls,
                     variant.name,
-                    property(variant.getter if variant.getter else lambda self_: self_.get_variant(variant.name, variant.default, variant.type),
-                             variant.setter if variant.setter else lambda self_, value: self_.set_variant(variant.name, variant.type, value)))
+                    property(variant.getter if variant.getter else lambda self_: self_.get_variant(variant.name, variant.default, variant.type_),
+                             variant.setter if variant.setter else lambda self_, value: self_.set_variant(variant.name, variant.type_, value)))
 
         # We only want to create the class attributes once, so keep track of classes already processed
         # and do not do them more than once.
