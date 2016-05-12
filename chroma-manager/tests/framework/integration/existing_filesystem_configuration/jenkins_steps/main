@@ -3,6 +3,8 @@
 . chroma-manager/tests/framework/utils/defaults.sh
 set_defaults false
 
+. chroma-manager/tests/framework/utils/selective_auto_pass.sh
+
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
