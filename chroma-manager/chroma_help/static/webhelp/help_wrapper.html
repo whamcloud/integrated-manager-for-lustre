@@ -10,6 +10,10 @@
       </a>
 
     </div>
-    <iframe src='index.html' style="width: 100%; height: 100%;"></iframe>
+    <iframe id="help-frame" src='index.html' style="width: 100%; height: 100%;"></iframe>
   </body>
+  <script language="javascript">
+    var iframe = document.getElementById('help-frame');
+    iframe.src = iframe.src + window.location.search;
+  </script>
 </html>
