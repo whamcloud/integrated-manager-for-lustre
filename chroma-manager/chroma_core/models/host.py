@@ -670,12 +670,14 @@ class RebootIfNeededStep(Step):
         return reboot_needed
 
     def run(self, kwargs):
-        if self._reboot_needed(kwargs['host']):
-            self.invoke_agent(kwargs['host'], 'reboot_server')
+        host = kwargs['host']
+
+        if host.is_managed and self._reboot_needed(host):
+            self.invoke_agent(host, 'reboot_server')
 
             from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
-            AgentRpc.await_restart(kwargs['host'].fqdn, kwargs['timeout'])
+            AgentRpc.await_restart(host.fqdn, kwargs['timeout'])
 
 
 class InstallPackagesStep(Step):
@@ -690,18 +692,14 @@ class InstallPackagesStep(Step):
         from chroma_core.models import package
 
         host = kwargs['host']
-        packages = kwargs['packages']
-        repos = kwargs['repos']
 
         package_report = self.invoke_agent_expect_result(host,
                                                          'install_packages',
-                                                         {'repos': repos,
-                                                          'packages': packages,
-                                                          'force_dependencies': True})
+                                                         {'repos': kwargs['bundles'],
+                                                          'packages': kwargs['packages']})
 
-        if package_report:
-            updates_available = package.update(host, package_report)
-            UpdatesAvailableAlert.notify(host, updates_available)
+        updates_available = package.update(host, package_report)
+        UpdatesAvailableAlert.notify(host, updates_available)
 
 
 class InstallHostPackagesJob(StateChangeJob):
@@ -742,14 +740,13 @@ class InstallHostPackagesJob(StateChangeJob):
         if self.managed_host.is_lustre_server:
             steps.append((LearnDevicesStep, {'host': self.managed_host}))
 
-        if self.managed_host.is_managed:
-            steps.extend([
-                (InstallPackagesStep, {'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
-                                       'host': self.managed_host,
-                                       'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']}),
-                (RebootIfNeededStep, {'host': self.managed_host,
-                                      'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})
-            ])
+        steps.extend([
+            (InstallPackagesStep, {'bundles': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
+                                   'host': self.managed_host,
+                                   'packages': list(self.managed_host.server_profile.packages)}),
+            (RebootIfNeededStep, {'host': self.managed_host,
+                                  'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})
+        ])
 
         return steps
 
@@ -1376,41 +1373,28 @@ class UpdatePackagesStep(RebootIfNeededStep):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         host = kwargs['host']
+
+        # install_packages will add any packages not existing that are specified within the profile
+        # as well as upgrading/downgrading packages to the version specified in the bundles
         package_report = self.invoke_agent_expect_result(host,
-                                                         'update_packages',
+                                                         'install_packages',
                                                          {'repos': kwargs['bundles'],
                                                           'packages': kwargs['packages']})
 
-        if package_report:
-            package.update(host, package_report)
+        package.update(host, package_report)
 
-            # If we have installed any updates at all, then assume it is necessary to restart the agent, as
-            # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
-            old_session_id = AgentRpc.get_session_id(host.fqdn)
-            self.invoke_agent(host, 'restart_agent')
-            AgentRpc.await_restart(kwargs['host'].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
-        else:
-            self.log("No updates installed on %s" % host)
+        # If we have installed any updates at all, then assume it is necessary to restart the agent, as
+        # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
+        old_session_id = AgentRpc.get_session_id(host.fqdn)
+        self.invoke_agent(host, 'restart_agent')
+        AgentRpc.await_restart(kwargs['host'].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
 
         # Now do some managed things
-        if host.is_managed:
-            if host.pacemaker_configuration:
-                # Upgrade of pacemaker packages could have left it disabled
-                self.invoke_agent(kwargs['host'], 'enable_pacemaker')
-                # and not running,
-                self.invoke_agent(kwargs['host'], 'start_pacemaker')
-
-            # Check if we are running the required (lustre) kernel
-            kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')
-            reboot_needed = (kernel_status['running'] != kernel_status['required']
-                             and kernel_status['required']
-                             and kernel_status['required'] in kernel_status['available'])
-
-            if reboot_needed:
-                # If the required kernel has been upgraded, then we must reboot the server
-                old_session_id = AgentRpc.get_session_id(host.fqdn)
-                self.invoke_agent(kwargs['host'], 'reboot_server')
-                AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
+        if host.is_managed and host.pacemaker_configuration:
+            # Upgrade of pacemaker packages could have left it disabled
+            self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+            # and not running,
+            self.invoke_agent(kwargs['host'], 'start_pacemaker')
 
 
 class UpdateYumFileStep(RebootIfNeededStep):
@@ -1455,13 +1439,15 @@ proxy=_none_
 
         return [(UpdatePackagesStep, {'host': self.host,
                                       'bundles': ['iml-agent'],
-                                      'packages': []}),
+                                      'packages': ['chroma-agent']}),
                 (UpdateYumFileStep, {'host': self.host,
                                      'filename': REPO_FILENAME,
                                      'file_contents': repo_file_contents}),
                 (UpdatePackagesStep, {'host': self.host,
                                       'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
-                                      'packages': list(self.host.server_profile.packages)})]
+                                      'packages': list(self.host.server_profile.packages)}),
+                (RebootIfNeededStep, {'host': self.host,
+                                      'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})]
 
     def create_locks(self):
         locks = [StateLock(

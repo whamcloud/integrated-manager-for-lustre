@@ -16,6 +16,9 @@
   ],
   "ui_description": "A server running the Robinhood Policy Engine",
   "packages": {
+    "iml-agent": [
+      "chroma-agent-management"
+    ],
     "lustre-client": [
       "lustre-client-modules",
       "lustre-client"

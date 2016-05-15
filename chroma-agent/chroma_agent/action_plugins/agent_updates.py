@@ -107,94 +107,40 @@ def update_profile(profile):
     return agent_result_ok
 
 
-def update_packages(repos, packages):
+def install_packages(repos, packages):
     """
-
-    Updates all packages from the repos in 'repos'.
-
-    :param repos: List of strings, each is a yum repos to include in the update
-    :param packages: List of packages to force dependencies for, e.g. specify
-                     lustre-modules here to insist that the dependencies of that
-                     are installed even if they're older than an installed package.
-    :return: None if no updates were installed, else a package report of the format
-             given by the lustre device plugin
-    """
-
-    yum_util('clean')
-
-    updates_stdout = yum_util('query', fromrepo=repos, narrow_updates=True)
-    update_packages = updates_stdout.strip().split("\n")
-
-    if not update_packages:
-        return None
-
-    if packages:
-        out = yum_util('requires', enablerepo=repos, packages=packages)
-        force_installs = []
-        for requirement in [l.strip() for l in out.strip().split("\n")]:
-            match = re.match("([^\)/]*) = (.*)", requirement)
-            if match:
-                require_package, require_version = match.groups()
-                force_installs.append("%s-%s" % (require_package, require_version))
-
-        if force_installs:
-            yum_util('install', enablerepo=repos, packages=force_installs)
-
-    # We are only updating named packages from our repoquery of the specified repos, but
-    # this invokation of yum does not disable any repos, so we may pull in dependencies
-    # from other repos such as the main CentOS one.
-
-    yum_util('update', packages=update_packages, enablerepo=repos)
-
-    error = _check_HYD4050()
-
-    if error:
-        return agent_error(error)
-
-    return agent_result(lustre.scan_packages())
-
-
-def install_packages(repos, packages, force_dependencies=False):
-    """
-    force_dependencies causes explicit evaluation of dependencies, and installation
-    of any specific-version dependencies are satisfied even if
+    Explicitly evaluate and install or update any specific-version dependencies and satisfy even if
     that involves installing an older package than is already installed.
-    Primary use case is installing lustre-modules, which depends on a
-    specific kernel package.
+    Primary use case is installing lustre-modules, which depends on a specific kernel package.
 
+    :param repos: List of strings, yum repo names
     :param packages: List of strings, yum package names
-    :param force_dependencies: If True, ensure dependencies are installed even
-                               if more recent versions are available.
-    :return: A package report of the format given by the lustre device plugin
+    :return: package report of the format given by the lustre device plugin
     """
+    if packages != []:
+        yum_util('clean')
 
-    yum_util('clean')
-
-    if force_dependencies:
         out = yum_util('requires', enablerepo=repos, packages=packages)
-        force_installs = []
         for requirement in [l.strip() for l in out.strip().split("\n")]:
             match = re.match("([^\)/]*) = (.*)", requirement)
             if match:
                 require_package, require_version = match.groups()
-                force_installs.append("%s-%s" % (require_package, require_version))
+                packages.append("%s-%s" % (require_package, require_version))
 
-        yum_util('install', packages=force_installs, enablerepo=repos)
+        yum_util('install', enablerepo=repos, packages=packages)
 
-    yum_util('install', enablerepo=repos, packages=packages)
+        # So now we have installed the packages requested, we will also make sure that any installed packages we
+        # have that are already installed are updated to our presumably better versions.
+        update_packages = yum_check_update(repos)
 
-    # So now we have installed the packages requested, we will also make sure that any installed packages we
-    # have that are already installed are updated to our presumably better versions.
-    update_packages = yum_check_update(repos)
+        if update_packages:
+            daemon_log.debug("The following packages need update after we installed IML packages %s" % update_packages)
+            yum_util('update', packages=update_packages, enablerepo=repos)
 
-    if update_packages:
-        daemon_log.debug("The following packages need update after we installed IML packages %s" % update_packages)
-        yum_util('update', packages=update_packages, enablerepo=repos)
+        error = _check_HYD4050()
 
-    error = _check_HYD4050()
-
-    if error:
-        return agent_error(error)
+        if error:
+            return agent_error(error)
 
     return agent_result(lustre.scan_packages())
 
@@ -269,7 +215,6 @@ def restart_agent():
     raise CallbackAfterResponse(None, _shutdown)
 
 
-ACTIONS = [configure_repo, unconfigure_repo, update_packages,
-           install_packages, kernel_status, restart_agent,
-           update_profile]
+ACTIONS = [configure_repo, unconfigure_repo, install_packages,
+           kernel_status, restart_agent, update_profile]
 CAPABILITIES = ['manage_updates']

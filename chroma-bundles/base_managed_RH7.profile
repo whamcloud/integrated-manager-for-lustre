@@ -12,18 +12,26 @@
   "bundles": [
     "iml-agent",
     "lustre",
-    "e2fsprogs"
+    "e2fsprogs",
+    "zfs"
   ],
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
   "packages": {
+    "iml-agent": [
+      "chroma-agent-management"
+    ],
     "lustre": [
-      "lustre-modules",
       "lustre-osd-ldiskfs",
-      "lustre"
+      "lustre",
+      "lustre-dkms",
+      "lustre-osd-zfs-mount",
+      "kernel-devel-3.10.0-327.22.2.el7_lustre"
+    ],
+    "zfs": [
+      "zfs"
     ]
   },
   "validation": [
-    {"test": "zfs_installed == False", "description": "ZFS is installed but is unsupported by the Managed Storage Server profile"},
     {"test": "distro_version < 8 and distro_version >= 7", "description": "The profile is designed for version 7 of EL"}
   ]
 }

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -214,7 +214,7 @@ class Step(object):
 
             # Prior to 3.0 update_packages returned {'update_packages': data} so fix this up. This code is here so that all
             # of the legacy fixups are in one place and can easily be removed.
-            if command == 'update_packages' and 'scan_packages' in result:
+            if command == 'install_packages' and 'scan_packages' in result:
                 result = agent_result(result['scan_packages'])
             else:
                 result = agent_result(result)

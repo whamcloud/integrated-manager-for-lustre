@@ -157,7 +157,7 @@ class MockAgentRpc(object):
         elif cmd == 'detect_scan':
             return mock_server['detect-scan']
         elif cmd == 'install_packages':
-            return agent_result(None)
+            return agent_result([])
         elif cmd == 'register_server':
             api_client = TestApiClient()
             old_is_authenticated = CsrfAuthentication.is_authenticated
@@ -214,8 +214,7 @@ class MockAgentRpc(object):
                      'configure_rsyslog', 'unconfigure_rsyslog',
                      'configure_target_store', 'unconfigure_target_store',
                      'deregister_server', 'restart_agent',
-                     'install_packages', 'shutdown_server',
-                     'host_corosync_config', 'check_block_device',
+                     'shutdown_server', 'host_corosync_config', 'check_block_device',
                      'set_conf_param', 'purge_configuration']:
             return None
         elif cmd in ['configure_target_ha', 'unconfigure_target_ha',

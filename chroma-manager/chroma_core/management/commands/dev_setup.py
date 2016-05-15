@@ -54,7 +54,7 @@ class Command(BaseCommand):
         profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed_RH7.profile")
 
         if options['no_bundles']:
-            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood']:
+            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood', 'zfs']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive

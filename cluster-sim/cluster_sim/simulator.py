@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -242,17 +242,21 @@ class ClusterSimulator(Persisted):
         # Packages which the FakeServers will report as available
         self.state['packages'] = {
             'server': {
-                'lustre': (0, "2.1.4", "1", "x86_64"),
-                'lustre-modules': (0, "2.1.4", "1", "x86_64"),
-                'lustre-osd-ldiskfs': (0, "2.1.4", "1", "x86_64")
+                'lustre': (0, '2.1.4', '1', 'x86_64'),
+                'lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
+                'lustre-dkms': (0, '2.1.4', '1', 'x86_64'),
+                'lustre-osd-zfs-mount': (0, '2.1.4', '1', 'x86_64'),
+                'kernel-devel-3.10.0-327.22.2.el7_lustre': (0, '2.6.32', '1', 'x86_64'),
+                'zfs': (0, '0.6.5.3', '1', 'x86_64')
             },
             'worker': {
-                'lustre-client': (0, "2.5.0", "1", "x86_64"),
-                'lustre-client-modules': (0, "2.5.0", "1", "x86_64")
+                'lustre-client': (0, '2.5.0', '1', 'x86_64'),
+                'lustre-client-modules': (0, '2.5.0', '1', 'x86_64')
             }
         }
         for packages in self.state['packages'].values():
-            packages['chroma-agent-management'] = 0, '', '', ''
+            packages['chroma-agent'] = (0, '3.0.1', '1', 'x86_64')
+            packages['chroma-agent-management'] = (0, '3.0.1', '1', 'x86_64')
         self.save()
 
         self.power.setup(pdu_count)

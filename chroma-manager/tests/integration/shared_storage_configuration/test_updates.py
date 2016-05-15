@@ -64,7 +64,6 @@ class TestUpdates(ChromaIntegrationTestCase):
                 upgrade_version = (p['epoch'], p['version'], p['release'], p['arch'])
                 upgrade_packages[p['name']] = upgrade_version
 
-                # Sanity: this upgrade should be a different version to what was initially installed
                 self.assertNotEqual(original_packages[p['name']], upgrade_version)
 
         # There should be at least one upgrade available

@@ -150,6 +150,7 @@ class FakeServer(utils.Persisted):
         self.state['fqdn'] = fqdn
         self.state['worker'] = worker
         self.state['client_mounts'] = client_mounts
+        self.state['packages']['chroma-agent'] = self._simulator.available_packages(self.node_type)['chroma-agent']    # The agent is installed at this point.
         self.save()
 
     @property
@@ -226,14 +227,15 @@ class FakeServer(utils.Persisted):
                 'installed': installed
             }
 
-        return {'iml-agent': packages}
+        return {'e2fsprogs': packages}
 
-    def install_packages(self, repos, packages, force_dependencies=False):
+    def install_packages(self, repos, packages):
         for package in packages:
             try:
                 self.state['packages'][package] = self._simulator.available_packages(self.node_type)[package]
             except KeyError:
-                raise RuntimeError("Package '%s' not found (available: %s)!" % (package, self._simulator.available_packages(self.node_type)))
+                raise RuntimeError("Package '%s' not found (available: %s)!" %
+                                   (package, self._simulator.available_packages(self.node_type)))
 
         self.save()
 
@@ -241,9 +243,6 @@ class FakeServer(utils.Persisted):
 
     def get_package_version(self, package):
         return self.state['packages'][package]
-
-    def update_packages(self, repos, packages):
-        return self.install_packages(repos, packages)
 
     def inject_log_message(self, message):
         log.debug("Injecting log message %s/%s" % (self.fqdn, message))
