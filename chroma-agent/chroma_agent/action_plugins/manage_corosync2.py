@@ -141,7 +141,6 @@ def _nodes_in_cluster():
     else:
         # nodes are on the right side of lines separated with ':'
         for line in result.stdout.split('\n'):
-
             if line.find(':') > 0:
                 nodes.extend(line.split(':')[1].strip().split())
 
@@ -183,16 +182,13 @@ def unconfigure_corosync2(host_fqdn, mcast_port):
     result = AgentShell.run_new(['pcs', '--force', 'cluster', 'node', 'remove', host_fqdn])
 
     if result.rc != 0:
-
         if 'No such file or directory' in result.stderr:
             # we want to return successful if the configuration file does not exist
             console_log.warning(result.stderr)
-
         elif 'Error: Unable to update any nodes' in result.stderr:
             # this error is expected when this is the last node in the cluster
             if len(cluster_nodes) != 1:
                 return agent_error(result.stderr)
-
         else:
             return agent_error(result.stderr)
 

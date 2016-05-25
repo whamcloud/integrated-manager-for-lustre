@@ -271,6 +271,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                             print step['console']
                             print step['backtrace']
                             print ''
+
+                            if 'Unable to update any nodes' in step['console']:
+                                self._fetch_help(lambda: 1 / 0,
+                                                 ['chris.gearing@intel.com'],
+                                                 'Unable to update any nodes: %s' % step['description'])
             elif disposition == "TIMED OUT":
                 if job['state'] != "complete":
                     print "Job %s incomplete:" % job['id']
