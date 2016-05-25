@@ -223,10 +223,13 @@ class UnconfigureCorosyncStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'],
-                                        "unconfigure_corosync2",
-                                        {'host_fqdn': kwargs['host'].fqdn,
-                                         'mcast_port': kwargs['mcast_port']})
+        # Serialize across nodes with the same mcast_port so that we ensure commands
+        # are executed in the same order.
+        with peer_mcast_ports_configuration_lock[kwargs['mcast_port']]:
+            self.invoke_agent_expect_result(kwargs['host'],
+                                            "unconfigure_corosync2",
+                                            {'host_fqdn': kwargs['host'].fqdn,
+                                             'mcast_port': kwargs['mcast_port']})
 
 
 class UnconfigureCorosync2Job(corosync_common.UnconfigureCorosyncJob):
