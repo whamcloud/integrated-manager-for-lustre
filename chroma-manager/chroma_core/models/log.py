@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,6 +21,8 @@
 
 
 from django.db import models
+
+import re
 
 
 class MessageClass:
@@ -71,9 +73,11 @@ class LogMessage(models.Model):
 
     @classmethod
     def get_message_class(cls, message):
-        if message.startswith("LustreError:"):
+        log_match = '(\[[\d\.]*\])? ?%s:'
+
+        if re.match(log_match % 'LustreError', message):
             return MessageClass.LUSTRE_ERROR
-        elif message.startswith("Lustre:"):
+        elif re.match(log_match % 'Lustre', message):
             return MessageClass.LUSTRE
         else:
             return MessageClass.NORMAL
