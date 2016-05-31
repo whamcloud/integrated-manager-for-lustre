@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,6 @@
 import xml.etree.ElementTree as xml
 from xml.parsers.expat import ExpatError as ParseError
 import socket
-import time
 
 from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 from chroma_agent.chroma_common.lib import shell
@@ -66,11 +65,10 @@ class LustreTarget(PacemakerObject):
 
 # TODO: Refactor this class to use PacemakerObject
 class PacemakerNode(object):
-    def __init__(self, name, attributes=None):
+    def __init__(self, name, uuid):
         self.name = name
-        self.attributes = attributes
-        if not self.attributes:
-            self.attributes = {}
+        self.uuid = uuid
+        self.attributes = {}
 
     def fence_reboot(self):
         self.fence_off()
@@ -191,7 +189,7 @@ class PacemakerConfig(object):
     def nodes(self):
         nodes = []
         for node in self.configuration.find('nodes'):
-            nodeobj = PacemakerNode(node.get('uname'))
+            nodeobj = PacemakerNode(node.get('uname'), node.get('id'))
             try:
                 i_attrs = node.find('instance_attributes')
                 for nvpair in i_attrs.findall('nvpair'):
@@ -214,19 +212,15 @@ class PacemakerConfig(object):
 
     @property
     def dc(self):
-        timeout = 30
-        dc = None
-        while not dc and timeout > 0:
-            dc = self.root.get('dc-uuid')
-            if dc:
-                break
-            time.sleep(1)
-            timeout -= 1
+        dc_uuid = self.root.get('dc-uuid')
 
-        if not dc:
-            raise PacemakerError("could not determine DC")
+        if dc_uuid:
+            try:
+                return next(node.name for node in self.nodes if node.uuid == dc_uuid)
+            except StopIteration:
+                pass
 
-        return dc
+        return None
 
     @property
     def fenceable_nodes(self):
@@ -241,6 +235,13 @@ class PacemakerConfig(object):
     @property
     def is_dc(self):
         return self.dc == self.get_node(socket.gethostname()).name
+
+    @property
+    def configured(self):
+        ''' configured returns True if this node has a pacemaker configuration set by IML.
+        :return: True if configuration present else False
+        '''
+        return 'fence_chroma' in cibadmin(['--query', '-o', 'resource'])[1]
 
     @property
     def stonith_enabled(self):

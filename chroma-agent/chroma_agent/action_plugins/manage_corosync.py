@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -43,6 +43,8 @@ RSRC_FAIL_WINDOW = "20m"
 # The number of times in the above window a resource monitor can fail
 # before we migrate it
 RSRC_FAIL_MIGRATION_COUNT = "3"
+
+PACEMAKER_CONFIGURE_TIMEOUT = 120
 
 
 def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = None, mcast_port = None):
@@ -117,27 +119,24 @@ def configure_pacemaker():
     enable_pacemaker()
     shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
 
-    _configure_pacemaker()
-
-    # Now check that pacemaker is configured, by looking for our configuration flag.
-    # Allow 1 minute - if nothing then return an error.
-    for timeout in range(0, 60):
-        if PacemakerConfig().stonith_enabled:
-            return None
-        time.sleep(1)
-
-    return "pacemaker_configuration_failed"
-
-
-def _configure_pacemaker():
     pc = PacemakerConfig()
 
-    if not pc.is_dc:
-        daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
-        return
+    timeout_time = time.time() + PACEMAKER_CONFIGURE_TIMEOUT
 
-    daemon_log.info("Configuring (global) pacemaker configuration because I am the DC")
+    while (pc.configured is False) and (time.time() < timeout_time):
+        if pc.is_dc:
+            daemon_log.info('Configuring (global) pacemaker configuration because I am the DC')
+            _do_configure_pacemaker(pc)
+        else:
+            daemon_log.info('Not configuring (global) pacemaker configuration because I am not the DC')
 
+        time.sleep(10)
+
+    if pc.configured is False:
+        raise RuntimeError('Failed to configure (global) pacemaker configuration dc=%s' % pc.dc)
+
+
+def _do_configure_pacemaker(pc):
     # ignoring quorum should only be done on clusters of 2
     if len(pc.nodes) > 2:
         no_quorum_policy = "stop"
@@ -171,10 +170,6 @@ def _configure_pacemaker():
     set_rsc_default("resource-stickiness", "1000")
     set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW)
     set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
-
-    # Finally mark who configured it.
-    pc.create_update_properyset("intel_manager_for_lustre_configuration",
-                                {"configured_by": socket.gethostname()})
 
 
 def configure_fencing(agents):
