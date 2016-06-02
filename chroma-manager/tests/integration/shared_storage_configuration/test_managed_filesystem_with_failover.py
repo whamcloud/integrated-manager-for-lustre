@@ -11,7 +11,10 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
     TEST_SERVERS = config['lustre_servers'][0:4]
 
     def _test_create_filesystem_with_failover(self):
-        filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)
+        filesystem_id = self._fetch_help(lambda: self.create_filesystem_standard(self.TEST_SERVERS),
+                                         ['chris.gearing@intel.com'],
+                                         'Test createfile system failed')
+
         filesystem = self.get_filesystem(filesystem_id)
 
         # Define where we expect targets for volumes to be started on depending on our failover state.
@@ -23,7 +26,9 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         }
 
         # Verify targets are started on the correct hosts
-        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
+        self._fetch_help(lambda: self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state),
+                         ['chris.gearing@intel.com'],
+                         'Verify targets failed')
 
         # Mount the filesystem
         self.assertTrue(filesystem['mount_command'])
@@ -161,16 +166,15 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         self.remote_operations.await_server_boot(self.TEST_SERVERS[0]['fqdn'])
 
         # Add two hosts
-        host_1 = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
-        host_2 = self.add_hosts([self.TEST_SERVERS[1]['address']])[0]
+        hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS[:2]])
 
         # Wait for the host to have reported the volumes and discovered HA configuration.
         ha_volumes = self.wait_for_shared_volumes(4, 2)
 
-        self.set_volume_mounts(ha_volumes[0], host_1['id'], host_2['id'])
-        self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
-        self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])
-        self.set_volume_mounts(ha_volumes[3], host_2['id'], host_1['id'])
+        self.set_volume_mounts(ha_volumes[0], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[1], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[2], hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(ha_volumes[3], hosts[1]['id'], hosts[0]['id'])
 
         # Create new filesystem such that the mgs/mdt is on the host we
         # failed over and the osts are not.

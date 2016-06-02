@@ -30,7 +30,8 @@ import socket
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.log import daemon_log, console_log
+from chroma_agent.log import daemon_log
+from chroma_agent.log import console_log
 from chroma_agent import config
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result, agent_result_ok
@@ -546,34 +547,45 @@ def stop_target(ha_label):
     return agent_error("failed to stop target %s" % ha_label)
 
 
-# common plumbing for failover/failback
 def _move_target(target_label, dest_node):
-    arg_list = ["crm_resource", "--resource", target_label, "--move", "--node", dest_node]
-    rc, stdout, stderr = AgentShell.run(arg_list)
+    """
+    common plumbing for failover/failback. Move the target with label to the destination node.
 
-    if rc != 0:
-        return "Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr)
+    :param target_label: The label of the node to move
+    :param dest_node: The target to move it to.
+    :return: None if successful or an error message if an error occurred.
+    """
 
-    if stderr.find("%s is already active on %s\n" %
-                   (target_label, dest_node)) > -1:
-        return None
+    arg_list = ['crm_resource', '--resource', target_label, '--move', '--node', dest_node]
 
-    # now wait for it to complete its move
+    # For on going debug purposes, lets get the resource locations at the beginning. This provides useful
+    # log output in the case where things don't work.
+    AgentShell.run(['crm_mon', '-1'])
+
+    # Now before we start cleanup anything that has gone on before. HA is a fickle old thing and this will make sure
+    # that everything is clean before we start.
+    AgentShell.try_run(['crm_resource', '--resource', target_label, '--cleanup'])
+
+    result = AgentShell.run_new(arg_list)
+
+    if result.rc != 0:
+        return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list), result.stdout, result.stderr)
+
     timeout = 100
-    n = 0
-    migrated = False
-    while n < timeout:
+
+    # Now wait for it to complete its move, this will succeed quickly if it was already there
+    while timeout > 0:
         if get_resource_location(target_label) == dest_node:
-            migrated = True
             break
+
         time.sleep(1)
-        n += 1
+        timeout -= 1
 
     # now delete the constraint that crm_resource --move created
-    AgentShell.try_run(["crm_resource", "--resource", target_label, "--un-move",
-                        "--node", dest_node])
-    if not migrated:
-        return "Failed to fail back target %s" % target_label
+    AgentShell.try_run(['crm_resource', '--resource', target_label, '--un-move', '--node', dest_node])
+
+    if timeout == 0:
+        return "Failed to move target %s to node %s" % (target_label, dest_node)
 
     return None
 

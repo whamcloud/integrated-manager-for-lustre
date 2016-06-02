@@ -337,7 +337,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         Two OSTs in an active/active pair"""
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(test_servers), 4)
-        servers = [s['address'] for s in test_servers][:4]
+        servers = [s['address'] for s in test_servers[:4]]
         self.add_hosts(servers)
 
         # Set up power control for fencing -- needed to ensure that

@@ -76,7 +76,9 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
             command = response.json
             failover_target_command_ids.append(command['id'])
 
-        self.wait_for_commands(self.chroma_manager, failover_target_command_ids)
+        self._fetch_help(lambda: self.wait_for_commands(self.chroma_manager, failover_target_command_ids),
+                         ['chris.gearing@intel.com'],
+                         'failed to failover')
 
         # Wait for failover to occur
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
@@ -110,7 +112,9 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
             command = response.json
             failback_target_command_ids.append(command['id'])
 
-        self.wait_for_commands(self.chroma_manager, failback_target_command_ids)
+        self._fetch_help(lambda: self.wait_for_commands(self.chroma_manager, failback_target_command_ids),
+                         ['chris.gearing@intel.com'],
+                         'failed to failback')
 
         # Wait for the targets to move back to their original server.
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state))

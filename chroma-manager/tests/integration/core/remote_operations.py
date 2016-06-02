@@ -556,7 +556,7 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(
             host['address'],
             'crm_resource -r %s -W' % ha_label,
-            timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
+            timeout = 30  # shorter timeout since shouldn't take long and increases turnaround when there is a problem
         )
         resource_status = result.stdout
 
