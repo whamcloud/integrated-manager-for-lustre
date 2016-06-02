@@ -2,8 +2,6 @@
 from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
-import dateutil
-import datetime
 import time
 from django.db import transaction
 
@@ -11,6 +9,7 @@ from collections import namedtuple
 from tests.services.supervisor_test_case import SupervisorTestCase
 from tests.services.agent_http_client import AgentHttpClient
 from tests.chroma_common.lib import util
+from tests.chroma_common.lib.date_time import IMLDateTime
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
@@ -86,7 +85,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
                 nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME,
                 state = 'lnet_down',
-                state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc()),
+                state_modified_at = IMLDateTime.utcnow(),
                 server_profile = server_profile
             )
             LNetConfiguration.objects.create(host = self.host, state = 'lnet_down')

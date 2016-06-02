@@ -4,6 +4,7 @@ import time
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 
 logger = logging.getLogger('test')
@@ -14,15 +15,13 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:2]
 
     def _wait_for_server_boot_time(self, fqdn, old_boot_time=None):
-        import dateutil.parser
-
         running_time = 0
         while running_time < TEST_TIMEOUT:
             hosts = self.get_list("/api/host/")
             for host in hosts:
                 if host['fqdn'] == fqdn:
                     if host['boot_time'] is not None:
-                        boot_time = dateutil.parser.parse(host['boot_time'])
+                        boot_time = IMLDateTime.parse(host['boot_time'])
                         if old_boot_time:
                             if boot_time > old_boot_time:
                                 return boot_time

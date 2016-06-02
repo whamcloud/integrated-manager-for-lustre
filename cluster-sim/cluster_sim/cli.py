@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,8 +24,6 @@ import argparse
 import json
 import signal
 import threading
-import datetime
-import dateutil.tz
 import os
 import sys
 from SimpleXMLRPCServer import SimpleXMLRPCServer
@@ -39,6 +37,7 @@ from cluster_sim.log import log
 
 from chroma_agent.agent_daemon import daemon_log
 from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 
 SIMULATOR_PORT = 8743
@@ -122,7 +121,7 @@ class SimulatorCli(object):
             'profile': profile['resource_uri']
         }
         if duration is not None:
-            args['expiry'] = (datetime.datetime.now(dateutil.tz.tzutc()) + duration).isoformat()
+            args['expiry'] = (IMLDateTime.utcnow() + duration).isoformat()
 
         response = session.post("%sapi/registration_token/" % url, data=json.dumps(args))
         assert response.ok

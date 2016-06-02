@@ -39,7 +39,7 @@ from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
-
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
@@ -116,7 +116,7 @@ class FakeServer(utils.Persisted):
                                                    'lnd_network': nid[2]}
                 interface_no += 1
 
-        self.boot_time = datetime.datetime.utcnow()
+        self.boot_time = IMLDateTime.utcnow()
         self.id = server_id
 
         self.log_rate = 0
@@ -253,7 +253,7 @@ class FakeServer(utils.Persisted):
                 'severity': 1,
                 'facility': 1,
                 'message': message,
-                'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
+                'datetime': IMLDateTime.utcnow().isoformat()
             })
 
     def pop_log_messages(self):
@@ -266,7 +266,7 @@ class FakeServer(utils.Persisted):
                 'severity': 1,
                 'facility': 1,
                 'message': "%s %s %s" % (self.fqdn, d, a),
-                'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
+                'datetime': IMLDateTime.utcnow().isoformat()
             } for a in range(0, self.log_rate)])
 
         self._log_messages = []
@@ -517,10 +517,10 @@ class FakeServer(utils.Persisted):
             log.info("%s beginning shutdown" % self.fqdn)
             self._enter_shutdown()
 
-            shutdown_start_time = datetime.datetime.utcnow()
+            shutdown_start_time = IMLDateTime.utcnow()
             self.shutdown_agent()
             self._cluster.leave(self.nodename)
-            shutdown_end_time = datetime.datetime.utcnow()
+            shutdown_end_time = IMLDateTime.utcnow()
 
             shutdown_time = (shutdown_end_time - shutdown_start_time).seconds
             while shutdown_time < MIN_SHUTDOWN_DURATION:
@@ -602,7 +602,7 @@ class FakeServer(utils.Persisted):
                 return
 
             self._enter_startup()
-            self.boot_time = datetime.datetime.utcnow()
+            self.boot_time = IMLDateTime.utcnow()
 
             while startup_time < MIN_STARTUP_DURATION:
                 if not simulate_bootup:

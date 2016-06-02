@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,12 +19,12 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import sys
 import traceback
 import logging
 import itertools
 from chroma_core.models.jobs import SchedulingError
-import dateutil.parser
 import bisect
 from collections import namedtuple
 
@@ -45,7 +45,7 @@ from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
-
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
@@ -441,13 +441,13 @@ class MetricResource:
         begin = end = None
         if not latest:
             try:
-                begin = dateutil.parser.parse(request.GET['begin'])
+                begin = IMLDateTime.parse(request.GET['begin'])
             except KeyError:
                 errors['begin'].append("This field is mandatory when latest=false")
             except ValueError:
                 errors['begin'].append("Malformed time string")
             try:
-                end = dateutil.parser.parse(request.GET['end'])
+                end = IMLDateTime.parse(request.GET['end'])
             except KeyError:
                 if update or num_points:
                     errors['end'].append("This field is mandatory when latest=false")

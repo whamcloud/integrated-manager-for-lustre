@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -28,15 +28,16 @@ import threading
 import Queue
 import select
 import json
+
 from argparse import ArgumentParser, ArgumentError, Action
-from dateutil import parser as dateparser
-from dateutil.tz import tzutc
 
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent.log import copytool_log, copytool_log_setup, increase_loglevel, decrease_loglevel
 from chroma_agent.utils import lsof
 from chroma_agent.agent_client import CryptoClient, ExceptionCatchingThread, HttpError, MAX_BYTES_PER_POST, MIN_SESSION_BACKOFF, MAX_SESSION_BACKOFF
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from chroma_agent.chroma_common.lib.date_time import FixedOffset
 
 READER_SELECT_TIMEOUT = 1.0
 RELAY_POLL_INTERVAL = 1
@@ -100,8 +101,8 @@ class CopytoolEventRelay(ExceptionCatchingThread):
                     break
 
             try:
-                date = dateparser.parse(event['event_time'])
-                event['event_time'] = str(date.astimezone(tzutc()))
+                date = IMLDateTime.parse(event['event_time'])
+                event['event_time'] = date.astimezone(tz=FixedOffset(0)).strftime("%Y-%m-%d %H:%M:%S+00:00")
             except ValueError as e:
                 copytool_log.error("Invalid event date in event '%s': %s" % (event, e))
                 break

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,7 +22,6 @@
 
 import threading
 import traceback
-import dateutil.parser
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -33,6 +32,7 @@ from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job
 from chroma_core.models.command import Command
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 
 log = log_register(__name__)
@@ -67,7 +67,7 @@ class QueueHandler(object):
                     deserialized_update_attrs[attr] = value
                 else:
                     if isinstance(field, DateTimeField):
-                        deserialized_update_attrs[attr] = dateutil.parser.parse(value)
+                        deserialized_update_attrs[attr] = IMLDateTime.parse(value)
                     else:
                         deserialized_update_attrs[attr] = value
 

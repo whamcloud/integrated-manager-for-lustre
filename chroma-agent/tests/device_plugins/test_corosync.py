@@ -1,32 +1,17 @@
+import mock
 import logging
-import datetime
+from datetime import timedelta
 import json
 
 
 from chroma_agent.device_plugins.corosync import CorosyncPlugin
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 log = logging.getLogger(__name__)
 
 ONLINE, OFFLINE = 'true', 'false'
 CMD = ('crm_mon', '--one-shot', '--as-xml')
-
-
-class patch_timezone(object):
-    def __init__(self, offset_hours):
-        self._offset = offset_hours * 3600
-
-    def __enter__(self):
-        from dateutil.tz import tzlocal
-        self._old_std_offset = tzlocal._std_offset
-        self._old_dst_offset = tzlocal._dst_offset
-        tzlocal._std_offset = datetime.timedelta(seconds = self._offset)
-        tzlocal._dst_offset = datetime.timedelta(seconds = self._offset)
-
-    def __exit__(self, *exc_info):
-        from dateutil.tz import tzlocal
-        tzlocal._std_offset = self._old_std_offset
-        tzlocal._dst_offset = self._old_dst_offset
 
 
 class TestCorosync(CommandCaptureTestCase):
@@ -90,29 +75,35 @@ class TestCorosync(CommandCaptureTestCase):
                           CommandCaptureCommand(('service', 'corosync', 'status'), rc=0),
                           CommandCaptureCommand(('service', 'pacemaker', 'status'), rc=0))
 
-        with patch_timezone(feed_tz):
-            plugin = CorosyncPlugin(None)
-            result_dict = plugin.start_session()
+        class mock_imldatetime(IMLDateTime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls.utcnow() + timedelta(hours=feed_tz)
 
-            self.assertRanAllCommandsInOrder()
-            self.assertEqual(result_dict["state"]["corosync"], 'started')
-            self.assertEqual(result_dict["state"]["pacemaker"], 'started')
+        mock.patch('chroma_agent.device_plugins.corosync.IMLDateTime', mock_imldatetime).start()
 
-            #  Check it's serializable.
-            try:
-                json.dumps(result_dict)
-            except TypeError:
-                self.fail("payload from plugin can't be serialized")
+        plugin = CorosyncPlugin(None)
+        result_dict = plugin.start_session()
 
-            def check_node(node_name, crm_info, expected_status):
-                tm = crm_info['datetime']
-                self.assertEqual(tm, feed_utc_datetime)
-                node_record = crm_info['nodes'][node_name]
-                self.assertEqual(node_record['name'], node_name)
-                self.assertEqual(node_record['online'], expected_status)
+        self.assertRanAllCommandsInOrder()
+        self.assertEqual(result_dict["state"]["corosync"], 'started')
+        self.assertEqual(result_dict["state"]["pacemaker"], 'started')
 
-            check_node('storage0.node', result_dict['crm_info'], ONLINE)
-            check_node('storage1.node', result_dict['crm_info'], OFFLINE)
+        #  Check it's serializable.
+        try:
+            json.dumps(result_dict)
+        except TypeError:
+            self.fail("payload from plugin can't be serialized")
+
+        def check_node(node_name, crm_info, expected_status):
+            tm = crm_info['datetime']
+            self.assertEqual(tm, feed_utc_datetime)
+            node_record = crm_info['nodes'][node_name]
+            self.assertEqual(node_record['name'], node_name)
+            self.assertEqual(node_record['online'], expected_status)
+
+        check_node('storage0.node', result_dict['crm_info'], ONLINE)
+        check_node('storage1.node', result_dict['crm_info'], OFFLINE)
 
     def test_corosync_down(self):
         """Corosync is not running - attempt was tried, but failed.

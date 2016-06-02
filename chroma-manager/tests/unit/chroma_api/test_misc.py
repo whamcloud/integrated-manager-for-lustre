@@ -1,4 +1,3 @@
-import dateutil.parser
 import mock
 
 from chroma_core.models import ManagedHost
@@ -12,6 +11,7 @@ from chroma_core.models import StepResult
 from chroma_core.models import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import synthetic_host
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 
 def _remove_host_resources(host_id):
@@ -42,7 +42,7 @@ class TestMisc(ChromaApiTestCase):
         response = self.api_client.get("/api/host/")
         self.assertHttpOK(response)
         host = self.deserialize(response)['objects'][0]
-        t = dateutil.parser.parse(host['state_modified_at'])
+        t = IMLDateTime.parse(host['state_modified_at'])
         self.assertNotEqual(t.tzinfo, None)
 
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,9 +20,7 @@
 # express and approved by Intel in writing.
 
 
-import datetime
 from chroma_api.host import ServerProfileResource
-import dateutil
 
 from tastypie.authorization import DjangoAuthorization
 from tastypie.fields import ToOneField, CharField
@@ -31,6 +29,7 @@ from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import CustomModelResource
 from chroma_core.models import RegistrationToken
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 import settings
 
@@ -100,7 +99,7 @@ class RegistrationTokenResource(CustomModelResource):
         resource_name = 'registration_token'
         queryset = RegistrationToken.objects.filter(
             cancelled = False,
-            expiry__gt = datetime.datetime.now(dateutil.tz.tzutc()),
+            expiry__gt = IMLDateTime.utcnow(),
             credits__gt = 0)
         validation = RegistrationTokenValidation()
         always_return_data = True

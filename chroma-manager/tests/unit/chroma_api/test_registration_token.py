@@ -1,11 +1,12 @@
 
 import datetime
-import dateutil.tz
+
 from chroma_core.models.registration_token import RegistrationToken, SECRET_LENGTH
 from django.contrib.auth.models import User, Group
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.tastypie_test import TestApiClient
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 
 class TestRegistrationTokenResource(ChromaApiTestCase):
@@ -44,7 +45,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
 
         readonly_test_values = {
             'secret': "X" * SECRET_LENGTH * 2,
-            'expiry': datetime.datetime.now(dateutil.tz.tzutc()),
+            'expiry': IMLDateTime.utcnow(),
             'credits': 666
         }
 
@@ -63,7 +64,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
         self.assertHttpCreated(response)
 
-        expiry_value = datetime.datetime.now(dateutil.tz.tzutc())
+        expiry_value = IMLDateTime.utcnow()
         expiry_value += datetime.timedelta(seconds = 120)
         expiry_value = expiry_value.replace(microsecond = 0)
 

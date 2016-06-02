@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -32,7 +32,7 @@ from chroma_agent.plugin_manager import DevicePluginMessageCollection, DevicePlu
 import requests
 from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log, logging_in_debug_mode
-
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 MAX_BYTES_PER_POST = 8 * 1024 ** 2  # 8MiB, should be <= SSLRenegBufferSize
 
@@ -106,7 +106,7 @@ class AgentClient(CryptoClient):
         self._nodename = server_properties.nodename
 
         self.boot_time = server_properties.boot_time
-        self.start_time = datetime.datetime.utcnow()
+        self.start_time = IMLDateTime.utcnow()
 
         self.action_plugins = action_plugins
         self.device_plugins = device_plugins

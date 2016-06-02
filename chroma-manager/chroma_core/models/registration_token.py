@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,11 +20,13 @@
 # express and approved by Intel in writing.
 
 
-import datetime
-import dateutil.tz
-from django.db import models
-from chroma_core.models.server_profile import ServerProfile
 import os
+import datetime
+
+from django.db import models
+
+from chroma_core.models.server_profile import ServerProfile
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 
 SECRET_LENGTH = 16  # Number of bytes in secret, double to get number of alphanumeric characters
@@ -33,7 +35,7 @@ DEFAULT_CREDITS = 1
 
 
 def _tzaware_future_offset(offset):
-    now = datetime.datetime.now(dateutil.tz.tzutc())
+    now = IMLDateTime.utcnow()
     return now + datetime.timedelta(seconds = offset)
 
 
@@ -59,8 +61,6 @@ class RegistrationToken(models.Model):
         help_text = "Integer, the number of servers which may register using this token before it expires (default %s)" % DEFAULT_CREDITS)
 
     profile = models.ForeignKey(ServerProfile, null=True)
-    # FIXME: need to change back the default when migration has been done
-    #profile = models.ForeignKey(ServerProfile, default=lambda: ServerProfile.objects.get(name='default'))
 
     def save(self, *args, **kwargs):
         assert self.profile

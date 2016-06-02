@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,9 +23,6 @@
 import Queue
 import json
 import traceback
-import datetime
-import dateutil
-import dateutil.tz
 import time
 
 from django.db import transaction
@@ -43,7 +40,7 @@ from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.http_agent.crypto import Crypto
-
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register('agent_views')
 import logging
@@ -274,8 +271,8 @@ class MessageView(ValidatedClientView):
         fqdn = self.valid_fqdn(request)
         if not fqdn:
             return HttpForbidden()
-        server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
-        client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
+        server_boot_time = IMLDateTime.parse(request.GET['server_boot_time'])
+        client_start_time = IMLDateTime.parse(request.GET['client_start_time'])
 
         messages = []
 
@@ -361,8 +358,7 @@ def validate_token(key, credits=1):
         log.warning("Attempt to register with non-existent token %s" % key)
         return HttpForbidden(), None
     else:
-        now = datetime.datetime.utcnow()
-        now = now.replace(tzinfo = dateutil.tz.tzutc())
+        now = IMLDateTime.utcnow()
 
         if token.expiry < now:
             log.warning("Attempt to register with expired token %s (now %s, expired at %s)" % (key, now, token.expiry))

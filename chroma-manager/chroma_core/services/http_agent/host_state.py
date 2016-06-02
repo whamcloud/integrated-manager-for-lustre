@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,13 +20,15 @@
 # express and approved by Intel in writing.
 
 
-import datetime
 import logging
 import threading
+import datetime
+
 from chroma_agent_comms.views import MessageView
 from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler import job_scheduler_notify
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register("http_agent_host_state")
 
@@ -47,7 +49,7 @@ class HostState(object):
         self._healthy = False
         self._host = ManagedHost.objects.get(fqdn = self.fqdn)
 
-        self._last_contact = datetime.datetime.utcnow()
+        self._last_contact = IMLDateTime.utcnow()
         self._boot_time = boot_time
         self._client_start_time = client_start_time
 
@@ -60,7 +62,7 @@ class HostState(object):
         :return A boolean, true if the agent should be sent a SESSION_TERMINATE_ALL: indicates
                 whether a fresh client run (different start time) is seen.
         """
-        self.last_contact = datetime.datetime.utcnow()
+        self.last_contact = IMLDateTime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
             if self._boot_time is not None:
                 HostRebootEvent.register_event(alert_item = self._host,
@@ -85,7 +87,7 @@ class HostState(object):
 
     def poll(self):
         if self._healthy:
-            time_since_contact = datetime.datetime.utcnow() - self.last_contact
+            time_since_contact = IMLDateTime.utcnow() - self.last_contact
             if time_since_contact > datetime.timedelta(seconds = self.CONTACT_TIMEOUT):
                 self.update_health(False)
         return self._healthy

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,7 +26,7 @@ import datetime
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
 from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
 from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
-
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 log = logging.getLogger(__name__)
 
 
@@ -119,7 +119,7 @@ class BaseFakeSyslogPlugin(DevicePlugin):
                     'severity': 1,
                     'facility': 1,
                     'message': 'Lustre: Cluster simulator syslog session start %s %s' % (self._server.fqdn, datetime.datetime.now()),
-                    'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
+                    'datetime': IMLDateTime.utcnow().isoformat() + 'Z'
                 }
             ]
         }
@@ -185,7 +185,7 @@ class BaseFakeLustrePlugin(DevicePlugin):
                            'python_version_major_minor': 2.6,
                            'python_patchlevel': 6,
                            'kernel_version': '2.6.32-504.8.1.el6_lustre.x86_64'},
-            'started_at': datetime.datetime.utcnow().isoformat() + 'Z',
+            'started_at': IMLDateTime.utcnow().isoformat() + 'Z',
             'agent_version': 'dummy'
         }
 
@@ -255,7 +255,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
         log.debug('Nodes and state:  %s' % nodes)
 
-        dt = datetime.datetime.utcnow().isoformat()
+        dt = IMLDateTime.utcnow().isoformat()
         message = self.get_test_message(utc_iso_date_str=dt,
                                         node_status_list=nodes)
 

@@ -1,9 +1,7 @@
 
-import datetime
 import subprocess
 import tempfile
 import uuid
-from dateutil import tz
 import mock
 
 from chroma_core.models import LogMessage
@@ -11,6 +9,7 @@ from chroma_core.models import Bundle, ServerProfile
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register('test_helper')
 
@@ -55,10 +54,8 @@ def generate_csr(common_name):
 
 
 def fake_log_message(message):
-    t = datetime.datetime.utcnow()
-    t = t.replace(tzinfo = tz.tzutc())
     return LogMessage.objects.create(
-        datetime = t,
+        datetime = IMLDateTime.utcnow(),
         message = message,
         severity = 0,
         facility = 0,

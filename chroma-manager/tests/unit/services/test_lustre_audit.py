@@ -1,4 +1,3 @@
-import datetime
 import mock
 
 from chroma_core.services.job_scheduler import job_scheduler_notify
@@ -8,6 +7,7 @@ from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import Package, PackageVersion, PackageAvailability
 from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 
 class TestAudit(IMLUnitTestCase):
@@ -25,7 +25,7 @@ class TestAudit(IMLUnitTestCase):
         # to run the function we're testing.
         self.update_scan = UpdateScan()
         self.update_scan.host = host
-        self.update_scan.started_at = datetime.datetime.utcnow()
+        self.update_scan.started_at = IMLDateTime.utcnow()
         self.update_scan.update_packages({'agent': data})
 
     def test_update_notification(self):
@@ -158,7 +158,7 @@ class TestAudit(IMLUnitTestCase):
     def test_update_properties(self):
         update_scan = UpdateScan()
         update_scan.host = synthetic_host('test1')
-        update_scan.started_at = datetime.datetime.utcnow()
+        update_scan.started_at = IMLDateTime.utcnow()
         self.assertEqual(update_scan.host.properties, '{}')
         update_scan.update_properties(None)
         update_scan.update_properties({'key': 'value'})

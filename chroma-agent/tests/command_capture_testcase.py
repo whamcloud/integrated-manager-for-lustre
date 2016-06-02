@@ -29,8 +29,6 @@ class CommandCaptureTestCase(AgentUnitTestCase):
         assert 'fake' not in str(Shell.run)
         mock.patch('chroma_agent.chroma_common.lib.shell.Shell.run', self._fake_run).start()
 
-        self.addCleanup(mock.patch.stopall)
-
     def _fake_run(self, arg_list, logger=None, monitor_func=None, timeout=Shell.SHELLTIMEOUT):
         assert type(arg_list) in [list, str, unicode], 'arg list must be list or str :%s' % type(arg_list)
 

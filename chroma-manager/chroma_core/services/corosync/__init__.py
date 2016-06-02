@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,7 +21,7 @@
 
 
 from collections import namedtuple, defaultdict
-from dateutil import parser
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -30,8 +30,8 @@ from chroma_core.models import ManagedHost, HostOfflineAlert
 from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.job_scheduler import job_scheduler_notify
-#from chroma_core.models import CorosyncUnknownPeersAlert, CorosyncNoPeersAlert, CorosyncToManyPeersAlert
 from chroma_core.models import CorosyncNoPeersAlert
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register(__name__)
 
@@ -109,7 +109,7 @@ class Service(ChromaService):
             dt = body['crm_info']['datetime']
 
             try:
-                dt = parser.parse(dt)
+                dt = IMLDateTime.parse(dt)
             except ValueError:
                 if dt != '':
                     log.warning("Invalid date or tz string from corosync plugin: %s" % dt)

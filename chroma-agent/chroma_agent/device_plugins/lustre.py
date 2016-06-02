@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,6 @@
 from collections import defaultdict, namedtuple
 import os
 import glob
-import datetime
 import ConfigParser
 
 from chroma_agent.lib.shell import AgentShell
@@ -37,7 +36,7 @@ from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.lib.yum_utils import yum_util
-
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
@@ -191,7 +190,7 @@ class LustrePlugin(DevicePlugin):
         return mounts.values()
 
     def _scan(self, initial=False):
-        started_at = datetime.datetime.utcnow().isoformat() + "Z"
+        started_at = IMLDateTime.utcnow().isoformat()
         audit = local.LocalAudit()
 
         # Only set resource_locations if we have the management package

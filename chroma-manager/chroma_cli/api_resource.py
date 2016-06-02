@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -83,13 +83,13 @@ class ApiResource(object):
         return "%d" % num
 
     def pretty_time(self, in_time):
-        from datetime import datetime as dt
-        from dateutil.tz import tzlocal, tzutc
-        local_tz = tzlocal()
-        local_midnight = dt.now(local_tz).replace(hour=0, minute=0,
-                                                  second=0, microsecond=0)
-        in_time = in_time.replace(tzinfo=tzutc())
-        out_time = in_time.astimezone(local_tz)
+        from chroma_cli.chroma_common.lib.date_time import IMLDateTime
+        from chroma_cli.chroma_common.lib.util import FixedOffset
+        from chroma_cli.chroma_common.lib.util import LocalOffset
+        local_midnight = IMLDateTime.now().replace(hour=0, minute=0,
+                                                   second=0, microsecond=0)
+        in_time = in_time.replace(tzinfo=FixedOffset(0))
+        out_time = in_time.astimezone(LocalOffset)
         if out_time < local_midnight:
             return out_time.strftime("%Y/%m/%d %H:%M:%S")
         else:

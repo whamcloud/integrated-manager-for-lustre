@@ -1,12 +1,12 @@
 import logging
 from datetime import timedelta
 
-from dateutil.parser import parse
 from django.utils import timezone
 from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
 from tests.unit.chroma_core.helpers import freshen
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -78,7 +78,7 @@ class TestSubsequentLoadDismissables(NotificationTestCase):
         for ev in objects:
             self.assertEqual(ev['dismissed'], False)
             self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
-            self.assertTrue(parse(ev['begin']) >= self.sample_date)
+            self.assertTrue(IMLDateTime.parse(ev['begin']) >= self.sample_date)
 
 
 class TestPatchDismissables(NotificationTestCase):

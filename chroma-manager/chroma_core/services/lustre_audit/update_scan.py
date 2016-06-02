@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,6 @@
 
 import json
 from chroma_core.services import log_register
-import dateutil.parser
 
 from django.db import transaction
 from django.db.models import Q
@@ -35,6 +34,7 @@ from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 import chroma_core.models.package
 from chroma_core.services.stats import StatsQueue
 
@@ -69,7 +69,7 @@ class UpdateScan(object):
 
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
-        self.started_at = dateutil.parser.parse(host_data['started_at'])
+        self.started_at = IMLDateTime.parse(host_data['started_at'])
         self.host = host
         self.host_data = host_data
         log.debug("UpdateScan.run: %s" % self.host)

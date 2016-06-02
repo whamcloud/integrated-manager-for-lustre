@@ -23,7 +23,6 @@
 import os
 import uuid
 from collections import namedtuple
-from dateutil import parser as date_parser
 from django.db import models
 from django.utils.timezone import now as tznow
 
@@ -34,6 +33,7 @@ from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.jobs import StatefulObject, StateChangeJob, Job, AdvertisedJob
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_help.help import help_text
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register(__name__.split('.')[-1])
 
@@ -143,7 +143,7 @@ class CopytoolEvent(object):
             raise RuntimeError("Unknown event type: %s" % type_string)
 
     def __init__(self, event_time, **kwargs):
-        self.timestamp = date_parser.parse(event_time)
+        self.timestamp = IMLDateTime.parse(event_time)
         self._parse_type(kwargs['event_type'])
         self.error = None
         self.__dict__.update(kwargs)

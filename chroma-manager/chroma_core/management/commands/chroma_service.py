@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,6 @@
 import threading
 import sys
 import signal
-import datetime
 import linecache
 from chroma_core.services import ServiceThread
 import os
@@ -40,6 +39,7 @@ from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
 from chroma_core.services.rpc import RpcClientFactory
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 import chroma_core.services.log
 
 
@@ -107,7 +107,7 @@ class Command(BaseCommand):
             class Trace(object):
                 def __init__(self):
                     self.tracefile = open('trace.log', 'w', buffering = 0)
-                    self.tracefile.write("Started at %s: %s %s\n" % (datetime.datetime.utcnow(), args, options))
+                    self.tracefile.write("Started at %s: %s %s\n" % (IMLDateTime.utcnow(), args, options))
 
                 def __call__(self, frame, event, arg):
                     if event == "line":

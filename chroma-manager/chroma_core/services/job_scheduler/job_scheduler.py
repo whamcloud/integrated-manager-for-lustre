@@ -31,7 +31,6 @@ import operator
 import itertools
 from collections import defaultdict
 import Queue
-import dateutil.parser
 from copy import deepcopy
 from chroma_core.lib.util import all_subclasses
 
@@ -66,6 +65,7 @@ from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemo
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 from disabled_connection import DISABLED_CONNECTION
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 from chroma_help.help import help_text
 
@@ -802,7 +802,7 @@ class JobScheduler(object):
     @transaction.commit_on_success
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
-            notification_time = dateutil.parser.parse(time_serialized)
+            notification_time = IMLDateTime.parse(time_serialized)
             self._notify(content_type, object_id, notification_time, update_attrs, from_states)
 
             self._run_next()

@@ -1,4 +1,3 @@
-import datetime
 import uuid
 import re
 from collections import defaultdict
@@ -17,6 +16,7 @@ from synthentic_objects import create_synthetic_device_info
 from chroma_core.services.log import log_register
 from tests.unit.chroma_core.helpers.test_api_client import TestApiClient
 from tests.unit.chroma_core.helpers import helper
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register('mock_agent_rpc')
 
@@ -177,7 +177,7 @@ class MockAgentRpc(object):
                 'available': ['fake_kernel-0.1']
             }
         elif cmd == 'reboot_server':
-            now = datetime.datetime.utcnow()
+            now = IMLDateTime.utcnow()
             log.info("rebooting %s; updating boot_time to %s" % (host, now))
             job_scheduler_notify.notify(host, now, {'boot_time': now})
         elif 'socket.gethostbyname(socket.gethostname())' in cmd:

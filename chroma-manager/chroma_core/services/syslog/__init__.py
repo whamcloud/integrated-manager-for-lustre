@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,6 @@
 # express and approved by Intel in writing.
 
 
-import dateutil.parser
 import os
 import dse
 
@@ -30,6 +29,7 @@ from chroma_core.services.syslog.parser import LogMessageParser
 from chroma_core.models.log import LogMessage
 from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 import settings
 
@@ -94,7 +94,7 @@ class Service(ChromaService):
                             severity = msg['severity'],
                             facility = msg['facility'],
                             tag = msg['source'],
-                            datetime = dateutil.parser.parse(msg['datetime']),
+                            datetime = IMLDateTime.parse(msg['datetime']).as_datetime,
                             message_class = LogMessage.get_message_class(msg['message'])
                         ))
                         self._table_size += 1

@@ -4,10 +4,12 @@ import json
 import datetime
 import mock
 
+from django.utils import unittest
+
 from chroma_agent.agent_client import HttpWriter, Message, HttpReader, SessionTable, HttpError
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import PRIO_LOW, DevicePluginMessage, PRIO_NORMAL, PRIO_HIGH
-from django.utils import unittest
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 
 class TestHttpWriter(unittest.TestCase):
@@ -17,8 +19,8 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
-        client.boot_time = datetime.datetime.utcnow()
-        client.start_time = datetime.datetime.utcnow()
+        client.boot_time = IMLDateTime.utcnow()
+        client.start_time = IMLDateTime.utcnow()
 
         callback = mock.Mock()
 
@@ -63,8 +65,8 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
-        client.boot_time = datetime.datetime.utcnow()
-        client.start_time = datetime.datetime.utcnow()
+        client.boot_time = IMLDateTime.utcnow()
+        client.start_time = IMLDateTime.utcnow()
 
         writer = HttpWriter(client)
 
@@ -97,8 +99,8 @@ class TestHttpWriter(unittest.TestCase):
         sending SESSION_CREATE_REQUEST messages has a power-of-two backoff wait"""
         client = mock.Mock()
         client._fqdn = "test_server"
-        client.boot_time = datetime.datetime.utcnow()
-        client.start_time = datetime.datetime.utcnow()
+        client.boot_time = IMLDateTime.utcnow()
+        client.start_time = IMLDateTime.utcnow()
 
         writer = client.writer = HttpWriter(client)
         reader = client.reader = HttpReader(client)
@@ -229,8 +231,8 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
-        client.boot_time = datetime.datetime.utcnow()
-        client.start_time = datetime.datetime.utcnow()
+        client.boot_time = IMLDateTime.utcnow()
+        client.start_time = IMLDateTime.utcnow()
 
         writer = HttpWriter(client)
 
