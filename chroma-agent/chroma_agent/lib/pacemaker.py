@@ -228,13 +228,16 @@ class PacemakerConfig(object):
 
     def get_node(self, node_name):
         try:
-            return [n for n in self.nodes if n.name == node_name][0]
-        except IndexError:
+            return next(n for n in self.nodes if n.name == node_name)
+        except StopIteration:
             raise PacemakerError("%s does not exist in pacemaker" % node_name)
 
     @property
     def is_dc(self):
-        return self.dc == self.get_node(socket.gethostname()).name
+        try:
+            return self.dc == self.get_node(socket.gethostname()).name
+        except PacemakerError:
+            return False
 
     @property
     def configured(self):
