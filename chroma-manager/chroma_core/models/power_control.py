@@ -328,12 +328,10 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         # now.
         if self.host and self.host.outlets.count() > 0:
             devices = [o.device for o in self.host.outlets.all()] + [self.device]
-            if (any([d.is_ipmi for d in devices]) and
-                not all([d.is_ipmi for d in devices])):
+            if any([d.is_ipmi for d in devices]) and not all([d.is_ipmi for d in devices]):
                 raise ValidationError("Mixing of IPMI and PDU power control is not supported.")
 
-        if (self.device.is_ipmi and
-            self.device.device_type.agent != "fence_virsh"):
+        if self.device.is_ipmi and (self.device.device_type.agent != "fence_virsh"):
             # Special-case for IPMI "outlets". The identifier is the BMC
             # address.
             self.identifier = self.validate_inet_address(self.identifier)
@@ -427,10 +425,9 @@ class PoweronHostJob(AdvertisedJob):
         # 1. The host is associated with >= 1 outlet
         # 2. At least one associated outlet is in a known state (On or Off)
         # 3. None of the associated outlets are On
-        return (host.outlets.count()
-                and any([True if o.has_power in [True, False] else False
-                         for o in host.outlets.all()])
-                and not any([o.has_power for o in host.outlets.all()]))
+        return (host.outlets.count() and
+                any([True if o.has_power in [True, False] else False for o in host.outlets.all()]) and
+                not any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -473,10 +470,9 @@ class PoweroffHostJob(AdvertisedJob):
         # 1. The host is associated with >= 1 outlet
         # 2. All associated outlets are in a known state (On or Off)
         # 3. At least one of the associated outlets is On
-        return (host.outlets.count()
-                and all([True if o.has_power in [True, False] else False
-                         for o in host.outlets.all()])
-                and any([o.has_power for o in host.outlets.all()]))
+        return (host.outlets.count() and
+                all([True if o.has_power in [True, False] else False for o in host.outlets.all()]) and
+                any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
     def long_description(cls, stateful_object):
