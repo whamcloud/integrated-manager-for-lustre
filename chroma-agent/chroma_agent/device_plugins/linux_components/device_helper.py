@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,8 +19,11 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import errno
 import glob
 import os
+from stat import S_ISBLK
+import time
 
 import chroma_agent.lib.normalize_device_path as ndp
 
@@ -37,16 +40,48 @@ class DeviceHelper(object):
 
     def _dev_major_minor(self, path):
         """Return a string if 'path' is a block device or link to one, else return None"""
-        from stat import S_ISBLK
-        try:
-            s = os.stat(path)
-        except OSError:
-            return None
 
-        if S_ISBLK(s.st_mode):
-            return "%d:%d" % (os.major(s.st_rdev), os.minor(s.st_rdev))
+        file_state = None
+        retries = 5
+        while retries > 0:
+            try:
+                file_state = os.stat(path)
+                break
+            except OSError as os_error:
+                if os_error.errno != errno.ENOENT:
+                    raise
+
+                # An OSError could be raised because a path genuinely doesn't
+                # exist, but it also can be the result of conflicting with
+                # actions that cause devices to disappear momentarily, such as
+                # during a partprobe while it reloads the partition table.
+                # So we retry for a short window to catch those devices that
+                # just disappear momentarily.
+                time.sleep(0.1)
+                retries -= 1
+
+        if file_state and S_ISBLK(file_state.st_mode):
+            return "%d:%d" % (os.major(file_state.st_rdev), os.minor(file_state.st_rdev))
         else:
             return None
+
+    def _paths_to_major_minors(self, device_paths):
+        """
+        Create a list of device major minors for a list of device paths. If any of the paths come
+        back as None, return an empty list.
+
+        :param device_paths: The list of paths to get the list of major minors for.
+        :return: list of dev_major_minors, or an empty list if any device_path is not found.
+        """
+        device_mms = []
+        for device_path in device_paths:
+            device_mm = self._dev_major_minor(device_path)
+
+            if device_mm is None:
+                return []
+
+            device_mms.append(device_mm)
+        return device_mms
 
     def _find_block_devs(self, folder):
         # Map of major_minor to path
@@ -65,14 +100,11 @@ class DeviceHelper(object):
         devices = {}
 
         for device in source_devices:
-            drives = [self._dev_major_minor(dp) for dp in device['device_paths']]
-
-            # Check that none of the drives in the list are None (i.e. not found) if we found them all
-            # then we create the entry.
-            if drives.count(None) == 0:
+            drive_mms = self._paths_to_major_minors(device['device_paths'])
+            if drive_mms:
                 devices[device['uuid']] = {'path': device["path"],
                                            'block_device': device['mm'],
-                                           'drives': drives}
+                                           'drives': drive_mms}
 
                 # Finally add these devices to the canonical path list.
                 for device_path in device['device_paths']:
