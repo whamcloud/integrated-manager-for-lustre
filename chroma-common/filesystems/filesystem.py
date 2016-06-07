@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,6 +22,7 @@
 
 from ..lib.shell import Shell
 from ..lib import util
+import abc
 
 _cached_filesystem_types = {}
 
@@ -31,6 +32,9 @@ class FileSystem(object):
         This class really really really needs to be in a common place to all code
         so that its functionality can be used in all components. Then we could pass
         it around as a class and not as a hash of its values. """
+
+    class_override = None
+    __metaclass__ = abc.ABCMeta
 
     class UnknownFileSystem(KeyError):
         pass
@@ -69,14 +73,13 @@ class FileSystem(object):
         '''
         pass
 
-    @property
+    @abc.abstractmethod
     def label(self):
-        '''
+        """
         :return: Returns the label of the filesystem
-        '''
-        raise NotImplementedError("Unimplemented property - label in class %s" % type(self))
+        """
+        pass
 
-    @property
     def device_path(self):
         '''
         :return: The path to the device the contains/will contain the filesystem
@@ -120,21 +123,23 @@ class FileSystem(object):
         '''
         return self._device_path
 
+    @abc.abstractmethod
     def mkfs(self, target_name, options):
-        '''
+        """
         Runs mkfs for the filesystem catering for any fs specific irregularities.
         :param target_name: The lustre target, ost1, ost2, mgt etc.
         :param options: mkfs options to be used for the mount.
         :return:
-        '''
-        raise NotImplementedError("Unimplemented method - mkfs in class %s" % type(self))
+        """
+        pass
 
+    @abc.abstractmethod
     def mkfs_options(self, target):
-        '''
+        """
         :param target: The target device that will be formatted.
         :return: A list of filesystem specific options required for the format.
-        '''
-        raise NotImplementedError("Unimplemented method - mkfs_options in class %s" % type(self))
+        """
+        pass
 
     @classmethod
     def all_supported_filesystems(self):

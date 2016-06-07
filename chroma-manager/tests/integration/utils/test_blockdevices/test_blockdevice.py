@@ -19,14 +19,22 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import abc
+
 
 class TestBlockDevice(object):
-    _supported_device_types = []
+    """
+    BlockDevice abstraction which provides blockdevice specific test code
+    functionality
 
-    """ BlockDevice abstraction which provides blockdevice specific functionality
-        This class really really really needs to be in a common place to all code
-        so that its functionality can be used in all components. Then we could pass
-        it around as a class and not as a hash of its values. """
+    This abstract base class is subclassed to provide concrete implementations
+    of the abstract methods containing the blockdevice specific behaviour.
+    """
+
+    class_override = None
+    __metaclass__ = abc.ABCMeta
+
+    _supported_device_types = []
 
     class UnknownBlockDevice(KeyError):
         pass
@@ -47,9 +55,9 @@ class TestBlockDevice(object):
         self._device_type = device_type
         self._device_path = device_path
 
-    @property
+    @abc.abstractproperty
     def preferred_fstype(self):
-        raise Exception.Unimplemented("Unimplemented property - preferred_fstype in class %s" % type(self))
+        pass
 
     @property
     def device_path(self):

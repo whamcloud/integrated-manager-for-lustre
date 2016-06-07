@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,6 +22,7 @@
 
 from collections import namedtuple, defaultdict
 from ..lib import util
+import abc
 
 _cached_device_types = {}
 
@@ -31,6 +32,9 @@ class BlockDevice(object):
         This class really really really needs to be in a common place to all code
         so that its functionality can be used in all components. Then we could pass
         it around as a class and not as a hash of its values. """
+
+    class_override = None
+    __metaclass__ = abc.ABCMeta
 
     # The split for multiple properties in the lustre configuration storage seems to be inconsistent
     # so create a look up table for the splitters.
@@ -68,17 +72,17 @@ class BlockDevice(object):
         self._device_type = device_type
         self._device_path = device_path
 
-    @property
+    @abc.abstractmethod
     def filesystem_type(self):
-        raise NotImplementedError("Unimplemented property - type in class %s" % type(self))
+        pass
 
-    @property
+    @abc.abstractmethod
     def uuid(self):
-        raise NotImplementedError("Unimplemented property - uuid in class %s" % type(self))
+        pass
 
-    @property
+    @abc.abstractmethod
     def preferred_fstype(self):
-        raise NotImplementedError("Unimplemented property - preferred_fstype in class %s" % type(self))
+        pass
 
     @property
     def device_type(self):
@@ -88,15 +92,17 @@ class BlockDevice(object):
     def device_path(self):
         return self._device_path
 
+    @abc.abstractmethod
     def mgs_targets(self, log):
-        '''
+        """
         Creates a list of all the mgs targets on a given device, returning a dict of filesystems and names
         :param log: The log to write debug info to
         :return: dict of filesystems and names
-        '''
-        raise NotImplementedError("Unimplemented method - mgs_targets in class %s" % type(self))
+        """
+        pass
 
     TargetsInfo = namedtuple('TargetsInfo', ['names', 'params'])
 
+    @abc.abstractmethod
     def targets(self, uuid_name_to_target, device, log):
-        raise NotImplementedError("Unimplemented method - targets in class %s" % type(self))
+        pass

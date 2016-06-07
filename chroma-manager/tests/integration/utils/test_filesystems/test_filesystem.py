@@ -19,14 +19,21 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import abc
+
 
 class TestFileSystem(object):
-    _supported_filesystems = []
+    """
+    Filesystem abstraction which provides filesystem specific testcode functionality
 
-    """ Filesystem abstraction which provides filesystem specific functionality
-        This class really really really needs to be in a common place to all code
-        so that its functionality can be used in all components. Then we could pass
-        it around as a class and not as a hash of its values. """
+    This abstract base class is subclassed to provide concrete implementations
+    of the abstract methods containing the filesystem specific behaviour.
+    """
+
+    class_override = None
+    __metaclass__ = abc.ABCMeta
+
+    _supported_filesystems = []
 
     class UnknownFileSystem(KeyError):
         pass
@@ -61,12 +68,13 @@ class TestFileSystem(object):
         else:
             return ''
 
+    @abc.abstractmethod
     def mkfs_command(self, targets, type, fsname, mgs_nids, additional_options):
-        raise Exception.Unimplemented("Unimplemented method - mkfs_command in class %s" % type(self))
+        pass
 
-    @property
+    @abc.abstractproperty
     def mount_path(self):
-        raise Exception.Unimplemented("Unimplemented property - mount_path in class %s" % type(self))
+        pass
 
     @property
     def install_packages_commands(cls):
