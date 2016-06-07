@@ -116,7 +116,11 @@ class ZfsDevices(DeviceHelper):
         if health in self.acceptable_health:
             size = self._human_to_bytes(size_str)
 
-            drives = [self._dev_major_minor(dp) for dp in self._get_zpool_devices(pool)]
+            drive_mms = self._paths_to_major_minors(self._get_zpool_devices(pool))
+
+            if drive_mms is None:
+                daemon_log.warn("Could not find major minors for zpool '%s'" % pool)
+                return
 
             # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
             block_device = "zfspool:%s" % pool
@@ -139,9 +143,9 @@ class ZfsDevices(DeviceHelper):
                 "block_device": block_device,
                 "uuid": uuid,
                 "size": size,
-                "drives": drives,
-                "datasets": self._get_zpool_datasets(pool, drives, block_devices),
-                "zvols": self._get_zpool_zvols(pool, drives, block_devices)
+                "drives": drive_mms,
+                "datasets": self._get_zpool_datasets(pool, drive_mms, block_devices),
+                "zvols": self._get_zpool_zvols(pool, drive_mms, block_devices)
                 }
 
     @property
@@ -249,6 +253,10 @@ class ZfsDevices(DeviceHelper):
 
         for zvol_path in glob.glob("/dev/%s/*" % pool_name):
             major_minor = self._dev_major_minor(zvol_path)
+
+            if major_minor is None:
+                continue
+
             uuid = zvol_path
 
             zpool_vols[uuid] = {

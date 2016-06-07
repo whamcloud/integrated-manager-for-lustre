@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -116,7 +116,9 @@ class BlockDevices(DeviceHelper):
         self._major_minor_to_fstype = {}
         for blkid_dev in utils.BlkId().itervalues():
             major_minor = self._dev_major_minor(blkid_dev['path'])
-            self._major_minor_to_fstype[major_minor] = blkid_dev['type']
+
+            if major_minor:
+                self._major_minor_to_fstype[major_minor] = blkid_dev['type']
 
         self.block_device_nodes, self.node_block_devices = self._parse_sys_block()
 
