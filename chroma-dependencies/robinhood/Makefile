@@ -1,4 +1,4 @@
-DISTRO=el6.7
+DISTRO=el6.8
 include ../include/Makefile.lustre_build_meta
 
 KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))

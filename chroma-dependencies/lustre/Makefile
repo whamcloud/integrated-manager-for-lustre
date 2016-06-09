@@ -1,4 +1,4 @@
-DISTRO			:= el6.7
+DISTRO			:= el6.8
 include ../include/Makefile.lustre_build_meta
 
 LUSTRE_KERNEL_RELEASE	 = $(KERNEL_RELEASE)_lustre.x86_64

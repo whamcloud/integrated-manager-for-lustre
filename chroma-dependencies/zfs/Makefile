@@ -1,4 +1,4 @@
-DISTRO			:= el6.7
+DISTRO			:= el6.8
 include ../include/Makefile.lustre_build_meta
 
 include $(INCLUDE_DIR)/Makefile.zfs_version-$(DISTRO)
