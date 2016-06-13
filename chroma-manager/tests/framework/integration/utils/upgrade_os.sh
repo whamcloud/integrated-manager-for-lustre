@@ -15,23 +15,36 @@ function upgrade_os {
     echo "Now upgrade the operating system to ${upgrade_distro_name_version_arch} on nodes ${comma_list_nodes}"
 
     pdsh -l root -R ssh -S -w ${comma_list_nodes} "exec 2>&1; set -xe
-    if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
-        cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
-    fi
+if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
+    cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
+fi
 
-    curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
+curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
 
-    epel_repo=\$(yum repolist | sed -n -e 's/^\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')
+# On RHEL systems, we need to set the releasever
+if which subscription-manager; then
+    yum clean all
+    # https://access.redhat.com/support/cases/#/case/01652731
+    #subscription-manager release --set=${upgrade_distro_version}
+    subscription-manager release --set=6Server
+fi
 
-    if [ -n "\${epel_repo}" ]; then
-        yum-config-manager --disable \${epel_repo}
-    fi
+epel_repo=\$(yum repolist | sed -n -e 's/^\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')
 
-    rpm -qa | sort >/tmp/before_upgrade
-    yum -y upgrade
-    rpm -qa | sort >/tmp/after_upgrade
-    # TODO: we really ought to reboot here
-    #       a new kernel was surely installed and real users would reboot here" | dshbak -c
+if [ -n "\${epel_repo}" ]; then
+    yum-config-manager --disable \${epel_repo}
+fi
+
+rpm -qa | sort >/tmp/before_upgrade
+yum -y upgrade
+rpm -qa | sort >/tmp/after_upgrade
+
+# The yum upgrade will have restored the /etc/yum.repos.d/CentOS-*.repo
+# files so remove them here
+rm /etc/yum.repos.d/CentOS-*.repo
+
+# TODO: we really ought to reboot here
+#       a new kernel was surely installed and real users would reboot here" | dshbak -c
 
     echo "End operating system upgrade"
 }

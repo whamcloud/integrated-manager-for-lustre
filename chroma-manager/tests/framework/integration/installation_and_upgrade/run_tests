@@ -46,19 +46,19 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.3.0.0
-BUILD_JOB=chroma-blessed
-BUILD_NUM=117
+# first fetch and install chroma 2.4.1.4
+BUILD_JOB=ieel-b2_4
+BUILD_NUM=8
 set +x
-echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
+echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
 ++ sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
-IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 set -x
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
 set +x
-echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE\""
-curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE"
+echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE\""
+curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
 set -x
 
 # Install and setup old chroma manager
@@ -70,11 +70,6 @@ yum -y install expect
 cd /tmp
 tar xzvf $IEEL_FROM_ARCHIVE
 cd ${IEEL_FROM_ARCHIVE%%.tar.gz}
-# hack out the O/S version check in old version so it installs on the new O/S
-ed <<"EOF" install
-/_check_platform()\$/d
-wq
-EOF
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
@@ -91,21 +86,11 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "ex
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
     # IEEL prior to 2.4.2.0 can't set proxies in the chroma-agent environment
-    # so we have to hack that into the repos for (real) RHEL
-    if [ ${IEEL_FROM_VER//./} -lt 2420 -a -f /etc/yum.repos.d/redhat.repo ]; then
+    # so we have to configure it to use the proxy with subscription-manager
+    if [ ${IEEL_FROM_VER//./} -lt 2420 ] && which subscription-manager; then
         proxy=\$(sed -ne '/^export http_proxy=/s/.*\"\(.*\)\"\$/\1/p' /etc/profile.d/intel_proxy.sh)
-        # this doesn't actually work due to RHBZ#1315693
-        #subscription-manager repos | sed -n -e 's/^Repo ID:  *//p' | xargs -i -n 1 subscription-manager repo-override --proxy=\$proxy --add=proxy:\$proxy --repo={}
-        # temporary hack until RH can fix their SM bugs
-        # do a global yum.conf proxy configuration and disable local repos
-        ed /etc/yum.conf << EOF
-/^$/i
-proxy=\$proxy
-.
-wq
-EOF
-        sed -i -e \"/^\(\[.*\)\$/s//\1\\\\
-proxy=_none_/\" /etc/yum.repos.d/cobbler-config.repo
+        [[ \$proxy =~ \/\/([^:]{1,}):{0,1}([[:digit:]]{1,}) ]]
+        subscription-manager config --server.proxy_hostname=\${BASH_REMATCH[1]} --server.proxy_port=\${BASH_REMATCH[2]}
     fi
 fi" | dshbak -c
 
