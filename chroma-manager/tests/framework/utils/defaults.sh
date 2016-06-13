@@ -49,7 +49,7 @@ set_defaults() {
     export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
     export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
-    if [[ $SLAVE = rhel*\&\&ssi ]]; then
+    if [[ $slave = rhel*\&\&ssi ]]; then
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"rhel"}
     else
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
