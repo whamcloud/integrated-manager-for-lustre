@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,8 +27,6 @@ SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 sys.path.insert(0, SITE_ROOT)
-
-os.environ['CELERY_LOADER'] = 'django'
 
 import multiprocessing
 workers = multiprocessing.cpu_count() * 2 + 1

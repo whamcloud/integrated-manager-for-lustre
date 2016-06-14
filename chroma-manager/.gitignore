@@ -1,6 +1,4 @@
 MANIFEST
-celerybeat-schedule*
-celerystate.db
 chroma-manager.spec
 _build
 _topdir

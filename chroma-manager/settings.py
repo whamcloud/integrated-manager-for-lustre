@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -138,15 +138,7 @@ AMQP_BROKER_USER = "chroma"
 AMQP_BROKER_PASSWORD = "chroma123"
 AMQP_BROKER_VHOST = "chromavhost"
 
-import djcelery
-djcelery.setup_loader()
-
 BROKER_URL = "amqp://%s:%s@localhost:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_VHOST)
-
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_RESULT_BACKEND = "database"
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -155,7 +147,6 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.staticfiles',
     'south',
-    'djcelery',
     'tastypie',
     'chroma_core',
     'chroma_api',
@@ -209,7 +200,6 @@ LOGGING = {
 
 # Periods given in seconds
 PLUGIN_DEFAULT_UPDATE_PERIOD = 5
-EMAIL_ALERTS_PERIOD = 300
 
 SQL_RETRY_PERIOD = 10
 
@@ -223,18 +213,6 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 
 # Argument to mkfs.ext4 '-J' option
 JOURNAL_SIZE = "2048"
-
-CELERY_ROUTES = (
-    {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
-    {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
-)
-
-CELERY_TRACK_STARTED = True
-CELERY_DISABLE_RATE_LIMITS = True
-
-# CELERY_ACKS_LATE is really important, it makes celery try a task again when a worker
-# crashes (only works with proper AMQP backend like RabbitMQ, not DJKombu)
-CELERY_ACKS_LATE = True
 
 if DEBUG:
     LOG_PATH = ""

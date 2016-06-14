@@ -14,7 +14,12 @@ from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
+from chroma_core.models import ManagedHost
+from chroma_core.models import HostContactAlert
+from chroma_core.models import Command
+from chroma_core.models import LNetConfiguration
+from chroma_core.models import ClientCertificate
+from chroma_core.models import AlertEmail
 from chroma_core.models import ServerProfile
 
 RABBITMQ_GRACE_PERIOD = 1
@@ -101,7 +106,9 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
             with transaction.commit_manually():
                 transaction.commit()
             host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
-            HostContactAlert.filter_by_item(host).delete()
+            for host_contact_alert in HostContactAlert.filter_by_item(host):
+                AlertEmail.objects.filter(alerts__in=[host_contact_alert]).delete()
+                host_contact_alert.delete()
             host.mark_deleted()
         except ManagedHost.DoesNotExist:
             pass

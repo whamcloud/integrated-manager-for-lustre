@@ -45,7 +45,6 @@ Requires: ntp
 Requires: Django >= 1.4
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.11
-Requires: django-celery >= 3.1.10
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
@@ -96,6 +95,8 @@ Obsoletes: nodejs-di
 Obsoletes: nodejs-mv
 Obsoletes: nodejs-json-mask
 Obsoletes: nodejs-zeparser
+Obsoletes: django-celery
+
 
 %if 0%{?rhel} < 7
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2

@@ -669,13 +669,6 @@ class ServiceConfig(CommandLine):
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
         local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
         local_settings_str = ""
-        local_settings_str += "CELERY_RESULT_BACKEND = \"database\"\n"
-        local_settings_str += "CELERY_RESULT_DBURI = \"postgresql://%s:%s@%s%s/%s\"\n" % (
-            databases['default']['USER'],
-            databases['default']['PASSWORD'],
-            databases['default']['HOST'] or "localhost",
-            ":%d" % databases['default']['PORT'] if databases['default']['PORT'] else "",
-            databases['default']['NAME'])
 
         # Usefully, a JSON dict looks a lot like python
         local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace(

@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -31,10 +31,8 @@ all_queues_to_monitor = ['agent_lustre_rx',
                          'agent_linux_rx',
                          'jobs',
                          'job_scheduler_notifications',
-                         'celery@eagle-48.eagle.hpdd.intel.com.celery.pidbox',              # To monitor this queue this line needs to be updated by hand.
                          'AgentDaemonRpcInterface.requests',
                          'ScanDaemonRpcInterface.requests',
-                         'celery',
                          'agent_syslog_rx',
                          'agent_linux_network_rx',
                          'periodic',
@@ -49,7 +47,6 @@ all_queues_to_monitor = ['agent_lustre_rx',
 
 queues_to_monitor = ['agent_lustre_rx',
                      'agent_tx',
-                     'celery',
                      'stats']
 
 #queues_to_monitor = all_queues_to_monitor

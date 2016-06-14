@@ -28,12 +28,14 @@ from django.db import transaction
 from django.db.models import DateTimeField
 from django.db.models.query_utils import Q
 
+from chroma_core.services.job_scheduler.mail_alerts import MailAlerts
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job
 from chroma_core.models.command import Command
 from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
+import settings
 
 log = log_register(__name__)
 
@@ -115,6 +117,11 @@ class Service(ChromaService):
         self._progress_thread.start()
 
         self._children_started.set()
+        self._mail_alerts_thread = MailAlerts(settings.EMAIL_SENDER,
+                                              settings.EMAIL_SUBJECT_PREFIX,
+                                              settings.EMAIL_HOST)
+        self._mail_alerts_thread.start()
+
         self._complete.wait()
 
         self.log.info("Cancelling outstanding jobs...")
@@ -139,12 +146,15 @@ class Service(ChromaService):
         self._rpc_thread.stop()
         self._queue_thread.stop()
         self._progress_thread.stop()
+        self._mail_alerts_thread.stop()
 
         self.log.info("Joining...")
         self._rpc_thread.join()
         self._queue_thread.join()
         self._job_scheduler.join_run_threads()
         self._progress_thread.join()
+        self._mail_alerts_thread.join()
+
         self.log.info("Complete.")
 
         self._complete.set()

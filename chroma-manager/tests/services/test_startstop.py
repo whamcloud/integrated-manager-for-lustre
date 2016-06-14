@@ -12,7 +12,7 @@ class TestStartStop(SupervisorTestCase):
     """
 
     def test_clean_stop(self):
-        clean_services = set(self.programs) - set(['celery_periodic', 'celery_jobs'])
+        clean_services = set(self.programs)
 
         for program_name in clean_services:
             self.start(program_name)

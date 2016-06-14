@@ -1,7 +1,5 @@
 import logging
-import mock
 
-from chroma_core import tasks
 from tests.unit.chroma_core.lib.storage_plugin.resource_manager.test_resource_manager import ResourceManagerTestCase
 
 
@@ -113,10 +111,6 @@ class TestAlerts(ResourceManagerTestCase):
         self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 1)
         # Check that the alert is now set on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 1)
-
-        # Create an email alert because HYD-XXXX says this will break us.
-        with mock.patch('chroma_core.tasks.send_alerts_email.delay'):
-            tasks.mail_alerts()
 
         alert_message_before_delete = StorageResourceAlert.objects.filter(active = True)[0].message()
 
