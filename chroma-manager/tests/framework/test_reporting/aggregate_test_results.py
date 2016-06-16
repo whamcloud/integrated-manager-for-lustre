@@ -58,8 +58,8 @@ def compile_unique_runs(usages):
             # each of which is a test run in Jenkins associated with our build.
             build_nums = []
             for ranges in use['ranges'].values():
-                for range in ranges:
-                    build_nums.append(range['end'] - 1)
+                for single_range in ranges:
+                    build_nums.extend(range(single_range['start'], single_range['end']))
 
             # The complete set of fingerprints will end up giving references to
             # the same build numbers multiple times. So we keep it to a unique
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     # Gather the fingerprints that link together the jobs
     downstream_jobs_names = build.job.get_downstream_job_names()
-    fingerprint_data = build.get_data("%s?depth=2&tree=fingerprint[fileName,usage[name,ranges[ranges[end]]]]" % build.python_api_url(build.baseurl))
+    fingerprint_data = build.get_data("%s?depth=2&tree=fingerprint[fileName,usage[name,ranges[ranges[start,end]]]]" % build.python_api_url(build.baseurl))
     usages = []  # Usages are a record of a fingerprint being used in specific test runs
 
     for fingerprint in fingerprint_data['fingerprint']:
