@@ -26,7 +26,7 @@ import socket
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib import fence_agents
-from chroma_agent.utils import wait
+from chroma_agent.chroma_common.lib import util
 
 
 class PacemakerError(Exception):
@@ -287,7 +287,7 @@ def cibadmin(command_args, timeout=120):
     # NB: This isn't a "true" timeout, in that it won't forcibly stop the
     # subprocess after a timeout. We'd need more invasive changes to
     # shell._run() for that.
-    for _ in wait(timeout):
+    for _ in util.wait(timeout):
         result = AgentShell.run_new(command_args)
 
         if result.rc == 0:

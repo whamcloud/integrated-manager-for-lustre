@@ -12,7 +12,7 @@ import re
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.utils import wait
+from tests.chroma_common.lib import util
 
 from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
 
@@ -356,7 +356,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         "Wait and assert correct number of matching alerts."
         expected_alerts.sort()
 
-        for index in wait(timeout=TEST_TIMEOUT):
+        for _ in util.wait(TEST_TIMEOUT):
             alerts = [alert['alert_type'] for alert in self.get_list("/api/alert/", filters)]
             alerts.sort()
             if alerts == expected_alerts:
@@ -396,7 +396,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         Check victim's available_actions until the desired action is available
         or the timeout is reached, filtering on action keys: class_name, state.
         """
-        for index in wait(timeout):
+        for _ in util.wait(timeout):
             actions = self.get_json_by_uri(victim['resource_uri'])['available_actions']
             for action in actions:
                 if all(action.get(key) == filters[key] for key in filters):

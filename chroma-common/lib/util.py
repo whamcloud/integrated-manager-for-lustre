@@ -22,6 +22,7 @@
 
 import os
 import time
+import itertools
 import threading
 import platform
 from collections import namedtuple
@@ -195,3 +196,27 @@ class PreserveFileAttributes(object):
     def __exit__(self, exception_type, value, _traceback):
         os.chmod(self.target, self.orig_perm)
         os.chown(self.target, self.orig_uid, self.orig_gid)
+
+
+def wait(timeout, minwait=0.1, maxwait=1.0):
+    """
+    Generate an exponentially backing-off enumeration with a timeout"
+
+    :param timeout: Number of seconds before iterator times out.
+    :param minwait: minimum wait between iterations.
+    :param maxwait: maximum wait between iterations.
+    :return: No return value
+    """
+    assert timeout > 0, "Timeout must be > 0"
+
+    for index in itertools.count():
+        yield index
+
+        sleep_time = min(minwait, maxwait)
+        timeout -= sleep_time
+
+        if timeout < 0:
+            break
+
+        time.sleep(sleep_time)
+        minwait *= 2

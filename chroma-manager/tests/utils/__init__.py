@@ -1,19 +1,6 @@
 import time
 import datetime
-import itertools
 import contextlib
-
-
-def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
-    "Generate an exponentially backing-off enumeration with optional timeout or count."
-    timeout += time.time()
-    for index in itertools.islice(itertools.count(), count):
-        yield index
-        remaining = timeout - time.time()
-        if remaining < 0:
-            break
-        time.sleep(min(minwait, maxwait, remaining))
-        minwait *= 2
 
 
 @contextlib.contextmanager

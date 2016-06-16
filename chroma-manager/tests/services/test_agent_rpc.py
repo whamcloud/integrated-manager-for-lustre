@@ -10,7 +10,7 @@ from django.db import transaction
 from collections import namedtuple
 from tests.services.supervisor_test_case import SupervisorTestCase
 from tests.services.agent_http_client import AgentHttpClient
-from tests.utils import wait
+from tests.chroma_common.lib import util
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
@@ -208,12 +208,12 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
     def _wait_for_command(self, command_id, timeout):
         """Wait for at least timeout"""
-        for index in wait(timeout):
+        for _ in util.wait(timeout):
             command = self._get_command(command_id)
             if command.complete:
                 return command
 
-        for index in wait(RABBITMQ_LONGWAIT_PERIOD):
+        for _ in util.wait(RABBITMQ_LONGWAIT_PERIOD):
             command = self._get_command(command_id)
             if command.complete:
                 break

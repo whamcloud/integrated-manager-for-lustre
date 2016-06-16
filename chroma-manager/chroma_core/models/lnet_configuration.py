@@ -340,7 +340,7 @@ class LoadLNetJob(LNetStateChangeJob):
         if stateful_object.is_managed:
             return help_text["load_lnet"]
         else:
-            return help_text['Start monitoring lnet on %s'] % stateful_object.host
+            return help_text['Start monitoring LNet on %s'] % stateful_object.host
 
     def description(self):
         return self.long_description(self.lnet_configuration)

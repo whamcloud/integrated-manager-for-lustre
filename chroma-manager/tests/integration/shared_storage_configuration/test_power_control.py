@@ -169,7 +169,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
         self.server = self.get_json_by_uri(self.server['resource_uri'])
         pre_boot_time = self.server['boot_time']
 
-        self.run_command(self.wait_for_action(class_name='PowercycleHostJob', timeout=0))
+        self.run_command(self.wait_for_action(class_name='PowercycleHostJob'))
 
         def boot_time_is_newer():
             server = self.get_json_by_uri(self.server['resource_uri'])

@@ -4,7 +4,7 @@ import logging
 import time
 
 from testconfig import config
-from tests.utils import wait
+from tests.chroma_common.lib import util
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 logger = logging.getLogger('test')
@@ -78,7 +78,7 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
     def assert_fs_stat(self, fs_id, name, value):
         "Wait until filesystem stat matches."
         initial = self.get_filesystem(fs_id).get(name)
-        for index in wait(timeout=60):
+        for _ in util.wait(timeout=60):
             fs = self.get_filesystem(fs_id)
             if fs.get(name) == value:
                 return fs

@@ -15,7 +15,7 @@ from django.utils.unittest import TestCase
 import settings
 
 from chroma_core.lib.util import site_dir
-from tests.utils import wait
+from tests.chroma_common.lib import util
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class SupervisorTestCase(TestCase):
 
     def _wait_for_port(self, port):
         log.info("Waiting for port %s..." % port)
-        for index in wait(self.TIMEOUT):
+        for _ in util.wait(self.TIMEOUT):
             try:
                 return socket.socket().connect(('localhost', port))
             except socket.error:
