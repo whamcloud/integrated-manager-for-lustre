@@ -5,26 +5,7 @@ NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
 DISTRO      := $(shell rpm --eval %dist | sed -e 's/\.\(el[0-9][0-9]*\).*/\1/')
 
-all: decruftinate $(BUNDLE_NAME).tar.gz install
-
-decruftinate:
-	@echo "Checking for cruft in $(CURDIR)/repo..."
-	@rpm_name() { base=$${1##*/}; name=$${base%-*}; version=$${name%-*}; name=$${name%-*}; echo $$name; }; \
-	cd repo; \
-	WANTED=""; \
-	for rpm in $(BUNDLE_RPMS); do \
-	  WANTED="$$WANTED $$(rpm_name $$rpm)"; \
-	done; \
-	echo "Desired RPMs: $$WANTED"; \
-	for exists in $$(ls *.rpm 2>/dev/null); do \
-	    name=$$(rpm_name $$exists); \
-		if [[ $$WANTED != *$$name* ]]; then \
-		    echo "removing cruft: $$name"; \
-			rm -f $$exists; \
-		fi; \
-	done
-	# we used to have a stamps subdir in this Makefile so clean it up
-	rm -rf stamps
+all: clean repo $(BUNDLE_NAME).tar.gz install
 
 $(BUNDLE_NAME).tar.gz: $(patsubst %,repo/%.rpm,$(BUNDLE_RPMS)) $(patsubst %,repo/%,$(OTHER))
 	rm -f *.tar.gz
@@ -36,11 +17,6 @@ repo:
 	mkdir repo
 
 repo/%.rpm: $(REPO)/%.rpm repo Makefile ../include/Makefile.bundle
-	# remove any previous verisons of the target also
-	RPM_NAME=$@; \
-	RPM_NAME=$${RPM_NAME%-*}; \
-	RPM_NAME=$${RPM_NAME%-*}; \
-	rm -f $$RPM_NAME-[R0-9]*
 	ln $< $@
 	touch $@
 

@@ -1,10 +1,9 @@
-ZFS_DISTRO=el6.7
 TOP := $(CURDIR)
+include $(TOP)/../chroma-dependencies/include/Makefile.distro
 include $(TOP)/../include/Makefile.version
-include $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(ZFS_DISTRO)
+include $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
 REPO ?= $(TOP)/../chroma-dependencies/repo
 WORKDIR := $(notdir $(CURDIR))
-DISTRO := $(shell rpm --eval %dist | sed -e 's/\.\(el[0-9][0-9]*\).*/\1/')
 
 PROFILES := default.profile base_managed_RH7.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
@@ -25,7 +24,7 @@ clean install:: subdirs
 
 package: subdirs $(PROFILES) lesskey.out EULA.txt create_installer
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
-		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(DISTRO)/$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
+		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(DISTRO_TAG)/$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
 		--show-transformed-names \
 		-C ../ \
 		--exclude README-INTERNAL \
@@ -43,6 +42,6 @@ rpms:
 docs download:
 	@echo "Nothing to do here"
 
-create_installer: create_installer.in $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(ZFS_DISTRO)
+create_installer: create_installer.in $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
 	sed -e "s/@ZFS_VERSION@/$(ZFS_RELEASE)/" < $< > $@
 	chmod 755 $@
