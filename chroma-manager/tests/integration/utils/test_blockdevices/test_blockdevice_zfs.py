@@ -36,10 +36,14 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    # Create a zpool on the device.
+    # Create a zpool on the device. If fail is then try with dev name, export then import with 'by-id'
+    # This is to avoid bug: https://github.com/zfsonlinux/zfs/issues/3708
     @property
     def prepare_device_commands(self):
-        return ["zpool create -f %s %s" % (self.device_path, self._device_path)]
+        create_cmd = "zpool create -f %s" % self.device_path
+        dev_name = "`ls -la %s | awk '{print substr ($11, 7, 10)}'`" % self._device_path
+        return ["if ! %s %s; then %s %s && zpool export %s && zpool import -d /dev/disk/by-id %s; fi"
+                % (create_cmd, self._device_path, create_cmd, dev_name, self.device_path, self.device_path)]
 
     @property
     def device_path(self):
