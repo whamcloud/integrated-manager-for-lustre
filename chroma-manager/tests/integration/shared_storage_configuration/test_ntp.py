@@ -2,9 +2,12 @@ import datetime
 
 from testconfig import config
 from django.utils.unittest import skipIf
+from django.utils.unittest import skip
+
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
+@skip("HYD-6115 disabled for now")
 class TestNtpSync(ChromaIntegrationTestCase):
     NTP_SYNC_PERIOD = 30
     TIME_OFFSET_HOURS = 8
