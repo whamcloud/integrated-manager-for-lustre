@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -257,8 +257,10 @@ var ChartManager = function(options) {
           params.latest = true;
         }
         if ( _.isNull( chart.series_begin) ) {
-            chart.series_end    = XDate(utc = true).addSeconds(TIME_OFFSET);
-            chart.series_begin  = chart.series_end.clone().addMilliseconds( -1 * global_time_boundary);
+            var endStamp = Date.now() + (TIME_OFFSET * 1000);
+
+            chart.series_end = new Date(endStamp);
+            chart.series_begin = new Date(endStamp - global_time_boundary);
         } else {
             if (!chart.snapshot) {
               params.update = 'true';

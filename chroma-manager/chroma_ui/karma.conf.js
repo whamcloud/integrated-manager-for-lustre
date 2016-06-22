@@ -12,7 +12,6 @@ module.exports = function(config) {
       'static/js/lib/underscore-min.js',
       'static/js/lib/lodash.custom.js',
       'static/js/lib/jquery.js',
-      'static/js/lib/xdate.js',
       'static/js/lib/angular/angular.js',
       'static/js/lib/angular/angular-resource.js',
       'static/js/lib/angular/ui-bootstrap.js',

@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -522,36 +522,4 @@ function removeBlankAttributes(obj) {
     }
   });
   return obj;
-}
-
-/* Convert date string into a "short local time" with today/yesterday subbed
- * in as necessary
- * args:
- *  (str) date as a string
- * output:
- *  (str) shortLocalTime string
- */
-function shortLocalTime(str)
-{
-  if (!str) return "";
-
-  var date = XDate(str);
-  var midnight = XDate().addSeconds(TIME_OFFSET)
-                        .setHours(0)
-                        .setMinutes(0)
-                        .setSeconds(0)
-                        .setMilliseconds(0);
-  var localDate = "";
-
-  if ( midnight < date ) {
-    localDate = "Today";
-  }
-  else if ( midnight.clone().addDays(-1) < date ) {
-    localDate = "Yesterday";
-  }
-  else {
-    localDate = date.toString("yyyy/MM/dd");
-  }
-
-  return  localDate + "&nbsp;" + date.toString("HH:mm");
 }

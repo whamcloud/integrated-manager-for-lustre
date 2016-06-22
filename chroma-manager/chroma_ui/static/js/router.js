@@ -119,13 +119,9 @@ var RouteUtils = function() {
     'configure/filesystem/create/': 'filesystemCreate',
     'configure/:tab/': 'configure',
     'configure/': 'configureIndex',
-    'command/:id/': 'command_detail',
     'target/:id/': 'target_detail',
     'user/:id/': 'user_detail',
     'storage_resource/:id/': 'storage_resource_detail',
-    'job/:id/': 'job_detail',
-    'log/around-:aroundDatetime/': 'log',
-    'log/': 'log',
     'system_status/': 'system_status'
   };
 
@@ -184,10 +180,6 @@ var ChromaRouter = Backbone.Router.extend({
       cd.render();
     }})
   },
-  command_detail: function(id)
-  {
-    this.object_detail(id, Command, CommandDetail);
-  },
   target_detail: function(id)
   {
     this.object_detail(id, Target, TargetDetail, function titleFunc(c) {
@@ -217,17 +209,9 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.object_detail(id, StorageResource, StorageResourceDetail, 'class_name');
   },
-  job_detail: function(id)
-  {
-    this.object_detail(id, Job, JobDetail, 'description');
-  },
   user_detail: function(id)
   {
     this.object_detail(id, User, UserDetail, 'username');
-  },
-  log: function(aroundDatetime)
-  {
-    this.toplevel('log', aroundDatetime);
   },
   system_status:function() {
     this.toplevel('system_status');
@@ -251,7 +235,6 @@ var ChromaRouter = Backbone.Router.extend({
     $('div.toplevel').hide();
     $("#toplevel-" + name).show();
 
-
     var navAnchors = $('a.navigation'),
       menuItem = $("#" + name + "_menu");
 
@@ -259,10 +242,6 @@ var ChromaRouter = Backbone.Router.extend({
     navAnchors.parent('li').removeClass('active');
     menuItem.addClass('active');
     menuItem.parent('li').addClass('active');
-
-    if (name == 'log') {
-      LogView.draw(aroundDatetime);
-    }
   },
   configureTab: function (tab) {
     this.toplevel('configure');

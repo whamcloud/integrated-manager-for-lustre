@@ -5,7 +5,6 @@
 
     <$= t('target_detail.html') $>
     <$= t('user_detail.html') $>
-    <$= t('command_detail.html') $>
     <$= t('storage_resource_detail.html') $>
     <$= t('volume_chooser_templates.html') $>
     <script type='text/javascript'>
@@ -64,7 +63,6 @@
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/angular/angular-resource.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/angular/ui-bootstrap.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/angular/angular-ui.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/xdate.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/sprintf/sprintf.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/app.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/app-compatibility.js"></script>
@@ -139,7 +137,6 @@
     <script type='text/javascript' src="<$= conf.get('STATIC_URL') $>js/user_detail.js"></script>
     <script type='text/javascript' src="<$= conf.get('STATIC_URL') $>js/target_detail.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/storage_resource_detail.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/command_detail.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/system_status.js"></script>
 
     <!-- Templates -->
@@ -199,7 +196,7 @@
                   </ul>
                 </li>
                 <li>
-                  <a id="log-menu" class="navigation" href="log/"><i class="icon-book"></i> Logs</a>
+                  <a id="log-menu" href="/ui/log/"><i class="icon-book"></i> Logs</a>
                 </li>
                 <li>
                   <a id="help-menu" class="navigation skip_router" href="<$= conf.get('STATIC_URL') $>webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a>
@@ -277,10 +274,6 @@
           <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/configure_charts.js"></script>
           <script type='text/javascript' src="<$= conf.get('STATIC_URL') $>js/filesystem_configuration.js"></script>
           <$= t('configuration.html') $>
-        </div>
-        <div class="toplevel" id='toplevel-log' style="display: none;">
-          <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/lib/jquery-ui-timepicker-addon.js"></script>
-          <$= t('logs.html') $>
         </div>
         <div class="toplevel" id='toplevel-system_status' style="display: none;"></div>
       </div>

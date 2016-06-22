@@ -72,10 +72,10 @@ $(HOME)/.node-gyp:
 	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
 
 npm: $(HOME)/.node-gyp
-ifneq ($(NPM), 3.8.8)
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.8.8.tgz > /tmp/npm-3.8.8.tgz
-	tar -xzf /tmp/npm-3.8.8.tgz -C /tmp/
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.8.8.tgz -d
+ifneq ($(NPM), 3.9.6)
+	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.9.6.tgz > /tmp/npm-3.9.6.tgz
+	tar -xzf /tmp/npm-3.9.6.tgz -C /tmp/
+	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.9.6.tgz -d
 endif
 
 ui-modules: npm
