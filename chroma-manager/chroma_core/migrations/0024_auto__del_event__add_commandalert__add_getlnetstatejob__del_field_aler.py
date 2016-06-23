@@ -15,45 +15,49 @@ FieldInfo = namedtuple('FieldInfo', ['name', 'type_'])
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        db.start_transaction()
+        # It may be that the transaction below completed successfully, but the follow on code failed, in which case
+        # the fields will already exit. So test for record_type.
+        if len(db.execute("select column_name FROM information_schema.columns "
+                          "WHERE table_name='chroma_core_alertstate' and column_name='record_type'")) == 0:
+            db.start_transaction()
 
-        # Adding field 'AlertStateBase.record_type'
-        db.add_column('chroma_core_alertstate', 'record_type',
-                      self.gf('django.db.models.fields.CharField')(default='', max_length=128),
-                      keep_default=False)
+            # Adding field 'AlertStateBase.record_type'
+            db.add_column('chroma_core_alertstate', 'record_type',
+                          self.gf('django.db.models.fields.CharField')(default='', max_length=128),
+                          keep_default=False)
 
-        # Adding field 'AlertStateBase.variant'
-        db.add_column('chroma_core_alertstate', 'variant',
-                      self.gf('django.db.models.fields.CharField')(max_length=512, null=True),
-                      keep_default=False)
+            # Adding field 'AlertStateBase.variant'
+            db.add_column('chroma_core_alertstate', 'variant',
+                          self.gf('django.db.models.fields.CharField')(max_length=512, null=True),
+                          keep_default=False)
 
-        # Changing field 'AlertStateBase.begin'
-        db.alter_column('chroma_core_alertstate', 'begin', self.gf('django.db.models.fields.DateTimeField')())
+            # Changing field 'AlertStateBase.begin'
+            db.alter_column('chroma_core_alertstate', 'begin', self.gf('django.db.models.fields.DateTimeField')())
 
-        # Changing field 'AlertStateBase.end'
-        db.alter_column('chroma_core_alertstate', 'end', self.gf('django.db.models.fields.DateTimeField')(null=True))
+            # Changing field 'AlertStateBase.end'
+            db.alter_column('chroma_core_alertstate', 'end', self.gf('django.db.models.fields.DateTimeField')(null=True))
 
-        # Adding field 'AlertStateBase.lustre_pid'
-        db.add_column('chroma_core_alertstate', 'lustre_pid',
-                      self.gf('django.db.models.fields.IntegerField')(null=True),
-                      keep_default=False)
+            # Adding field 'AlertStateBase.lustre_pid'
+            db.add_column('chroma_core_alertstate', 'lustre_pid',
+                          self.gf('django.db.models.fields.IntegerField')(null=True),
+                          keep_default=False)
 
-        # Changing field 'AlertEvent.alert_item_type'
-        db.alter_column('chroma_core_alertstate',
-                        'alert_item_type_id',
-                        self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True))
+            # Changing field 'AlertEvent.alert_item_type'
+            db.alter_column('chroma_core_alertstate',
+                            'alert_item_type_id',
+                            self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True))
 
-        # Changing field 'AlertEvent.alert_item_id'
-        db.alter_column('chroma_core_alertstate',
-                        'alert_item_id',
-                        self.gf('django.db.models.fields.PositiveIntegerField')(null=True))
+            # Changing field 'AlertEvent.alert_item_id'
+            db.alter_column('chroma_core_alertstate',
+                            'alert_item_id',
+                            self.gf('django.db.models.fields.PositiveIntegerField')(null=True))
 
-        db.delete_column('chroma_core_alertstate',
-                         'content_type_id')
+            db.delete_column('chroma_core_alertstate',
+                             'content_type_id')
 
-        db.commit_transaction()
+            db.commit_transaction()
 
-        def migrate_alert(alert_name, fields_info, source_is_alert_table):
+        def migrate_alert(alert_name, fields_info, source_is_alert_table, field_count_offset = 1):
             """Alerts have been collapsed into a single table. The additional variables required for some old tables
             are now stored as json. This routine takes those additional variables from the child tables and turns
             them into the json.
@@ -62,8 +66,10 @@ class Migration(SchemaMigration):
 
             This function first of all rolls events into alerts and then for any existing alerts/events with
             additional variables (fields_info) converts the fixed field into json fields.
-            """
 
+            Generally there is 1 more field in the original table than variants (this extra is the id, however sometimes
+            an additional field might exist (lustre_pid) and so field_count_offset can cater for this.
+            """
             assert type(alert_name) is str
             assert type(fields_info) is list
             assert type(source_is_alert_table) is bool
@@ -74,7 +80,6 @@ class Migration(SchemaMigration):
 
             alert_ids = []
             event_ids = []
-
 
             if source_is_alert_table:
                 # Fetch and unpack the records for any alerts of this type.
@@ -98,16 +103,16 @@ class Migration(SchemaMigration):
                 event_record = EventRecord(*event_record)
 
                 db.execute('insert into chroma_core_alertstate '
-                       '(begin, "end", severity, alert_type, alert_item_id, alert_item_type_id, variant, record_type)'
-                       'values (%s, %s, %s, %s, %s, %s, %s, %s)' %
-                       ("'%s'" % event_record.created_at,
-                        "'%s'" % event_record.created_at,
-                        event_record.severity,
-                        "'%s'" % alert_name,
-                        event_record.host_id if event_record.host_id else 'null',
-                        host_content_type_id if event_record.host_id else 'null',
-                        "''",
-                        "''"))
+                           '(begin, "end", severity, alert_type, alert_item_id, alert_item_type_id, variant, record_type)'
+                           'values (%s, %s, %s, %s, %s, %s, %s, %s)' %
+                           ("'%s'" % event_record.created_at,
+                            "'%s'" % event_record.created_at,
+                            event_record.severity,
+                            "'%s'" % alert_name,
+                            event_record.host_id if event_record.host_id else 'null',
+                            host_content_type_id if event_record.host_id else 'null',
+                            "''",
+                            "''"))
 
                 alert_record_id = db.execute("SELECT currval('chroma_core_alertstate_id_seq')")[0][0]
 
@@ -115,7 +120,7 @@ class Migration(SchemaMigration):
                 alert_ids.append(alert_record_id)
 
             # If we have records and variants
-            if len(alert_ids) > 0 and len(fields_info) > 0:
+            if len(alert_ids) > 0:
                 # Validate we have the correct number of variants. It should match the number
                 # of fields in the old table + the id.
                 if source_is_alert_table:
@@ -124,35 +129,33 @@ class Migration(SchemaMigration):
                 else:
                     record = db.execute("select * from %s where event_ptr_id = %s" % (table_name,
                                                                                       event_alert_ids[alert_ids[0]]))[0]
-                assert len(record) == len(fields_info) + 1, "Variant definitions doesn't match old table field count"
+
+                assert len(record) == len(fields_info) + field_count_offset, \
+                    "Variant definitions doesn't match old table field count for %s" % alert_name
 
                 # Now convert each row
                 for alert_id in alert_ids:
                     variant = {}
 
-                    if source_is_alert_table:
-                        record = db.execute("select %s from %s where alertstate_ptr_id = %s" %
-                                            (','.join([field_info.name for field_info in fields_info]),
-                                             table_name,
-                                             alert_id))[0]
-                    else:
-                        record = db.execute("select %s from %s where event_ptr_id = %s" %
-                                            (','.join([field_info.name for field_info in fields_info]),
-                                             table_name,
-                                             event_alert_ids[alert_id]))[0]
+                    if len(fields_info) > 0:
+                        if source_is_alert_table:
+                            record = db.execute("select %s from %s where alertstate_ptr_id = %s" %
+                                                (','.join([field_info.name for field_info in fields_info]),
+                                                 table_name,
+                                                 alert_id))[0]
+                        else:
+                            record = db.execute("select %s from %s where event_ptr_id = %s" %
+                                                (','.join([field_info.name for field_info in fields_info]),
+                                                 table_name,
+                                                 event_alert_ids[alert_id]))[0]
 
-                    for index, field_info in enumerate(fields_info):
-                        variant[field_info.name] = field_info.type_(record[index])
+                        for index, field_info in enumerate(fields_info):
+                            variant[field_info.name] = field_info.type_(record[index])
 
-                    AlertState.objects.filter(id=alert_id).update(variant=json.dumps(variant))
+                    AlertState.objects.filter(id=alert_id).update(variant=json.dumps(variant),
+                                                                  record_type=alert_name)
 
-            db.delete_table(table_name, 'unused_%s' % table_name)
-
-            # Finally set the record_type to be the alert_type
-            db.execute("update chroma_core_alertstate set record_type=alert_type where alert_type='%s'" % alert_name)
-
-        alert_record_count = db.execute('select count(*) from chroma_core_alertstate')[0][0]
-        event_record_count = db.execute('select count(*) from chroma_core_event')[0][0]
+            db.rename_table(table_name, 'unused_%s' % table_name)
 
         migrate_alert('CorosyncNoPeersAlert', [], True)
         migrate_alert('CorosyncStoppedAlert', [], True)
@@ -173,6 +176,7 @@ class Migration(SchemaMigration):
         migrate_alert('TargetOfflineAlert', [], True)
         migrate_alert('TargetRecoveryAlert', [], True)
         migrate_alert('UpdatesAvailableAlert', [], True)
+        migrate_alert('StorageResourceOffline',[], True)
         migrate_alert('StorageResourceLearnEvent',
                       [FieldInfo('storage_resource_id', int)],
                       False)
@@ -185,7 +189,7 @@ class Migration(SchemaMigration):
                       False),
         migrate_alert('LearnEvent',
                       [FieldInfo('learned_item_id', int),
-                       FieldInfo('learned_item_type', int)],
+                       FieldInfo('learned_item_type_id', int)],
                       False)
 
         # This last two are special because they have the additional fixed field of lustre_pid that needs copying.
@@ -198,18 +202,17 @@ class Migration(SchemaMigration):
 
         migrate_alert('ClientConnectEvent',
                       [FieldInfo('message_str', str)],
-                      False,)
-        migrate_alert('SyslogEvent', [], False)
+                      False,
+                      2)
+        migrate_alert('SyslogEvent', [], False, 2)
 
         # event no longer exists so we can delete this.
         db.rename_table('chroma_core_event', 'unused_chroma_core_event')
 
-        # Check all the records where converted
-        new_alert_record__count = db.execute('select count(*) from chroma_core_alertstate')[0][0]
+        # Check for unconverted records
+        non_conversions = db.execute("select * from chroma_core_alertstate where record_type = ''")
 
-        assert (alert_record_count + event_record_count) == new_alert_record__count, "Not all records converted %s != %s" % \
-                                                                                      ((alert_record_count + event_record_count),
-                                                                                       new_alert_record__count)
+        assert len(non_conversions) == 0, "Not all records converted, %s unconverted" % len(non_conversions)
 
 
         # LNetOfflineAlert used to take the host as the affected item, but now it is the lnet configuration so this needs

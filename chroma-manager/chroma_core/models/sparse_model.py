@@ -157,7 +157,7 @@ class SparseModel(models.Model):
     def get_variant(self, name, default, type_):
         assert isinstance(name, str)
         assert isinstance(type_, type)
-        assert default is None or isinstance(default, type_)
+        assert default is None or isinstance(default, type_), 'Default variant issue for type %s' % type(self)
 
         value = json.loads(self.variant).get(name, default)
 
