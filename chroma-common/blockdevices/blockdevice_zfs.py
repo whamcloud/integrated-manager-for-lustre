@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -69,6 +69,7 @@ class BlockDeviceZfs(BlockDevice):
     LDD_F_SV_TYPE_MDT = 0x0001
     LDD_F_SV_TYPE_OST = 0x0002
     LDD_F_SV_TYPE_MGS = 0x0004
+    LDD_F_SV_TYPE_MGS_or_MDT = (LDD_F_SV_TYPE_MGS | LDD_F_SV_TYPE_MDT)
 
     _supported_device_types = ['zfs']
 
@@ -167,10 +168,39 @@ class BlockDeviceZfs(BlockDevice):
             log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])
             return self.TargetsInfo([], None)
 
-        if flags & (self.LDD_F_SV_TYPE_MDT | self.LDD_F_SV_TYPE_MGS) == (self.LDD_F_SV_TYPE_MDT | self.LDD_F_SV_TYPE_MGS):
+        if (flags & self.LDD_F_SV_TYPE_MGS_or_MDT) == self.LDD_F_SV_TYPE_MGS_or_MDT:
             # For combined MGS/MDT volumes, synthesise an 'MGS'
             names = ["MGS", name]
         else:
             names = [name]
 
         return self.TargetsInfo(names, params)
+
+    def import_(self):
+        # We can actually only import the zpool so if we aren't the pool get the pool and import that.
+        if '/' in self._device_path:
+            blockdevice = BlockDevice(self._supported_device_types[0],
+                                      self._device_path.split('/')[0])
+
+            return blockdevice.import_()
+
+        try:
+            Shell.try_run(['zpool', 'list', self._device_path])
+            return None                                     # zpool is already imported so nothing to do.
+        except Shell.CommandExecutionError:
+            return Shell.run_canned_error_message(['zpool', 'import', self._device_path])
+
+    def export(self):
+        # We can actually only export the zpool so if we aren't the pool get the pool and export that.
+        if '/' in self._device_path:
+            blockdevice = BlockDevice(self._supported_device_types[0],
+                                      self._device_path.split('/')[0])
+
+            return blockdevice.export()
+
+        try:
+            Shell.try_run(['zpool', 'list', self._device_path])
+        except Shell.CommandExecutionError:
+            return None                                     # zpool is not imported so nothing to do.
+
+        return Shell.run_canned_error_message(['zpool', 'export', self._device_path])

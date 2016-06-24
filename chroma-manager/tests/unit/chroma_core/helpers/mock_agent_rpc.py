@@ -214,6 +214,8 @@ class MockAgentRpc(object):
                      'start_corosync', 'stop_corosync',
                      'start_pacemaker', 'stop_pacemaker',
                      'configure_ntp', 'unconfigure_ntp',
+                     'import_target', 'export_target',
+                     'import_target', 'export_target'
                      'set_profile', 'update_profile',
                      'failover_target', 'failback_target',
                      'configure_network', 'open_firewall', 'close_firewall']:

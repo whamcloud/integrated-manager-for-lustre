@@ -340,9 +340,9 @@ class RunJobThread(threading.Thread):
                 self._job_progress.step_failure(self.job.id, e.backtrace)
                 self._job_progress.complete_job(self.job.id, errored = True)
                 return
-            except Exception:
+            except Exception, e:
                 backtrace = traceback.format_exc()
-                log.error("Job %d step %d encountered an error: %s" % (self.job.id, step_index, backtrace))
+                log.error("Job %d step %d encountered an error: %s:%s" % (self.job.id, step_index, e, backtrace))
 
                 self._job_progress.step_failure(self.job.id, backtrace)
                 self._job_progress.complete_job(self.job.id, errored = True)

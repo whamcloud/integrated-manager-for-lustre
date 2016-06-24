@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -45,3 +45,11 @@ def agent_ok_or_error(error):
         return agent_result_ok
 
 agent_result_ok = agent_result(True)
+
+
+def agent_result_is_error(result):
+    return 'error' in result
+
+
+def agent_result_is_ok(result):
+    return 'result' in result

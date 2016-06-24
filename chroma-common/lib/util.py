@@ -19,7 +19,6 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-
 import os
 import time
 import itertools
@@ -28,6 +27,12 @@ import platform
 from collections import namedtuple
 from collections import MutableSequence
 import sys
+
+
+def running_nose_tests():
+    """Return true if the current application is running nosetests"""
+    return 'nosetests' in sys.argv[0]
+
 
 ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
 
@@ -63,10 +68,16 @@ class ExpiringList(MutableSequence):
         self._container.insert(index, ExpiringValue(value, time.time() + self.grace_period))
 
 
+# When running unit tests every test is within a transaction and so if you kick of another thread you will not see
+# any of the database changes that have occured. For this reason if we are running unit tests we default to no threads
+# otherwise we default to threads
+_use_threads_default = running_nose_tests()
+
+
 class ExceptionThrowingThread(threading.Thread):
     def __init__(self, *args, **kwargs):
         # Sometimes not threading helps with debug.
-        self._use_threads = kwargs.pop('use_threads', True)
+        self._use_threads = kwargs.pop('use_threads', _use_threads_default)
 
         if self._use_threads:
             super(ExceptionThrowingThread, self).__init__(*args, **kwargs)
@@ -152,7 +163,7 @@ For a Mac it pretends to be Centos 6.7.
 
 :return: PlatformInfo named tuple
 """
-if 'nosetests' in sys.argv[0]:
+if running_nose_tests():
     # default platform_info attributes for agent unit tests (el6)
     platform_info = PlatformInfo('Linux',
                                  'CentOS',

@@ -74,20 +74,20 @@ class FileSystemLdiskfs(FileSystem):
 
         return int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
-    def mount(self, target_name, mount_point):
+    def mount(self, mount_point):
         self._initialize_modules()
 
-        result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
+        result = Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
         if result.rc == self.RC_MOUNT_INPUT_OUTPUT_ERROR:
             # HYD-1040: Sometimes we should retry on a failed registration
-            result = Shell.run(['mount', '-t', 'lustre', self.mount_path(target_name), mount_point])
+            result = Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
         if result.rc != self.RC_MOUNT_SUCCESS:
             raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
-    def umount(self, target_name, mount_point):
+    def umount(self):
         return Shell.try_run(["umount", os.path.realpath(self._device_path)])
 
     def mkfs(self, target_name, options):

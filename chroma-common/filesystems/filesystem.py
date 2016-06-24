@@ -100,21 +100,21 @@ class FileSystem(object):
         '''
         return 0
 
-    def mount(self, target_name, mount_point):
+    def mount(self, mount_point):
         '''
         :return: Mount the file system, raise an exception on error.
         '''
         self._initialize_modules()
 
-        return Shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
+        return Shell.try_run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
 
-    def umount(self, target_name, mount_point):
+    def umount(self):
         '''
         :return: Umount the file system, raise an exception on error.
         '''
         self._initialize_modules()
 
-        return Shell.try_run(["umount", self.mount_path(target_name)])
+        return Shell.try_run(["umount", self._device_path])
 
     def mount_path(self, target_name):
         '''

@@ -106,3 +106,21 @@ class BlockDevice(object):
     @abc.abstractmethod
     def targets(self, uuid_name_to_target, device, log):
         pass
+
+    def import_(self):
+        """
+        If appropriate import the blockdevice, this is required for many devices where only 1 node may have the device
+        imported at a time. zpools for example.
+
+        :return: None on success or error message on failure
+        """
+        return None
+
+    def export(self):
+        """
+        If appropriate export the blockdevice, this is required for many devices where only 1 node may have the device
+        imported at a time. zpools for example.
+
+        :return: None on success or error message on failure
+        """
+        return None

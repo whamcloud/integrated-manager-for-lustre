@@ -1,7 +1,8 @@
 from mock import patch
+
 from chroma_agent.action_plugins.manage_node import shutdown_server, reboot_server
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
-from .test_manage_target import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestServerShutdownAndReboot(CommandCaptureTestCase):

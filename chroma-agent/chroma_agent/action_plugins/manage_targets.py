@@ -34,7 +34,11 @@ from chroma_agent.log import daemon_log
 from chroma_agent.log import console_log
 from chroma_agent import config
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result, agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_is_error
 from chroma_agent.lib.pacemaker import cibadmin
 from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
 from chroma_agent.chroma_common.lib.util import platform_info
@@ -286,9 +290,9 @@ def register_target(target_name, device_path, mount_point, backfstype):
 
     _mkdir_p_concurrent(mount_point)
 
-    filesystem.mount(target_name, mount_point)
+    filesystem.mount(mount_point)
 
-    filesystem.umount(target_name, mount_point)
+    filesystem.umount()
 
     return {'label': filesystem.label}
 
@@ -328,7 +332,7 @@ def unconfigure_target_store(uuid):
     config.delete('targets', uuid)
 
 
-def configure_target_store(device, uuid, mount_point, backfstype, target_name):
+def configure_target_store(device, uuid, mount_point, backfstype, device_type):
     # Logically this should be config.set - but an error condition exists where the configure_target_store
     # steps fail later on and so the config exists but the manager doesn't know. Meaning that a set fails
     # because of a duplicate, where as an update doesn't.
@@ -336,7 +340,7 @@ def configure_target_store(device, uuid, mount_point, backfstype, target_name):
     config.update('targets', uuid, {'bdev': device,
                                     'mntpt': mount_point,
                                     'backfstype': backfstype,
-                                    'target_name': target_name})
+                                    'device_type': device_type})
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
@@ -432,20 +436,54 @@ def _query_ha_targets():
 
 
 def mount_target(uuid):
-    # these are called by the Target RA from corosync
+    # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
+
+    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
+        exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    filesystem.mount(info['target_name'], info['mntpt'])
+    filesystem.mount(info['mntpt'])
 
 
 def unmount_target(uuid):
+    # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    filesystem.umount(info['target_name'], info['mntpt'])
+    filesystem.umount()
+
+    if agent_result_is_error(export_target(info['device_type'], info['bdev'])):
+        exit(-1)
+
+
+def import_target(device_type, path):
+    """
+    Passed a device type and a path import the device if such an operation make sense. For example a jbod scsi
+    disk does not have the concept of import whilst zfs does.
+    :param path: path of device to import
+    :param device_type: the type of device to import
+    :return: None or an Error message
+    """
+    blockdevice = BlockDevice(device_type, path)
+
+    return agent_ok_or_error(blockdevice.import_())
+
+
+def export_target(device_type, path):
+    """
+    Passed a device type and a path export the device if such an operation make sense. For example a jbod scsi
+    disk does not have the concept of export whilst zfs does.
+    :param path: path of device to export
+    :param device_type: the type of device to export
+    :return: None or an Error message
+    """
+
+    blockdevice = BlockDevice(device_type, path)
+
+    return agent_ok_or_error(blockdevice.export())
 
 
 def _wait_target(ha_label, started):
@@ -640,11 +678,10 @@ def failback_target(ha_label):
 def _get_target_config(uuid):
     info = config.get('targets', uuid)
 
-    # Some history, previously the backfstype and target_name were not stored. So if not present presume ldiskfs
-    # and for the target_name set as unknown because ldiskfs does not use it.
-    if 'backfstype' not in info:
-        info['backfstype'] = 'ldiskfs'
-        info['target_name'] = 'unknown'
+    # Some history, previously the backfstype, device_type was not stored so if not present presume ldiskfs/linux
+    if ('backfstype' not in info) or ('device_type' not in info):
+        info['backfstype'] = info.get('backfstype', 'ldiskfs')
+        info['device_type'] = info.get('device_type', 'linux')
         config.update('targets', uuid, info)
 
     return info
@@ -712,9 +749,13 @@ def purge_configuration(device, filesystem_name):
         AgentShell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, device])
 
 
-ACTIONS = [purge_configuration, register_target, configure_target_ha,
-           unconfigure_target_ha, mount_target, unmount_target,
-           start_target, stop_target, format_target, check_block_device,
+ACTIONS = [purge_configuration, register_target,
+           configure_target_ha, unconfigure_target_ha,
+           mount_target, unmount_target,
+           import_target, export_target,
+           start_target, stop_target,
+           format_target, check_block_device,
            writeconf_target, failback_target,
            failover_target, target_running,
-           clear_targets, configure_target_store, unconfigure_target_store]
+           clear_targets,
+           configure_target_store, unconfigure_target_store]

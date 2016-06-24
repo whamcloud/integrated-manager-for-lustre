@@ -24,6 +24,7 @@ import json
 import re
 import logging
 import uuid
+from collections import namedtuple
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
@@ -39,6 +40,7 @@ from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
 from chroma_core.chroma_common.lib import util
+from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
 
 import settings
 
@@ -733,6 +735,7 @@ class ConfigureTargetStoreStep(Step):
         volume_node = kwargs['volume_node']
         host = kwargs['host']
         backfstype = kwargs['backfstype']
+        device_type = kwargs['device_type']
 
         assert(volume_node is not None)
 
@@ -741,7 +744,7 @@ class ConfigureTargetStoreStep(Step):
             'uuid': target.uuid,
             'mount_point': target_mount.mount_point,
             'backfstype': backfstype,
-            'target_name': target.name})
+            'device_type': device_type})
 
 
 class UnconfigureTargetStoreStep(Step):
@@ -795,6 +798,76 @@ class RemoveTargetFromPacemakerConfigStep(Step):
         return help_text['remove_target_from_pacemaker_config'] % kwargs['target']
 
 
+TargetVolumeInfo = namedtuple('TargetVolumeInfo', ['host', 'path', 'device_type'])
+
+
+class MakeTargetActiveStep(Step):
+    """
+    When carrying out operations we need to make sure a Target is mounted on the correct node. This is often (probably)
+    always pre or post HA operation. For example when formatting the device we need to be sure it is where we are going
+    to carry out the format command.
+
+    Three parameters
+    target: The target in question, this allows a good user message.
+    inactive_volume_nodes: Is the volume_nodes that are not active on.
+    active_volume_node: Is the volume_nodes that are active on.
+
+    These parameters can be created using the create_parameters function, which allows the more complex building
+    functionality to lie within the Step code but without the run itself requiring database access.
+
+    """
+
+    idempotent = True
+
+    def inactivate_volume_node(self, volume_node):
+        self.invoke_agent_expect_result(volume_node.host,
+                                        'export_target',
+                                        {'device_type': volume_node.device_type,
+                                         'path': volume_node.path})
+
+    def run(self, kwargs):
+        threads = []
+
+        for inactive_volume_node in kwargs['inactive_volume_nodes']:
+            thread = ExceptionThrowingThread(target=self.inactivate_volume_node,
+                                             args=(inactive_volume_node,))
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+
+        self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                        'import_target',
+                                        {'device_type': kwargs['active_volume_node'].device_type,
+                                         'path': kwargs['active_volume_node'].path})
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+
+    @classmethod
+    def create_parameters(cls, target, host):
+        inactive_volume_nodes = []
+        active_volume_node = None
+
+        for mtm in target.managedtargetmount_set.all():
+            # Use ActiveTargetInfo so we do all db reads in here not in the run step, which would then need db access.
+            target_volume_info = TargetVolumeInfo(mtm.volume_node.host,
+                                                  mtm.volume_node.path,
+                                                  mtm.volume_node.volume.storage_resource.to_resource_class().device_type())
+
+            if host == mtm.volume_node.host:
+                active_volume_node = target_volume_info
+            else:
+                inactive_volume_nodes.append(target_volume_info)
+
+        assert active_volume_node
+
+        return {'target': target,
+                'inactive_volume_nodes': inactive_volume_nodes,
+                'active_volume_node': active_volume_node}
+
+
 class ConfigureTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, 'registered', 'unmounted')
     stateful_object = 'target'
@@ -825,7 +898,8 @@ class ConfigureTargetJob(StateChangeJob):
                                                      'target': target_mount.target,
                                                      'target_mount': target_mount,
                                                      'backfstype': target_mount.volume_node.volume.filesystem_type,
-                                                     'volume_node': target_mount.volume_node}))
+                                                     'volume_node': target_mount.volume_node,
+                                                     'device_type': target_mount.target.volume.storage_resource.to_resource_class().device_type()}))
 
         for target_mount in target_mounts:
             steps.append((AddTargetToPacemakerConfigStep, {'host': target_mount.host,
@@ -1158,22 +1232,22 @@ class FormatTargetJob(StateChangeJob):
         else:
             mgs_nids = None
 
-        steps = []
-
         device_type = self.target.volume.storage_resource.to_resource_class().device_type()
+
+        steps = [(MakeTargetActiveStep,
+                      MakeTargetActiveStep.create_parameters(self.target,
+                                                             primary_mount.host))]
 
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume
             # so before proceeding, check that it is indeed unoccupied
-            steps.append((PreFormatCheck, {
-                'host': primary_mount.host,
-                'path': primary_mount.volume_node.path,
-                'device_type': device_type
-            }))
+            steps.append((PreFormatCheck,
+                          {'host': primary_mount.host,
+                           'path': primary_mount.volume_node.path,
+                           'device_type': device_type}))
 
-            steps.append((PreFormatComplete, {
-                'target': self.target
-            }))
+            steps.append((PreFormatComplete,
+                          {'target': self.target}))
 
         # This line is key, because it causes the volume property to be filled so it can be access by the step
         self.target.volume

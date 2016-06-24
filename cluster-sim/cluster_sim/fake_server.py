@@ -857,6 +857,12 @@ class FakeServer(utils.Persisted):
 
         return agent_result_ok
 
+    def import_target(self, device_type, path):
+        return agent_result_ok
+
+    def export_target(self, device_type, path):
+        return agent_result_ok
+
     @property
     def _targets_started_here(self):
         uuid_started_on = {}
