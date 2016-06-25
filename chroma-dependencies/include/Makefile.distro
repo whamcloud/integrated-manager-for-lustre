@@ -3,7 +3,7 @@ ifeq ($(EL_MAJOR), 7)
 DISTRO			:= el7
 DISTRO_TAG		:= el7
 else ifeq ($(EL_MAJOR), 6)
-DISTRO			:= el6.7
+DISTRO			:= el6.8
 DISTRO_TAG		:= el6
 else
 $(error "Unknown major el version $(EL_MAJOR)")

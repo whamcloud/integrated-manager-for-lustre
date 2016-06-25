@@ -70,9 +70,9 @@ set_defaults() {
         export JENKINS_DISTRO="el6.4"
         if ${upgrade_test}; then
             export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"6.7"}
-            export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"6.7"}
+            export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"6.8"}
         else
-            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"6.7"}
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"6.8"}
         fi
     fi
 
