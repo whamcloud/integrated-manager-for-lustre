@@ -78,8 +78,8 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         ethtool = fake_ethtool(self.interfaces)
         sys.modules['ethtool'] = ethtool
 
-        self.write_ifcfg = mock.patch('chroma_agent.node_admin.write_ifcfg').start()
-        self.unmanage_network = mock.patch('chroma_agent.node_admin.unmanage_network').start()
+        self.write_ifcfg = mock.patch('chroma_agent.lib.node_admin.write_ifcfg').start()
+        self.unmanage_network = mock.patch('chroma_agent.lib.node_admin.unmanage_network').start()
 
         self.write_config_to_file = mock.patch(
             'chroma_agent.action_plugins.manage_corosync.write_config_to_file').start()

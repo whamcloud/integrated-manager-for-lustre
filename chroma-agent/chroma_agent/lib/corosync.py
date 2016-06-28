@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,15 +25,13 @@ import re
 import socket
 
 from jinja2 import Environment, PackageLoader
-
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
 
-
-from chroma_agent import node_admin, config
+from chroma_agent import config
+from chroma_agent.lib import node_admin
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-
 from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.lib import networking
