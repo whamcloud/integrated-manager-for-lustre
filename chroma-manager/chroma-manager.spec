@@ -53,7 +53,7 @@ Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
 Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
-Requires: nodejs >= 0.10.33-1
+Requires: nodejs >= 0.10.46-1
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: nodejs-active-x-obfuscator
