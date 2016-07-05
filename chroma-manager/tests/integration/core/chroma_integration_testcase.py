@@ -635,7 +635,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         host = hosts[0]
 
         lnet_configuration = self.get_list("/api/lnet_configuration", args={'host__id': host["id"],
-                                                                            'dehydrate__nid': True,
+                                                                            'dehydrate__nids': True,
                                                                             'dehydrate__host': True})
         self.assertEqual(len(lnet_configuration), 1, "Expected a single lnet configuration to be returned got %s" % len(lnet_configuration))
         lnet_configuration = lnet_configuration[0]

@@ -17,7 +17,7 @@ class TestRelated(TestCase):
     def test_related_optional_expanded(self):
         ''' Test that an optional expand overrides a default full of false in dehydrate_related '''
         self.mock_related_field.full = False
-        self.mock_related_resource.Meta.resource_name = 'test_resource'
+        self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {'dehydrate__test_resource': True}
         self.mock_related_bundle.request.GET = {'dehydrate__test_resource': True}
@@ -35,7 +35,7 @@ class TestRelated(TestCase):
     def test_related_default_expanded(self):
         ''' Test that an default full of False works in dehydrate_related '''
         self.mock_related_field.full = True
-        self.mock_related_resource.Meta.resource_name = 'test_resource'
+        self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {}
         self.mock_related_bundle.request.GET = {}
@@ -54,7 +54,7 @@ class TestRelated(TestCase):
         ''' Test that an optional n0expand overrides a default full of true in dehydrate_related '''
 
         self.mock_related_field.full = True
-        self.mock_related_resource.Meta.resource_name = 'test_resource'
+        self.mock_related_field.instance_name = 'test_resource'
 
         for false_ in [False, 'false', 'False', 0, '0', None]:
             self.mock_related_field.reset_mock()
@@ -76,7 +76,7 @@ class TestRelated(TestCase):
         ''' Test that an default full of False works in dehydrate_related '''
 
         self.mock_related_field.full = False
-        self.mock_related_resource.Meta.resource_name = 'test_resource'
+        self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {}
 

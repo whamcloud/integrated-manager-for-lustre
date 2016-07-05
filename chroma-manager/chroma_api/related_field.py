@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -28,12 +28,10 @@ def dehydrate_related(self, bundle, related_resource):
     Based on the ``full_resource``, returns either the endpoint or the data
     from ``full_dehydrate`` for the related resource.
 
-    Allows the definition to be overridden by a parameter such as nid_dehydrate={True/False}
+    Allows the definition to be overridden by a parameter such as dehydrate__nid={True/False}
     """
 
-    # For some reason resource_name is not always present for all objects. Needs to be understood but
-    # it only happens in test when some of the objects have been faked so probably something we can come back to.
-    dehydrate_flag_name = "dehydrate__" + getattr(related_resource.Meta, 'resource_name', "no_resource_name")
+    dehydrate_flag_name = "dehydrate__" + self.instance_name
 
     dehydrate_flag_value = bundle.request.GET.get(dehydrate_flag_name, self.full)
 
