@@ -376,11 +376,6 @@ div.toplevel, div.relative {
   font-size: 9px;
 }
 
-/* Only visible for users who can read from the API */
-.read_enabled_only {
-  display: none;
-}
-
 .page-wrapper {
   min-height: 100%;
   height: auto !important;

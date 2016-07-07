@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -24,15 +24,6 @@
   'use strict';
 
   angular.module('constants', [])
-    .constant('STATES', {
-      ERROR: 'ERROR',
-      WARN: 'WARNING',
-      GOOD: 'GOOD',
-      INFO: 'INFO',
-      INCOMPLETE: 'INCOMPLETE',
-      CANCELED: 'CANCELED',
-      COMPLETE: 'COMPLETE'
-    })
     .constant('STATIC_URL', window.STATIC_URL)
     .constant('UI_ROOT', '/ui/')
     .constant('HELP_TEXT', window.HELP_TEXT);

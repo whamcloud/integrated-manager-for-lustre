@@ -19,11 +19,6 @@
               $.each(row.groups, function(i, group) {
                 group_names.push(group.name);
               });
-              /*
-              if (row.is_superuser) {
-                group_names.push('superusers')
-              }
-              */
               row.groups = group_names.join(",");
               row.buttons = "";
             });
@@ -38,7 +33,10 @@
             }))
           }
           buttons.push($("<button>Edit</button>").click(function() {
-            Backbone.history.navigate("/user/" + row.user.id + "/", true);
+            parent.postMessage(
+              '/configure/user/' + row.user.id,
+              location.origin
+            );
           }));
           $.each(buttons, function(i, button) {
             $('td:eq(4)', nRow).prepend(button);

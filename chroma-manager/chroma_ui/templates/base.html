@@ -40,7 +40,6 @@
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/bootstrap/bootstrap-extend.css" type="text/css"/>
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/font-awesome/font-awesome.css" type="text/css"/>
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/volume.css" type="text/css" />
-    <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/big_green_button.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/power_control.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/outlet_info.css" type="text/css" />
     <link rel="stylesheet" href="<$= conf.get('STATIC_URL') $>css/create_pdu.css" type="text/css" />
@@ -71,14 +70,11 @@
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/interceptors/tastypie.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/interceptors/clean-request-url.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/controller_module.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/bigGreenButton.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/power_control.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/dialogs/create_pdu.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/controllers/dialogs/create_bmc.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/models_module.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/base_model.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/alert.js"></script>
-    <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/health.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_device.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_device_outlet.js"></script>
     <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/models/power_control_type.js"></script>
@@ -158,110 +154,26 @@
         Api.on_available(function() {
             Backbone.history.start({root: UI_ROOT, pushState: true})
         });
-
-        var copyrightElement = document.getElementsByClassName('copyright-year')[0];
-        copyrightElement.innerHTML = window.HELP_TEXT.copyright_year;
     });
   </script>
 
   <body>
     <div class='page-wrapper'>
-      <div class="navbar navbar-inverse">
-        <div class="navbar-inner">
-          <div class="container">
-            <a class="btn btn-navbar" ng-click="isCollapsed = !isCollapsed">
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-            </a>
-            <a class="brand" href="/ui">
-              <span class="logo"></span>
-            </a>
-            <div class="nav-collapse collapse navbar-inverse-collapse" collapse="isCollapsed">
-              <ul class="nav">
-                <li>
-                  <a id="dashboard-menu" class="navigation skip_router" href="/ui/dashboard/"><i class="icon-bar-chart"></i> Dashboard</a>
-                </li>
-                <li class="dropdown fsadmin_only">
-                  <a class="navigation dropdown-toggle" id="configure-menu" href="#"><i class="icon-cog"></i> Configuration <i class="icon-caret-down"></i></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a id="server-conf-item" href="/ui/configure/server/" title='servers'>Servers</a></li>
-                    <li><a id="power-conf-item" class="navigation" href='/ui/configure/power/' title='power'>Power Control</a></li>
-                    <li><a id="filesystem-conf-item" class="navigation" href='/ui/configure/filesystem/' title='filesystems'>File Systems</a></li>
-                    <li><a id="hsm-conf-item" class="skip_router" href="/ui/configure/hsm/">HSM</a></li>
-                    <li><a id="storage-conf-item" class="navigation" href='/ui/configure/storage/' title='storage'>Storage</a></li>
-                    <li><a id="user-conf-item" class="superuser_only navigation" href='/ui/configure/user/' title='users'>Users</a></li>
-                    <li><a id="volume-conf-item" class="navigation" href='/ui/configure/volume/' title='volumes'>Volumes</a></li>
-                    <li><a id="mgt-conf-item" href='/ui/configure/mgt/' title='mgts'>MGTs</a></li>
-                  </ul>
-                </li>
-                <li>
-                  <a id="log-menu" href="/ui/log/"><i class="icon-book"></i> Logs</a>
-                </li>
-                <li>
-                  <a id="help-menu" class="navigation skip_router" href="<$= conf.get('STATIC_URL') $>webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a>
-                </li>
-                <li class="status-menu-container">
-                  <a id="status-menu" ng-controller="BigGreenButtonCtrl" class="navigation status-nav skip_router" ng-href="((bigGreen.link))" context-tooltip="status_light" tooltip-placement="bottom">
-                    <span ng-class="bigGreen.status.health" class="ng-cloak badge">
-                      ((bigGreen.count))<sup ng-if="bigGreen.aboveLimit">+</sup>
-                    </span>
-                    Status
-                  </a>
-                </li>
-              </ul>
-              <ul class="nav pull-right">
-                <li>
-                  <a class="navigation skip_router" href="/ui/status/">
-                    <i id="notification_icon_jobs" class="icon-spinner icon-spin" style="display: none;"> </i>
-                  </a>
-                </li>
-                <li>
-                  <a href="/ui/about/">
-                    <$ if (conf.get('IS_RELEASE')) { $>
-                      <$= conf.get('VERSION') $>
-                    <$ } else { $>
-                      Build <$= conf.get('BUILD') $>
-                    <$ } $>
-                  </a>
-                </li>
-                <li>
-            <span id="user_info">
-              <span id="authenticated">
-                <a href='#' id='account'>Account</a>
-                <a href="#" class='logout'>Logout</a>
-              </span>
-              <span id="anonymous">
-                <a href="/ui/login/" class='login'>Login</a>
-              </span>
-            </span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <script type='text/javascript'>
-        /* the class skip_router is a function only class that intends to allow
-         static links to exist in the nav without the backbone router taking over
-         and having the URL rewritten to be prefixed with /ui/
-         i.e. help_wrapper link
-         */
-        $(document).ajaxComplete(function() {
-          $("a.navigation:not(a.skip_router)").each(function() {
-            var el = $(this);
-            var href = el.attr('href');
-            if (href.indexOf(UI_ROOT) != 0) {
-              el.attr('href', UI_ROOT + href);
-            }
-          });
-        });
         $(document).ready(function() {
-          $("a.navigation:not(a.skip_router)").live('click', function(ev) {
-            var url = $(this).attr('href').substr(UI_ROOT.length);
-            Backbone.history.navigate(url, {trigger: true});
+          var r = new RegExp('^' + UI_ROOT);
+
+          $("a.navigation:not(a.skip_router)").live('click', function (ev) {
             ev.preventDefault();
+
+            var href = $(this)
+              .attr('href');
+            var url = href.replace(r, '');
+
+            parent.postMessage(
+              url,
+              location.origin
+            );
           });
         });
       </script>
@@ -269,7 +181,7 @@
       <noscript>
         <p>Chroma requires JavaScript to be enabled.</p>
       </noscript>
-      <div class='read_enabled_only rightpanel'>
+      <div class='rightpanel'>
         <div class="toplevel" id='toplevel-configure' style="display: none;">
           <script type="text/javascript" src="<$= conf.get('STATIC_URL') $>js/configure_charts.js"></script>
           <script type='text/javascript' src="<$= conf.get('STATIC_URL') $>js/filesystem_configuration.js"></script>
@@ -278,18 +190,5 @@
         <div class="toplevel" id='toplevel-system_status' style="display: none;"></div>
       </div>
     </div>
-    <footer class="container logo-footer">
-      <div class="row">
-        <div class="span12">
-          <small>
-            Intel&reg; Manager for Lustre* software <$= conf.get('VERSION') $> (build <$= conf.get('BUILD') $>) is
-            Copyright &copy; <span class="copyright-year"></span> Intel Corporation. All rights reserved.
-            <a href="/ui/about/">About Intel&reg; Manager for Lustre* software</a>
-            &nbsp;
-            <a class="navigation superuser_only" href="/ui/system_status/">System status</a>
-          </small>
-        </div>
-      </div>
-    </footer>
   </body>
 </html>

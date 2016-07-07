@@ -98,28 +98,28 @@ var Api = function() {
 
   function startBlocking()
   {
-    if (errored) {
-      return;
-    }
-
-    outstanding_requests += 1;
-    if (outstanding_requests == 1 && enable_overlay) {
-      $.blockUI({
-        message: ""
-      });
-    }
+    // if (errored) {
+    //   return;
+    // }
+    //
+    // outstanding_requests += 1;
+    // if (outstanding_requests == 1 && enable_overlay) {
+    //   $.blockUI({
+    //     message: ""
+    //   });
+    // }
   }
 
   function completeBlocking()
   {
-    if (errored) {
-      return;
-    }
-
-    outstanding_requests -= 1;
-    if (outstanding_requests == 0 && enable_overlay) {
-      $.unblockUI();
-    }
+    // if (errored) {
+    //   return;
+    // }
+    //
+    // outstanding_requests -= 1;
+    // if (outstanding_requests == 0 && enable_overlay) {
+    //   $.unblockUI();
+    // }
   }
 
   function enable()

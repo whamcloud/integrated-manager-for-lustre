@@ -84,7 +84,10 @@
           $('#mgt_existing_dropdown').val('');
           set_mdt_advanced_visible(false);
 
-          Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
+          parent.postMessage(
+            'configure/filesystem/' + data.filesystem.id,
+            location.origin
+          );
         },
         {
             400: function (jqXHR) {

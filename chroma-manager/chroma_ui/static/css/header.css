@@ -105,19 +105,6 @@
     }
 }
 
-span#user_info {
-    float: right;
-    font-size: 14px;
-    margin-left: 12px;
-    margin-right: 12px;
-    margin-top: 10px;
-}
-
-span#user_info .logout,
-span#user_info .login {
-  padding-left: 15px;
-}
-
 .top_links ul.navigation {
     font-size: 14px;
     padding-left: 20px;

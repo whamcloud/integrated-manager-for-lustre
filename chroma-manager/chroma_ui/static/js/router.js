@@ -30,9 +30,11 @@ var RouteUtils = function() {
     var id = resource_uri.split('/')[3];
 
     if (resource == 'filesystem') {
-      return "/configure/filesystem/detail/" + id + "/"
+      return "/configure/filesystem/" + id + "/"
     } else if (resource == 'host') {
-      return "configure/server/" + id + "/";
+      return "/configure/server/" + id + "/";
+    } else if (resource == 'storage_resource') {
+      return "/configure/storage/" + id + "/";
     } else {
       return "/" + resource + "/" + id + "/";
     }
@@ -45,11 +47,9 @@ var RouteUtils = function() {
     var resource = detail_uri.split('/')[2];
 
     var resource_to_list_uri = {
-      "filesystem": "/configure/filesystem/list/",
-      "host": "/configure/server/",
-      "volume": "/configure/volume/",
-      "user": "/configure/user/",
-      "storage_resource": "/configure/storage/"
+      "volume": "/configureold/volume/",
+      "user": "/configureold/user/",
+      "storage_resource": "/configureold/storage/"
     };
 
     /* FIXME: can't do the mapping for a /target/ URI because
@@ -69,11 +69,6 @@ var RouteUtils = function() {
   {
     if (resource_uri) {
       var url = api_path_to_ui_path(resource_uri);
-
-      if (resource_uri.indexOf('host') !== -1) {
-        var absoluteUrl = '/ui/' + url;
-        return "<a href='" + absoluteUrl + "'>" + label + "</a>";
-      }
 
       return "<a class='navigation' href='" + url + "'>" + label + "</a>"
     } else {
@@ -98,7 +93,7 @@ var RouteUtils = function() {
   }
 
   function detail_page (a, b, c) {
-    return '<a href="/ui/%s/%s">%s</a>'
+    return '<a class="navigation" href="/ui/%s/%s">%s</a>'
       .sprintf(a, b, c);
   }
 
@@ -114,15 +109,14 @@ var RouteUtils = function() {
 }();
 
   var routes = {
-    'configure/filesystem/detail/:id/': 'filesystemDetail',
-    'configure/filesystem/list/': 'filesystemList',
-    'configure/filesystem/create/': 'filesystemCreate',
-    'configure/:tab/': 'configure',
-    'configure/': 'configureIndex',
-    'target/:id/': 'target_detail',
-    'user/:id/': 'user_detail',
-    'storage_resource/:id/': 'storage_resource_detail',
-    'system_status/': 'system_status'
+    'configureold/filesystem/detail/:id/': 'filesystemDetail',
+    'configureold/filesystem/create/': 'filesystemCreate',
+    'configureold/:tab/': 'configure',
+    'configureold/': 'configureIndex',
+    'targetold/:id/': 'target_detail',
+    'userold/:id/': 'user_detail',
+    'storage_resourceold/:id/': 'storage_resource_detail',
+    'system_statusold/': 'system_status'
   };
 
   routes = Object.keys(routes).reduce(function (newRoutes, route) {
@@ -258,9 +252,7 @@ var ChromaRouter = Backbone.Router.extend({
 
     this.configureTab(tab);
 
-    if (tab == 'filesystem') {
-      this.filesystemList();
-    } else if (tab == 'volume') {
+    if (tab == 'volume') {
       VolumeView.draw()
     } else if (tab == 'user') {
       UserView.draw()
@@ -289,16 +281,9 @@ var ChromaRouter = Backbone.Router.extend({
   },
   filesystemPage: function(page) {
     this.configureTab('filesystem');
-    $('#filesystem-tab-list').hide();
     $('#filesystem-tab-create').hide();
     $('#filesystem-tab-detail').hide();
     $('#filesystem-tab-' + page).show();
-  },
-  filesystemList: function() {
-    if ( this.failed_filesystem_admin_check() )
-      return;
-    this.filesystemPage('list');
-    FilesystemListView.draw()
   },
   filesystemDetail: function(id) {
     if ( this.failed_filesystem_admin_check() )

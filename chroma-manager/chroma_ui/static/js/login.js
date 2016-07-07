@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -19,10 +19,6 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-/* FIXME HYD-1381: this should be done on renders rather than on
-   all ajax completions */
-$(document).ajaxComplete(function(){Login.updateVisibility();});
 
 var Login = (function () {
   var user = null;
@@ -42,46 +38,12 @@ var Login = (function () {
     }
   }
 
-  function initUi() {
-    $('#user_info #authenticated').hide();
-    $('#user_info #anonymous').show();
-
-    $('#user_info #authenticated .logout').click(function(event) {
-      Api.delete("session/", {}, success_callback = function() {
-        window.location.href = '%slogin/'.sprintf(Api.UI_ROOT);
-      });
-      event.preventDefault();
-    });
-
-    $('#user_info #authenticated #account').click(function (ev) {
-      Backbone.history.navigate("/user/" + Login.getUser().id + "/", true);
-      ev.preventDefault();
-    });
-  }
-
-  function updateVisibility() {
-    $('.fsadmin_only').toggle(userHasGroup('filesystem_administrators'));
-    $('.superuser_only').toggle(userHasGroup('superusers'));
-  }
-
   function init() {
-    initUi();
-
     /* Discover information about the currently logged in user (if any)
      * so that we can put the user interface in the right state and
      * enable API calls */
     Api.get("/api/session/", {}, success_callback = function (session) {
       user = session.user;
-      $('.read_enabled_only').toggle(session.read_enabled);
-
-      if (!user) {
-        $('#user_info #authenticated').hide();
-        $('#user_info #anonymous').show();
-      } else {
-        $('#user_info #authenticated #account').html(user.username);
-        $('#user_info #authenticated').show();
-        $('#user_info #anonymous').hide();
-      }
 
       Api.enable();
     }, undefined, false, true);
@@ -94,8 +56,7 @@ var Login = (function () {
   return {
     init: init,
     getUser: getUser,
-    userHasGroup: userHasGroup,
-    updateVisibility: updateVisibility
+    userHasGroup: userHasGroup
   };
 }());
 

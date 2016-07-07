@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -237,7 +237,7 @@ var VolumeChooserStore = function ()
     element.hide();
     var background_div = element.parent('.volume_chooser_background');
 
-    element.wrap("<div id='" + wrapper_id + "' class='volume_chooser_header'/>");
+    element.wrap("<div id='" + wrapper_id + "' class='volume_chooser_header' tabindex='0'/>");
     var header_div = element.parent('.volume_chooser_header');
 
     element.after("<span class='volume_chooser_selected'/>");

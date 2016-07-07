@@ -68,7 +68,7 @@ setup(
                       "static/images/datatables/*.png", "static/images/datatables/*.jpg",
                       "static/images/*.ico", "static/images/*.png",
                       "static/images/*.gif", "templates/*.html", "templates/new/*.html",
-                      "static/chroma_ui/bower_components/font-awesome/fonts/*",
+                      "static/chroma_ui/node_modules/font-awesome/fonts/*",
                       "static/chroma_ui/source/iml/login/assets/images/*.png",
                       "static/chroma_ui/source/iml/app/assets/images/*",
                       "static/chroma_ui/source/styles/imports-*.css",
