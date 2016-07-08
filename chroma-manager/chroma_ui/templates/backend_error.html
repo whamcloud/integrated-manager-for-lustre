@@ -21,10 +21,10 @@
 <p><$- description $></p>
 <h2>[debug]</h2>
 <p>server time: <$= getServerDate().toISOString() $></p>
-<p>build: <$= conf.get('BUILD') $></p>
-<p>version: <$= conf.get('VERSION') $></p>
-<p>is release: <$= conf.get('IS_RELEASE') $></p>
-<p>fqdn: <$= conf.get('HOST_NAME') $></p>
+<p>build: <$= conf.BUILD $></p>
+<p>version: <$= conf.VERSION $></p>
+<p>is release: <$= conf.IS_RELEASE $></p>
+<p>fqdn: <$= conf.HOST_NAME $></p>
 <$ _.forEach(debug_info, function(v, k) { $>
 <p><$- k $>: <$- v $></p>
 <$ }); $>

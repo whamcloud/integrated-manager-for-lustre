@@ -5,8 +5,8 @@
   "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "intel-gui": "5.8.0",
-    "intel-realtime": "5.0.0",
-    "intel-view-server": "6.0.0"
+    "intel-gui": "5.8.1",
+    "intel-realtime": "5.0.2",
+    "intel-view-server": "6.0.3"
   }
 }

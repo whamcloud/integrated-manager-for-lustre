@@ -24,8 +24,6 @@ import os
 import settings
 import json
 
-from chroma_help.help import help_text
-
 from django.core.management.commands.runserver import Command as BaseCommand
 
 
@@ -50,7 +48,6 @@ class Command(BaseCommand):
         CONF = os.path.join(VIEW_SERVER_DIR, "conf.json")
 
         conf = {
-            "HELP_TEXT": help_text,
             "ALLOW_ANONYMOUS_READ": settings.ALLOW_ANONYMOUS_READ,
             "BUILD": settings.BUILD,
             "IS_RELEASE": settings.IS_RELEASE,
