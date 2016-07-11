@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -18,7 +18,6 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
-
 
 import logging
 import operator
@@ -81,11 +80,6 @@ def _make_deletable(metaclass, dct):
             self.not_deleted = None
             self.save()
         signals.post_delete.send(sender = self.__class__, instance = self)
-
-        from chroma_core.lib.job import job_log
-        from chroma_core.models.alert import AlertState
-        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active = None)
-        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
 
     def delete(self):
         raise NotImplementedError("Must use .mark_deleted on Deletable objects")

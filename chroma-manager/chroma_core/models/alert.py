@@ -28,6 +28,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.utils import timezone
 from django.db import IntegrityError
+from django.db.models import signals
+from django.dispatch import receiver
 
 from chroma_core.models.sparse_model import SparseModel
 from chroma_core.models import utils as conversion_util
@@ -174,28 +176,29 @@ class AlertStateBase(SparseModel):
                 alert_item_type__app_label = item_class._meta.app_label)
 
     @classmethod
-    def notify(cls, alert_item, active, **kwargs):
-        """Notify an alert in the default severity level for that alert"""
-
-        return cls._notify(alert_item, active, **kwargs)
-
-    @classmethod
     def notify_warning(cls, alert_item, active, **kwargs):
         """Notify an alert in at most the WARNING severity level"""
 
         kwargs['attrs_to_save'] = {'severity': min(
             cls.default_severity, logging.WARNING)}
-        return cls._notify(alert_item, active, **kwargs)
+        return cls.notify(alert_item, active, **kwargs)
 
     @classmethod
-    def _notify(cls, alert_item, active, **kwargs):
-        if hasattr(alert_item, 'content_type'):
-            alert_item = alert_item.downcast()
-
-        if active:
-            return cls.high(alert_item, **kwargs)
+    def notify(cls, alert_item, active, **kwargs):
+        """Notify an alert in the default severity level for that alert"""
+        try:
+            # Make sure this alert_item still exists.
+            alert_item.__class__.objects.get(id=alert_item.id)
+        except alert_item.__class__.DoesNotExist:
+            pass
         else:
-            return cls.low(alert_item, **kwargs)
+            if hasattr(alert_item, 'content_type'):
+                alert_item = alert_item.downcast()
+
+            if active:
+                return cls._high(alert_item, **kwargs)
+            else:
+                return cls._low(alert_item, **kwargs)
 
     @classmethod
     def _get_attrs_to_save(cls, kwargs):
@@ -213,10 +216,7 @@ class AlertStateBase(SparseModel):
         return attrs_to_save
 
     @classmethod
-    def high(cls, alert_item, **kwargs):
-        if hasattr(alert_item, 'not_deleted') and alert_item.not_deleted != True:
-            return None
-
+    def _high(cls, alert_item, **kwargs):
         attrs_to_save = cls._get_attrs_to_save(kwargs)
 
         try:
@@ -230,9 +230,10 @@ class AlertStateBase(SparseModel):
                 kwargs['severity'] = cls.default_severity
 
             alert_state = cls(active = True,
-                              dismissed = False,  # Users dismiss, not the software
-                              alert_item = alert_item,
+                              dismissed=False,  # Users dismiss, not the software
+                              alert_item=alert_item,
                               **kwargs)
+
             try:
                 alert_state.save()
                 job_log.info("AlertState: Raised %s on %s "
@@ -248,7 +249,7 @@ class AlertStateBase(SparseModel):
         return alert_state
 
     @classmethod
-    def low(cls, alert_item, **kwargs):
+    def _low(cls, alert_item, **kwargs):
         # The caller may provide an end_time rather than wanting now()
         end_time = kwargs.pop('end_time', timezone.now())
 
@@ -278,8 +279,10 @@ class AlertStateBase(SparseModel):
     @classmethod
     def register_event(cls, alert_item, **kwargs):
         # Events are Alerts with no duration, so just go high/low.
-        alert_state = cls.high(alert_item, attrs_to_save=kwargs)
-        cls.low(alert_item, end_time=alert_state.begin, attrs_to_save=kwargs)
+        alert_state = cls.notify(alert_item, True, attrs_to_save=kwargs)
+
+        if alert_state:
+            cls.notify(alert_item, False, end_time=alert_state.begin, attrs_to_save=kwargs)
 
     def cast(self, target_class):
         """
@@ -298,6 +301,17 @@ class AlertStateBase(SparseModel):
         new_alert.message()
 
         return new_alert
+
+    @staticmethod
+    @receiver(signals.post_delete)
+    def deactivate(signal, sender, **kwargs):
+        alert_item = kwargs['instance']
+
+        if hasattr(alert_item, 'id'):
+            updated = AlertState.filter_by_item_id(alert_item.__class__, alert_item.id).update(active=None)
+
+            if updated != 0:
+                job_log.info("Lowered %d alerts while deleting %s %s" % (updated, alert_item.__class__, alert_item.id))
 
 
 class AlertState(AlertStateBase):

@@ -603,8 +603,8 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         return steps
 
     def on_success(self):
-        _delete_target(self.target)
         super(RemoveConfiguredTargetJob, self).on_success()
+        _delete_target(self.target)
 
 
 # HYD-832: when transitioning from 'registered' to 'removed', do something to
@@ -641,9 +641,8 @@ class RemoveTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
-        _delete_target(self.target)
-
         super(RemoveTargetJob, self).on_success()
+        _delete_target(self.target)
 
 
 class ForgetTargetJob(StateChangeJob):
@@ -664,9 +663,8 @@ class ForgetTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
-        _delete_target(self.target)
-
         super(ForgetTargetJob, self).on_success()
+        _delete_target(self.target)
 
     state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
     stateful_object = 'target'

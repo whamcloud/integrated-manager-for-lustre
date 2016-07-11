@@ -189,6 +189,22 @@ class AlertResource(LongPollingAPI, SeverityResource):
         return http.HttpNoContent()
 
     def dehydrate_alert_item(self, bundle):
+        # This is a not very nice solution to HYD-5625. The problem with HYD-5625 is that an alert_item can be deleted
+        # at the same time as another thread/process is raising and alert on that item. Because the link between the two
+        # is computed AND because we don't really delete the alert item generally but mark it as deleted  the database
+        # cannot use simple integrity to prevent this happening. I spent more that 2 days trying to come up with a solid
+        # solution to this problem and failed. So went for this solution which is to mark any active alert that has a
+        # deleted item as in active here. If it is found the alert is marked as in active.
+        # So this fix is definitely a fix not a prevention, but working with what we have I've not seen a prevention
+        # that is possible without a major rewrite for an occasional issue.
+        #
+        # We have to use getattr rather than .not deleted because some objects are not DeletableObjects and so don't
+        # have that attribute. It would be nice to fix that fact really for some consistency.
+        if (bundle.obj.active is True) and \
+                ((bundle.obj.alert_item is None) or (getattr(bundle.obj.alert_item, 'not_deleted', True) is not True)):
+            bundle.obj.active = False
+            bundle.obj.save()
+
         return api.get_resource_uri(bundle.obj.alert_item)
 
     def dehydrate_alert_item_str(self, bundle):
