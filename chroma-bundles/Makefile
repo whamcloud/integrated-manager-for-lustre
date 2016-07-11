@@ -6,7 +6,7 @@ REPO ?= $(TOP)/../chroma-dependencies/repo
 WORKDIR := $(notdir $(CURDIR))
 DISTRO := $(shell rpm --eval %dist | sed -e 's/\.\(el[0-9][0-9]*\).*/\1/')
 
-PROFILES := default.profile base_managed_RH6.profile base_managed_RH7.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
+PROFILES := default.profile base_managed_RH7.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
 all: package
