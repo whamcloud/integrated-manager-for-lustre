@@ -51,9 +51,9 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.4.1.4
-BUILD_JOB=ieel-b2_4
-BUILD_NUM=8
+# first fetch and install chroma 3.0.0.0
+BUILD_JOB=ieel
+BUILD_NUM=890
 set +x
 echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
 ++ sed -e 's/.*>\(ieel-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
