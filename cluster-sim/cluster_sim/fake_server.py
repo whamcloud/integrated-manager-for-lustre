@@ -671,14 +671,14 @@ class FakeServer(utils.Persisted):
             self.save()
             return agent_result_ok
 
-    def configure_corosync2_stage_1(self):
-        return agent_result_ok
-
-    def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, mcast_port, create_cluster):
+    def configure_corosync2_stage_1(self, mcast_port, pcs_password):
         with self._lock:
             self.state['corosync'].mcast_port = mcast_port
             self.save()
             return agent_result_ok
+
+    def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, create_cluster, mcast_port, pcs_password):
+        return agent_result_ok
 
     def change_mcast_port(self, old_mcast_port, new_mcast_port):
         with self._lock:

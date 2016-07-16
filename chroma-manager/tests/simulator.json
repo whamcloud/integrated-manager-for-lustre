@@ -27,6 +27,7 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ],
+            "profile": "base_managed_rh7",
             "distro": "mock"
         },
         {
@@ -42,6 +43,7 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ],
+            "profile": "base_managed_rh7",
             "distro": "mock"
         },
         {
@@ -57,6 +59,7 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ],
+            "profile": "base_managed_rh7",
             "distro": "mock"
         },
         {
@@ -72,6 +75,7 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ],
+            "profile": "base_managed_rh7",
             "distro": "mock"
         },
         {

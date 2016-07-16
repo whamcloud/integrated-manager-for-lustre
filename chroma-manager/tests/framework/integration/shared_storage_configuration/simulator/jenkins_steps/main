@@ -21,6 +21,9 @@ trap "chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_
 cd $WORKSPACE/chroma_test_env/
 chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
+# Use the server profiles for the managed servers that matches the distro we're testing on
+sed -i -e "s/\(\"profile\": *\)\"base_managed_RH[0-9]\"/\1\"base_managed_RH${TEST_DISTRO_VERSION[0]}\"/g" $CLUSTER_CONFIG_TEMPLATE
+
 echo "Beginning automated test run..."
 chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/cluster_setup
 chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/run_tests
