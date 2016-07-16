@@ -211,7 +211,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
             # POST to the /registration_token/ REST API resource to acquire
             # permission to add a server
-            profile = self.get_named_profile(host.get('profile', 'base_managed'))
+            profile = self.get_named_profile(host['profile'])
             response = self.chroma_manager.post(
                 '/api/registration_token/',
                 body={
