@@ -19,11 +19,13 @@ if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
     cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
 fi
 
+# Fetch the cobbler repo file for the version we are upgrading to, and clean the repo of
+# the data form the previous repo file.
 curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
+yum clean all
 
 # On RHEL systems, we need to set the releasever
 if which subscription-manager; then
-    yum clean all
     # https://access.redhat.com/support/cases/#/case/01652731
     #subscription-manager release --set=${upgrade_distro_version}
     subscription-manager release --set=6Server
