@@ -47,7 +47,8 @@ rm /etc/yum.repos.d/CentOS-*.repo
 #       a new kernel was surely installed and real users would reboot here" | dshbak -c
 
     echo "End operating system upgrade"
-}
 
-# We have upgraded to the upgrade_distribution so the TEST_DISTRO_VERSION has now changed.
-export TEST_DISTRO_VERSION=${upgrade_distro_version}
+
+    # We have upgraded to the upgrade_distribution so the TEST_DISTRO_VERSION has now changed.
+    export TEST_DISTRO_VERSION=${upgrade_distro_version}
+}
