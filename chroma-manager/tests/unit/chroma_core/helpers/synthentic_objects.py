@@ -199,11 +199,9 @@ def create_synthetic_device_info(host, mock_server, plugin):
 
                 interface_no += 1
 
-        result = {'interfaces': {'active': interfaces,
-                                 'deleted': []},
+        result = {'interfaces': interfaces,
                   'lnet': {'state': lnet_state,
-                           'nids': {'active': nids,
-                                    'deleted': []}}}
+                           'nids': nids}}
 
     return {plugin: result}
 
@@ -244,10 +242,10 @@ def parse_synthentic_device_info(host_id, data):
     # actual writes to the database
     for plugin, device_data in data.items():
         if plugin == 'linux_network':
-            if len(device_data['lnet']['nids']['active']) > 0:
+            if len(device_data['lnet']['nids']) > 0:
                 nid_tuples = []
 
-                for name, nid in device_data['lnet']['nids']['active'].items():
+                for name, nid in device_data['lnet']['nids'].items():
                     nid_tuples.append(Nid.Nid(nid['nid_address'], nid['lnd_type'], nid['lnd_network']))
             else:
                 nid_tuples = None

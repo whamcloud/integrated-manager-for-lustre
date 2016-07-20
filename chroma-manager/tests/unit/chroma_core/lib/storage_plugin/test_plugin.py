@@ -60,8 +60,8 @@ class TestPlugin(Plugin):
     def update_scan(self, root_resource):
         self.update_scan_called = True
 
-    def commit_resource_statistics(self):
-        self.commit_resource_statistics_called = True
+    def _commit_resource_statistics(self):
+        self._commit_resource_statistics_called = True
 
     def teardown(self):
         self.teardown_called = True
@@ -164,7 +164,7 @@ class TestAddRemove(IMLUnitTestCase):
                 self.plugin,
                 self.plugin._scannable_id,
                 [self.plugin._root_resource, self.plugin.resource1],
-                self.plugin.update_period)
+                self.plugin._update_period)
 
         # Session reporting 0 resource in initial_scan
         self._create_mocked_resource_and_plugin()
@@ -177,7 +177,7 @@ class TestAddRemove(IMLUnitTestCase):
                 self.plugin,
                 self.plugin._scannable_id,
                 [self.plugin._root_resource],
-                self.plugin.update_period)
+                self.plugin._update_period)
 
     def test_update_add(self):
         self._create_mocked_resource_and_plugin()

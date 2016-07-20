@@ -108,16 +108,16 @@ class LinuxNetwork(Plugin):
 
         inet4_address_to_interface = {}
 
-        # Actually I think this deleted here is unnecessary, it is probably the case that this routine
-        # could audit each nid against each network interface and work out which ones are now missing
-        # but this needs to land and this does work.
-        # But it any real work happens on this code, this should be removed.
-        for name in devices['interfaces']['deleted']:
-            self.remove_by_attr(HostNetworkInterface,
-                                host_id = host_id,
-                                name = name)
+        # Get the existing interfaces, get the reported and then delete those that no longer exist.
+        current_interface_names = set(interface_name for interface_name in devices['interfaces'])
+        existing_interface_names = set(interface.name for interface in self.find_by_attr(HostNetworkInterface, host_id=host_id))
 
-        for name, iface in devices['interfaces']['active'].iteritems():
+        for name in (existing_interface_names - current_interface_names):
+            self.remove_by_attr(HostNetworkInterface,
+                                host_id=host_id,
+                                name=name)
+
+        for name, iface in devices['interfaces'].iteritems():
             iface_resource, created = self.update_or_create(HostNetworkInterface,
                                                             name = name,
                                                             inet4_address = iface['inet4_address'],
@@ -131,16 +131,16 @@ class LinuxNetwork(Plugin):
 
             inet4_address_to_interface[iface_resource.name] = iface_resource
 
-        # Actually I think this deleted here is unnecessary, it is probably the case that this routine
-        # could audit each nid against each network interface and work out which ones are now missing
-        # but this needs to land and this does work.
-        # ut it any real work happens on this code, this should be removed.
-        for name in devices['lnet']['nids']['deleted']:
-            self.remove_by_attr(Nid,
-                                host_id = host_id,
-                                name = name)
+        # Get the existing nids, get the reported and then delete those that no longer exist.
+        current_nid_names = set(nid_name for nid_name in devices['lnet']['nids'])
+        existing_nid_names = set(nid.name for nid in self.find_by_attr(Nid, host_id=host_id))
 
-        for name, nid in devices['lnet']['nids']['active'].iteritems():
+        for name in (existing_nid_names - current_nid_names):
+            self.remove_by_attr(Nid,
+                                host_id=host_id,
+                                name=name)
+
+        for name, nid in devices['lnet']['nids'].iteritems():
             parent_interface = inet4_address_to_interface[name]
 
             assert(name == parent_interface.name)

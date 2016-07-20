@@ -59,16 +59,6 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
     def update_session(self):
         result = self._get_results()
 
-        # Default to nothing deleted
-        result['interfaces']['deleted'] = []
-        result['lnet']['nids']['deleted'] = []
-
-        if hasattr(self._server, 'nid_last_result'):
-            result['interfaces']['deleted'] = [item for item in self._server.nid_last_result['interfaces']['active'] if item not in result['interfaces']['active']]
-            result['lnet']['nids']['deleted'] = [item for item in self._server.nid_last_result['lnet']['nids']['active'] if item not in result['lnet']['nids']['active']]
-
-        self._server.nid_last_result = result
-
         return result
 
     def _get_results(self):
@@ -101,11 +91,9 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
             self._server.network_interfaces[self._server.network_interfaces.keys()[0]]['lnd_network'] = 0
             return self._get_results()
 
-        return {'interfaces': {'active': interfaces,
-                               'deleted': []},
+        return {'interfaces': interfaces,
                 'lnet': {'state': self._lnet_state(),
-                         'nids': {'active': nids,
-                                  'deleted': []}}}
+                         'nids': nids}}
 
 
 class BaseFakeSyslogPlugin(DevicePlugin):

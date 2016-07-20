@@ -276,7 +276,7 @@ class BaseStorageResource(object):
                     raise AttributeError("attribute %s not found" % key)
 
     @classmethod
-    def attrs_to_id_tuple(cls, attrs):
+    def attrs_to_id_tuple(cls, attrs, null_missing):
         """Serialized ID for use in StorageResourceRecord.storage_id_str"""
         identifier_val = []
         for f in cls._meta.identifier.id_fields:
@@ -286,14 +286,36 @@ class BaseStorageResource(object):
             if f in attrs:
                 identifier_val.append(attrs[f])
             else:
-                if cls._meta.storage_attributes[f].optional:
+                if cls._meta.storage_attributes[f].optional or null_missing:
                     identifier_val.append(None)
                 else:
                     raise RuntimeError("Missing ID attribute '%s'" % f)
         return tuple(identifier_val)
 
     def id_tuple(self):
-        return self.attrs_to_id_tuple(self._storage_dict)
+        return self.attrs_to_id_tuple(self._storage_dict, False)
+
+    @classmethod
+    def compare_id_tuple(self, tuple1, tuple2, allow_missing):
+        """
+        Compare two id tuples and return True if they are the equal or False if they are different. If allow_missing is
+        True then None values are not compared.
+        :param tuple1:
+        :param tuple2:
+        :param allow_missing:
+        :return: True if the tuples match.
+        """
+        if allow_missing:
+            if len(tuple1) != len(tuple2):
+                return False
+
+            for value1, value2 in zip(tuple1, tuple2):
+                if (value1 is not None) and (value2 is not None) and (value1 != value2):
+                    return False
+
+            return True
+        else:
+            return tuple1 == tuple2
 
     def add_parent(self, parent_resource):
         # TODO: lock _parents

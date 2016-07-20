@@ -112,7 +112,7 @@ class StorageResourceRecord(models.Model):
         if isinstance(resource_class._meta.identifier, AutoId):
             import uuid
             attrs['chroma_auto_id'] = uuid.uuid4().__str__()
-        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs))
+        id_str = json.dumps(resource_class.attrs_to_id_tuple(attrs, False))
 
         # NB assumes that none of the items in ID tuple are ResourceReferences: this
         # would raise an exception from json encoding.

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -352,24 +352,16 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
         interfaces = NetworkInterfaces()
         nids = self._lnet_devices(interfaces)
 
-        result = {'interfaces': {'active': interfaces},
+        result = {'interfaces': interfaces,
                   'lnet': {'state': self._lnet_state(),
-                           'nids': {'active': nids}}}
-
-        # Default to nothing deleted
-        result['interfaces']['deleted'] = []
-        result['lnet']['nids']['deleted'] = []
-
-        if (LinuxNetworkDevicePlugin.last_return != {}):
-            result['interfaces']['deleted'] = [item for item in LinuxNetworkDevicePlugin.last_return['interfaces']['active'] if item not in result['interfaces']['active']]
-            result['lnet']['nids']['deleted'] = [item for item in LinuxNetworkDevicePlugin.last_return['lnet']['nids']['active'] if item not in result['lnet']['nids']['active']]
+                           'nids': nids}}
 
         return result
 
     def update_session(self):
         this_return = self.start_session()
 
-        # THIS DOESN"T WORK BECAUSE RX/TX change in the network and so the data is sent back everytime. So it does work
+        # THIS DOESN'T WORK BECAUSE RX/TX change in the network and so the data is sent back everytime. So it does work
         # but the data is always sent to if (true) is really what we have.
         if (this_return != self.last_return):
             LinuxNetworkDevicePlugin.last_return = this_return
