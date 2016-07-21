@@ -182,6 +182,12 @@ class SimulatorRemoteOperations(RemoteOperations):
         else:
             return self._simulator.servers[fqdn].read_proc(path)
 
+    def read_file(self, address, file_path):
+        pass
+
+    def rename_file(self, address, current_path, new_path):
+        pass
+
     def mount_filesystem(self, client_address, filesystem):
         client = self._simulator.get_lustre_client(client_address)
         mgsnode, fsname = filesystem['mount_path'].split(":/")
@@ -435,8 +441,15 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_fqdn(fqdn, "logger \"%s\"" % message)
 
     def read_proc(self, address, path):
-        result = self._ssh_address(address, "cat %s" % path)
+        result = self._ssh_address(address, 'cat %s' % path)
         return result.stdout.strip()
+
+    def read_file(self, address, file_path):
+        result = self._ssh_address(address, 'cat %s' % file_path)
+        return result.stdout
+
+    def rename_file(self, address, current_path, new_path):
+        self._ssh_address(address, 'mv %s %s' % (current_path, new_path))
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
