@@ -1491,7 +1491,9 @@ class JobScheduler(object):
             return jobs
 
     def get_locks(self, obj_key, obj_id):
-        locks = {}
+        locks = {'read': [],
+                 'write': []}
+
         try:
             object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
             locks['read'] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
