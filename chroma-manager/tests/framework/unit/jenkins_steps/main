@@ -1,17 +1,7 @@
 #!/bin/bash -e
 
-# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
-# printing it into the console in plaintext calling this script.
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-. $HOME/auth.sh
-set -x
-
-[ -r localenv ] && . localenv
-
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-
-# Variables that we expect to be set upstream, no "default"
-WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+. chroma-manager/tests/framework/utils/defaults.sh
+set_defaults false
 
 # Get the chroma-externals repo as pip is going to need it
 scripts/update_chroma-externals.py
