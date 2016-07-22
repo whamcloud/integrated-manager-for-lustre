@@ -3,6 +3,8 @@
 . chroma-manager/tests/framework/utils/defaults.sh
 set_defaults false
 
+. chroma-manager/tests/framework/utils/selective_auto_pass.sh
+
 # Get the chroma-externals repo as pip is going to need it
 scripts/update_chroma-externals.py
 
