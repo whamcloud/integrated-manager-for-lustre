@@ -5,7 +5,17 @@
 . chroma-manager/tests/framework/utils/gui_update.sh
 . chroma-manager/tests/framework/utils/fake_pass.sh
 
-if gui_bump; then
-  fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
-  exit 0
-fi
+check_for_autopass() {
+    tests_required_for_gui_bumps="chroma-tests-services"
+
+    if gui_bump && [[ ! $tests_required_for_gui_bumps =~ $BUILD_JOB ]]; then
+      fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
+      exit 0
+    fi
+
+    supported_distro_versions="6.8 7.2"
+    if [[ ! $supported_distro_versions =~ $TEST_DISTRO_VERSION ]] && ([ -z "$UPGRADE_TEST_DISTRO" ] || [[ ! $supported_distro_versions =~ $UPGRADE_TEST_DISTRO ]]); then
+      fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
+      exit 0
+    fi
+}  # end of check_for_autopass()

@@ -3,7 +3,10 @@
 PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 
 . chroma-manager/tests/framework/utils/defaults.sh
+. chroma-manager/tests/framework/utils/selective_auto_pass.sh
+
 set_defaults false
+check_for_autopass
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/services/services_cluster_config.json"}
 

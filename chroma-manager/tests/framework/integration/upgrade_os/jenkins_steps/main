@@ -4,6 +4,7 @@
 . chroma-manager/tests/framework/utils/selective_auto_pass.sh
 
 set_defaults true
+check_for_autopass
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 SLAVE=${slave:?"Need to set slave"}
