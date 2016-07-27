@@ -20,6 +20,7 @@ cleanup() {
     if $got_aborted; then
         tmpfile=/tmp/abort.$$.debug
         exec 2>$tmpfile
+        env >&2
     fi
     python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1 || true
     # look for known failures in the logs
@@ -37,9 +38,22 @@ cleanup() {
         echo "bug: HYD-2948"
     fi
 
-    chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
+    if [ -f chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster ]; then
+        chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
+    else
+        {
+        echo "*****************************************************************"
+        echo "chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster could not be found"
+        if $got_aborted; then
+            echo "this job was aborted!!"
+        fi
+        pwd
+        ls -l chroma
+        echo "*****************************************************************"
+        } >&2
+    fi
 
-    echo "exit trap done"
+    echo "exit trap done" >&2
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
         cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
         #rm $tmpfile
