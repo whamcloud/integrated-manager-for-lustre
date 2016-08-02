@@ -40,6 +40,8 @@ class ZfsDevices(DeviceHelper):
 
     def __init__(self):
         self._zpools = {}
+        self._datasets = {}
+        self._zvols = {}
 
     @exceptionSandBox(daemon_log, [])
     def quick_scan(self):
@@ -56,6 +58,8 @@ class ZfsDevices(DeviceHelper):
             self._search_for_inactive(block_devices)
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}
+            self._datasets = {}
+            self._zvols = {}
 
     def _search_for_active(self, block_devices):
         # First look for active/imported zpools
@@ -125,28 +129,36 @@ class ZfsDevices(DeviceHelper):
             # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
             block_device = "zfspool:%s" % pool
 
-            block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
-                                                              'path': pool,
-                                                              'serial_80': None,
-                                                              'serial_83': None,
-                                                              'size': size,
-                                                              'filesystem_type': None,
-                                                              'parent': None}
+            datasets = self._get_zpool_datasets(pool, uuid, drive_mms, block_devices)
+            zvols = self._get_zpool_zvols(pool, drive_mms, uuid, block_devices)
 
-            # Do this to cache the device, type see blockdevice and filesystem for info.
-            BlockDevice('zfs', pool)
-            FileSystem('zfs', pool)
+            if (datasets == {}) and (zvols == {}):
+                block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
+                                                                  'path': pool,
+                                                                  'serial_80': None,
+                                                                  'serial_83': None,
+                                                                  'size': size,
+                                                                  'filesystem_type': None,
+                                                                  'parent': None}
 
-            self._zpools[uuid] = {
-                "name": pool,
-                "path": pool,
-                "block_device": block_device,
-                "uuid": uuid,
-                "size": size,
-                "drives": drive_mms,
-                "datasets": self._get_zpool_datasets(pool, drive_mms, block_devices),
-                "zvols": self._get_zpool_zvols(pool, drive_mms, block_devices)
+                # Do this to cache the device, type see blockdevice and filesystem for info.
+                BlockDevice('zfs', pool)
+                FileSystem('zfs', pool)
+
+                self._zpools[uuid] = {
+                    "name": pool,
+                    "path": pool,
+                    "block_device": block_device,
+                    "uuid": uuid,
+                    "size": size,
+                    "drives": drive_mms,
                 }
+
+            if datasets != {}:
+                self._datasets.update(datasets)
+
+            if zvols != {}:
+                self._zvols.update(zvols)
 
     @property
     @exceptionSandBox(daemon_log, {})
@@ -156,22 +168,12 @@ class ZfsDevices(DeviceHelper):
     @property
     @exceptionSandBox(daemon_log, {})
     def datasets(self):
-        datasets = {}
-
-        for pool_uuid, pool in self.zpools.items():
-            datasets.update(pool["datasets"].items())
-
-        return datasets
+        return self._datasets
 
     @property
     @exceptionSandBox(daemon_log, {})
     def zvols(self):
-        zvols = {}
-
-        for pool_uuid, pool in self.zpools.items():
-            zvols.update(pool["zvols"].items())
-
-        return zvols
+        return self._zvols
 
     def _get_zpool_devices(self, name):
         # TODO: Is there a better way of doing this
@@ -208,7 +210,7 @@ class ZfsDevices(DeviceHelper):
 
         return devices
 
-    def _get_zpool_datasets(self, pool_name, drives, block_devices):
+    def _get_zpool_datasets(self, pool_name, zpool_uuid, drives, block_devices):
         out = AgentShell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
 
         zpool_datasets = {}
@@ -222,12 +224,12 @@ class ZfsDevices(DeviceHelper):
                     # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
                     major_minor = "zfsset:%s" % (len(self.datasets) + 1)
                     block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
-                                                                      'path': name,
-                                                                      'serial_80': None,
-                                                                      'serial_83': None,
-                                                                      'size': size,
-                                                                      'filesystem_type': None,
-                                                                      'parent': None}
+                                                                     'path': name,
+                                                                     'serial_80': None,
+                                                                     'serial_83': None,
+                                                                     'size': size,
+                                                                     'filesystem_type': None,
+                                                                     'parent': None}
 
                     # Do this to cache the device, type see blockdevice and filesystem for info.
                     BlockDevice('zfs', name)
@@ -248,7 +250,7 @@ class ZfsDevices(DeviceHelper):
 
     # Each zfs pool may have zvol entries in it. This will parse those zvols and create
     # device entries for them
-    def _get_zpool_zvols(self, pool_name, drives, block_devices):
+    def _get_zpool_zvols(self, pool_name, zpool_uuid, drives, block_devices):
         zpool_vols = {}
 
         for zvol_path in glob.glob("/dev/%s/*" % pool_name):

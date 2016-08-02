@@ -51,7 +51,7 @@ class DeviceHelper(object):
                 self.non_existent_paths.discard(path)
                 break
             except OSError as os_error:
-                if os_error.errno != errno.ENOENT:
+                if os_error.errno not in [errno.ENOENT, errno.ENOTDIR]:
                     raise
 
                 # An OSError could be raised because a path genuinely doesn't
