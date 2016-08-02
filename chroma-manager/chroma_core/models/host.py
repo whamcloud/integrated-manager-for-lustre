@@ -531,6 +531,7 @@ class UpdateDevicesStep(Step):
         for plugin in storage_plugin_manager.loaded_plugin_names:
             try:
                 plugin_data[plugin] = self.invoke_agent(host, 'device_plugin', {'plugin': plugin})[plugin]
+                plugin_data[plugin]['polled result'] = True
             except AgentException as e:
                 self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
 
@@ -1010,6 +1011,11 @@ class UpdateDevicesJob(HostListMixin):
 
     def get_deps(self):
         return DependAll(DependOn(host.lnet_configuration, 'lnet_up') for host in self.hosts)
+
+    def create_locks(self):
+        return [StateLock(job=self,
+                          locked_item=host,
+                          write=True) for host in self.hosts]
 
     def get_steps(self):
         return [(UpdateDevicesStep, {'hosts': self.hosts})]

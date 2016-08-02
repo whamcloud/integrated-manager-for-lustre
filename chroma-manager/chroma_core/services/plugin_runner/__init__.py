@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -40,8 +40,8 @@ class AgentPluginHandlerCollection(object):
             self.handlers[plugin_name].setup_host(host_id, data)
 
     def update_host_resources(self, host_id, updates):
-            for plugin_name, data in updates.items():
-                self.handlers[plugin_name].update_host_resources(host_id, data)
+        for plugin_name, data in updates.items():
+            self.handlers[plugin_name].update_host_resources(host_id, data)
 
     def remove_host_resources(self, host_id):
         for handler in self.handlers.values():

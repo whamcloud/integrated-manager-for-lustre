@@ -50,6 +50,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'register_copytool',
                'unregister_copytool',
                'update_nids',
+               'scan_agent_storage_devices',
                'update_lnet_configuration',
                'create_host',
                'set_host_profile',
@@ -186,6 +187,10 @@ class JobSchedulerClient(object):
     @classmethod
     def update_nids(cls, nid_data):
         return JobSchedulerRpc().update_nids(nid_data)
+
+    @classmethod
+    def scan_agent_storage_devices(cls, include_host_ids, exclude_host_ids):
+        return JobSchedulerRpc().scan_agent_storage_devices(include_host_ids, exclude_host_ids)
 
     @classmethod
     def tables_changed(cls, timestamp, tables):

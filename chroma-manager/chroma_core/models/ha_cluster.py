@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -36,6 +36,14 @@ class HaCluster(object):
         for cluster_peers in find_cliques(graph):
             clusters.append(cls(cluster_peers))
         return clusters
+
+    @classmethod
+    def host_peers(cls, host):
+        for clusters in cls.all_clusters():
+            if host in clusters.peers:
+                return clusters.peers
+
+        return []
 
     def __init__(self, peer_list):
         self.peer_list = peer_list

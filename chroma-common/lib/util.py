@@ -30,8 +30,14 @@ import sys
 
 
 def running_nose_tests():
-    """Return true if the current application is running nosetests"""
-    return 'nosetests' in sys.argv[0]
+    """
+    Return true if the current application is running nosetests
+
+    A bit of a smorgasbord of tests to discover, but at least only one smorgasbord
+    """
+    return ('nosetests' in sys.argv[0]) or \
+           ('manage.py' in sys.argv[0] and 'test' in sys.argv[1]) or \
+           ('behave' in sys.argv[0])
 
 
 ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
@@ -69,9 +75,9 @@ class ExpiringList(MutableSequence):
 
 
 # When running unit tests every test is within a transaction and so if you kick of another thread you will not see
-# any of the database changes that have occured. For this reason if we are running unit tests we default to no threads
+# any of the database changes that have occurred. For this reason if we are running unit tests we default to no threads
 # otherwise we default to threads
-_use_threads_default = running_nose_tests()
+_use_threads_default = not running_nose_tests()
 
 
 class ExceptionThrowingThread(threading.Thread):

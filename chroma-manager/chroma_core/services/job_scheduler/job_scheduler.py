@@ -57,6 +57,7 @@ from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
+from chroma_core.models import UpdateDevicesJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1536,6 +1537,26 @@ class JobScheduler(object):
         self.progress.advance()
 
         return command.id
+
+    def scan_agent_storage_devices(self, include_host_ids, exclude_host_ids):
+        host_ids = include_host_ids if include_host_ids else [host.id for host in ManagedHost.objects.all()]
+
+        if exclude_host_ids:
+            host_ids = list(set(host_ids) - set(exclude_host_ids))
+
+        if host_ids:
+            with self._lock:
+                jobs = [UpdateDevicesJob(host_ids=json.dumps(host_ids))]
+
+                with transaction.commit_on_success():
+                    command = Command.objects.create(message="Scanning agent storage devices")
+                    self.CommandPlan.add_jobs(jobs, command)
+
+            self.progress.advance()
+
+            return command.id
+        else:
+            return None
 
     def update_lnet_configuration(self, lnet_configuration_list):
         with self._lock:

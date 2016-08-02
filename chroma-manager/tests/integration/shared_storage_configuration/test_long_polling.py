@@ -46,7 +46,8 @@ class TestScaleLongPolling(LongPollingTestCase):
         # TODO: Increase the connections so we can have realistic numbers.
         for index in range(0, 64):
             thread = ExceptionThrowingThread(target=fetch_like_hell,
-                                             args=(self, '/api/host'))
+                                             args=(self, '/api/host'),
+                                             use_threads=True)
             thread.start()
             threads.append(thread)
 
