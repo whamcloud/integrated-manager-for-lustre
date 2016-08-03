@@ -1,7 +1,6 @@
 html, body
 {
 	font-family:Verdana, Arial, Helvetica, sans-serif;
-  height: 100%;
 }
 
 body {
@@ -377,11 +376,6 @@ div.toplevel, div.relative {
 }
 
 .page-wrapper {
-  min-height: 100%;
-  height: auto !important;
-  height: 100%;
-  margin: 0 auto -60px;
-  padding-bottom: 60px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
