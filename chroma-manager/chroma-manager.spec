@@ -53,7 +53,7 @@ Requires: policycoreutils-python
 Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 0.10.46-1
-Requires: nginx >= 1.8.1-1
+Requires: nginx >= 1.10.1-1
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd

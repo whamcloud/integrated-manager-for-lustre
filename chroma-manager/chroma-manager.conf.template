@@ -9,7 +9,7 @@ server {
 }
 
 server {
-    listen {{HTTPS_FRONTEND_PORT}} ssl spdy;
+    listen {{HTTPS_FRONTEND_PORT}} ssl http2;
 
     error_page 497 https://$http_host$request_uri;
 
