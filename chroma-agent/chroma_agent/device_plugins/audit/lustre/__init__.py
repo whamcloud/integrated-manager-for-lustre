@@ -24,6 +24,7 @@ import re
 import os
 import heapq
 from collections import defaultdict
+from collections import namedtuple
 
 from tablib.packages import yaml
 from chroma_agent.utils import Mounts
@@ -49,6 +50,9 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     Contains methods which are common to all Lustre cluster component types.
     """
+
+    LustreVersion = namedtuple('LustreVersion', ['major', 'minor', 'patch'])
+
     @classmethod
     def is_available(cls):
         """Returns a boolean indicating whether or not this audit class should
@@ -146,6 +150,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         """Creates a dict from simple dict-like (k\s+v) file contents."""
         return dict(re.split('\s+', line) for line in self.read_lines(file))
 
+    @property
     def version(self):
         """Returns a string representation of the local Lustre version."""
         try:
@@ -154,9 +159,20 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         except IOError:
             return "0.0.0"
 
+    @property
     def version_info(self):
-        """Returns a tuple containing int components of the local Lustre version."""
-        return tuple([int(num) for num in self.version().split('.')])
+        """Returns a LustreVersion containing major, minor and patch components of the local Lustre version."""
+        result = []
+
+        for element in (self.version.split('.') + ['0', '0', '0'])[0:3]:
+            digits = re.match('\d+', element)
+
+            if digits:
+                result.append(int(digits.group()))
+            else:
+                result.append(0)
+
+        return self.LustreVersion(*result)
 
     def health_check(self):
         """Returns a string containing Lustre's idea of its own health."""
@@ -252,7 +268,7 @@ class MdsAudit(TargetAudit):
     @classmethod
     def is_available(cls):
         """Stupid override to prevent this being used on 2.x+ filesystems."""
-        if MdsAudit().version_info()[0] < 2:
+        if cls().version_info.major < 2:
             return super(MdsAudit, cls).is_available()
         else:
             return False
@@ -576,10 +592,10 @@ class OstAudit(ObdfilterAudit):
         # but the obdfilter module is not. Pre-2.4, both are loaded, so
         # we need to prevent double audits. Really, this whole method of
         # determining which audits to run needs to be reworked. Later.
-        lustre_version = cls().version_info()
-        if lustre_version[0] < 2:
+        lustre_version = cls().version_info
+        if lustre_version.major < 2:
             return False
-        elif (lustre_version[0] == 2 and lustre_version[1] < 4):
+        elif (lustre_version.major == 2) and (lustre_version.minor < 4):
             return False
         else:
             return super(OstAudit, cls).is_available()

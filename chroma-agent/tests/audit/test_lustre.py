@@ -52,10 +52,38 @@ class TestLustreAudit(PatchedContextTestCase):
         self.audit = LustreAudit()
 
     def test_version(self):
-        self.assertEqual(self.audit.version(), "2.0.66")
+        self.assertEqual(self.audit.version, "2.0.66")
 
     def test_version_info(self):
-        self.assertEqual(self.audit.version_info(), (2, 0, 66))
+        self.assertEqual(self.audit.version_info, self.audit.LustreVersion(2, 0, 66))
+
+
+class TestGitLustreVersion(PatchedContextTestCase):
+    def setUp(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.8.55_144_g75fa74c/mds_mgs")
+        super(TestGitLustreVersion, self).setUp()
+        self.audit = LustreAudit()
+
+    def test_version(self):
+        self.assertEqual(self.audit.version, "2.8.55_144_g75fa74c")
+
+    def test_version_info(self):
+        self.assertEqual(self.audit.version_info, self.audit.LustreVersion(2, 8, 55))
+
+
+class TestMisformedLustreVersion(PatchedContextTestCase):
+    def setUp(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.bad/mds_mgs")
+        super(TestMisformedLustreVersion, self).setUp()
+        self.audit = LustreAudit()
+
+    def test_version(self):
+        self.assertEqual(self.audit.version, "2.bad")
+
+    def test_version_info(self):
+        self.assertEqual(self.audit.version_info, self.audit.LustreVersion(2, 0, 0))
 
 
 class TestMissingLustreVersion(PatchedContextTestCase):
@@ -67,10 +95,10 @@ class TestMissingLustreVersion(PatchedContextTestCase):
         self.audit = LustreAudit()
 
     def test_version(self):
-        self.assertEqual(self.audit.version(), "0.0.0")
+        self.assertEqual(self.audit.version, "0.0.0")
 
     def test_version_info(self):
-        self.assertEqual(self.audit.version_info(), (0, 0, 0))
+        self.assertEqual(self.audit.version_info, self.audit.LustreVersion(0, 0, 0))
 
     def tearDown(self):
         shutil.rmtree(self.test_root)
