@@ -10,6 +10,7 @@
     "reset": true,
     "pacemaker_hard_reset": true,
     "managed": true,
+    "new_zpools_each_test": true,
     "test_runners": [
         {
             "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
@@ -119,14 +120,14 @@
     ],
     "lustre_devices": [
         {"path_index": 0,
-            "backend_filesystem": "linux"},
+            "backend_filesystem": "zfs"},
         {"path_index": 1,
             "backend_filesystem": "linux"},
         {"path_index": 2,
-            "backend_filesystem": "linux"},
+            "backend_filesystem": "zfs"},
         {"path_index": 3,
             "backend_filesystem": "linux"},
         {"path_index": 4,
-            "backend_filesystem": "linux"}
+            "backend_filesystem": "zfs"}
     ]
 }
