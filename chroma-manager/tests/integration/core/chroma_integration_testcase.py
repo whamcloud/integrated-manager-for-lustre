@@ -288,7 +288,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         response = self.chroma_manager.get('/api/host/')
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
-        if addresses:
+        if addresses is not None:
             hosts = [host for host in hosts if host['address'] in addresses]
         return hosts
 
