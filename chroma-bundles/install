@@ -41,9 +41,6 @@ REPO_ALIASES = [ "{0}Server" ]
 LOG_DIR = "/var/log/chroma"
 LOG_FILE = os.path.join(LOG_DIR, "install.log")
 
-upgrade = False
-
-
 def _check_platform():
     # This is the place to run tests for validating that this is a sane
     # installation target.
@@ -286,7 +283,7 @@ def _get_version():
 
     return version, release
 
-def _new_bundles():
+def _new_bundles(upgrade):
     bundles = {}
     log.debug("Bundles in {action} package:".format(action = "upgrade" \
                                                         if upgrade \
@@ -315,7 +312,7 @@ def _new_bundles():
     return bundles
 
 
-def _new_profiles():
+def _new_profiles(upgrade):
     profiles = []
     log.debug("Profiles in {action} package:".format(action = "upgrade" \
                                                          if upgrade \
@@ -379,7 +376,7 @@ enable=0
     return manager_repo_dir, manager_repo_file
 
 
-def _install_or_upgrade_packages():
+def _install_or_upgrade_packages(upgrade):
     manager_repo_dir = None
     manager_repo_file = None
     old_version, old_release = _get_version()
@@ -678,11 +675,11 @@ def main():
         old_bundles = {}
 
     # Find the new bundles and profiles
-    new_bundles = _new_bundles()
-    new_profiles = _new_profiles()
+    new_bundles = _new_bundles(upgrade)
+    new_profiles = _new_profiles(upgrade)
 
     # Update RPMs
-    _install_or_upgrade_packages()
+    _install_or_upgrade_packages(upgrade)
 
     # Ensure database migrations are run (may prompt the user)
     _run(['chroma-config', 'setup'] + (['--no-dbspace-check'] if args.dbspace_check else []),
@@ -715,4 +712,3 @@ except:
     log.debug("Unhandled exception: %s" % traceback.format_exc())
     log.error("Unhandled exception. Please contact support with details from %s." % LOG_FILE)
     sys.exit(-1)
-
