@@ -835,17 +835,28 @@ class MakeTargetActiveStep(Step):
 
         ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
 
-        self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                        'import_target',
-                                        {'device_type': kwargs['active_volume_node'].device_type,
-                                         'path': kwargs['active_volume_node'].path})
+        if kwargs['active_volume_node'] is not None:
+            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                            'import_target',
+                                            {'device_type': kwargs['active_volume_node'].device_type,
+                                             'path': kwargs['active_volume_node'].path})
 
     @classmethod
     def describe(cls, kwargs):
-        return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+        if kwargs['active_volume_node'] is None:
+            return help_text['export_target_from_nodes'] % kwargs['target']
+        else:
+            return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
 
     @classmethod
     def create_parameters(cls, target, host):
+        """
+        Create the kwargs appropriate for the MakeTargetActive step.
+
+        :param target: The lustre target to be made available to host (and hence unavailable to other hosts)
+        :param host: The host target to be made available to, or None if target to be made unavailable on all hosts
+        :return:
+        """
         inactive_volume_nodes = []
         active_volume_node = None
 
@@ -860,7 +871,8 @@ class MakeTargetActiveStep(Step):
             else:
                 inactive_volume_nodes.append(target_volume_info)
 
-        assert active_volume_node
+        assert ((host is not None) and (active_volume_node is not None)) or \
+               ((host is None) and (active_volume_node is None))
 
         return {'target': target,
                 'inactive_volume_nodes': inactive_volume_nodes,

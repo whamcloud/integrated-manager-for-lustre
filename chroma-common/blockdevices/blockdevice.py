@@ -145,3 +145,15 @@ class BlockDevice(object):
         :return: None on success or error message on failure
         """
         return None
+
+    @abc.abstractmethod
+    def purge_filesystem_configuration(self, filesystem_name, log):
+        """
+        Purge the details of the filesystem from the mgs blockdevice.  This routine presumes that the blockdevice
+        is the mgs_blockdevice and does not make any checks
+
+        :param filesystem_name: The name of the filesystem to purge
+        :param log: The logger to use for log messages.
+        :return: None on success or error message on failure
+        """
+        pass

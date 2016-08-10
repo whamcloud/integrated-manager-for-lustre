@@ -30,7 +30,6 @@ import socket
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.log import daemon_log
 from chroma_agent.log import console_log
 from chroma_agent import config
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
@@ -723,23 +722,10 @@ def clear_targets(force = False):
         unconfigure_target_ha(True, attrs['ha_label'], attrs['uuid'])
 
 
-def purge_configuration(device, filesystem_name):
-    ls = AgentShell.try_run(["debugfs", "-w", "-R", "ls -l CONFIGS/", device])
+def purge_configuration(mgs_device_path, mgs_device_type, filesystem_name):
+    mgs_blockdevice = BlockDevice(mgs_device_type, mgs_device_path)
 
-    victims = []
-    for line in ls.split("\n"):
-        try:
-            name = line.split()[8]
-        except IndexError:
-            continue
-
-        if name.startswith("%s-" % filesystem_name):
-            victims.append(name)
-
-    daemon_log.info("Purging config files: %s" % victims)
-
-    for victim in victims:
-        AgentShell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, device])
+    return agent_ok_or_error(mgs_blockdevice.purge_filesystem_configuration(filesystem_name, console_log))
 
 
 ACTIONS = [purge_configuration, register_target,

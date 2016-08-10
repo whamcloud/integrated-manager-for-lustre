@@ -283,3 +283,44 @@ class BlockDeviceZfs(BlockDevice):
             return None                                     # zpool is not imported so nothing to do.
 
         return Shell.run_canned_error_message(['zpool', 'export', self._device_path])
+
+    def purge_filesystem_configuration(self, filesystem_name, log):
+        """
+        Purge the details of the filesystem from the mgs blockdevice.  This routine presumes that the blockdevice
+        is the mgs_blockdevice and does not make any checks
+
+        :param filesystem_name: The name of the filesystem to purge
+        :param log: The logger to use for log messages.
+        :return: None on success or error message
+        """
+
+        try:
+            shell_result = Shell.run(["zfs", "canmount=on", self._device_path])
+
+            if shell_result.rc != 0:
+                return "ZFS failed to set canmount=on property on device %s, error was %s" % \
+                       (self._device_path, shell_result.stderr)
+
+            shell_result = Shell.run(["zfs", "mount", self._device_path])
+
+            if shell_result.rc != 0:
+                return "ZFS failed to mount device %s, error was %s" % (self._device_path, shell_result.stderr)
+
+            shell_result = Shell.run(["rm", "/%s/CONFIG/%s-*" % (self._device_path, filesystem_name)])
+
+            if shell_result.rc != 0:
+                return "ZFS failed to purge filesystem (%s) information from device %s, error was %s" % \
+                       (filesystem_name, self._device_path, shell_result.stderr)
+        finally:
+            # Try both these commands, report failure but we really don't have a way out if they fail.
+            shell_result_unmount = Shell.run(["zfs", "unmount", self._device_path])
+            shell_result_canmount = Shell.run(["zfs", "canmount=off", self._device_path])
+
+            if shell_result_unmount.rc != 0:
+                return "ZFS failed to unmount device %s, error was %s" % (self._device_path, shell_result_unmount.stderr)
+
+            if shell_result_canmount.rc != 0:
+                return "ZFS failed to set canmount=off property on device %s, error was %s" % \
+                       (self._device_path, shell_result_canmount.stderr)
+
+        return None

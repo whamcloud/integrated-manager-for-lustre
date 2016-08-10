@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,9 @@
 from django.db import models
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
 from chroma_core.models import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
+from chroma_core.models import UnmountStep
+from chroma_core.models import MountStep
+from chroma_core.models import MakeTargetActiveStep
 from chroma_core.models import NoNidsPresent
 from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job
 from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
@@ -152,26 +155,15 @@ class PurgeFilesystemStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        mgs_device_path = kwargs['path']
+        mgs_device_path = kwargs['mgs_device_path']
+        mgs_device_type = kwargs['mgs_device_type']
         fs = kwargs['filesystem']
-        mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == fs.mgs_id)
 
-        initial_mgs_state = mgs.state
-
-        # Whether the MGS was officially up or not, try stopping it (idempotent so will
-        # succeed either way
-        if initial_mgs_state in ['mounted', 'unmounted']:
-            self.invoke_agent_expect_result(host, "stop_target", {'ha_label': mgs.ha_label})
-        self.invoke_agent(host, "purge_configuration", {
-            'device': mgs_device_path,
-            'filesystem_name': fs.name
-        })
-
-        if initial_mgs_state == 'mounted':
-            result = self.invoke_agent_expect_result(host, "start_target", {'ha_label': mgs.ha_label})
-            # Update active_mount because it won't necessarily start the same place it was started to
-            # begin with
-            mgs.update_active_mount(result)
+        self.invoke_agent(host,
+                          'purge_configuration',
+                          {'mgs_device_path': mgs_device_path,
+                           'mgs_device_type': mgs_device_type,
+                           'filesystem_name': fs.name})
 
 
 class RemoveFilesystemJob(StateChangeJob):
@@ -210,20 +202,43 @@ class RemoveFilesystemJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
+        mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
+        mgs_primary_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == mgs_target.id and mtm.primary is True)
+
         # Only try to purge filesystem from MGT if the MGT has made it past
         # being formatted (case where a filesystem was created but is being
         # removed before it or its MGT got off the ground)
-        mgt_setup = self.filesystem.mgs.state not in ['unformatted', 'formatted']
+        if mgs_target.state in ['unformatted', 'formatted']:
+            return steps
 
-        if (not self.filesystem.immutable_state) and mgt_setup:
-            mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
-            mgs_primary_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == mgs.id and mtm.primary is True)
+        # Don't purge immutable filesystems. (Although how this gets called in that case is beyond me)
+        if self.filesystem.immutable_state:
+            return steps
 
-            steps.append((PurgeFilesystemStep, {
-                'filesystem': self.filesystem,
-                'path': mgs_primary_mount.volume_node.path,
-                'host': mgs_primary_mount.host
-            }))
+        # Whether the MGS was officially up or not, try stopping it, idempotent so will succeed either way
+        if mgs_target.state in ['mounted', 'unmounted']:
+            steps.append((UnmountStep,
+                          {"target": mgs_target,
+                           "host": mgs_primary_mount.host}))
+
+        steps.append((MakeTargetActiveStep,
+                      MakeTargetActiveStep.create_parameters(mgs_target,
+                                                             mgs_primary_mount.host)))
+
+        steps.append((PurgeFilesystemStep,
+                      {'filesystem': self.filesystem,
+                       'mgs_device_path': mgs_primary_mount.volume_node.path,
+                       'mgs_device_type': mgs_primary_mount.volume_node.volume.storage_resource.to_resource_class().device_type(),
+                       'host': mgs_primary_mount.host}))
+
+        steps.append((MakeTargetActiveStep,
+                      MakeTargetActiveStep.create_parameters(mgs_target,
+                                                             None)))
+
+        if mgs_target.state == 'mounted':
+            steps.append((MountStep,
+                          {"target": mgs_target,
+                           "host": mgs_primary_mount.host}))
 
         return steps
 

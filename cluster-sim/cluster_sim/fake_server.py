@@ -842,8 +842,8 @@ class FakeServer(utils.Persisted):
     def unconfigure_target_ha(self, primary, ha_label, uuid):
         return agent_result(self._cluster.unconfigure(self.nodename, ha_label, primary))
 
-    def purge_configuration(self, device, filesystem_name):
-        serial = self._devices.get_by_path(self.fqdn, device)['serial_80']
+    def purge_configuration(self, mgs_device_path, mgs_device_type, filesystem_name):
+        serial = self._devices.get_by_path(self.fqdn, mgs_device_path)['serial_80']
         mgsnode = self._devices.state['targets'][serial]['mgsnode']
         self._devices.mgt_purge_fs(mgsnode, filesystem_name)
 

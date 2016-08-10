@@ -269,3 +269,39 @@ class BlockDeviceLinux(BlockDevice):
             names = [name]
 
         return self.TargetsInfo(names, params)
+
+    def purge_filesystem_configuration(self, filesystem_name, log):
+        """
+         Purge the details of the filesystem from the mgs blockdevice.  This routine presumes that the blockdevice
+         is the mgs_blockdevice and does not make any checks
+
+         :param filesystem_name: The name of the filesystem to purge
+         :param log: The logger to use for log messages.
+         :return: None on success or error message
+         """
+        shell_result = Shell.run(["debugfs", "-w", "-R", "ls -l CONFIGS/", self._device_path])
+
+        if shell_result.rc != 0:
+            return "Purge filesystem failed to interrogate ldiskfs device %s, error was %s" % \
+                   (self._device_path, shell_result.stderr)
+
+        victims = []
+        for line in shell_result.stdout.split("\n"):
+            try:
+                name = line.split()[8]
+            except IndexError:
+                continue
+
+            if name.startswith("%s-" % filesystem_name):
+                victims.append(name)
+
+        log.info("Purging config files: %s" % victims)
+
+        for victim in victims:
+            shell_result = Shell.run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, self._device_path])
+
+            if shell_result.rc != 0:
+                return "Purge filesystem failed to purge %s from ldiskfs device %s, error was %s" % \
+                       (victim, self._device_path, shell_result.stderr)
+
+        return None

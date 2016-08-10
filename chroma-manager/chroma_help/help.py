@@ -208,6 +208,7 @@ help_text = {
     'update_nids': 'Update NIDs.',
     'configure_target': 'Configure target mount points.',
     'remove_target_from_pacemaker_config': 'Removing target %s from pacemaker configuration',
+    'export_target_from_nodes': 'Ensure target %s is available for use',
     'moving_target_to_node': 'Moving target %s to node %s',
     'add_target_to_pacemaker_config': 'Adding target %s to pacemaker configuration',
     'register_target': 'Register target.',
