@@ -22,7 +22,7 @@
 import errno
 import glob
 import os
-from stat import S_ISBLK
+import stat
 import time
 
 import chroma_agent.lib.normalize_device_path as ndp
@@ -34,6 +34,8 @@ class DeviceHelper(object):
     DISKBYPATHPATH = os.path.join('/dev', 'disk', 'by-path')
     MDRAIDPATH = os.path.join('/dev', 'md')
     DEVPATH = '/dev'
+    MAXRETRIES = 5
+    non_existent_paths = set([])
 
     """Base class with common methods for the various device detecting classes used
        by this plugin"""
@@ -42,10 +44,11 @@ class DeviceHelper(object):
         """Return a string if 'path' is a block device or link to one, else return None"""
 
         file_state = None
-        retries = 5
+        retries = self.MAXRETRIES
         while retries > 0:
             try:
                 file_state = os.stat(path)
+                self.non_existent_paths.discard(path)
                 break
             except OSError as os_error:
                 if os_error.errno != errno.ENOENT:
@@ -58,11 +61,12 @@ class DeviceHelper(object):
                 # So we retry for a short window to catch those devices that
                 # just disappear momentarily.
                 time.sleep(0.1)
-                retries -= 1
+                retries -= retries if path in self.non_existent_paths else 1
 
-        if file_state and S_ISBLK(file_state.st_mode):
+        if file_state and stat.S_ISBLK(file_state.st_mode):
             return "%d:%d" % (os.major(file_state.st_rdev), os.minor(file_state.st_rdev))
         else:
+            self.non_existent_paths.add(path)
             return None
 
     def _paths_to_major_minors(self, device_paths):
