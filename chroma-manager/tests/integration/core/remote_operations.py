@@ -149,6 +149,9 @@ class SimulatorRemoteOperations(RemoteOperations):
     def stop_corosync(self, fqdn):
         self._simulator.servers[fqdn].stop_corosync()
 
+    def restart_chroma_manager(self, fqdn):
+        pass
+
     def get_corosync_port(self, fqdn):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
 
@@ -186,6 +189,12 @@ class SimulatorRemoteOperations(RemoteOperations):
         pass
 
     def rename_file(self, address, current_path, new_path):
+        pass
+
+    def create_file(self, address, file_content, file_path):
+        pass
+
+    def delete_file(self, address, file_content, file_path):
         pass
 
     def mount_filesystem(self, client_address, filesystem):
@@ -432,6 +441,10 @@ class RealRemoteOperations(RemoteOperations):
     def start_corosync(self, fqdn):
         self._ssh_fqdn(fqdn, "chroma-agent start_corosync")
 
+    def restart_chroma_manager(self, fqdn):
+        # Do not call this function directly, use function in ApiTestCaseWithTestReset class
+        self._ssh_address(fqdn, 'chroma-config restart')
+
     def run_chroma_diagnostics(self, server, verbose):
         return self._ssh_fqdn(server['fqdn'],
                               "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
@@ -450,6 +463,12 @@ class RealRemoteOperations(RemoteOperations):
 
     def rename_file(self, address, current_path, new_path):
         self._ssh_address(address, 'mv %s %s' % (current_path, new_path))
+
+    def create_file(self, address, file_content, file_path):
+        self._ssh_address(address, 'echo %s > %s' % (file_content, file_path))
+
+    def delete_file(self, address, file_path):
+        self._ssh_address(address, 'rm -rf %s' % file_path)
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response

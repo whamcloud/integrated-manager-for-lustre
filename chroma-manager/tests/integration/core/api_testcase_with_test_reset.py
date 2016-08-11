@@ -12,7 +12,9 @@ import re
 
 from testconfig import config
 
+from tests.utils.http_requests import HttpRequests
 from tests.utils.http_requests import AuthorizedHttpRequests
+
 from tests.chroma_common.lib import util
 
 from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
@@ -52,6 +54,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     _chroma_manager_api = None
 
     _chroma_manager = None
+    _unauthorized_chroma_manager = None
 
     def __init__(self, methodName='runTest'):
         super(ApiTestCaseWithTestReset, self).__init__(methodName)
@@ -211,9 +214,19 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             user = config['chroma_managers'][0]['users'][0]
             self._chroma_manager = AuthorizedHttpRequests(user['username'],
                                                           user['password'],
-                                                          server_http_url =
-                                                          config['chroma_managers'][0]['server_http_url'])
+                                                          server_http_url=config['chroma_managers'][0]['server_http_url'])
         return self._chroma_manager
+
+    @property
+    def unauthorized_chroma_manager(self):
+        if self._unauthorized_chroma_manager is None:
+            self._unauthorized_chroma_manager = HttpRequests(server_http_url=config['chroma_managers'][0]['server_http_url'])
+        return self._unauthorized_chroma_manager
+
+    def restart_chroma_manager(self, fqdn):
+        self.remote_operations.restart_chroma_manager(fqdn)
+        # Process start times will be outdated after restarting chroma-manager so must update start times
+        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def api_contactable(self):
         try:
