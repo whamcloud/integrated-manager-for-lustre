@@ -25,7 +25,6 @@ Requires: python-daemon
 Requires: python-setuptools
 Requires: python-requests >= 2.6.0
 Requires: python-tablib yum-utils
-Obsoletes: python-dateutil
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
