@@ -135,7 +135,7 @@ class SimulatorCli(object):
             server_secret = args.secret
             worker_secret = args.secret
         elif args.username and args.password:
-            server_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='base_managed')
+            server_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='base_managed_rh7')
             worker_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='posix_copytool_worker')
         else:
             sys.stderr.write("Must pass either --secret or --username and --password\n")

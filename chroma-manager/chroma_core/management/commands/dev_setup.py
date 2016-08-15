@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -51,14 +51,14 @@ class Command(BaseCommand):
         sc._syncdb()
 
         # default, works for --no-bundles
-        profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
+        profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed_RH7.profile")
 
         if options['no_bundles']:
             for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive
-            repo_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
+            repo_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed_RH7.profile')
             if os.path.isfile(repo_profile_path):
                 profile_path = repo_profile_path
 

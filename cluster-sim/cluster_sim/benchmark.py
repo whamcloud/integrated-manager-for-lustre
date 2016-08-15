@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -214,7 +214,7 @@ class Benchmark(object):
 
     def get_registration_secret(self, credit_count, duration=None):
         return SimulatorCli()._acquire_token(self.url + "/", self.args.username, self.args.password, credit_count,
-                                             duration=duration, preferred_profile='base_managed')
+                                             duration=duration, preferred_profile='base_managed_rh7')
 
     def GET(self, path, *args, **kwargs):
         return self.api_session.get("%s%s" % (self.url, path), *args, **kwargs)
