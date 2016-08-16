@@ -10,10 +10,8 @@ from tests.chroma_common.lib.shell import Shell
 class TestRemoteFirewallControlIpTables(unittest.TestCase):
     """ Class for testing the RemoteFirewallControlIpTables classes """
 
-    @staticmethod
-    def example_func_1(address, command, expected_return_code=None):
-        # example output from 'iptables -L' or 'service iptables status' if firewall not configured
-        not_configured_output = """Table: filter
+    # example output from 'iptables -L' or 'service iptables status' if firewall not configured
+    not_configured_output = """Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
 
@@ -24,16 +22,9 @@ Chain OUTPUT (policy ACCEPT)
 num  target     prot opt source               destination
 
 """
-        return Shell.RunResult(0, not_configured_output, '', False)
 
-    @staticmethod
-    def example_func_2(address, command, expected_return_code=None):
-        return Shell.RunResult(0, '', '', False)
-
-    @staticmethod
-    def example_func_3(address, command, expected_return_code=None):
-        # example output from 'iptables -L' or 'service iptables status'
-        chain_output = """Table: filter
+    # example output from 'iptables -L' or 'service iptables status'
+    chain_output = """Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
 1    ACCEPT     all  --  0.0.0.0/0            0.0.0.0/0           state RELATED,ESTABLISHED
@@ -53,28 +44,34 @@ Chain OUTPUT (policy ACCEPT)
 num  target     prot opt source               destination
 
 """
-        return Shell.RunResult(0, chain_output, '', False)
+
+    # incorrect/unexpected output from 'iptables -L' or 'service iptables status'
+    incorrect_output = ''
 
     def setUp(self):
         super(TestRemoteFirewallControlIpTables, self).setUp()
 
-        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1', self.example_func_1)
-
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_remote_command = mock.Mock()
+        self.mock_remote_operations = mock.Mock()
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.not_configured_output, '', False)
+        mock.patch('tests.utils.remote_firewall_control.RealRemoteOperations',
+                   return_value=self.mock_remote_operations).start()
+        self.addCleanup(mock.patch.stopall)
+
+        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1')
 
     def test_create(self):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(1, '', '', False),
                   'which %s' % RemoteFirewallControlIpTables.firewall_app_name: Shell.RunResult(0, '', '', False)}
 
-        def side_effect(address, cmd):
+        def side_effect(address, cmd, return_codes):
             return values[cmd]
 
-        self.mock_remote_command.side_effect = side_effect
+        self.mock_remote_operations.command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
+        new_controller = RemoteFirewallControl.create('0.0.0.0')
 
         self.assertEquals(type(new_controller), RemoteFirewallControlIpTables)
 
@@ -88,7 +85,8 @@ num  target     prot opt source               destination
         # should return a string representing remote command to remove a port rule
         response = self.test_firewall.remote_remove_port_cmd(123, 'udp')
 
-        self.assertEqual(response, 'iptables -D INPUT -m state --state new -p udp --dport 123 -j ACCEPT && iptables-save')
+        self.assertEqual(response,
+                         'iptables -D INPUT -m state --state new -p udp --dport 123 -j ACCEPT && iptables-save')
 
     def test_remote_validate_persistent_rule(self):
         # should return a string representing remote command to validate a persistent port rule exists
@@ -99,7 +97,7 @@ num  target     prot opt source               destination
 
     def test_process_rules_empty_ruleset(self):
         # firewall is active but with no matching rules
-        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1', self.example_func_1)
+        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
         response = self.test_firewall.process_rules()
@@ -109,7 +107,9 @@ num  target     prot opt source               destination
 
     def test_process_rules_incorrect(self):
         # incorrectly formatted string input is invalid and error string should be returned
-        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1', self.example_func_2)
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.incorrect_output, '', False)
+
+        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
         try:
@@ -118,11 +118,12 @@ num  target     prot opt source               destination
         except RuntimeError, e:
             self.assertEqual(str(e),
                              'process_rules(): "iptables -L INPUT -nv" command output contains unexpected iptables output')
-            pass
 
     def test_process_rules(self):
         # firewall is active and configured with matching rules
-        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1', self.example_func_3)
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.chain_output, '', False)
+
+        self.test_firewall = RemoteFirewallControlIpTables('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
         response = self.test_firewall.process_rules()
@@ -140,48 +141,42 @@ num  target     prot opt source               destination
 class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
     """ Class for testing the RemoteFirewallControlFirewallCmd classes """
 
-    @staticmethod
-    def example_func_1(address, command, expected_return_code=None):
-        return Shell.RunResult(0, '', '', False)
+    no_rules_manually_added_output = ''
 
-    @staticmethod
-    def example_func_2(address, command, expected_return_code=None):
-        return Shell.RunResult(0, 'Chain INPUT (policy ACCEPT)', '', False)
+    incorrect_output = 'Chain INPUT (policy ACCEPT)'
 
-    @staticmethod
-    def example_func_3(address, command, expected_return_code=None):
-        list_ports_output = """123/udp
+    list_ports_output = """123/udp
 22/tcp
 80/tcp
 443/tcp"""
-        return Shell.RunResult(0, list_ports_output, '', False)
 
-    @staticmethod
-    def example_func_4(address, command, expected_return_code=None):
-        list_ports_output = """123/udp 22/tcp 80/tcp 443/tcp
+    single_line_list_ports_output = """123/udp 22/tcp 80/tcp 443/tcp
 """
-        return Shell.RunResult(0, list_ports_output, '', False)
 
     def setUp(self):
         super(TestRemoteFirewallControlFirewallCmd, self).setUp()
 
-        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1', self.example_func_1)
-
         # reset controller_instances cls cache
         RemoteFirewallControl.controller_instances = {}
 
-        self.mock_remote_command = mock.Mock()
+        self.mock_remote_operations = mock.Mock()
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.no_rules_manually_added_output, '', False)
+        mock.patch('tests.utils.remote_firewall_control.RealRemoteOperations',
+                   return_value=self.mock_remote_operations).start()
+        self.addCleanup(mock.patch.stopall)
+
+        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1')
 
     def test_create(self):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(0, '', '', False),
                   'which %s' % RemoteFirewallControlIpTables.firewall_app_name: Shell.RunResult(1, '', '', False)}
 
-        def side_effect(address, cmd):
+        def side_effect(address, cmd, return_codes):
             return values[cmd]
 
-        self.mock_remote_command.side_effect = side_effect
+        self.mock_remote_operations.command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
+        new_controller = RemoteFirewallControl.create('0.0.0.0')
 
         self.assertTrue(type(new_controller) == RemoteFirewallControlFirewallCmd)
 
@@ -189,12 +184,12 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(0, '', '', False),
                   'which %s' % RemoteFirewallControlIpTables.firewall_app_name: Shell.RunResult(0, '', '', False)}
 
-        def side_effect(address, cmd):
+        def side_effect(address, cmd, return_codes):
             return values[cmd]
 
-        self.mock_remote_command.side_effect = side_effect
+        self.mock_remote_operations.command.side_effect = side_effect
 
-        new_controller = RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
+        new_controller = RemoteFirewallControl.create('0.0.0.0')
 
         self.assertTrue(type(new_controller) == RemoteFirewallControlFirewallCmd)
 
@@ -202,13 +197,13 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
         values = {'which %s' % RemoteFirewallControlFirewallCmd.firewall_app_name: Shell.RunResult(1, '', '', False),
                   'which %s' % RemoteFirewallControlIpTables.firewall_app_name: Shell.RunResult(1, '', '', False)}
 
-        def side_effect(address, cmd):
+        def side_effect(address, cmd, return_codes):
             return values[cmd]
 
-        self.mock_remote_command.side_effect = side_effect
+        self.mock_remote_operations.command.side_effect = side_effect
 
         with self.assertRaises(RuntimeError):
-            RemoteFirewallControl.create('0.0.0.0', self.mock_remote_command)
+            RemoteFirewallControl.create('0.0.0.0')
 
     def test_remote_add_port(self):
         # should return a string representing remote command to add a port rule
@@ -238,7 +233,9 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
 
     def test_process_rules_incorrect(self):
         # incorrectly formatted string input is invalid and error string should be returned
-        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1', self.example_func_2)
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.incorrect_output, '', False)
+
+        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
 
@@ -249,11 +246,12 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
             self.assertEqual(str(e),
                              'process_rules(): "firewall-cmd --list-ports" command output contains unexpected '
                              'firewall-cmd output')
-            pass
 
     def test_process_rules_format_1(self):
         # firewall is active and configured with matching rules
-        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1', self.example_func_3)
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.list_ports_output, '', False)
+
+        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
         response = self.test_firewall.process_rules()
@@ -269,7 +267,9 @@ class TestRemoteFirewallControlFirewallCmd(unittest.TestCase):
 
     def test_process_rules_format_2(self):
         # firewall is active and configured with matching rules
-        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1', self.example_func_4)
+        self.mock_remote_operations.command.return_value = Shell.RunResult(0, self.single_line_list_ports_output, '', False)
+
+        self.test_firewall = RemoteFirewallControlFirewallCmd('10.0.0.1')
 
         self.assertEqual(len(self.test_firewall.rules), 0)
         response = self.test_firewall.process_rules()

@@ -5,6 +5,7 @@ import re
 from testconfig import config
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import RETURN_CODES_ALL
 
 
 class TestFilesystemDetection(StatsTestCaseMixin):
@@ -18,11 +19,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         if self.get_list('/api/target/') == []:
             # Attempt to ensure all the targets are mounted for the filesystem.
             for host in config['lustre_servers']:
-                self.remote_operations.remote_command(
-                    host['address'],
-                    "mount -a -t lustre",
-                    expected_return_code = None
-                )
+                self.remote_operations.command(host['address'], "mount -a -t lustre", return_codes=RETURN_CODES_ALL)
 
             self.add_hosts([l['address'] for l in config['lustre_servers']])
 
@@ -107,7 +104,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
 
-            target_has_secondary = target_config.get('secondary_server') != None
+            target_has_secondary = target_config.get('secondary_server') is not None
             failover_is_failnode = target_config.get('failover_mode', 'failnode') == 'failnode'
             mounted_on_secondary = target_config.get('mount_server') == 'secondary_server'
 
@@ -153,11 +150,10 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            self.remote_operations.remote_command(
-                client,
-                "rm -rf /mnt/%s/*" % filesystem['name'],
-                expected_return_code = None  # may not exist - don't care, move along.
-            )
+            # may not exist - don't care, move along.
+            self.remote_operations.command(client,
+                                           "rm -rf /mnt/%s/*" % filesystem['name'],
+                                           return_codes=RETURN_CODES_ALL)
             self.remote_operations.exercise_filesystem(client, filesystem)
             self.check_stats(filesystem['id'])
         finally:
@@ -178,11 +174,10 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            self.remote_operations.remote_command(
-                client,
-                "rm -rf /mnt/%s/*" % filesystem['name'],
-                expected_return_code = None  # may not exist - dont care, move along.
-            )
+            # may not exist - don't care, move along.
+            self.remote_operations.command(client,
+                                           "rm -rf /mnt/%s/*" % filesystem['name'],
+                                           return_codes=RETURN_CODES_ALL)
             self.remote_operations.exercise_filesystem(client, filesystem)
             self.check_stats(filesystem['id'])
         finally:
@@ -192,19 +187,12 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
             target_host_config = self.get_host_config(target_config[target_config.get('mount_server', 'primary_server')])
-            result = self.remote_operations.remote_command(
-                target_host_config['address'],
-                'mount'
-            )
+            result = self.remote_operations.command(target_host_config['address'], 'mount')
+
             if re.search("on %s type lustre" % target_config['mount_path'], result.stdout):
-                self.remote_operations.remote_command(
-                    target_host_config['address'],
-                    "umount %s" % target_config['mount_path'],
-                )
-                result = self.remote_operations.remote_command(
-                    target_host_config['address'],
-                    'mount'
-                )
+                self.remote_operations.command(target_host_config['address'], "umount %s" % target_config['mount_path'])
+                result = self.remote_operations.command(target_host_config['address'], 'mount')
+
                 self.assertNotRegexpMatches(
                     result.stdout,
                     "on %s type lustre" % target_config['mount_path']
@@ -226,10 +214,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
 
         # Remount all targets
         for host in config['lustre_servers']:
-            self.remote_operations.remote_command(
-                host['address'],
-                "mount -a -t lustre"
-            )
+            self.remote_operations.command(host['address'], 'mount -a -t lustre')
 
         # Verify all targets detected as mounted
         self.wait_until_true(lambda: self.targets_in_state('mounted'))

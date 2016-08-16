@@ -4,11 +4,11 @@ from django.utils.unittest import skipIf
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.remote_operations import RealRemoteOperations
+from tests.integration.core.constants import RETURN_CODES_GREP_NOT_FOUND
 
 
 class TestFirewall(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
-    GREP_NOTFOUND_RC = 1
 
     def setUp(self):
         super(TestFirewall, self).setUp()
@@ -20,7 +20,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         chroma_manager = config['chroma_managers'][0]
 
         self.assertEqual('Enforcing\n',
-                         self.remote_operations.remote_command(chroma_manager['address'], 'getenforce').stdout)
+                         self.remote_operations.command(chroma_manager['address'], 'getenforce').stdout)
 
         # TODO: refactor reset_cluster/reset_chroma_manager_db so that previous
         # state can be cleaned up without initializing the DB
@@ -45,7 +45,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         :return: RemoteFirewallControl.rules list of matching active firewall rules
         """
         # process rules on remote firewall in current state
-        firewall = RemoteFirewallControl.create(server['address'], self.remote_operations.remote_command_no_check)
+        firewall = RemoteFirewallControl.create(server['address'])
         firewall.process_rules()
 
         if port_proto_filter:
@@ -105,7 +105,7 @@ class TestFirewall(ChromaIntegrationTestCase):
 
         for server in self.TEST_SERVERS:
             self.assertNotEqual('Enforcing\n',
-                                self.remote_operations.remote_command(server['address'], 'getenforce').stdout)
+                                self.remote_operations.command(server['address'], 'getenforce').stdout)
 
             mcast_port = self.remote_operations.get_corosync_port(server['fqdn'])
             self.assertIsNotNone(mcast_port)
@@ -127,9 +127,9 @@ class TestFirewall(ChromaIntegrationTestCase):
             self.assertEqual(len(matching_rules), 0)
 
             # retrieve command string compatible with this server target
-            firewall = RemoteFirewallControl.create(server['address'], self.remote_operations.remote_command_no_check)
+            firewall = RemoteFirewallControl.create(server['address'])
 
             # test that the remote firewall configuration doesn't include rules to enable the mcast_port
-            self.remote_operations.remote_command(server['address'],
-                                                  firewall.remote_validate_persistent_rule_cmd(mcast_port),
-                                                  expected_return_code=self.GREP_NOTFOUND_RC)
+            self.remote_operations.command(server['address'],
+                                           firewall.remote_validate_persistent_rule_cmd(mcast_port),
+                                           return_codes=RETURN_CODES_GREP_NOT_FOUND)

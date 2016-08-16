@@ -11,10 +11,13 @@ from testconfig import config
 
 from tests.chroma_common.lib.util import ExceptionThrowingThread
 from tests.chroma_common.lib.shell import Shell
-from tests.utils.remote_firewall_control import RemoteFirewallControl
+import sys
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.constants import RETURN_CODES_CHANNEL_FAIL
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
+from tests.integration.core.constants import RETURN_CODES_SUCCESS
+from tests.integration.core.constants import RETURN_CODES_ALL
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -53,6 +56,10 @@ class SimulatorRemoteOperations(RemoteOperations):
     def __init__(self, test_case, simulator):
         self._test_case = test_case
         self._simulator = simulator
+
+    def _not_implemented(self):
+        """ Raise exception with template message including name of calling function and current class """
+        raise RuntimeError('%s not implemented in %s' % (sys._getframe(1).f_code.co_name, self.__class__))
 
     def host_contactable(self, address):
         cfg_server = self._address2server(address)
@@ -184,28 +191,28 @@ class SimulatorRemoteOperations(RemoteOperations):
             return self._simulator.servers[fqdn].read_proc(path)
 
     def read_file(self, address, file_path):
-        raise RuntimeError('read_file not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def rename_file(self, address, current_path, new_path):
-        raise RuntimeError('rename_file not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def create_file(self, address, file_content, file_path):
-        raise RuntimeError('create_file not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def delete_file(self, address, file_content, file_path):
-        raise RuntimeError('delete_file not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def copy_file(self, address, current_file_path, new_file_path):
-        raise RuntimeError('copy_file not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def file_exists(self, address, file_path):
-        raise RuntimeError('file_exists not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def make_directory(self, address, dir_path):
-        raise RuntimeError('make_directory not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def list_dir(self, address, dir_path):
-        raise RuntimeError('list_dir not implemented in SimulatorRemoteOperations')
+        self._not_implemented()
 
     def mount_filesystem(self, client_address, filesystem):
         client = self._simulator.get_lustre_client(client_address)
@@ -232,7 +239,7 @@ class SimulatorRemoteOperations(RemoteOperations):
         # Lets just imagine we exercised the simulated MDT, go boy go, fetch the ball.
         pass
 
-    def exercise_filesystem(self, client_address, filesystem, mdt_indexes = [0], no_of_files_per_mdt = None):
+    def exercise_filesystem(self, client_address, filesystem, mdt_indexes=(0,), no_of_files_per_mdt=None):
         # And the same for the simulated filesystem, 1,2,3,4...1,2,3,4....
         pass
 
@@ -312,17 +319,14 @@ class SimulatorRemoteOperations(RemoteOperations):
     def start_agents(self, server_list):
         pass
 
-    def remote_command(self, address, command_string, timeout, buffer):
-        raise RuntimeError('remote_command not implemented in SimulatorRemoteOperations')
+    def command(self, address, command, return_codes, timeout, buffer):
+        self._not_implemented()
 
-    def remote_command_no_check(self, address, command_string, timeout, buffer):
-        raise RuntimeError('remote_command_no_check not implemented in SimulatorRemoteOperations')
+    def execute_commands(self, commands, target, debug_message, return_codes, timeout):
+        self._not_implemented()
 
-    def execute_commands(self, commands, target, debug_message, expected_return_code, timeout):
-        raise RuntimeError('execute_commands not implemented in SimulatorRemoteOperations')
-
-    def execute_simultaneous_commands(self, commands, targets, debug_message, expected_return_code, timeout):
-        raise RuntimeError('execute_simultaneous_commands not implemented in SimulatorRemoteOperations')
+    def execute_simultaneous_commands(self, commands, targets, debug_message, return_codes, timeout):
+        self._not_implemented()
 
 
 class RealRemoteOperations(RemoteOperations):
@@ -343,24 +347,24 @@ class RealRemoteOperations(RemoteOperations):
         #    to be mangled.
         raise NotImplementedError()
 
-    def remote_command_no_check(self, address, command_string, timeout=TEST_TIMEOUT, buffer=None):
-        """ pass remote_command expected_return_code=None, so exception not raised on nonzero return code """
-        return self.remote_command(address, command_string, expected_return_code=None, timeout=timeout, buffer=buffer)
-
-    def remote_command(self,
-                       address,
-                       command,
-                       expected_return_code=0,
-                       timeout=TEST_TIMEOUT,
-                       buffer=None):
+    def command(self,
+                address,
+                command,
+                return_codes=RETURN_CODES_SUCCESS,
+                timeout=TEST_TIMEOUT,
+                buffer=None):
         """
-        Executes a command on a remote server over ssh. Address can be an IP or an FQDN.
+        Sends a command over ssh to a remote machine and returns the stdout, stderr and return code.
+        It will verify that the return code of the command matches one of return_codes. Address can be an IP or an FQDN.
 
-        Sends a command over ssh to a remote machine and returns the stdout,
-        stderr, and exit status. It will verify that the exit status of the
-        command matches expected_return_code unless expected_return_code=None.
+        :param address: address of targets server to issue ssh command on
+        :param command: shell command to issue
+        :param return_codes: tuple or list of expected return codes
+        :param timeout: time allowed for command to return readable data on stdout (or complete)
+        :param buffer: data to supply to stdin when command is issued (file object)
+        :return: RunResult object
         """
-        logger.debug("remote_command[%s]: %s" % (address, command))
+        logger.debug("command[%s]: %s" % (address, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -414,13 +418,12 @@ class RealRemoteOperations(RemoteOperations):
         rc = channel.recv_exit_status()
         channel.close()
 
-        # Verify we recieved the correct exit status if one was specified.
-        if expected_return_code is not None:
-            assert rc == expected_return_code, \
-                "expected rc: '%s' actual rc: '%s' stdout: '%s' stderr: '%s'" % (expected_return_code,
-                                                                                 rc,
-                                                                                 stdout,
-                                                                                 stderr)
+        # Verify an expected return code was received
+        assert rc in return_codes, \
+            "expected one of rc: '%s' actual rc: '%s' stdout: '%s' stderr: '%s'" % (return_codes,
+                                                                                    rc,
+                                                                                    stdout,
+                                                                                    stderr)
 
         return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
@@ -428,34 +431,49 @@ class RealRemoteOperations(RemoteOperations):
                          commands,
                          target,
                          debug_message,
-                         expected_return_code=0,
+                         return_codes=RETURN_CODES_SUCCESS,
                          timeout=TEST_TIMEOUT):
-        stdout = []
+        """
+        Execute a list of commands sequentially on a single target
+
+        :param commands: list of commands to execute on a given target
+        :param target: target to execute commands on
+        :param debug_message: message to prefix log entry after each command in list is issued
+        :param return_codes: tuple or list of expected return codes for each executed command
+        :param timeout: timeout in seconds for paramiko ssh channel to receive data
+        :return: dictionary of command string keys and result object values
+        """
+        results = {}
         for command in commands:
-            result = self.remote_command(target,
-                                         command,
-                                         expected_return_code,
-                                         timeout,
-                                         None)
+            result = self.command(target, command, return_codes, timeout, None)
             logger.info("%s command %s rc %s output:\n %s" % (debug_message, command, result.rc, result.stdout))
 
-            stdout.append(result.stdout)
+            results[command] = result
 
-        return stdout
+        return results
 
     def execute_simultaneous_commands(self,
                                       commands,
                                       targets,
                                       debug_message,
-                                      expected_return_code=0,
+                                      return_codes=RETURN_CODES_SUCCESS,
                                       timeout=TEST_TIMEOUT):
+        """
+        Execute the same list of commands simultaneously on multiple targets
+
+        :param commands: list of commands to execute on a given target
+        :param targets: targets to execute commands on
+        :param debug_message: message to prefix log entry after each command in list is issued
+        :param return_codes: tuple or list of expected return codes for each executed command
+        :param timeout: timeout in seconds for paramiko ssh channel to receive data
+        """
         threads = []
         for target in targets:
             command_thread = ExceptionThrowingThread(target=self.execute_commands,
                                                      args=(commands,
                                                            target,
                                                            '%s: %s' % (target, debug_message),
-                                                           expected_return_code,
+                                                           return_codes,
                                                            timeout))
             command_thread.start()
             threads.append(command_thread)
@@ -472,73 +490,73 @@ class RealRemoteOperations(RemoteOperations):
         except KeyError:
             raise RuntimeError("Unknown filesystem type %s (known types are %s)" % (filesystem_type, commands.keys()))
 
-        self.remote_command(fqdn, command)
+        self.command(fqdn, command)
 
     def stop_target(self, fqdn, ha_label):
-        return self.remote_command(fqdn, "chroma-agent stop_target --ha %s" % ha_label)
+        return self.command(fqdn, "chroma-agent stop_target --ha %s" % ha_label)
 
     def start_target(self, fqdn, ha_label):
-        self.remote_command(fqdn, "chroma-agent start_target --ha %s" % ha_label)
+        self.command(fqdn, "chroma-agent start_target --ha %s" % ha_label)
 
     def stop_lnet(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent stop_lnet")
+        self.command(fqdn, "chroma-agent stop_lnet")
 
     def start_lnet(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent start_lnet")
+        self.command(fqdn, "chroma-agent start_lnet")
 
     def stop_pacemaker(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent stop_pacemaker")
+        self.command(fqdn, "chroma-agent stop_pacemaker")
 
     def start_pacemaker(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent start_pacemaker")
+        self.command(fqdn, "chroma-agent start_pacemaker")
 
     def stop_corosync(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent stop_corosync")
+        self.command(fqdn, "chroma-agent stop_corosync")
 
     def start_corosync(self, fqdn):
-        self.remote_command(fqdn, "chroma-agent start_corosync")
+        self.command(fqdn, "chroma-agent start_corosync")
 
     def restart_chroma_manager(self, fqdn):
         # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
-        self.remote_command(fqdn, 'chroma-config restart')
+        self.command(fqdn, 'chroma-config restart')
 
     def run_chroma_diagnostics(self, server, verbose):
-        return self.remote_command(server['fqdn'],
+        return self.command(server['fqdn'],
                                    "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
                                    timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
-        self.remote_command(fqdn, "logger \"%s\"" % message)
+        self.command(fqdn, "logger \"%s\"" % message)
 
     def read_proc(self, address, path):
-        result = self.remote_command(address, "cat %s" % path)
+        result = self.command(address, "cat %s" % path)
         return result.stdout.strip()
 
     def read_file(self, address, file_path):
-        result = self.remote_command(address, 'cat %s' % file_path)
+        result = self.command(address, 'cat %s' % file_path)
         return result.stdout
 
     def rename_file(self, address, current_path, new_path):
         # Warning! This will force move by overwriting destination file
-        self.remote_command(address, 'mv -f %s %s' % (current_path, new_path))
+        self.command(address, 'mv -f %s %s' % (current_path, new_path))
 
     def create_file(self, address, file_content, file_path):
-        self.remote_command(address, 'cat > %s <<EOF\n%s\nEOF' % (file_path, file_content))
+        self.command(address, 'cat > %s <<EOF\n%s\nEOF' % (file_path, file_content))
 
     def delete_file(self, address, file_path):
-        self.remote_command(address, 'rm -rf %s' % file_path)
+        self.command(address, 'rm -rf %s' % file_path)
 
     def copy_file(self, address, current_file_path, new_file_path):
-        self.remote_command(address, 'cp %s %s' % (current_file_path, new_file_path))
+        self.command(address, 'cp %s %s' % (current_file_path, new_file_path))
 
     def file_exists(self, address, file_path):
-        return self.remote_command_no_check(address, 'ls %s' % file_path).rc == 0
+        return self.command(address, 'ls %s' % file_path, return_codes=RETURN_CODES_ALL).rc == 0
 
     def make_directory(self, address, dir_path):
-        self.remote_command(address, 'mkdir %s' % dir_path)
+        self.command(address, 'mkdir %s' % dir_path)
 
     def list_dir(self, address, dir_path):
-        return self.remote_command(address, 'ls %s' % dir_path).stdout.split()
+        return self.command(address, 'ls %s' % dir_path).stdout.split()
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
@@ -546,7 +564,7 @@ class RealRemoteOperations(RemoteOperations):
 
         tries = 300
         while tries > 0:
-            result = self.remote_command_no_check(server['fqdn'], cmd, buffer=buffer)
+            result = self.command(server['fqdn'], cmd, buffer=buffer, return_codes=RETURN_CODES_ALL)
 
             # retry on expected (i.e. waiting for dust to settle, etc.)
             # failures
@@ -594,57 +612,36 @@ class RealRemoteOperations(RemoteOperations):
     # HYD-2071: These two methods may no longer be useful after the API-side
     # work lands.
     def set_node_standby(self, server):
-        self.remote_command(server['address'], "chroma-agent set_node_standby --node %s" % server['nodename'])
+        self.command(server['address'], "chroma-agent set_node_standby --node %s" % server['nodename'])
 
     def set_node_online(self, server):
-        self.remote_command(server['address'], "chroma-agent set_node_online --node %s" % server['nodename'])
+        self.command(server['address'], "chroma-agent set_node_online --node %s" % server['nodename'])
 
     def mount_filesystem(self, client_address, filesystem):
         """
         Mounts a lustre filesystem on a specified client.
         """
-        self.remote_command(
-            client_address,
-            "mkdir -p /mnt/%s" % filesystem['name']
-        )
+        self.command(client_address, "mkdir -p /mnt/%s" % filesystem['name'])
 
-        self.remote_command(
-            client_address,
-            filesystem['mount_command']
-        )
+        self.command(client_address, filesystem['mount_command'])
 
-        result = self.remote_command(
-            client_address,
-            'mount'
-        )
-        self._test_case.assertRegexpMatches(
-            result.stdout,
-            " on /mnt/%s " % filesystem['name'])
+        result = self.command(client_address, 'mount')
+        self._test_case.assertRegexpMatches(result.stdout, " on /mnt/%s " % filesystem['name'])
 
     def _unmount_filesystem(self, client, filesystem_name):
         """
         Unmounts a lustre filesystem from the specified client if mounted.
         """
-        result = self.remote_command(
-            client,
-            'mount'
-        )
+        result = self.command(client, 'mount')
         if re.search(" on /mnt/%s " % filesystem_name, result.stdout):
             logger.debug("Unmounting %s" % filesystem_name)
-            self.remote_command(
-                client,
-                "umount /mnt/%s" % filesystem_name
-            )
-        result = self.remote_command(
-            client,
-            'mount'
-        )
+            self.command(client, "umount /mnt/%s" % filesystem_name)
+
+        result = self.command(client, 'mount')
         mount_output = result.stdout
         logger.debug("`Mount`: %s" % mount_output)
-        self._test_case.assertNotRegexpMatches(
-            mount_output,
-            " on /mnt/%s " % filesystem_name
-        )
+
+        self._test_case.assertNotRegexpMatches(mount_output, " on /mnt/%s " % filesystem_name)
 
     def unmount_filesystem(self, client_address, filesystem):
         """
@@ -653,25 +650,18 @@ class RealRemoteOperations(RemoteOperations):
         self._unmount_filesystem(client_address, filesystem['name'])
 
     def get_resource_running(self, host, ha_label):
-        result = self.remote_command(
-            host['address'],
-            'crm_resource -r %s -W' % ha_label,
-            timeout = 30  # shorter timeout since shouldn't take long and increases turnaround when there is a problem
-        )
+        # shorter timeout since shouldn't take long and increases turnaround when there is a problem
+        result = self.command(host['address'], 'crm_resource -r %s -W' % ha_label, timeout=30)
         resource_status = result.stdout
 
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
         hostname = host['fqdn'] if self.distro_version(host) >= 7 else host['nodename']
-        result = self.remote_command(
-            host['address'],
-            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname)
-        )
-        self._test_case.assertRegexpMatches(
-            result.stdout,
-            'value=0'
-        )
+        result = self.command(host['address'],
+                              'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname))
+
+        self._test_case.assertRegexpMatches(result.stdout, 'value=0')
 
         # Check pacemaker thinks it's running on the right host.
         expected_resource_status = "%s is running on: %s" % (ha_label, host['nodename'])
@@ -703,14 +693,10 @@ class RealRemoteOperations(RemoteOperations):
             configuration = xml.fromstring(result.stdout)
 
             rsc_locations = configuration.findall('./configuration/constraints/rsc_location')
-            self._test_case.assertTrue(host_has_location(rsc_locations,
-                                                         host),
-                                       configuration)
+            self._test_case.assertTrue(host_has_location(rsc_locations, host), configuration)
 
             primatives = configuration.findall('./configuration/resources/primitive')
-            self._test_case.assertTrue(has_primitive(primatives,
-                                                     filesystem_name),
-                                       configuration)
+            self._test_case.assertTrue(has_primitive(primatives, filesystem_name), configuration)
 
     def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
         """
@@ -733,18 +719,17 @@ class RealRemoteOperations(RemoteOperations):
         test_root = '/mnt/%s/mdt%s' % (filesystem['name'], mdt_index)
 
         if mdt_index:
-            self.remote_command(client_address, "lfs mkdir -i %s %s" % (mdt_index, test_root))
+            self.command(client_address, "lfs mkdir -i %s %s" % (mdt_index, test_root))
         else:
-            self.remote_command(client_address, "mkdir -p %s" % test_root)
+            self.command(client_address, "mkdir -p %s" % test_root)
 
         def actual_exercise(client_address, test_root, file_no, bytes_to_write):
-            self.remote_command(client_address, "mkdir -p %s/%s" % (test_root, file_no))
+            self.command(client_address, "mkdir -p %s/%s" % (test_root, file_no))
 
-            self.remote_command(client_address,
-                                "dd if=/dev/zero of=%s/%s/exercisetest-%s.dat bs=1000 count=%s" % (test_root,
-                                                                                                   file_no,
-                                                                                                   file_no,
-                                                                                                   bytes_to_write))
+            self.command(client_address, "dd if=/dev/zero of=%s/%s/exercisetest-%s.dat bs=1000 count=%s" % (test_root,
+                                                                                                            file_no,
+                                                                                                            file_no,
+                                                                                                            bytes_to_write))
 
         threads = []
 
@@ -757,9 +742,9 @@ class RealRemoteOperations(RemoteOperations):
 
         ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
 
-        self.remote_command(client_address, "rm -rf %s" % test_root)
+        self.command(client_address, "rm -rf %s" % test_root)
 
-    def exercise_filesystem(self, client_address, filesystem, mdt_indexes=[0], no_of_files_per_mdt=None):
+    def exercise_filesystem(self, client_address, filesystem, mdt_indexes=(0,), no_of_files_per_mdt=None):
         """
         Verify we can actually exercise a filesystem.
 
@@ -791,10 +776,9 @@ class RealRemoteOperations(RemoteOperations):
     def host_contactable(self, address):
         try:
             # TODO: Better way to check this?
-            result = self.remote_command_no_check(
-                address,
-                "echo 'Checking if node is ready to receive commands.'"
-            )
+            result = self.command(address,
+                                  "echo 'Checking if node is ready to receive commands.'",
+                                  return_codes=RETURN_CODES_ALL)
 
         except socket.error:
             logger.debug("Unknown socket error when checking %s" % address)
@@ -817,7 +801,7 @@ class RealRemoteOperations(RemoteOperations):
         return True
 
     def host_up_secs(self, address):
-        result = self.remote_command(address, "cat /proc/uptime")
+        result = self.command(address, "cat /proc/uptime")
         secs_up = result.stdout.split()[0]
         return secs_up
 
@@ -835,28 +819,21 @@ class RealRemoteOperations(RemoteOperations):
             self.kill_server(fqdn)
             self.start_server(fqdn)
         elif reset_cmd:
-            result = self.remote_command(
-                server_config['host'],
-                reset_cmd,
-                ssh_key_file=server_config.get('ssh_key_file', None)
-            )
+            result = self.command(server_config['host'], reset_cmd, ssh_key_file=server_config.get('ssh_key_file', None))
             node_status = result.stdout
             if re.search('was reset', node_status):
                 logger.info("%s reset successfully" % fqdn)
         else:
-            self.remote_command(server_config['address'],
-                                """
-                                echo 1 > /proc/sys/kernel/sysrq;
-                                echo b > /proc/sysrq-trigger
-                                """, expected_return_code=-1)
+            self.command(server_config['address'],
+                         """
+                         echo 1 > /proc/sys/kernel/sysrq;
+                         echo b > /proc/sysrq-trigger
+                         """, return_codes=RETURN_CODES_CHANNEL_FAIL)
 
     def kill_server(self, fqdn):
         # "Pull the plug" on host
         server_config = self._fqdn_to_server_config(fqdn)
-        self.remote_command(
-            server_config['host'],
-            server_config['destroy_command']
-        )
+        self.command(server_config['host'], server_config['destroy_command'])
 
         i = 0
         last_secs_up = 0
@@ -877,18 +854,13 @@ class RealRemoteOperations(RemoteOperations):
     def start_server(self, fqdn):
         boot_server = self._fqdn_to_server_config(fqdn)
 
-        result = self.remote_command(
-            boot_server['host'],
-            boot_server['start_command']
-        )
-        node_status = result.stdout
+        node_status = self.command(boot_server['host'], boot_server['start_command']).stdout
+
         if re.search('started', node_status):
             logger.info("%s started successfully" % fqdn)
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = False):
-        """
-        Wait for the stonithed server to come back online
-        """
+    def await_server_boot(self, boot_fqdn, monitor_fqdn=None, restart=False):
+        """ Wait for the stonithed server to come back online """
         boot_server = self._fqdn_to_server_config(boot_fqdn)
         monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
         restart_attempted = False
@@ -902,10 +874,7 @@ class RealRemoteOperations(RemoteOperations):
                 # drop out here
                 if monitor_server:
                     # Verify other host knows it is no longer offline
-                    result = self.remote_command(
-                        monitor_server['address'],
-                        "crm_mon -1"
-                    )
+                    result = self.command(monitor_server['address'], "crm_mon -1")
                     node_status = result.stdout
 
                     logger.info("Response running crm_mon -1 on %s:  %s" % (hostname, node_status))
@@ -921,10 +890,7 @@ class RealRemoteOperations(RemoteOperations):
                 if restart and running_time > UNATTENDED_BOOT_TIMEOUT and \
                    not restart_attempted:
                     logger.info("attempting to restart %s" % boot_fqdn)
-                    result = self.remote_command(
-                        boot_server['host'],
-                        boot_server['status_command']
-                    )
+                    result = self.command(boot_server['host'], boot_server['status_command'])
                     node_status = result.stdout
                     if re.search('running', node_status):
                         logger.info("%s seems to be running, but unresponsive" % boot_fqdn)
@@ -936,7 +902,7 @@ class RealRemoteOperations(RemoteOperations):
             running_time += 3
 
         if running_time >= TEST_TIMEOUT:
-            host_alive = self.remote_command_no_check(boot_server['address'], 'hostname').rc == 0
+            host_alive = self.command(boot_server['address'], 'hostname', return_codes=RETURN_CODES_ALL).rc == 0
 
             self._test_case._fetch_help(lambda: self._test_case.assertTrue(False,
                                                                            "Timed out waiting for host %s to come back online.\n"
@@ -944,26 +910,21 @@ class RealRemoteOperations(RemoteOperations):
                                         ['chris.gearing@intel.com'])
 
         if monitor_server:
-            result = self.remote_command(
-                monitor_server['address'],
-                "crm_mon -1"
-            )
-            self._test_case.assertRegexpMatches(result.stdout,
-                                                'Online: \[.* %s .*\]' %
-                                                hostname)
+            result = self.command(monitor_server['address'], "crm_mon -1")
+            self._test_case.assertRegexpMatches(result.stdout, 'Online: \[.* %s .*\]' % hostname)
 
     def unmount_clients(self):
         """
         Unmount all filesystems of type lustre from all clients in the config.
         """
         for client in config['lustre_clients'] + self.config_workers:
-            self.remote_command(client['address'], 'umount -t lustre -a')
-            self.remote_command(client['address'], 'sed -i \'/lustre/d\' /etc/fstab')
+            self.command(client['address'], 'umount -t lustre -a')
+            self.command(client['address'], 'sed -i \'/lustre/d\' /etc/fstab')
 
             if client not in [server['address'] for server in config['lustre_servers']]:
                 # Skip this check if the client is also a server, because
                 # both targets and clients look like 'lustre' mounts
-                result = self.remote_command(client['address'], 'mount')
+                result = self.command(client['address'], 'mount')
                 self._test_case.assertNotRegexpMatches(result.stdout, " type lustre")
 
     def unmount_lustre_targets(self, server):
@@ -974,23 +935,21 @@ class RealRemoteOperations(RemoteOperations):
         :return: Exception on failure.
         """
         try:
-            self.remote_command(server['address'], 'umount -t lustre -a')
+            self.command(server['address'], 'umount -t lustre -a')
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
             logger.info("Unmounting Lustre on %s timed out.  Going to try to gather debug information." % server['nodename'])
-            self.remote_command(server['address'],
-                                """set -ex
-                                echo 1 > /proc/sys/kernel/sysrq
-                                echo 8 > /proc/sysrq-trigger
-                                echo t > /proc/sysrq-trigger
-                                """)
+            self.command(server['address'],
+                         """set -ex
+                         echo 1 > /proc/sys/kernel/sysrq
+                         echo 8 > /proc/sysrq-trigger
+                         echo t > /proc/sysrq-trigger
+                         """)
             # going to need to reboot this node to get any use out of it
             self.reset_server(server['fqdn'])
-            raise RuntimeError("Failed to umount Lustre on %s.  "
-                               "Debug data has been collected.  "
-                               "Make sure to add it to an existing ticket or "
-                               "create a new one." % server['nodename'])
+            raise RuntimeError("Failed to umount Lustre on %s.  Debug data has been collected.  "
+                               "Make sure to add it to an existing ticket or create a new one." % server['nodename'])
 
     def is_worker(self, server):
         workers = [w['address'] for w in
@@ -1002,21 +961,14 @@ class RealRemoteOperations(RemoteOperations):
         return [w for w in config['lustre_servers'] if self.is_worker(w)]
 
     def has_pacemaker(self, server):
-        result = self.remote_command_no_check(
-            server['address'],
-            'which crmadmin'
-        )
-        return result.rc == 0
+        return self.command(server['address'], 'which crmadmin', return_codes=RETURN_CODES_ALL).rc == 0
 
     def get_pacemaker_targets(self, server, running=False):
         """
         Returns a list of chroma targets configured in pacemaker on a server.
         :param running: Restrict the returned list only to running targets.
         """
-        result = self.remote_command(
-            server['address'],
-            'crm_resource -L'
-        )
+        result = self.command(server['address'], 'crm_resource -L')
         crm_resources = result.stdout.split('\n')
         targets = []
         for r in crm_resources:
@@ -1031,15 +983,10 @@ class RealRemoteOperations(RemoteOperations):
         return targets
 
     def is_pacemaker_target_running(self, server, target):
-        result = self.remote_command(
-            server['address'],
-            "crm_resource -r %s -W" % target
-
-        )
-        return re.search('is running', result.stdout)
+        return re.search('is running', self.command(server['address'], "crm_resource -r %s -W" % target).stdout)
 
     def get_fence_nodes_list(self, address):
-        result = self.remote_command(address, "fence_chroma -o list")
+        result = self.command(address, "fence_chroma -o list")
         # -o list returns:
         # host1,\n
         # host2,\n
@@ -1052,7 +999,7 @@ class RealRemoteOperations(RemoteOperations):
         Remove /etc/chroma.cfg on the test servers.
         """
         for server in server_list:
-            self.remote_command(server['address'], 'rm -f /etc/chroma.cfg')
+            self.command(server['address'], 'rm -f /etc/chroma.cfg')
 
     def write_config(self, server_list):
         """
@@ -1075,11 +1022,7 @@ class RealRemoteOperations(RemoteOperations):
             config.write(cfg_str)
 
             if len(cfg_str.getvalue()) > 0:
-                self.remote_command(
-                    server['address'],
-                    'cat > /etc/chroma.cfg',
-                    buffer = cfg_str.getvalue()
-                )
+                self.command(server['address'], 'cat > /etc/chroma.cfg', buffer=cfg_str.getvalue())
 
         self.sync_disks([s['address'] for s in server_list])
 
@@ -1090,15 +1033,15 @@ class RealRemoteOperations(RemoteOperations):
         between configs getting to disk and powercycle operations.
         """
         for server in server_list:
-            self.remote_command(server, 'sync; sync')
+            self.command(server, 'sync; sync')
 
     def stop_agents(self, server_list):
         for server in server_list:
-            self.remote_command(server, '/etc/init.d/chroma-agent stop')
+            self.command(server, '/etc/init.d/chroma-agent stop')
 
     def start_agents(self, server_list):
         for server in server_list:
-            self.remote_command(server, '/etc/init.d/chroma-agent start')
+            self.command(server, '/etc/init.d/chroma-agent start')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -1109,7 +1052,7 @@ class RealRemoteOperations(RemoteOperations):
         if sorted:
             sort_cmd = " | sort"
         for server in server_list:
-            self.remote_command(server, 'rpm -qa %s > %s' % (sort_cmd, location))
+            self.command(server, 'rpm -qa %s > %s' % (sort_cmd, location))
 
     def clear_ha(self, server_list):
         """
@@ -1124,17 +1067,18 @@ class RealRemoteOperations(RemoteOperations):
                 continue
 
             if self.has_pacemaker(server):
-                firewall = RemoteFirewallControl.create(address, self.remote_command_no_check)
+                from tests.utils.remote_firewall_control import RemoteFirewallControl
+                firewall = RemoteFirewallControl.create(address)
 
                 if config.get('pacemaker_hard_reset', False):
                     clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self.remote_command(address, clear_ha_script.read())
+                        self.command(address, clear_ha_script.read())
 
-                    self.remote_command(address, firewall.remote_add_port_cmd(22, 'tcp'))
-                    self.remote_command(address, firewall.remote_add_port_cmd(988, 'tcp'))
+                    self.command(address, firewall.remote_add_port_cmd(22, 'tcp'))
+                    self.command(address, firewall.remote_add_port_cmd(988, 'tcp'))
 
                     self.unmount_lustre_targets(server)
                 else:
@@ -1142,11 +1086,11 @@ class RealRemoteOperations(RemoteOperations):
 
                     # Stop targets and delete targets
                     for target in crm_targets:
-                        self.remote_command(address, 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
+                        self.command(address, 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
                     for target in crm_targets:
                         self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                        self.remote_command(address, 'pcs resource delete %s' % target)
-                        self.remote_command(address, 'crm_resource -C -r %s' % target)
+                        self.command(address, 'pcs resource delete %s' % target)
+                        self.command(address, 'crm_resource -C -r %s' % target)
 
                     # Verify no more targets
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
@@ -1154,25 +1098,17 @@ class RealRemoteOperations(RemoteOperations):
                     # remove firewall rules previously added for corosync
                     mcast_port = self.get_corosync_port(server['fqdn'])
                     if mcast_port:
-                        self.remote_command(
-                            address,
-                            firewall.remote_remove_port_cmd(mcast_port, 'udp')
-                        )
+                        self.command(address, firewall.remote_remove_port_cmd(mcast_port, 'udp'))
 
-                rpm_q_result = self.remote_command_no_check(address, "rpm -q chroma-agent")
+                rpm_q_result = self.command(address, "rpm -q chroma-agent", return_codes=RETURN_CODES_ALL)
                 if rpm_q_result.rc == 0:
                     # Stop the agent
-                    self.remote_command(
+                    self.command(
                         address,
                         'service chroma-agent stop'
                     )
                     # Keep going if it failed - may be none there.
-                    self.remote_command_no_check(
-                        address,
-                        '''
-                        rm -rf /var/lib/chroma/*;
-                        '''
-                    )
+                    self.command(address, 'rm -rf /var/lib/chroma/*', return_codes=RETURN_CODES_ALL)
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % address)
 
@@ -1186,13 +1122,10 @@ class RealRemoteOperations(RemoteOperations):
         # Note the sleep ensures the reboot really happens otherwise it might look alive in the await_server_boot
         for server in server_list:
             # Keep going if it failed - may be none there.
-            self.remote_command_no_check(server['address'],
-                                         '''
-                                         [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
-                                         rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
-                                         reboot &&
-                                         sleep 20
-                                         ''')
+            self.command(server['address'],
+                         "[ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] && "
+                         "rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf && reboot && sleep 20",
+                         return_codes=RETURN_CODES_ALL)
 
         # Now ensure they have all comeback to life
         for server in server_list:
@@ -1206,7 +1139,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def get_corosync_port(self, fqdn):
         mcast_port = None
-        for line in self.remote_command(fqdn, "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
+        for line in self.command(fqdn, "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
 
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
@@ -1216,49 +1149,47 @@ class RealRemoteOperations(RemoteOperations):
         return int(mcast_port) if mcast_port is not None else None
 
     def grep_file(self, server, string, file):
-        result = self.remote_command(server['address'], "grep -e \"%s\" %s || true" % (string, file)).stdout
+        result = self.command(server['address'], "grep -e \"%s\" %s || true" % (string, file)).stdout
         return result
 
     def get_file_content(self, server, file):
-        result = self.remote_command(server['address'], "cat \"%s\" || true" % file).stdout
+        result = self.command(server['address'], "cat \"%s\" || true" % file).stdout
         return result
 
     def enable_agent_debug(self, server_list):
         for server in server_list:
-            self.remote_command(server['address'], "touch /tmp/chroma-agent-debug")
+            self.command(server['address'], "touch /tmp/chroma-agent-debug")
 
     def disable_agent_debug(self, server_list):
         for server in server_list:
-            self.remote_command(server['address'], "rm -f /tmp/chroma-agent-debug")
+            self.command(server['address'], "rm -f /tmp/chroma-agent-debug")
 
     def omping(self, server, servers, count=5, timeout=30):
-        firewall = RemoteFirewallControl.create(server['address'], self.remote_command_no_check)
+        from tests.utils.remote_firewall_control import RemoteFirewallControl
+        firewall = RemoteFirewallControl.create(server['address'])
 
-        self.remote_command(server['address'], firewall.remote_add_port_cmd(4321, 'udp'))
+        self.command(server['address'], firewall.remote_add_port_cmd(4321, 'udp'))
 
-        result = self.remote_command(server['address'],
-                                     'exec 2>&1; omping -T %s -c %s %s' % (timeout,
-                                                                           count,
-                                                                           " ".join([s['nodename'] for s in servers])))
+        result = self.command(server['address'],
+                              'exec 2>&1; omping -T %s -c %s %s' % (timeout,
+                                                                    count,
+                                                                    " ".join([s['nodename'] for s in servers])))
 
-        self.remote_command(server['address'], firewall.remote_remove_port_cmd(4321, 'udp'))
+        self.command(server['address'], firewall.remote_remove_port_cmd(4321, 'udp'))
 
         return result.stdout
 
     def yum_update(self, server):
-        self.remote_command(server['address'], "yum -y update")
+        self.command(server['address'], "yum -y update")
 
     def default_boot_kernel_path(self, server):
-        r = self.remote_command(server['address'], "grubby --default-kernel")
+        r = self.command(server['address'], "grubby --default-kernel")
         stdout = r.stdout.rstrip()
 
         return stdout
 
     def get_chroma_repos(self):
-        result = self.remote_command(
-            config['chroma_managers'][0]['address'],
-            "ls /var/lib/chroma/repo/"
-        )
+        result = self.command(config['chroma_managers'][0]['address'], "ls /var/lib/chroma/repo/")
         return result.stdout.split()
 
     def check_time_within_range(self, first_dt, second_dt, minutes):
@@ -1272,7 +1203,7 @@ class RealRemoteOperations(RemoteOperations):
         """return datetime.datetime from UTC date on client"""
         _date_get_format = '%Y:%m:%d:%H:%M'
 
-        time_string = self.remote_command(client_address, 'date -u +%s' % _date_get_format).stdout.strip('\n')
+        time_string = self.command(client_address, 'date -u +%s' % _date_get_format).stdout.strip('\n')
 
         # create datetime.datetime from linux date utility shell output
         return datetime.datetime(*[int(element) for element in time_string.split(':')])
@@ -1282,6 +1213,6 @@ class RealRemoteOperations(RemoteOperations):
         _date_set_format = '%Y%m%d %H:%M'
 
         time_string = new_datetime.strftime(_date_set_format)
-        result = self.remote_command(client_address, 'date -u --set="%s"' % time_string)
+        result = self.command(client_address, 'date -u --set="%s"' % time_string)
 
         return result

@@ -1,5 +1,6 @@
 import logging
 
+from tests.integration.core.constants import RETURN_CODES_ALL
 from tests.integration.core.remote_operations import RealRemoteOperations
 
 logger = logging.getLogger('test')
@@ -20,15 +21,15 @@ def _check_status(address, additional_check_items):
 
     # Catch all exceptions so our caller doesn't have it's exceptions overwritten.
     try:
-        remote_ops = RealRemoteOperations(None)
+        remote_operations = RealRemoteOperations(None)
 
-        if remote_ops.host_contactable(address):
+        if remote_operations.host_contactable(address):
             logger.debug("Host %s was contactable via SSH" % address)
 
             for action, command in check_items:
                 logger.debug("#" * 40)
 
-                result = remote_ops.remote_command(address, command, None)
+                result = remote_operations.command(address, command, return_codes=RETURN_CODES_ALL)
 
                 if result.rc == 0:
                     logger.debug("%s on %s\n%s" % (action, address, result.stdout.read()))

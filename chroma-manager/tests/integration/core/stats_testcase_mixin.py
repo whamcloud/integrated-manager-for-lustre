@@ -6,6 +6,7 @@ from testconfig import config
 from tests.chroma_common.lib import util
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core import constants
+from tests.integration.core.constants import RETURN_CODES_ALL
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -145,8 +146,8 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         # Make sure client cache is flushed and stats up to date
         self.remote_operations.unmount_filesystem(client, filesystem)
         self.remote_operations.mount_filesystem(client, filesystem)
-        result = self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)
-        if result.exit_status == 0:
+        result = self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), return_codes=RETURN_CODES_ALL)
+        if result.rc == 0:
             # file was removed so we need to flush to make sure stats are up-to-date
             self.remote_operations.unmount_filesystem(client, filesystem)
             self.remote_operations.mount_filesystem(client, filesystem)
@@ -212,4 +213,4 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         self.wait_for_assert(lambda: self._check_within_range(filesystem_id, 'bytes_total', bytes_total, range_in_bytes))
 
         # Remove test file copied to mounted fs
-        self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), expected_return_code=None)
+        self.remote_operations.command(client, "rm /mnt/%s/%s" % (filesystem_name, filename), return_codes=RETURN_CODES_ALL)

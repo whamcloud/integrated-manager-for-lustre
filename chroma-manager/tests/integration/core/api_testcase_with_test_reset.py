@@ -22,7 +22,9 @@ from tests.integration.core.remote_operations import SimulatorRemoteOperations, 
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import RETURN_CODES_SUCCESS
 from tests.integration.core.constants import INSTALL_TIMEOUT
+from tests.integration.core.constants import RETURN_CODES_ALL
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
 
@@ -358,12 +360,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
     def wait_last_command_complete(self, timeout=TEST_TIMEOUT, verify_successful=True):
-        '''
+        """
         This actually waits for all commands to be complete and then verifies that the last command completed successfully
         :param timeout: Time to wait for commands to complete
         :param verify_successful: True if we should verify the last command completed OK.
         :return: No return value
-        '''
+        """
         assert type(timeout) is int, "timeout is not an int: %s" % type(timeout)
         assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
 
@@ -377,7 +379,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.wait_for_command(self.chroma_manager, last_command['id'], timeout, True)
 
     def wait_alerts(self, expected_alerts, **filters):
-        "Wait and assert correct number of matching alerts."
+        """ Wait and assert correct number of matching alerts """
         expected_alerts.sort()
 
         for _ in util.wait(TEST_TIMEOUT):
@@ -601,7 +603,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     @property
     def chroma_manager_api(self):
-        '''
+        """
         Provides the details of the rest api provided by the manager. Presumes that the api does not change during
         execution of the whole test suite and so stores the result once in a class variable. A class variable
         because instances of this class come and go but the api today is constant.
@@ -610,7 +612,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         only fetching the data once is the we only see the debug once.
 
         :return: hash of the api
-        '''
+        """
         if ApiTestCaseWithTestReset._chroma_manager_api is None:
             ApiTestCaseWithTestReset._chroma_manager_api = self.get_json_by_uri("/api/")
 
@@ -637,11 +639,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             superuser = [u for u in chroma_manager['users'] if u['super']][0]
 
             # Stop all manager services
-            result = self.remote_operations.remote_command(
-                chroma_manager['address'],
-                'chroma-config stop',
-                expected_return_code = None
-            )
+            result = self.remote_operations.command(chroma_manager['address'],
+                                                    'chroma-config stop',
+                                                    return_codes=RETURN_CODES_ALL)
             if not result.rc == 0:
                 logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.rc, result.stdout, result.stderr))
 
@@ -650,11 +650,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             services = ['chroma-supervisor']
             while services and running_time < TEST_TIMEOUT:
                 for service in services:
-                    result = self.remote_operations.remote_command(
-                        chroma_manager['address'],
-                        'service %s status' % service,
-                        expected_return_code = None
-                    )
+                    result = self.remote_operations.command(chroma_manager['address'],
+                                                            'service %s status' % service,
+                                                            return_codes=RETURN_CODES_ALL)
                     if result.rc == 3:
                         services.remove(service)
                 time.sleep(1)
@@ -662,45 +660,42 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
 
             # Completely nuke the database to start from a clean state.
-            self.remote_operations.remote_command(
-                chroma_manager['address'],
-                'service postgresql stop && rm -fr /var/lib/pgsql/data/*'
-            )
+            self.remote_operations.command(chroma_manager['address'],
+                                           'service postgresql stop && rm -fr /var/lib/pgsql/data/*')
 
             # Run chroma-config setup to recreate the database and start the manager.
-            result = self.remote_operations.remote_command(
-                chroma_manager['address'],
-                "chroma-config setup %s %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost"), "--no-dbspace-check"),
-                expected_return_code=None,
-                timeout=INSTALL_TIMEOUT
-            )
+            result = self.remote_operations.command(chroma_manager['address'],
+                                                    'chroma-config setup %s %s %s %s &> '
+                                                    'config_setup.log' % (superuser['username'],
+                                                                          superuser['password'],
+                                                                          chroma_manager.get('ntp_server',
+                                                                                             'localhost'),
+                                                                          '--no-dbspace-check'),
+                                                    return_codes=RETURN_CODES_ALL,
+                                                    timeout=INSTALL_TIMEOUT)
             if result.rc != 0:
-                result = self.remote_operations.remote_command(
-                    chroma_manager['address'],
-                    "cat config_setup.log"
-                )
+                result = self.remote_operations.command(chroma_manager['address'], "cat config_setup.log")
                 self.assertEqual(0, result.rc, "chroma-config setup failed: '%s'" % result.stdout)
 
             # Register the default bundles and profile again
-            result = self.remote_operations.remote_command(
-                chroma_manager['address'],
-                "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log" % platform.dist()[1][0:1],
-                expected_return_code = None
-            )
+            result = self.remote_operations.command(chroma_manager['address'],
+                                                    "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; "
+                                                    "do chroma-config bundle register "
+                                                    "$(dirname $bundle_meta); "
+                                                    "done &> config_bundle.log" % platform.dist()[1][0:1],
+                                                    return_codes=RETURN_CODES_ALL)
             if result.rc != 0:
-                result = self.remote_operations.remote_command(
-                    chroma_manager['address'],
-                    "cat config_bundle.log"
-                )
+                result = self.remote_operations.command(chroma_manager['address'], "cat config_bundle.log")
                 self.assertEqual(0, result.rc, "chroma-config bundle register failed: '%s'" % result.stdout)
 
-            result = self.remote_operations.remote_command(
-                chroma_manager['address'],
-                "ls /tmp/ee-*/",
-                expected_return_code = None
-            )
+            result = self.remote_operations.command(chroma_manager['address'],
+                                                    "ls /tmp/ee-*/",
+                                                    return_codes=RETURN_CODES_ALL)
             installer_contents = result.stdout
-            self.assertEqual(0, result.rc, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr))
+            self.assertEqual(0,
+                             result.rc,
+                             "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" %
+                             (installer_contents, result.stderr))
 
             logger.debug("Installer contents: %s" % installer_contents)
 
@@ -708,16 +703,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             profiles = " ".join([line for line in installer_contents.split("\n")
                                  if 'profile' in line])
             logger.debug("Found these profiles: %s" % profiles)
-            result = self.remote_operations.remote_command(
-                chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/ee-*/$profile_pat; done &> config_profile.log" % profiles,
-                expected_return_code = None
-            )
+            result = self.remote_operations.command(chroma_manager['address'],
+                                                    "for profile_pat in %s; "
+                                                    "do chroma-config profile register "
+                                                    "/tmp/ee-*/$profile_pat; "
+                                                    "done &> config_profile.log" % profiles,
+                                                    return_codes=RETURN_CODES_ALL)
             if result.rc != 0:
-                result = self.remote_operations.remote_command(
-                    chroma_manager['address'],
-                    "cat config_profile.log"
-                )
+                result = self.remote_operations.command(chroma_manager['address'], "cat config_profile.log")
                 self.assertEqual(0, result.rc, "chroma-config profile register failed: '%s'" % result.stdout)
 
     def graceful_teardown(self, chroma_manager):
@@ -918,7 +911,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.remote_operations.execute_simultaneous_commands(TestBlockDeviceZfs.zfs_install_commands(),
                                                                  [server['fqdn'] for server in test_servers],
                                                                  'checking for zfs presence',
-                                                                 expected_return_code=None)
+                                                                 return_codes=RETURN_CODES_ALL)
         except AssertionError:
             return
 
@@ -937,15 +930,16 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
 
                 self.remote_operations.execute_simultaneous_commands(zfs_device.release_commands,
-                                                   [server['fqdn'] for server in test_servers],
-                                                   'export zfs device %s' % zfs_device,
-                                                   expected_return_code=None)
+                                                                     [server['fqdn'] for server in test_servers],
+                                                                     'export zfs device %s' % zfs_device,
+                                                                     return_codes=RETURN_CODES_ALL)
 
                 try:
                     self.remote_operations.execute_commands(zfs_device.capture_commands,
                                                             first_test_server['fqdn'],
                                                             'import zfs device %s' % zfs_device,
-                                                            expected_return_code=0 if devices_must_exist else None)
+                                                            return_codes=RETURN_CODES_SUCCESS if devices_must_exist else
+                                                            RETURN_CODES_ALL)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
@@ -955,14 +949,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                         self.remote_operations.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
                                                                              [first_test_server['fqdn']],
                                                                              'clearing disk because zfs import failed %s' % ldiskfs_device,
-                                                                             expected_return_code=0)
+                                                                             return_codes=RETURN_CODES_SUCCESS)
                     else:
                         raise
 
         if zpool_datasets is None:
             zpool_datasets = self.remote_operations.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
-                                                   first_test_server['fqdn'],
-                                                   'listing zfs devices')[0].split()
+                                                                     first_test_server['fqdn'],
+                                                                     'listing zfs devices').values()[0].stdout.split()
 
         zpools_datasets = [zpool_dataset for zpool_dataset in zpool_datasets if zpool_dataset != '']
 
@@ -1017,8 +1011,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
                 self.remote_operations.execute_simultaneous_commands(linux_device.destroy_commands,
-                                                   [server['fqdn'] for server in test_servers],
-                                                   'clear block device %s' % linux_device)
+                                                                     [server['fqdn'] for server in test_servers],
+                                                                     'clear block device %s' % linux_device)
 
     @property
     def quick_setup(self):

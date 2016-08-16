@@ -20,15 +20,19 @@
 # express and approved by Intel in writing.
 
 
+import re
 import abc
 from collections import namedtuple
 from operator import attrgetter
+
 from tests.chroma_common.lib import util
-import re
+from tests.integration.core.constants import RETURN_CODES_ALL
+from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class RemoteFirewallControl(object):
-    """Class for issuing shell commands for managing the firewall, this abstract base class is subclassed to
+    """
+    Class for issuing shell commands for managing the firewall, this abstract base class is subclassed to
     provide concrete implementations of the abstract methods containing the distribution specific command parameters
     """
 
@@ -38,33 +42,33 @@ class RemoteFirewallControl(object):
     class_priority = None
     firewall_list_cmd = None
     firewall_app_name = None
-    remote_access_func = None
 
     # dict of RemoteFirewallControl objects for specific servers,  defaults to empty string which evaluates as False
     controller_instances = {}
 
     firewall_rule = namedtuple('firewall_rule', ('port', 'protocol'))
 
-    def __init__(self, address, remote_access_func):
+    def __init__(self, address):
         self.address = address
-        self.remote_access_func = remote_access_func
         self.rules = []
+        self.remote_operations = RealRemoteOperations(None)
 
     @classmethod
-    def _applicable(cls, address, remote_access_func):
+    def _applicable(cls, address):
         """
         Verify applicability of RemoteFirewallControl subclass by testing installed firewall control packages
         choosing class based on a numerical priority value
 
         :param address: remote server IP address to verify
-        :param remote_access_func: reference to function which provides remote access shell execution and returns
-                                   RunResult object
         :return: true if applicable, false if not
         """
-        return remote_access_func(address, 'which %s' % cls.firewall_app_name).rc == 0
+        result = RealRemoteOperations(None).command(address,
+                                                    'which %s' % cls.firewall_app_name,
+                                                    return_codes=RETURN_CODES_ALL)
+        return result.rc == 0
 
     @classmethod
-    def create(cls, address, remote_access_func):
+    def create(cls, address):
         """ check cache for controller at this address, update if necessary and return controller object """
         if address not in cls.controller_instances:
             # Note: this assumes OS will not be changed on a remote host during parent process lifetime
@@ -72,12 +76,12 @@ class RemoteFirewallControl(object):
                 # return available class with highest priority (positive integer closest to 0)
                 # Note: if identical class_priority values exist in resultant list, either class could be returned
                 required_class = sorted([_cls for _cls in util.all_subclasses(cls)
-                                         if _cls._applicable(address, remote_access_func)],
+                                         if _cls._applicable(address)],
                                         key=attrgetter('class_priority'))[0]
             except IndexError:
                 raise RuntimeError('Current platform version not applicable')
 
-            cls.controller_instances[address] = required_class(address, remote_access_func)
+            cls.controller_instances[address] = required_class(address)
 
         return cls.controller_instances[address]
 
@@ -122,7 +126,7 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
 
         :return: None on success/valid input, error string otherwise
         """
-        result = self.remote_access_func(self.address, self.firewall_list_cmd)
+        result = self.remote_operations.command(self.address, self.firewall_list_cmd, return_codes=RETURN_CODES_ALL)
 
         if result.rc != 0:
             raise RuntimeError('process_rules(): remote shell command failed unexpectedly, is iptables running?')
@@ -201,7 +205,7 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
 
         :return: None on success/valid input, error string otherwise
         """
-        result = self.remote_access_func(self.address, self.firewall_list_cmd)
+        result = self.remote_operations.command(self.address, self.firewall_list_cmd, return_codes=RETURN_CODES_ALL)
 
         if result.rc != 0:
             raise RuntimeError('process_rules(): remote shell command failed unexpectedly, is firewall-cmd running?')

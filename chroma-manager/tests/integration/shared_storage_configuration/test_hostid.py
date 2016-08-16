@@ -20,7 +20,7 @@ class TestHostid(ChromaIntegrationTestCase):
         hostid_path = '/etc/hostid'
         address = self.TEST_SERVERS[0]['address']
 
-        self.remote_operations.remote_command(address, 'rm -rf %s' % hostid_path)
+        self.remote_operations.command(address, 'rm -rf %s' % hostid_path)
 
         # Verify hostid is not present before host is set up
         self.assertFalse(self.remote_operations.file_exists(address, hostid_path))
