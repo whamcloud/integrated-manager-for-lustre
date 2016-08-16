@@ -94,7 +94,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
 
             result = self.remote_command(
                 chroma_manager['address'],
-                "ls /tmp/ieel-*/",
+                "ls /tmp/ee-*/",
                 expected_return_code = None
             )
             installer_contents = result.stdout
@@ -108,7 +108,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             logger.debug("Found these profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log" % profiles,
+                "for profile_pat in %s; do chroma-config profile register /tmp/ee-*/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
