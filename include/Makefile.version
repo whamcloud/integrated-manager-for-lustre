@@ -40,3 +40,6 @@ endif
 
 .ieel_version:
 	@echo "${ARCHIVE_VERSION}"
+
+.short_archive_name:
+	@echo "${SHORT_ARCHIVE_NAME}"
