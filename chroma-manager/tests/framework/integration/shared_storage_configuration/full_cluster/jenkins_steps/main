@@ -9,8 +9,8 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/$ARCHIVE_NAME\""
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
 set -x
 
 # Gather logs from nodes and release the cluster at exit
