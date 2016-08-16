@@ -7,7 +7,7 @@ SLAVE=${slave:?"Need to set slave"}
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/$ARCHIVE_NAME"
 set -x
 
 # Gather logs from nodes and release the cluster at exit

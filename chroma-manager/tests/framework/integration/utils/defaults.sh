@@ -21,6 +21,8 @@ set_defaults() {
         d=${d%/*}
     done
     export IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
+    export SHORT_ARCHIVE_NAME="$(make -f $d/include/Makefile.version .short_archive_name)"
+    export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz"
 
     export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
 

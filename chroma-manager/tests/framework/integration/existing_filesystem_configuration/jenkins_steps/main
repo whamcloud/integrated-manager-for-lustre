@@ -8,8 +8,8 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -k -O -u $JENKINS_USER:********* \"$JOB_URL/ieel-$IEEL_VERSION.tar.gz\""
-curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/ieel-$IEEL_VERSION.tar.gz"
+echo "+ curl -k -O -u $JENKINS_USER:********* \"$JOB_URL/$ARCHIVE_NAME\""
+curl -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
 set -x
 
 # Release the provisioned cluster (at exit of this script)
