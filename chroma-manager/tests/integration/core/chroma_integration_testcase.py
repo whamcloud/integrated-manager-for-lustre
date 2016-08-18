@@ -297,10 +297,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """
         self.add_hosts([self.TEST_SERVERS[0]['address']])
 
-        def at_least_3_volumes():
-            return len(self.get_usable_volumes()) >= 3
-
-        self.wait_until_true(lambda: at_least_3_volumes())
+        self.wait_usable_volumes(3)
 
         ha_volumes = self.get_usable_volumes()
 
@@ -498,6 +495,14 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         volumes = response.json['objects']
         return self.filter_for_permitted_volumes(volumes)
+
+    def wait_usable_volumes(self, required_volume_count):
+        def at_least_n_volumes(required_volumes):
+            return len(self.get_usable_volumes()) >= required_volumes
+
+        self.wait_until_true(lambda: at_least_n_volumes(required_volume_count))
+
+        return self.get_usable_volumes()
 
     def filter_for_permitted_volumes(self, volumes):
         """

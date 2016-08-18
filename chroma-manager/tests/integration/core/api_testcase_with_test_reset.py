@@ -886,7 +886,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         Make sure any pools are imported onto server[0], and then remove any datasets on the pools.
 
         Very ZFS specific code.
-        :return:
+        :param test_servers: Servers that have have access to the zpools
+        :param remove_zpools: Remove zpools as well as datasets
+        :param zpool_datasets: Datasets to remove, None means all
+        :param devices_must_exist: Error is devices do not exist when moving.
         """
         if (self.simulator is not None) or (self.zfs_devices_exist is False):
             return
