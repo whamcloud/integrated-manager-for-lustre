@@ -21,27 +21,21 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
-        ost_volume = volumes[2]
-        self.set_volume_mounts(mgt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
-        self.set_volume_mounts(mdt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
-        self.set_volume_mounts(ost_volume, self.hosts[0]['id'], self.hosts[1]['id'])
+        ost_volumes = volumes[2:4]
 
-        self.filesystem_id = self.create_filesystem(
-                {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': {'lov.stripesize': '2097152'}
+        for volume in volumes:
+            self.set_volume_mounts(volume, self.hosts[0]['id'], self.hosts[1]['id'])
 
-                }],
-                'osts': [{
-                    'volume_id': ost_volume['id'],
-                    'conf_params': {'ost.writethrough_cache_enable': '0'}
-                }],
-                'conf_params': {'llite.max_cached_mb': '16'}
-            }
-        )
+        self.filesystem_id = self.create_filesystem({'name': 'testfs',
+                                                     'mgt': {'volume_id': mgt_volume['id']},
+                                                     'mdts': [{'volume_id': mdt_volume['id'],
+                                                               'conf_params': {'lov.stripesize': '2097152'}}],
+                                                     'osts': [{'volume_id': ost_volumes[0]['id'],
+                                                               'conf_params': {'ost.sync_journal': '0'}},
+                                                              {'volume_id': ost_volumes[1]['id'],
+                                                               'conf_params': {'ost.sync_journal': '1'}}
+                                                              ],
+                                                     'conf_params': {'llite.max_cached_mb': '16'}})
 
     def _test_params(self):
         # Mount the filesystem
@@ -59,7 +53,8 @@ class TestConfParams(ChromaIntegrationTestCase):
 
             server_address = self.hosts[0]['address']
             self.wait_until_true(lambda: "2097152" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize"))
-            self.wait_until_true(lambda: "0" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable"))
+            self.wait_until_true(lambda: "0" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0000/sync_journal"))
+            self.wait_until_true(lambda: "1" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0001/sync_journal"))
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 

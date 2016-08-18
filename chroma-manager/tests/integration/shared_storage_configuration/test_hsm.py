@@ -51,7 +51,7 @@ class TestHsmCoordinatorControl(ChromaIntegrationTestCase):
                 }],
                 'osts': [{
                     'volume_id': ost_volume['id'],
-                    'conf_params': {'ost.writethrough_cache_enable': '0'}
+                    'conf_params': {}
                 }],
                 'conf_params': {'llite.max_cached_mb': '16'}
             }

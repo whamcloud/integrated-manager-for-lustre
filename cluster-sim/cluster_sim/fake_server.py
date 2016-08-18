@@ -315,7 +315,8 @@ class FakeServer(utils.Persisted):
         }
 
         OBDFILTER_DEFAULTS = {
-            'writethrough_cache_enable': "0"
+            'writethrough_cache_enable': "16",
+            'sync_journal': "0"
         }
 
         MDT_DEFAULTS = {
@@ -333,8 +334,7 @@ class FakeServer(utils.Persisted):
                 return LOV_DEFAULTS[parts[5]]
         elif parts[3] == 'obdfilter':
             # /proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable
-            ost_name = parts[4].rsplit("-", 1)[0]
-            conf_param = "%s.obdfilter.%s" % (ost_name, parts[5])
+            conf_param = "%s.ost.%s" % (parts[4], parts[5])
             try:
                 return configs[conf_param]
             except KeyError:

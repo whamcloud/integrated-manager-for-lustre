@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -214,7 +214,7 @@ all_params = {
     # OSS Asynchronous Journal Commit
     # ===============================
 
-    'ost.sync_journal': (OstConfParam, BooleanParam(), "Controls whether a journal flush is forced after a bulk write or not. Default is 1, which enables the asynchronous journal commit feature to synchronously write data to disk without forcing a journal flush. In the \"Lustre Operations Manual\", see Section 31.2.9: OSS Asynchronous Journal Commit."),
+    'ost.sync_journal': (OstConfParam, BooleanParam(), "Controls whether a journal flush is forced after a bulk write or not. Default is 0, which enables the asynchronous journal commit feature to synchronously write data to disk without forcing a journal flush. In the \"Lustre Operations Manual\", see Section 31.2.9: OSS Asynchronous Journal Commit."),
     'ost.sync_on_lock_cancel': (OstConfParam, EnumParam(['always', 'blocking', 'never']), "Controls if a journal is flushed or not when a lock is cancelled. Values are \"always\", \"blocking\", or \"never\". Default is \"never\". In the \"Lustre Operations Manual\", see Section 31.2.9: OSS Asynchronous Journal Commit."),
 
 
@@ -231,39 +231,38 @@ all_params = {
 
     # "Configuring adapative timeouts"
     # ================================
+    'sys.at_min': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout lower-limit or minimum processing time reported by a server (in seconds). Default is 0. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+    'sys.at_max': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout upper-limit (in seconds). Default is 600. Set to 0 to disable adaptive timeouts. In the \"Lustre Operations Manual\", see Section 31.1.3.1. Configuring Adaptive Timeouts."),
+    'sys.at_history': (FilesystemGlobalConfParam, IntegerParam(), "Time period (in seconds) within which adaptive timeouts remember the slowest event that occurred. Default is 600. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+    'sys.at_early_margin': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) in advance of a queued request timeout at which the server sends a request to the client to extend the timeout time. Default is 5. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+    'sys.at_extra': (FilesystemGlobalConfParam, IntegerParam(), "Incremental time (in seconds) that a server requests the client to add to the timeout time when the server determines that a queued request is about to time out. Default is 30. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+    # ldlm_enqueue_min does not appear to be conf_param'able
+    #'sys.ldlm_enqueue_min': (FilesystemGlobalConfParam, IntegerParam(), "Sets the minimum lock enqueue time. Default value is 100. The ldlm_enqueue  time is the maximum of the measured enqueue estimate (influenced by at_min and at_max parameters), multiplied by a weighting factor, and the ldlm_enqueue_min setting. LDLM lock enqueues were based on the obd_timeout  value; now they have a dedicated minimum value. Lock enqueues increase as the measured enqueue times increase (similar to adaptive timeouts)."),
 
-'sys.at_min': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout lower-limit or minimum processing time reported by a server (in seconds). Default is 0. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
-'sys.at_max': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout upper-limit (in seconds). Default is 600. Set to 0 to disable adaptive timeouts. In the \"Lustre Operations Manual\", see Section 31.1.3.1. Configuring Adaptive Timeouts."),
-'sys.at_history': (FilesystemGlobalConfParam, IntegerParam(), "Time period (in seconds) within which adaptive timeouts remember the slowest event that occurred. Default is 600. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
-'sys.at_early_margin': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) in advance of a queued request timeout at which the server sends a request to the client to extend the timeout time. Default is 5. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
-'sys.at_extra': (FilesystemGlobalConfParam, IntegerParam(), "Incremental time (in seconds) that a server requests the client to add to the timeout time when the server determines that a queued request is about to time out. Default is 30. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
-# ldlm_enqueue_min does not appear to be conf_param'able
-#'sys.ldlm_enqueue_min': (FilesystemGlobalConfParam, IntegerParam(), "Sets the minimum lock enqueue time. Default value is 100. The ldlm_enqueue  time is the maximum of the measured enqueue estimate (influenced by at_min and at_max parameters), multiplied by a weighting factor, and the ldlm_enqueue_min setting. LDLM lock enqueues were based on the obd_timeout  value; now they have a dedicated minimum value. Lock enqueues increase as the measured enqueue times increase (similar to adaptive timeouts)."),
+    # "Lustre Timeouts"
+    # =================
+    'sys.timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a client waits for a server to complete an RPC. Default is 100. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts and Section 31.1.3: Adaptive Timeouts."),
+    'sys.ldlm_timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a server will wait for a client to reply to an initial AST (lock cancellation request). Default is 20 for an OST and 6 for an MDT. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts."),
 
-# "Lustre Timeouts"
-# =================
-'sys.timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a client waits for a server to complete an RPC. Default is 100. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts and Section 31.1.3: Adaptive Timeouts."),
-'sys.ldlm_timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a server will wait for a client to reply to an initial AST (lock cancellation request). Default is 20 for an OST and 6 for an MDT. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts."),
-
-# "Setting MDS and OSS Thread Counts"
-# ===================================
-# NB: there is also a 'thread_started' param here which is read only
-'mdt.MDS.mds.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'mdt.MDS.mds.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on a metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'mdt.MDS.mds_readpage.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'mdt.MDS.mds_readpage.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'mdt.MDS.mds_setattr.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'mdt.MDS.mds_setattr.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost_io.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost_io.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost_create.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
-'ost.OSS.ost_create.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    # "Setting MDS and OSS Thread Counts"
+    # ===================================
+    # NB: there is also a 'thread_started' param here which is read only
+    'mdt.MDS.mds.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'mdt.MDS.mds.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on a metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'mdt.MDS.mds_readpage.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'mdt.MDS.mds_readpage.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'mdt.MDS.mds_setattr.threads_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'mdt.MDS.mds_setattr.threads_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost_io.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost_io.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost_create.threads_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+    'ost.OSS.ost_create.threads_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
 
 
-# "HSM Configuration and Control"
-# =================
+    # "HSM Configuration and Control"
+    # =================
     'mdt.hsm_control': (MdtConfParam, EnumParam(['enabled', 'shutdown', 'disabled', 'purge']), "Controls if HSM is enabled for this MDT's filesystem. Values are \"enabled\", \"shutdown\", \"disabled\", or \"purge\". Default is \"disabled\". In the \"Lustre Operations Manual\", see Section XXX FIXME: HSM SOMETHING SOMETHING."),
 }
 
