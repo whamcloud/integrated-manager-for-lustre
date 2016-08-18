@@ -8,7 +8,7 @@
 check_for_autopass() {
     tests_required_for_gui_bumps="chroma-tests-services"
 
-    if gui_bump && [[ ! $tests_required_for_gui_bumps =~ $BUILD_JOB ]]; then
+    if gui_bump && [[ ! $tests_required_for_gui_bumps =~ $JOB_NAME ]]; then
       fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
       exit 0
     fi

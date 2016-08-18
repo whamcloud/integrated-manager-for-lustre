@@ -46,6 +46,9 @@ set_defaults() {
     set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
     export JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
     set -x
+
+    JOB_NAME=${JOB_NAME%%/*}
+    export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
     export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
     export BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
     export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
