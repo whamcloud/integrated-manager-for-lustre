@@ -271,7 +271,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     for step in job_steps:
                         if step['state'] == 'failed':
                             print "Step %s (%s) failed:" % (step['id'], step['description'])
-                            print step['console'].encode('ascii', 'replace')     # Sometimes unicode can upset unit-test
+                            print step['console']
                             print step['backtrace']
                             print ''
 

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -79,9 +79,9 @@ class Shell(object):
 
         try:
             p = subprocess.Popen(arg_list,
-                                 stdout = stdout_fd,
-                                 stderr = stderr_fd,
-                                 close_fds = True)
+                                 stdout=stdout_fd,
+                                 stderr=stderr_fd,
+                                 close_fds=True)
 
             # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
             # to poll the thread_state.teardown event as well as the completion of the subprocess.
@@ -102,13 +102,19 @@ class Shell(object):
                         p.kill()
                         stdout_fd.seek(0)
                         stderr_fd.seek(0)
-                        return cls.RunResult(254, stdout_fd.read(), stderr_fd.read(), True)
+                        return cls.RunResult(254,
+                                             stdout_fd.read().decode('ascii', 'ignore'),
+                                             stderr_fd.read().decode('ascii', 'ignore'),
+                                             True)
                     elif wait < max_wait:
                         wait *= 2.0
                 else:
                     stdout_fd.seek(0)
                     stderr_fd.seek(0)
-                    return cls.RunResult(rc, stdout_fd.read(), stderr_fd.read(), False)
+                    return cls.RunResult(rc,
+                                         stdout_fd.read().decode('ascii', 'ignore'),
+                                         stderr_fd.read().decode('ascii', 'ignore'),
+                                         False)
         finally:
             stdout_fd.close()
             stderr_fd.close()
