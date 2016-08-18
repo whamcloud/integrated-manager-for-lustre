@@ -65,12 +65,12 @@ server {
     }
 
     location /static/webhelp {
-        root {{APP_PATH}}/chroma_help;
+        alias {{APP_PATH}}/ui-modules/node_modules/intel-help-docs/;
 
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
 
-        index help_wrapper.html;
+        index index.html;
     }
 
     location /static {
