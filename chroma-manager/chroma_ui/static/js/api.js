@@ -199,7 +199,7 @@ var Api = function() {
     });
     message += "</dl>";
     message += "<p style='text-align: center'>"
-    message += "<a href='" + UI_ROOT + "'>Reload</a>"
+    message += "<a href='" + UI_ROOT + "' target='_top'>Reload</a>"
     message += "</p>"
 
     /* NB: we 'reload' them back to the base URL because a malformed URL is a possible
