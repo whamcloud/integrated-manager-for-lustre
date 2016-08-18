@@ -92,10 +92,18 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.set_state(host['lnet_configuration'], 'lnet_down')
         self.assertNoAlerts(host['lnet_configuration'], of_severity='ERROR')
 
-        # Raise all the alerts we can
+        # Raise target offline alerts
         self.set_state("/api/filesystem/%s/" % fs_id, 'available')
         for target in self.get_list("/api/target/"):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
+
+        self.wait_alerts(['TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'CorosyncNoPeersAlert'],
+                         active=True)
+
+        # Raise service stopped alerts
         self.remote_operations.stop_lnet(host['fqdn'])
         self.remote_operations.stop_pacemaker(host['fqdn'])
         self.remote_operations.stop_corosync(host['fqdn'])
