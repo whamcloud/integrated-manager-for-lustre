@@ -331,7 +331,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             }
         return self._standard_filesystem_layout
 
-    def create_filesystem_standard(self, test_servers):
+    def create_filesystem_standard(self, test_servers, name = 'testfs'):
         """Create a standard, basic filesystem configuration.
         One MGT, one MDT, in an active/active pair
         Two OSTs in an active/active pair"""
@@ -372,7 +372,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Create new filesystem
         return self.create_filesystem(
             {
-                'name': 'testfs',
+                'name': name,
                 'mgt': {'volume_id': self.standard_filesystem_layout['mgt']['volume']['id']},
                 'mdts': [{'volume_id': self.standard_filesystem_layout['mdt']['volume']['id'], 'conf_params': {}}],
                 'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [self.standard_filesystem_layout['ost1']['volume'], self.standard_filesystem_layout['ost2']['volume']]],
