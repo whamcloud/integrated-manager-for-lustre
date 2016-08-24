@@ -177,6 +177,13 @@ class VolumeResource(ChromaModelResource):
             # Not filtering on category
             pass
 
+        # FixMe Fix for orphaned Volumes should not be here should not exist.
+        # Sometimes a volume gets left as undeleted when all its volume nodes have become deleted
+        # This fixes that up, horrible and will be fixed at some point.
+        for volume in objects.all():
+            if len(volume.volumenode_set.all()) == 0:
+                volume.mark_deleted()
+
         try:
             try:
                 objects = objects.filter(Q(volumenode__primary = request.GET['primary']) & Q(volumenode__host__id = request.GET['host_id']))

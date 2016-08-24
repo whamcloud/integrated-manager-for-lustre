@@ -29,6 +29,7 @@ QUERIES_PER_FILESYSTEM_TARGET = 4  # queries per target when included in a files
 QUERIES_PER_VOLUME = 1  # queries per volume object when reading volumes
 QUERIES_PER_VOLUME_HOST = 1  # additional queries per-volume per-host
 QUERIES_TOTAL_UNDECORATED_LOGS = 5  # total queries to get all log messages (when they don't have any NIDs or targets)
+PAGING_AND_AUTH_QUERIES = 8
 
 
 class TestQueryScaling(ChromaApiTestCase):
@@ -81,9 +82,9 @@ class TestQueryScaling(ChromaApiTestCase):
 
         # Ignore samples[0], it was just to clear out any setup overhead from first call to API
 
-        #gradient between samples[1] and samples[2]
+        # gradient between samples[1] and samples[2]
         grad1 = (query_counts[samples[2]] - query_counts[samples[1]]) / (samples[2] - samples[1])
-        #gradient between samples[2] and samples[3]
+        # gradient between samples[2] and samples[3]
         grad2 = (query_counts[samples[3]] - query_counts[samples[2]]) / (samples[3] - samples[2])
 
         if grad1 == 0 and grad2 == 0:
@@ -190,7 +191,6 @@ class TestQueryScaling(ChromaApiTestCase):
         scaling_with_hosts = self._measure_scaling(create_n_hosts_fixed_volumes, VolumeResource, HostResource)
 
         self.assertIsInstance(scaling_with_hosts, Order1)
-        PAGING_AND_AUTH_QUERIES = 5
         self.assertEqual(scaling_with_hosts.query_count, PAGING_AND_AUTH_QUERIES + QUERIES_PER_VOLUME + (fixed_volume_count * QUERIES_PER_VOLUME_HOST))
 
     def _create_filesystem_n_osts(self, n_targets):
