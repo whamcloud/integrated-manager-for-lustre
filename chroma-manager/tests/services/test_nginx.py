@@ -113,12 +113,12 @@ class TestSecureUrls(NginxTestCase):
         csr = tempfile.NamedTemporaryFile()
 
         # A private key
-        self._openssl(['genrsa', '-out', server_key.name, '2048'])
+        self._openssl(['genrsa', '-out', server_key.name, '2048', '-sha256'])
         # A self signed cert
         self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority",
-                       "-key", server_key.name, "-out", csr.name])
+                       "-key", server_key.name, "-out", csr.name, "-sha256"])
         self._openssl(["x509", "-req", "-days", "36500", "-signkey", server_key.name,
-                       "-out", server_cert.name, "-in", csr.name])
+                       "-out", server_cert.name, "-in", csr.name, "-sha256"])
 
         return server_key.name, server_cert.name
 
@@ -128,12 +128,12 @@ class TestSecureUrls(NginxTestCase):
         client_csr = tempfile.NamedTemporaryFile()
 
         # Client key
-        self._openssl(['genrsa', '-out', client_key.name, '2048'])
+        self._openssl(['genrsa', '-out', client_key.name, '2048', '-sha256'])
         # Client CSR
         self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % client_cn,
-                       "-key", client_key.name, "-out", client_csr.name])
+                       "-key", client_key.name, "-out", client_csr.name, "-sha256"])
         # Generate client cert
-        self._openssl(["x509", "-req", "-days", "36500", "-CAkey", authority_key,
+        self._openssl(["x509", "-req", "-days", "36500", "-sha256", "-CAkey", authority_key,
                        "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
 
         return client_cert.name, client_key.name

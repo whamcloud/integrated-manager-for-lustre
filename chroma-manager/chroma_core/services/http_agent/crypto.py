@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -52,7 +52,7 @@ class Crypto(CommandLine):
     def _get_or_create_private_key(self, filename):
         if not os.path.exists(filename):
             self.log.info("Generating manager key file")
-            self.try_shell(['openssl', 'genrsa', '-out', filename, '2048'])
+            self.try_shell(['openssl', 'genrsa', '-out', filename, '2048', '-sha256'])
         return filename
 
     @property
@@ -68,8 +68,8 @@ class Crypto(CommandLine):
         Get the path to the authority certificate, or self-sign the authority key to generate one
         """
         if not os.path.exists(self.AUTHORITY_CERT_FILE):
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", self.authority_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-signkey", self.authority_key, "-out", self.AUTHORITY_CERT_FILE], stdin_text = csr)
+            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", self.authority_key])
+            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-signkey", self.authority_key, "-out", self.AUTHORITY_CERT_FILE], stdin_text = csr)
 
         return self.AUTHORITY_CERT_FILE
 
@@ -86,8 +86,8 @@ class Crypto(CommandLine):
             hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
 
             self.log.info("Generating manager certificate file")
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
+            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
+            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
 
             self.log.info("Generated %s" % self.MANAGER_CERT_FILE)
         return self.MANAGER_CERT_FILE
@@ -99,10 +99,10 @@ class Crypto(CommandLine):
     def sign(self, csr_string):
         self.log.info("Signing")
 
-        rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CAkey", self.authority_key, "-CA", self.authority_cert, "-CAcreateserial"], stdin_text = csr_string)
+        rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CAkey", self.authority_key, "-CA", self.authority_cert, "-CAcreateserial", "-sha256"], stdin_text = csr_string)
         return out.strip()
 
     def get_serial(self, cert_str):
-        rc, out, err = self.try_shell(['openssl', 'x509', '-serial', '-noout'], stdin_text = cert_str)
+        rc, out, err = self.try_shell(['openssl', 'x509', '-serial', '-noout', '-sha256'], stdin_text = cert_str)
         # Output like "serial=foo"
         return out.strip().split("=")[1]
