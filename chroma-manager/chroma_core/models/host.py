@@ -1584,6 +1584,7 @@ class UpdateNidsJob(HostListMixin):
         from chroma_core.models.target import MountStep
         from chroma_core.models.target import UnmountStep
         from chroma_core.models.target import FilesystemMember
+        from chroma_core.models.target import MakeTargetActiveStep
 
         filesystems, targets = self._targets_on_hosts()
 
@@ -1591,6 +1592,8 @@ class UpdateNidsJob(HostListMixin):
         for target in targets:
             target = target.downcast()
             primary_tm = target.managedtargetmount_set.get(primary = True)
+            steps.append((MakeTargetActiveStep,
+                          MakeTargetActiveStep.create_parameters(target, primary_tm.host)))
             steps.append((WriteConfStep, {
                 'target': target,
                 'path': primary_tm.volume_node.path,
