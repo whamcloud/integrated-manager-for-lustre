@@ -301,6 +301,7 @@ class ServiceConfig(CommandLine):
         crypto = Crypto()
         # The server_cert attribute is created on read
         crypto.server_cert
+        crypto.client_cert
 
     CONTROLLED_SERVICES = ['chroma-supervisor', 'nginx']
 

@@ -37,6 +37,9 @@ class Crypto(CommandLine):
     MANAGER_KEY_FILE = os.path.join(settings.CRYPTO_FOLDER, 'manager.pem')
     MANAGER_CERT_FILE = os.path.join(settings.CRYPTO_FOLDER, 'manager.crt')
 
+    CLIENT_KEY_FILE = os.path.join(settings.CRYPTO_FOLDER, 'client.pem')
+    CLIENT_CERT_FILE = os.path.join(settings.CRYPTO_FOLDER, 'client.crt')
+
     # The local CA used for issuing certificates to agents, and
     # for signing the manager cert if an externally signed cert
     # is not provided
@@ -53,6 +56,17 @@ class Crypto(CommandLine):
         if not os.path.exists(filename):
             self.log.info("Generating manager key file")
             self.try_shell(['openssl', 'genrsa', '-out', filename, '2048', '-sha256'])
+        return filename
+
+    def _get_or_create_certificate(self, filename, key):
+        if not os.path.exists(filename):
+            hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
+
+            self.log.info("Generating %s" % filename)
+            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", key])
+            self.try_shell(["openssl", 'x509', "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", filename], stdin_text = csr)
+            self.log.info("Generated %s" % filename)
+
         return filename
 
     @property
@@ -79,18 +93,15 @@ class Crypto(CommandLine):
 
     @property
     def server_cert(self):
-        if not os.path.exists(self.MANAGER_CERT_FILE):
-            # Determine what domain name HTTP clients will
-            # be using to access me, and bake that into my
-            # certificate (using SERVER_HTTP_URL re
-            hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
+        return self._get_or_create_certificate(self.MANAGER_CERT_FILE, self.server_key)
 
-            self.log.info("Generating manager certificate file")
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
+    @property
+    def client_key(self):
+        return self._get_or_create_private_key(self.CLIENT_KEY_FILE)
 
-            self.log.info("Generated %s" % self.MANAGER_CERT_FILE)
-        return self.MANAGER_CERT_FILE
+    @property
+    def client_cert(self):
+        return self._get_or_create_certificate(self.CLIENT_CERT_FILE, self.client_key)
 
     def get_common_name(self, csr_string):
         rc, out, err = self.try_shell(['openssl', 'req', '-noout', '-subject'], stdin_text = csr_string)
