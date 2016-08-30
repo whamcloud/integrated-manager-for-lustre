@@ -54,7 +54,7 @@ class Command(BaseCommand):
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL
         }
 
-        source_map_glob = os.path.join(SITE_ROOT, "chroma_ui", "static", "chroma_ui", "built*.map")
+        source_map_glob = os.path.join(SITE_ROOT, "ui-modules", "node_modules", "@iml", "gui", "dist", "built*.map")
         source_map_paths = glob.glob(source_map_glob)
 
         if source_map_paths:

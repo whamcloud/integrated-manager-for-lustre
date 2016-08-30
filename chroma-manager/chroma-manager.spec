@@ -345,8 +345,6 @@ fi
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
-%{manager_root}/chroma_ui/templates/*
-%{manager_root}/chroma_ui/static/*
 %{manager_root}/ui-modules/node_modules/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*

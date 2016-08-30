@@ -32,7 +32,7 @@ server {
     gzip_comp_level 2;
 
     location /favicon.ico {
-      alias {{APP_PATH}}/chroma_ui/static/images/intel.ico;
+      alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist/source/intel.ico;
     }
 
     location /certificate/ {
@@ -50,27 +50,6 @@ server {
         return 301 https://$http_host/ui;
     }
 
-    location ~ /static/chroma_ui/styles/imports-.+\.css {
-        root {{APP_PATH}}/chroma_ui;
-        gzip on;
-        gzip_types text/css;
-        etag on;
-
-        expires 1y;
-        add_header Cache-Control "public";
-    }
-
-    location ~ /static/chroma_ui/built-.+\.js {
-        root {{APP_PATH}}/chroma_ui;
-
-        gzip on;
-        gzip_types application/x-javascript application/javascript text/javascript application/json;
-        etag on;
-
-        expires 1y;
-        add_header Cache-Control "public";
-    }
-
     location /static/webhelp {
         alias {{APP_PATH}}/ui-modules/node_modules/intel-help-docs/;
 
@@ -80,8 +59,23 @@ server {
         index index.html;
     }
 
-    location /static {
-        root {{APP_PATH}}/chroma_ui;
+    location /gui {
+        alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist;
+        
+        etag on;
+        expires 1y;
+        add_header Cache-Control "public";
+      
+        gzip on;
+        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
+    }
+
+    location /old-gui {
+        alias {{APP_PATH}}/ui-modules/node_modules/@iml/old-gui/static;
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control "public";
 
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;

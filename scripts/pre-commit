@@ -92,8 +92,7 @@ CHECKS = [
         'output': 'Checking boilerplate...',
         'command': 'scripts/boilerplate.py test %s',
         'match_files': [
-            '.*\.py$',
-            '.*chroma_ui/static/js/.*\.js$'
+            '.*\.py$'
         ],
         'ignore_files': [
             '.*/chroma-manager/r3d/prettytable.py',
@@ -106,7 +105,6 @@ CHECKS = [
             '.*/tests/.*.py',
             '.*/manage.py',
             '.*/BUILD/.*',
-            '.*chroma_ui/static/js/lib/.*\.js$',
             '.*/chroma-externals/.*',
         ],
         'print_filename': True
@@ -115,68 +113,6 @@ CHECKS = [
 
 DJANGO_PROJECTS = ['chroma-manager']
 
-local_node_modules_dir = 'chroma-manager/chroma_ui_new/gulp/node_modules'
-
-jshint_bin_dir = local_node_modules_dir + '/gulp-jshint/node_modules/jshint/bin'
-
-JS_QUALITY_FILES = {
-    'match_files': [
-        '.*/chroma_ui/static/js/.+/[^/]+\.js$',
-        '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
-        '.*/chroma_ui/static/js/app.js$',
-        '.*/chroma_ui/static/js/constants.js$',
-        '.*/ui-modules/.*\.js$'
-    ],
-    'ignore_files': [
-        '.*/chroma_ui/static/js/lib/.*',
-        '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
-        '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
-        '.*/chroma_ui_new/karma.*\.conf\.js',
-        '.*/chroma_ui_new/test/matchers/matchers\.js',
-        '.*/chroma-manager/chroma_ui_new/node_modules/.*',
-        '.*/chroma-manager/chroma_ui_new/gulp/node_modules/.*',
-        '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
-    ]
-
-}
-
-JS_HINT_CHECK = {
-        'output': 'Running JSHint...',
-        'command': jshint_bin_dir + '/jshint %s',
-        'print_filename': True,
-    }
-JS_HINT_CHECK.update(JS_QUALITY_FILES)
-
-jscs_bin_dir = local_node_modules_dir + '/gulp-jscs/node_modules/jscs/bin'
-
-jscs_command = '%s/%s/jscs' % (os.path.dirname(os.path.dirname(os.path.realpath(__file__))), jscs_bin_dir)
-
-JS_CS_CHECK = {
-        'output': 'Running JSCS...',
-        'command': jscs_command + ' %s -r inline',
-        'print_filename': False,
-        'use_dirname_cwd': True
-    }
-JS_CS_CHECK.update(JS_QUALITY_FILES)
-
-has_js_hint = spawn.find_executable('jshint', path=jshint_bin_dir)
-
-has_js_cs = spawn.find_executable('jscs', path=jscs_bin_dir)
-
-has_node_js = spawn.find_executable('node')
-
-(CHECKS if has_js_hint and has_node_js else DISABLED_CHECKS).append(JS_HINT_CHECK)
-
-(CHECKS if has_js_cs and has_node_js else DISABLED_CHECKS).append(JS_CS_CHECK)
-
-if not has_js_hint:
-    print "WARNING: skipping JSHint check"
-
-if not has_js_cs:
-    print "WARNING: skipping JSCS check"
-
-if not has_node_js:
-    print "WARNING: skipping SEMVER check"
 
 def matches_file(file_name, match_files):
     return any(re.compile(match_file).match(file_name) for match_file in match_files)

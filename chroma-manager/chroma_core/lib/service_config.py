@@ -579,14 +579,6 @@ class ServiceConfig(CommandLine):
         else:
             log.info("User accounts already created")
 
-        # FIXME: we do this here because running management commands requires a working database,
-        # but that shouldn't be so (ideally the /static/ dir would be built into the RPM)
-        # (Django ticket #17656)
-        log.info("Building static directory...")
-        args = ['', 'collectstatic', '--noinput']
-        if not self.verbose:
-            args = args + ["--verbosity", "0"]
-        ManagementUtility(args).execute()
         return error
 
     def setup(self, username, password, ntp_server, check_db_space):

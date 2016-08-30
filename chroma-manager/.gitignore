@@ -6,5 +6,4 @@ set_state.prof
 *.crt
 *.pem
 *.stamp
-chroma_ui/templates/new/*
 dev_nginx

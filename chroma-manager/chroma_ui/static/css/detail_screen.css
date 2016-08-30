@@ -1,9 +1,0 @@
-div.detail_screen div[command-dropdown] {
-  display: inline-block;
-  vertical-align: top;
-  margin-top: 3px;
-}
-
-div.detail_screen div.hide[command-dropdown] {
-  display: none;
-}

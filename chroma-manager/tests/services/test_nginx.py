@@ -51,10 +51,10 @@ class TestInsecureUrls(NginxTestCase):
         self.assertEqual(response.headers['location'], without_slash + "/")
 
     def test_simple_access(self):
-        """Test passthrough for /api/, /static/"""
+        """Test passthrough for /api/, /old-gui/"""
 
         response = requests.get(
-            "https://localhost:%s/static/images/intel-logo-white-trans-80x31.png" % settings.HTTPS_FRONTEND_PORT,
+            "https://localhost:%s/old-gui/js/router.js" % settings.HTTPS_FRONTEND_PORT,
             verify=False)
         self.assertEqual(response.status_code, 200)
 
