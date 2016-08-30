@@ -2,6 +2,8 @@ include ../include/Makefile.version
 
 NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
 
+NPM_VERSION ?= 3.10.6
+
 ARCH := $(shell echo $$(uname -m))
 
 # Fixup proxies if needed
@@ -72,10 +74,10 @@ $(HOME)/.node-gyp:
 	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
 
 npm: $(HOME)/.node-gyp
-ifneq ($(NPM), 3.10.5)
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-3.10.5.tgz > /tmp/npm-3.10.5.tgz
-	tar -xzf /tmp/npm-3.10.5.tgz -C /tmp/
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-3.10.5.tgz -d
+ifneq ($(NPM), $(NPM_VERSION))
+	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
+	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
+	/tmp/package/bin/npm-cli.js install -g /tmp/npm-$(NPM_VERSION).tgz -d
 endif
 
 ui-modules: npm
