@@ -25,14 +25,9 @@ import platform
 import abc
 from collections import defaultdict
 from collections import namedtuple
-from . import util
 
-# Temporary hack to enable service_control to be located in chroma-common
-# we shouldn't be aware of Agent within common code
-try:
-    from chroma_agent.lib.shell import AgentShell
-except ImportError:
-    from .shell import Shell as AgentShell
+from . import util
+from . import shell
 
 
 class ServiceControl(object):
@@ -208,12 +203,12 @@ class ServiceControlEL6(ServiceControl):
     @property
     def running(self):
         # Returns True if the service is running. "service servicename status"
-        return AgentShell.run(['/sbin/service', self.service_name, 'status'])[0] == 0
+        return shell.Shell.run(['/sbin/service', self.service_name, 'status']).rc == 0
 
     @property
     def enabled(self):
         # Returns True if the service is enabled. "chkconfig servicename"
-        return AgentShell.run(['/sbin/chkconfig', self.service_name])[0] == 0
+        return shell.Shell.run(['/sbin/chkconfig', self.service_name]).rc == 0
 
     @classmethod
     def _applicable(cls):
@@ -225,20 +220,20 @@ class ServiceControlEL6(ServiceControl):
         pass
 
     def enable(self):
-        return AgentShell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name]) or\
-               AgentShell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'on'])
+        return shell.Shell.run_canned_error_message(['/sbin/chkconfig', '--add', self.service_name]) or \
+               shell.Shell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'on'])
 
     def reload(self):
-        return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'reload'])
+        return shell.Shell.run_canned_error_message(['/sbin/service', self.service_name, 'reload'])
 
     def disable(self):
-        return AgentShell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'off'])
+        return shell.Shell.run_canned_error_message(['/sbin/chkconfig', self.service_name, 'off'])
 
     def _start(self):
-        return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'start'])
+        return shell.Shell.run_canned_error_message(['/sbin/service', self.service_name, 'start'])
 
     def _stop(self):
-        return AgentShell.run_canned_error_message(['/sbin/service', self.service_name, 'stop'])
+        return shell.Shell.run_canned_error_message(['/sbin/service', self.service_name, 'stop'])
 
 
 class ServiceControlEL7(ServiceControl):
@@ -248,12 +243,12 @@ class ServiceControlEL7(ServiceControl):
     @property
     def running(self):
         # Returns True if the service is running.
-        return AgentShell.run(['systemctl', 'is-active', self.service_name])[0] == 0
+        return shell.Shell.run(['systemctl', 'is-active', self.service_name]).rc == 0
 
     @property
     def enabled(self):
         # Returns True if the service is enabled.
-        return AgentShell.run(['systemctl', 'is-enabled', self.service_name])[0] == 0
+        return shell.Shell.run(['systemctl', 'is-enabled', self.service_name]).rc == 0
 
     @classmethod
     def _applicable(cls):
@@ -262,22 +257,22 @@ class ServiceControlEL7(ServiceControl):
 
     @classmethod
     def daemon_reload(cls):
-        AgentShell.run(['systemctl', 'daemon-reload'])
+        shell.Shell.run(['systemctl', 'daemon-reload'])
 
     def enable(self):
-        return AgentShell.run_canned_error_message(['systemctl', 'enable', self.service_name])
+        return shell.Shell.run_canned_error_message(['systemctl', 'enable', self.service_name])
 
     def reload(self):
-        return AgentShell.run_canned_error_message(['systemctl', 'reload', self.service_name])
+        return shell.Shell.run_canned_error_message(['systemctl', 'reload', self.service_name])
 
     def disable(self):
-        return AgentShell.run_canned_error_message(['systemctl', 'disable', self.service_name])
+        return shell.Shell.run_canned_error_message(['systemctl', 'disable', self.service_name])
 
     def _start(self):
-        return AgentShell.run_canned_error_message(['systemctl', 'start', self.service_name])
+        return shell.Shell.run_canned_error_message(['systemctl', 'start', self.service_name])
 
     def _stop(self):
-        return AgentShell.run_canned_error_message(['systemctl', 'stop', self.service_name])
+        return shell.Shell.run_canned_error_message(['systemctl', 'stop', self.service_name])
 
 
 class ServiceControlOSX(ServiceControlEL6):

@@ -135,7 +135,7 @@ class BlockDevices(DeviceHelper):
             raise RuntimeError("Unabled to find scsi_id")
 
         def scsi_id_command(cmd):
-            rc, out, err = AgentShell.run(cmd)
+            rc, out, err = AgentShell.run_old(cmd)
             if rc:
                 return None
             else:

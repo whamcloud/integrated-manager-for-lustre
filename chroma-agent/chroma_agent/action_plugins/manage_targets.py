@@ -132,7 +132,7 @@ def get_resource_locations():
     """Parse `crm_mon -1` to identify where (if anywhere)
        resources (i.e. targets) are running."""
 
-    rc, lines_text, stderr = AgentShell.run(["crm_mon", "-1", "-r"])
+    rc, lines_text, stderr = AgentShell.run_old(["crm_mon", "-1", "-r"])
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
         return {"crm_mon_error": {"rc": rc,
@@ -347,7 +347,7 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     if primary:
         # If the target already exists with the same params, skip.
         # If it already exists with different params, that is an error
-        rc, stdout, stderr = AgentShell.run(["crm_resource", "-r", ha_label, "-g", "target"])
+        rc, stdout, stderr = AgentShell.run_old(["crm_resource", "-r", ha_label, "-g", "target"])
         if rc == 0:
             info = _get_target_config(stdout.rstrip("\n"))
             if info['bdev'] == device and info['mntpt'] == mount_point:
@@ -411,7 +411,7 @@ def _get_nvpairid_from_xml(xml_string):
 def _query_ha_targets():
     targets = {}
 
-    rc, stdout, stderr = AgentShell.run(['crm_resource', '-l'])
+    rc, stdout, stderr = AgentShell.run_old(['crm_resource', '-l'])
     if rc == 234:
         return targets
     elif rc != 0:
@@ -535,7 +535,7 @@ def start_target(ha_label):
         _wait_target(ha_label, True)
 
         # and make sure it didn't start but (the RA) fail(ed)
-        rc, stdout, stderr = AgentShell.run(['crm_mon', '-1'])
+        rc, stdout, stderr = AgentShell.run_old(['crm_mon', '-1'])
 
         failed = True
         for line in stdout.split("\n"):
@@ -598,7 +598,7 @@ def _move_target(target_label, dest_node):
     # that everything is clean before we start.
     AgentShell.try_run(['crm_resource', '--resource', target_label, '--cleanup'])
 
-    result = AgentShell.run_new(arg_list)
+    result = AgentShell.run(arg_list)
 
     if result.rc != 0:
         return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list), result.stdout, result.stderr)

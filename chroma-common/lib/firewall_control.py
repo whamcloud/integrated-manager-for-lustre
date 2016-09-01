@@ -25,7 +25,7 @@ import abc
 from collections import namedtuple
 from . import util
 import re
-from .shell import Shell
+from ..lib import shell
 
 
 class FirewallControl(object):
@@ -181,7 +181,7 @@ class FirewallControlEL6(FirewallControl):
             raise RuntimeError('invalid mode: %s' % op)
 
         cmdlist = ''
-        rc, stdout, stderr, timeout = Shell.run(['service', 'iptables', 'status'])
+        rc, stdout, stderr, timeout = shell.Shell.run(['service', 'iptables', 'status'])
         if rc == 0 and stdout != """Table: filter
 Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination
@@ -226,7 +226,7 @@ num  target     prot opt source               destination
 
             cmdlist = ['/sbin/iptables', op_arg, chain]
             cmdlist.extend(args_in)
-            rc, stdout, stderr, timeout = Shell.run(cmdlist)
+            rc, stdout, stderr, timeout = shell.Shell.run(cmdlist)
 
             if rc:
                 return stderr or stdout or 'iptables returned unexpected error!'
@@ -251,7 +251,7 @@ num  target     prot opt source               destination
         """ EL6 implementation of opening port on firewall using linux shell """
         # XXX using -n and installing the rule manually here is a dirty hack due to lokkit
         # completely restarting the firewall interrupts existing sessions
-        error = Shell.run_canned_error_message(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port,
+        error = shell.Shell.run_canned_error_message(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port,
                                                                                            proto)])
         if error:
             return error
@@ -297,7 +297,7 @@ num  target     prot opt source               destination
 
     def _add_address(self, daddress, proto):
         """EL6 implementation of opening all ports to a specific destination address on firewall
-        using linux shell. Note that currently this doesn't check for exact duplicates before
+        using linux shell.Shell. Note that currently this doesn't check for exact duplicates before
         adding
         """
         return self.iptables('add', 'INPUT', ['4', '-m', 'state', '--state', 'NEW', '-m',
@@ -330,7 +330,7 @@ class FirewallControlEL7(FirewallControl):
         """
         arg_list = ['/usr/bin/firewall-cmd', '--%s-port=%s/%s' % (act, port, proto)]
 
-        result = Shell.run(arg_list)
+        result = shell.Shell.run(arg_list)
 
         if result.rc:
             if result.rc == self.not_running_rc:
@@ -342,7 +342,7 @@ class FirewallControlEL7(FirewallControl):
         if result.stdout == self.duplicate_msg:
             return self.SuccessCode.DUPLICATE
 
-        error = Shell.run_canned_error_message(arg_list + ['--permanent'])
+        error = shell.Shell.run_canned_error_message(arg_list + ['--permanent'])
 
         return error or self.SuccessCode.UPDATED
 
@@ -360,11 +360,11 @@ class FirewallControlEL7(FirewallControl):
                          % (daddress, proto)
 
         # when constructing the "rich rule" instruction parameter for firewall-cmd we don't have
-        # to encapsulate the rule spec in single quotes as you would in bash because Shell.run
+        # to encapsulate the rule spec in single quotes as you would in bash because shell.Shell.run
         # implicitly assumes it is a value for a single keyword argument
         arg_list = ['/usr/bin/firewall-cmd', '--%s-rich-rule=%s' % (act, rich_rule_spec)]
 
-        result = Shell.run(arg_list)
+        result = shell.Shell.run(arg_list)
 
         if result.rc:
             if result.rc == self.not_running_rc:

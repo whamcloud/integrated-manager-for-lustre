@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from ..lib.shell import Shell
+from ..lib import shell
 from ..lib import util
 import abc
 
@@ -91,13 +91,13 @@ class FileSystem(object):
         """ :return: Mount the file system, raise an exception on error. """
         self._initialize_modules()
 
-        return Shell.try_run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
+        return shell.Shell.try_run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
 
     def umount(self):
         """ :return: Umount the file system, raise an exception on error. """
         self._initialize_modules()
 
-        return Shell.try_run(["umount", self._device_path])
+        return shell.Shell.try_run(["umount", self._device_path])
 
     def mount_path(self, target_name):
         """

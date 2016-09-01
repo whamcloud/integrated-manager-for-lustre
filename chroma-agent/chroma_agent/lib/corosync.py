@@ -443,6 +443,6 @@ class CorosyncRingInterface(object):
 
 
 def corosync_running():
-    rc, stdout, stderr = AgentShell.run(['service', 'corosync', 'status'])
+    rc, stdout, stderr = AgentShell.run_old(['service', 'corosync', 'status'])
 
     return rc == 0

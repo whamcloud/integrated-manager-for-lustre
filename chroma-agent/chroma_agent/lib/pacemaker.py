@@ -288,7 +288,7 @@ def cibadmin(command_args, timeout=120):
     # subprocess after a timeout. We'd need more invasive changes to
     # shell._run() for that.
     for _ in util.wait(timeout):
-        result = AgentShell.run_new(command_args)
+        result = AgentShell.run(command_args)
 
         if result.rc == 0:
             return result
@@ -307,6 +307,6 @@ def cibadmin(command_args, timeout=120):
 
 
 def pacemaker_running():
-    result = AgentShell.run_new(['service', 'pacemaker', 'status'])
+    result = AgentShell.run(['service', 'pacemaker', 'status'])
 
     return result.rc == 0

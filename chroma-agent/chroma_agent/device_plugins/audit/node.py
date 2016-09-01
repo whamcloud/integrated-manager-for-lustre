@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -74,7 +74,7 @@ class NodeAudit(BaseAudit, FileSystemMixin):
 
         If the fetched property is expensive to compute, it should be cached / updated less frequently.
         """
-        zfs_not_installed, stdout, stderr = AgentShell.run(['which', 'zfs'])
+        zfs_not_installed, stdout, stderr = AgentShell.run_old(['which', 'zfs'])
 
         return {'zfs_installed': not zfs_not_installed,
                 'distro': platform.linux_distribution()[0],

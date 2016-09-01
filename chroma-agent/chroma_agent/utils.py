@@ -107,7 +107,7 @@ def lsof(pid=None, file=None):
     pids = defaultdict(dict)
     current_pid = None
 
-    rc, stdout, stderr = AgentShell.run(lsof_args)
+    rc, stdout, stderr = AgentShell.run_old(lsof_args)
     if rc != 0:
         if stderr:
             raise RuntimeError(stderr)

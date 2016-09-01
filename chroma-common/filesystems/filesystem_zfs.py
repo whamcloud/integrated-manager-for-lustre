@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from ..lib.shell import Shell
+from ..lib import shell
 from ..blockdevices.blockdevice_zfs import BlockDeviceZfs
 from filesystem import FileSystem
 
@@ -64,7 +64,7 @@ class FileSystemZfs(FileSystem, BlockDeviceZfs):
 
         new_path = self.mount_path(target_name)
 
-        Shell.try_run(["mkfs.lustre"] + options + [new_path])
+        shell.Shell.try_run(["mkfs.lustre"] + options + [new_path])
 
         return {'uuid': BlockDeviceZfs('zfs', new_path).uuid,
                 'filesystem_type': self.filesystem_type,

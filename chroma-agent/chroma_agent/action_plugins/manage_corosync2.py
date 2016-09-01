@@ -134,7 +134,7 @@ def _nodes_in_cluster():
     :return: a list of all nodes in cluster
     """
     nodes = []
-    result = AgentShell.run_new(['pcs', 'status', 'nodes', 'corosync'])
+    result = AgentShell.run(['pcs', 'status', 'nodes', 'corosync'])
 
     if result.rc != 0:
         # log all command errors but always continue to remove node from cluster
@@ -180,7 +180,7 @@ def unconfigure_corosync2(host_fqdn, mcast_port):
     # Detect if we are the only node in the cluster, we want to do this before next command removes conf file
     cluster_nodes = _nodes_in_cluster()
 
-    result = AgentShell.run_new(['pcs', '--force', 'cluster', 'node', 'remove', host_fqdn])
+    result = AgentShell.run(['pcs', '--force', 'cluster', 'node', 'remove', host_fqdn])
 
     if result.rc != 0:
         if 'No such file or directory' in result.stderr:

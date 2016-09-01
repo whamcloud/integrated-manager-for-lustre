@@ -103,7 +103,7 @@ class CorosyncPlugin(DevicePlugin):
         """
 
         crm_command = ['crm_mon', '--one-shot', '--as-xml']
-        rc, stdout, stderr = AgentShell.run(crm_command)
+        rc, stdout, stderr = AgentShell.run_old(crm_command)
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
             daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
                                (rc, crm_command, stdout, stderr))

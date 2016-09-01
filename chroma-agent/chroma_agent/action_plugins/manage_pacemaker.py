@@ -55,7 +55,7 @@ def _get_cluster_size():
     # you'd think there'd be a way to query the value of a property
     # such as "expected-quorum-votes" but there does not seem to be, so
     # just count nodes instead
-    rc, stdout, stderr = AgentShell.run(["crm_node", "-l"])
+    rc, stdout, stderr = AgentShell.run_old(["crm_node", "-l"])
 
     if not stdout:
         return 0
@@ -152,8 +152,8 @@ def _do_configure_pacemaker(pc):
         cibadmin(["--create", "-o", "resources", "-X",
                   "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
     except Exception as e:
-        rc, stdout, stderr = AgentShell.run(['crm_resource', '--locate',
-                                             '--resource', "st-fencing"])
+        rc, stdout, stderr = AgentShell.run_old(['crm_resource', '--locate',
+                                                 '--resource', "st-fencing"])
         if rc == 0:                     # no need to do the rest if another member is already doing it
             return None
         else:
@@ -252,7 +252,7 @@ def unconfigure_fencing():
 
 
 def delete_node(nodename):
-    rc, stdout, stderr = AgentShell.run(['crm_node', '-l'])
+    rc, stdout, stderr = AgentShell.run_old(['crm_node', '-l'])
     node_id = None
     for line in stdout.split('\n'):
         node_id, name, status = line.split(" ")

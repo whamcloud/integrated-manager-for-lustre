@@ -27,7 +27,7 @@ from collections import defaultdict
 from tempfile import mktemp
 
 from blockdevice import BlockDevice
-from ..lib.shell import Shell
+from ..lib import shell
 
 
 class BlockDeviceLinux(BlockDevice):
@@ -42,9 +42,9 @@ class BlockDeviceLinux(BlockDevice):
     def _initialize_modules(self):
         if not self._modules_initialized:
             try:                                            # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
-                Shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
-            except Shell.CommandExecutionError:
-                Shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
+                shell.Shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the osd module during mkfs.lustre
+            except shell.Shell.CommandExecutionError:
+                shell.Shell.try_run(['modprobe', 'ldiskfs'])      # TEI-469: Race loading the ldiskfs module during mkfs.lustre
 
             self._modules_initialized = True
 
@@ -75,7 +75,7 @@ class BlockDeviceLinux(BlockDevice):
         return self._blkid_value("UUID")
 
     def _blkid_value(self, value):
-        result = Shell.run(["blkid", "-p", "-o", "value", "-s", value, self._device_path])
+        result = shell.Shell.run(["blkid", "-p", "-o", "value", "-s", value, self._device_path])
 
         if result.rc == 2:
             # blkid returns 2 if there is no filesystem on the device
@@ -107,7 +107,7 @@ class BlockDeviceLinux(BlockDevice):
 
         log.info("Searching Lustre logs for filesystems")
 
-        ls = Shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", self._device_path])
+        ls = shell.Shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", self._device_path])
         filesystems = []
         targets = []
         for line in ls.split("\n"):
@@ -163,7 +163,7 @@ class BlockDeviceLinux(BlockDevice):
         log.info("Reading log for %s:%s from log %s" % (conf_param_type, conf_param_name, log_name))
 
         try:
-            Shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), self._device_path])
+            shell.Shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), self._device_path])
             if not os.path.exists(tmpfile) or os.path.getsize(tmpfile) == 0:
                 # debugfs returns 0 whether it succeeds or not, find out whether
                 # dump worked by looking for output file of some length. (LU-632)
@@ -238,7 +238,7 @@ class BlockDeviceLinux(BlockDevice):
 
         log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
 
-        result = Shell.run(["tunefs.lustre", "--dryrun", device['path']])
+        result = shell.Shell.run(["tunefs.lustre", "--dryrun", device['path']])
         if result.rc != 0:
             log.info("Device %s did not have a Lustre filesystem on it" % device['path'])
             return self.TargetsInfo([], None)
@@ -279,7 +279,7 @@ class BlockDeviceLinux(BlockDevice):
          :param log: The logger to use for log messages.
          :return: None on success or error message
          """
-        shell_result = Shell.run(["debugfs", "-w", "-R", "ls -l CONFIGS/", self._device_path])
+        shell_result = shell.Shell.run(["debugfs", "-w", "-R", "ls -l CONFIGS/", self._device_path])
 
         if shell_result.rc != 0:
             return "Purge filesystem failed to interrogate ldiskfs device %s, error was %s" % \
@@ -298,7 +298,7 @@ class BlockDeviceLinux(BlockDevice):
         log.info("Purging config files: %s" % victims)
 
         for victim in victims:
-            shell_result = Shell.run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, self._device_path])
+            shell_result = shell.Shell.run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, self._device_path])
 
             if shell_result.rc != 0:
                 return "Purge filesystem failed to purge %s from ldiskfs device %s, error was %s" % \

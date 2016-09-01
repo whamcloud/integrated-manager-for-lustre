@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -72,7 +72,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     # 1 in 50 (estimate) times. yum commands are idempotent and so trying the command three
     # times has no downside and changes the estimated chance of fail to 1 in 12500.
     for hyd_3885 in range(2, -1, -1):
-        rc, stdout, stderr = AgentShell.run(cmd)
+        rc, stdout, stderr = AgentShell.run_old(cmd)
 
         if rc in valid_rc_values:
             return stdout

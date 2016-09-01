@@ -28,7 +28,7 @@ import time
 import warnings
 
 
-class Shell(object):
+class BaseShell(object):
     class CommandExecutionError(Exception):
         def __init__(self, result, command):
             self.result = result
@@ -135,7 +135,7 @@ class Shell(object):
 
         os.environ["TERM"] = ""
 
-        result = Shell._run(arg_list, logger, monitor_func, timeout)
+        result = cls._run(arg_list, logger, monitor_func, timeout)
 
         return result
 
@@ -145,10 +145,10 @@ class Shell(object):
         stdout string.
         """
 
-        result = Shell.run(arg_list, logger, monitor_func, timeout)
+        result = cls.run(arg_list, logger, monitor_func, timeout)
 
         if result.rc != 0:
-            raise Shell.CommandExecutionError(result, arg_list)
+            raise cls.CommandExecutionError(result, arg_list)
 
         return result.stdout
 
@@ -159,10 +159,24 @@ class Shell(object):
         :param args:
         :return: None if successful or canned user error message
         """
-        result = Shell.run(arg_list)
+        result = cls.run(arg_list)
 
         if result.rc != 0:
             return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list),
                                                            result.stdout, result.stderr)
 
         return None
+
+# By default Shell is this BaseShell class, and other chroma_common modules use BaseShell via Shell by default.
+# However consumers (namely the agent today) may change Shell to reference their own SubClass version and this will
+# mean that chroma_common consumers of Shell use the SubClass rather than the base.
+Shell = BaseShell
+
+
+def set_shell(new_shell_class):
+    """
+    Change the Shell the chroma_common (and any other referencers of Shell in this module) use for Shell commands
+    :param new_shell_class: The new Shell classs to use
+    """
+    global Shell
+    Shell = new_shell_class

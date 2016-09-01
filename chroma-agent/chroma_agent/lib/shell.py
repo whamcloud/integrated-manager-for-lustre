@@ -25,7 +25,8 @@ from StringIO import StringIO
 from copy import deepcopy
 import threading
 
-from chroma_agent.chroma_common.lib.shell import Shell
+from chroma_agent.chroma_common.lib.shell import BaseShell
+from chroma_agent.chroma_common.lib.shell import set_shell
 
 console_log = logging.getLogger('console')
 
@@ -71,7 +72,7 @@ class ResultStore(threading.local):
             })
 
 
-class AgentShell(Shell):
+class AgentShell(BaseShell):
     class SubprocessAborted(Exception):
         pass
 
@@ -90,7 +91,7 @@ class AgentShell(Shell):
             raise AgentShell.SubprocessAborted()
 
     @classmethod
-    def run_new(cls, arg_list):
+    def run(cls, arg_list):
         """
         Run a subprocess, and return a named tuple of rc, stdout, stderr.
         Record subprocesses run and their results in log.
@@ -106,9 +107,9 @@ class AgentShell(Shell):
         return result
 
     @classmethod
-    def run(cls, arg_list):
+    def run_old(cls, arg_list):
         """ This method is provided for backwards compatibility only, use run_new() in new code """
-        result = AgentShell.run_new(arg_list)
+        result = AgentShell.run(arg_list)
 
         return result.rc, result.stdout, result.stderr
 
@@ -116,7 +117,7 @@ class AgentShell(Shell):
     def try_run(cls, arg_list):
         """ Run a subprocess, and raise an exception if it returns nonzero.  Return stdout string. """
 
-        result = AgentShell.run_new(arg_list)
+        result = AgentShell.run(arg_list)
 
         if result.rc != 0:
             raise AgentShell.CommandExecutionError(result, arg_list)
@@ -130,9 +131,12 @@ class AgentShell(Shell):
 
         :return: None if successful or canned user error message
         """
-        result = AgentShell.run_new(arg_list)
+        result = AgentShell.run(arg_list)
 
         if result.rc != 0:
             return "Error (%s) running '%s': '%s' '%s'" % (result.rc, " ".join(arg_list), result.stdout, result.stderr)
 
         return None
+
+# We want chroma_common routines to use our AgentShell.
+set_shell(AgentShell)

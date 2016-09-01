@@ -23,7 +23,7 @@
 import os
 import re
 
-from ..lib.shell import Shell
+from ..lib import shell
 from filesystem import FileSystem
 from ..blockdevices.blockdevice_linux import BlockDeviceLinux
 
@@ -45,7 +45,7 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
     def label(self):
         self._initialize_modules()
 
-        blkid_output = Shell.try_run(['blkid', '-c/dev/null', '-o', 'value', '-s', 'LABEL', self._device_path])
+        blkid_output = shell.Shell.try_run(['blkid', '-c/dev/null', '-o', 'value', '-s', 'LABEL', self._device_path])
 
         return blkid_output.strip()
 
@@ -53,7 +53,7 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
     def inode_size(self):
         self._initialize_modules()
 
-        dumpe2fs_output = Shell.try_run(['dumpe2fs', '-h', self._device_path])
+        dumpe2fs_output = shell.Shell.try_run(['dumpe2fs', '-h', self._device_path])
 
         return int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
@@ -61,30 +61,30 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
     def inode_count(self):
         self._initialize_modules()
 
-        dumpe2fs_output = Shell.try_run(["dumpe2fs", "-h", self._device_path])
+        dumpe2fs_output = shell.Shell.try_run(["dumpe2fs", "-h", self._device_path])
 
         return int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
     def mount(self, mount_point):
         self._initialize_modules()
 
-        result = Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
+        result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
         if result.rc == self.RC_MOUNT_INPUT_OUTPUT_ERROR:
             # HYD-1040: Sometimes we should retry on a failed registration
-            result = Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
+            result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
         if result.rc != self.RC_MOUNT_SUCCESS:
             raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
     def umount(self):
-        return Shell.try_run(["umount", os.path.realpath(self._device_path)])
+        return shell.Shell.try_run(["umount", os.path.realpath(self._device_path)])
 
     def mkfs(self, target_name, options):
         self._initialize_modules()
 
-        Shell.try_run(['mkfs.lustre'] + options + [self._device_path])
+        shell.Shell.try_run(['mkfs.lustre'] + options + [self._device_path])
 
         return {'uuid': self.uuid,
                 'filesystem_type': self.filesystem_type,
