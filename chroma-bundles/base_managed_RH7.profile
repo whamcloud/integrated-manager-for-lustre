@@ -21,11 +21,10 @@
       "chroma-agent-management"
     ],
     "lustre": [
-      "lustre-osd-ldiskfs",
       "lustre",
-      "lustre-dkms",
+      "lustre-modules",
+      "lustre-osd-ldiskfs",
       "lustre-osd-zfs",
-      "lustre-osd-zfs-mount",
       "kernel-devel-3.10.0-327.28.2.el7_lustre"
     ],
     "zfs": [

@@ -55,24 +55,17 @@ zfs_installer() {
     cat <<EOF > install
 #!/bin/sh
 
-
-yum -y install rpm-build zlib-devel libuuid-devel gcc
-rpmbuild --rebuild spl-$ZFS_VERSION.$DISTRO.src.rpm
-rpmbuild --rebuild zfs-$ZFS_VERSION.$DISTRO.src.rpm
-_rpmdir=\$(rpm --eval %_rpmdir)
-dist=\$(rpm --eval %dist)
 yum -y install dkms-*.$DISTRO.noarch.rpm \
                zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
                lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
                lustre-osd-zfs-mount-[0-9]*.rpm lustre-[0-9]*.rpm \
                kernel-devel-\$(uname -r) kernel-headers-\$(uname -r) \
-               \$_rpmdir/x86_64/spl-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/libnvpair1-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/libuutil1-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/libzfs2-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/libzpool2-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/zfs-$ZFS_VERSION\$dist.x86_64.rpm \
-               \$_rpmdir/x86_64/zfs-dracut-$ZFS_VERSION\$dist.x86_64.rpm
+               spl-$ZFS_VERSION.$DISTRO.x86_64.rpm \
+               libnvpair1-$ZFS_VERSION.$DISTRO.x86_64.rpm \
+               libuutil1-$ZFS_VERSION.$DISTRO.x86_64.rpm \
+               libzfs2-$ZFS_VERSION.$DISTRO.x86_64.rpm \
+               libzpool2-$ZFS_VERSION.$DISTRO.x86_64.rpm \
+               zfs-$ZFS_VERSION.$DISTRO.x86_64.rpm
 EOF
 
 }

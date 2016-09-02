@@ -7,19 +7,15 @@ LUSTRE_KERNEL_RELEASE	 = $(KERNEL_RELEASE)_lustre.x86_64
 CHROMA_EXTERNALS_SUBDIR := zfs
 SRC_REPO		:= $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=$(DISTRO),ib_stack=inkernel/artifact/artifacts
 ALL_RPMS		:= zfs-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   zfs-$(ZFS_RELEASE).$(DISTRO_TAG).src.rpm \
-			   kmod-zfs-$(LUSTRE_KERNEL_RELEASE)-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 			   zfs-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm \
 			   spl-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   spl-$(ZFS_RELEASE).$(DISTRO_TAG).src.rpm \
 			   spl-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm \
-			   kmod-spl-$(LUSTRE_KERNEL_RELEASE)-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 			   libnvpair1-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 			   libuutil1-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 			   libzfs2-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 			   libzpool2-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm
 
-NO_REQUIREMENT		:= zfs zfs-dkms spl spl-dkms kmod-spl-$(LUSTRE_KERNEL_RELEASE) kmod-zfs-$(LUSTRE_KERNEL_RELEASE) \
+NO_REQUIREMENT		:= zfs zfs-dkms spl spl-dkms \
 			   libnvpair1 libuutil1 libzfs2 libzpool2
 
 $(INCLUDE_DIR)/Makefile.zfs_version-$(DISTRO): $(INCLUDE_DIR)/Makefile.lustre_build_meta.md5
