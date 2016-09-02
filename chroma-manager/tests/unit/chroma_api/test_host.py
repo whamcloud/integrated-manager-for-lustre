@@ -10,6 +10,7 @@ from chroma_core.models import Nid
 from chroma_core.models import ServerProfile, ServerProfileValidation
 from chroma_core.services.job_scheduler import job_scheduler_client
 from tests.unit.chroma_core.helpers import MockAgentRpc, create_host_ssh_patch, synthetic_host
+from tests.unit.chroma_core.helpers import create_targets_patch
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 
@@ -405,6 +406,21 @@ class TestHostResource(ChromaApiTestCase):
         content = json.loads(response.content)
         for object in content['objects']:
             self.assertEqual(len(object['host_profiles']['profiles']), 1)
+
+    @create_targets_patch
+    def test_select_by_filesystem(self):
+        """Test selecting host by filesystem with valid and invalid filesystem ids."""
+        self.create_simple_filesystem(synthetic_host('myserver'))
+
+        response = self.api_client.get('/api/host/', data={'filesystem_id': self.fs.id})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(1, len(content['objects']))
+
+        response = self.api_client.get('/api/host/', data={'filesystem_id': -1000})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(0, len(content['objects']))
 
 
 sample_private_key = """-----BEGIN RSA PRIVATE KEY-----

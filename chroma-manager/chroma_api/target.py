@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -28,7 +28,6 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 import settings
 from collections import defaultdict
 
-from django.shortcuts import get_object_or_404, Http404
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
@@ -379,10 +378,12 @@ class TargetResource(MetricResource, ConfParamResource):
            possible from build_filters because it only deals with kwargs to filter())"""
         objects = super(TargetResource, self).apply_filters(request, filters)
         try:
-            fs = get_object_or_404(ManagedFilesystem, pk = request.GET['filesystem_id'])
-            objects = objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
-        except Http404 as exc:
-            raise custom_response(self, request, http.HttpNotFound, {'filesystem': exc})
+            try:
+                fs = ManagedFilesystem.objects.get(pk=request.GET['filesystem_id'])
+            except ManagedFilesystem.DoesNotExist:
+                objects = objects.filter(id=-1)                       # No filesystem so we want to produce an empty list.
+            else:
+                objects = objects.filter((Q(managedmdt__filesystem=fs) | Q(managedost__filesystem=fs)) | Q(id=fs.mgs.id))
         except KeyError:
             # Not filtering on filesystem_id
             pass

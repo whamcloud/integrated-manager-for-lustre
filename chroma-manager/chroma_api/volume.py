@@ -198,9 +198,12 @@ class VolumeResource(ChromaModelResource):
             pass
 
         try:
-            fs = get_object_or_404(ManagedFilesystem,
-                                   pk = request.GET['filesystem_id'])
-            objects = objects.filter((Q(managedtarget__managedmdt__filesystem = fs) | Q(managedtarget__managedost__filesystem = fs)) | Q(managedtarget__id = fs.mgs.id))
+            try:
+                fs = ManagedFilesystem.objects.get(pk=request.GET['filesystem_id'])
+            except ManagedFilesystem.DoesNotExist:
+                objects = objects.filter(id=-1)                       # No filesystem so we want to produce an empty list.
+            else:
+                objects = objects.filter((Q(managedtarget__managedmdt__filesystem=fs) | Q(managedtarget__managedost__filesystem=fs)) | Q(managedtarget__id=fs.mgs.id))
         except KeyError:
             # Not filtering on filesystem_id
             pass

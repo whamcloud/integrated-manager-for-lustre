@@ -2,6 +2,7 @@ import json
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
+from tests.unit.chroma_core.helpers import create_targets_patch
 from chroma_core.models import VolumeNode
 
 
@@ -39,3 +40,18 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
 
         VolumeNode.objects.filter(host_id=host1.id).delete()
         self.assertEqual(0, len(self._get_volumes(host1.id)))
+
+    @create_targets_patch
+    def test_select_by_filesystem(self):
+        """Test selecting host by filesystem with valid and invalid filesystem ids."""
+        self.create_simple_filesystem(synthetic_host('myserver'))
+
+        response = self.api_client.get('/api/volume/', data={'filesystem_id': self.fs.id})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(3, len(content['objects']))
+
+        response = self.api_client.get('/api/volume/', data={'filesystem_id': -1000})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(0, len(content['objects']))
