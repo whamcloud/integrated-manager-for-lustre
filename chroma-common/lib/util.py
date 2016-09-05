@@ -18,6 +18,7 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+import inspect
 
 import os
 import time
@@ -237,3 +238,31 @@ def wait(timeout, minwait=0.1, maxwait=1.0):
 
         time.sleep(sleep_time)
         minwait *= 2
+
+
+def wait_for_result(lambda_expression, logger, timeout=5 * 60, expected_exception_classes=None):
+    """
+    Evaluates lambda_expression once/1s until no exceptions matching any of expected_exception_classes or hits
+    timeout.
+
+    If timout is reached, exception is re-raised.
+    """
+    assert timeout > 0, "Timeout must be > 0"
+
+    if expected_exception_classes is None:
+        expected_exception_classes = [BaseException]
+
+    running_time = 0
+
+    while True:
+        try:
+            return lambda_expression()
+        except tuple(expected_exception_classes) as e:
+            logger.debug("%s tripped assertion: %s" % (inspect.getsource(lambda_expression), e))
+
+            if running_time >= timeout:
+                logger.debug("Timed out waiting for %s\nException %s" % (inspect.getsource(lambda_expression), e))
+                raise
+
+        time.sleep(1)
+        running_time += 1

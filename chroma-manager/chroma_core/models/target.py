@@ -40,8 +40,6 @@ from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
 from chroma_core.chroma_common.lib import util
-from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
-from chroma_core.models import UpdateDevicesStep
 
 import settings
 
@@ -828,12 +826,13 @@ class MakeTargetActiveStep(Step):
         threads = []
 
         for inactive_volume_node in kwargs['inactive_volume_nodes']:
-            thread = ExceptionThrowingThread(target=self.inactivate_volume_node,
-                                             args=(inactive_volume_node,))
+            thread = util.ExceptionThrowingThread(target=self.inactivate_volume_node,
+                                                  args=(inactive_volume_node,))
             thread.start()
             threads.append(thread)
 
-        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+        # This will raise an exception if any of the threads raise an exception
+        util.ExceptionThrowingThread.wait_for_threads(threads)
 
         if kwargs['active_volume_node'] is not None:
             self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
@@ -1171,7 +1170,7 @@ class MkfsStep(Step):
         if not (result['filesystem_type'] in FileSystem.all_supported_filesystems()):
             raise RuntimeError("Unexpected filesystem type '%s'" % result['filesystem_type'])
 
-        # I don't think this should be here - seems kind of out of place - but I also don't see when else to store it.
+        # I don't think this should be here - seems kind of out of place - but I also don't see when else to store it
         # See comment above about database = True
         target.volume.filesystem_type = result['filesystem_type']
 
@@ -1194,7 +1193,6 @@ class MkfsStep(Step):
             target.inode_count = result['inode_count']
             target.inode_size = result['inode_size']
 
-        # FIXME: investigate and use notify instead of saving directly, initial attempts at this failed
         target.volume.save()
         target.save()
 
@@ -1226,8 +1224,10 @@ class UpdateManagedTargetMount(Step):
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
 
-            mtm.volume_node = VolumeNode.objects.get(host=host,
-                                                     path=filesystem.mount_path(target.name))
+            mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
+                                                                                  path=filesystem.mount_path(target.name)),
+                                                   logger=job_log,
+                                                   expected_exception_classes=[VolumeNode.DoesNotExist])
 
             mtm.volume_node.primary = primary
             mtm.volume_node.save()
@@ -1301,11 +1301,10 @@ class FormatTargetJob(StateChangeJob):
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume
             # so before proceeding, check that it is indeed unoccupied
-            steps.append((PreFormatCheck, {'host': primary_mount.host,
-                                           'path': primary_mount.volume_node.path,
-                                           'device_type': device_type}))
-
-            steps.append((PreFormatComplete, {'target': self.target}))
+            steps.extend([(PreFormatCheck, {'host': primary_mount.host,
+                                            'path': primary_mount.volume_node.path,
+                                            'device_type': device_type}),
+                          (PreFormatComplete, {'target': self.target})])
 
         # This line is key, because it causes the volume property to be filled so it can be access by the step
         self.target.volume
@@ -1317,20 +1316,16 @@ class FormatTargetJob(StateChangeJob):
 
         mkfsoptions = self.target.downcast().mkfs_override_options(block_device.preferred_fstype, mkfsoptions)
 
-        steps.append((MkfsStep, {'primary_host': primary_mount.host,
-                                 'target': self.target,
-                                 'device_path': primary_mount.volume_node.path,
-                                 'failover_nids': self.target.get_failover_nids(),
-                                 'mgs_nids': mgs_nids,
-                                 'reformat': self.target.reformat,
-                                 'device_type': device_type,
-                                 'backfstype': block_device.preferred_fstype,
-                                 'mkfsoptions': mkfsoptions}))
-
-        # post format tasks include detecting and updating volume_nodes
-        hosts = [mtm.host for mtm in self.target.managedtargetmount_set.all()]
-        steps.append((UpdateDevicesStep, {'hosts': hosts}))
-        steps.append((UpdateManagedTargetMount, {'target': self.target}))
+        steps.extend([(MkfsStep, {'primary_host': primary_mount.host,
+                                  'target': self.target,
+                                  'device_path': primary_mount.volume_node.path,
+                                  'failover_nids': self.target.get_failover_nids(),
+                                  'mgs_nids': mgs_nids,
+                                  'reformat': self.target.reformat,
+                                  'device_type': device_type,
+                                  'backfstype': block_device.preferred_fstype,
+                                  'mkfsoptions': mkfsoptions}),
+                      (UpdateManagedTargetMount, {'target': self.target})])
 
         return steps
 
