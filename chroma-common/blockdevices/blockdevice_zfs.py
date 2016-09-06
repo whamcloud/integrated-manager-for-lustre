@@ -22,6 +22,7 @@
 
 import re
 import threading
+import glob
 
 from collections import defaultdict
 
@@ -306,11 +307,12 @@ class BlockDeviceZfs(BlockDevice):
             if shell_result.rc != 0:
                 return "ZFS failed to mount device %s, error was %s" % (self._device_path, shell_result.stderr)
 
-            shell_result = Shell.run(["rm", "/%s/CONFIG/%s-*" % (self._device_path, filesystem_name)])
+            for config_entry in glob.glob("/%s/CONFIGS/%s-*" % (self._device_path, filesystem_name)):
+                shell_result = Shell.run(["rm", config_entry])
 
-            if shell_result.rc != 0:
-                return "ZFS failed to purge filesystem (%s) information from device %s, error was %s" % \
-                       (filesystem_name, self._device_path, shell_result.stderr)
+                if shell_result.rc != 0:
+                    return "ZFS failed to purge filesystem (%s) information from device %s, error was %s" % \
+                           (filesystem_name, self._device_path, shell_result.stderr)
         finally:
             # Try both these commands, report failure but we really don't have a way out if they fail.
             shell_result_unmount = Shell.run(["zfs", "unmount", self._device_path])

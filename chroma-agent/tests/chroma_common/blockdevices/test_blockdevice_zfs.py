@@ -1,3 +1,4 @@
+import glob
 import mock
 
 from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
@@ -96,8 +97,8 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_import_success(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1)
-        self.add_command(('zpool', 'import', self.blockdevice._device_path.split('/')[0]))
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
+                          CommandCaptureCommand(('zpool', 'import', self.blockdevice._device_path.split('/')[0])))
 
         self.assertIsNone(self.blockdevice.import_())
         self.assertRanAllCommandsInOrder()
@@ -130,7 +131,7 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_property_values(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(("zfs", "get", "-Hp", "-o", "property,value", "all", self.blockdevice._device_path),
+        self.add_command(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
                          stdout=example_data.zfs_example_properties)
 
         zfs_properties = self.blockdevice.zfs_properties()
@@ -143,7 +144,7 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_targets(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(("zfs", "get", "-Hp", "-o", "property,value", "all", self.blockdevice._device_path),
+        self.add_command(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
                          stdout=example_data.zfs_example_properties)
 
         target_info = self.blockdevice.targets(None, None, None)
@@ -152,4 +153,23 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         self.assertEqual(target_info.params['fsname'], ['efs'])
         self.assertEqual(target_info.params['svname'], ['efs-MDT0000'])
         self.assertEqual(target_info.params['flags'], ['37'])
+        self.assertRanAllCommandsInOrder()
+
+    def test_purge_filesystem_information(self):
+        self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
+        device_path = self.blockdevice._device_path
+
+        self.add_commands(CommandCaptureCommand(('zfs', 'canmount=on', device_path)),
+                          CommandCaptureCommand(('zfs', 'mount', device_path)),
+                          CommandCaptureCommand(('rm', 'testfs-a')),
+                          CommandCaptureCommand(('rm', 'testfs-b')),
+                          CommandCaptureCommand(('zfs', 'unmount', device_path)),
+                          CommandCaptureCommand(('zfs', 'canmount=off', device_path)))
+
+        with mock.patch.object(glob, 'glob', return_value=['testfs-a', 'testfs-b']) as mock_glob:
+            result = self.blockdevice.purge_filesystem_configuration('testfs', None)
+
+        mock_glob.assert_called_once_with('/%s/CONFIGS/%s-*' % (device_path, 'testfs'))
+
+        self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()
