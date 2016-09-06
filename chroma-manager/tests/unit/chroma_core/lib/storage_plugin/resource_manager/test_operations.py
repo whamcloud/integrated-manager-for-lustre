@@ -92,16 +92,50 @@ class TestResourceOperations(ResourceManagerTestCase):
         # Check the Lun and DeviceNode are still there but the Presentation is gone
         self.assertEquals(count_after, count_before - 1)
 
-    def test_update_host_lun(self):
-        """Test that Volumes are generated from LogicalDrives when they are reported
-        in an update rather than the initial resource set"""
+    def test_update_host_lun_order1(self):
+        """
+        Test that Volumes are generated from LogicalDrives when they are reported
+        in an update rather than the initial resource set, adding device before node
+        resource and removing the device before the node resource
+        """
+        self._test_update_host_lun([self.dev_resource, self.node_resource],
+                                   [self.dev_resource, self.node_resource])
+
+    def test_update_host_lun_order2(self):
+        """
+        Test that Volumes are generated from LogicalDrives when they are reported
+        in an update rather than the initial resource set, adding node before device
+        resource and removing the device before the node resource
+        """
+        self._test_update_host_lun([self.node_resource, self.dev_resource],
+                                   [self.dev_resource, self.node_resource])
+
+    def test_update_host_lun_order3(self):
+        """
+        Test that Volumes are generated from LogicalDrives when they are reported
+        in an update rather than the initial resource set, adding node before device
+        resource and removing the node before the device resource
+        """
+        self._test_update_host_lun([self.node_resource, self.dev_resource],
+                                   [self.node_resource, self.dev_resource])
+
+    def test_update_host_lun_order4(self):
+        """
+        Test that Volumes are generated from LogicalDrives when they are reported
+        in an update rather than the initial resource set, adding device before node
+        resource and removing the node before the device resource
+        """
+        self._test_update_host_lun([self.dev_resource, self.node_resource],
+                                   [self.node_resource, self.dev_resource])
+
+    def _test_update_host_lun(self, addition_order, removal_order):
         self.resource_manager.session_open(self.plugin, self.scannable_resource_pk, [self.scannable_resource], 60)
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
-        self.resource_manager.session_add_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
+        self.resource_manager.session_add_resources(self.scannable_resource_pk, addition_order)
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
-        self.resource_manager.session_remove_local_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
+        self.resource_manager.session_remove_local_resources(self.scannable_resource_pk, removal_order)
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
 

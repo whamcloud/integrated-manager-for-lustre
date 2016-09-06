@@ -557,14 +557,6 @@ def _delete_target(target):
     target.mark_deleted()
     job_log.debug("_delete_target: %s %s" % (target, id(target)))
 
-    if target.volume.storage_resource is None:
-        # If a LogicalDrive storage resource goes away, but the
-        # volume is in use by a target, then the volume is left behind.
-        # Check if this is the case, and clean up any remaining volumes.
-        for vn in VolumeNode.objects.filter(volume = target.volume):
-            vn.mark_deleted()
-        target.volume.mark_deleted()
-
 
 class RemoveConfiguredTargetJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unmounted', 'removed')

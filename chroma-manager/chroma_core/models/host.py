@@ -384,30 +384,49 @@ class Volume(models.Model):
         ordering = ['id']
 
     @classmethod
-    def get_unused_luns(cls, queryset = None):
-        """Get all Luns which are not used by Targets"""
-        if not queryset:
-            queryset = cls.objects.all()
+    def get_unused_luns(cls, queryset):
+        """
+        Get all Luns which are not used by Targets
 
-        queryset = queryset.annotate(any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'))
-        return queryset.filter(any_targets = None)
+        The obvious (and previous) method of just looking for a managed_target_mount referencing the VolumeNode and
+        excluding it fails, because if a Volume is removed and then re-added (so becoming a new Volume) at the same path
+        (or any device moved to the same path) then that would be presented as an unused target when actually the 'path'
+        and so effectively the 'target' is in use.
+
+        For this reason we build a list of (host,paths) for all the current ManagedTargetMount's then build a list of all
+        Volumes that match this (host:path) and exclude them from the result. This might be possible as a straight
+        query but it is probably as quick, easier to read to issue the query to get the list.
+        """
+
+        from chroma_core.models import ManagedTargetMount
+
+        # There is an existing behaviour(!) that ManagedTargetMounts are not deleted when a Target is deleted and so we must
+        # filter ManagedTargetMount by undeleted Targets.
+        mtm_host_paths = [(mtm.host.id, mtm.volume_node.path) for mtm in ManagedTargetMount.objects.filter(managedtarget__not_deleted=True)]
+        volume_node_ids = [volume_node.volume_id for volume_node in VolumeNode.objects.all() if ((volume_node.host.id,
+                                                                                                  volume_node.path)) in mtm_host_paths]
+
+        queryset = queryset.exclude(id__in=volume_node_ids)
+
+        return queryset
 
     @classmethod
-    def get_usable_luns(cls, queryset = None):
-        """Get all Luns which are not used by Targets and have enough VolumeNode configuration
-        to be used as a Target (i.e. have only one node or at least have a primary node set)"""
-        if not queryset:
-            queryset = cls.objects.all()
+    def get_usable_luns(cls, queryset):
+        """
+        Get all Luns which are not used by Targets and have enough VolumeNode configuration
+        to be used as a Target (i.e. have only one node or at least have a primary node set)
 
-        # Luns are usable if they have only one VolumeNode (i.e. no HA available but
-        # we can definitively say where it should be mounted) or if they have
-        # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
-        # know at least where the primary mount should be)
-        return queryset.filter(volumenode__host__not_deleted = True).\
-            annotate(any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
-                     has_primary = BoolOr('volumenode__primary'),
-                     num_volumenodes = Count('volumenode')
-                     ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
+        Luns are usable if they have only one VolumeNode (i.e. no HA available but
+        we can definitively say where it should be mounted) or if they have
+        a primary VolumeNode (i.e. one or more VolumeNodes is available and we
+        know at least where the primary mount should be)
+        """
+        queryset = cls.get_unused_luns(queryset)\
+                      .filter(volumenode__host__not_deleted=True)\
+                      .annotate(has_primary=BoolOr('volumenode__primary'), num_volumenodes=Count('volumenode'))\
+                      .filter(Q(num_volumenodes=1) | Q(has_primary=True))
+
+        return queryset
 
     def get_kind(self):
         if not hasattr(self, 'kind'):

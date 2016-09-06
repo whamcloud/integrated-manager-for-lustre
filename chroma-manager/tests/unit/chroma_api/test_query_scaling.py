@@ -29,7 +29,7 @@ QUERIES_PER_FILESYSTEM_TARGET = 4  # queries per target when included in a files
 QUERIES_PER_VOLUME = 1  # queries per volume object when reading volumes
 QUERIES_PER_VOLUME_HOST = 1  # additional queries per-volume per-host
 QUERIES_TOTAL_UNDECORATED_LOGS = 5  # total queries to get all log messages (when they don't have any NIDs or targets)
-PAGING_AND_AUTH_QUERIES = 8
+PAGING_AND_AUTH_QUERIES = 5
 
 
 class TestQueryScaling(ChromaApiTestCase):

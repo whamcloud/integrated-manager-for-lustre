@@ -62,7 +62,6 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
 
 from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized, StorageResourceLearnEvent, StorageResourceAttributeReference, StorageAlertPropagated
-from chroma_core.models.target import ManagedTargetMount
 
 
 class PluginSession(object):
@@ -652,9 +651,7 @@ class ResourceManager(object):
                             pass
 
                         try:
-                            volume_node = VolumeNode.objects.get(storage_resource = nr)
-                            if not ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node).exists():
-                                volume_node.mark_deleted()
+                            self._remove_volume_node(VolumeNode.objects.get(storage_resource=nr), False)
                         except VolumeNode.DoesNotExist:
                             pass
             else:
@@ -665,9 +662,8 @@ class ResourceManager(object):
                 volume = logicaldrive_id_to_volume[node_to_logicaldrive_id[node_record]]
                 log.info("Setting up DeviceNode %s" % node_record.pk)
                 path = node_record_id_to_path[node_record.id]
-                if path in path_to_volumenode:
-                    volume_node = path_to_volumenode[path]
-                else:
+
+                if path not in path_to_volumenode:
                     volume_nodes.insert(dict(
                         volume_id = volume.id,
                         host_id = host.id,
@@ -678,8 +674,8 @@ class ResourceManager(object):
                         not_deleted = True
                     ))
 
-                    log.info("Created VolumeNode for resource %s" % node_record.pk)
-                    volumes_for_affinity_checks.add(volume)
+                log.info("Created VolumeNode for resource %s" % node_record.pk)
+                volumes_for_affinity_checks.add(volume)
 
         volume_to_volume_nodes = defaultdict(list)
         for vn in VolumeNode.objects.filter(volume__in = volumes_for_affinity_checks):
@@ -694,12 +690,10 @@ class ResourceManager(object):
         # was not included in the set of usable DeviceNode resources, remove
         # the VolumeNode
         for volume_node in scope_volume_nodes:
-            log.debug("volume node %s (%s) usable %s" % (volume_node.id, volume_node.storage_resource_id, volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]))
-            if not volume_node.storage_resource_id in [nr.id for nr in usable_node_resources]:
-                removed = self._try_removing_volume_node(volume_node)
-                if not removed:
-                    volume_node.storage_resource = None
-                    volume_node.save()
+            usable_node_resource_ids = [nr.id for nr in usable_node_resources]
+            log.debug("volume node %s (%s) usable %s" % (volume_node.id, volume_node.storage_resource_id, volume_node.storage_resource_id in usable_node_resource_ids))
+            if volume_node.storage_resource_id not in usable_node_resource_ids:
+                self._remove_volume_node(volume_node, True)
 
     def _set_affinity_weights(self, volume, volume_nodes):
         from chroma_core.lib.storage_plugin.api.resources import PathWeight
@@ -756,32 +750,26 @@ class ResourceManager(object):
         self._balance_volume_nodes(volumes_for_balancing, volume_to_volume_nodes)
 
     def _try_removing_volume(self, volume):
-        targets = ManagedTarget.objects.filter(volume = volume)
-        nodes = VolumeNode.objects.filter(volume = volume)
-        if targets.count() == 0 and nodes.count() == 0:
+        nodes = VolumeNode.objects.filter(volume=volume)
+
+        if nodes.count() == 0:
             log.info("Removing Volume %s" % volume.id)
             volume.storage_resource = None
             volume.save()
             volume.mark_deleted()
             return True
-        elif targets.count():
-            log.warn("Leaving Volume %s, used by Target %s" % (volume.id, targets[0]))
-        elif nodes.count():
-            log.warn("Leaving Volume %s, used by nodes %s" % (volume.id, [n.id for n in nodes]))
-
-        return False
-
-    def _try_removing_volume_node(self, volume_node):
-        targets = ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node)
-        if targets.count() == 0:
-            log.info("Removing VolumeNode %s" % volume_node.id)
-            volume_node.mark_deleted()
-            self._try_removing_volume(volume_node.volume)
-            return True
         else:
-            log.warn("Leaving VolumeNode %s, used by Target %s" % (volume_node.id, targets[0]))
+            log.warn("Leaving Volume %s, used by nodes %s" % (volume.id, [n.id for n in nodes]))
+            return False
 
-        return False
+    def _remove_volume_node(self, volume_node, try_remove_volume):
+        log.info("Removing VolumeNode %s" % volume_node.id)
+        volume_node.storage_resource = None
+        volume_node.save()
+        volume_node.mark_deleted()
+
+        if try_remove_volume:
+            self._try_removing_volume(volume_node.volume)
 
     # Fixme: This function that should just not be in resource_manager will leave just looking at networks
     def _delete_nid_resource(self, scannable_id, deleted_resource_id):
@@ -1245,50 +1233,17 @@ class ResourceManager(object):
         for v in volume_nodes:
             record_id_to_volume_nodes[v.storage_resource_id].append(v)
 
-        occupiers = ManagedTargetMount.objects.filter(managedtarget__not_deleted = True).filter(volume_node__in = volume_nodes)
-        vn_id_to_occupiers = defaultdict(list)
-        for mtm in occupiers:
-            vn_id_to_occupiers[mtm.volume_node_id].append(mtm)
-
-        volumes_need_attention = []
         for record_id in ordered_for_deletion:
             volume_nodes = record_id_to_volume_nodes[record_id]
             log.debug("%s lun_nodes depend on %s" % (len(volume_nodes), record_id))
             for volume_node in volume_nodes:
-                if vn_id_to_occupiers[volume_node.id]:
-                    log.warn("Leaving VolumeNode %s, used by Target" % volume_node.id)
-                    log.warning("Could not remove VolumeNode %s, disconnecting from resource %s" % (volume_node.id, record_id))
-                else:
-                    log.warn("Removing VolumeNode %s" % volume_node.id)
-                    VolumeNode.delayed.update({'id': volume_node.id, 'not_deleted': None})
-                    volumes_need_attention.append(volume_node.volume_id)
+                self._remove_volume_node(volume_node, True)
 
-            volumes_need_attention.extend([v.pk for v in record_id_to_volumes[record_id]])
-
-        VolumeNode.delayed.flush()
-
-        volume_to_targets = defaultdict(list)
-        for mt in ManagedTarget.objects.filter(volume__in = volumes_need_attention):
-            volume_to_targets[mt.volume_id].append(mt)
-
-        volume_to_volume_nodes = defaultdict(list)
-        for vn in VolumeNode.objects.filter(volume__in = volumes_need_attention):
-            volume_to_volume_nodes[vn.volume_id].append(vn)
-
-        for volume_id in volumes_need_attention:
-            targets = volume_to_targets[volume_id]
-            nodes = volume_to_volume_nodes[volume_id]
-            if (not targets) and (not nodes):
-                log.warn("Removing Volume %s" % volume_id)
-                Volume.delayed.update({'id': volume_id, 'not_deleted': None})
-            elif targets:
-                log.warn("Leaving Volume %s, used by Target %s" % (volume_id, targets[0]))
-            elif nodes:
-                log.warn("Leaving Volume %s, used by nodes %s" % (volume_id, [n.id for n in nodes]))
-
-        Volume.delayed.flush()
-
-        # Ensure any remaining Volumes (in use by target) are disconnected from storage resource
+        # Ensure any remaining Volumes (in use by target) are disconnected from storage resource. This is a horrible
+        # piece of code that glosses over some of the failings. I did try and remove it for 3.1 but realised it should
+        # basically be a null action because no hits should occur and if it is not a null action then it saves us from
+        # something that wasn't expected.
+        # Example failing: Volume Resource is removed before a VolumeNode resource!
         Volume._base_manager.filter(storage_resource__in = ordered_for_deletion).update(storage_resource = None)
         VolumeNode._base_manager.filter(storage_resource__in = ordered_for_deletion).update(storage_resource = None)
 
