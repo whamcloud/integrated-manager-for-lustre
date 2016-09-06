@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 import socket
+import threading
 
 from django.utils.unittest import TestCase
 from testconfig import config
@@ -22,6 +23,23 @@ logger.addHandler(handler)
 # paramiko.transport logger spams nose log collection so we're quieting it down
 paramiko_logger = logging.getLogger('paramiko.transport')
 paramiko_logger.setLevel(logging.WARN)
+
+
+class ExceptionThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super(ExceptionThread, self).__init__(*args, **kwargs)
+        self._exception_value = None
+
+    def run(self):
+        try:
+            return super(ExceptionThread, self).run()
+        except BaseException as e:
+            self._exception_value = e
+
+    def join(self):
+        super(ExceptionThread, self).join()
+        if self._exception_value:
+            raise self._exception_value
 
 
 class RemoteCommandResult(object):
@@ -46,6 +64,29 @@ class UtilityTestCase(TestCase):
 
     def setUp(self):
         self.maxDiff = None                  # By default show the complete diff on errors.
+
+    def execute_commands(self, commands, target, debug_message, expected_return_code=0):
+        stdout = []
+        for command in commands:
+            result = self.remote_command(target, command, expected_return_code=expected_return_code)
+            logger.info("%s command %s exit_status %s output:\n %s" % (debug_message, command, result.exit_status, result.stdout))
+
+            stdout.append(result.stdout)
+
+        return stdout
+
+    def execute_simultaneous_commands(self, commands, targets, debug_message, expected_return_code=0):
+        threads = []
+        for target in targets:
+            command_thread = ExceptionThread(target=self.execute_commands,
+                                             args=(commands,
+                                                   target,
+                                                   '%s: %s' % (target, debug_message),
+                                                   expected_return_code))
+            command_thread.start()
+            threads.append(command_thread)
+
+        map(lambda th: th.join(), threads)
 
     def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
         """

@@ -21,6 +21,8 @@ from tests.integration.core.remote_operations import SimulatorRemoteOperations, 
 
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
+from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -62,7 +64,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.simulator = None
         self.down_node_expected = False
 
-    def setUp(self):
+    def setUp(self, quick_setup=False):
         super(ApiTestCaseWithTestReset, self).setUp()
 
         if config.get('simulator', False):
@@ -119,46 +121,47 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         else:
             self.remote_operations = RealRemoteOperations(self)
 
-        # Ensure that all servers are up and available
-        for server in self.TEST_SERVERS:
-            logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
-            self.remote_operations.await_server_boot(server['fqdn'], restart = True)
-            logger.info("%s is running" % server['fqdn'])
-            self.remote_operations.inject_log_message(server['fqdn'],
-                                                      "==== "
-                                                      "starting test %s "
-                                                      "=====" % self)
-
-        if config.get('reset', True):
-            self.reset_cluster()
-        elif config.get('soft_reset', True):
-            # Reset the manager via the API
-            self.wait_until_true(self.api_contactable)
-            self.remote_operations.unmount_clients()
-            self.api_force_clear()
-            self._fetch_help(lambda: self.remote_operations.clear_ha(self.TEST_SERVERS),
-                             ['chris.gearing@intel.com'],
-                             'soft clear ha failure')
-            self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
-
-        if config.get('managed'):
-            # Erase all volumes if the config does not indicate that there is already
-            # a pre-existing file system (in the case of the monitoring only tests).
+        if quick_setup is False:
+            # Ensure that all servers are up and available
             for server in self.TEST_SERVERS:
-                for path in server.get('device_paths', []):
-                    self.remote_operations.erase_block_device(server['fqdn'], path)
+                logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
+                self.remote_operations.await_server_boot(server['fqdn'], restart = True)
+                logger.info("%s is running" % server['fqdn'])
+                self.remote_operations.inject_log_message(server['fqdn'],
+                                                          "==== "
+                                                          "starting test %s "
+                                                          "=====" % self)
 
-            # Ensure that config from previous runs doesn't linger into
-            # this one.
-            self.remote_operations.remove_config(self.TEST_SERVERS)
+            if config.get('reset', True):
+                self.reset_cluster()
+            elif config.get('soft_reset', True):
+                # Reset the manager via the API
+                self.wait_until_true(self.api_contactable)
+                self.remote_operations.unmount_clients()
+                self.api_force_clear()
+                self._fetch_help(lambda: self.remote_operations.clear_ha(self.TEST_SERVERS),
+                                 ['chris.gearing@intel.com'],
+                                 'soft clear ha failure')
+                self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
-            # If there are no configuration options for a given server
-            # (e.g. corosync_config), then this is a noop and no config file
-            # is written.
-            self.remote_operations.write_config(self.TEST_SERVERS)
+            if config.get('managed'):
+                # Ensure that config from previous runs doesn't linger into
+                # this one.
+                self.remote_operations.remove_config(self.TEST_SERVERS)
 
-        # Enable agent debugging
-        self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
+                # If there are no configuration options for a given server
+                # (e.g. corosync_config), then this is a noop and no config file
+                # is written.
+                self.remote_operations.write_config(self.TEST_SERVERS)
+
+                # cleanup ldiskfs devices
+                self.cleanup_ldiskfs_devices(self.TEST_SERVERS)
+
+                # cleanup zfs pools
+                self.cleanup_zfs_pools(self.config_servers, False, None, True)
+
+            # Enable agent debugging
+            self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
 
         self.wait_until_true(self.supervisor_controlled_processes_running)
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
@@ -873,3 +876,99 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         for user in response.json['objects']:
             if not user['username'] in configured_usernames:
                 chroma_manager.delete(user['resource_uri'])
+
+    @property
+    def zfs_devices_exist(self):
+        return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
+
+    def cleanup_zfs_pools(self, test_servers, remove_zpools, zpool_datasets, devices_must_exist):
+        """
+        Make sure any pools are imported onto server[0], and then remove any datasets on the pools.
+
+        Very ZFS specific code.
+        :return:
+        """
+        if (self.simulator is not None) or (self.zfs_devices_exist is False):
+            return
+
+        # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
+        # Might need to improve on this moving forwards.
+        try:
+            self.execute_simultaneous_commands(TestBlockDeviceZfs.zfs_install_commands(),
+                                               [server['fqdn'] for server in test_servers],
+                                               'checking for zfs presence',
+                                               expected_return_code=None)
+        except AssertionError:
+            return
+
+        first_test_server = test_servers[0]
+
+        def dataset_match(datasets, device_path):
+            return next((dataset for dataset in datasets if dataset.startswith(device_path)), None) is not None
+
+        for lustre_device in config['lustre_devices']:
+            if ((lustre_device['backend_filesystem'] == 'zfs') and
+                    ((zpool_datasets is None) or
+                     dataset_match(zpool_datasets,
+                                   first_test_server['device_paths'][lustre_device['path_index']]))):
+
+                zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
+
+                self.execute_simultaneous_commands(zfs_device.release_commands,
+                                                   [server['fqdn'] for server in test_servers],
+                                                   'export zfs device %s' % zfs_device,
+                                                   expected_return_code=None)
+
+                self.execute_commands(zfs_device.capture_commands,
+                                      first_test_server['fqdn'],
+                                      'import zfs device %s' % zfs_device,
+                                      expected_return_code=0 if devices_must_exist else None)
+
+        if zpool_datasets is None:
+            zpool_datasets = self.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
+                                                   first_test_server['fqdn'],
+                                                   'listing zfs devices')[0].split()
+
+        zpools_datasets = [zpool_dataset for zpool_dataset in zpool_datasets if zpool_dataset != '']
+
+        # Sorting longest first means
+        # zpool/dataset1/dataset2
+        #  is deleted before
+        # zpool/dataset1
+        zpools_datasets.sort(key=lambda value: -len(value))
+
+        # Have to remove datasets before zpools
+        for remove_dataset in [True, False] if remove_zpools else [True]:
+            for zpool_dataset in zpools_datasets:
+                if remove_dataset == ('/' in zpool_dataset):
+                    zfs_device = TestBlockDevice('zfs', zpool_dataset)
+
+                    self.execute_commands(zfs_device.destroy_commands,
+                                          first_test_server['fqdn'],
+                                          'destroy zfs device %s' % zfs_device)
+
+    @property
+    def ldiskfs_devices_exist(self):
+        return any(lustre_device['backend_filesystem'] == 'ldiskfs' for lustre_device in config['lustre_devices'])
+
+    def cleanup_ldiskfs_devices(self, test_servers):
+        """
+        Destroy any partitions on the block device.
+
+        Very ldiskfs specific code.
+        :return:
+        """
+        if (self.simulator is not None) or (self.ldiskfs_devices_exist is False):
+            return
+
+        first_test_server = test_servers[0]
+
+        # Erase all volumes if the config does not indicate that there is already
+        # a pre-existing file system (in the case of the monitoring only tests).
+        for lustre_device in config['lustre_devices']:
+            if lustre_device['backend_filesystem'] == 'ldiskfs':
+                linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+
+                self.execute_simultaneous_commands(linux_device.destroy_commands,
+                                                   [server['fqdn'] for server in test_servers],
+                                                   'clear block device %s' % linux_device)

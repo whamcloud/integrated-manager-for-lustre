@@ -85,9 +85,17 @@ class TestBlockDevice(object):
         return []
 
     @property
+    def remove_packages_commands(self):
+        return []
+
+    @property
     def release_commands(self):
         return []
 
     @property
     def capture_commands(self):
+        return []
+
+    @property
+    def destroy_commands(self):
         return []

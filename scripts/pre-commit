@@ -78,7 +78,7 @@ CHECKS = [
     },
     {
         'output': 'Running pep8...',
-        'command': 'pep8 -r --ignore=E501,E251 %s',
+        'command': 'pep8 -r --ignore=E501,E251,E711,E712 %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
         'ignore_files': [
             '.*migrations.*',

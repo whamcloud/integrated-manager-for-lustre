@@ -116,5 +116,17 @@
         }
     ],
     "pdu_outlets": [
+    ],
+    "lustre_devices": [
+        {"path_index": 0,
+            "backend_filesystem": "ldiskfs"},
+        {"path_index": 1,
+            "backend_filesystem": "ldiskfs"},
+        {"path_index": 2,
+            "backend_filesystem": "ldiskfs"},
+        {"path_index": 3,
+            "backend_filesystem": "ldiskfs"},
+        {"path_index": 4,
+            "backend_filesystem": "ldiskfs"}
     ]
 }

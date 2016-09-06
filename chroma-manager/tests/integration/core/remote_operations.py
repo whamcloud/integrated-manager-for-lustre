@@ -119,9 +119,6 @@ class SimulatorRemoteOperations(RemoteOperations):
             # Revert requests.request to its real implementation
             requests.request = self._old_request_fn
 
-    def erase_block_device(self, fqdn, path):
-        self._simulator.format_block_device(fqdn, path, None)
-
     def format_block_device(self, fqdn, path, filesystem_type):
         self._simulator.format_block_device(fqdn, path, filesystem_type)
 
@@ -296,6 +293,12 @@ class SimulatorRemoteOperations(RemoteOperations):
     def sync_disks(self, server_list):
         pass
 
+    def stop_agents(self, server_list):
+        pass
+
+    def start_agents(self, server_list):
+        pass
+
 
 class RealRemoteOperations(RemoteOperations):
 
@@ -399,11 +402,6 @@ class RealRemoteOperations(RemoteOperations):
             raise KeyError(fqdn)
 
         return self._ssh_address(address, command, expected_return_code, timeout, buffer)
-
-    def erase_block_device(self, fqdn, path):
-        # Needless to say, we're not bothering to scrub the whole device, just enough
-        # that it doesn't look formatted any more.
-        self._ssh_fqdn(fqdn, "dd if=/dev/zero of={path} bs=4k count=1; sync".format(path=path))
 
     def format_block_device(self, fqdn, path, filesystem_type):
         commands = {
@@ -1036,6 +1034,14 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             self._ssh_address(server, 'sync; sync')
 
+    def stop_agents(self, server_list):
+        for server in server_list:
+            self._ssh_address(server, '/etc/init.d/chroma-agent stop')
+
+    def start_agents(self, server_list):
+        for server in server_list:
+            self._ssh_address(server, '/etc/init.d/chroma-agent start')
+
     def catalog_rpms(self, server_list, location, sorted=False):
         """
         Runs an 'rpm -qa' on the targeted server(s) redirecting the
@@ -1052,7 +1058,6 @@ class RealRemoteOperations(RemoteOperations):
         Stops and deletes all chroma targets for any corosync clusters
         configured on any of the lustre servers appearing in the cluster config
         """
-
         for server in server_list:
             address = server['address']
 

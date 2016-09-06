@@ -1,7 +1,6 @@
 import logging
 import json
 import sys
-import threading
 
 from testconfig import config
 from tests.integration.core.utility_testcase import UtilityTestCase
@@ -11,23 +10,6 @@ from tests.integration.utils.test_filesystems.test_filesystem import TestFileSys
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-
-
-class ExceptionThread(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(ExceptionThread, self).__init__(*args, **kwargs)
-        self._exception_value = None
-
-    def run(self):
-        try:
-            return super(ExceptionThread, self).run()
-        except BaseException as e:
-            self._exception_value = e
-
-    def join(self):
-        super(ExceptionThread, self).join()
-        if self._exception_value:
-            raise self._exception_value
 
 
 class CreateLustreFilesystem(UtilityTestCase):
@@ -112,9 +94,9 @@ class CreateLustreFilesystem(UtilityTestCase):
 
             self.umount_devices(server['nodename'])
 
-            self._execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
-                                   server['address'],
-                                   'clear command')
+            self.execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
+                                  server['address'],
+                                  'clear command')
 
         # Wipe the start of the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
@@ -164,21 +146,6 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         with open(filename, 'w') as outfile:
             json.dump(config, outfile, indent = 2, separators=(',', ': '))
-
-    def _execute_commands(self, commands, target, debug_message):
-        for command in commands:
-            result = self.remote_command(target, command)
-            logger.info("%s command %s exit_status %s output:\n %s" % (debug_message, command, result.exit_status, result.stdout))
-
-    def _execute_simultaneous_commands(self, commands, targets, debug_message):
-        threads = []
-        for target in targets:
-            th = ExceptionThread(target=self._execute_commands,
-                                 args=(commands, target,
-                                       '%s: %s' % (target, debug_message)))
-            th.start()
-            threads.append(th)
-        map(lambda th: th.join(), threads)
 
     def create_lustre_filesystem_for_test(self):
         self.configure_target_device(self.mgt,
@@ -278,12 +245,12 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         # If we are going to mount on the secondary the move the block device from the primary to the secondary.
         if target.get('mount_server') == 'secondary_server':
-            self._execute_commands(block_device.release_commands,
-                                   target['primary_server'],
-                                   'Release device')
-            self._execute_commands(block_device.capture_commands,
-                                   target['secondary_server'],
-                                   'Capture device')
+            self.execute_commands(block_device.release_commands,
+                                  target['primary_server'],
+                                  'Release device')
+            self.execute_commands(block_device.capture_commands,
+                                  target['secondary_server'],
+                                  'Capture device')
 
         self.remote_command(
             target_server,
@@ -315,19 +282,19 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         block_device = TestBlockDevice(device_type, device_path)
 
-        self._execute_simultaneous_commands(block_device.install_packages_commands,
-                                            targets.values(),
-                                            'install blockdevice packages')
+        self.execute_simultaneous_commands(block_device.install_packages_commands,
+                                           targets.values(),
+                                           'install blockdevice packages')
 
-        self._execute_commands(block_device.prepare_device_commands,
-                               targets['primary_server'],
-                               'prepare device')
+        self.execute_commands(block_device.prepare_device_commands,
+                              targets['primary_server'],
+                              'prepare device')
 
         filesystem = TestFileSystem(block_device.preferred_fstype, block_device.device_path)
 
-        self._execute_simultaneous_commands(filesystem.install_packages_commands,
-                                            targets.values(),
-                                            'install filesystem packages')
+        self.execute_simultaneous_commands(filesystem.install_packages_commands,
+                                           targets.values(),
+                                           'install filesystem packages')
 
         result = self.remote_command(targets['primary_server'],
                                      filesystem.mkfs_command(target,

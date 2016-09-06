@@ -257,6 +257,23 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return new_hosts
 
+    def fetch_or_add_hosts(self, addresses, auth_type='existing_keys_choice'):
+        """
+        Add any host in the list of addresses that do not already exists. Very useful in tests when you use the
+        quick_setup to not remove the hosts before the test.
+
+        :param addresses: list of host addresses to add
+        :param auth_type: Type of authentication to add
+        :return: Host configured in IML.
+        """
+        existing_hosts = self.get_hosts()
+        host_addresses_to_add = list(set(addresses) - set([host['address'] for host in existing_hosts]))
+
+        if host_addresses_to_add != []:
+            self.add_hosts(host_addresses_to_add, auth_type)
+
+        return self.get_hosts()
+
     def get_hosts(self, addresses=None):
         """
         Get the hosts from the api for all or subset of hosts.
@@ -268,7 +285,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
         if addresses:
-            hosts = [h for h in hosts if h['address'] in addresses]
+            hosts = [host for host in hosts if host['address'] in addresses]
         return hosts
 
     def create_filesystem_simple(self, name = 'testfs', hsm = False):

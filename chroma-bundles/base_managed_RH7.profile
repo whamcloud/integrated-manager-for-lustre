@@ -24,6 +24,7 @@
       "lustre-osd-ldiskfs",
       "lustre",
       "lustre-dkms",
+      "lustre-osd-zfs",
       "lustre-osd-zfs-mount",
       "kernel-devel-3.10.0-327.28.2.el7_lustre"
     ],
