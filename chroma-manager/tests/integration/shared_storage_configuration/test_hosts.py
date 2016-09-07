@@ -10,7 +10,7 @@ class TestHosts(ChromaIntegrationTestCase):
             config['lustre_servers'][1]['address']
         ])
 
-        volumes = self.get_usable_volumes()
+        volumes = self.wait_usable_volumes(3)
         self.assertGreaterEqual(len(volumes), 3)
 
         mgt_volume = volumes[0]
@@ -20,36 +20,25 @@ class TestHosts(ChromaIntegrationTestCase):
         self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
         self.set_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
 
-        filesystem_id = self.create_filesystem(
-            {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': {}
-                }],
-                'osts': [{
-                    'volume_id': ost_volume['id'],
-                    'conf_params': {}
-                }],
-                'conf_params': {}
-            }
-        )
+        filesystem_id = self.create_filesystem({'name': 'testfs',
+                                                'mgt': {'volume_id': mgt_volume['id']},
+                                                'mdts': [{'volume_id': mdt_volume['id'],
+                                                          'conf_params': {}}],
+                                                'osts': [{'volume_id': ost_volume['id'],
+                                                          'conf_params': {}}],
+                                                'conf_params': {}})
+
         filesystem_uri = "/api/filesystem/%s/" % filesystem_id
 
-        self.add_hosts([
-            config['lustre_servers'][2]['address']
-        ])
+        self.add_hosts([config['lustre_servers'][2]['address']])
 
-        new_volumes = [v for v in self.get_usable_volumes() if v not in volumes]
-        self.assertGreaterEqual(len(new_volumes), 1)
+        remaining_volumes = self.wait_usable_volumes(len(volumes) - 3)
+        self.assertEqual(len(volumes) - 3, len(remaining_volumes))
 
         # add the new volume to the existing filesystem
-        response = self.chroma_manager.post("/api/target/", body = {
-            'volume_id': new_volumes[0]['id'],
-            'kind': 'OST',
-            'filesystem_id': filesystem_id
-        })
+        response = self.chroma_manager.post("/api/target/", body={'volume_id': remaining_volumes[0]['id'],
+                                                                  'kind': 'OST',
+                                                                  'filesystem_id': filesystem_id})
         self.assertEqual(response.status_code, 202, response.text)
         target_uri = response.json['target']['resource_uri']
         create_command = response.json['command']['id']

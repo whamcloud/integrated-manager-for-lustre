@@ -64,7 +64,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.simulator = None
         self.down_node_expected = False
 
-    def setUp(self, quick_setup=False):
+    def setUp(self):
         super(ApiTestCaseWithTestReset, self).setUp()
 
         if config.get('simulator', False):
@@ -121,7 +121,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         else:
             self.remote_operations = RealRemoteOperations(self)
 
-        if quick_setup is False:
+        if self.quick_setup is False:
             # Ensure that all servers are up and available
             for server in self.TEST_SERVERS:
                 logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
@@ -975,3 +975,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.execute_simultaneous_commands(linux_device.destroy_commands,
                                                    [server['fqdn'] for server in test_servers],
                                                    'clear block device %s' % linux_device)
+
+    @property
+    def quick_setup(self):
+        """
+        Defining IML_QUICK_TEST_SETUP will mean that test setup is shortened to enable hands on development and debug
+        of to be quicker.  It is not intended to be safe to use for real tests and is not really a part way towards test
+        optimization.  It is to reduce the cycle time of development where a 10 second test can take 20 minutes
+        for each run.
+
+        Use with caution, only use when running 1 test - not a series of tests etc.
+
+        :return:
+        """
+        return 'IML_QUICK_TEST_SETUP' in os.environ

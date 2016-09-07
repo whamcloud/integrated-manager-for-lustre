@@ -10,9 +10,6 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
     """
     Not a test as such but a method for turning some of the disks into zpools.
     """
-    def setUp(self):
-        super(TestConfigureZfsTargets, self).setUp(quick_setup=True)
-
     def test_setup_zfs_targets_for_test(self):
         if self.zfs_devices_exist is False:
             return
@@ -20,7 +17,7 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
         first_test_server = self.config_servers[0]
 
         # We add the hosts to cause ZFS to be installed.
-        self.fetch_or_add_hosts([server['address'] for server in self.config_servers])
+        self.add_hosts([server['address'] for server in self.config_servers])
 
         self.cleanup_zfs_pools(self.config_servers, True, None, False)
 

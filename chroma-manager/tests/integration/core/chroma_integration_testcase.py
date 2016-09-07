@@ -228,7 +228,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
-    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+    def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre servers to chroma and ensure lnet ends in the correct state."""
         if self.simulator:
             self.register_simulated_hosts(addresses)
@@ -257,22 +257,26 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return new_hosts
 
-    def fetch_or_add_hosts(self, addresses, auth_type='existing_keys_choice'):
+    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         """
-        Add any host in the list of addresses that do not already exists. Very useful in tests when you use the
-        quick_setup to not remove the hosts before the test.
+        Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
+
+        If the quick_setup is enabled then this will shortcut by adding any hosts in the list of addresses that do not
+        already exists.
 
         :param addresses: list of host addresses to add
         :param auth_type: Type of authentication to add
         :return: Host configured in IML.
         """
-        existing_hosts = self.get_hosts()
-        host_addresses_to_add = list(set(addresses) - set([host['address'] for host in existing_hosts]))
+        if self.quick_setup:
+            existing_hosts = self.get_hosts()
+            addresses_to_add = list(set(addresses) - set([host['address'] for host in existing_hosts]))
+        else:
+            addresses_to_add = addresses
 
-        if host_addresses_to_add != []:
-            self.add_hosts(host_addresses_to_add, auth_type)
+        self._add_hosts(addresses_to_add, auth_type)
 
-        return self.get_hosts()
+        return self.get_hosts(addresses)
 
     def get_hosts(self, addresses=None):
         """
