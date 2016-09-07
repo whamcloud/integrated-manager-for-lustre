@@ -200,6 +200,12 @@ class SimulatorRemoteOperations(RemoteOperations):
     def file_exists(self, address, file_path):
         raise RuntimeError('file_exists not implemented in SimulatorRemoteOperations')
 
+    def make_directory(self, address, dir_path):
+        raise RuntimeError('make_directory not implemented in SimulatorRemoteOperations')
+
+    def list_dir(self, address, dir_path):
+        raise RuntimeError('list_dir not implemented in SimulatorRemoteOperations')
+
     def mount_filesystem(self, client_address, filesystem):
         client = self._simulator.get_lustre_client(client_address)
         mgsnode, fsname = filesystem['mount_path'].split(":/")
@@ -470,7 +476,7 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(address, 'mv -f %s %s' % (current_path, new_path))
 
     def create_file(self, address, file_content, file_path):
-        self._ssh_address(address, 'echo %s > %s' % (file_content, file_path))
+        self._ssh_address(address, 'cat > %s <<EOF\n%s\nEOF' % (file_path, file_content))
 
     def delete_file(self, address, file_path):
         self._ssh_address(address, 'rm -rf %s' % file_path)
@@ -480,6 +486,12 @@ class RealRemoteOperations(RemoteOperations):
 
     def file_exists(self, address, file_path):
         return self._ssh_address(address, 'ls %s' % file_path, expected_return_code=None).rc == 0
+
+    def make_directory(self, address, dir_path):
+        self._ssh_address(address, 'mkdir %s' % dir_path)
+
+    def list_dir(self, address, dir_path):
+        return self._ssh_address(address, 'ls %s' % dir_path).stdout.split()
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
