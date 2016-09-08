@@ -18,7 +18,7 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
-
+import os
 
 import re
 import threading
@@ -27,6 +27,7 @@ import glob
 from collections import defaultdict
 
 from ..lib import shell
+from ..lib.agent_rpc import agent_ok_or_error
 from blockdevice import BlockDevice
 
 
@@ -346,3 +347,22 @@ class BlockDeviceZfs(BlockDevice):
                        (self._device_path, shell_result_canmount.stderr)
 
         return None
+
+    @classmethod
+    def initialise_driver(cls):
+        """
+        Enable SPL Multi-Mount Protection for ZFS during failover by generating a hostid to be used by Lustre.
+
+        :return: None on success, error message on failure
+        """
+        error = None
+
+        if os.path.isfile('/etc/hostid') is False:
+            # only create an ID if one doesn't already exist
+            result = shell.Shell.run(['genhostid'])
+
+            if result.rc != 0:
+                error = 'Error preparing nodes for ZFS multimount protection. gethostid failed with %s' \
+                        % result.stderr
+
+        return agent_ok_or_error(error)

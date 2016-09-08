@@ -183,19 +183,22 @@ class SimulatorRemoteOperations(RemoteOperations):
             return self._simulator.servers[fqdn].read_proc(path)
 
     def read_file(self, address, file_path):
-        pass
+        raise RuntimeError('read_file not implemented in SimulatorRemoteOperations')
 
     def rename_file(self, address, current_path, new_path):
-        pass
+        raise RuntimeError('rename_file not implemented in SimulatorRemoteOperations')
 
     def create_file(self, address, file_content, file_path):
-        pass
+        raise RuntimeError('create_file not implemented in SimulatorRemoteOperations')
 
     def delete_file(self, address, file_content, file_path):
-        pass
+        raise RuntimeError('delete_file not implemented in SimulatorRemoteOperations')
 
     def copy_file(self, address, current_file_path, new_file_path):
-        pass
+        raise RuntimeError('copy_file not implemented in SimulatorRemoteOperations')
+
+    def file_exists(self, address, file_path):
+        raise RuntimeError('file_exists not implemented in SimulatorRemoteOperations')
 
     def mount_filesystem(self, client_address, filesystem):
         client = self._simulator.get_lustre_client(client_address)
@@ -474,6 +477,9 @@ class RealRemoteOperations(RemoteOperations):
 
     def copy_file(self, address, current_file_path, new_file_path):
         self._ssh_address(address, 'cp %s %s' % (current_file_path, new_file_path))
+
+    def file_exists(self, address, file_path):
+        return self._ssh_address(address, 'ls %s' % file_path, expected_return_code=None).rc == 0
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response

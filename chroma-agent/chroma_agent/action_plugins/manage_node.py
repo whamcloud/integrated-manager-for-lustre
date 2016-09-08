@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,6 +26,10 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.lib.pacemaker import PacemakerConfig
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.chroma_common.lib import util
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 
 
 def ssi(runlevel):
@@ -73,4 +77,14 @@ def reboot_server(at_time = "now"):
     raise CallbackAfterResponse(None, _reboot)
 
 
-ACTIONS = [reboot_server, shutdown_server, fail_node, stonith]
+def initialise_block_device_drivers():
+    console_log.info("Initialising drivers for block device types")
+    for cls in util.all_subclasses(BlockDevice):
+        error = cls.initialise_driver()
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
+
+ACTIONS = [reboot_server, shutdown_server, fail_node, stonith, initialise_block_device_drivers]

@@ -112,6 +112,10 @@ class BlockDevice(object):
     def device_path(self):
         return self._device_path
 
+    @classmethod
+    def initialise_driver(cls):
+        return None
+
     @abc.abstractmethod
     def mgs_targets(self, log):
         """

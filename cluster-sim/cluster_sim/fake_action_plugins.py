@@ -65,9 +65,11 @@ class FakeActionPlugins():
                         data[plugin] = klass(None).start_session()
                     return data
 
-            elif cmd in ['configure_rsyslog', 'unconfigure_rsyslog']:
-                return
-            elif cmd in ['configure_ntp', 'unconfigure_ntp']:
+            elif cmd in ['configure_ntp',
+                         'unconfigure_ntp',
+                         'unconfigure_corosync',
+                         'unconfigure_corosync2',
+                         'initialise_block_device_drivers']:
                 return agent_result_ok
             elif cmd == 'deregister_server':
                 sim = self._simulator
@@ -107,14 +109,14 @@ class FakeActionPlugins():
                 return agent_result_ok
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
-            elif cmd in ['unconfigure_corosync', 'unconfigure_corosync2']:
-                return agent_result_ok
-            elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
-                         'enable_pacemaker']:
-                return
-            elif cmd in ['configure_target_store', 'unconfigure_target_store']:
-                return
-            elif cmd == 'configure_repo':
+            elif cmd in ['configure_pacemaker',
+                         'unconfigure_pacemaker',
+                         'enable_pacemaker',
+                         'configure_target_store',
+                         'unconfigure_target_store',
+                         'configure_repo',
+                         'configure_rsyslog',
+                         'unconfigure_rsyslog']:
                 return
             elif cmd == 'kernel_status':
                 return {

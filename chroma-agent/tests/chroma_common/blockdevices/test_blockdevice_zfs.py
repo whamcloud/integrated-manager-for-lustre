@@ -1,7 +1,9 @@
 import glob
 import mock
 
+from os import path
 from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 from tests.chroma_common.blockdevices.blockdevice_base_tests import BaseTestBD
 from tests.data.chroma_common import example_data
 from tests.command_capture_testcase import CommandCaptureCommand
@@ -222,4 +224,29 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         mock_glob.assert_called_once_with('/%s/CONFIGS/%s-*' % (device_path, 'testfs'))
 
         self.assertEqual(result, None)
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver(self):
+        self.add_commands(CommandCaptureCommand(('genhostid',)))
+
+        with mock.patch.object(path, 'isfile', return_value=False):
+            result = BlockDeviceZfs.initialise_driver()
+
+        self.assertEqual(result, agent_result_ok)
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver_file_exists(self):
+        with mock.patch.object(path, 'isfile', return_value=True):
+            result = BlockDeviceZfs.initialise_driver()
+
+        self.assertEqual(result, agent_result_ok)
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver_fail(self):
+        self.add_commands(CommandCaptureCommand(('genhostid',), rc=1, stderr='sample error text'))
+
+        with mock.patch.object(path, 'isfile', return_value=False):
+            result = BlockDeviceZfs.initialise_driver()
+
+        self.assertIn('sample error text', result['error'])
         self.assertRanAllCommandsInOrder()
