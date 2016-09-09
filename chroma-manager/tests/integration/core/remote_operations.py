@@ -194,6 +194,9 @@ class SimulatorRemoteOperations(RemoteOperations):
     def delete_file(self, address, file_content, file_path):
         pass
 
+    def copy_file(self, address, current_file_path, new_file_path):
+        pass
+
     def mount_filesystem(self, client_address, filesystem):
         client = self._simulator.get_lustre_client(client_address)
         mgsnode, fsname = filesystem['mount_path'].split(":/")
@@ -440,7 +443,7 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_fqdn(fqdn, "chroma-agent start_corosync")
 
     def restart_chroma_manager(self, fqdn):
-        # Do not call this function directly, use function in ApiTestCaseWithTestReset class
+        # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
         self._ssh_address(fqdn, 'chroma-config restart')
 
     def run_chroma_diagnostics(self, server, verbose):
@@ -460,13 +463,17 @@ class RealRemoteOperations(RemoteOperations):
         return result.stdout
 
     def rename_file(self, address, current_path, new_path):
-        self._ssh_address(address, 'mv %s %s' % (current_path, new_path))
+        #Warning! This will force move by overwriting destination file
+        self._ssh_address(address, 'mv -f %s %s' % (current_path, new_path))
 
     def create_file(self, address, file_content, file_path):
         self._ssh_address(address, 'echo %s > %s' % (file_content, file_path))
 
     def delete_file(self, address, file_path):
         self._ssh_address(address, 'rm -rf %s' % file_path)
+
+    def copy_file(self, address, current_file_path, new_file_path):
+        self._ssh_address(address, 'cp %s %s' % (current_file_path, new_file_path))
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
