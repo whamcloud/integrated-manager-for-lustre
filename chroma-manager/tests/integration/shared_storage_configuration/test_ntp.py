@@ -2,12 +2,10 @@ import datetime
 
 from testconfig import config
 from django.utils.unittest import skipIf
-from django.utils.unittest import skip
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skip("HYD-6115 disabled for now")
 class TestNtpSync(ChromaIntegrationTestCase):
     NTP_SYNC_PERIOD = 30
     TIME_OFFSET_HOURS = 8
@@ -48,8 +46,6 @@ class TestNtpSync(ChromaIntegrationTestCase):
         self.manager_fqdn = config['chroma_managers'][0]['fqdn']
         self.agent_address = self.TEST_SERVERS[0]['address']
 
-        self._change_agent_time()
-
         # Now agent is now out of sync with manager, add host (implicitly configuring ntp)
         self.add_hosts([self.agent_address])
 
@@ -58,18 +54,16 @@ class TestNtpSync(ChromaIntegrationTestCase):
                              timeout=self.NTP_SYNC_PERIOD)
 
         # Now test time synchronisation if un/configure_ntp is called through agent cli
-
         self.remote_operations._ssh_address(self.agent_address, 'chroma-agent unconfigure_ntp')
 
         self._change_agent_time()
+
+        self.assertFalse(self._check_agent_time())
 
         # Now agent is now out of sync with manager, configure ntp
         self.remote_operations._ssh_address(self.agent_address,
                                             'chroma-agent configure_ntp --ntp_server %s' % self.manager_fqdn)
 
-        self._fetch_help(lambda: self.wait_until_true(self._check_agent_time,
-                                                      error_message='agent time not synchronised with manager after configure_ntp()',
-                                                      timeout=self.NTP_SYNC_PERIOD),
-                         ['tom.nabarro@intel.com'],
-                         'ntp sync failure',
-                         timeout=7200)
+        self.wait_until_true(self._check_agent_time,
+                             error_message='agent time not synchronised with manager after configure_ntp()',
+                             timeout=self.NTP_SYNC_PERIOD)
