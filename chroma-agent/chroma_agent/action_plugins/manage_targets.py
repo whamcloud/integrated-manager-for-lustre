@@ -170,6 +170,11 @@ def get_resource_locations():
         if "target-role" in columns[2]:
             del columns[2]
 
+        # and even newer pacemakers add a "(disabled)" to the end of the line:
+        # MGS_e1321a	(ocf::chroma:Target):	Stopped (disabled)
+        if columns[3] == "(disabled)":
+            columns[3] = None
+
         locations[columns[0]] = columns[3]
 
     return locations

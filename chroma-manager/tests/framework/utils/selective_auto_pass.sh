@@ -13,8 +13,9 @@ check_for_autopass() {
       exit 0
     fi
 
-    supported_distro_versions="7.2"
-    if [[ ! $supported_distro_versions =~ $TEST_DISTRO_VERSION ]] && ([ -z "$UPGRADE_TEST_DISTRO" ] || [[ ! $supported_distro_versions =~ $UPGRADE_TEST_DISTRO ]]); then
+    # regex matches separated by |
+    supported_distro_versions="7\.[0-9]+"
+    if [[ ! $TEST_DISTRO_VERSION =~ $supported_distro_versions ]] && ([ -z "$UPGRADE_TEST_DISTRO" ] || [[ ! $UPGRADE_TEST_DISTRO =~ $supported_distro_versions ]]); then
       fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
       exit 0
     fi
