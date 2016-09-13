@@ -26,6 +26,7 @@ import stat
 import time
 
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.log import daemon_log
 
 
 class DeviceHelper(object):
@@ -48,7 +49,11 @@ class DeviceHelper(object):
         while retries > 0:
             try:
                 file_state = os.stat(path)
-                self.non_existent_paths.discard(path)
+
+                if path in self.non_existent_paths:
+                    self.non_existent_paths.discard(path)
+                    daemon_log.debug('New device started to respond %s' % path)
+
                 break
             except OSError as os_error:
                 if os_error.errno not in [errno.ENOENT, errno.ENOTDIR]:
@@ -63,10 +68,15 @@ class DeviceHelper(object):
                 time.sleep(0.1)
                 retries -= retries if path in self.non_existent_paths else 1
 
-        if file_state and stat.S_ISBLK(file_state.st_mode):
+        if file_state is None:
+            if path not in self.non_existent_paths:
+                self.non_existent_paths.add(path)
+                daemon_log.debug('New device failed to respond %s' % path)
+
+            return None
+        elif stat.S_ISBLK(file_state.st_mode):
             return "%d:%d" % (os.major(file_state.st_rdev), os.minor(file_state.st_rdev))
         else:
-            self.non_existent_paths.add(path)
             return None
 
     def _paths_to_major_minors(self, device_paths):
