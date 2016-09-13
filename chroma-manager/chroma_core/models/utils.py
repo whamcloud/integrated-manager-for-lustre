@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -55,10 +55,16 @@ class DeletableManager(models.Manager):
 
 
 def _make_deletable(metaclass, dct):
-    # commit_on_success to ensure that the object is only marked deleted
-    # if the updates to alerts also succeed
-    @transaction.commit_on_success
     def mark_deleted(self):
+        # If this is not within a managed transaction we must use commit_on_success to ensure that the object is
+        # only marked deleted if the updates to alerts also succeed
+        if transaction.is_managed():
+            self._mark_deleted()
+        else:
+            with transaction.commit_on_success():
+                self._mark_deleted()
+
+    def _mark_deleted(self):
         """Mark a record as deleted, returns nothing.
 
         Looks up the model instance by pk, sets the not_deleted attribute
@@ -93,6 +99,7 @@ def _make_deletable(metaclass, dct):
     dct['objects'] = DeletableManager()
     dct['delete'] = delete
     dct['mark_deleted'] = mark_deleted
+    dct['_mark_deleted'] = _mark_deleted
     # Conditional to only create the 'deleted' attribute on the immediate
     # user of the metaclass, not again on subclasses.
     if issubclass(dct.get('__metaclass__', type), metaclass):
