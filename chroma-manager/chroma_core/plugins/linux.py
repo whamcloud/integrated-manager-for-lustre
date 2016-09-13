@@ -200,6 +200,7 @@ class Linux(Plugin):
     def agent_session_start(self, host_id, data, initial_scan=True):
         devices = data
         init_dvc_poll = False
+        reported_device_node_paths = []
 
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices:
@@ -296,6 +297,7 @@ class Linux(Plugin):
                                     host_id = host_id,
                                     path = bdev['path'])
                 self.major_minor_to_node_resource[bdev['major_minor']] = node
+                reported_device_node_paths.append(bdev['path'])
             else:
                 # Serial is not set, so create an UnsharedDevice
                 device, created = self.update_or_create(UnsharedDevice,
@@ -308,6 +310,7 @@ class Linux(Plugin):
                         host_id = host_id,
                         path = bdev['path'])
                 self.major_minor_to_node_resource[bdev['major_minor']] = node
+                reported_device_node_paths.append(bdev['path'])
 
         # Okay, now we've got ScsiDeviceNodes, time to build the devicemapper ones
         # on top of them.  These can come in any order and be nested to any depth.
@@ -329,6 +332,13 @@ class Linux(Plugin):
                 continue
 
             self.major_minor_to_node_resource[bdev['major_minor']] = node
+            reported_device_node_paths.append(bdev['path'])
+
+        # Finally Remove and of the devs that are no longer present.
+        self.remove_missing_devices(False,
+                            host_id,
+                            ScsiDevice,
+                            set([preferred_serial(bdev) for bdev in devices['devs'].values()]))
 
         # Now all the LUNs and device nodes are in, create the links between
         # the DM block devices and their parent entities.
@@ -378,15 +388,15 @@ class Linux(Plugin):
                 mpath_node.logical_drive = mpath_parents[0].logical_drive
                 mpath_node.add_parent(p)
 
-        self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [])
+        self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [], reported_device_node_paths)
 
-        self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [])
+        self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name']) or init_dvc_poll
+        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or init_dvc_poll
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name']) or init_dvc_poll
+        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or init_dvc_poll
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name']) or init_dvc_poll
+        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or init_dvc_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
@@ -412,6 +422,8 @@ class Linux(Plugin):
 
             this_node.add_parent(partition)
 
+        self.remove_missing_devicenodes(reported_device_node_paths)
+
         # If we see a new device and the data was sent by the agent rather than polled by the manager
         # Then we need to cause all of the ha peer agents to re-poll themselves. Sometimes agents can't see changes
         # such as another node changing a zfs poll. This code causes them to do a deeper poll.
@@ -419,7 +431,7 @@ class Linux(Plugin):
             ha_peers = HaCluster.host_peers(ManagedHost.objects.get(id=host_id))
             JobSchedulerClient.scan_agent_storage_devices([peer.id for peer in ha_peers], [host_id])
 
-    def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list):
+    def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list, reported_device_node_paths):
         resources_changed = False
 
         for device_uuid, device_info in devices[device_type].items():
@@ -434,11 +446,14 @@ class Linux(Plugin):
 
             device_res, created_res = self.update_or_create(klass,
                                                             **node_attributes)
+
             node_res, _ = self.update_or_create(LinuxDeviceNode,
                                                 parents=[device_res],
                                                 logical_drive=device_res,
                                                 host_id=host_id,
                                                 path=device_info['path'])
+
+            reported_device_node_paths.append(device_info['path'])
 
             for drive_bd in device_info['drives']:
                 drive_res = self.major_minor_to_node_resource[drive_bd]
@@ -446,12 +461,18 @@ class Linux(Plugin):
 
             self.major_minor_to_node_resource[device_info['block_device']] = node_res
 
-            resources_changed |= created_res
+            resources_changed = created_res or resources_changed
 
+        return self.remove_missing_devices(host_id, resources_changed, klass, devices[device_type].keys())
+
+    # noinspection PyTypeChecker,PyTypeChecker
+    def remove_missing_devices(self, host_id, resources_changed, klass, devices):
         # Now look for any VolumeNodes that were not reported, these should be removed from the resources.
         # If there are no device_nodes left after this then remove the drive_resource as well.
+        assert len(klass._meta.identifier.id_fields) == 1
+
         for drive_resource in self.find_by_attr(klass):
-            if drive_resource.uuid not in devices[device_type]:
+            if drive_resource.identifier_values[0] not in devices:
                 device_node_exists = False
 
                 for resource_node in self.find_by_attr(LinuxDeviceNode):
@@ -466,6 +487,16 @@ class Linux(Plugin):
                     self.remove(drive_resource)
 
         return resources_changed
+
+    def remove_missing_devicenodes(self, reported_paths):
+        """
+        Remove any LinuxDeviceNode paths that were not reported at all this iteration
+
+        :param reported_paths: list of LinuxDeviceNode path's report on this iteration
+        """
+        for resource_node in self.find_by_attr(LinuxDeviceNode):
+            if resource_node.path not in reported_paths:
+                self.remove(resource_node)
 
     def update_scan(self, scannable_resource):
         pass
