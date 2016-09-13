@@ -358,8 +358,10 @@ class ResourceManager(object):
             except KeyError:
                 log.warning("Cannot remove session for %s, it does not exist" % scannable_id)
 
-    @transaction.commit_on_success
     def _persist_created_hosts(self, session, scannable_id, new_resources):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         log.debug("_persist_created_hosts")
 
         record_pks = []
@@ -496,16 +498,21 @@ class ResourceManager(object):
 
     def get_label(self, record_id):
         try:
+            if StorageResourceRecord.objects.get(pk=record_id).to_resource().get_label() != self._label_cache[record_id]:
+                pass
+
             return self._label_cache[record_id]
         except KeyError:
             return StorageResourceRecord.objects.get(pk = record_id).to_resource().get_label()
 
-    @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin.api.resources import DeviceNode, LogicalDriveOccupier
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.lib.storage_plugin.base_resource import HostsideResource
+
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
 
         scannable_resource = ResourceQuery().get_resource(scannable_id)
 
@@ -777,10 +784,12 @@ class ResourceManager(object):
         return False
 
     # Fixme: This function that should just not be in resource_manager will leave just looking at networks
-    @transaction.commit_on_success
     def _delete_nid_resource(self, scannable_id, deleted_resource_id):
         from chroma_core.lib.storage_plugin.api.resources import LNETInterface, NetworkInterface as SrcNetworkInterface
         resource = StorageResourceRecord.objects.get(pk = deleted_resource_id).to_resource()
+
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
 
         # Shame to do this twice, but it seems that the scannable resource might not always be a host
         # according to this test_subscriber
@@ -799,10 +808,12 @@ class ResourceManager(object):
                                                                  name = resource.name)          # Presumes Nid name == Interface Name, that is asserted when it is added!yes
                 Nid.objects.filter(network_interface = network_interface).delete()
 
-    @transaction.commit_on_success
     def _persist_nid_updates(self, scannable_id, changed_resource_id, changed_attrs):
         from chroma_core.lib.storage_plugin.api.resources import LNETInterface, LNETModules, NetworkInterface as SrcNetworkInterface
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
 
         scannable_resource = ResourceQuery().get_resource(scannable_id)
 
@@ -949,8 +960,10 @@ class ResourceManager(object):
                 record_pk = session.local_id_to_global_id[local_resource_id]
                 return self._get_stats(record_pk, update_data)
 
-    @transaction.autocommit
     def _get_stats(self, record_pk, update_data):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         record = StorageResourceRecord.objects.get(pk = record_pk)
         samples = []
         for stat_name, stat_data in update_data.items():
@@ -969,22 +982,24 @@ class ResourceManager(object):
             samples += stat_record.update(stat_name, stat_properties, stat_data)
         return samples
 
-    @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
-        from chroma_core.models import StorageResourceRecord
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         record = StorageResourceRecord.objects.get(pk = record_pk)
         if remove:
             record.parents.remove(parent_pk)
         else:
             record.parents.add(parent_pk)
 
-    @transaction.autocommit
     def _resource_persist_update_attributes(self, scannable_id, local_record_id, attrs):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         session = self._sessions[scannable_id]
 
         global_record_id = session.local_id_to_global_id[local_record_id]
 
-        from chroma_core.models import StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk = global_record_id)
 
         ''' Sometimes we are given reference to a BaseStorageResource and so we need to store the id
@@ -1002,6 +1017,10 @@ class ResourceManager(object):
         """NB this is plural because new resources may be interdependent
         and if so they must be added in a blob so that we can hook up the
         parent relationships"""
+
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         with self._instance_lock:
             session = self._sessions[scannable_id]
             self._persist_new_resources(session, resources)
@@ -1009,9 +1028,11 @@ class ResourceManager(object):
             self._persist_nid_updates(scannable_id, None, None)
             self._persist_created_hosts(session, scannable_id, resources)
 
-    @transaction.commit_on_success
     @advisory_lock(AlertState, wait=False)
-    def session_remove_resources(self, scannable_id, resources):
+    def session_remove_local_resources(self, scannable_id, resources):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         with self._instance_lock:
             session = self._sessions[scannable_id]
             for local_resource in resources:
@@ -1023,7 +1044,21 @@ class ResourceManager(object):
                     pass
             self._persist_lun_updates(scannable_id)
 
+    @advisory_lock(AlertState, wait=False)
+    def session_remove_global_resources(self, scannable_id, resources):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
+        with self._instance_lock:
+            session = self._sessions[scannable_id]
+            resources = session._plugin_instance._index._local_id_to_resource.values()
+
+            self._cull_lost_resources(session, resources)
+
     def session_notify_alert(self, scannable_id, resource_local_id, active, severity, alert_class, attribute):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         with self._instance_lock:
             session = self._sessions[scannable_id]
             record_pk = session.local_id_to_global_id[resource_local_id]
@@ -1079,9 +1114,11 @@ class ResourceManager(object):
                                                   alert_type="StorageResourceAlert_%s" % alert_class)
         return alert_state
 
-    @transaction.commit_on_success
     @advisory_lock(AlertState, wait=False)
     def _cull_lost_resources(self, session, reported_resources):
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
+
         reported_scoped_resources = []
         reported_global_resources = []
         for r in reported_resources:
@@ -1303,7 +1340,6 @@ class ResourceManager(object):
                 deleter.delete(int(record_id))
         StorageResourceRecord.delayed.flush()
 
-    @advisory_lock(AlertState, wait=False)
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             with transaction.commit_manually():
@@ -1311,7 +1347,6 @@ class ResourceManager(object):
                 transaction.commit()
             with transaction.commit_on_success():
                 log.debug("global_remove_resource: %s" % resource_id)
-                from chroma_core.models import StorageResourceRecord
                 try:
                     record = StorageResourceRecord.objects.get(pk = resource_id)
                 except StorageResourceRecord.DoesNotExist:
@@ -1362,11 +1397,11 @@ class ResourceManager(object):
 
         return result
 
-    # Use commit on success to avoid situations where a resource record
-    # lands in the DB without its attribute records.
-    @transaction.commit_on_success
     def _persist_new_resources(self, session, resources):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
+        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
+        assert transaction.is_managed()
 
         # Sort the resources into an order based on ResourceReference
         # attributes, such that the referenced resource is created

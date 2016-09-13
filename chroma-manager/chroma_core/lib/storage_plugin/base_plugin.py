@@ -27,6 +27,7 @@ import threading
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 from chroma_core.services.stats import StatsQueue
+from chroma_core.lib.storage_plugin.api import identifiers
 
 
 class ResourceNotFound(Exception):
@@ -103,7 +104,8 @@ class BaseStoragePlugin(object):
 
         self._resource_lock = threading.Lock()
         self._delta_new_resources = []
-        self._delta_delete_resources = []
+        self._delta_delete_local_resources = []
+        self._delta_delete_global_resources = []
 
         self._alerts_lock = threading.Lock()
         self._delta_alerts = set()
@@ -250,9 +252,15 @@ class BaseStoragePlugin(object):
 
     def _commit_resource_deletes(self):
         # Resources deleted since last update
-        if len(self._delta_delete_resources) > 0:
-            self._resource_manager.session_remove_resources(self._scannable_id, self._delta_delete_resources)
-        self._delta_delete_resources = []
+        if len(self._delta_delete_local_resources) > 0:
+            self._resource_manager.session_remove_local_resources(self._scannable_id,
+                                                                  self._delta_delete_local_resources)
+            self._delta_delete_local_resources = []
+
+        if len(self._delta_delete_global_resources) > 0:
+            self._resource_manager.session_remove_global_resources(self._scannable_id,
+                                                                   self._delta_delete_global_resources)
+            self._delta_delete_global_resources = []
 
     def _commit_resource_updates(self):
         # Resources with changed attributes
@@ -460,7 +468,12 @@ class BaseStoragePlugin(object):
         """
         with self._resource_lock:
             self._index.remove(resource)
-            self._delta_delete_resources.append(resource)
+
+            if isinstance(resource.identifier, identifiers.BaseScopedId):
+                self._delta_delete_local_resources.append(resource)
+            else:
+                self._delta_delete_global_resources.append(resource)
+
             # TODO: it would be useful if local resource instances had a
             # way to invalidate their handles to detect buggy plugins
 

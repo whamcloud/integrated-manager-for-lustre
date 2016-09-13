@@ -22,7 +22,7 @@ class TestResourceOperations(ResourceManagerTestCase):
                                            60)
 
         self.assertEqual(StorageResourceRecord.objects.count(), 3)
-        self.resource_manager.session_remove_resources(self.scannable_resource_pk, [self.node_resource])
+        self.resource_manager.session_remove_local_resources(self.scannable_resource_pk, [self.node_resource])
         self.assertEqual(StorageResourceRecord.objects.count(), 2)
         self.resource_manager.session_add_resources(self.scannable_resource_pk, [self.node_resource])
         self.assertEqual(StorageResourceRecord.objects.count(), 3)
@@ -84,7 +84,7 @@ class TestResourceOperations(ResourceManagerTestCase):
                 self.assertIn(lun_klass, parent_resources)
 
         count_before = StorageResourceRecord.objects.count()
-        self.resource_manager.session_remove_resources(controller_record.pk, [presentation_resource])
+        self.resource_manager.session_remove_local_resources(controller_record.pk, [presentation_resource])
         count_after = StorageResourceRecord.objects.count()
 
         self.assertEqual(StorageResourceRecord.objects.filter(resource_class = presentation_klass_id).count(), 0)
@@ -101,7 +101,7 @@ class TestResourceOperations(ResourceManagerTestCase):
         self.resource_manager.session_add_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
-        self.resource_manager.session_remove_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
+        self.resource_manager.session_remove_local_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
 

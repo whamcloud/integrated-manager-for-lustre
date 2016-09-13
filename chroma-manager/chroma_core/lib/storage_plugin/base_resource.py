@@ -356,6 +356,14 @@ class BaseStorageResource(object):
     def get_parents(self):
         return self._parents
 
+    @property
+    def identifier_values(self):
+        return tuple(getattr(self, id_field) for id_field in self._meta.identifier.id_fields)
+
+    @property
+    def identifier(self):
+        return self._meta.identifier
+
 
 class BaseScannableResource(object):
     """Used for marking which BaseStorageResource subclasses are for scanning (like couplets, hosts)"""
