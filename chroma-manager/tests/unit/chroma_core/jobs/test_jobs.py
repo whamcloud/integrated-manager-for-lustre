@@ -1,5 +1,7 @@
 import mock
 
+from tests.unit.chroma_core import helpers
+
 from chroma_core.lib.job import Step
 from chroma_core.services.log import log_register
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
@@ -8,33 +10,40 @@ from chroma_core.chroma_common.lib.agent_rpc import agent_result, agent_result_o
 log = log_register('iml_test_case')
 
 
-class InvokeAgentInvoke(object):
-    def __init__(self, host_fqdn, command, args, result, error, executions_remaining=999999):
-        self.host_fqdn = host_fqdn
-        self.command = command
-        self.args = args
-        self.result = result
-        self.error = error
-        self.executions_remaining = executions_remaining
+class TestJobs(IMLUnitTestCase):
+    def __init__(self, methodName='runTest'):
+        super(TestJobs, self).__init__(methodName=methodName)
 
-    def __eq__(self, other):
-        return (self.host_fqdn == other.host_fqdn and
-                self.command == other.command and
-                self.args == other.args)
-
-
-class IMLUnitTestMockedInvoke(IMLUnitTestCase):
-    def setUp(self):
-        self.reset_invoke_capture()
+        self.hosts = []
         self._missing_invoke_err_msg = 'Invoke attempted was unknown to InvokeCaptureTestCase, did you intend this?'
+        self.mock_job = mock.MagicMock()
+        self._invokes = []
+
+    def setUp(self):
+        super(TestJobs, self).setUp()
+
+        helpers.load_default_profile()
+
+        for host_id in range(0, 10):
+            host = helpers.synthetic_host(address='myserver%s' % host_id)
+            self.hosts.append(host)
+
+        self.reset_invoke_capture()
 
         assert 'fake' not in str(Step.invoke_agent)
 
         mock.patch("chroma_core.lib.job.Step.invoke_agent", self._fake_invoke_agent).start()
 
-        self.mock_job = mock.MagicMock()
-
         self.addCleanup(mock.patch.stopall)
+
+    @property
+    def host(self):
+        # Handy if you're only using one
+        return self.hosts[0]
+
+    @property
+    def host_ids(self):
+        return [host.id for host in self.hosts]
 
     def _fake_invoke_agent(self, host, invoke, args=None):
         args = args if args is not None else {}
@@ -109,7 +118,7 @@ class IMLUnitTestMockedInvoke(IMLUnitTestCase):
         for invoke in invokes:
             self._invokes.append(invoke)
 
-    def add_invoke(self, host_fqdn, invoke, args, result, executions_remaining=999999):
+    def add_invoke(self, host_fqdn, invoke, args, result, error, executions_remaining=999999):
         '''
         Add a single invoke that is expected to be run.
         :param args: Tuple of the arguments of the invoke
@@ -118,7 +127,7 @@ class IMLUnitTestMockedInvoke(IMLUnitTestCase):
         :param stderr: stderr for the invoke
         :return: No return value
         '''
-        self.add_invokes(InvokeAgentInvoke(host_fqdn, invoke, args, result, executions_remaining))
+        self.add_invokes(InvokeAgentInvoke(host_fqdn, invoke, args, result, error, executions_remaining))
 
     @property
     def invokes_ran_count(self):
@@ -138,3 +147,26 @@ class IMLUnitTestMockedInvoke(IMLUnitTestCase):
         :return: None
         '''
         self._invokes_history = []
+
+    def run_step(self, job, step):
+        step[0](job,
+                step[1],
+                None,
+                None,
+                None).run(step[1])
+
+
+class InvokeAgentInvoke(object):
+    def __init__(self, host_fqdn, command, args, result, error, executions_remaining=999999):
+        self.host_fqdn = host_fqdn
+        self.command = command
+        self.args = args
+        self.result = result
+        self.error = error
+        self.executions_remaining = executions_remaining
+
+    def __eq__(self, other):
+        return (self.host_fqdn == other.host_fqdn and
+                self.command == other.command and
+                self.args == other.args)
+

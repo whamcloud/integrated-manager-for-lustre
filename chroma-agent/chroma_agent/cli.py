@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -68,6 +68,13 @@ def _register_function(parser, name, fn):
     debugging, and for the inital setup command.
     """
     argspec = inspect.getargspec(fn)
+
+    # agent_daemon_context is used to pass daemon context to the agnet, the user cannot provide it and
+    # so functions that require it cannot be called from the CLI
+    # In future we might want to 'create' a context so these functions can be called, but today the only
+    # usages do not make sense to call from the CLI.
+    if 'agent_daemon_context' in argspec[0]:
+        return
 
     p = parser.add_parser(name, help = fn.__doc__)
 

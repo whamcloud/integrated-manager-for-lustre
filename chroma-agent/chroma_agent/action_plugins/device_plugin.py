@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -45,5 +45,24 @@ def device_plugin(plugin = None):
 
     return result
 
-ACTIONS = [device_plugin]
+
+def trigger_plugin_update(agent_daemon_context, plugin_names):
+    """
+    Cause a device plugin to update on its next poll cycle irrespective of whether anything has changed or not.
+
+    Because this function requires agent_daemon_context it is not available from the cli.
+
+    :param agent_daemon_context: the context for the running agent daemon - None if the agent is not a daemon
+    :param plugin_names: The plugins to force the update for, [] means all
+    :return: result_agent_ok always
+    """
+
+    if plugin_names == []:
+        plugin_names = agent_daemon_context.plugin_sessions.keys()
+
+    for plugin_name in plugin_names:
+        agent_daemon_context.plugin_sessions[plugin_name]._plugin.trigger_plugin_update = True
+
+
+ACTIONS = [device_plugin, trigger_plugin_update]
 CAPABILITIES = []

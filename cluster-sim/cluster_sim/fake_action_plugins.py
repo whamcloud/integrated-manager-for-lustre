@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -46,7 +46,7 @@ class FakeActionPlugins():
     def capabilities(self):
         return ['manage_targets']
 
-    def run(self, cmd, kwargs):
+    def run(self, cmd, agent_daemon_context, kwargs):
 
         # This is a little hackish: we don't actually separate the thread_state for
         # each simulated agent (they mostly don't even shell out when simulated) but

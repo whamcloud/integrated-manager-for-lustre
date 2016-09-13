@@ -50,7 +50,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'register_copytool',
                'unregister_copytool',
                'update_nids',
-               'scan_agent_storage_devices',
+               'trigger_plugin_update',
                'update_lnet_configuration',
                'create_host',
                'set_host_profile',
@@ -189,8 +189,21 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().update_nids(nid_data)
 
     @classmethod
-    def scan_agent_storage_devices(cls, include_host_ids, exclude_host_ids):
-        return JobSchedulerRpc().scan_agent_storage_devices(include_host_ids, exclude_host_ids)
+    def trigger_plugin_update(cls, include_host_ids, exclude_host_ids, plugin_names):
+        """
+        Cause the plugins on the hosts passed to send an update irrespective of whether any
+        changes have occurred.
+
+        :param include_host_ids: List of host ids to include in the trigger update.
+        :param exclude_host_ids: List of host ids to exclude from the include list (makes for usage easy)
+        :param plugin_names: list of plugins to trigger update on - empty list means all.
+        :return: command id that caused updates to be sent.
+        """
+        assert isinstance(include_host_ids, list)
+        assert isinstance(exclude_host_ids, list)
+        assert isinstance(plugin_names, list)
+
+        return JobSchedulerRpc().trigger_plugin_update(include_host_ids, exclude_host_ids, plugin_names)
 
     @classmethod
     def tables_changed(cls, timestamp, tables):

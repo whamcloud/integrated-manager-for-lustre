@@ -427,9 +427,9 @@ class Linux(Plugin):
         # If we see a new device and the data was sent by the agent rather than polled by the manager
         # Then we need to cause all of the ha peer agents to re-poll themselves. Sometimes agents can't see changes
         # such as another node changing a zfs poll. This code causes them to do a deeper poll.
-        if (initial_scan is False) and (init_dvc_poll is True) and (devices.get('polled result', False) is False):
+        if (initial_scan is False) and (init_dvc_poll is True):
             ha_peers = HaCluster.host_peers(ManagedHost.objects.get(id=host_id))
-            JobSchedulerClient.scan_agent_storage_devices([peer.id for peer in ha_peers], [host_id])
+            JobSchedulerClient.trigger_plugin_update([peer.id for peer in ha_peers], [host_id], ['linux'])
 
     def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list, reported_device_node_paths):
         resources_changed = False

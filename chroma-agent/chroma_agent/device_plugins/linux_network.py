@@ -363,8 +363,9 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
 
         # THIS DOESN'T WORK BECAUSE RX/TX change in the network and so the data is sent back everytime. So it does work
         # but the data is always sent to if (true) is really what we have.
-        if (this_return != self.last_return):
+        if (this_return != self.last_return) or (self.trigger_plugin_update is True):
             LinuxNetworkDevicePlugin.last_return = this_return
+            self.trigger_plugin_update = False
             return self.last_return
         else:
             return

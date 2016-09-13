@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,6 +27,7 @@ import sys
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent.agent_client import AgentDaemonContext
 
 
 class CallbackAfterResponse(Exception):
@@ -174,7 +175,10 @@ class ActionRunner(threading.Thread):
         daemon_log.info("%s.run: %s %s %s" % (self.__class__.__name__, self.id, self.action, self.args))
         try:
             AgentShell.thread_state.enable_save()
-            result = self.manager._session._client.action_plugins.run(self.action, self.args)
+
+            agent_daemon_context = AgentDaemonContext(self.manager._session._client.sessions._sessions)
+
+            result = self.manager._session._client.action_plugins.run(self.action, agent_daemon_context, self.args)
         except CallbackAfterResponse, e:
             self.manager.respond_with_callback(self.id, e, AgentShell.thread_state.get_subprocesses())
         except AgentShell.SubprocessAborted:

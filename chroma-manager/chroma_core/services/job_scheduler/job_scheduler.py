@@ -57,7 +57,7 @@ from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
-from chroma_core.models import UpdateDevicesJob
+from chroma_core.models import TriggerPluginUpdatesJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1538,18 +1538,27 @@ class JobScheduler(object):
 
         return command.id
 
-    def scan_agent_storage_devices(self, include_host_ids, exclude_host_ids):
-        host_ids = include_host_ids if include_host_ids else [host.id for host in ManagedHost.objects.all()]
+    def trigger_plugin_update(self, include_host_ids, exclude_host_ids, plugin_names):
+        """
+        Cause the plugins on the hosts passed to send an update irrespective of whether any
+        changes have occurred.
 
-        if exclude_host_ids:
-            host_ids = list(set(host_ids) - set(exclude_host_ids))
+        :param include_host_ids: List of host ids to include in the trigger update.
+        :param exclude_host_ids: List of host ids to exclude from the include list (makes for usage easy)
+        :param plugin_names: list of plugins to trigger update on - empty list means all.
+        :return: command id that caused updates to be sent.
+        """
+
+        host_ids = [host.id for host in ManagedHost.objects.all()] if include_host_ids  is None else include_host_ids
+        host_ids = host_ids if exclude_host_ids is None else list(set(host_ids) - set(exclude_host_ids))
 
         if host_ids:
             with self._lock:
-                jobs = [UpdateDevicesJob(host_ids=json.dumps(host_ids))]
+                jobs = [TriggerPluginUpdatesJob(host_ids=json.dumps(host_ids),
+                                                plugin_names_json=json.dumps(plugin_names))]
 
                 with transaction.commit_on_success():
-                    command = Command.objects.create(message="Scanning agent storage devices")
+                    command = Command.objects.create(message="Triggering update from agent(s)")
                     self.CommandPlan.add_jobs(jobs, command)
 
             self.progress.advance()

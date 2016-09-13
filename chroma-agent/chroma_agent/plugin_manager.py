@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -118,6 +118,10 @@ class DevicePlugin(object):
         self._session = session
         self._reset_delta()
 
+        # When True the plugin should send an update to the manager regardless of whether any changes have occurred.
+        # The plugin must reset to False when this is done.
+        self.trigger_plugin_update = False
+
     def start_session(self):
         """
         Return information needed to start a manager-agent session, i.e. a full
@@ -171,7 +175,7 @@ class DevicePlugin(object):
         if not delta_fields:
             delta_fields = result.keys()
 
-        if self._safety_send < DevicePlugin.FAILSAFEDUPDATE:
+        if (self._safety_send < DevicePlugin.FAILSAFEDUPDATE) and (self.trigger_plugin_update is False):
             self._safety_send += 1
 
             for key in delta_fields:
@@ -181,6 +185,7 @@ class DevicePlugin(object):
                     self.last_result[key] = result[key]
         else:
             self._safety_send = 0
+            self.trigger_plugin_update = False
 
         return result if result else None                       # Turn {} into None, None will mean no message sent.
 
@@ -299,7 +304,7 @@ class ActionPluginManager(object):
         if self.commands is None:
             self._load()
 
-    def run(self, cmd, args):
+    def run(self, cmd, agent_daemon_context, args):
         # FIXME: provide a log object to action plugins that we capture
         # and send back to the caller
         try:
@@ -307,4 +312,11 @@ class ActionPluginManager(object):
         except KeyError:
             return agent_error("Requested command %s was unknown to the agent" % cmd)
 
-        return fn(**args)
+        # Only pass in the agent_daemon_context if the agent_daemon_context is expected by the function.
+        # This feature was added just prior to 3.1 and whilst it would be better to always pass the context the
+        # scope of the change was prohibitive at that time.
+        # Not a fixme because it is of little value to make the additional changes at this time.
+        if 'agent_daemon_context' in fn.__code__.co_varnames:
+            return fn(agent_daemon_context, **args)
+        else:
+            return fn(**args)

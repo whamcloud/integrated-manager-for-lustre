@@ -1,10 +1,10 @@
 import mock
 
-from tests.unit.lib.iml_unit_test_mocked_invoke import IMLUnitTestMockedInvoke, InvokeAgentInvoke
+from tests.unit.chroma_core.jobs.test_jobs import TestJobs, InvokeAgentInvoke
 from chroma_core.models.corosync2 import AutoConfigureCorosyncStep
 
 
-class TestCorosyncConfiguration(IMLUnitTestMockedInvoke):
+class TestCorosyncConfiguration(TestJobs):
     def test_acc_step(self):
         mcast_port = 55442
         prefix = 21

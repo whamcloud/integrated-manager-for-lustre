@@ -47,6 +47,10 @@ class LinuxDevicePlugin(DevicePlugin):
     # agent some state which we try and avoid. But this flag does at least allow us to keep it neat.
     devices_scanned = False
 
+    def __init__(self, session):
+        super(LinuxDevicePlugin, self).__init__(session)
+        self._last_quick_scan_result = ""
+
     def _quick_scan(self):
         """Lightweight enumeration of available block devices"""
         zfs = ZfsDevices().quick_scan()
@@ -94,15 +98,24 @@ class LinuxDevicePlugin(DevicePlugin):
                 'emcpower': emcpowers,
                 'mds': mds}
 
+    def _scan_devices(self, scan_always):
+        full_scan_result = None
+
+        if scan_always or (self._quick_scan() != self._last_quick_scan_result):
+            full_scan_result = self._full_scan()
+            self._last_quick_scan_result = self._quick_scan()
+
+        return full_scan_result
+
     def start_session(self):
-        self._devices = self._quick_scan()
-        return self._full_scan()
+        return self._scan_devices(True)
 
     def update_session(self):
-        devices = self._quick_scan()
-        if devices != self._devices:
-            self._devices = devices
-            return self._full_scan()
+        scan_result = self._scan_devices(self.trigger_plugin_update)
+
+        self.trigger_plugin_update = False      # I do explicitly do this after not before the scan, leads to less repeat scans.
+
+        return scan_result
 
 
 class BlockDevices(DeviceHelper):

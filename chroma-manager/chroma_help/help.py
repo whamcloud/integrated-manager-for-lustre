@@ -205,6 +205,7 @@ help_text = {
     'discovered_filesystem_with_n_MDTs_and_n_OSTs': 'Discovered filesystem %s with %s MDTs and %s OSTs',
     'update_devices': 'Update device info.',
     'update_packages': 'Update packages.',
+    'Trigger plugin poll for %s plugins': 'Trigger plugin poll for %s plugins',
     'update_nids': 'Update NIDs.',
     'configure_target': 'Configure target mount points.',
     'remove_target_from_pacemaker_config': 'Removing target %s from pacemaker configuration',

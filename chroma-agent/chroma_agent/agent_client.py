@@ -98,6 +98,18 @@ class CryptoClient(object):
             return None
 
 
+class AgentDaemonContext(object):
+    """
+    Simple class that may be expanded in the future to allow more AgentDaemon context to be passed to action_plugins
+    (and potentially others)
+    """
+    def __init__(self, plugin_sessions):
+        """
+        :param plugin_sessions: A dictionary of plugin sessions, the key is the name of the plugin 'linux' for example.
+        """
+        self.plugin_sessions = plugin_sessions
+
+
 class AgentClient(CryptoClient):
     def __init__(self, url, action_plugins, device_plugins, server_properties, crypto):
         super(AgentClient, self).__init__(url, crypto)

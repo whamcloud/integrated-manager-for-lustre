@@ -531,7 +531,6 @@ class UpdateDevicesStep(Step):
         for plugin in storage_plugin_manager.loaded_plugin_names:
             try:
                 plugin_data[plugin] = self.invoke_agent(host, 'device_plugin', {'plugin': plugin})[plugin]
-                plugin_data[plugin]['polled result'] = True
             except AgentException as e:
                 self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
 
@@ -553,6 +552,24 @@ class UpdateDevicesStep(Step):
             # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
             if plugin_data != {}:
                 AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
+
+
+class TriggerPluginUpdatesStep(Step):
+    idempotent = True
+
+    def trigger_plugin_updates(self, host, plugin_names):
+        self.invoke_agent_expect_result(host, 'trigger_plugin_update', {'plugin_names': plugin_names})
+
+    def run(self, kwargs):
+        threads = []
+
+        for host in kwargs['hosts']:
+            thread = ExceptionThrowingThread(target=self.trigger_plugin_updates,
+                                             args=(host, kwargs['plugin_names']))
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
 
 
 class DeployStep(Step):
@@ -1019,6 +1036,29 @@ class UpdateDevicesJob(HostListMixin):
 
     def get_steps(self):
         return [(UpdateDevicesStep, {'hosts': self.hosts})]
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+
+class TriggerPluginUpdatesJob(HostListMixin):
+    plugin_names_json = models.CharField(max_length=512)
+
+    @property
+    def plugin_names(self):
+        return json.loads(self.plugin_names_json)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return stateful_object.description()
+
+    def description(self):
+        return help_text['Trigger plugin poll for %s plugins'] % (", ".join(self.plugin_names) if self.plugin_names else 'all')
+
+    def get_steps(self):
+        return [(TriggerPluginUpdatesStep, {'hosts': self.hosts,
+                                            'plugin_names': self.plugin_names})]
 
     class Meta:
         app_label = 'chroma_core'

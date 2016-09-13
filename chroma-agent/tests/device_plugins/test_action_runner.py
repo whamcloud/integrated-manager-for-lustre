@@ -8,9 +8,10 @@ from django.utils import unittest
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin, CallbackAfterResponse
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePlugin
+from chroma_agent.agent_client import AgentDaemonContext
 
-
-ACTION_ONE_RETVAL = 'action_one_return'
+ACTION_ONE_NO_CONTEXT_RETVAL = 'action_one_no_context_return'
+ACTION_ONE_WITH_CONTEXT_RETVAL = 'action_one_with_context_return'
 ACTION_TWO_RETVAL = 'action_two_return'
 
 
@@ -20,13 +21,23 @@ subprocesses = {
 }
 
 
-def action_one(arg1):
+def action_one_no_context(arg1):
     """An action which invokes subprocess_one"""
 
     assert arg1 == "arg1_test"
     stdout = AgentShell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
-    return ACTION_ONE_RETVAL
+    return ACTION_ONE_NO_CONTEXT_RETVAL
+
+
+def action_one_with_context(agent_daemon_context, arg1):
+    """An action which invokes subprocess_one"""
+
+    assert isinstance(agent_daemon_context, AgentDaemonContext)
+    assert arg1 == "arg1_test"
+    stdout = AgentShell.try_run(['subprocess_one', 'subprocess_one_arg'])
+    assert stdout == 'subprocess_one_stdout'
+    return ACTION_ONE_WITH_CONTEXT_RETVAL
 
 
 def action_two(arg1):
@@ -54,7 +65,7 @@ def action_four():
 
     raise CallbackAfterResponse('result', action_four_callback)
 
-ACTIONS = [action_one, action_two, action_three, action_four]
+ACTIONS = [action_one_no_context, action_one_with_context, action_two, action_three, action_four]
 
 
 class ActionTestCase(unittest.TestCase):
@@ -104,18 +115,32 @@ class TestActionPluginManager(ActionTestCase):
 
     def test_run_direct_success(self):
         """
-        Test that we can run an action directly using ActionPluginManager (as the
-        CLI would)
+        Test that we can run an action directly using ActionPluginManager as the
+        CLI would.
         """
-        result = ActionPluginManager().run('action_one', {'arg1': "arg1_test"})
-        self.assertEqual(result, ACTION_ONE_RETVAL)
+        result = ActionPluginManager().run('action_one_no_context',
+                                           None,
+                                           {'arg1': "arg1_test"})
+        self.assertEqual(result, ACTION_ONE_NO_CONTEXT_RETVAL)
 
     def test_run_direct_failure(self):
         """
         Test that ActionPluginManager.run re-raises exceptions
         """
         with self.assertRaises(AssertionError):
-            ActionPluginManager().run('action_one', {'arg1': "the_wrong_thing"})
+            ActionPluginManager().run('action_one_no_context',
+                                      None,
+                                      {'arg1': "the_wrong_thing"})
+
+    def test_run_direct_success_with_context(self):
+        """
+        Test that we can run an action using ActionPluginManager as the
+        daemon would.
+        """
+        result = ActionPluginManager().run('action_one_with_context',
+                                           AgentDaemonContext([]),
+                                           {'arg1': "arg1_test"})
+        self.assertEqual(result, ACTION_ONE_WITH_CONTEXT_RETVAL)
 
 
 class ActionRunnerPluginTestCase(ActionTestCase):
@@ -173,12 +198,12 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
         the manager would via the HTTPS agent comms)
         """
 
-        id = self._run_action('action_one', {'arg1': 'arg1_test'})
+        id = self._run_action('action_one_no_context', {'arg1': 'arg1_test'})
         response = self._get_responses(1)[0]
         self.assertDictEqual(response, {
             'type': 'ACTION_COMPLETE',
             'id': id,
-            'result': ACTION_ONE_RETVAL,
+            'result': ACTION_ONE_NO_CONTEXT_RETVAL,
             'exception': None,
             'subprocesses': [{
                 'args': ['subprocess_one', 'subprocess_one_arg'],
@@ -222,7 +247,7 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
 
         for action in xrange(0, actions):
             if action & 1:
-                ids[action] = self._run_action('action_one', {'arg1': 'arg1_test'})
+                ids[action] = self._run_action('action_one_no_context', {'arg1': 'arg1_test'})
             else:
                 ids[action] = self._run_action('action_two', {'arg1': 'arg2_test'})
 
@@ -235,7 +260,7 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
                 self.assertDictEqual(response, {
                     'type': 'ACTION_COMPLETE',
                     'id': ids[action],
-                    'result': ACTION_ONE_RETVAL,
+                    'result': ACTION_ONE_NO_CONTEXT_RETVAL,
                     'exception': None,
                     'subprocesses': [{
                                      'args': ['subprocess_one', 'subprocess_one_arg'],
