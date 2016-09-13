@@ -188,11 +188,11 @@ class VolumeResource(ChromaModelResource):
             try:
                 objects = objects.filter(Q(volumenode__primary=request.GET['primary']) &
                                          Q(volumenode__host__id=request.GET['host_id']) &
-                                         Q(volumenode__not_deleted=True))
+                                         Q(volumenode__not_deleted=True)).distinct()
             except KeyError:
                 # Not filtering on primary, try just host_id
                 objects = objects.filter(Q(volumenode__host__id=request.GET['host_id']) &
-                                         Q(volumenode__not_deleted=True))
+                                         Q(volumenode__not_deleted=True)).distinct()
         except KeyError:
             # Not filtering on host_id
             pass
