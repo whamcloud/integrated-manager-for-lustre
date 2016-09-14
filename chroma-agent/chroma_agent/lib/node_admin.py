@@ -49,5 +49,5 @@ def unmanage_network(device, mac_address):
         try:
             AgentShell.try_run(['nmcli', 'con', 'load', ifcfg_path])
         except AgentShell.CommandExecutionError as cee:
-            if cee.result.rc not in [127, 8]:            # network manager may be uninstalled (127) stopped (8)
+            if cee.result.rc not in [127, 2, 8]:            # network manager may be uninstalled (127) stopped (8)
                 raise

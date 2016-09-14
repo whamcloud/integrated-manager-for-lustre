@@ -38,16 +38,11 @@ class TestNodeAdmin(CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
         self.write_ifcfg_mock.assert_called_with(self.device_name, self.mac_address, None, None)
 
-    def test_unmanage_network_nm_uninstalled(self):
-        self.add_commands(CommandCaptureCommand(('nmcli', 'con', 'load', self.write_ifcfg_result), rc=127))
+    def test_unmanage_network_nm_failures(self):
+        for expected_rc in [2, 127, 8]:
+            self.reset_command_capture()
+            self.add_commands(CommandCaptureCommand(('nmcli', 'con', 'load', self.write_ifcfg_result), rc=expected_rc))
 
-        node_admin.unmanage_network(self.device_name, self.mac_address)
+            node_admin.unmanage_network(self.device_name, self.mac_address)
 
-        self.assertRanAllCommandsInOrder()
-
-    def test_unmanage_network_nm_stopped(self):
-        self.add_commands(CommandCaptureCommand(('nmcli', 'con', 'load', self.write_ifcfg_result), rc=8))
-
-        node_admin.unmanage_network(self.device_name, self.mac_address)
-
-        self.assertRanAllCommandsInOrder()
+            self.assertRanAllCommandsInOrder()
