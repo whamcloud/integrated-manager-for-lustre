@@ -26,9 +26,19 @@ yum clean all
 
 # On RHEL systems, we need to set the releasever
 if which subscription-manager; then
-    # https://access.redhat.com/support/cases/#/case/01652731
-    #subscription-manager release --set=${upgrade_distro_version}
-    subscription-manager release --set=6Server
+    # The way RHEL does their repos, the release for the specific minor version
+    # only exists once there are updates for that version. In the small window
+    # between a minor version GAing and its first updates, then there is only
+    # the more generic 6Server or 7Server release. So we first test if a minor
+    # version exists yet, and if so use that, but if not, use the more generic
+    # [67]Server. This allows us to 'pin' older OS versions, but not break if in
+    # the window between GA and first updates.
+    if subscription-manager release --list | grep ${upgrade_distro_version}; then
+        release=${upgrade_distro_version}
+    else
+        release=${upgrade_distro_version%%.*}Server
+    fi
+    subscription-manager release --set=\${release}
 fi
 
 epel_repo=\$(yum repolist | sed -n -e 's/^\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')

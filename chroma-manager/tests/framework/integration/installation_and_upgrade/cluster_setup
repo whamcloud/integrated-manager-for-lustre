@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [ "$slave" = "rhel6&&ssi" ]; then
+if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
     RHEL=true
 else
     RHEL=false
@@ -38,7 +38,7 @@ fi
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 if $RHEL; then
-yum-config-manager --enable  rhel-6-server-optional-rpms
+yum-config-manager --enable  rhel-$(rpm --eval %rhel)-server-optional-rpms
 fi
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
