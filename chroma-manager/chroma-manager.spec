@@ -15,7 +15,6 @@ Source0: %{name}-%{version}.tar.gz
 Source1: chroma-supervisor-init.sh
 Source2: chroma-host-discover-init.sh
 Source3: logrotate.cfg
-Source4: chroma-config.1.gz
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -171,8 +170,8 @@ mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
-mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
-install %{SOURCE4} $RPM_BUILD_ROOT/usr/share/man/man1
+mkdir -p $RPM_BUILD_ROOT/%{_mandir}/man1
+install chroma-config.1 $RPM_BUILD_ROOT/%{_mandir}/man1
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
@@ -218,9 +217,6 @@ rm -rf $RPM_BUILD_ROOT
 %post
 %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.pyc \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
-
-# Create chroma-config MAN Page
-makewhatis
 
 # set worker_processes to auto
 sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
@@ -302,9 +298,6 @@ if [ $1 -lt 1 ]; then
 fi
 
 %postun
-# Remove chroma-config MAN Page
-rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE4}.gz
-
 if [ $1 -lt 1 ]; then
     %if 0%{?rhel} > 6
         for port in 80 443; do
@@ -338,7 +331,7 @@ fi
 /etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
-%attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
+%attr(0755,root,root)/%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf
