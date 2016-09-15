@@ -22,9 +22,10 @@ server {
     ssl_trusted_certificate {{SSL_PATH}}/authority.crt;
     ssl_client_certificate {{SSL_PATH}}/authority.crt;
     ssl_verify_client optional;
-    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!RC4:!aNULL:!MD5;
+    ssl_protocols TLSv1.2;
     ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:!DH+3DES:!ADH:!AECDH:!RC4:!aNULL:!MD5';
+
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 180m;
 

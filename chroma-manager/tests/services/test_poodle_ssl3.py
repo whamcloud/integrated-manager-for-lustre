@@ -18,7 +18,7 @@ class TestPoodleSSLv3(SupervisorTestCase):
 
         ssl_sock = ssl.wrap_socket(sock, ssl_version=ssl.PROTOCOL_SSLv3)
 
-        self.assertRaises(ssl.SSLError,
+        self.assertRaises(socket.error,
                           ssl_sock.connect,
                           ('127.0.0.1', 8000))
 
@@ -31,10 +31,10 @@ class TestPoodleSSLv3(SupervisorTestCase):
                           ssl_sock.connect,
                           ('127.0.0.1', 8000))
 
-    def test_tls1_enabled(self):
+    def test_tls1_2_enabled(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        ssl_sock = ssl.wrap_socket(sock, ssl_version=ssl.PROTOCOL_TLSv1)
+        ssl_sock = ssl.wrap_socket(sock, ssl_version=ssl.PROTOCOL_TLSv1_2)
 
         ssl_sock.connect(('127.0.0.1', 8000))
 
