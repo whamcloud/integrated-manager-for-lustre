@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -513,7 +513,7 @@ class Nid(models.Model):
 
     @property
     def modprobe_entry(self):
-        return("%s%s(%s)" % (self.network_interface.type,
+        return("%s%s(%s)" % (settings.NETWORK_TYPE_TO_LND_TYPE[self.network_interface.type],
                              self.lnd_network,
                              self.network_interface.name))
 

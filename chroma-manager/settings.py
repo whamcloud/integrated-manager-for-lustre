@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -331,6 +331,10 @@ SSH_CONFIG = None
 AUTH_PROFILE_MODULE = "chroma_core.UserProfile"
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
+
+# Allow the LND type for a Network type to be overridden from the standard ib->o2ib and tcp->tcp to something else.
+NETWORK_TYPE_TO_LND_TYPE = {'tcp': 'tcp',
+                            'o2ib': 'o2ib'}
 
 try:
     from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
