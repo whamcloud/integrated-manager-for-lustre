@@ -8,6 +8,8 @@ import tempfile
 import sys
 import requests
 import settings
+import socket
+import ssl
 from tests.services.http_listener import HttpListener
 from tests.services.supervisor_test_case import SupervisorTestCase
 
@@ -199,3 +201,59 @@ class TestSecureUrls(NginxTestCase):
             url = "https://localhost:%s/agent/reregister/" % settings.HTTPS_FRONTEND_PORT
             response = requests.post(url, verify=False, cert=(cert, key))
             self.assertEqual(response.status_code, 200)
+
+
+class TestCrypto(SupervisorTestCase):
+    SERVICES = ['nginx']
+
+    def _connect_socket(self, *args, **kwargs):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        ssl_sock = ssl.wrap_socket(sock, *args, **kwargs)
+
+        ssl_sock.connect(('127.0.0.1', 8000))
+
+        sock.close()
+
+    """
+    This test looks to see that SSLv3 is disabled this is needed due to the great POODLE scare of the summer
+    of 2014.
+
+    https://www.us-cert.gov/ncas/alerts/TA14-290A
+    """
+    def test_ssl3_disabled(self):
+        self.assertRaises(socket.error,
+                          self._connect_socket,
+                          ssl_version=ssl.PROTOCOL_SSLv3)
+
+    def test_ssl2_disabled(self):
+        self.assertRaises(socket.error,
+                          self._connect_socket,
+                          ssl_version=ssl.PROTOCOL_SSLv2)
+
+    def test_tls1_disabled(self):
+        self.assertRaises(socket.error,
+                          self._connect_socket,
+                          ssl_version=ssl.PROTOCOL_TLSv1)
+
+    def test_tls1_1_disabled(self):
+        self.assertRaises(socket.error,
+                          self._connect_socket,
+                          ssl_version=ssl.PROTOCOL_TLSv1_1)
+
+    def test_tls1_2_enabled(self):
+        self._connect_socket(ssl_version=ssl.PROTOCOL_TLSv1_2)
+
+    def test_good_cipher(self):
+        self._connect_socket(ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers='ECDHE-RSA-AES128-GCM-SHA256')
+
+    def test_bad_ciphers(self):
+        bad_ciphers = ['DH+3DES', 'ADH', 'AECDH', 'RC4', 'aNULL', 'MD5']
+
+        for bad_cipher in bad_ciphers:
+            self.assertRaises(socket.error,
+                              self._connect_socket,
+                              ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers=bad_cipher)
+
+    def test_connection(self):
+        self._connect_socket()
