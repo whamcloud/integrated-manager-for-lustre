@@ -311,6 +311,11 @@ AUTH_PROFILE_MODULE = "chroma_core.UserProfile"
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
+# Users can select particular LND types against particular Network Types, this dictionary provides the mapping and
+# can be overridden by providing a new/different mapping.
+NETWORK_TYPE_TO_LND_TYPE = {'tcp': ['tcp', 'o2ib'],
+                            'o2ib': ['tcp', 'o2ib']}
+
 try:
     from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
 except ImportError:

@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,6 +25,8 @@ from collections import namedtuple
 import re
 
 from django.db import models
+
+import settings
 
 
 class Nid(models.Model):
@@ -67,8 +69,7 @@ class Nid(models.Model):
     @classmethod
     def lnd_types_for_network_type(cls, network_type):
         try:
-            return {'tcp': ['tcp'],
-                    'o2ib': ['tcp', 'o2ib']}[network_type]
+            return settings.NETWORK_TYPE_TO_LND_TYPE[network_type]
         except KeyError:
             raise KeyError("Unknown network type %s" % network_type)
 
