@@ -1,4 +1,10 @@
-EL_MAJOR = $(shell rpm --eval '%{?rhel}')
+ifeq ($(shell uname -s),Darwin)
+    # For OSX we are using Python 2.7 so pretend to be EL7.
+    EL_MAJOR        := 7
+else
+    EL_MAJOR = $(shell rpm --eval '%{?rhel}')
+endif
+
 ifeq ($(EL_MAJOR), 7)
 DISTRO			:= el7
 DISTRO_TAG		:= el7
