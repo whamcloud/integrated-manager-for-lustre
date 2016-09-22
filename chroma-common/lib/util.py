@@ -18,7 +18,6 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
-import inspect
 
 import os
 import time
@@ -258,10 +257,8 @@ def wait_for_result(lambda_expression, logger, timeout=5 * 60, expected_exceptio
         try:
             return lambda_expression()
         except tuple(expected_exception_classes) as e:
-            logger.debug("%s tripped assertion: %s" % (inspect.getsource(lambda_expression), e))
-
             if running_time >= timeout:
-                logger.debug("Timed out waiting for %s\nException %s" % (inspect.getsource(lambda_expression), e))
+                logger.debug("Timed out waiting for command completion assertion was %s" % e)
                 raise
 
         time.sleep(1)
