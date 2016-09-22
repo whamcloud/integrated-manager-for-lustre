@@ -434,11 +434,11 @@ def _query_ha_targets():
         return targets
 
 
-def mount_target(uuid):
+def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
+    if agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)):
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -458,17 +458,19 @@ def unmount_target(uuid):
         exit(-1)
 
 
-def import_target(device_type, path):
+def import_target(device_type, path, pacemaker_ha_operation):
     """
     Passed a device type and a path import the device if such an operation make sense. For example a jbod scsi
     disk does not have the concept of import whilst zfs does.
-    :param path: path of device to import
     :param device_type: the type of device to import
+    :param path: path of device to import
+    :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
+               often have not have been cleanly exported because the previous mounted node failed in operation.
     :return: None or an Error message
     """
     blockdevice = BlockDevice(device_type, path)
 
-    return agent_ok_or_error(blockdevice.import_())
+    return agent_ok_or_error(blockdevice.import_(pacemaker_ha_operation))
 
 
 def export_target(device_type, path):

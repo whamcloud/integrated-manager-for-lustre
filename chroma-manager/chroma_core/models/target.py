@@ -838,7 +838,8 @@ class MakeTargetActiveStep(Step):
             self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
                                             'import_target',
                                             {'device_type': kwargs['active_volume_node'].device_type,
-                                             'path': kwargs['active_volume_node'].path})
+                                             'path': kwargs['active_volume_node'].path,
+                                             'pacemaker_ha_operation': False})
 
     @classmethod
     def describe(cls, kwargs):

@@ -236,13 +236,15 @@ class BlockDeviceZfs(BlockDevice):
 
         return self.TargetsInfo(names, params)
 
-    def import_(self):
+    def import_(self, pacemaker_ha_operation):
         """
         Before importing check the device_path does not reference a dataset, if it does then retry on parent zpool
         block device.
 
         We can only import the zpool if it's not already imported so check before importing.
 
+        :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
+               often have not have been cleanly exported because the previous mounted node failed in operation.
         :return: None for success meaning the zpool is imported
         """
         self._initialize_modules()
@@ -252,13 +254,15 @@ class BlockDeviceZfs(BlockDevice):
         except NotZpoolException:
             blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
 
-            return blockdevice.import_()
+            return blockdevice.import_(pacemaker_ha_operation)
 
         try:
             shell.Shell.try_run(['zpool', 'list', self._device_path])
             return None                                     # zpool is already imported so nothing to do.
         except shell.Shell.CommandExecutionError:
-            return shell.Shell.run_canned_error_message(['zpool', 'import', self._device_path])
+            return shell.Shell.run_canned_error_message(['zpool', 'import'] +
+                                                        (['-f'] if pacemaker_ha_operation else []) +
+                                                        [self._device_path])
 
     def export(self):
         """

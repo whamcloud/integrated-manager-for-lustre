@@ -94,22 +94,34 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_mgs_targets(self):
         self.assertEqual({}, self.blockdevice.mgs_targets(None))
 
-    def test_import_success(self):
+    def test_import_success_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.blockdevice._device_path.split('/')[0])))
 
-        self.assertIsNone(self.blockdevice.import_())
+        self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
 
-    def test_import_existing(self):
+    def test_import_success_with_pacemaker(self):
+        self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
+
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
+                          CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])))
+
+        self.assertIsNone(self.blockdevice.import_(True))
+        self.assertRanAllCommandsInOrder()
+
+    def test_import_existing_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_command(('zpool', 'list', self.blockdevice._device_path.split('/')[0]))
 
-        self.assertIsNone(self.blockdevice.import_())
+        self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
+
+    def test_import_existing_with_pacemaker(self):
+        self.test_import_existing_non_pacemaker()
 
     def test_export_success(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)

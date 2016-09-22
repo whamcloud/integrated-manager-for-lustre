@@ -394,24 +394,32 @@ class TestCheckImportExport(CommandCaptureTestCase):
         self.addCleanup(mock.patch.stopall)
 
     def test_import_device_ldiskfs(self):
-        self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb'))
-        self.assertRanAllCommands()
+        for with_pacemaker in [True, False]:
+            self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb', with_pacemaker))
+            self.assertRanAllCommands()
 
     def test_export_device_ldiskfs(self):
-        self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb'))
+        self.assertAgentOK(manage_targets.export_target('linux', '/dev/sdb'))
         self.assertRanAllCommands()
 
-    def test_import_device_zfs(self):
+    def test_import_device_zfs_non_pacemaker(self):
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.zpool), rc=0))
 
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset))
+        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, False))
+        self.assertRanAllCommands()
+
+    def test_import_device_zfs_pacemaker(self):
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1),
+                          CommandCaptureCommand(('zpool', 'import', '-f', self.zpool), rc=0))
+
+        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, True))
         self.assertRanAllCommands()
 
     def test_import_device_zfs_already_imported(self):
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=0))
 
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset))
+        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, False))
         self.assertRanAllCommands()
 
     def test_export_device_zfs(self):

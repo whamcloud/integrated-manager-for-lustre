@@ -128,11 +128,13 @@ class BlockDevice(object):
     def targets(self, uuid_name_to_target, device, log):
         pass
 
-    def import_(self):
+    def import_(self, pacemaker_ha_operation):
         """
         If appropriate import the blockdevice, this is required for many devices where only 1 node may have the device
         imported at a time. zpools for example.
 
+        :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
+               often have not have been cleanly exported because the previous mounted node failed in operation.
         :return: None on success or error message on failure
         """
         return None
