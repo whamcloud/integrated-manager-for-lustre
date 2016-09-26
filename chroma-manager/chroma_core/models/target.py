@@ -111,12 +111,20 @@ class ManagedTarget(StatefulObject):
 
     @property
     def full_volume(self):
-        """Used in API Resource that want the Volume and all related objects
+        """
+        Used in API Resource that want the Volume and all related objects
 
         This results in a join query to get data with fewer DB hits
+
+        If the volume was picked up using a simple join from the targets table then we would not need to work
+        around the not_deleted (it would pick up the record deleted or not) but because we effectively hardcode
+        it we have to ignore not deleted by use of the _base_manager.
+
+        Sadly the storage_resources do return empty because they are actually deleted, meaning we have Volume records
+        that have no resource records to go with them.
         """
 
-        return Volume.objects.all().select_related(
+        return Volume._base_manager.all().select_related(
             'storage_resource',
             'storage_resource__resource_class',
             'storage_resource__resource_class__storage_plugin'
