@@ -42,6 +42,11 @@ try:
 except ImportError:
     fatal("Can't import django.db! Are you on the IML manager?")
 
+# PowerControlType will register on database saves for IML reasons, this will cause a hang
+# during the run, so disconnect it.
+from django.db.models import signals
+from chroma_core.models import register_power_device
+signals.post_save.disconnect(register_power_device, sender = PowerControlDevice)
 
 if __name__ == "__main__":
     try:
