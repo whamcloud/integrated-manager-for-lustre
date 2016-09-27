@@ -387,10 +387,10 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         reconfigure = {'reconfigure_fencing': True}
         previous = old_self.host if old_self else None
         for host in self._hosts_for_fence_reconfiguration(self.host, previous):
-            if host.pacemaker_configuration:
+            if (host.pacemaker_configuration is not None) and (host.pacemaker_configuration.state != 'removed'):
                 job_scheduler_notify.notify(host.pacemaker_configuration, tznow(), reconfigure)
             else:
-                job_log.debug("Skipping reconfiguration of non-server %s" % host)
+                job_log.debug("Skipping reconfiguration of fence because active pacemaker_configuration not found %s" % host)
 
     @property
     def power_state(self):
