@@ -543,9 +543,11 @@ def _check_repos():
 
         if failures == len(urls):
             log.debug("Failed to read information for repository %s." % repo.id)
-            log.info("Yum does not seem to be able to find required network resources.  "
-                     "Please check your network and yum configuration and try again.  "
-                     "Perhaps you need to disable some repositories that are not reachable.")
+            log.info('Yum did not find the required network resources for all enabled repositories.\n'
+                     'Please check your network and yum configuration and try again.\n'
+                     'Perhaps you need to disable some repositories that are expectedly not reachable.\n'
+                     'You may also see this message if Red Hat Satellite repos are enabled.\n'
+                     'To skip this check, please rerun with the --no-repo-check flag.')
             log.info("URLs that failed: %s" % ' '.join(urls))
             sys.exit(1)
 
