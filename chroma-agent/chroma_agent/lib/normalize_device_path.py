@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -52,26 +52,6 @@ def normalized_device_path(device_path):
         normalized_path = _normalize_device_table[normalized_path]
 
     return normalized_path
-
-
-def find_normalized_end(device_basename):
-    '''
-    :param device_path: The device_path being search for
-    :return: ZFS does not provide full devices paths, just the tail end and so this route looks through all the known
-    devices and returns the first path that matches. This seems a bit hit and miss and so the routine raises an exception
-    if more than one value is found. A better solution might be required in the future if this proves a problem.
-    '''
-
-    _prime_normalized_paths()
-
-    values = [value for value in _normalize_device_table.values() if value.endswith(device_basename)]
-
-    if len(values) == 0:
-        raise KeyError("Device ending with %s not found in normalized devices" % device_basename)
-    elif len(values) > 1:
-        raise KeyError("Device ending with %s found more than once in normalized devices" % device_basename)
-
-    return values[0]
 
 
 def find_normalized_start(device_fullpath):
