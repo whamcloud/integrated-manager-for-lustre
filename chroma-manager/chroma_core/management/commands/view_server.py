@@ -44,7 +44,7 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        VIEW_SERVER_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', 'intel-view-server')
+        VIEW_SERVER_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', 'intel-view-server', 'dist', 'source')
         CONF = os.path.join(VIEW_SERVER_DIR, "conf.json")
 
         conf = {
