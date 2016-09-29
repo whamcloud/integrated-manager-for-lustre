@@ -52,7 +52,6 @@ Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
 Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
-Requires: nodejs >= 0.10.46-1
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
@@ -100,12 +99,14 @@ Obsoletes: django-celery
 %if 0%{?rhel} < 7
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 Requires: nginx >= 1.10.1-1
+Requires: nodejs >= 0.10.47-1
 %endif
 
 %if 0%{?rhel} > 6
 Requires: fence-agents
 Requires: fence-agents-virsh
 Requires: nginx >= 1:1.10.1-1
+Requires: nodejs >= 1:6.7.0-1
 %endif
 
 %description
