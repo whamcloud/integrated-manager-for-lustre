@@ -1,6 +1,7 @@
 from testconfig import config
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
 class TestConfParams(ChromaIntegrationTestCase):
@@ -72,7 +73,8 @@ class TestConfParams(ChromaIntegrationTestCase):
             'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}],
             'message': "Test writeconf"
         }).json
-        self.wait_for_command(self.chroma_manager, command['id'])
+        # With the introduction of zfs-backed targets, UpdateNidsJob may take longer than the default 5min timeout
+        self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
 
         fs_uri = "/api/filesystem/%s/" % self.filesystem_id
         response = self.chroma_manager.get(fs_uri)
