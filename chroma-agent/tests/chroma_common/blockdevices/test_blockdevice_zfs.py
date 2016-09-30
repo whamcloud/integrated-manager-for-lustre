@@ -97,8 +97,36 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_import_success_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', self.blockdevice._device_path.split('/')[0])))
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
+                          CommandCaptureCommand(('zpool', 'import', self.pool_name)),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
+                                                stdout='compressratio\t1.00x\n'
+                                                       'mounted\tyes\n'
+                                                       'quota\t0\n'
+                                                       'reservation\t0'))
+
+        self.assertIsNone(self.blockdevice.import_(False))
+        self.assertRanAllCommandsInOrder()
+
+    def test_import_existing_readonly(self):
+        self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
+
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), executions_remaining=1),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
+                                                stdout='compressratio\t1.00x\n'
+                                                       'mounted\tyes\n'
+                                                       'quota\t0\n'
+                                                       'readonly\ton',
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('zpool', 'list', self.pool_name),
+                                                executions_remaining=1),
+                          CommandCaptureCommand(('zpool', 'export', self.pool_name)),
+                          CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
+                          CommandCaptureCommand(('zpool', 'import', self.pool_name)),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
+                                                stdout='compressratio\t1.00x\n'
+                                                       'mounted\tyes\n'
+                                                       'quota\t0'))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -107,7 +135,12 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])))
+                          CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
+                                                stdout='compressratio\t1.00x\n'
+                                                       'mounted\tyes\n'
+                                                       'quota\t0\n'
+                                                       'reservation\t0'))
 
         self.assertIsNone(self.blockdevice.import_(True))
         self.assertRanAllCommandsInOrder()
@@ -115,7 +148,12 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_import_existing_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.blockdevice._device_path.split('/')[0]))
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name)),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
+                                                stdout='compressratio\t1.00x\n'
+                                                       'mounted\tyes\n'
+                                                       'quota\t0\n'
+                                                       'reservation\t0'))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -126,8 +164,8 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_export_success(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.blockdevice._device_path.split('/')[0]))
-        self.add_command(('zpool', 'export', self.blockdevice._device_path.split('/')[0]))
+        self.add_command(('zpool', 'list', self.pool_name))
+        self.add_command(('zpool', 'export', self.pool_name))
 
         self.assertIsNone(self.blockdevice.export())
         self.assertRanAllCommandsInOrder()
@@ -135,7 +173,7 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     def test_export_missing(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1)
+        self.add_command(('zpool', 'list', self.pool_name), rc=1)
 
         self.assertIsNone(self.blockdevice.export())
         self.assertRanAllCommandsInOrder()
@@ -146,7 +184,7 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         self.add_command(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
                          stdout=example_data.zfs_example_properties)
 
-        zfs_properties = self.blockdevice.zfs_properties()
+        zfs_properties = self.blockdevice.zfs_properties(False)
 
         self.assertEqual(zfs_properties['lustre:fsname'], 'efs')
         self.assertEqual(zfs_properties['lustre:svname'], 'efs-MDT0000')

@@ -159,14 +159,15 @@ class BlockDeviceZfs(BlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    def zfs_properties(self, log=None):
+    def zfs_properties(self, reread, log=None):
         """
         Try to retrieve the properties for a zfs device at self._device_path.
 
+        :param reread: Do not use the stored properties, always fetch them from the device
         :param log: optional logger
         :return: dictionary of zfs properties
         """
-        if not self._zfs_properties:
+        if reread or not self._zfs_properties:
             self._zfs_properties = {}
 
             try:
@@ -203,7 +204,7 @@ class BlockDeviceZfs(BlockDevice):
                                                                                           device['type'],
                                                                                           device['uuid']))
 
-        zfs_properties = self.zfs_properties(log)
+        zfs_properties = self.zfs_properties(False, log)
 
         if ('lustre:svname' not in zfs_properties) or ('lustre:flags' not in zfs_properties):
             if log:
@@ -258,11 +259,26 @@ class BlockDeviceZfs(BlockDevice):
 
         try:
             shell.Shell.try_run(['zpool', 'list', self._device_path])
-            return None                                     # zpool is already imported so nothing to do.
+
+            result = None
+
+            # Zpool is imported but make sure it is not readonly.
+            if self.zfs_properties(False).get('readonly') == 'on':
+                result = self.export()
+
+                if result is None:
+                    result = self.import_(pacemaker_ha_operation)
+
+            return result                                     # result None if already imported and writable
         except shell.Shell.CommandExecutionError:
-            return shell.Shell.run_canned_error_message(['zpool', 'import'] +
-                                                        (['-f'] if pacemaker_ha_operation else []) +
-                                                        [self._device_path])
+            result = shell.Shell.run_canned_error_message(['zpool', 'import'] +
+                                                          (['-f'] if pacemaker_ha_operation else []) +
+                                                          [self._device_path])
+            # Check the pool is not readonly, reread the properties because we have just imported it.
+            if self.zfs_properties(True).get('readonly') == 'on':
+                return 'zfs pool %s imported but device is readonly' % self._device_path
+
+            return result
 
     def export(self):
         """
