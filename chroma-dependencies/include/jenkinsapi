@@ -62,7 +62,7 @@ def get_zfs_ver(runs, distro):
                 filename = a
                 break
 
-    return filename[9:filename[9:].find(".el6")+9]
+    return filename[9:filename[9:].find("." + distro.split(".")[0])+9]
 
 def save_build(build, build_name, build_num):
     with open("/var/tmp/build-%s-%s.pkl" % (build_name, build_num), "wb") as pf:
