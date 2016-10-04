@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -45,6 +45,7 @@ from chroma_agent.crypto import Crypto
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.log import daemon_log, daemon_log_setup, console_log_setup, increase_loglevel, decrease_loglevel
+from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_functions
 
 
 class ServerProperties(object):
@@ -203,6 +204,10 @@ def main():
             signal.signal(signal.SIGINT, teardown_callback)
             signal.signal(signal.SIGUSR1, decrease_loglevel)
             signal.signal(signal.SIGUSR2, increase_loglevel)
+
+        # Call any agent daemon startup methods that were registered.
+        for function in agent_daemon_startup_functions:
+            function()
 
         agent_client.start()
         # Waking-wait to pick up signals

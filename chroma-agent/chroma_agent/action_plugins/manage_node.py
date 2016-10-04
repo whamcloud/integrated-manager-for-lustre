@@ -30,6 +30,7 @@ from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.chroma_common.lib import util
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_function
 
 
 def ssi(runlevel):
@@ -77,6 +78,9 @@ def reboot_server(at_time = "now"):
     raise CallbackAfterResponse(None, _reboot)
 
 
+# When the agent is run we want to allow block devices to do any initialization that they might need, this function
+# may also be called by the manager.
+@agent_daemon_startup_function()
 def initialise_block_device_drivers():
     console_log.info("Initialising drivers for block device types")
     for cls in util.all_subclasses(BlockDevice):

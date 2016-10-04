@@ -13,6 +13,46 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
     pool_name = 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333'
     dataset_path = '/'.join([pool_name, 'ost_index0'])
 
+    rpm_qi_zfs_stdout = """Name        : zfs
+Version     : 0.6.5.7
+Release     : 1.el7
+Architecture: x86_64
+Install Date: Wed 05 Oct 2016 07:59:50 PDT
+Group       : System Environment/Kernel
+Size        : 819698
+License     : CDDL
+Signature   : (none)
+Source RPM  : zfs-0.6.5.7-1.el7.src.rpm
+Build Date  : Sat 20 Aug 2016 09:34:50 PDT
+Build Host  : onyx-1-sdg1-el7-x8664.onyx.hpdd.intel.com
+Relocations : (not relocatable)
+URL         : http://zfsonlinux.org/
+Summary     : Commands to control the kernel modules and libraries
+Description :
+This package contains the ZFS command line utilities.
+"""
+
+    rpm_qi_spl_stdout = """[root@lotus-33vm18 ~]# rpm -qi spl
+Name        : spl
+Version     : 1.2.3.4
+Release     : 1.el7
+Architecture: x86_64
+Install Date: Wed 05 Oct 2016 08:35:27 PDT
+Group       : System Environment/Kernel
+Size        : 49120
+License     : GPLv2+
+Signature   : (none)
+Source RPM  : spl-0.6.5.7-1.el7.src.rpm
+Build Date  : Sat 20 Aug 2016 09:31:43 PDT
+Build Host  : onyx-1-sdg1-el7-x8664.onyx.hpdd.intel.com
+Relocations : (not relocatable)
+URL         : http://zfsonlinux.org/
+Summary     : Commands to control the kernel modules
+Description :
+This package contains the commands to verify the SPL
+kernel modules are functioning properly.
+"""
+
     def setUp(self):
         super(TestBlockDeviceZFS, self).setUp()
 
@@ -227,7 +267,11 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver(self):
-        self.add_commands(CommandCaptureCommand(('genhostid',)))
+        self.add_commands(CommandCaptureCommand(('genhostid',)),
+                          CommandCaptureCommand(('rpm', '-qi', 'spl'), stdout=self.rpm_qi_spl_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'spl/1.2.3.4')),
+                          CommandCaptureCommand(('rpm', '-qi', 'zfs'), stdout=self.rpm_qi_zfs_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'zfs/0.6.5.7')))
 
         with mock.patch.object(path, 'isfile', return_value=False):
             result = BlockDeviceZfs.initialise_driver()
@@ -236,17 +280,46 @@ class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_file_exists(self):
+        self.add_commands(CommandCaptureCommand(('rpm', '-qi', 'spl'), stdout=self.rpm_qi_spl_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'spl/1.2.3.4')),
+                          CommandCaptureCommand(('rpm', '-qi', 'zfs'), stdout=self.rpm_qi_zfs_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'zfs/0.6.5.7')))
+
         with mock.patch.object(path, 'isfile', return_value=True):
             result = BlockDeviceZfs.initialise_driver()
 
         self.assertEqual(result, agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
-    def test_initialise_driver_fail(self):
-        self.add_commands(CommandCaptureCommand(('genhostid',), rc=1, stderr='sample error text'))
+    def test_initialise_driver_fail_genhostid(self):
+        self.add_commands(CommandCaptureCommand(('genhostid',), rc=1, stderr='sample genhostid error text'))
 
         with mock.patch.object(path, 'isfile', return_value=False):
             result = BlockDeviceZfs.initialise_driver()
 
-        self.assertIn('sample error text', result['error'])
+        self.assertIn('sample genhostid error text', result['error'])
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver_fail_dkms_spl(self):
+        self.add_commands(CommandCaptureCommand(('genhostid',)),
+                          CommandCaptureCommand(('rpm', '-qi', 'spl'), stdout=self.rpm_qi_spl_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'spl/1.2.3.4'), rc=1, stderr='sample dkms error text'))
+
+        with mock.patch.object(path, 'isfile', return_value=False):
+            result = BlockDeviceZfs.initialise_driver()
+
+        self.assertIn('sample dkms error text', result['error'])
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver_fail_dkms_zfs(self):
+        self.add_commands(CommandCaptureCommand(('genhostid',)),
+                          CommandCaptureCommand(('rpm', '-qi', 'spl'), stdout=self.rpm_qi_spl_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'spl/1.2.3.4')),
+                          CommandCaptureCommand(('rpm', '-qi', 'zfs'), stdout=self.rpm_qi_zfs_stdout),
+                          CommandCaptureCommand(('dkms', 'install', 'zfs/0.6.5.7'), rc=1, stderr='sample dkms error text'))
+
+        with mock.patch.object(path, 'isfile', return_value=False):
+            result = BlockDeviceZfs.initialise_driver()
+
+        self.assertIn('sample dkms error text', result['error'])
         self.assertRanAllCommandsInOrder()
