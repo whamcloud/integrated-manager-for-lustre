@@ -3,7 +3,7 @@ import logging
 
 from tests.integration.core.long_polling_testing import LongPollingThread
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.chroma_common.lib.util import ExceptionThrowingThread
+from chroma_common.lib.util import ExceptionThrowingThread
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)

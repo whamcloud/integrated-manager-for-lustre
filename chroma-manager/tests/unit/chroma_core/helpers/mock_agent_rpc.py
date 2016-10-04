@@ -10,13 +10,13 @@ from chroma_core.models import ManagedTarget
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.disabled_connection import DISABLED_CONNECTION
-from chroma_core.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
+from chroma_common.lib.agent_rpc import agent_result, agent_result_ok
 from synthentic_objects import synthetic_lnet_configuration
 from synthentic_objects import create_synthetic_device_info
 from chroma_core.services.log import log_register
 from tests.unit.chroma_core.helpers.test_api_client import TestApiClient
 from tests.unit.chroma_core.helpers import helper
-from tests.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
 log = log_register('mock_agent_rpc')
 

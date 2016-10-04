@@ -5,7 +5,7 @@ from tests.unit.chroma_api.test_misc import remove_host_resources_patch
 from tests.unit.chroma_core.helpers import synthetic_host
 from chroma_core.models.host import ForceRemoveHostJob, RemoveHostJob
 from chroma_core.models.client_mount import LustreClientMount
-from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class LustreClientMountTests(ChromaApiTestCase):

@@ -7,7 +7,7 @@ import os
 import shutil
 import tempfile
 
-from ...chroma_common.lib.util import PreserveFileAttributes
+from chroma_common.lib.util import PreserveFileAttributes
 
 
 class NTPConfig(object):

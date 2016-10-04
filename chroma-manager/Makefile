@@ -59,10 +59,13 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version ui-modules
-	$(MAKE) -C ../chroma-agent develop
-	$(MAKE) -C ../cluster-sim develop
-	python setup.py develop
-	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
+	set -e;                                                  \
+	export PYTHONPATH=$$(pwd)/../chroma-common:$$PYTHONPATH; \
+	$(MAKE) -C ../chroma-agent develop;                      \
+	$(MAKE) -C ../cluster-sim develop;                       \
+	python setup.py develop;                                 \
+	./manage.py dev_setup $(DEV_SETUP_BUNDLES);              \
+	$(MAKE) -C ../chroma-common develop
 
 ui-modules:
 	echo "jenkins_fold:start:Setting up ui-modules"
@@ -221,8 +224,8 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file."; \
 	sort < requirements.tmp; } > $@
 	rm -f requirements.tmp
-	set -e;                                                   \
-	if grep ^make $@; then                                    \
+	set -e;                                               \
+	if grep ^make $@; then                                \
 		echo "why is this not quiet like it should be?";  \
 		sed -i -e '/^make\[[0-9]\]: /d' $@;               \
 	fi
@@ -235,14 +238,15 @@ download: requirements.txt
 
 docs: requirements.txt version
 	echo "jenkins_fold:start:Make Docs"
-	set -e;                                                         \
-	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
+	set -e;                                                     \
+	export PYTHONPATH=$$(pwd)/../chroma-common:$$PYTHONPATH;    \
+	if [ -z $(VIRTUAL_ENV) ] ; then                             \
 		virtualenv myenv;                                       \
 		. myenv/bin/activate;                                   \
 		CACHE=$$(pwd)/../chroma-externals;                      \
 		echo "# Using pip cache at $$CACHE";                    \
 		python tests/utils/pip_install_requirements.py $$CACHE; \
-	fi;                                                             \
+	fi;                                                         \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"
 

@@ -17,7 +17,7 @@ from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 import chroma_core.models.package
 from chroma_core.services.stats import StatsQueue
 

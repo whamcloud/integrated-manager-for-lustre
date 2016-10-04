@@ -19,6 +19,7 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/scm_version.py
 
 develop: version
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common; \
 	python setup.py develop
 
 cleandist:
@@ -30,6 +31,7 @@ production:
 tarball: version
 	echo "jenkins_fold:start:Make Agent Tarball"
 	rm -f MANIFEST
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common; \
 	python setup.py sdist
 	echo "jenkins_fold:end:Make Agent Tarball"
 
@@ -41,12 +43,13 @@ rpms: production cleandist tarball
 	cp chroma-agent-init.sh lustre-modules-init.sh logrotate.cfg \
 	   _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
-	dist=$$(rpm --eval %dist);                             \
-	dist=$${dist/.centos/};                                \
-	rpmbuild --define "_topdir $$(pwd)/_topdir"            \
-		 --define "version $(PACKAGE_VERSION)"         \
-		 --define "package_release $(PACKAGE_RELEASE)" \
-		 --define "%dist $$dist"                       \
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common;  \
+	dist=$$(rpm --eval %dist);                                \
+	dist=$${dist/.centos/};                                   \
+	rpmbuild --define "_topdir $$(pwd)/_topdir"               \
+		 --define "version $(PACKAGE_VERSION)"                \
+		 --define "package_release $(PACKAGE_RELEASE)"        \
+		 --define "%dist $$dist"                              \
 		 -bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir

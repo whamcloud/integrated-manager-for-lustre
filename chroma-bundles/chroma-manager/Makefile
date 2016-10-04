@@ -1,5 +1,5 @@
 include $(CURDIR)/../../include/Makefile.version
-RPMS        := chroma-manager
+RPMS        := chroma-manager chroma-common
 DESC        := $(PRODUCT_NAME)
 NAME		:= $(SHORT_PRODUCT_NAME)
 VERSION		:= $(PACKAGE_VERSION)

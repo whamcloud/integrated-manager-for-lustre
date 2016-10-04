@@ -12,7 +12,7 @@ from chroma_core.services.syslog.parser import LogMessageParser
 from chroma_core.models.log import LogMessage
 from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
 import settings
 

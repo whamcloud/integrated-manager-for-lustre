@@ -11,7 +11,7 @@ from chroma_agent_comms.views import MessageView
 from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler import job_scheduler_notify
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
 log = log_register("http_agent_host_state")
 

@@ -19,8 +19,8 @@ from chroma_agent.crypto import Crypto
 from chroma_agent.log import copytool_log, copytool_log_setup, increase_loglevel, decrease_loglevel
 from chroma_agent.utils import lsof
 from chroma_agent.agent_client import CryptoClient, ExceptionCatchingThread, HttpError, MAX_BYTES_PER_POST, MIN_SESSION_BACKOFF, MAX_SESSION_BACKOFF
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
-from chroma_agent.chroma_common.lib.date_time import FixedOffset
+from chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import FixedOffset
 
 READER_SELECT_TIMEOUT = 1.0
 RELAY_POLL_INTERVAL = 1
