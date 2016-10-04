@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -34,7 +34,7 @@ from chroma_core.models.jobs import Job
 from chroma_core.lib.job import Step
 from chroma_help.help import help_text
 from chroma_core.lib.job import job_log
-from chroma_core.chroma_common.lib.name_value_list import NameValueList
+from chroma_common.lib.name_value_list import NameValueList
 
 import settings
 

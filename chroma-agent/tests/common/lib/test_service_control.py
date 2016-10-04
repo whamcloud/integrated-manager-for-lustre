@@ -1,9 +1,9 @@
 import mock
 
-from chroma_agent.chroma_common.lib import util
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.service_control import ServiceControlEL6
-from chroma_agent.chroma_common.lib.service_control import ServiceControlEL7
+from chroma_common.lib import util
+from chroma_common.lib.service_control import ServiceControl
+from chroma_common.lib.service_control import ServiceControlEL6
+from chroma_common.lib.service_control import ServiceControlEL7
 from tests.command_capture_testcase import CommandCaptureTestCase
 from tests.command_capture_testcase import CommandCaptureCommand
 

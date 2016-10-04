@@ -1,4 +1,3 @@
-
 #
 # INTEL CONFIDENTIAL
 #
@@ -34,7 +33,7 @@ from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.rpc import RpcTimeout
-from chroma_core.chroma_common.lib.util import ExpiringList
+from chroma_common.lib.util import ExpiringList
 import settings
 
 

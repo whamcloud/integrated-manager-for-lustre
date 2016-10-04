@@ -74,10 +74,12 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version ui-modules
-	$(MAKE) -C ../chroma-agent develop
-	$(MAKE) -C ../cluster-sim develop
-	python setup.py develop
-	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
+	export PYTHONPATH=$$(pwd)/../chroma-common:$$PYTHONPATH; \
+	$(MAKE) -C ../chroma-agent develop && \
+	$(MAKE) -C ../cluster-sim develop && \
+	python setup.py develop && \
+	./manage.py dev_setup $(DEV_SETUP_BUNDLES) && \
+	$(MAKE) -C ../chroma-common develop
 
 $(HOME)/.node-gyp:
 	@echo "copying nodejs headers"; \
@@ -267,6 +269,7 @@ download: requirements
 
 docs: requirements version
 	set -e ; \
+	export PYTHONPATH=$$(pwd)/../chroma-common:$$PYTHONPATH; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
 		virtualenv myenv; \
 		. myenv/bin/activate; \

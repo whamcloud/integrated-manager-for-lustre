@@ -33,13 +33,13 @@ from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
-from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_common.lib.exception_sandbox import exceptionSandBox
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.lib.yum_utils import yum_util
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
-from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_common.filesystems.filesystem import FileSystem
+from chroma_common.blockdevices.blockdevice import BlockDevice
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from chroma_agent.device_plugins.audit import local

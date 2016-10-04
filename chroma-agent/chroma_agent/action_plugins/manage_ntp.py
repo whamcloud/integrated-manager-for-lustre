@@ -20,9 +20,9 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib.ntp import NTPConfig
-from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_common.lib.ntp import NTPConfig
+from chroma_common.lib.agent_rpc import agent_ok_or_error
+from chroma_common.lib.service_control import ServiceControl
 
 
 ntp_service = ServiceControl.create('ntpd')

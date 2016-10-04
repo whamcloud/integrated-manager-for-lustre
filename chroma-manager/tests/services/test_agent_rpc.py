@@ -8,8 +8,8 @@ from django.db import transaction
 from collections import namedtuple
 from tests.services.supervisor_test_case import SupervisorTestCase
 from tests.services.agent_http_client import AgentHttpClient
-from tests.chroma_common.lib import util
-from tests.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib import util
+from chroma_common.lib.date_time import IMLDateTime
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger

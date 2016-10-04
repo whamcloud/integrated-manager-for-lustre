@@ -1,6 +1,6 @@
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
-from chroma_core.chroma_common.lib.evaluator import safe_eval
+from chroma_common.lib.evaluator import safe_eval
 
 
 class TestEvaluator(IMLUnitTestCase):

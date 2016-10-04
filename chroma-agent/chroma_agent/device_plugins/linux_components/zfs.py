@@ -28,11 +28,11 @@ from chroma_agent.lib.shell import AgentShell
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ZfsDevice
-from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
-from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.chroma_common.lib import util
+from chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_common.blockdevices.blockdevice_zfs import ZfsDevice
+from chroma_common.filesystems.filesystem import FileSystem
+from chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_common.lib import util
 
 
 class ZfsDevices(object):

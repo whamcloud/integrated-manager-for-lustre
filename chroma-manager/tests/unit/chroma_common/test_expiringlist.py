@@ -1,6 +1,6 @@
 from django.utils import unittest
 from mock import patch
-from chroma_core.chroma_common.lib.util import ExpiringList
+from chroma_common.lib.util import ExpiringList
 
 
 class TestExpiringList(unittest.TestCase):

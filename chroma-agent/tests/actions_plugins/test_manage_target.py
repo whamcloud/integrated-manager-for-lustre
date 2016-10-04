@@ -1,8 +1,8 @@
 import mock
 
 from chroma_agent.action_plugins import manage_targets
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 from django.utils import unittest

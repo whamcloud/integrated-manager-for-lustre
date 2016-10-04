@@ -1,6 +1,6 @@
 import mock
 from django.utils import unittest
-from chroma_agent.chroma_common.lib.util import PreserveFileAttributes
+from chroma_common.lib.util import PreserveFileAttributes
 
 
 class PreservePermissionTestCase(unittest.TestCase):

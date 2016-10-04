@@ -83,9 +83,9 @@ class ApiResource(object):
         return "%d" % num
 
     def pretty_time(self, in_time):
-        from chroma_cli.chroma_common.lib.date_time import IMLDateTime
-        from chroma_cli.chroma_common.lib.util import FixedOffset
-        from chroma_cli.chroma_common.lib.util import LocalOffset
+        from chroma_common.lib.date_time import IMLDateTime
+        from chroma_common.lib.util import FixedOffset
+        from chroma_common.lib.util import LocalOffset
         local_midnight = IMLDateTime.now().replace(hour=0, minute=0,
                                                    second=0, microsecond=0)
         in_time = in_time.replace(tzinfo=FixedOffset(0))

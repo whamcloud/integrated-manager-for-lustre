@@ -1,7 +1,7 @@
 import mock
 
 from django.utils import unittest
-from chroma_agent.chroma_common.lib.exception_sandbox import ExceptionSandBox, exceptionSandBox
+from chroma_common.lib.exception_sandbox import ExceptionSandBox, exceptionSandBox
 
 
 class FencingTestCase(unittest.TestCase):

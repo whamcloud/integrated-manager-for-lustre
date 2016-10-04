@@ -1,7 +1,7 @@
 import json
 
 from tests.unit.chroma_core.jobs.test_jobs import TestJobs
-from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_common.lib.agent_rpc import agent_result_ok
 
 from chroma_core.models import TriggerPluginUpdatesJob
 

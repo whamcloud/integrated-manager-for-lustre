@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,8 +20,8 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
+from chroma_common.lib.firewall_control import FirewallControl
+from chroma_common.lib.agent_rpc import agent_ok_or_error
 
 
 def open_firewall(port, address, proto, description, persist):

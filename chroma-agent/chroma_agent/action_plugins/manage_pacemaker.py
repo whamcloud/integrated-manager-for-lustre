@@ -35,8 +35,8 @@ from chroma_agent.log import daemon_log
 from manage_corosync import start_corosync, stop_corosync
 from chroma_agent.lib.pacemaker import pacemaker_running
 from chroma_agent.lib.corosync import corosync_running
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
+from chroma_common.lib.service_control import ServiceControl
+from chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
 
 
 # The window of time in which we count resource monitor failures

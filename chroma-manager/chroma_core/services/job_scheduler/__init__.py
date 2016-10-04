@@ -33,7 +33,7 @@ from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job
 from chroma_core.models.command import Command
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
 import settings
 

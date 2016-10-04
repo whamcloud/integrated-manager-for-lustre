@@ -2,7 +2,7 @@ import json
 
 from django.utils import unittest
 
-from chroma_agent.chroma_common.lib.name_value_list import NameValueList
+from chroma_common.lib.name_value_list import NameValueList
 
 
 class TestNameValueList(unittest.TestCase):
