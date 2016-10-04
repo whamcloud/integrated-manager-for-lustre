@@ -21,6 +21,7 @@ from tests.integration.core.remote_operations import SimulatorRemoteOperations, 
 
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
 
@@ -743,7 +744,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.assertTrue(command_id)
                 remove_filesystem_command_ids.append(command_id)
 
-            self.wait_for_commands(chroma_manager, remove_filesystem_command_ids)
+            self.wait_for_commands(chroma_manager,
+                                   remove_filesystem_command_ids,
+                                   timeout=LONG_TEST_TIMEOUT)
 
         # Remove MGT
         response = chroma_manager.get(
