@@ -1,5 +1,6 @@
 
 from testconfig import config
+from django.utils.unittest.case import skipIf
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
@@ -67,15 +68,15 @@ class TestReformatTarget(ChromaIntegrationTestCase):
     """
     def _format(self, occupy_initial=False, occupy_after_add=False, reformat=False):
         """
-        :param occupy_initial: Create a local filesystem on the volume before adding
-        the server to chroma.
-        :param occupy_after_add: Create a local filesystem on the volume after adding
-        the server to chroma.
+        :param occupy_initial: Create a local filesystem on the volume before adding the server to chroma.
+        :param occupy_after_add: Create a local filesystem on the volume after adding the server to chroma.
         :param reformat: argument to target creation POST
         """
-        # Pick one victim volume ahead of doing anything with Chroma
+        # Pick one victim volume ahead of running tests
+        device_index = next(device['path_index'] for device in config['lustre_devices'] if
+                            device['backend_filesystem'] == 'linux')
         host_config = config['lustre_servers'][0]
-        device_path = host_config['device_paths'][0]
+        device_path = host_config['device_paths'][device_index]
 
         # Optionally create a local filesystem on a volume before it is added to chroma
         if occupy_initial:
@@ -134,6 +135,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         self.assertIsNotNone(failed_step)
         return failed_step
 
+    @skipIf(ChromaIntegrationTestCase.linux_devices_exist() is False, "test requires a linux device, none found")
     def test_format_occupied_device(self):
         """
         Test that attempting to format a block device which
@@ -150,6 +152,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         failed_step = self._get_failed_step(command)
         self.assertEqual(failed_step['class_name'], "PreFormatCheck")
 
+    @skipIf(ChromaIntegrationTestCase.linux_devices_exist() is False, "test requires a linux device, none found")
     def test_reformat_occupied_device(self):
         """
         Test that if a block device contains a filesystem, we
@@ -161,6 +164,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         command_id = self._format(occupy_initial=True, reformat=True)
         self.wait_for_command(self.chroma_manager, command_id, verify_successful=True)
 
+    @skipIf(ChromaIntegrationTestCase.linux_devices_exist() is False, "test requires a linux device, none found")
     def test_format_live_occupied_device(self):
         """
         Like test_format_occupied_device, but the device
@@ -176,6 +180,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         failed_step = self._get_failed_step(command)
         self.assertEqual(failed_step['class_name'], "PreFormatCheck")
 
+    @skipIf(ChromaIntegrationTestCase.linux_devices_exist() is False, "test requires a linux device, none found")
     def test_reformat_live_occupied_device(self):
         """
         Test that reformatting works even if we only find out the volume is occupied
