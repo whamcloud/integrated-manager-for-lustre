@@ -27,7 +27,7 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
         """
         host0 = synthetic_host('host0')
         host1 = synthetic_host('host1')
-        synthetic_volume_full(host0, host1)
+        synthetic_volume_full(host0, secondary_hosts=[host1])
 
         self.assertEqual(1, len(self._get_volumes()))
         self.assertEqual(1, len(self._get_volumes(host0.id)))
@@ -63,7 +63,7 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
         """
         host0 = synthetic_host('host0')
         host1 = synthetic_host('host1')
-        volume = synthetic_volume_full(host0, host1)
+        volume = synthetic_volume_full(host0, secondary_hosts=[host1])
 
         # Check we get 1 Volume with 2 VolumeNodes (check for with and without primary)
         for data in [{'host_id': host0.id},
@@ -91,3 +91,24 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
 
             # Check the Volume has 3 VolumeNodes
             self.assertEqual(len(content['objects'][0]['volume_nodes']), 3)
+
+    def test_unusable_by_lustre(self):
+        """Test selecting host by filesystem with valid and invalid filesystem ids."""
+        host = synthetic_host('myserver')
+        synthetic_volume_full(host)
+        synthetic_volume_full(host, usable_for_lustre=False)
+
+        response = self.api_client.get('/api/volume/')
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(2, len(content['objects']))
+
+        response = self.api_client.get('/api/volume/', data={'category': 'usable'})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(1, len(content['objects']))
+
+        response = self.api_client.get('/api/volume/', data={'category': 'unused'})
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        self.assertEqual(1, len(content['objects']))

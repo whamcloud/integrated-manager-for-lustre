@@ -126,6 +126,8 @@ class ZfsDataset(ZfsPool):
     class Meta:
         identifier = GlobalId('uuid')
 
+    usable_for_lustre = False
+
 
 class ZfsVol(ZfsPool):
     class Meta:

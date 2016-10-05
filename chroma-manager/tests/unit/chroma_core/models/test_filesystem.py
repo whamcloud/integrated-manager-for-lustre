@@ -49,7 +49,7 @@ class TestNidStrings(IMLUnitTestCase):
         mgs0 = self._host_with_nids('primary-mgs')
         mgs1 = self._host_with_nids('failover-mgs')
         other = self._host_with_nids('othernode')
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(mgs0, mgs1).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(mgs0, secondary_hosts=[mgs1]).id, name = "MGS")
         fs = self._create_file_system(mgt, other)
 
         self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0',), (u'1.2.3.5@tcp5',)))
@@ -68,7 +68,7 @@ class TestNidStrings(IMLUnitTestCase):
         mgs0 = self._host_with_nids('primary-mgs-twonid')
         mgs1 = self._host_with_nids('failover-mgs-twonid')
         other = self._host_with_nids('othernode')
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(mgs0, mgs1).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(mgs0, secondary_hosts=[mgs1]).id, name = "MGS")
         fs = self._create_file_system(mgt, other)
 
         self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0', u'4.3.2.1@tcp1'), (u'1.2.3.5@tcp5', u'4.3.2.2@tcp1')))

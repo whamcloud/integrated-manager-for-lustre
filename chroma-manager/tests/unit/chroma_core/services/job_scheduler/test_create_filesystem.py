@@ -31,7 +31,7 @@ class TestOrderedTargets(IMLUnitTestCase):
             self.nodes.append(synthetic_host('node%s' % node))
 
         for node in self.nodes:
-            synthetic_volume_full(node, *list(set(self.nodes) - set([node])))
+            synthetic_volume_full(node, secondary_hosts=list(set(self.nodes) - set([node])))
 
         self.volume_ids = [volume.id for volume in Volume.objects.all()]
 

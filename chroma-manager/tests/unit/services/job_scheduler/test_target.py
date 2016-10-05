@@ -153,12 +153,10 @@ class TestSharedTarget(JobTestCaseWithHost):
     def setUp(self):
         super(TestSharedTarget, self).setUp()
 
-        self.mgt, tms = ManagedMgs.create_for_volume(
-            self._test_lun(
-                ManagedHost.objects.get(address='pair1'),
-                ManagedHost.objects.get(address='pair2')
-            ).id,
-            name = "MGS")
+        self.mgt, tms = ManagedMgs.create_for_volume(self._test_lun(ManagedHost.objects.get(address='pair1'),
+                                                                    secondary_hosts=[ManagedHost.objects.get(address='pair2')]).id,
+                                                     name="MGS")
+
         ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
         for tm in tms:
             ObjectCache.add(ManagedTargetMount, tm)

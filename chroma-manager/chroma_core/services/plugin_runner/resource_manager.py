@@ -554,18 +554,13 @@ class ResourceManager(object):
             else:
                 node_to_logicaldrive_id[node_record] = logicaldrive_id
 
-        # Get the sizes for all of the logicaldrive resources
-        sizes = StorageResourceAttributeSerialized.objects.filter(
-            resource__id__in = node_to_logicaldrive_id.values(), key = 'size').values('resource_id', 'value')
-        logicaldrive_id_to_size = dict([(s['resource_id'],
-                                    StorageResourceAttributeSerialized.decode(s['value'])) for s in sizes])
+        # Get the sizes, filesystem_type and device_type for all of the logicaldrive resources
+        logicaldrive_id_to_attribute = defaultdict(dict)
 
-        # Build a dict of filesystem_type for each logicaldrive
-        logicaldrive_id_to_fstype = defaultdict(lambda: None)
-        for attr in StorageResourceAttributeSerialized.objects.filter(
-                resource__id__in = node_to_logicaldrive_id.values(),
-                key = 'filesystem_type').values('resource_id', 'value'):
-            logicaldrive_id_to_fstype[attr['resource_id']] = StorageResourceAttributeSerialized.decode(attr['value'])
+        for resource in StorageResourceRecord.objects.filter(id__in=node_to_logicaldrive_id.values()):
+            for attribute_name in ['size', 'filesystem_type', 'usable_for_lustre']:
+                attribute_value = getattr(resource.to_resource(), attribute_name)
+                logicaldrive_id_to_attribute[attribute_name][resource.id] = attribute_value
 
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
@@ -595,11 +590,12 @@ class ResourceManager(object):
                         continue
 
                     volumes.insert(dict(
-                        size = logicaldrive_id_to_size[logicaldrive_id],
-                        filesystem_type = logicaldrive_id_to_fstype.get(logicaldrive_id, None),
-                        storage_resource_id = logicaldrive_id,
-                        not_deleted = True,
-                        label = label
+                        size=logicaldrive_id_to_attribute['size'][logicaldrive_id],
+                        filesystem_type=logicaldrive_id_to_attribute['filesystem_type'][logicaldrive_id],
+                        storage_resource_id=logicaldrive_id,
+                        usable_for_lustre=logicaldrive_id_to_attribute['usable_for_lustre'][logicaldrive_id],
+                        not_deleted=True,
+                        label=label
                     ))
                     logicaldrive_id_handled.add(logicaldrive_id)
 

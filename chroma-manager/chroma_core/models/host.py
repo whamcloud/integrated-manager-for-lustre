@@ -376,6 +376,9 @@ class Volume(models.Model):
 
     filesystem_type = models.CharField(max_length = 32, blank = True, null = True)
 
+    usable_for_lustre = models.BooleanField(default=True,
+                                            help_text="True if the Volume can be selected for use as a new Lustre Target")
+
     __metaclass__ = DeletableMetaclass
 
     class Meta:
@@ -386,7 +389,7 @@ class Volume(models.Model):
     @classmethod
     def get_unused_luns(cls, queryset):
         """
-        Get all Luns which are not used by Targets
+        Get all Luns which are not used by Targets but are of a type that could be used by Targets.
 
         The obvious (and previous) method of just looking for a managed_target_mount referencing the VolumeNode and
         excluding it fails, because if a Volume is removed and then re-added (so becoming a new Volume) at the same path
@@ -406,7 +409,7 @@ class Volume(models.Model):
         volume_node_ids = [volume_node.volume_id for volume_node in VolumeNode.objects.all() if ((volume_node.host.id,
                                                                                                   volume_node.path)) in mtm_host_paths]
 
-        queryset = queryset.exclude(id__in=volume_node_ids)
+        queryset = queryset.filter(usable_for_lustre=True).exclude(id__in=volume_node_ids)
 
         return queryset
 

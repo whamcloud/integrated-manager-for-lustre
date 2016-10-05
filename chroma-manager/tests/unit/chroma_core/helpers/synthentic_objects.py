@@ -15,7 +15,7 @@ from tests.unit.chroma_core.helpers import random_str
 log = log_register('synthetic_objects')
 
 
-def synthetic_volume(serial=None, with_storage=True):
+def synthetic_volume(serial=None, with_storage=True, usable_for_lustre=True):
     """
     Create a Volume and an underlying StorageResourceRecord
     """
@@ -35,21 +35,29 @@ def synthetic_volume(serial=None, with_storage=True):
 
         volume.storage_resource = storage_resource
 
+    volume.usable_for_lustre = usable_for_lustre
+
     volume.save()
 
     return volume
 
 
-def synthetic_volume_full(primary_host, *args):
+def synthetic_volume_full(primary_host, secondary_hosts=None, usable_for_lustre=True):
     """
     Create a Volume and some VolumeNodes
     """
-    volume = synthetic_volume()
+    secondary_hosts = [] if secondary_hosts is None else secondary_hosts
+
+    volume = synthetic_volume(usable_for_lustre=usable_for_lustre)
     path = "/fake/path/%s" % volume.id
 
-    VolumeNode.objects.create(volume = volume, host = primary_host, path = path, primary = True)
-    for host in args:
-        VolumeNode.objects.create(volume = volume, host = host, path = path, primary = False)
+    VolumeNode.objects.create(volume=volume,
+                              host=primary_host,
+                              path=path,
+                              primary=True)
+
+    for host in secondary_hosts:
+        VolumeNode.objects.create(volume=volume, host=host, path=path, primary=False)
 
     return volume
 

@@ -30,8 +30,8 @@ class JobTestCase(IMLUnitTestCase):
                 return
         raise self.failureException("Command '%s', %s was not invoked (calls were: %s)" % (agent_command, agent_args, wrapped_calls))
 
-    def _test_lun(self, primary_host, *args):
-        return synthetic_volume_full(primary_host, *args)
+    def _test_lun(self, primary_host, secondary_hosts=None):
+        return synthetic_volume_full(primary_host, secondary_hosts)
 
     def _synthetic_host_with_nids(self, address):
         return synthetic_host(address, self.mock_servers[address]['nids'])

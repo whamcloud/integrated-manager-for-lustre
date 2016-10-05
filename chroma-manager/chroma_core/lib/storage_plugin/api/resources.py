@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -94,6 +94,8 @@ class LogicalDrive(BaseStorageResource):
 
     size = attributes.Bytes()
     filesystem_type = attributes.Boolean(optional=True)
+
+    usable_for_lustre = True
 
     """ This has to be a class method today because at the point we call it we only has the type not the object"""
     @classmethod
