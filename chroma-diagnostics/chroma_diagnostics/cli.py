@@ -23,15 +23,17 @@
 from collections import defaultdict
 import socket
 import logging
-import subprocess
 from datetime import datetime, timedelta
 import time
 import argparse
 from argparse import RawTextHelpFormatter
-import os
 import sys
+import subprocess
+import os
 
 from chroma_diagnostic_actions import cd_actions
+import utils
+
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
@@ -57,50 +59,6 @@ logrotate_logs = {
                   'chroma-agent.log',
                   'chroma-agent-console.log'
                   ]}
-
-
-def run_command(cmd, out, err):
-
-    try:
-        p = subprocess.Popen(cmd, stdout = out, stderr = err)
-    except OSError:
-        #  The cmd in this case could not run, skipping
-        return None
-    else:
-        p.wait()
-        try:
-            out.flush()
-        except AttributeError:
-            # doesn't do flush
-            pass
-        try:
-            err.flush()
-        except AttributeError:
-            # doesn't do flush
-            pass
-        return p
-
-
-def run_command_output_piped(cmd):
-    return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
-
-
-def save_command_output(fn, cmd, output_directory):
-
-    out_fn = "%s.out" % fn
-    err_fn = "%s.err" % fn
-    out_path = os.path.join(output_directory, out_fn)
-    err_path = os.path.join(output_directory, err_fn)
-
-    with open(out_path, 'w') as out:
-        with open(err_path, 'w') as err:
-            result = run_command(cmd, out, err)
-
-    # Remove meaningless zero lenth error files
-    if os.path.getsize(err_path) <= 0:
-        os.remove(err_path)
-
-    return result
 
 
 def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
@@ -144,7 +102,7 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
                 if root_file_name in log_names_to_collect:
                     abs_path = os.path.join(path, file_name)
                     if verbose > 2:
-                        log.info(run_command_output_piped(['ls', '-l', abs_path]).stdout.read())
+                        log.info(utils.run_command_output_piped(['ls', '-l', abs_path]).stdout.read())
                     last_modified = os.path.getmtime(abs_path)
                     if last_modified >= cutoff_date_seconds:
                         collected_files[root_file_name].append((abs_path,
@@ -187,20 +145,7 @@ def export_postgres_chroma_db(parent_directory):
     # ... the IML database
     cmd_export += ['chroma']
 
-    return run_command_output_piped(cmd_export)
-
-
-def change_tree_permissions(root_directory, new_permission):
-    """Change the permissions of all the files and directories below and
-    including the root_directory passed.
-    root_directory: Root to directory tree to change permissions of.
-    new_permission: Permission value to set.
-    """
-    for root, dirs, files in os.walk(root_directory):
-        for cd_file in files:
-            path = os.path.join(root, cd_file)
-            if os.path.exists(path):
-                os.chmod(os.path.join(root, cd_file), new_permission)
+    return utils.run_command_output_piped(cmd_export)
 
 
 def main():
@@ -248,11 +193,17 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
     run_sos = args.verbose > 0
+
     for cd_action in cd_actions(run_sos):
-        if save_command_output(cd_action.log_filename, cd_action.cmd, output_directory):
-            log.info(cd_action.cmd_desc)
-        elif args.verbose > 0:
+        if callable(cd_action.cmd_or_function):
             log.info(cd_action.error_message)
+            if not cd_action.cmd_or_action(output_directory, args.verbose):
+                log.info(cd_action.error_message)
+        else:
+            if utils.save_command_output(cd_action.log_filename, cd_action.cmd_or_function, output_directory):
+                log.info(cd_action.cmd_desc)
+            elif args.verbose > 0:
+                log.info(cd_action.error_message)
 
     log_count = copy_logrotate_logs(output_directory, args.days_back, args.verbose)
     if log_count > 0:
@@ -266,22 +217,22 @@ def main():
         log.info("Failed to export the manager system database, or none exists.  None exists on target servers.")
 
     if run_sos:
-        if run_command_output_piped(['sosreport', '--batch', '--tmp-dir', output_directory]):
+        if utils.run_command_output_piped(['sosreport', '--batch', '--tmp-dir', output_directory]):
             log.info("Running sosreport")
         else:
             log.info("Failed to run command sosreport")
 
-    change_tree_permissions(output_directory, 0644)
+    utils.change_tree_permissions(output_directory, 0644)
 
     archive_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
     # then tar.lzma'ing just the output dir
     log.info("Compressing diagnostics into LZMA (archive)")
-    run_command_output_piped(
+    utils.run_command_output_piped(
         ['tar', '--lzma', '-cf', archive_path, '-C', default_output_directory, output_fn, '--remove-files'])
 
     log.info("\nDiagnostic collection is completed.")
-    log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
+    log.info("Size:  %s" % utils.run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
              u"sent to Intel Manager for Lustre Support for analysis.")

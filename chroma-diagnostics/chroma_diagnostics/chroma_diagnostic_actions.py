@@ -21,6 +21,8 @@
 
 
 from collections import namedtuple
+from zfs import get_zdb_output_for_zpools
+from zfs import check_and_display_hostid
 
 
 PACKAGES = ['chroma-agent',
@@ -35,7 +37,61 @@ PACKAGES = ['chroma-agent',
 # with the extention "-<date>.gz"
 
 
-CDAction = namedtuple('CDAction', ['log_filename', 'cmd', 'cmd_desc', 'error_message', 'in_sos'])
+CDAction = namedtuple('CDAction', ['log_filename', 'cmd_or_function', 'cmd_desc', 'error_message', 'in_sos'])
+
+zdb_function_action = CDAction('zdb_function',
+                             get_zdb_output_for_zpools,
+                             'Running zdb function',
+                             'zdb function failed',
+                             False)
+
+check_host_id_function_action = CDAction('zdb',
+                             check_and_display_hostid,
+                             'Running check hostid function',
+                             'check hostid function failed',
+                             False)
+
+zpool_list_action = CDAction('zpool_list',
+                             ['zpool', 'list'],
+                             "Display basic information about pools",
+                             "Failed to detect pool list",
+                             False)
+
+zpool_import_action = CDAction('zpool_import',
+                               ['zpool', 'import'],
+                               "Discover available pools",
+                               "Failed to detect available pools",
+                               False)
+
+zpool_status_action = CDAction('zpool_status',
+                               ['zpool', 'status'],
+                               "Display state information of pools",
+                               "Failed to detect pools",
+                               False)
+
+zfs_list_action = CDAction('zfs_list',
+                           ['zfs', 'list'],
+                           "list basic dataset information",
+                           "Failed to list system datasets",
+                           False)
+
+zfs_get_all_action = CDAction('zfs_get_all',
+                              ['zfs', 'get', 'all'],
+                              "Display all datasets",
+                              "Failed to list datasets",
+                              False)
+
+arc_summary_action = CDAction('arc_summary',
+                              ['arc_summary.py', '-d'],
+                              "Display state and health of the ARC",
+                              "Failed to display information of the ARC",
+                              False)
+
+spl_host_id_action = CDAction('spl_host_id',
+                             ['cat', '/sys/module/spl/parameters/spl_hostid'],
+                             "Display SPL host id",
+                             "Failed to display SPL host id",
+                             False)
 
 detected_devices_action = CDAction('detected_devices',
                                    ['chroma-agent', 'device_plugin', '--plugin=linux'],
@@ -173,7 +229,13 @@ def cd_actions(exclude_actions_in_sos):
                    network_scan_action,
                    sysctl_action,
                    lctl_debug_kernal_action,
-                   lctl_devices_action] + proc_actions
+                   lctl_devices_action,
+                   zpool_list_action,
+                   zpool_import_action,
+                   zpool_status_action,
+                   zfs_list_action,
+                   arc_summary_action,
+                   spl_host_id_action] + proc_actions
 
     # Return action if the action command isnt in sosreport or if sosreport is not going to run
     return [action for action in all_actions if (action.in_sos is False) or (exclude_actions_in_sos is False)]
