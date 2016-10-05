@@ -860,13 +860,12 @@ class MakeTargetActiveStep(Step):
         inactive_volume_nodes = []
         active_volume_node = None
 
-        for mtm in target.managedtargetmount_set.all():
-            # Use ActiveTargetInfo so we do all db reads in here not in the run step, which would then need db access.
-            target_volume_info = TargetVolumeInfo(mtm.volume_node.host,
-                                                  mtm.volume_node.path,
-                                                  mtm.volume_node.volume.storage_resource.to_resource_class().device_type())
+        for volume_node in target.volume.volumenode_set.all():
+            target_volume_info = TargetVolumeInfo(volume_node.host,
+                                                  volume_node.path,
+                                                  volume_node.volume.storage_resource.to_resource_class().device_type())
 
-            if host == mtm.volume_node.host:
+            if host == volume_node.host:
                 active_volume_node = target_volume_info
             else:
                 inactive_volume_nodes.append(target_volume_info)

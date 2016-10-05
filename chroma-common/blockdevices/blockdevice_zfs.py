@@ -276,7 +276,7 @@ class BlockDeviceZfs(BlockDevice):
                                                           (['-f'] if pacemaker_ha_operation else []) +
                                                           [self._device_path])
             # Check the pool is not readonly, reread the properties because we have just imported it.
-            if self.zfs_properties(True).get('readonly') == 'on':
+            if (result is None) and (self.zfs_properties(True).get('readonly') == 'on'):
                 return 'zfs pool %s imported but device is readonly' % self._device_path
 
             return result
