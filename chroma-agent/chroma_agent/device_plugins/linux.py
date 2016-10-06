@@ -53,10 +53,7 @@ class LinuxDevicePlugin(DevicePlugin):
 
     def _quick_scan(self):
         """Lightweight enumeration of available block devices"""
-        zfs = ZfsDevices().quick_scan()
-        blocks = os.listdir("/sys/block/")
-
-        return zfs + blocks
+        return ZfsDevices().quick_scan() + BlockDevices.quick_scan()
 
     def _full_scan(self):
         # If we are a worker node then return nothing because our devices are not of interest. This is a short term
@@ -253,3 +250,15 @@ class BlockDevices(DeviceHelper):
         ndp.add_normalized_list(by_id_nodes, mapper_devs)
 
         return block_device_nodes, node_block_devices
+
+    @classmethod
+    def quick_scan(cls):
+        """
+        Return a very quick list of block devices from a number of sources so we can quickly see changes.
+        """
+        blocks = []
+
+        for path in [cls.SYSBLOCKPATH, cls.MAPPERPATH, cls.DISKBYIDPATH, cls.DISKBYPATHPATH]:
+            blocks.extend(os.listdir(path))
+
+        return blocks

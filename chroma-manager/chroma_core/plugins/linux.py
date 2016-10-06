@@ -32,6 +32,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 from chroma_core.models import ManagedHost
+from chroma_core.models import VolumeNode
 from settings import SERIAL_PREFERENCE
 
 version = 1
@@ -201,7 +202,7 @@ class Linux(Plugin):
 
     def agent_session_start(self, host_id, data, initial_scan=True):
         devices = data
-        init_dvc_poll = False
+        initiate_device_poll = False
         reported_device_node_paths = []
 
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
@@ -394,11 +395,11 @@ class Linux(Plugin):
 
         self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or init_dvc_poll
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or init_dvc_poll
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
 
-        init_dvc_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or init_dvc_poll
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
@@ -426,11 +427,18 @@ class Linux(Plugin):
 
         self.remove_missing_devicenodes(reported_device_node_paths)
 
-        # If we see a new device and the data was sent by the agent rather than polled by the manager
-        # Then we need to cause all of the ha peer agents to re-poll themselves. Sometimes agents can't see changes
-        # such as another node changing a zfs poll. This code causes them to do a deeper poll.
-        if (initial_scan is False) and (init_dvc_poll is True):
-            ha_peers = HaCluster.host_peers(ManagedHost.objects.get(id=host_id))
+        # If we see a device change and the data was sent by the agent poll rather than initial start up
+        # then we need to cause all of the ha peer agents and any other nodes that we share VolumeNodes with
+        # re-poll themselves.
+        # This 'set' is probably a good balance between every node and no poll at all.
+        if (initial_scan is False) and (initiate_device_poll is True):
+            ha_peers = set(HaCluster.host_peers(ManagedHost.objects.get(id=host_id)))
+
+            hosts_volume_node_ids = [volume_node.volume_id for volume_node in VolumeNode.objects.filter(host_id=host_id)]
+            all_volume_nodes = list(VolumeNode.objects.filter(volume_id__in=hosts_volume_node_ids))
+            all_volume_node_hosts = ManagedHost.objects.filter(id__in=set(volume_node.host_id for volume_node in all_volume_nodes))
+
+            ha_peers |= set(all_volume_node_hosts)
             JobSchedulerClient.trigger_plugin_update([peer.id for peer in ha_peers], [host_id], ['linux'])
 
     def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list, reported_device_node_paths):

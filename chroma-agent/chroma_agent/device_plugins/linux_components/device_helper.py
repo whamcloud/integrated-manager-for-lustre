@@ -34,9 +34,11 @@ class DeviceHelper(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
     DISKBYPATHPATH = os.path.join('/dev', 'disk', 'by-path')
     MDRAIDPATH = os.path.join('/dev', 'md')
+    SYSBLOCKPATH = os.path.join('/sys', 'block')
     DEVPATH = '/dev'
     MAXRETRIES = 5
     non_existent_paths = set([])
+    previous_path_status = {}
 
     """Base class with common methods for the various device detecting classes used
        by this plugin"""
@@ -44,16 +46,17 @@ class DeviceHelper(object):
     def _dev_major_minor(self, path):
         """Return a string if 'path' is a block device or link to one, else return None"""
 
-        file_state = None
+        file_status = None
         retries = self.MAXRETRIES
         while retries > 0:
             try:
-                file_state = os.stat(path)
+                file_status = os.stat(path)
 
                 if path in self.non_existent_paths:
                     self.non_existent_paths.discard(path)
                     daemon_log.debug('New device started to respond %s' % path)
 
+                self.previous_path_status[path] = file_status
                 break
             except OSError as os_error:
                 if os_error.errno not in [errno.ENOENT, errno.ENOTDIR]:
@@ -68,14 +71,19 @@ class DeviceHelper(object):
                 time.sleep(0.1)
                 retries -= retries if path in self.non_existent_paths else 1
 
-        if file_state is None:
+        if file_status is None:
             if path not in self.non_existent_paths:
                 self.non_existent_paths.add(path)
                 daemon_log.debug('New device failed to respond %s' % path)
 
-            return None
-        elif stat.S_ISBLK(file_state.st_mode):
-            return "%d:%d" % (os.major(file_state.st_rdev), os.minor(file_state.st_rdev))
+            if path not in self.previous_path_status:
+                return None
+
+            file_status = self.previous_path_status.pop(path)
+            daemon_log.debug('Device failed to respond but stored file_status used')
+
+        if stat.S_ISBLK(file_status.st_mode):
+            return "%d:%d" % (os.major(file_status.st_rdev), os.minor(file_status.st_rdev))
         else:
             return None
 
