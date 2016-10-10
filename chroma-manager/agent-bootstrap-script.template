@@ -121,7 +121,7 @@ def reg_manager():
         open(AGENT_CERT, 'w').write(json_resp['certificate'])
         return json_resp
     except urllib2.URLError, e:
-        log.exception("Cannot reach host/url %s: %s" % (reg_url, e))
+        bootstrap_log.exception("Cannot reach host/url %s: %s" % (reg_url, e))
         raise
 
 
