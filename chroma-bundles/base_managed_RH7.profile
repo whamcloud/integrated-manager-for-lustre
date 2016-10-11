@@ -1,5 +1,5 @@
 {
-  "ui_name": "Managed Storage Server For EL7.2",
+  "ui_name": "Managed Storage Server",
   "managed": true,
   "worker": false,
   "name": "base_managed_rh7",
