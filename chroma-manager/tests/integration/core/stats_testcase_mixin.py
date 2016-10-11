@@ -164,12 +164,16 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
                          (expected_bytes_written, actual_bytes_written, starting_bytes_free, current_bytes_free))
 
             return expected_bytes_written == actual_bytes_written
-        self.wait_until_true(_check)
+
+        # FIXME: HYD-6654 when writing to lustre fs containing ZFS-backed targets, extra storage space
+        # overhead is incurred which results in an unsuccessful bytes written check.
+        if self.zfs_devices_exist() is False:
+            self.wait_until_true(_check)
 
         # Check files free are what we expect after the writing above
         self.assert_fs_stat(filesystem_id, 'files_free', starting_files_free - 1)
 
-        #Check total bytes remained the same
+        # Check total bytes remained the same
         self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
 
         response = self.chroma_manager.get(

@@ -83,12 +83,6 @@ class TestFilesystemDetection(StatsTestCaseMixin):
 
         return response.json['objects']
 
-    # HYD-3576 is a problem with zfs stats, this routine allows us to check if any of the targets are zfs
-    # and returns true if so.
-    @property
-    def _if_any_zfs(self):
-        return any(server['device_type'] == 'zfs' for server in config['lustre_servers'])
-
     def test_filesystem_detection_verify_attributes(self):
         self._detect_filesystem()
 
@@ -150,7 +144,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             )
             self.remote_operations.exercise_filesystem(client, filesystem)
             # HYD-3576
-            if not self._if_any_zfs:
+            if self.zfs_devices_exist() is False:
                 self.check_stats(filesystem['id'])
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
@@ -174,7 +168,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             )
             self.remote_operations.exercise_filesystem(client, filesystem)
             # HYD-3576
-            if not self._if_any_zfs:
+            if self.zfs_devices_exist() is False:
                 self.check_stats(filesystem['id'])
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)

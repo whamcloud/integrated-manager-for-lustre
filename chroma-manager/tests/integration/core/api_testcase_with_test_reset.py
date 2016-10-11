@@ -155,8 +155,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 # is written.
                 self.remote_operations.write_config(self.TEST_SERVERS)
 
-                # cleanup ldiskfs devices
-                self.cleanup_ldiskfs_devices(self.TEST_SERVERS)
+                # cleanup linux devices
+                self.cleanup_linux_devices(self.TEST_SERVERS)
 
                 # cleanup zfs pools
                 self.cleanup_zfs_pools(self.config_servers, False, None, True)
@@ -880,8 +880,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if not user['username'] in configured_usernames:
                 chroma_manager.delete(user['resource_uri'])
 
-    @property
-    def zfs_devices_exist(self):
+    @classmethod
+    def linux_devices_exist(cls):
+        return any(lustre_device['backend_filesystem'] == 'linux' for lustre_device in config['lustre_devices'])
+
+    @classmethod
+    def zfs_devices_exist(cls):
         return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
 
     def cleanup_zfs_pools(self, test_servers, remove_zpools, zpool_datasets, devices_must_exist):
@@ -894,7 +898,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         :param zpool_datasets: Datasets to remove, None means all
         :param devices_must_exist: Error is devices do not exist when moving.
         """
-        if (self.simulator is not None) or (self.zfs_devices_exist is False):
+        if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
 
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
@@ -953,18 +957,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                           first_test_server['fqdn'],
                                           'destroy zfs device %s' % zfs_device)
 
-    @property
-    def ldiskfs_devices_exist(self):
-        return any(lustre_device['backend_filesystem'] == 'ldiskfs' for lustre_device in config['lustre_devices'])
-
-    def cleanup_ldiskfs_devices(self, test_servers):
+    def cleanup_linux_devices(self, test_servers):
         """
         Destroy any partitions on the block device.
 
-        Very ldiskfs specific code.
+        Very linux specific code.
         :return:
         """
-        if (self.simulator is not None) or (self.ldiskfs_devices_exist is False):
+        if (self.simulator is not None) or (self.linux_devices_exist() is False):
             return
 
         first_test_server = test_servers[0]
@@ -972,7 +972,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # Erase all volumes if the config does not indicate that there is already
         # a pre-existing file system (in the case of the monitoring only tests).
         for lustre_device in config['lustre_devices']:
-            if lustre_device['backend_filesystem'] == 'ldiskfs':
+            if lustre_device['backend_filesystem'] == 'linux':
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
                 self.execute_simultaneous_commands(linux_device.destroy_commands,

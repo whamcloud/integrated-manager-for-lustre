@@ -11,7 +11,7 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
     Not a test as such but a method for turning some of the disks into zpools.
     """
     def test_setup_zfs_targets_for_test(self):
-        if self.zfs_devices_exist is False:
+        if self.zfs_devices_exist() is False:
             return
 
         first_test_server = self.config_servers[0]
