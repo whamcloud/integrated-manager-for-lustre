@@ -246,7 +246,7 @@ class ClusterSimulator(Persisted):
                 'lustre-modules': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-osd-zfs': (0, '2.1.4', '1', 'x86_64'),
-                'kernel-devel-3.10.0-327.28.2.el7_lustre': (0, '2.6.32', '1', 'x86_64'),
+                'kernel-devel-3.10.0-327.36.2.el7_lustre': (0, '2.6.32', '1', 'x86_64'),
                 'zfs': (0, '0.6.5.3', '1', 'x86_64')
             },
             'worker': {
