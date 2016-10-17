@@ -125,16 +125,16 @@ class TestFilesystemDNE(StatsTestCaseMixin):
             # Now check some sample values. smoke test really.
             if index == 0:
                 # self.assertEqual(diff_stat['stats_mkdir'], len(mdt_indexes) + no_of_files_per_mdt[index] + sum(no_of_files_per_mdt))  # We created a directory for each MDT + 2 for each file (mkdir -p a/b counts as 2)
-                self.assertEqual(diff_stat['stats_open'], (2 * no_of_files_per_mdt[index]) + len(mdt_indexes))     # Directory creation is opened to create a file hence * 2
                 # I have yet to work out a calculation that works for rmdir. I'm not going to create a ticket because it isn't going to be important
                 # enough to get fix. There are lots of stats we could have chosen that might have been similar. But if someone wants to have a go
                 # at this calculation then it would be great. The calc works for 1 mdt.
                 # self.assertEqual(diff_stat['stats_rmdir'], len(mdt_indexes) + no_of_files_per_mdt[index])
+                pass
             else:
                 self.assertEqual(diff_stat['stats_mkdir'], no_of_files_per_mdt[index])                             # We created one directories for each file
-                self.assertEqual(diff_stat['stats_open'], (2 * no_of_files_per_mdt[index]) + 1)                    # Directory creation is a open
                 self.assertEqual(diff_stat['stats_rmdir'], 1 + no_of_files_per_mdt[index])                         # We then remove the directory
 
+            self.assertEqual(diff_stat['stats_open'], (2 * no_of_files_per_mdt[index]) + 1)                    # Directory creation is a open
             self.assertEqual(diff_stat['stats_unlink'], no_of_files_per_mdt[index])                                # And remove all the files.
 
     def test_create_dne_filesystem(self):
