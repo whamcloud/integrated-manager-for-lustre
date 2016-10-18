@@ -71,7 +71,7 @@ def _check_platform():
     SUPPORTED_DISTROS = ['redhat', 'centos']
     # Keep the version locked down for now -- if we can go with a minimum
     # version that'd be better, but we can't assume (c.f. pacemaker).
-    SUPPORTED_VERSIONS = ['6.4', '6.5', '6.6', '6.7', '6.8', '7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1610' ]
+    SUPPORTED_VERSIONS = ['7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1611' ]
     # This will work assuming we have version parity across all supported
     # distributions.
     SUPPORTED_PLATFORMS = ["%s-%s-%s" % p for p in itertools.product(SUPPORTED_DISTROS, SUPPORTED_VERSIONS, SUPPORTED_ARCHES)]
