@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -96,6 +96,10 @@ class AgentRpcMessenger(object):
     # The name of the device plugin on the agent with which
     # this module will communicate
     PLUGIN_NAME = 'action_runner'
+
+    # A bit rubbish, but a tag so callers can know the failure was because the server could not be contacted.
+    # Improve with a different Exception one day.
+    COULD_NOT_CONTACT_TAG = 'Could not contact server'
 
     # If no action_runner session is present when trying to run
     # an action, wait this long for one to show up
@@ -270,7 +274,8 @@ class AgentRpcMessenger(object):
 
         if not self.await_session(fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT):
             log.error("No %s session for %s after %s seconds" % (AgentRpcMessenger.PLUGIN_NAME, fqdn, wait_count))
-            raise AgentException(fqdn, action, args, "Could not contact server %s no session after %s seconds" % (fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT))
+            raise AgentException(fqdn, action, args, "%s %s no session after %s seconds" %
+                                 (self.COULD_NOT_CONTACT_TAG, fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT))
 
         with self._lock:
             try:
@@ -278,7 +283,7 @@ class AgentRpcMessenger(object):
             except KeyError:
                 # This could happen in spite of the earlier check, as that was outside the lock.
                 log.warning("AgentRpcMessenger._send: no session for %s" % fqdn)
-                raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
+                raise AgentException(fqdn, action, args, "%s %s" % (self.COULD_NOT_CONTACT_TAG, fqdn))
 
             log.debug("AgentRpcMessenger._send: using session %s" % session_id)
 

@@ -458,7 +458,7 @@ def unmount_target(uuid):
         exit(-1)
 
 
-def import_target(device_type, path, pacemaker_ha_operation):
+def import_target(device_type, path, pacemaker_ha_operation, validate_importable=False):
     """
     Passed a device type and a path import the device if such an operation make sense. For example a jbod scsi
     disk does not have the concept of import whilst zfs does.
@@ -466,11 +466,18 @@ def import_target(device_type, path, pacemaker_ha_operation):
     :param path: path of device to import
     :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
                often have not have been cleanly exported because the previous mounted node failed in operation.
+    :param validate_importable: The intention is to make sure the device can be imported but not actually import it.
+               in this in incarnation the device is import and the exported checking for errors.
     :return: None or an Error message
     """
     blockdevice = BlockDevice(device_type, path)
 
-    return agent_ok_or_error(blockdevice.import_(pacemaker_ha_operation))
+    error = blockdevice.import_(pacemaker_ha_operation)
+
+    if (error is None) and (validate_importable is True):
+        error = blockdevice.export()
+
+    return agent_ok_or_error(error)
 
 
 def export_target(device_type, path):

@@ -24,8 +24,7 @@ from django.db import models
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
 from chroma_core.models import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
 from chroma_core.models import UnmountStep
-from chroma_core.models import MountStep
-from chroma_core.models import MakeTargetActiveStep
+from chroma_core.models import MountOrImportStep
 from chroma_core.models import NoNidsPresent
 from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job
 from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
@@ -221,9 +220,10 @@ class RemoveFilesystemJob(StateChangeJob):
                           {"target": mgs_target,
                            "host": mgs_primary_mount.host}))
 
-        steps.append((MakeTargetActiveStep,
-                      MakeTargetActiveStep.create_parameters(mgs_target,
-                                                             mgs_primary_mount.host)))
+        steps.append((MountOrImportStep,
+                      MountOrImportStep.create_parameters(mgs_target,
+                                                          mgs_primary_mount.host,
+                                                          False)))
 
         steps.append((PurgeFilesystemStep,
                       {'filesystem': self.filesystem,
@@ -231,15 +231,10 @@ class RemoveFilesystemJob(StateChangeJob):
                        'mgs_device_type': mgs_primary_mount.volume_node.volume.storage_resource.to_resource_class().device_type(),
                        'host': mgs_primary_mount.host}))
 
-        steps.append((MakeTargetActiveStep,
-                      MakeTargetActiveStep.create_parameters(mgs_target,
-                                                             None)))
-
-        if mgs_target.state == 'mounted':
-            steps.append((MountStep,
-                          {"target": mgs_target,
-                           "host": mgs_primary_mount.host}))
-
+        steps.append((MountOrImportStep,
+                      MountOrImportStep.create_parameters(mgs_target,
+                                                          mgs_primary_mount.host if mgs_target.state == 'mounted' else None,
+                                                          True)))
         return steps
 
     def on_success(self):

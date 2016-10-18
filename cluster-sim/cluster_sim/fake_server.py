@@ -856,7 +856,7 @@ class FakeServer(utils.Persisted):
 
         return agent_result_ok
 
-    def import_target(self, device_type, path, pacemaker_ha_operation):
+    def import_target(self, device_type, path, pacemaker_ha_operation, validate_importable=False):
         return agent_result_ok
 
     def export_target(self, device_type, path):

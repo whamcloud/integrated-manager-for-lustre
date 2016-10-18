@@ -798,7 +798,7 @@ class RemoveTargetFromPacemakerConfigStep(Step):
 TargetVolumeInfo = namedtuple('TargetVolumeInfo', ['host', 'path', 'device_type'])
 
 
-class MakeTargetActiveStep(Step):
+class MountOrImportStep(Step):
     """
     When carrying out operations we need to make sure a Target is mounted on the correct node. This is often (probably)
     always pre or post HA operation. For example when formatting the device we need to be sure it is where we are going
@@ -817,10 +817,23 @@ class MakeTargetActiveStep(Step):
     idempotent = True
 
     def inactivate_volume_node(self, volume_node):
-        self.invoke_agent_expect_result(volume_node.host,
-                                        'export_target',
-                                        {'device_type': volume_node.device_type,
-                                         'path': volume_node.path})
+        # If the node cannot be contacted then this is not a failure, because the node might be broken, it is refuses
+        # to export the node that is an error.
+        # The first is not an issue because after doing this export we will only do a soft import and so will fail if
+        # something sill have the node imported.
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
+
+        try:
+            self.invoke_agent_expect_result(volume_node.host,
+                                            'export_target',
+                                            {'device_type': volume_node.device_type,
+                                             'path': volume_node.path})
+        except AgentException as e:
+            # TODO: When landing this on b4_0 for future code we will add a new exception AgentContactException to
+            # deal with this case properly
+            if e.backtrace.startswith(AgentRpcMessenger.COULD_NOT_CONTACT_TAG) is False:
+                raise
 
     def run(self, kwargs):
         threads = []
@@ -835,26 +848,45 @@ class MakeTargetActiveStep(Step):
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
         if kwargs['active_volume_node'] is not None:
-            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                            'import_target',
-                                            {'device_type': kwargs['active_volume_node'].device_type,
-                                             'path': kwargs['active_volume_node'].path,
-                                             'pacemaker_ha_operation': False})
+            if kwargs['start_target'] is True:
+                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                'import_target',
+                                                {'device_type': kwargs['active_volume_node'].device_type,
+                                                 'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False,
+                                                 'validate_importable': True})
+
+                result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                         "start_target",
+                                                         {'ha_label': kwargs['target'].ha_label})
+
+                kwargs['target'].update_active_mount(result)
+            else:
+                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                'import_target',
+                                                {'device_type': kwargs['active_volume_node'].device_type,
+                                                 'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False,
+                                                 'validate_importable': False})
 
     @classmethod
     def describe(cls, kwargs):
         if kwargs['active_volume_node'] is None:
             return help_text['export_target_from_nodes'] % kwargs['target']
         else:
-            return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+            if kwargs['start_target'] is True:
+                return help_text['mounting_target_on_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+            else:
+                return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
 
     @classmethod
-    def create_parameters(cls, target, host):
+    def create_parameters(cls, target, host, start_target):
         """
         Create the kwargs appropriate for the MakeTargetActive step.
 
         :param target: The lustre target to be made available to host (and hence unavailable to other hosts)
         :param host: The host target to be made available to, or None if target to be made unavailable on all hosts
+        :param start_target: True means the target is started False means it is just imported.
         :return:
         """
         inactive_volume_nodes = []
@@ -875,7 +907,8 @@ class MakeTargetActiveStep(Step):
 
         return {'target': target,
                 'inactive_volume_nodes': inactive_volume_nodes,
-                'active_volume_node': active_volume_node}
+                'active_volume_node': active_volume_node,
+                'start_target': start_target}
 
 
 class ConfigureTargetJob(StateChangeJob):
@@ -1012,14 +1045,13 @@ class RegisterTargetJob(StateChangeJob):
 
 
 class MountStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        target = kwargs['target']
-
-        result = self.invoke_agent_expect_result(kwargs['host'], "start_target", {'ha_label': target.ha_label})
-
-        target.update_active_mount(result)
+    """
+    This is a defunct step and should not be used for anything. Steps cannot be deleted from the
+    source because Picklefield is used for the XXX field and unPickling requires all types that
+    were present at the time of Pickling are present at the time of unPickling. Migrating the Pickles
+    would be very difficult.
+    """
+    pass
 
 
 class StartTargetJob(StateChangeJob):
@@ -1057,7 +1089,10 @@ class StartTargetJob(StateChangeJob):
         return DependAny(deps)
 
     def get_steps(self):
-        return [(MountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [(MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target,
+                                                     self.target.best_available_host(),
+                                                     True))]
 
 
 class UnmountStep(Step):
@@ -1295,8 +1330,10 @@ class FormatTargetJob(StateChangeJob):
 
         device_type = self.target.volume.storage_resource.to_resource_class().device_type()
 
-        steps = [(MakeTargetActiveStep,
-                  MakeTargetActiveStep.create_parameters(self.target, primary_mount.host))]
+        steps = [(MountOrImportStep,
+                  MountOrImportStep.create_parameters(self.target,
+                                                      primary_mount.host,
+                                                      False))]
 
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume

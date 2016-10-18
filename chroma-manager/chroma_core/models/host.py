@@ -1655,10 +1655,9 @@ class UpdateNidsJob(HostListMixin):
 
     def get_steps(self):
         from chroma_core.models.target import ManagedMgs
-        from chroma_core.models.target import MountStep
         from chroma_core.models.target import UnmountStep
         from chroma_core.models.target import FilesystemMember
-        from chroma_core.models.target import MakeTargetActiveStep
+        from chroma_core.models.target import MountOrImportStep
 
         filesystems, targets = self._targets_on_hosts()
 
@@ -1666,8 +1665,10 @@ class UpdateNidsJob(HostListMixin):
         for target in targets:
             target = target.downcast()
             primary_tm = target.managedtargetmount_set.get(primary = True)
-            steps.append((MakeTargetActiveStep,
-                          MakeTargetActiveStep.create_parameters(target, primary_tm.host)))
+            steps.append((MountOrImportStep,
+                          MountOrImportStep.create_parameters(target,
+                                                              primary_tm.host,
+                                                              False)))
             steps.append((WriteConfStep, {
                 'target': target,
                 'path': primary_tm.volume_node.path,
@@ -1683,12 +1684,18 @@ class UpdateNidsJob(HostListMixin):
             steps.append((ResetConfParamsStep, {'mgt': target.downcast()}))
 
         for target in mgs_targets:
-            steps.append((MountStep, {'target': target, "host": target.best_available_host()}))
+            steps.append((MountOrImportStep,
+                          MountOrImportStep.create_parameters(target,
+                                                              target.best_available_host(),
+                                                              True)))
 
         # FIXME: HYD-1133: when doing this properly these should
         # be run as parallel jobs
         for target in fs_targets:
-            steps.append((MountStep, {'target': target, "host": target.best_available_host()}))
+            steps.append((MountOrImportStep,
+                          MountOrImportStep.create_parameters(target,
+                                                              target.best_available_host(),
+                                                              True)))
 
         for target in fs_targets:
             steps.append((UnmountStep, {'target': target, "host": target.best_available_host()}))

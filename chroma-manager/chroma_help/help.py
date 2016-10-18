@@ -211,6 +211,7 @@ help_text = {
     'remove_target_from_pacemaker_config': 'Removing target %s from pacemaker configuration',
     'export_target_from_nodes': 'Ensure target %s is available for use',
     'moving_target_to_node': 'Moving target %s to node %s',
+    'mounting_target_on_node': 'Mounting target %s on node %s',
     'add_target_to_pacemaker_config': 'Adding target %s to pacemaker configuration',
     'register_target': 'Register target.',
     'format_target': 'Format target.',
