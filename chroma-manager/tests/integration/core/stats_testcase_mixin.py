@@ -173,8 +173,8 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
             # Check files free are what we expect after the writing above
             self.assert_fs_stat(filesystem_id, 'files_free', starting_files_free - 1)
 
-        # Check total bytes remained the same
-        self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
+            # Check total bytes remained the same
+            self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
 
         response = self.chroma_manager.get(
             '/api/target/metric/',
