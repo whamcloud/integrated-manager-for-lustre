@@ -143,9 +143,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 expected_return_code = None  # may not exist - don't care, move along.
             )
             self.remote_operations.exercise_filesystem(client, filesystem)
-            # HYD-3576
-            if self.zfs_devices_exist() is False:
-                self.check_stats(filesystem['id'])
+            self.check_stats(filesystem['id'])
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
@@ -167,9 +165,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 expected_return_code = None  # may not exist - dont care, move along.
             )
             self.remote_operations.exercise_filesystem(client, filesystem)
-            # HYD-3576
-            if self.zfs_devices_exist() is False:
-                self.check_stats(filesystem['id'])
+            self.check_stats(filesystem['id'])
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
