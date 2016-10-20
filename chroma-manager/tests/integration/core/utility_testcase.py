@@ -30,29 +30,60 @@ class UtilityTestCase(TestCase):
         self.maxDiff = None                  # By default show the complete diff on errors.
 
     def wait_until_true(self, lambda_expression, error_message='', timeout=TEST_TIMEOUT):
-        """Evaluates lambda_expression once/1s until True or hits timeout."""
+        """Evaluates lambda_expression once/1s until True or hits timeout.
+
+        :param lambda_expression: the expression to repeatedly evaluate
+        :param error_message: optional string to print or expression to call on failure (useful for debug)
+        :param timeout: the maximum number of seconds to wait for the expression to evaluate as true. If
+                        it does not return in this amount of time, then an error will be raised.
+        :return: None
+
+        Typical usage.
+        self.wait_until_true(lambda: len(self.get_list('/api/target/)) == expected_len)
+
+        self.wait_until_true(lambda: len(self.get_list('/api/target/)) == expected_len,
+                             "Timed out waiting for there to be %s targets." %s expected_len,
+                             timeout = LONG_TEST_TIMEOUT,
+                             debug_timeout=30)
+        """
+
         assert hasattr(lambda_expression, '__call__'), 'lambda_expression is not callable: %s' % type(lambda_expression)
         assert hasattr(error_message, '__call__') or type(error_message) is str, 'error_message is not callable and not a str: %s' % type(error_message)
         assert type(timeout) == int, 'timeout is not an int: %s' % type(timeout)
 
-        running_time = 0
-        lambda_result = None
-        wait_time = 0.01
-        while not lambda_result and running_time < timeout:
-            lambda_result = lambda_expression()
-            logger.debug("%s evaluated to %s" % (inspect.getsource(lambda_expression), lambda_result))
+        def evaluate_expression(expression, maxtime):
+            running_time = 0
+            lambda_result = None
+            wait_time = 0.01
 
-            if not lambda_result:
-                time.sleep(wait_time)
-                wait_time = min(1, wait_time * 10)
-                running_time += wait_time
+            while not lambda_result and running_time < maxtime:
+                lambda_result = expression()
+                logger.debug("%s evaluated to %s" % (inspect.getsource(expression), lambda_result))
 
-        if hasattr(error_message, '__call__'):
-            error_message = error_message()
+                if not lambda_result:
+                    time.sleep(wait_time)
+                    wait_time = min(1, wait_time * 10)
+                    running_time += wait_time
 
-        self.assertLess(running_time,
-                        timeout,
-                        'Timed out waiting for %s\nError Message %s' % (inspect.getsource(lambda_expression), error_message))
+            return lambda_result, running_time
+
+        # Wait for lambda_expression to return true for up to timeout
+        original_lambda_result, original_running_time = evaluate_expression(lambda_expression, timeout)
+
+        if not original_lambda_result:
+            # Did not become true in timeout
+            if hasattr(error_message, '__call__'):
+                # Call the error callback to get debug info at point of failure
+                error_message = error_message()
+
+            debug_lambda_result, debug_running_time = evaluate_expression(lambda_expression, timeout)
+
+            if debug_lambda_result:
+                logger.debug("lambda eventually passed after %s additional seconds past the timeout." % debug_running_time)
+
+            # This will always assert Raise an error if did not pass before reaching timeout
+            raise self.failureException('Timed out after %s seconds waiting for %s\nError Message %s' %
+                                        (timeout, inspect.getsource(lambda_expression), error_message))
 
     def wait_for_items_length(self, fetch_items, length, timeout=TEST_TIMEOUT):
         """
