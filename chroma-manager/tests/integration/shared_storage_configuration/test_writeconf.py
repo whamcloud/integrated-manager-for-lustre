@@ -1,6 +1,5 @@
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
 class TestWriteconf(ChromaIntegrationTestCase):
@@ -62,7 +61,7 @@ class TestWriteconf(ChromaIntegrationTestCase):
         })
         self.assertEqual(response.status_code, 201)
         command = response.json
-        self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
+        self.wait_for_command(self.chroma_manager, command['id'])
 
         # Writeconf will leave the filesystem down, so bring it up again
         self.set_state("/api/filesystem/%s/" % self.filesystem_id, 'available')

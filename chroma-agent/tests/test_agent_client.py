@@ -19,6 +19,8 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
+        client.device_plugins = mock.Mock()
+        client.device_plugins.get_plugins = mock.Mock(return_value=['test_plugin'])
         client.boot_time = IMLDateTime.utcnow()
         client.start_time = IMLDateTime.utcnow()
 
@@ -26,36 +28,37 @@ class TestHttpWriter(unittest.TestCase):
 
         # Disable poll() so that it's not trying to set up sessions, just doing passthrough of messages
         with mock.patch("chroma_agent.agent_client.HttpWriter.poll"):
-            writer = HttpWriter(client)
-            writer.start()
+            try:
+                writer = HttpWriter(client)
+                writer.start()
 
-            message = Message("DATA", "test_plugin", {'key1': 'val1'}, 'session_foo', 666, callback = callback)
-            writer.put(message)
+                message = Message("DATA", "test_plugin", {'key1': 'val1'}, 'session_foo', 666, callback = callback)
+                writer.put(message)
 
-            TIMEOUT = 2
-            i = 0
-            while True:
-                if client.post.call_count and callback.call_count:
-                    break
-                else:
-                    time.sleep(1)
-                    i += 1
-                    if i > TIMEOUT:
-                        raise RuntimeError("Timeout waiting for .post() and callback (%s %s)" % (client.post.call_count, callback.call_count))
+                TIMEOUT = 2
+                i = 0
+                while True:
+                    if client.post.call_count and callback.call_count:
+                        break
+                    else:
+                        time.sleep(1)
+                        i += 1
+                        if i > TIMEOUT:
+                            raise RuntimeError("Timeout waiting for .post() and callback (%s %s)" % (client.post.call_count, callback.call_count))
 
-            # Should have sent back the result
-            self.assertEqual(client.post.call_count, 1)
-            self.assertDictEqual(client.post.call_args[0][0], {
-                'messages': [message.dump(client._fqdn)],
-                'server_boot_time': client.boot_time.isoformat() + "Z",
-                'client_start_time': client.start_time.isoformat() + "Z"
-            })
+                # Should have sent back the result
+                self.assertEqual(client.post.call_count, 1)
+                self.assertDictEqual(client.post.call_args[0][0], {
+                    'messages': [message.dump(client._fqdn)],
+                    'server_boot_time': client.boot_time.isoformat() + "Z",
+                    'client_start_time': client.start_time.isoformat() + "Z"
+                })
 
-            # Should have invoked the callback
-            self.assertEqual(callback.call_count, 1)
-
-            writer.stop()
-            writer.join()
+                # Should have invoked the callback
+                self.assertEqual(callback.call_count, 1)
+            finally:
+                writer.stop()
+                writer.join()
 
     def test_priorities(self):
         """
@@ -124,11 +127,11 @@ class TestHttpWriter(unittest.TestCase):
         try:
             def expect_message_at(t):
                 datetime.datetime.now = mock.Mock(return_value=t - datetime.timedelta(seconds = 0.1))
-                writer.poll()
+                writer.poll('test_plugin')
                 self.assertEqual(writer._messages.qsize(), 0)
 
                 datetime.datetime.now = mock.Mock(return_value=t + datetime.timedelta(seconds = 0.1))
-                writer.poll()
+                writer.poll('test_plugin')
                 self.assertEqual(writer._messages.qsize(), 1)
 
             datetime.datetime = mock.Mock()
@@ -138,10 +141,10 @@ class TestHttpWriter(unittest.TestCase):
             # =====================================
 
             # Poll should put some session creation messages
-            writer.poll()
+            writer.poll('test_plugin')
             self.assertEqual(writer._messages.qsize(), 1)
             # Another poll immediately after shouldn't add any messages (MIN_SESSION_BACKOFF hasn't passed)
-            writer.poll()
+            writer.poll('test_plugin')
             self.assertEqual(writer._messages.qsize(), 1)
 
             # Send should consume the messages, and they go to nowhere because the POST fails
@@ -189,7 +192,7 @@ class TestHttpWriter(unittest.TestCase):
 
             # Poll will get a DATA message from initial_scan
             session.initial_scan = mock.Mock(return_value={'foo': 'bar'})
-            writer.poll()
+            writer.poll('test_plugin')
             session.initial_scan.assert_called_once()
             self.assertFalse(writer._messages.empty())
 
@@ -202,9 +205,9 @@ class TestHttpWriter(unittest.TestCase):
             t_3 = t_0 + datetime.timedelta(seconds = 60)
             datetime.datetime.now = mock.Mock(return_value=t_3)
 
-            writer.poll()
+            writer.poll('test_plugin')
             self.assertEqual(writer._messages.qsize(), 1)
-            writer.poll()
+            writer.poll('test_plugin')
             self.assertEqual(writer._messages.qsize(), 1)
             writer.send()
             self.assertEqual(writer._messages.qsize(), 0)
@@ -257,7 +260,7 @@ class TestHttpWriter(unittest.TestCase):
         oversized_string = "".join(choice(string.printable) for i in range(MAX_BYTES_PER_POST))
 
         # There should be one message to set up the session
-        writer.poll()
+        writer.poll('test_plugin')
         self.assertTrue(writer.send())
         self.assertEqual(client.post.call_count, 1)
         messages = client.post.call_args[0][0]['messages']
@@ -288,7 +291,7 @@ class TestHttpWriter(unittest.TestCase):
 
         # However, we should eventually get a new session for the
         # offending plugin
-        writer.poll()
+        writer.poll('test_plugin')
         self.assertTrue(writer.send())
         self.assertEqual(client.post.call_count, 4)
         messages = client.post.call_args[0][0]['messages']

@@ -33,6 +33,7 @@ import requests
 from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log, logging_in_debug_mode
 from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from chroma_agent.chroma_common.lib.util import ExceptionThrowingThread
 
 MAX_BYTES_PER_POST = 8 * 1024 ** 2  # 8MiB, should be <= SSLRenegBufferSize
 
@@ -320,6 +321,7 @@ class HttpWriter(ExceptionCatchingThread):
         super(HttpWriter, self).__init__()
         self._client = client
         self._stopping = threading.Event()
+        self._messages_waiting = threading.Event()
         self._last_poll = defaultdict(lambda: None)
         self._messages = Queue.PriorityQueue()
         self._retry_messages = Queue.Queue()
@@ -327,8 +329,9 @@ class HttpWriter(ExceptionCatchingThread):
     def put(self, message):
         """Called from a different thread context than the main loop"""
         self._messages.put(message)
+        self._messages_waiting.set()
 
-    def _run(self):
+    def _run_plugin(self, plugin_name):
         # Ensure that there is a time at least this long between
         # calls to .poll() (just to avoid spinning)
         POLL_PERIOD = 1.0
@@ -336,16 +339,32 @@ class HttpWriter(ExceptionCatchingThread):
         while not self._stopping.is_set():
             started_at = datetime.datetime.now()
 
-            self.poll()
-
-            while not (self._messages.empty() and self._retry_messages.empty()):
-                self.send()
+            self.poll(plugin_name)
 
             # Ensure that we poll at most every POLL_PERIOD
             self._stopping.wait(timeout=max(0, POLL_PERIOD - (datetime.datetime.now() - started_at).seconds))
 
+    def _run(self):
+        threads = []
+
+        for plugin_name in self._client.device_plugins.get_plugins():
+            thread = ExceptionThrowingThread(target=self._run_plugin,
+                                             args=(plugin_name,))
+            threads.append(thread)
+            thread.start()
+
+        while not self._stopping.is_set():
+            while not (self._messages.empty() and self._retry_messages.empty()):
+                self.send()
+
+            self._messages_waiting.wait()
+            self._messages_waiting.clear()
+
+        ExceptionThrowingThread.wait_for_threads(threads)
+
     def stop(self):
         self._stopping.set()
+        self._messages_waiting.set()       # Trigger this to cause  _run to loop spin and see that _stopping is set.
 
     def send(self):
         """Return True if the POST succeeds, else False"""
@@ -413,7 +432,7 @@ class HttpWriter(ExceptionCatchingThread):
             for callback in completion_callbacks:
                 callback()
 
-    def poll(self):
+    def poll(self, plugin_name):
         """
         For any plugins that don't have a session, try asking for one.
         For any ongoing sessions, invoke the poll callback
@@ -421,42 +440,41 @@ class HttpWriter(ExceptionCatchingThread):
 
         now = datetime.datetime.now()
 
-        for plugin_name, plugin_klass in self._client.device_plugins.get_plugins().items():
-            try:
-                session = self._client.sessions.get(plugin_name)
-            except KeyError:
-                # Request to open a session
-                #
-                if plugin_name in self._client.sessions._requested_at:
-                    next_request_at = self._client.sessions._requested_at[plugin_name] + self._client.sessions._backoffs[plugin_name]
-                    if now < next_request_at:
-                        # We're still in our backoff period, skip requesting a session
-                        daemon_log.debug("Delaying session request until %s" % next_request_at)
-                        continue
-                    else:
-                        if self._client.sessions._backoffs[plugin_name] < MAX_SESSION_BACKOFF:
-                            self._client.sessions._backoffs[plugin_name] *= 2
-
-                daemon_log.debug("Requesting session for plugin %s" % plugin_name)
-                self._client.sessions._requested_at[plugin_name] = now
-                self._messages.put(Message("SESSION_CREATE_REQUEST", plugin_name))
-            else:
-                try:
-                    data = session.poll()
-                except Exception:
-                    backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
-                    daemon_log.error("Error in plugin %s: %s" % (plugin_name, backtrace))
-                    self._client.sessions.terminate(plugin_name)
-                    self._messages.put(Message("SESSION_CREATE_REQUEST", plugin_name))
+        try:
+            session = self._client.sessions.get(plugin_name)
+        except KeyError:
+            # Request to open a session
+            #
+            if plugin_name in self._client.sessions._requested_at:
+                next_request_at = self._client.sessions._requested_at[plugin_name] + self._client.sessions._backoffs[plugin_name]
+                if now < next_request_at:
+                    # We're still in our backoff period, skip requesting a session
+                    daemon_log.debug("Delaying session request until %s" % next_request_at)
+                    return
                 else:
-                    if data is not None:
-                        if isinstance(data, DevicePluginMessageCollection):
-                            for message in data:
-                                session.send_message(DevicePluginMessage(message, priority = data.priority))
-                        elif isinstance(data, DevicePluginMessage):
-                            session.send_message(data)
-                        else:
-                            session.send_message(DevicePluginMessage(data))
+                    if self._client.sessions._backoffs[plugin_name] < MAX_SESSION_BACKOFF:
+                        self._client.sessions._backoffs[plugin_name] *= 2
+
+            daemon_log.debug("Requesting session for plugin %s" % plugin_name)
+            self._client.sessions._requested_at[plugin_name] = now
+            self.put(Message("SESSION_CREATE_REQUEST", plugin_name))
+        else:
+            try:
+                data = session.poll()
+            except Exception:
+                backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
+                daemon_log.error("Error in plugin %s: %s" % (plugin_name, backtrace))
+                self._client.sessions.terminate(plugin_name)
+                self.put(Message("SESSION_CREATE_REQUEST", plugin_name))
+            else:
+                if data is not None:
+                    if isinstance(data, DevicePluginMessageCollection):
+                        for message in data:
+                            session.send_message(DevicePluginMessage(message, priority = data.priority))
+                    elif isinstance(data, DevicePluginMessage):
+                        session.send_message(data)
+                    else:
+                        session.send_message(DevicePluginMessage(data))
 
 
 class HttpReader(ExceptionCatchingThread):

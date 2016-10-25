@@ -77,8 +77,9 @@ class ExpiringList(MutableSequence):
 
 # When running unit tests every test is within a transaction and so if you kick of another thread you will not see
 # any of the database changes that have occurred. For this reason if we are running unit tests we default to no threads
-# otherwise we default to threads
-_use_threads_default = not running_nose_tests()
+# otherwise we default to threads.
+# Always run threads on the agent because the agent doesn't use the db.
+_use_threads_default = (not running_nose_tests()) or ('chroma_agent' in __name__)
 
 
 class ExceptionThrowingThread(threading.Thread):
