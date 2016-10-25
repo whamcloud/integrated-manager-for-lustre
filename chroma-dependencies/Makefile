@@ -1,5 +1,6 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
+include $(TOP)/include/Makefile.distro
 REPO = $(TOP)/repo/
 
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
@@ -21,7 +22,7 @@ cleanrepo: TARGET=cleanrepo
 requirements::
 	# these are the ones provided by EL
 	{ echo "../chroma-externals/netaddr-0.7.5.zip";                                 \
-	if [ $(shell rpm --eval '%{?rhel}') -lt 7 ]; then                               \
+	if [ $(EL_MAJOR) -lt 7 ]; then                               \
 	    echo "paramiko==1.7.5";                                                     \
 	    echo "pycrypto==2.0.1";                                                     \
 	fi;                                                                             \
