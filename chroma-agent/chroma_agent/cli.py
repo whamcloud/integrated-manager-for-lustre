@@ -110,6 +110,8 @@ def _codify_args(args):
                    'True': True,
                    'False': False}
 
+    args = vars(args)
+
     for key, value in args.items():
         try:
             args[key] = conversions[value]
@@ -119,7 +121,7 @@ def _codify_args(args):
                 # valid json it was a descriptor of a dict. This can only be exercised as by someone logged onto
                 # the server and doesn't get executed at a privilege higher than the person executing it so anything
                 # they could achieve with bad json they could achieve directly.
-                if type(value) == str:
+                if (type(value) == str) and (value[0] in '{['):
                     args[key] = json.loads(value)
             except ValueError:
                 pass
@@ -138,7 +140,7 @@ def main():
         AgentShell.thread_state.enable_save()
         args = parser.parse_args()
 
-        _codify_args(vars(args))
+        _codify_args(args)
 
         result = args.func(args)
         try:
