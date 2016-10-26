@@ -383,6 +383,9 @@ class BlockDeviceZfs(BlockDevice):
                     if version is not None:
                         try:
                             error = shell.Shell.run_canned_error_message(['dkms', 'install', '%s/%s' % (install_package, version)])
+
+                            if error is None:
+                                error = shell.Shell.run_canned_error_message(['modprobe', install_package])
                         except OSError as e:
                             if e.errno != errno.ENOENT:
                                 error = 'Error running "dkms install %s/%s" error return %s' % (install_package, version, e.errno)
