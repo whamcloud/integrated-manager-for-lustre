@@ -1,5 +1,5 @@
 from chroma_common.blockdevices.blockdevice_lvm_volume import BlockDeviceLvmVolume
-from tests.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestBlockDeviceLvmVolume(CommandCaptureTestCase):

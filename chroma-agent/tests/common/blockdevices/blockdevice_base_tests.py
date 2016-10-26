@@ -4,7 +4,7 @@
 
 
 import abc
-from tests.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 class BaseTestBD(object):

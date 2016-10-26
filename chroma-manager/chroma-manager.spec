@@ -131,7 +131,7 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: chroma-common = %{version}-%{release}
+Requires: chroma-common-test = %{version}-%{release}
 Requires: python-requests >= 2.6.0
 Requires: python-nose
 Requires: python-nose-testconfig

@@ -5,8 +5,8 @@ import abc
 from chroma_common.lib import util
 from chroma_common.lib.firewall_control import FirewallControl
 from chroma_common.lib.firewall_control import FirewallControlEL6
-from tests.command_capture_testcase import CommandCaptureTestCase
-from tests.command_capture_testcase import CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureCommand
 
 
 class BaseTestFC:

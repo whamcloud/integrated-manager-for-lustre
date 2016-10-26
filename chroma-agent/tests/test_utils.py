@@ -3,7 +3,7 @@ import StringIO
 from django.utils import unittest
 from chroma_agent.utils import BlkId, Fstab, Mounts
 import mock
-from tests.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 def patch_open(path_to_result):

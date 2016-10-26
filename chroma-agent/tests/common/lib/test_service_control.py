@@ -4,8 +4,8 @@ from chroma_common.lib import util
 from chroma_common.lib.service_control import ServiceControl
 from chroma_common.lib.service_control import ServiceControlEL6
 from chroma_common.lib.service_control import ServiceControlEL7
-from tests.command_capture_testcase import CommandCaptureTestCase
-from tests.command_capture_testcase import CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureCommand
 
 
 class TestServiceStateEL6(CommandCaptureTestCase):

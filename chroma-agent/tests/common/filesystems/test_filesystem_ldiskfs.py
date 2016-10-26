@@ -1,6 +1,6 @@
 import mock
 
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_common.filesystems.filesystem_ldiskfs import FileSystemLdiskfs
 from chroma_common.blockdevices.blockdevice_linux import BlockDeviceLinux
 from tests.data.chroma_common import example_data
