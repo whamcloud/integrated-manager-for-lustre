@@ -95,12 +95,10 @@ class FakeServer(utils.Persisted):
         'pacemaker': PacemakerState('stopped')
     }
 
-    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nid_tuples_or_network_interfaces, worker=False, client_mounts=None):
+    def __init__(self, simulator, fake_cluster, server_id, fqdn, nid_tuples_or_network_interfaces, worker=False, client_mounts=None):
         self.fqdn = fqdn
 
         super(FakeServer, self).__init__(simulator.folder)
-
-        self.nodename = nodename
 
         # When reloaded from a file the network interfaces are presented as a dict but when created from code they
         # are represented as nid_tuples.
@@ -128,7 +126,7 @@ class FakeServer(utils.Persisted):
         self._lock = threading.Lock()
         self._agent_client = None
 
-        self._cluster.join(nodename, fqdn=fqdn)
+        self._cluster.join(fqdn=fqdn)
 
         if simulator.folder:
             # If simulator is persistent, save Crypto in same place
@@ -146,7 +144,6 @@ class FakeServer(utils.Persisted):
 
         self.state['id'] = server_id
         self.state['network_interfaces'] = self.network_interfaces
-        self.state['nodename'] = nodename
         self.state['fqdn'] = fqdn
         self.state['worker'] = worker
         self.state['client_mounts'] = client_mounts
@@ -374,7 +371,7 @@ class FakeServer(utils.Persisted):
                 log.warning("No HA resource for target %s/%s" % (target['label'], target['uuid']))
                 continue
             location = self._cluster.resource_locations()[ha_resource['ha_label']]
-            mounted = location == self.nodename
+            mounted = location == self.fqdn
             local_targets.append({"name": target['label'],
                                   "uuid": target['uuid'],
                                   "params": {},
@@ -518,7 +515,7 @@ class FakeServer(utils.Persisted):
 
             shutdown_start_time = IMLDateTime.utcnow()
             self.shutdown_agent()
-            self._cluster.leave(self.nodename)
+            self._cluster.leave(self.fqdn)
             shutdown_end_time = IMLDateTime.utcnow()
 
             shutdown_time = (shutdown_end_time - shutdown_start_time).seconds
@@ -614,7 +611,7 @@ class FakeServer(utils.Persisted):
                 time.sleep(remaining_delay)
 
             self.start_agent()
-            self._cluster.join(self.nodename)
+            self._cluster.join(self.fqdn)
 
             self._exit_startup()
             log.info("%s startup complete" % self.fqdn)
@@ -837,10 +834,10 @@ class FakeServer(utils.Persisted):
         return agent_result_ok
 
     def configure_target_ha(self, primary, device, ha_label, uuid, mount_point):
-        return agent_result(self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point))
+        return agent_result(self._cluster.configure(self.fqdn, device, ha_label, uuid, primary, mount_point))
 
     def unconfigure_target_ha(self, primary, ha_label, uuid):
-        return agent_result(self._cluster.unconfigure(self.nodename, ha_label, primary))
+        return agent_result(self._cluster.unconfigure(self.fqdn, ha_label, primary))
 
     def purge_configuration(self, mgs_device_path, mgs_device_type, filesystem_name):
         serial = self._devices.get_by_path(self.fqdn, mgs_device_path)['serial_80']
@@ -878,7 +875,7 @@ class FakeServer(utils.Persisted):
                 #                                                            json.dumps(self._cluster.state['resources'], indent=2)))
                 pass
             else:
-                if started_on == self.nodename:
+                if started_on == self.fqdn:
                     yield target
 
     def get_lustre_stats(self):

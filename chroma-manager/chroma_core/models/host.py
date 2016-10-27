@@ -126,9 +126,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # A fully qualified domain name like flint02.testnet
     fqdn = models.CharField(max_length = 255, help_text = "Unicode string, fully qualified domain name")
 
-    # a nodename to match against fqdn in corosync output
-    nodename = models.CharField(max_length = 255, help_text = "Unicode string, node name")
-
     # The last known boot time
     boot_time = models.DateTimeField(null = True, blank = True)
 
@@ -1034,7 +1031,7 @@ class SetHostProfileJob(Job):
         return help_text['set_host_profile_on'] % stateful_object
 
     def description(self):
-        return "Set profile and update host %s" % self.host.nodename
+        return "Set profile and update host %s" % self.host.fqdn
 
     def get_steps(self):
         return [(SetHostProfileStep, {'host': self.host,

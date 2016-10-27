@@ -130,7 +130,7 @@ class TestQueryScaling(ChromaApiTestCase):
         for i in range(0, n):
             hostname = "fakehost_%.3d" % i
 
-            host = ManagedHost.objects.create(fqdn = hostname, nodename = hostname, address = hostname)
+            host = ManagedHost.objects.create(fqdn = hostname, address = hostname)
             LNetConfiguration.objects.get_or_create(host = host)
 
     def _create_san_volumes(self, n_servers, n_volumes):

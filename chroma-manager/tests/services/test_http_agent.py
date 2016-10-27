@@ -154,7 +154,6 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
             self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
-                nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME
             )
             ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)

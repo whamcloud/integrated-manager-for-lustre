@@ -62,7 +62,7 @@ def synthetic_volume_full(primary_host, secondary_hosts=None, usable_for_lustre=
     return volume
 
 
-def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile = 'test_profile'):
+def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, server_profile = 'test_profile'):
     """
     Create a ManagedHost + paraphernalia, with states set as if configuration happened successfully
 
@@ -76,13 +76,10 @@ def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn
 
     if fqdn is None:
         fqdn = address
-    if nodename is None:
-        nodename = address
 
     host = ManagedHost.objects.create(
         address=address,
         fqdn=fqdn,
-        nodename=nodename,
         state='managed',
         server_profile=server_profile,
         immutable_state=not server_profile.managed if server_profile else False
@@ -272,7 +269,6 @@ def _synthetic_create_host_ssh(address, server_profile, root_pw=None, pkey=None,
         host = synthetic_host(address,
                               fqdn=host_info['fqdn'],
                               nids=host_info['nids'],
-                              nodename=host_info['nodename'],
                               server_profile = server_profile)
 
     command = Command.objects.create(message="No-op", complete=True)

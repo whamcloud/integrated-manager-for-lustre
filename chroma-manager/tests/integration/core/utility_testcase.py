@@ -118,12 +118,12 @@ class UtilityTestCase(TestCase):
                         timeout,
                         "Timed out waiting for %s\nAssertion %s" % (inspect.getsource(lambda_expression), assertion))
 
-    def get_host_config(self, nodename):
+    def get_host_config(self, fqdn):
         """
         Get the entry for a lustre server from the cluster config.
         """
         for host in config['lustre_servers']:
-            if host['nodename'] == nodename:
+            if host['fqdn'] == fqdn:
                 return host
 
     def _fetch_help(self, assert_test, tell_who, message=None, callback=lambda: True, timeout=1800):

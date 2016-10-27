@@ -224,7 +224,7 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().update_lnet_configuration(lnet_configuration_list)
 
     @classmethod
-    def create_host(cls, fqdn, nodename, address, server_profile_id):
+    def create_host(cls, fqdn, address, server_profile_id):
         # The address of a host isn't something we can learn from it (the
         # address is specifically how the host is to be reached from the manager
         # for outbound connections, not just its FQDN).  If during creation we know
@@ -232,7 +232,7 @@ class JobSchedulerClient(object):
         if address is None:
             address = fqdn
 
-        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
+        host_id, command_id = JobSchedulerRpc().create_host(fqdn, address, server_profile_id)
 
         return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
 

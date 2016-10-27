@@ -1219,12 +1219,12 @@ class JobScheduler(object):
 
                 assert host.state == 'undeployed'               # assert the fact this is undeployed being setup
             except ManagedHost.DoesNotExist:
-                fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
+                fqdn_command = "python -c \"import socket ; print socket.getfqdn();\""
                 agent_ssh = AgentSsh(address, timeout = 5)
                 auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-                rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
+                rc, stdout, stderr = agent_ssh.ssh(fqdn_command, auth_args=auth_args)
                 log.info("Getting FQDN for '%s': %s" % (address, stdout))
-                nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
+                fqdn = stdout.strip()
 
                 if root_pw:
                     install_method = ManagedHost.INSTALL_SSHPSW
@@ -1237,7 +1237,6 @@ class JobScheduler(object):
                     server_profile = ServerProfile.objects.get(name = profile)
                     host = ManagedHost.objects.create(state = 'undeployed',
                                                       address = address,
-                                                      nodename = nodename,
                                                       fqdn = fqdn,
                                                       immutable_state = not server_profile.managed,
                                                       server_profile = server_profile,
@@ -1293,7 +1292,7 @@ class JobScheduler(object):
 
         return command
 
-    def create_host(self, fqdn, nodename, address, server_profile_id):
+    def create_host(self, fqdn, address, server_profile_id):
         """
         Create a new host, or update a host in the process of being deployed.
         """
@@ -1305,9 +1304,6 @@ class JobScheduler(object):
                     # If there is already a host record (SSH-assisted host addition) then
                     # update it
                     host = ManagedHost.objects.get(fqdn=fqdn, state='undeployed')
-                    # host.fqdn = fqdn
-                    # host.nodename = nodename
-                    # host.save()
                     job = DeployHostJob.objects.filter(~Q(state='complete'), managed_host=host)
                     command = Command.objects.filter(jobs=job)[0]
 
@@ -1315,7 +1311,6 @@ class JobScheduler(object):
                     # Else create a new one
                     host = ManagedHost.objects.create(
                         fqdn=fqdn,
-                        nodename=nodename,
                         immutable_state=not server_profile.managed,
                         address=address,
                         server_profile=server_profile,

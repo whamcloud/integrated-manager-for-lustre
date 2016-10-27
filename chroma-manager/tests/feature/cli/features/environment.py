@@ -98,7 +98,7 @@ def before_feature(context, feature):
 
     def create_host_ssh(address, server_profile, root_pw, pkey, pkey_pw):
         host_data = AgentRpc.mock_servers[address]
-        host = synthetic_host(address, nids=host_data['nids'], fqdn=host_data['fqdn'], nodename=host_data['nodename'])
+        host = synthetic_host(address, nids=host_data['nids'], fqdn=host_data['fqdn'])
         ObjectCache.add(ManagedHost, host)
         command = Command.objects.create(complete = True, message = "Mock create_host_ssh")
         return host, command

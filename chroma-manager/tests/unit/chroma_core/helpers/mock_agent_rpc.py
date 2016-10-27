@@ -148,7 +148,7 @@ class MockAgentRpc(object):
         elif cmd == 'start_target':
             ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
-            return agent_result(target.primary_host.nodename)
+            return agent_result(target.primary_host.fqdn)
         elif cmd == 'register_target':
             # Assume mount paths are "/mnt/testfs-OST0001" style
             mount_point = args['mount_point']
@@ -169,7 +169,6 @@ class MockAgentRpc(object):
                 response = api_client.post(args['url'] + "register/%s/" % args['secret'], data = {
                     'address': host,
                     'fqdn': fqdn,
-                    'nodename': cls.mock_servers[host]['nodename'],
                     'capabilities': ['manage_targets'],
                     'version': cls.version,
                     'csr': helper.generate_csr(fqdn)
@@ -195,8 +194,6 @@ class MockAgentRpc(object):
                 return '127.0.0.1'
             else:
                 return mock_server['address']
-        elif 'print os.uname()[1]' in cmd:
-            return '%s\n%s' % (mock_server['nodename'], mock_server['fqdn'])
         elif 'socket.getfqdn()' in cmd:
             return mock_server['fqdn']
         elif 'ping' in cmd:

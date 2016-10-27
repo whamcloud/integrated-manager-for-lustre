@@ -16,7 +16,6 @@ class TestOneHost(JobTestCase):
     mock_servers = {
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
             'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
         }
     }
@@ -68,7 +67,6 @@ class TestBigFilesystem(JobTestCase):
     #     for i, address in enumerate(["oss%d" % i for i in range(0, OSS_COUNT)] + ['mds0', 'mds1', 'mgs0', 'mgs1']):
     #         self.mock_servers[address] = {
     #             'fqdn': address,
-    #             'nodename': address,
     #             'nids': [Nid.Nid("192.168.0.%d" % i, "tcp", 0)]
     #         }
     #

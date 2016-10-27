@@ -10,7 +10,6 @@
       "fqdn": "hydra-4vm3.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.216",
-      "nodename": "hydra-4vm3.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],
@@ -34,7 +33,6 @@
       "address": "hydra-4.lab.whamcloud.com",
       "fqdn": "hydra-4.lab.whamcloud.com",
       "ip_address": "10.10.4.36",
-      "nodename": "hydra-4.lab.whamcloud.com",
       "reset_is_buggy": true
     }
   },
@@ -50,7 +48,6 @@
       "host": "hydra-4",
       "ip_address": "10.10.4.215",
       "lustre_client_version": "2.3.0",
-      "nodename": "hydra-4vm2.lab.whamcloud.com",
       "start_command": "virsh start hydra-4vm2",
       "status_command": "virsh domstate hydra-4vm2"
     }
@@ -71,7 +68,6 @@
       "fqdn": "hydra-4vm5.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.218",
-      "nodename": "hydra-4vm5.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],
@@ -98,7 +94,6 @@
       "fqdn": "hydra-4vm6.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.219",
-      "nodename": "hydra-4vm6.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],
@@ -125,7 +120,6 @@
       "fqdn": "hydra-4vm7.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.223",
-      "nodename": "hydra-4vm7.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],
@@ -152,7 +146,6 @@
       "fqdn": "hydra-4vm8.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.226",
-      "nodename": "hydra-4vm8.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],
@@ -219,7 +212,6 @@
       "fqdn": "hydra-4vm4.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.217",
-      "nodename": "hydra-4vm4.lab.whamcloud.com",
       "repos": [
         "chroma"
       ],

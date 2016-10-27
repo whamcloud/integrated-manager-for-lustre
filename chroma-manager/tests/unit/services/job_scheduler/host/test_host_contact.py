@@ -27,7 +27,6 @@ class TestHostAddValidations(JobTestCase):
             },
             'mgr_fqdn': "test-server.company.domain",
             'self_fqdn': "test-server.company.domain",
-            'nodename': "test-server.company.domain",
             'address': "192.168.1.42"
         }
     }

@@ -124,7 +124,6 @@ class ClusterSimulator(Persisted):
                 self._get_cluster_for_server(conf['id']),
                 conf['id'],
                 conf['fqdn'],
-                conf['nodename'],
                 conf['network_interfaces'],
                 conf['worker'],
                 conf['client_mounts'])
@@ -137,8 +136,7 @@ class ClusterSimulator(Persisted):
     def _create_server(self, i, nid_count):
         interface_names = ['tcp', 'o2ib']
         nid_tuples = []
-        nodename = "test%.3d" % i
-        fqdn = "%s.localdomain" % nodename
+        fqdn = "test%.3d.localdomain" % i
         x, y = (i / 256, i % 256)
         for network in range(0, nid_count):
             name = interface_names[network % len(interface_names)]
@@ -147,7 +145,7 @@ class ClusterSimulator(Persisted):
 
         log.info("_create_server: %s" % fqdn)
 
-        server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nodename, nid_tuples)
+        server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nid_tuples)
         self.servers[fqdn] = server
 
         self.power.add_server(fqdn)
@@ -156,8 +154,7 @@ class ClusterSimulator(Persisted):
 
     def _create_worker(self, i, nid_count):
         nid_tuples = []
-        nodename = "worker%.3d" % i
-        fqdn = "%s.localdomain" % nodename
+        fqdn = "worker%.3d.localdomain" % i
         x, y = (i / 256, i % 256)
         for network in range(0, nid_count):
             nid_tuples.append(('10.%d.%d.%d' % (network, x, y), 'tcp', network))
@@ -166,7 +163,7 @@ class ClusterSimulator(Persisted):
 
         # Use -1 as the special cluster for workers
         worker = FakeServer(self, self._get_cluster_for_server(-1),
-                            i, fqdn, nodename, nid_tuples, worker=True)
+                            i, fqdn, nid_tuples, worker=True)
         self.servers[fqdn] = worker
 
         return worker

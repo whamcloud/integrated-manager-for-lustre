@@ -226,7 +226,7 @@ class SimulatorRemoteOperations(RemoteOperations):
 
     def get_resource_running(self, host, ha_label):
         actual = self._simulator.get_cluster(host['fqdn']).resource_locations()[ha_label]
-        expected = host['nodename']
+        expected = host['fqdn']
         logger.debug("get_resource_running: %s %s %s" % (ha_label, actual, expected))
         return actual == expected
 
@@ -577,7 +577,7 @@ class RealRemoteOperations(RemoteOperations):
         return result
 
     def backup_cib(self, server):
-        backup = "/tmp/cib-backup-%s.xml" % server['nodename']
+        backup = "/tmp/cib-backup-%s.xml" % server['fqdn']
         running_targets = self.get_pacemaker_targets(server, running = True)
         for target in running_targets:
             self.stop_target(server['fqdn'], target)
@@ -593,7 +593,7 @@ class RealRemoteOperations(RemoteOperations):
         import xml.etree.ElementTree as xml
 
         new_cib = xml.fromstring(open("/tmp/cib-backup-%s.xml" %
-                                      server['nodename']).read())
+                                      server['fqdn']).read())
 
         # get the current admin_epoch
         current_cib = xml.fromstring(self.cibadmin(server, "--query").stdout)
@@ -612,10 +612,10 @@ class RealRemoteOperations(RemoteOperations):
     # HYD-2071: These two methods may no longer be useful after the API-side
     # work lands.
     def set_node_standby(self, server):
-        self.command(server['address'], "chroma-agent set_node_standby --node %s" % server['nodename'])
+        self.command(server['address'], "chroma-agent set_node_standby --node %s" % server['fqdn'])
 
     def set_node_online(self, server):
-        self.command(server['address'], "chroma-agent set_node_online --node %s" % server['nodename'])
+        self.command(server['address'], "chroma-agent set_node_online --node %s" % server['fqdn'])
 
     def mount_filesystem(self, client_address, filesystem):
         """
@@ -657,14 +657,14 @@ class RealRemoteOperations(RemoteOperations):
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
-        hostname = host['fqdn'] if self.distro_version(host) >= 7 else host['nodename']
+        hostname = host['fqdn'] if self.distro_version(host) >= 7 else host['fqdn'].split('.')[0]
         result = self.command(host['address'],
                               'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname))
 
         self._test_case.assertRegexpMatches(result.stdout, 'value=0')
 
         # Check pacemaker thinks it's running on the right host.
-        expected_resource_status = "%s is running on: %s" % (ha_label, host['nodename'])
+        expected_resource_status = "%s is running on: %s" % (ha_label, host['fqdn'])
 
         return bool(re.search(expected_resource_status, resource_status))
 
@@ -865,7 +865,7 @@ class RealRemoteOperations(RemoteOperations):
         monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
         restart_attempted = False
 
-        hostname = boot_server['fqdn'] if self.distro_version(boot_server) >= 7 else boot_server['nodename']
+        hostname = boot_server['fqdn'] if self.distro_version(boot_server) >= 7 else boot_server['fqdn'].split('.')[0]
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
@@ -939,7 +939,7 @@ class RealRemoteOperations(RemoteOperations):
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
-            logger.info("Unmounting Lustre on %s timed out.  Going to try to gather debug information." % server['nodename'])
+            logger.info("Unmounting Lustre on %s timed out.  Going to try to gather debug information." % server['fqdn'])
             self.command(server['address'],
                          """set -ex
                          echo 1 > /proc/sys/kernel/sysrq
@@ -949,7 +949,7 @@ class RealRemoteOperations(RemoteOperations):
             # going to need to reboot this node to get any use out of it
             self.reset_server(server['fqdn'])
             raise RuntimeError("Failed to umount Lustre on %s.  Debug data has been collected.  "
-                               "Make sure to add it to an existing ticket or create a new one." % server['nodename'])
+                               "Make sure to add it to an existing ticket or create a new one." % server['fqdn'])
 
     def is_worker(self, server):
         workers = [w['address'] for w in
@@ -1173,7 +1173,7 @@ class RealRemoteOperations(RemoteOperations):
         result = self.command(server['address'],
                               'exec 2>&1; omping -T %s -c %s %s' % (timeout,
                                                                     count,
-                                                                    " ".join([s['nodename'] for s in servers])))
+                                                                    " ".join([s['fqdn'] for s in servers])))
 
         self.command(server['address'], firewall.remote_remove_port_cmd(4321, 'udp'))
 

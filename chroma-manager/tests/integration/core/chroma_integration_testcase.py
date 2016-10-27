@@ -543,7 +543,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         for volume in volumes:
             for volume_node in volume['volume_nodes']:
                 host = self.chroma_manager.get(volume_node['host']).json
-                host_config = self.get_host_config(host['nodename'])
+                host_config = self.get_host_config(host['fqdn'])
                 if host_config:
                     if volume_node['path'] in host_config['device_paths']:
                         permitted_volumes.append(volume)
@@ -551,7 +551,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     else:
                         logger.warning("%s not in %s" % (volume_node['path'], host_config['device_paths']))
                 else:
-                    logger.warning("No host config for '%s'" % host['nodename'])
+                    logger.warning("No host config for '%s'" % host['fqdn'])
         return permitted_volumes
 
     def set_volume_mounts(self, volume, primary_host_id, secondary_host_id):

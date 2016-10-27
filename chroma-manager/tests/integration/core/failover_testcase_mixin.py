@@ -33,7 +33,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         """
         # Attach configurations to primary host so we can retreive information
         # about its vmhost and how to destroy it.
-        primary_host['config'] = self.get_host_config(primary_host['nodename'])
+        primary_host['config'] = self.get_host_config(primary_host['fqdn'])
 
         # "Push the reset button" on the primary lustre server
         self.remote_operations.reset_server(primary_host['config']['fqdn'])

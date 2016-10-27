@@ -54,10 +54,6 @@ class ServerProperties(object):
         return socket.getfqdn()
 
     @property
-    def nodename(self):
-        return os.uname()[1]
-
-    @property
     def boot_time(self):
         for line in open("/proc/stat").readlines():
             name, val = line.split(" ", 1)

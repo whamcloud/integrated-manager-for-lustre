@@ -18,8 +18,7 @@ class TestHostListMixin(IMLUnitTestCase):
             address = "myserver_%d" % i
             self.hosts.append(ManagedHost.objects.create(
                 address = address,
-                fqdn = address,
-                nodename = address
+                fqdn = address
             ))
 
     def tearDown(self):

@@ -125,10 +125,9 @@ class Service(ChromaService):
             log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
             # NB: This will ignore any unknown peers in the report.
-            cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(Q(nodename__in=nodes.keys()) |
-                                                                                          Q(fqdn__in=nodes.keys()))
+            cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(Q(fqdn__in=nodes.keys()))
 
-            unknown_nodes = set(nodes.keys()) - set([h.nodename for h in cluster_nodes]) - set([h.fqdn for h in cluster_nodes])
+            unknown_nodes = set(nodes.keys()) - set([h.fqdn for h in cluster_nodes])
 
             # Leaving this out for now - because they raise issue caused by limitations in the simulator and
             # test system as a whole. Difficult to know if they will or won't be raised it all depends on the past.
@@ -142,8 +141,8 @@ class Service(ChromaService):
             #  Consider all nodes in the peer group for this reporting agent
             for host in cluster_nodes:
                 try:
-                    data = nodes[host.nodename]
-                    node_identifier = host.nodename
+                    data = nodes[host.fqdn]
+                    node_identifier = host.fqdn
                 except KeyError:
                     data = nodes[host.fqdn]
                     node_identifier = host.fqdn

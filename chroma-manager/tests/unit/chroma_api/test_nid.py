@@ -23,7 +23,6 @@ class TestHostResource(ChromaApiTestCase):
         super(TestHostResource, self).setUp()
 
         self.host = {'fqdn': 'foo.mycompany.com',
-                     'nodename': 'foo.mycompany.com',
                      'nids': [Nid.Nid("192.168.0.19", "tcp", 0)]}
 
         MockAgentRpc.mock_servers = {'foo': self.host}
@@ -97,7 +96,7 @@ class TestHostResource(ChromaApiTestCase):
                                        "network_interface": self._lnetinfo.network_interfaces[0]['resource_uri']},
                                  assertion_test=lambda self, response: self.assertHttpBadRequest(response))
 
-        self.assertEqual(response, {'lnd_type': [u'lnd_type blop not valid for interface %s-%s' % (self._lnetinfo.lnet_configuration['host']['nodename'],
+        self.assertEqual(response, {'lnd_type': [u'lnd_type blop not valid for interface %s-%s' % (self._lnetinfo.lnet_configuration['host']['fqdn'],
                                                                                                    self._lnetinfo.network_interfaces[0]['name'])]})
 
     LNetInfo = namedtuple("LNetInfo", ("nids", "network_interfaces", "lnet_configuration", "host"))

@@ -17,8 +17,7 @@ class TestCommandResource(ChromaApiTestCase):
             address = 'myserver_%d' % i
             host = ManagedHost.objects.create(
                 address = address,
-                fqdn = address,
-                nodename = address)
+                fqdn = address)
             hosts.append(host)
 
         with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.command_run_jobs",

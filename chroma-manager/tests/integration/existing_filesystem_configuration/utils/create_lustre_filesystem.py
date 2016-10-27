@@ -74,14 +74,14 @@ class CreateLustreFilesystem(UtilityTestCase):
             #     if len(assigned_secondaries) == len(config['lustre_servers']):
             #         assigned_secondaries.clear()
             #     for server in config['lustre_servers']:
-            #         if (server['nodename'] != target['primary_server']) and \
-            #            (server['nodename'] not in assigned_secondaries):
-            #             target['secondary_server'] = server['nodename']
+            #         if (server['fqdn'] != target['primary_server']) and \
+            #            (server['fqdn'] not in assigned_secondaries):
+            #             target['secondary_server'] = server['fqdn']
             #             assigned_secondaries.add(target['secondary_server'])
             #             break
             # This loop gives a really bad distribution, but we only use a few servers so it achieves what we need today.
             for target in config['filesystem']['targets'].values():
-                target['secondary_server'] = next(server['nodename'] for server in config['lustre_servers'] if server['nodename'] != target['primary_server'])
+                target['secondary_server'] = next(server['fqdn'] for server in config['lustre_servers'] if server['fqdn'] != target['primary_server'])
         else:
             config['test_ha'] = False                           # Deals is is_lvm = True
 
@@ -94,7 +94,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.remote_operations.command(server['address'], 'umount -t lustre -a')
 
-            self.umount_devices(server['nodename'])
+            self.umount_devices(server['fqdn'])
 
             self.remote_operations.execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
                                                     server['address'],
@@ -105,7 +105,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
         for server in config['lustre_servers']:
-            self.dd_devices(server['nodename'])
+            self.dd_devices(server['fqdn'])
 
             # Sometimes reboot hangs, sometimes it doesn't
             self.remote_operations.command(server['address'], 'reboot', return_codes=RETURN_CODES_ALL)
@@ -172,9 +172,9 @@ class CreateLustreFilesystem(UtilityTestCase):
     def get_targets_by_kind(self, kind):
         return [v for k, v in config['filesystem']['targets'].iteritems() if v['kind'] == kind]
 
-    def get_lustre_server_by_name(self, nodename):
+    def get_lustre_server_by_name(self, fqdn):
         for lustre_server in config['lustre_servers']:
-            if lustre_server['nodename'] == nodename:
+            if lustre_server['fqdn'] == fqdn:
                 return lustre_server
 
         return None

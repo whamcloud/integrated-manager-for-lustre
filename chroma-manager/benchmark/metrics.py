@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -83,8 +83,7 @@ class ServerGenerator(Generator):
     def create_entity(self, fs):
         self.entity = ManagedHost.objects.create(
                 address=self.name,
-                fqdn=self.name,
-                nodename=self.name)
+                fqdn=self.name)
         self.entity.metrics
 
 
@@ -230,8 +229,7 @@ class Benchmark(GenericBenchmark):
 
         mgs_host = ManagedHost.objects.create(
                 address="mgs",
-                fqdn="mgs",
-                nodename="mgs")
+                fqdn="mgs")
         mgs_vol = Volume.objects.create(label="mgs")
         VolumeNode.objects.create(host = mgs_host,
                                   path = uuid.uuid4(),

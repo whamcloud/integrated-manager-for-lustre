@@ -9,7 +9,6 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             address = "host_%d" % i
 
             host = self._create_host(fqdn = address,
-                                     nodename = address,
                                      address = address)
 
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
@@ -45,7 +44,6 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             address = "host_%d" % i
 
             host = self._create_host(fqdn = address,
-                                     nodename = address,
                                      address = address)
 
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})

@@ -34,7 +34,6 @@ class TestNidChange(NidTestCase):
     mock_servers = {
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
             'nids': [Nid.Nid('192.168.0.1', 'tcp', 0)]
         }
     }
@@ -59,17 +58,14 @@ class TestUpdateNids(NidTestCase):
     mock_servers = {
         'mgs': {
             'fqdn': 'mgs.mycompany.com',
-            'nodename': 'mgs.mycompany.com',
             'nids': [Nid.Nid('192.168.0.1', 'tcp', 0)]
         },
         'mds': {
             'fqdn': 'mds.mycompany.com',
-            'nodename': 'mds.mycompany.com',
             'nids': [Nid.Nid('192.168.0.2', 'tcp', 0)]
         },
         'oss': {
             'fqdn': 'oss.mycompany.com',
-            'nodename': 'oss.mycompany.com',
             'nids': [Nid.Nid('192.168.0.3', 'tcp', 0)]
         },
     }
@@ -108,7 +104,6 @@ class TestHostAddRemove(JobTestCase):
     mock_servers = {
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
             'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
         }
     }

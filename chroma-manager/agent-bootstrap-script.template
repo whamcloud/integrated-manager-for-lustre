@@ -97,13 +97,11 @@ def setup_keys():
 
 def reg_manager():
     fqdn = socket.getfqdn()
-    nodename = os.uname()[1]
     csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" % (fqdn, PRIVATE_KEY))
 
     data = json.dumps({{
         'address': socket.gethostbyname(socket.gethostname()),
         'fqdn': fqdn,
-        'nodename': nodename,
         'version': 0,
         'csr': csr,
         'capabilities': []

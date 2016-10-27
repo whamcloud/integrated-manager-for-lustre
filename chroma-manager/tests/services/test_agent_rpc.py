@@ -87,7 +87,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
             self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
-                nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME,
                 state = 'lnet_down',
                 state_modified_at = IMLDateTime.utcnow(),

@@ -233,7 +233,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post', 'put']
         detail_allowed_methods = ['get', 'put', 'delete']
-        readonly = ['nodename', 'fqdn', 'nids', 'member_of_active_filesystem',
+        readonly = ['fqdn', 'nids', 'member_of_active_filesystem',
                     'needs_update', 'boot_time',
                     'client_mounts']
         # HYD-2256: remove these fields when other auth schemes work

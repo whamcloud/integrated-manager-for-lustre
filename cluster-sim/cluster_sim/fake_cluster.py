@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -69,9 +69,9 @@ class FakeCluster(Persisted):
 
             return locations
 
-    def get_running_resources(self, nodename):
+    def get_running_resources(self, fqdn):
         with self._lock:
-            return [resource for resource in self.state['resources'].values() if resource['started_on'] == nodename]
+            return [resource for resource in self.state['resources'].values() if resource['started_on'] == fqdn]
 
     def start(self, ha_label):
         with self._lock:
@@ -102,13 +102,13 @@ class FakeCluster(Persisted):
             self.save()
             return resource
 
-    def leave(self, nodename):
+    def leave(self, fqdn):
         with self._lock:
-            log.debug("leave: %s" % nodename)
-            self.state['nodes'][nodename]['online'] = False
+            log.debug("leave: %s" % fqdn)
+            self.state['nodes'][fqdn]['online'] = False
             for ha_label, resource in self.state['resources'].items():
-                if resource['started_on'] == nodename:
-                    options = set([resource['primary_node'], resource['secondary_node']]) - set([nodename])
+                if resource['started_on'] == fqdn:
+                    options = set([resource['primary_node'], resource['secondary_node']]) - set([fqdn])
                     if options:
                         destination = options.pop()
                         log.debug("migrating %s to %s" % (ha_label, destination))
@@ -119,25 +119,25 @@ class FakeCluster(Persisted):
 
             self.save()
 
-    def join(self, nodename, **kwargs):
+    def join(self, fqdn, **kwargs):
         with self._lock:
-            if nodename in self.state['nodes']:
-                self.state['nodes'][nodename]['online'] = True
+            if fqdn in self.state['nodes']:
+                self.state['nodes'][fqdn]['online'] = True
             else:
-                self.state['nodes'][nodename] = {'online': True, 'nodename': nodename}
-                self.state['nodes'][nodename].update(**kwargs)
+                self.state['nodes'][fqdn] = {'online': True}
+                self.state['nodes'][fqdn].update(**kwargs)
 
             for ha_label, resource in self.state['resources'].items():
                 if resource['started_on'] is None:
-                    if resource['primary_node'] == nodename:
-                        log.debug("Starting %s on primary %s" % (ha_label, nodename))
-                        resource['started_on'] = nodename
-                    elif resource['secondary_node'] == nodename:
-                        log.debug("Starting %s on secondary %s" % (ha_label, nodename))
-                        resource['started_on'] = nodename
+                    if resource['primary_node'] == fqdn:
+                        log.debug("Starting %s on primary %s" % (ha_label, fqdn))
+                        resource['started_on'] = fqdn
+                    elif resource['secondary_node'] == fqdn:
+                        log.debug("Starting %s on secondary %s" % (ha_label, fqdn))
+                        resource['started_on'] = fqdn
             self.save()
 
-    def configure(self, nodename, device_path, ha_label, uuid, primary, mount_point):
+    def configure(self, fqdn, device_path, ha_label, uuid, primary, mount_point):
         with self._lock:
             try:
                 resource = self.state['resources'][ha_label]
@@ -153,13 +153,13 @@ class FakeCluster(Persisted):
                 }
 
             if primary:
-                resource['primary_node'] = nodename
+                resource['primary_node'] = fqdn
             else:
-                resource['secondary_node'] = nodename
+                resource['secondary_node'] = fqdn
             self.state['resources'][ha_label] = resource
             self.save()
 
-    def unconfigure(self, nodename, ha_label, primary):
+    def unconfigure(self, fqdn, ha_label, primary):
         with self._lock:
             try:
                 resource = self.state['resource'][ha_label]

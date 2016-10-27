@@ -498,7 +498,6 @@ def register(request, key):
     host, command = JobSchedulerClient.create_host(
         address=host_attributes['address'],
         fqdn=host_attributes['fqdn'],
-        nodename=host_attributes['nodename'],
         server_profile_id=server_profile.pk
     )
 

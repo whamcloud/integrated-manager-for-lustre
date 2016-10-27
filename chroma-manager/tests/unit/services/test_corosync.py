@@ -52,13 +52,13 @@ class CorosyncTestCase(IMLUnitTestCase):
             for hs in node_status_list:
                 node = hs[0]
                 status = hs[1]  # 'true' or 'false'
-                node_dict = {node.nodename: {
-                                "name": node.nodename, "standby": "false",
+                node_dict = {node.fqdn: {
+                                "name": node.fqdn, "standby": "false",
                                 "standby_onfail": "false",
                                 "expected_up": "true",
                                 "is_dc": "true", "shutdown": "false",
                                 "online": status, "pending": "false",
-                                "type": "member", "id": node.nodename,
+                                "type": "member", "id": node.fqdn,
                                 "resources_running": "0", "unclean": "false"}}
                 nodes.update(node_dict)
 
@@ -75,8 +75,7 @@ class CorosyncTestCase(IMLUnitTestCase):
 
         fqdn = "%s.%s" % (hostname, domain)
         host = ManagedHost(address=hostname,
-                           fqdn=fqdn,
-                           nodename=hostname)
+                           fqdn=fqdn)
 
         if save:
             host.save()

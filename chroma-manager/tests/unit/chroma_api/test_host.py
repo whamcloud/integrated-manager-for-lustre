@@ -22,12 +22,10 @@ class TestHostResource(ChromaApiTestCase):
 
         MockAgentRpc.mock_servers = {'foo': {
             'fqdn': 'foo.mycompany.com',
-            'nodename': 'test01.foo.mycompany.com',
             'nids': [Nid.Nid("192.168.0.19", "tcp", 0)]
         },
                                      'bar': {
             'fqdn': 'bar.mycompany.com',
-            'nodename': 'test01.bar.mycompany.com',
             'nids': [Nid.Nid("192.168.0.91", "tcp", 0)]
         }}
 
@@ -475,7 +473,6 @@ class TestCreateHostAPI(ChromaApiTestCase):
     def _create_host(self):
         ManagedHost.objects.create(state = 'undeployed',
                                    address = 'myaddress',
-                                   nodename = 'myaddress',
                                    fqdn = 'myaddress',
                                    immutable_state = False,
                                    install_method = ManagedHost.INSTALL_MANUAL)

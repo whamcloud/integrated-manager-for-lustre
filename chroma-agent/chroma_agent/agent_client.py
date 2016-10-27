@@ -116,7 +116,6 @@ class AgentClient(CryptoClient):
         super(AgentClient, self).__init__(url, crypto)
 
         self._fqdn = server_properties.fqdn
-        self._nodename = server_properties.nodename
 
         self.boot_time = server_properties.boot_time
         self.start_time = IMLDateTime.utcnow()
@@ -151,7 +150,6 @@ class AgentClient(CryptoClient):
         data = {
             'address': address,
             'fqdn': self._fqdn,
-            'nodename': self._nodename,
             'capabilities': self.action_plugins.capabilities,
             'version': version(),
             'csr': self._crypto.generate_csr(self._fqdn)

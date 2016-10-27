@@ -68,14 +68,14 @@ class TestClusterSetup(TestCase):
                 pout, pin = multiprocessing.Pipe()
                 process = multiprocessing.Process(target=run_omping,
                                                   args=(pin, server, num_requests))
-                pipe_outs[server['nodename']] = pout
-                processes[server['nodename']] = process
+                pipe_outs[server['fqdn']] = pout
+                processes[server['fqdn']] = process
                 process.start()
 
             passed = True
             stdouts = []
             for server in self.config_servers:
-                omping_result = json.loads(pipe_outs[server['nodename']].recv())
+                omping_result = json.loads(pipe_outs[server['fqdn']].recv())
                 # This tests if any of the omping pings failed after the first.
                 # It is fairly common for the first multicast packet to be lost
                 # while it is still creating the multicast tree.
@@ -87,10 +87,10 @@ class TestClusterSetup(TestCase):
                 stdouts.append("""----------------
 %s
 -----------------
-%s""" % (server['nodename'], omping_result))
+%s""" % (server['fqdn'], omping_result))
 
                 # Make sure each omping process terminates
-                processes[server['nodename']].join()
+                processes[server['fqdn']].join()
 
             aggregate_omping_results = "\n" + " ".join([stdout for stdout in stdouts])
             logger.debug("Omping results: %s" % aggregate_omping_results)

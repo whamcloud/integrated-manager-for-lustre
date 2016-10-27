@@ -16,7 +16,6 @@
         {
             "address": "hydra-2-ss2-storage-appliance-1",
             "root_password": "lustre",
-            "nodename": "hydra-2-ss2-storage-appliance-1",
             "fqdn": "hydra-2-ss2-storage-appliance-1",
             "device_paths": [
                 "/dev/disk/by-id/scsi-1360014051ad7ed7bea0a4f8294b7d49b6",
@@ -34,7 +33,6 @@
         {
             "address": "hydra-2-ss2-storage-appliance-2",
             "root_password": "lustre",
-            "nodename": "hydra-2-ss2-storage-appliance-2",
             "fqdn": "hydra-2-ss2-storage-appliance-2",
             "device_paths": [
                 "/dev/disk/by-id/scsi-1360014051ad7ed7bea0a4f8294b7d49b6",
@@ -52,7 +50,6 @@
         {
             "address": "hydra-2-ss2-storage-appliance-3",
             "root_password": "lustre",
-            "nodename": "hydra-2-ss2-storage-appliance-3",
             "fqdn": "hydra-2-ss2-storage-appliance-3",
             "device_paths": [
                 "/dev/disk/by-id/scsi-1360014051ad7ed7bea0a4f8294b7d49b6",
@@ -70,7 +67,6 @@
         {
             "address": "hydra-2-ss2-storage-appliance-4",
             "root_password": "lustre",
-            "nodename": "hydra-2-ss2-storage-appliance-4",
             "fqdn": "hydra-2-ss2-storage-appliance-4",
             "device_paths": [
                 "/dev/disk/by-id/scsi-1360014051ad7ed7bea0a4f8294b7d49b6",

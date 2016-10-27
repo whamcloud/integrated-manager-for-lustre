@@ -24,7 +24,7 @@ def load_filesystem_from_json(data):
     for host_info in data['hosts']:
         from tests.unit.chroma_core.helpers import MockAgentRpc
         mock_host_info = MockAgentRpc.mock_servers[host_info['address']]
-        #host, command = JobSchedulerClient.create_host(mock_host_info['fqdn'], mock_host_info['nodename'], ['manage_targets'], address = host_info['address'])
+        #host, command = JobSchedulerClient.create_host(mock_host_info['fqdn'], ['manage_targets'], address = host_info['address'])
         nids = [Nid.split_nid_string(n) for n in mock_host_info['nids']]
 
         # update mock_servers with list of Nid objects
@@ -32,8 +32,7 @@ def load_filesystem_from_json(data):
 
         host = synthetic_host(mock_host_info['address'],
                               nids=nids,
-                              fqdn=mock_host_info['fqdn'],
-                              nodename=mock_host_info['nodename'])
+                              fqdn=mock_host_info['fqdn'])
         ObjectCache.add(ManagedHost, host)
         host.state = 'managed'
         host.save()
@@ -138,7 +137,7 @@ def step(context):
 
     for address, host_info in sorted(MockAgentRpc.mock_servers.items()):
         if not ManagedHost.objects.filter(fqdn=host_info['fqdn']).exists():
-            host = synthetic_host(address, nids=host_info['nids'], fqdn=host_info['fqdn'], nodename=host_info['nodename'])
+            host = synthetic_host(address, nids=host_info['nids'], fqdn=host_info['fqdn'])
 
     for address, host_info in sorted(MockAgentRpc.mock_servers.items()):
         if not VolumeNode.objects.filter(host__fqdn=host_info['fqdn'], path__startswith="/fake/path/").exists():

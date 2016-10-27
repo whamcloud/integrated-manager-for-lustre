@@ -66,27 +66,22 @@
     "lustre_servers": [
         {
             "address": "hydra-2-lustre-1-8-mgs-mds",
-            "nodename": "hydra-2-lustre-1-8-mgs-mds",
             "fqdn": "hydra-2-lustre-1-8-mgs-mds.lab.whamcloud.com
         },
         {
             "address": "hydra-2-lustre-1-8-oss1",
-            "nodename": "hydra-2-lustre-1-8-oss1",
             "fqdn": "hydra-2-lustre-1-8-oss1.lab.whamcloud.com
         },
         {
             "address": "hydra-2-lustre-1-8-oss2",
-            "nodename": "hydra-2-lustre-1-8-oss2",
             "fqdn": "hydra-2-lustre-1-8-oss2.lab.whamcloud.com
         },
         {
             "address": "hydra-2-lustre-1-8-oss3",
-            "nodename": "hydra-2-lustre-1-8-oss3",
             "fqdn": "hydra-2-lustre-1-8-oss3.lab.whamcloud.com
         },
         {
             "address": "hydra-2-lustre-1-8-oss4",
-            "nodename": "hydra-2-lustre-1-8-oss4",
             "fqdn": "hydra-2-lustre-1-8-oss4.lab.whamcloud.com
         }
     ],

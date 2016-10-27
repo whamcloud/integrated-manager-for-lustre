@@ -17,7 +17,6 @@
         {
             "address": "test000.localdomain",
             "root_password": "",
-            "nodename": "test000",
             "fqdn": "test000.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
@@ -33,7 +32,6 @@
         {
             "address": "test001.localdomain",
             "root_password": "",
-            "nodename": "test001",
             "fqdn": "test001.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
@@ -49,7 +47,6 @@
         {
             "address": "test002.localdomain",
             "root_password": "",
-            "nodename": "test002",
             "fqdn": "test002.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
@@ -65,7 +62,6 @@
         {
             "address": "test003.localdomain",
             "root_password": "",
-            "nodename": "test003",
             "fqdn": "test003.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
@@ -81,7 +77,6 @@
         {
             "address": "worker000.localdomain",
             "root_password": "",
-            "nodename": "worker000",
             "fqdn": "worker000.localdomain",
             "profile": "posix_copytool_worker",
             "distro": "mock"
@@ -89,7 +84,6 @@
         {
             "address": "worker001.localdomain",
             "root_password": "",
-            "nodename": "worker001",
             "fqdn": "worker001.localdomain",
             "profile": "posix_copytool_worker",
             "distro": "mock"
@@ -97,7 +91,6 @@
         {
             "address": "worker002.localdomain",
             "root_password": "",
-            "nodename": "worker002",
             "fqdn": "worker002.localdomain",
             "profile": "posix_copytool_worker",
             "distro": "mock"
@@ -105,7 +98,6 @@
         {
             "address": "worker003.localdomain",
             "root_password": "",
-            "nodename": "worker003",
             "fqdn": "worker003.localdomain",
             "profile": "posix_copytool_worker",
             "distro": "mock"

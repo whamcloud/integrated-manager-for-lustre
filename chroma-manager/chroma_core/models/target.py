@@ -130,14 +130,14 @@ class ManagedTarget(StatefulObject):
             'storage_resource__resource_class__storage_plugin'
         ).prefetch_related('volumenode_set', 'volumenode_set__host').get(pk=self.volume.pk)
 
-    def update_active_mount(self, nodename):
-        """Set the active_mount attribute from the nodename of a host, raising
+    def update_active_mount(self, fqdn):
+        """Set the active_mount attribute from the fqdn of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
         try:
             started_on = ObjectCache.get_one(ManagedHost,
-                                             lambda mh: (mh.nodename == nodename) or (mh.fqdn == nodename))
+                                             lambda mh: (mh.fqdn == fqdn))
         except ManagedHost.DoesNotExist:
-            raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
+            raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, fqdn))
 
         try:
             job_log.debug("Started %s on %s" % (self.ha_label, started_on))

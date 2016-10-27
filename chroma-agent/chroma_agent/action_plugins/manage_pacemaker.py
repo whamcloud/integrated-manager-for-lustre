@@ -246,18 +246,18 @@ def unconfigure_fencing():
     return agent_ok_or_error(_unconfigure_fencing())
 
 
-def delete_node(nodename):
+def delete_node(fqdn):
     rc, stdout, stderr = AgentShell.run_old(['crm_node', '-l'])
     node_id = None
     for line in stdout.split('\n'):
         node_id, name, status = line.split(" ")
-        if name == nodename:
+        if name == fqdn:
             break
     AgentShell.try_run(['crm_node', '--force', '-R', node_id])
     cibadmin(["--delete", "-o", "nodes", "-X",
-              "<node uname=\"%s\"/>" % nodename])
+              "<node uname=\"%s\"/>" % fqdn])
     cibadmin(["--delete", "-o", "nodes", "--crm_xml",
-              "<node_state uname=\"%s\"/>" % nodename])
+              "<node_state uname=\"%s\"/>" % fqdn])
 
 
 # This is a required due to a short coming in the state-machine which is that transient states are not supported.

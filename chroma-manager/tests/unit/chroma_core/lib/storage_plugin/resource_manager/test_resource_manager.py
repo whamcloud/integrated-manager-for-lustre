@@ -23,7 +23,6 @@ class ResourceManagerTestCase(IMLUnitTestCase):
         super(ResourceManagerTestCase, self).setUp()
 
         self.host = self._create_host(fqdn = 'myaddress.mycompany.com',
-                                      nodename = 'myaddress.mycompany.com',
                                       address = 'myaddress.mycompany.com')
 
         self.manager = load_plugins(plugins_to_load)
@@ -40,9 +39,8 @@ class ResourceManagerTestCase(IMLUnitTestCase):
 
         self.addCleanup(mock.patch.stopall)
 
-    def _create_host(self, fqdn, nodename, address):
+    def _create_host(self, fqdn, address):
         host = ManagedHost.objects.create(fqdn = fqdn,
-                                          nodename = nodename,
                                           address = address)
 
         LNetConfiguration.objects.create(host = host, state = 'lnet_down')

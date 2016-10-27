@@ -142,7 +142,7 @@ class BaseFakeLustrePlugin(DevicePlugin):
 
     def update_session(self, first=False):
         mounts = []
-        for resource in self._server._cluster.get_running_resources(self._server.nodename):
+        for resource in self._server._cluster.get_running_resources(self._server.fqdn):
             mounts.append({
                 'device': resource['device_path'],
                 'fs_uuid': resource['uuid'],
@@ -238,8 +238,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
         log.debug('cluster nodes:  %s' % self._server._cluster.state['nodes'])
 
-        nodes = [(node_dict['nodename'], node_dict['online']) for node_dict
-                            in self._server._cluster.state['nodes'].values()]
+        nodes = [(fqdn, state['online']) for fqdn, state in self._server._cluster.state['nodes'].iteritems()]
 
         log.debug('Nodes and state:  %s' % nodes)
 

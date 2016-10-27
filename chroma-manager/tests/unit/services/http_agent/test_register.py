@@ -13,11 +13,11 @@ from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from tests.utils import patch, timed
 import settings
 
+
 class TestRegistration(IMLUnitTestCase):
     """API unit tests for functionality used only by the agent"""
     mock_servers = {'mynewhost': {
         'fqdn': 'mynewhost.mycompany.com',
-        'nodename': 'test01.mynewhost.mycompany.com',
         'nids': [Nid.Nid("192.168.0.1", "tcp", 0)],
     }}
 
@@ -38,7 +38,6 @@ class TestRegistration(IMLUnitTestCase):
         with timed('csr', 10):
             data = {
                 'fqdn': host_info['fqdn'],
-                'nodename': host_info['nodename'],
                 'version': '1.0',
                 'capabilities': ['manage_targets'],
                 'address': 'mynewhost',

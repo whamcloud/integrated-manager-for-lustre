@@ -240,7 +240,6 @@ class JobTestCaseWithHost(JobTestCase):
     mock_servers = {
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
             'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
         }
     }
@@ -252,8 +251,7 @@ class JobTestCaseWithHost(JobTestCase):
         for address, info in self.mock_servers.items():
             host = synthetic_host(address=address,
                                   fqdn=info['fqdn'],
-                                  nids=info['nids'],
-                                  nodename=info['nodename'])
+                                  nids=info['nids'])
             self.hosts.append(host)
 
         # Handy if you're only using one
