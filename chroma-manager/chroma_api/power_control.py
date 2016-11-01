@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,7 +20,10 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.models import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet
+from chroma_core.models import ManagedHost
+from chroma_core.models import PowerControlDeviceOutlet
+from chroma_core.models import PowerControlDevice
+from chroma_core.models import PowerControlType
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import CustomModelResource
 
@@ -135,6 +138,9 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
     """
     name = fields.CharField(attribute = 'display_name', readonly = True)
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [PowerControlType]
+
     def hydrate(self, bundle):
         bundle = super(PowerControlTypeResource, self).hydrate(bundle)
 
@@ -186,6 +192,9 @@ class PowerControlDeviceResource(DeleteablePowerObjectResource):
     device_type = fields.ToOneField('chroma_api.power_control.PowerControlTypeResource', 'device_type', full = True)
     outlets = fields.ToManyField('chroma_api.power_control.PowerControlDeviceOutletResource', 'outlets', full = True, null = True)
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [PowerControlType, PowerControlDeviceOutlet]
+
     def hydrate(self, bundle):
         bundle = super(PowerControlDeviceResource, self).hydrate(bundle)
 
@@ -225,6 +234,9 @@ class PowerControlDeviceOutletResource(DeleteablePowerObjectResource):
     """
     device = fields.ToOneField('chroma_api.power_control.PowerControlDeviceResource', 'device')
     host = fields.ToOneField('chroma_api.host.HostResource', 'host', null = True)
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedHost, PowerControlDevice]
 
     class Meta:
         queryset = PowerControlDeviceOutlet.objects.all()

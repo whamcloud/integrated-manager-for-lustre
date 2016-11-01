@@ -23,6 +23,7 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
+from chroma_core.models import ManagedHost
 from chroma_core.models import NetworkInterface
 from chroma_core.services import log_register
 from chroma_api.authentication import AnonymousAuthentication
@@ -47,6 +48,9 @@ class NetworkInterfaceResource(ChromaModelResource):
     host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=False)
     nid = fields.ToOneField('chroma_api.nid.NidResource', 'nid', full=True, null=True)
     lnd_types = fields.ListField()
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedHost, NetworkInterface]
 
     class Meta:
         queryset = NetworkInterface.objects.select_related('host', 'nid').all()

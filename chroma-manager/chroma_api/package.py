@@ -23,6 +23,7 @@
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.host import HostResource
 from chroma_core.models import ManagedHost
+from chroma_core.models.package import Package
 from chroma_core.models.package import PackageVersion
 from django.db.models import Q
 from tastypie.authorization import DjangoAuthorization
@@ -67,6 +68,9 @@ class PackageResource(ChromaModelResource):
                                   attribute=lambda bundle: ManagedHost.objects.filter(
                                       packageavailability__package_version=bundle.obj), null=True,
                                   help_text="List of URIs of servers on which this package is available")
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedHost, Package, PackageVersion]
 
     def apply_filters(self, request, applicable_filters):
         if 'host' in request.GET:

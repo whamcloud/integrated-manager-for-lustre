@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -28,6 +28,7 @@ from django.core.urlresolvers import resolve
 
 
 from chroma_core.models import CorosyncConfiguration
+from chroma_core.models import ManagedHost
 from chroma_core.services import log_register
 from chroma_api.utils import StatefulModelResource
 from chroma_api.utils import BulkResourceOperation
@@ -58,6 +59,9 @@ class CorosyncConfigurationResource(StatefulModelResource, BulkResourceOperation
 
     network_interfaces = fields.ListField(null=True,
                                           help_text="Network interfaces the form part of the corosync configuration.")
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedHost, CorosyncConfiguration]
 
     class Meta:
         queryset = CorosyncConfiguration.objects.all()

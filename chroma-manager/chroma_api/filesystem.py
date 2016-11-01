@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -313,6 +313,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
                                           "file system is in the process of being deleted")
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
                             help_text = "The MGT on which this file system is registered")
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedFilesystem]
 
     def _get_stat_simple(self, bundle, klass, stat_name, factor = 1.0):
         try:

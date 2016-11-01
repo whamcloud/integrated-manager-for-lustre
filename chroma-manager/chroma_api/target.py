@@ -199,6 +199,9 @@ class TargetResource(MetricResource, ConfParamResource):
     volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'full_volume', full = True, help_text = "\
                              The volume on which this target is stored.")
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedTarget, ManagedFilesystem]
+
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
             self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])

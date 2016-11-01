@@ -65,6 +65,9 @@ class StorageResourceClassResource(ChromaModelResource):
     columns = fields.ListField(help_text = "List of resource attributes to be used when presenting resource in tabular form")
     fields = fields.DictField(help_text = "List of resource attributes which should be presented in an input form")
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [StorageResourceClass]
+
     def dehydrate_columns(self, bundle):
         properties = bundle.obj.get_class().get_all_attribute_properties()
         return [{'name': name, 'label': props.get_label(name)} for (name, props) in properties if not isinstance(props, attributes.Password)]

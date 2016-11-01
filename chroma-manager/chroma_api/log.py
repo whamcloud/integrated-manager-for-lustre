@@ -63,6 +63,9 @@ class LogResource(ChromaModelResource):
                                      help_text='Unicode string.  One of %s' % MessageClass.strings(),
                                      enumerations = MessageClass.strings())
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [LogMessage]
+
     def dehydrate_substitutions(self, bundle):
         return self._substitutions(bundle.obj)
 

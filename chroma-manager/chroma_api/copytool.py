@@ -64,6 +64,9 @@ class CopytoolOperationResource(ChromaModelResource):
     description = fields.CharField()
     active_filter = {'started_at__isnull': False, 'finished_at__isnull': True}
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Copytool]
+
     def dehydrate_description(self, bundle):
         return str(bundle.obj)
 
@@ -140,6 +143,9 @@ class CopytoolResource(StatefulModelResource, MetricResource):
     host = fields.ToOneField('chroma_api.host.HostResource', 'host', full = True)
     filesystem = fields.ToOneField('chroma_api.filesystem.FilesystemResource', 'filesystem')
     active_operations_count = fields.IntegerField()
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Copytool]
 
     def hydrate_index(self, bundle):
         if 'index' in bundle.data:

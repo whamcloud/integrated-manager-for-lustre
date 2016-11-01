@@ -42,7 +42,6 @@ from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.chroma_common.lib import util
-from long_polling_api import LongPollingAPI
 
 
 class AlertSubscriptionValidation(Validation):
@@ -149,7 +148,7 @@ class AlertTypeResource(Resource):
         detail_allowed_methods = ['get']
 
 
-class AlertResource(LongPollingAPI, SeverityResource):
+class AlertResource(SeverityResource):
     """
     Notification of a bad health state.  Alerts refer to particular objects (such as
     servers or targets), and can either be active (indicating this is a current
@@ -185,8 +184,8 @@ class AlertResource(LongPollingAPI, SeverityResource):
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [AlertState, LNetOfflineAlert]
 
-    def dispatch(self, request_type, request, **kwargs):
-        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
+    # def dispatch(self, request_type, request, **kwargs):
+    #     return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def override_urls(self):
         return [

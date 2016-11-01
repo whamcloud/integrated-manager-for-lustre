@@ -136,6 +136,9 @@ class JobResource(ChromaModelResource):
 
     available_transitions = fields.DictField()
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Job]
+
     def _dehydrate_locks(self, bundle, write):
         if bundle.obj.locks_json:
             locks = json.loads(bundle.obj.locks_json)

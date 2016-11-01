@@ -20,7 +20,12 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.models import Volume, ManagedFilesystem, HaCluster, ManagedHost
+from chroma_core.models import Volume
+from chroma_core.models import VolumeNode
+from chroma_core.models import ManagedFilesystem
+from chroma_core.models import HaCluster
+from chroma_core.models import ManagedHost
+from chroma_core.models import StorageResourceRecord
 
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
@@ -115,6 +120,9 @@ class VolumeResource(ChromaModelResource):
         'storage_resource', null = True, blank = True, full = False,
         help_text = "The `storage_resource` corresponding to the "
                     "device which this Volume represents")
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Volume, VolumeNode, ManagedFilesystem, HaCluster, ManagedHost, StorageResourceRecord]
 
     def dehydrate_kind(self, bundle):
         #  Kind comes from the related storage_resource.

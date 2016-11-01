@@ -126,6 +126,9 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
     deletable = fields.BooleanField(help_text = "If ``true``, this object may be removed with a DELETE operation")
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [StorageResourceRecord]
+
     def dehydrate_parent_classes(self, bundle):
         def find_bases(klass, bases = set()):
             for parent in klass.__bases__:

@@ -36,6 +36,8 @@ from chroma_api.network_interface import NetworkInterfaceResource
 from chroma_api.lnet_configuration import LNetConfigurationResource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
+from chroma_core.models import LNetConfiguration
+from chroma_core.models import NetworkInterface
 from chroma_core.models import Nid
 from chroma_api.validation_utils import ChromaValidation
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -102,6 +104,9 @@ class NidResource(ChromaModelResource):
     """
     network_interface = fields.ToOneField('chroma_api.network_interface.NetworkInterfaceResource', 'network_interface')
     lnet_configuration = fields.ToOneField('chroma_api.lnet_configuration.LNetConfigurationResource', 'lnet_configuration')
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [Nid, LNetConfiguration, NetworkInterface]
 
     class Meta:
         queryset = Nid.objects.select_related('network_interface', 'lnet_configuration').all()

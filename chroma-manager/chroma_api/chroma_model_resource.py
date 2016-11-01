@@ -19,15 +19,14 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-from tastypie.resources import ModelResource
 from tastypie import fields
 
 from chroma_core.services import log_register
-
+from chroma_api.long_polling_api import LongPollingAPI
 log = log_register(__name__)
 
 
-class ChromaModelResource(ModelResource):
+class ChromaModelResource(LongPollingAPI):
     """
     Base class for chroma_models.
     """

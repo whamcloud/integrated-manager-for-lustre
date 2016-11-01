@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -35,7 +35,6 @@ from tastypie import fields
 from chroma_core.lib.service_config import SupervisorStatus
 from chroma_core.services import log_register
 from chroma_api.authentication import AnonymousAuthentication
-
 
 log = log_register(__name__)
 

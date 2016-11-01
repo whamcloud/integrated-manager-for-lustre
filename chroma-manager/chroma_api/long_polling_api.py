@@ -21,6 +21,7 @@
 
 import json
 
+from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpNotModified
 
@@ -32,10 +33,13 @@ import settings
 log = log_register(__name__)
 
 
-class LongPollingAPI(object):
+class LongPollingAPI(ModelResource):
     long_polling_tables = None                  # The caller must declare a set of long polling tables.
 
-    def handle_long_polling_dispatch(self, request_type, request, **kwargs):
+    def dispatch(self, request_type, request, **kwargs):
+        if self.long_polling_tables is None:
+            pass
+
         table_timestamps = None
 
         if (self.long_polling_tables is not None) and (request.method.lower() in ['get']):
@@ -61,7 +65,7 @@ class LongPollingAPI(object):
 
             if table_timestamps:
                 # We want the super of the thing that called us, because it might have other overloads
-                response = super(self.__class__, self).dispatch(request_type, request, **kwargs)
+                response = super(LongPollingAPI, self).dispatch(request_type, request, **kwargs)
 
                 if request.GET.get('last_modified') is not None:
                     # Expensive but reliable method, this is only used when a user types from a browser
@@ -78,6 +82,6 @@ class LongPollingAPI(object):
                 raise ImmediateHttpResponse(HttpNotModified("Timeout waiting for data change"))
         else:
             # We want the super of the thing that called us, because it might have other overloads
-            response = super(self.__class__, self).dispatch(request_type, request, **kwargs)
+            response = super(LongPollingAPI, self).dispatch(request_type, request, **kwargs)
 
         return response

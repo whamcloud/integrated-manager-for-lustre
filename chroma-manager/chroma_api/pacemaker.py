@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,6 +24,7 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
+from chroma_core.models import ManagedHost
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.services import log_register
 from chroma_api.utils import StatefulModelResource
@@ -50,6 +51,9 @@ class PacemakerConfigurationResource(StatefulModelResource, BulkResourceOperatio
     LNetConfiguration information.
     """
     host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=False)
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [ManagedHost, PacemakerConfiguration]
 
     class Meta:
         queryset = PacemakerConfiguration.objects.all()

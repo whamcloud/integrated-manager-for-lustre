@@ -53,6 +53,9 @@ class StepResource(ChromaModelResource):
 
     description = fields.CharField()
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = []
+
     def dehydrate_description(self, bundle):
         return bundle.obj.describe()
 

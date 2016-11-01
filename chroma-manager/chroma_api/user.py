@@ -146,6 +146,9 @@ class UserResource(ChromaModelResource):
                                                            " Returns one of %s." %
                                                            ", ".join(str(x) for x in UserProfile.STATES))
 
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [User]
+
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
 
