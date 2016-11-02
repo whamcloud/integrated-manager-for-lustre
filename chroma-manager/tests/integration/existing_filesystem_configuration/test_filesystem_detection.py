@@ -54,6 +54,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             )
             self.assertEqual(response.successful, True, response.text)
             command = response.json
+
             self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
 
             # Verify it detected the filesystem

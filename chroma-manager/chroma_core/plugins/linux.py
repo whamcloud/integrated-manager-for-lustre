@@ -264,6 +264,8 @@ class Linux(Plugin):
 
         # Create ScsiDevices
         res_by_serial = {}
+        scsi_device_identifiers = []
+
         for bdev in devices['devs'].values():
             serial = preferred_serial(bdev)
             if not bdev['major_minor'] in special_block_devices:
@@ -275,6 +277,7 @@ class Linux(Plugin):
                                                           size=bdev['size'],
                                                           filesystem_type=bdev['filesystem_type'])
                     res_by_serial[serial] = node
+                    scsi_device_identifiers.append(node.id_tuple())
 
         # Map major:minor string to LinuxDeviceNode
         self.major_minor_to_node_resource = {}
@@ -337,11 +340,10 @@ class Linux(Plugin):
             self.major_minor_to_node_resource[bdev['major_minor']] = node
             reported_device_node_paths.append(bdev['path'])
 
-        # Finally Remove and of the devs that are no longer present.
-        self.remove_missing_devices(False,
-                            host_id,
-                            ScsiDevice,
-                            set([preferred_serial(bdev) for bdev in devices['devs'].values()]))
+        # Finally remove any of the scsi devs that are no longer present.
+        initiate_device_poll |= self.remove_missing_devices(host_id,
+                                                            ScsiDevice,
+                                                            scsi_device_identifiers)
 
         # Now all the LUNs and device nodes are in, create the links between
         # the DM block devices and their parent entities.
@@ -409,6 +411,8 @@ class Linux(Plugin):
                     fstype = fstype)
 
         # Create Partitions (devices that have 'parent' set)
+        partition_identifiers = []
+
         for bdev in [x for x in devices['devs'].values() if x['parent']]:
             this_node = self.major_minor_to_node_resource[bdev['major_minor']]
             parent_resource = self.major_minor_to_node_resource[bdev['parent']]
@@ -424,8 +428,14 @@ class Linux(Plugin):
                     filesystem_type = bdev['filesystem_type'])
 
             this_node.add_parent(partition)
+            partition_identifiers.append(partition.id_tuple())
 
-        self.remove_missing_devicenodes(reported_device_node_paths)
+        # Finally remove any of the partitions that are no longer present.
+        initiate_device_poll |= self.remove_missing_devices(host_id,
+                                                            Partition,
+                                                            partition_identifiers)
+
+        initiate_device_poll |= self.remove_missing_devicenodes(reported_device_node_paths)
 
         # If we see a device change and the data was sent by the agent poll rather than initial start up
         # then we need to cause all of the ha peer agents and any other nodes that we share VolumeNodes with
@@ -443,6 +453,7 @@ class Linux(Plugin):
 
     def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list, reported_device_node_paths):
         resources_changed = False
+        device_identifiers = []
 
         for device_uuid, device_info in devices[device_type].items():
             block_device = devices['devs'][device_info['block_device']]
@@ -464,6 +475,7 @@ class Linux(Plugin):
                                                 path=device_info['path'])
 
             reported_device_node_paths.append(device_info['path'])
+            device_identifiers.append(device_res.id_tuple())
 
             for drive_bd in device_info['drives']:
                 drive_res = self.major_minor_to_node_resource[drive_bd]
@@ -473,20 +485,24 @@ class Linux(Plugin):
 
             resources_changed = created_res or resources_changed
 
-        return self.remove_missing_devices(host_id, resources_changed, klass, devices[device_type].keys())
+        resources_changed |= self.remove_missing_devices(host_id,
+                                                         klass,
+                                                         device_identifiers)
 
-    # noinspection PyTypeChecker,PyTypeChecker
-    def remove_missing_devices(self, host_id, resources_changed, klass, devices):
+        return resources_changed
+
+    def remove_missing_devices(self, host_id, klass, device_identifiers):
         # Now look for any VolumeNodes that were not reported, these should be removed from the resources.
         # If there are no device_nodes left after this then remove the drive_resource as well.
-        assert len(klass._meta.identifier.id_fields) == 1
 
-        for drive_resource in self.find_by_attr(klass):
-            if drive_resource.identifier_values[0] not in devices:
+        resources_changed = False
+
+        for device_resource in self.find_by_attr(klass):
+            if device_resource.id_tuple() not in device_identifiers:
                 device_node_exists = False
 
                 for resource_node in self.find_by_attr(LinuxDeviceNode):
-                    if resource_node.logical_drive == drive_resource:
+                    if resource_node.logical_drive == device_resource:
                         if resource_node.host_id == host_id:
                             self.remove(resource_node)
                             resources_changed |= True
@@ -494,7 +510,8 @@ class Linux(Plugin):
                             device_node_exists = True
 
                 if device_node_exists is False:
-                    self.remove(drive_resource)
+                    self.remove(device_resource)
+                    resources_changed |= True
 
         return resources_changed
 
@@ -503,10 +520,18 @@ class Linux(Plugin):
         Remove any LinuxDeviceNode paths that were not reported at all this iteration
 
         :param reported_paths: list of LinuxDeviceNode path's report on this iteration
+
+        :return True if any resources were removed.
         """
+
+        resources_changed = False
+
         for resource_node in self.find_by_attr(LinuxDeviceNode):
             if resource_node.path not in reported_paths:
                 self.remove(resource_node)
+                resources_changed |= True
+
+        return resources_changed
 
     def update_scan(self, scannable_resource):
         pass

@@ -1038,6 +1038,7 @@ class ResourceManager(object):
             resources = session._plugin_instance._index._local_id_to_resource.values()
 
             self._cull_lost_resources(session, resources)
+            self._persist_lun_updates(scannable_id)
 
     def session_notify_alert(self, scannable_id, resource_local_id, active, severity, alert_class, attribute):
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.

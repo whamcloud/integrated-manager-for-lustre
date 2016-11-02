@@ -60,8 +60,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
 
     def test_imported_zfs(self):
         """ Check when zpool is already imported which has datasets, only the datasets (not zpool) are reported """
-        self.add_commands(CommandCaptureCommand(('partprobe', )),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
     zfsPool1        1T    1234567890ABCDE    ONLINE
     zfsPool2        1G    111111111111111    OFFLINE\n"""),
                           CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool1"), stdout="""\
@@ -87,8 +86,7 @@ zfsPool1
 
     def test_exported_zfs_datasets_zvols(self):
         """ Check when zpool is imported which has datasets, only the datasets (not zpool) are reported """
-        self.add_commands(CommandCaptureCommand(("partprobe", )),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
                           CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
      id: 1234567890ABCDE
   state: ONLINE
@@ -144,8 +142,7 @@ zfsPool1
 
     def test_exported_zfs_no_datasets_zvols(self):
         """ Check when zpool is imported which has no datasets or zvols, only the zpool is reported """
-        self.add_commands(CommandCaptureCommand(("partprobe", )),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
                           CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
      id: 1234567890ABCDE
   state: ONLINE

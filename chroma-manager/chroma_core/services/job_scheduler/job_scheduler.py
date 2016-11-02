@@ -1558,7 +1558,7 @@ class JobScheduler(object):
                                                 plugin_names_json=json.dumps(plugin_names))]
 
                 with transaction.commit_on_success():
-                    command = Command.objects.create(message="Triggering update from agent(s)")
+                    command = Command.objects.create(message="%s triggering updates from agents" % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn)
                     self.CommandPlan.add_jobs(jobs, command)
 
             self.progress.advance()
