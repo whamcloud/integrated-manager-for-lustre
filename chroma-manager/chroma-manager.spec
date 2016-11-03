@@ -193,6 +193,12 @@ for pattern in $preserve_patterns; do
     echo "%{manager_root}/$pattern" >> manager.files
 done
 
+# only include compiled modules in the cli package
+for cli_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/chroma_cli/ -name "*.pyc"); do
+    install_file=${cli_file/$RPM_BUILD_ROOT\///}
+    echo "${install_file%.py*}.py[c,o]" >> cli.files
+done
+
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
 entry_scripts="/usr/bin/chroma-config /usr/bin/chroma"
@@ -357,10 +363,9 @@ fi
 %files libs
 %{python_sitelib}/*.egg-info/*
 
-%files cli
+%files -f cli.files cli
 %defattr(-,root,root)
 %{_bindir}/chroma
-%{manager_root}/chroma_cli/*
 
 %files integration-tests
 %defattr(-,root,root)
