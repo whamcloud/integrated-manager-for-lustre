@@ -1,11 +1,12 @@
-from django.utils import unittest
 from mock import patch
 from chroma_common.lib.util import ExpiringList
+from chroma_common.test.iml_unit_testcase import ImlUnitTestCase
 
 
-class TestExpiringList(unittest.TestCase):
+class TestExpiringList(ImlUnitTestCase):
 
     def setUp(self):
+        super(TestExpiringList, self).setUp()
         self.exping_list = ExpiringList(10)
         patcher_time = patch('time.time')
         self.addCleanup(patcher_time.stop)

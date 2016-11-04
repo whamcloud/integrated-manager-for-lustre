@@ -71,30 +71,44 @@ EOF
 popd
 
 if $MEASURE_COVERAGE; then
-  python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml --with-coverage tests/unit/ <<EOC
+  COVERAGE_STRING="--with-coverage"
+else
+  COVERAGE_STRING=""
+fi
+
+python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml $COVERAGE_STRING tests/unit/ <<EOC
 yes
 EOC
+
+if $MEASURE_COVERAGE; then
   mv .coverage $WORKSPACE/.coverage.chroma_manager_unit_tests
 
   coverage run --source=. --omit=tests/* -m behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
   mv .coverage $WORKSPACE/.coverage.chroma_manager_behave_unit_tests
+else
+  behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
+fi
 
-  cd ../chroma-agent
-  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml --with-coverage
+cd ../chroma-agent
+nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml $COVERAGE_STRING
+
+if $MEASURE_COVERAGE; then
   mv .coverage $WORKSPACE/.coverage.chroma_agent_unit_tests
 
   cd $WORKSPACE
   coverage combine
   coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
-else
-  python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml tests/unit/ <<EOC
-yes
-EOC
+fi
 
-  behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
+cd ../chroma-common
+nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-common-unit-test-results.xml $COVERAGE_STRING
 
-  cd ../chroma-agent
-  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml
+if $MEASURE_COVERAGE; then
+  mv .coverage $WORKSPACE/.coverage.chroma_common_unit_tests
+
+  cd $WORKSPACE
+  coverage combine
+  coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
 fi
 
 set -e
