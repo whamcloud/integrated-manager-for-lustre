@@ -228,12 +228,17 @@ class BlockDevices(object):
 
         def parse_block_dir(dev_dir, parent = None):
             """ Parse a dir like /sys/block/sda (must contain 'dev' and 'size') """
+            size = 0
             device_name = dev_dir.split(os.sep)[-1]
-            major_minor = open(os.path.join(dev_dir, "dev")).read().strip()
-            size = int(open(os.path.join(dev_dir, "size")).read().strip()) * 512
+
+            try:
+                major_minor = open(os.path.join(dev_dir, "dev")).read().strip()
+                size = int(open(os.path.join(dev_dir, "size")).read().strip()) * 512
+            except IOError:
+                pass
 
             # Exclude zero-sized devices
-            if not size:
+            if size == 0:
                 return
 
             # Exclude ramdisks, floppy drives, obvious cdroms
