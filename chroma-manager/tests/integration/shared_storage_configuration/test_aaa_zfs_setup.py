@@ -42,4 +42,4 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
                     server['zpool_device_paths'][lustre_device['path_index']] = server['device_paths'][lustre_device['path_index']]
                     server['device_paths'][lustre_device['path_index']] = zfs_device.device_path
 
-        self.cleanup_zfs_pools(self.config_servers, self.CZP_RECREATEZPOOLS, None, False)
+        self.cleanup_zfs_pools(self.config_servers, self.CZP_RECREATEZPOOLS | self.CZP_EXPORTPOOLS, None, False)

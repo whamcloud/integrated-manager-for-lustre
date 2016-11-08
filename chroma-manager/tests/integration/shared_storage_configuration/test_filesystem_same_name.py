@@ -51,7 +51,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
         self.cleanup_zfs_pools([config['lustre_servers'][0]],
-                               self.CZP_REMOVEDATASETS,
+                               self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)
 

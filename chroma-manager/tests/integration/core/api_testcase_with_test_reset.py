@@ -160,7 +160,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
                 # cleanup zfs pools
                 self.cleanup_zfs_pools(self.config_servers,
-                                       self.CZP_RECREATEZPOOLS if config.get('new_zpools_each_test', False) else self.CZP_REMOVEDATASETS,
+                                       self.CZP_EXPORTPOOLS | (self.CZP_RECREATEZPOOLS if config.get('new_zpools_each_test', False) else self.CZP_REMOVEDATASETS),
                                        None,
                                        True)
 
@@ -897,14 +897,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     CZP_REMOVEDATASETSANDZPOOLS = (CZP_REMOVEDATASETS | CZP_REMOVEZPOOLS)
     CZP_CREATEZPOOLS = 0x4
     CZP_RECREATEZPOOLS = (CZP_REMOVEDATASETS | CZP_REMOVEZPOOLS | CZP_CREATEZPOOLS)
+    CZP_EXPORTPOOLS = 0x8
 
     def cleanup_zfs_pools(self, test_servers, action, zpool_datasets, devices_must_exist):
         """
-        Make sure any pools are imported onto server[0], and then remove any datasets on the pools.
+        Make sure any zpools are imported onto server[0], and then remove any datasets on the pools. Finally
+        zpools are imported are exported leaving them not present on any node.
 
         Very ZFS specific code.
         :param test_servers: Servers that have have access to the zpools
         :param action: Action defined by the CZP constants.
+        :param zpool_datasets: List of datasets to remove, None means remove all datasets.
         :param devices_must_exist: Error is devices do not exist when moving.
         """
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
@@ -921,6 +924,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             return
 
         first_test_server = test_servers[0]
+        imported_zpools = []
 
         def dataset_match(datasets, device_path):
             return next((dataset for dataset in datasets if dataset.startswith(device_path)), None) is not None
@@ -943,6 +947,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                           first_test_server['fqdn'],
                                           'import zfs device %s' % zfs_device,
                                           expected_return_code=0 if devices_must_exist else None)
+                    imported_zpools.append(zfs_device)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
@@ -988,6 +993,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     self.execute_commands(zfs_device.prepare_device_commands,
                                           first_test_server['fqdn'],
                                           'create zfs device %s' % zfs_device)
+
+        if action & self.CZP_EXPORTPOOLS:
+            for zfs_device in imported_zpools:
+                self.execute_commands(zfs_device.release_commands,
+                                      first_test_server['fqdn'],
+                                      'export zfs device %s' % zfs_device)
 
     def cleanup_linux_devices(self, test_servers):
         """
