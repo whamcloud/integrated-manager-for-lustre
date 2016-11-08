@@ -113,7 +113,7 @@ class BlockDevice(object):
         return self._device_path
 
     @classmethod
-    def initialise_driver(cls):
+    def initialise_driver(cls, managed_mode):
         return None
 
     @abc.abstractmethod

@@ -28,7 +28,6 @@ import glob
 from collections import defaultdict
 
 from ..lib import shell
-from ..lib.agent_rpc import agent_ok_or_error
 from blockdevice import BlockDevice
 
 
@@ -433,13 +432,16 @@ class BlockDeviceZfs(BlockDevice):
         return None
 
     @classmethod
-    def initialise_driver(cls):
+    def initialise_driver(cls, managed_mode):
         """
         Enable SPL Multi-Mount Protection for ZFS during failover by generating a hostid to be used by Lustre.
 
         :return: None on success, error message on failure
         """
         error = None
+
+        if managed_mode is False:
+            return error
 
         if os.path.isfile('/etc/hostid') is False:
             # only create an ID if one doesn't already exist
@@ -479,4 +481,4 @@ class BlockDeviceZfs(BlockDevice):
                 if error:
                     break
 
-        return agent_ok_or_error(error)
+        return error

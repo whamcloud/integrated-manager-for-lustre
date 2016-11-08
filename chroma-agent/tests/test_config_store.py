@@ -207,6 +207,21 @@ class ConfigStoreTests(unittest.TestCase):
             raise RuntimeError("Multi-process safety check failed: %s" %
                                exceptions.get(block=False))
 
+    def test_profile_managed_true(self):
+        self.config.set('settings', 'profile', {'managed': True})
+        self.assertEqual(self.config.profile_managed, True)
+
+    def test_profile_managed_false(self):
+        self.config.set('settings', 'profile', {'managed': False})
+        self.assertEqual(self.config.profile_managed, False)
+
+    def test_profile_managed_missing_false_section(self):
+        self.assertEqual(self.config.profile_managed, False)
+
+    def test_profile_managed_missing_false_ket(self):
+        self.config.set('settings', 'profile', {'trevor': 'andy'})
+        self.assertEqual(self.config.profile_managed, False)
+
 
 class AgentStoreConversionTests(unittest.TestCase):
     def setUp(self):

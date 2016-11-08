@@ -31,6 +31,7 @@ from chroma_agent.chroma_common.lib import util
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_function
+from chroma_agent import config
 
 
 def ssi(runlevel):
@@ -84,7 +85,7 @@ def reboot_server(at_time = "now"):
 def initialise_block_device_drivers():
     console_log.info("Initialising drivers for block device types")
     for cls in util.all_subclasses(BlockDevice):
-        error = cls.initialise_driver()
+        error = cls.initialise_driver(config.profile_managed)
 
         if error:
             return agent_error(error)

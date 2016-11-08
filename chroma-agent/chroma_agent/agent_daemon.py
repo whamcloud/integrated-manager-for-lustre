@@ -172,7 +172,7 @@ def main():
             daemon_log.error("No configuration found (must be registered before running the agent service)")
             return
 
-        if config.get('settings', 'profile')['managed'] is False:
+        if config.profile_managed is False:
             # This is kind of terrible. The design of DevicePluginManager is
             # such that it can be called with either class methods or
             # instantiated and then called with instance methods. As such,

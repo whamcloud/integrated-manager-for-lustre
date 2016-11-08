@@ -858,7 +858,7 @@ class InitialiseBlockDeviceDriversStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
 
-        self.invoke_agent(host, 'initialise_block_device_drivers', {})
+        self.invoke_agent_expect_result(host, 'initialise_block_device_drivers', {})
 
 
 class SetupHostJob(BaseSetupHostJob):

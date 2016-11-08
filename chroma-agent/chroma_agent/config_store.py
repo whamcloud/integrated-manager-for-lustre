@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -173,3 +173,16 @@ class ConfigStore(object):
 
         with self._lock:
             self._safe_unlink(os.path.join(dir, safe_key))
+
+    # #####################################
+    # Some self accessors to common entries
+    # #####################################
+    @property
+    def profile_managed(self):
+        """
+        :return: True if profile is managed False if not or no profile
+        """
+        try:
+            return self.get('settings', 'profile').get('managed', False)
+        except (KeyError, TypeError):
+            return False

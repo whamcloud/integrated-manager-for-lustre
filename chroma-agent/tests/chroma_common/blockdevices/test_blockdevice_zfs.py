@@ -3,7 +3,6 @@ import mock
 
 from os import path
 from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 from tests.chroma_common.blockdevices.blockdevice_base_tests import BaseTestBD
 from tests.data.chroma_common import example_data
 from tests.command_capture_testcase import CommandCaptureCommand
@@ -272,9 +271,9 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('modprobe', 'zfs')))
 
         with mock.patch.object(path, 'isfile', return_value=False):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertEqual(result, agent_result_ok)
+        self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_file_exists(self):
@@ -287,18 +286,18 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('modprobe', 'zfs')))
 
         with mock.patch.object(path, 'isfile', return_value=True):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertEqual(result, agent_result_ok)
+        self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_fail_genhostid(self):
         self.add_commands(CommandCaptureCommand(('genhostid',), rc=1, stderr='sample genhostid error text'))
 
         with mock.patch.object(path, 'isfile', return_value=False):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertIn('sample genhostid error text', result['error'])
+        self.assertIn('sample genhostid error text', result)
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_fail_dkms_spl(self):
@@ -308,9 +307,9 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('dkms', 'install', 'spl/1.2.3.4'), rc=1, stderr='sample dkms error text'))
 
         with mock.patch.object(path, 'isfile', return_value=False):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertIn('sample dkms error text', result['error'])
+        self.assertIn('sample dkms error text', result)
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_fail_dkms_zfs(self):
@@ -323,9 +322,9 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('dkms', 'install', 'zfs/0.6.5.7'), rc=1, stderr='sample dkms error text'))
 
         with mock.patch.object(path, 'isfile', return_value=False):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertIn('sample dkms error text', result['error'])
+        self.assertIn('sample dkms error text', result)
         self.assertRanAllCommandsInOrder()
 
     def test_initialise_driver_fail_modprobe_zfs(self):
@@ -339,7 +338,13 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('modprobe', 'zfs'), rc=1, stderr='sample modprobe error text'))
 
         with mock.patch.object(path, 'isfile', return_value=False):
-            result = BlockDeviceZfs.initialise_driver()
+            result = BlockDeviceZfs.initialise_driver(True)
 
-        self.assertIn('sample modprobe error text', result['error'])
+        self.assertIn('sample modprobe error text', result)
+        self.assertRanAllCommandsInOrder()
+
+    def test_initialise_driver_monitor_mode(self):
+        result = BlockDeviceZfs.initialise_driver(False)
+
+        self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()
