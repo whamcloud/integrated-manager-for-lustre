@@ -337,9 +337,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
             # Count how many of the reported Luns are ready for our test
             # (i.e. they have both a primary and a failover node)
-            ha_volumes = self.get_shared_volumes(required_hosts = 4)
-            self.assertGreaterEqual(len(ha_volumes), 4,
-                "Need at least 4 ha volumes. Found '%s'" % ha_volumes)
+            ha_volumes = self.wait_for_shared_volumes(4, 4)
 
             self._standard_filesystem_layout = {
                 'mgt': {'primary_host': hosts[0], 'failover_host': hosts[1], 'volume': ha_volumes[0]},
@@ -483,6 +481,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             accessible_enough = len(v['volume_nodes']) >= required_hosts
             if has_primary and has_two and accessible_enough:
                 ha_volumes.append(v)
+
+        logger.info("Found these HA volumes: '%s'" % ha_volumes)
 
         return ha_volumes
 

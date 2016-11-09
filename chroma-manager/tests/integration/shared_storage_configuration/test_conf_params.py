@@ -17,8 +17,7 @@ class TestConfParams(ChromaIntegrationTestCase):
                          [config['lustre_servers'][0]['address'],
                           config['lustre_servers'][1]['address']])
 
-        volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(volumes), 4)
+        volumes = self.wait_for_shared_volumes(4, 2)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
@@ -94,12 +93,12 @@ class TestConfParams(ChromaIntegrationTestCase):
     def test_update_conf_params(self):
         self.add_hosts([config['lustre_servers'][0]['address']])
 
-        ha_volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(ha_volumes), 4)
+        volumes = self.get_usable_volumes()
+        self.assertGreaterEqual(len(volumes), 4)
 
-        mgt_volume = ha_volumes[0]
-        mdt_volumes = [ha_volumes[1]]
-        ost_volumes = [ha_volumes[2]]
+        mgt_volume = volumes[0]
+        mdt_volumes = [volumes[1]]
+        ost_volumes = [volumes[2]]
         filesystem_id = self.create_filesystem({
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},

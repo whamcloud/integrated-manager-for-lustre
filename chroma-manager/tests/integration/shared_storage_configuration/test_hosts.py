@@ -10,8 +10,7 @@ class TestHosts(ChromaIntegrationTestCase):
             config['lustre_servers'][1]['address']
         ])
 
-        volumes = self.wait_usable_volumes(3)
-        self.assertGreaterEqual(len(volumes), 3)
+        volumes = self.wait_for_shared_volumes(3, 2)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]

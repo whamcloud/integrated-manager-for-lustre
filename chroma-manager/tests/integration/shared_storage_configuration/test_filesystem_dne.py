@@ -22,8 +22,7 @@ class TestFilesystemDNE(StatsTestCaseMixin):
                          [config['lustre_servers'][0]['address'],
                           config['lustre_servers'][1]['address']])
 
-        self.ha_volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(self.ha_volumes), 4)
+        self.ha_volumes = self.wait_for_shared_volumes(4, 2)
 
         self.mgt_volume = self.ha_volumes[0]
         self.mdt_volumes = self.ha_volumes[1:(1 + mdt_count)]

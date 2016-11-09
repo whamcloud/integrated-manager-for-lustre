@@ -65,7 +65,6 @@ class TestAddHost(TestCreateFilesystem):
     def test_add_host(self):
         """ Test that a host and OST can be added to a filesystem"""
 
-        volumes = self.get_usable_volumes()
         filesystem_id = self.get_filesystem_by_name(self.fs_name)['id']
         filesystem_uri = "/api/filesystem/%s/" % filesystem_id
 
@@ -74,10 +73,7 @@ class TestAddHost(TestCreateFilesystem):
             config['lustre_servers'][3]['address']
         ])
 
-        new_volumes = [v for v in self.get_usable_volumes() if v not in volumes]
-        self.assertGreaterEqual(len(new_volumes), 1)
-
-        ost_volume = new_volumes[0]
+        ost_volume = self.wait_for_shared_volumes(1, 4)
 
         self.set_volume_mounts(ost_volume, new_hosts[0]['id'], new_hosts[1]['id'])
 
