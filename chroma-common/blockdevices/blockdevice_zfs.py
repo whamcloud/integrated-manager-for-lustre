@@ -84,6 +84,7 @@ class BlockDeviceZfs(BlockDevice):
 
         self._modules_initialized = False
         self._zfs_properties = None
+        self._zpool_properties = None
 
     def _initialize_modules(self):
         if not self._modules_initialized:
@@ -195,6 +196,42 @@ class BlockDeviceZfs(BlockDevice):
 
         return self._zfs_properties
 
+    def zpool_properties(self, reread, log=None):
+        """
+        Try to retrieve the properties for a zpool device at self._device_path.
+
+        :param reread: Do not use the stored properties, always fetch them from the device
+        :param log: optional logger
+        :return: dictionary of zpool properties
+        """
+        self._assert_zpool('zpool_properties')
+
+        if reread or not self._zpool_properties:
+            self._zpool_properties = {}
+
+            try:
+                ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
+            except OSError:                                     # Zfs not found.
+                return self._zpool_properties
+            except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
+                with ExportedZfsDevice(self.device_path) as available:
+                    if available:
+                        ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
+                    else:
+                        return self._zpool_properties
+
+            for line in ls.strip().split("\n"):
+                try:
+                    _, key, value, _ = line.split('\t')
+
+                    self._zpool_properties[key] = value
+                except ValueError:                              # Be resilient to things we don't understand.
+                    if log:
+                        log.info("zpool get for %s returned %s which was not parsable." % (self._device_path, line))
+                    pass
+
+        return self._zpool_properties
+
     def mgs_targets(self, log):
         return {}
 
@@ -251,7 +288,6 @@ class BlockDeviceZfs(BlockDevice):
         :return: None for success meaning the zpool is imported
         """
         self._initialize_modules()
-
         try:
             self._assert_zpool('import_')
         except NotZpoolException:
@@ -264,8 +300,8 @@ class BlockDeviceZfs(BlockDevice):
 
             result = None
 
-            # Zpool is imported but make sure it is not readonly.
-            if self.zfs_properties(False).get('readonly') == 'on':
+            # Zpool is imported but make sure it is not readonly. re-read properties to detect changes
+            if self.zpool_properties(True).get('readonly') == 'on':
                 result = self.export()
 
                 if result is None:
@@ -277,7 +313,7 @@ class BlockDeviceZfs(BlockDevice):
                                                           (['-f'] if pacemaker_ha_operation else []) +
                                                           [self._device_path])
             # Check the pool is not readonly, reread the properties because we have just imported it.
-            if (result is None) and (self.zfs_properties(True).get('readonly') == 'on'):
+            if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
                 return 'zfs pool %s imported but device is readonly' % self._device_path
 
             return result

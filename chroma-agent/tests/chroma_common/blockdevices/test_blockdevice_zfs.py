@@ -53,6 +53,15 @@ This package contains the commands to verify the SPL
 kernel modules are functioning properly.
 """
 
+    zpool_properties = '-\tsize\t68G\t-\n' \
+                       '-\thealth\tONLINE\t-\n' \
+                       '-\tcachefile\t-\t-\n' \
+                       '-\treadonly\toff\t-\n'
+    zpool_properties_readonly = '-\tsize\t68G\t-\n' \
+                                '-\thealth\tONLINE\t-\n' \
+                                '-\tcachefile\t-\t-\n' \
+                                '-\treadonly\ton\t-\n'
+
     def setUp(self):
         super(TestBlockDeviceZFS, self).setUp()
 
@@ -141,11 +150,8 @@ kernel modules are functioning properly.
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.pool_name)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
+                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
+                                                stdout=self.zpool_properties))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -154,21 +160,16 @@ kernel modules are functioning properly.
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), executions_remaining=1),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'readonly\ton',
+                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
+                                                stdout=self.zpool_properties_readonly,
                                                 executions_remaining=1),
                           CommandCaptureCommand(('zpool', 'list', self.pool_name),
                                                 executions_remaining=1),
                           CommandCaptureCommand(('zpool', 'export', self.pool_name)),
                           CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.pool_name)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0'))
+                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
+                                                stdout=self.zpool_properties))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -178,11 +179,8 @@ kernel modules are functioning properly.
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
                           CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
+                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
+                                                stdout=self.zpool_properties))
 
         self.assertIsNone(self.blockdevice.import_(True))
         self.assertRanAllCommandsInOrder()
@@ -191,11 +189,8 @@ kernel modules are functioning properly.
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.pool_name),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
+                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
+                                                stdout=self.zpool_properties))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()

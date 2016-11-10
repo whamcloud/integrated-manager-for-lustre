@@ -382,6 +382,10 @@ class TestCheckBlockDevice(CommandCaptureTestCase):
 
 
 class TestCheckImportExport(CommandCaptureTestCase):
+    """
+    Test that the correct blockdevice methods are called, implementation of methods tested in
+    test_blockdevice_zfs therefore don't repeat command capturing here
+    """
     zpool = 'zpool'
     zpool_dataset = '%s/dataset' % zpool
 
@@ -390,6 +394,12 @@ class TestCheckImportExport(CommandCaptureTestCase):
 
         self.patch_init_modules = mock.patch.object(BlockDeviceZfs, '_initialize_modules')
         self.patch_init_modules.start()
+        self.mock_import_ = mock.Mock(return_value=None)
+        self.patch_import_ = mock.patch.object(BlockDeviceZfs, 'import_', self.mock_import_)
+        self.patch_import_.start()
+        self.mock_export = mock.Mock(return_value=None)
+        self.patch_export = mock.patch.object(BlockDeviceZfs, 'export', self.mock_export)
+        self.patch_export.start()
 
         self.addCleanup(mock.patch.stopall)
 
@@ -402,71 +412,12 @@ class TestCheckImportExport(CommandCaptureTestCase):
         self.assertAgentOK(manage_targets.export_target('linux', '/dev/sdb'))
         self.assertRanAllCommandsInOrder()
 
-    def test_import_device_zfs_non_pacemaker(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', self.zpool)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.zpool),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
-
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, False))
-        self.assertRanAllCommandsInOrder()
-
-    def test_import_device_zfs_pacemaker(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', '-f', self.zpool), rc=0),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.zpool),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
-
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, True))
-        self.assertRanAllCommandsInOrder()
-
-    def test_import_device_zfs_already_imported(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.zpool),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
-
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, False))
-        self.assertRanAllCommandsInOrder()
-
-    def test_import_device_zfs_already_imported_readonly(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), executions_remaining=1),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.zpool),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'readonly\ton',
-                                                executions_remaining=1),
-                          CommandCaptureCommand(('zpool', 'list', self.zpool), executions_remaining=1),
-                          CommandCaptureCommand(('zpool', 'export', self.zpool)),
-                          CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', self.zpool)),
-                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.zpool),
-                                                stdout='compressratio\t1.00x\n'
-                                                       'mounted\tyes\n'
-                                                       'quota\t0\n'
-                                                       'reservation\t0'))
-
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, False))
-        self.assertRanAllCommandsInOrder()
+    def test_import_device_zfs(self):
+        for with_pacemaker in [True, False]:
+            self.mock_import_.reset_mock()
+            self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, with_pacemaker))
+            self.mock_import_.assert_called_once_with(with_pacemaker)
 
     def test_export_device_zfs(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool)),
-                          CommandCaptureCommand(('zpool', 'export', self.zpool)))
-
         self.assertAgentOK(manage_targets.export_target('zfs', self.zpool_dataset))
-        self.assertRanAllCommandsInOrder()
-
-    def test_export_device_zfs_already_exported(self):
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.zpool), rc=1))
-
-        self.assertAgentOK(manage_targets.export_target('zfs', self.zpool_dataset))
-        self.assertRanAllCommandsInOrder()
+        self.mock_export.assert_called_once_with()
