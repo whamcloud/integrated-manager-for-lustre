@@ -3,9 +3,21 @@
     var $applyButton, $cancelButton, $volumeErrorDialog;
     var initialized = false;
     var volume_status_map = {
-      'configured-ha'   : { icon: 'status',       label: 'Configured (HA)' },
-      'configured-noha' : { icon: 'status-away',  label: 'Configured (No HA)' },
-      unconfigured      : { icon: 'status-busy',  label: 'Unconfigured' }
+      'configured-ha': {
+        icon: 'icon-ok-sign',
+        label: 'Configured (HA)',
+        style: 'color: #4CAF50;'
+      },
+      'configured-noha': {
+        icon: 'icon-warning-sign',
+        label: 'Configured (No HA)',
+        style: 'color: #FFC107;'
+      },
+      unconfigured: {
+        icon: 'icon-exclamation-sign',
+        label: 'Unconfigured',
+        style: 'color: #D9534F;'
+      }
     };
 
     /**
@@ -144,9 +156,11 @@
         volume.status_icon = UIHelper.help_hover(
           topic = 'volume_status_' + volume.status,
           content = UIHelper.fugue_icon(
-                      volume_status_map[volume.status]['icon'],
-                      { 'data-status': volume.status }
-                    ) //+ volume_status_map[volume.status]['label']
+            volume_status_map[volume.status]['icon'], {
+              'data-status': volume.status,
+              'style': volume_status_map[volume.status]['style']
+            }
+          )
         );
 
         if (volume.volume_nodes.length > 0) {

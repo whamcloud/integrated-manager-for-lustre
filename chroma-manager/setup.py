@@ -64,7 +64,7 @@ setup(
                       "static/font/*", "static/css/font-awesome/*.css", "static/css/bootstrap/*.css",
                       "static/css/smoothness/images/*",
                       "static/css/smoothness/*.css", "static/css/images/*.gif",
-                      "static/css/*.css", "static/images/fugue/*.png",
+                      "static/css/*.css",
                       "static/images/datatables/*.png", "static/images/datatables/*.jpg",
                       "static/images/*.ico", "static/images/*.png",
                       "static/images/*.gif", "templates/*.html", "templates/new/*.html",

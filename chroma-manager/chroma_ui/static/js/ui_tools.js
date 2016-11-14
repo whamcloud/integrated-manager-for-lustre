@@ -1,7 +1,7 @@
 //
 // INTEL CONFIDENTIAL
 //
-// Copyright 2013-2014 Intel Corporation All Rights Reserved.
+// Copyright 2013-2016 Intel Corporation All Rights Reserved.
 //
 // The source code contained or described herein and all documents related
 // to the source code ("Material") are owned by Intel Corporation or its
@@ -59,23 +59,12 @@ var UIHelper = function() {
     return html;
   }
 
-  // build an image tag to a fugue icon
-  // name: filename of the icon without file extension
-  // data: (optional) an object who's properties will be built into data-X properties
+  // build an i tag to a font-awesome icon
+  // name: font-awesome classname
+  // data: (optional) props to pass to the element builder
   function fugue_icon(name, properties) {
-    var _properties = _.defaults({ 'class': '' }, properties || {}, { src: STATIC_URL + "images/fugue/" + name + ".png" } );
-    _properties['class'] =  'fugue_icon' + _properties['class']; // prepend class with fugue_icon
-    return build_tag('img', { properties: _properties } );
-  }
-
-  // Build an <img> tag based on an INFO/ERROR/WARNING severity string
-  function severity_icon(severity) {
-    var name = {
-        INFO: 'information',
-        ERROR: 'exclamation-red',
-        WARNING: 'exclamation'
-      }[severity];
-    return fugue_icon(name, {alt: severity, title: severity});
+    var _properties = _.defaults({ class: name }, properties || {});
+    return build_tag('i', { properties: _properties } );
   }
 
   // build a help link (help.js)
@@ -106,7 +95,6 @@ var UIHelper = function() {
   return {
     build_tag: build_tag,
     fugue_icon: fugue_icon,
-    severity_icon: severity_icon,
     help_hover: help_hover,
     help_button: help_button,
     help_button_small: help_button_small

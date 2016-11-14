@@ -10,10 +10,17 @@ span.alert_indicator {
   background-position: 2px;
 }
 
+span.alert_indicator::before {
+  font-family: 'FontAwesome';
+  font-weight: normal;
+  font-style: normal;
+  padding-right: 5px;
+}
+
 span.alert_indicator_large {
   width: 65px;
   height: 20px;
-  padding-left: 24px;
+  padding-left: 3px;
   padding-top: 3px;
   vertical-align: center;
   font-size: 8pt;
@@ -24,23 +31,21 @@ span.alert_indicator_large {
 
 
 span.alert_indicator_active {
-  /*
-  color: #664f00;
-  background-color: #FFBF00;
-  */
   font-weight: bold;
+}
 
-  background-image: url(../images/fugue/exclamation-red.png);
+span.alert_indicator_active::before {
+  content: "\f06a";
+  color: #D9534F;
 }
 
 span.alert_indicator_inactive {
-  /*
-  color: #444;
-  background-color: #efe;
-  */
   font-weight: normal;
+}
 
-  background-image: url(../images/fugue/tick.png);
+span.alert_indicator_inactive::before {
+  content: "\f00c";
+  color: #4CAF50;
 }
 
 span.alert_indicator_list.alert_indicator_inactive {
@@ -59,11 +64,10 @@ span.alert_indicator_list ul {
   padding-left: 0px;
 }
 
-span.alert_indicator_list ul li {
-  padding-left: 24px;
-  background-image: url(../images/fugue/exclamation-red.png);
-  background-repeat: no-repeat;
-  background-position: 2px;
+span.alert_indicator_list ul li::before {
+  font-family: 'FontAwesome';
+  content: "\f06a";
+  color: #D9534F;
 }
 
 
@@ -79,20 +83,26 @@ span.notification_object_icon {
   height: 24px;
 }
 
-.busy_icon {
-  background-image: url(../images/loading.gif);
+.busy_icon::before {
+  font-family: 'FontAwesome';
+  font-weight: normal;
+  font-style: normal;
+  content: "\f110";
+  -moz-animation: spin 2s infinite linear;
+  -o-animation: spin 2s infinite linear;
+  -webkit-animation: spin 2s infinite linear;
+  animation: spin 2s infinite linear;
+  display: inline-block;
 }
 
-.locked_icon {
-  background-image: url(../images/fugue/lock.png);
+.locked_icon::before {
+  font-family: 'FontAwesome';
+  font-weight: normal;
+  font-style: normal;
+  content: "\f023";
+  animation: none;
 }
 
 span.notification_icons {
   white-space: nowrap;
-}
-
-img.fugue_icon {
-  height: 16px;
-  width: 16px;
-  vertical-align: middle;
 }

@@ -152,25 +152,23 @@ pre
 	margin-bottom:20px;
 }
 
-.magni{
-    width: 16px;
-	height:16px;
-	padding-bottom:5px;
-	position:absolute;
-    z-index: 999;
-    right: 16px;
-    top: 4px;
+.magni {
+  width: 21px;
+  height: 21px;
+  position: absolute;
+  z-index: 999;
+  right: 16px;
+  top: 4px;
 }
 
 .magbutton {
-    padding: 0px;
+    padding: 0;
     width: 24px;
     height: 24px;
 }
 
-.magbutton img {
-    margin-left: -11px;
-    margin-top: -1px;
+.magbutton.ui-button-text-only .ui-button-text {
+  padding: 0;
 }
 
 .timeint{

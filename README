@@ -26,12 +26,5 @@ herein.  Where a package is dual-licensed under (L)GPL and a more
 liberal license (e.g. BSD, MIT, ASL), it is included under the more
 liberal license.
 
-The icon set in chroma-manager/chroma_ui/static/images/fugue/ is
-subject to the following:
-        (C) 2012 Yusuke Kamiyamane. All rights reserved.
-        These icons are licensed under a Creative Commons
-        Attribution 3.0 License.
-        <http://creativecommons.org/licenses/by/3.0/>
-
 The code in chroma-manager/polymorphic/ is included under the New BSD
 license from http://code.google.com/p/django-polymorphic-models/
