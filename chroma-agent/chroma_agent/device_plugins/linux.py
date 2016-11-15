@@ -108,9 +108,9 @@ class LinuxDevicePlugin(DevicePlugin):
         return self._scan_devices(True)
 
     def update_session(self):
-        scan_result = self._scan_devices(self.trigger_plugin_update)
-
-        self.trigger_plugin_update = False      # I do explicitly do this after not before the scan, leads to less repeat scans.
+        trigger_plugin_update = self.trigger_plugin_update
+        self.trigger_plugin_update = False
+        scan_result = self._scan_devices(trigger_plugin_update)
 
         return scan_result
 
