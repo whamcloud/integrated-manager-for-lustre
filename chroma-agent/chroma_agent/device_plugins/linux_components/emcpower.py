@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,15 +26,15 @@ import re
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
-class EMCPower(DeviceHelper):
-    """Reads /dev/emcpower?*"""
+class EMCPower(object):
+    """ Reads /dev/emcpower?* """
 
     def __init__(self, block_devices):
-        self.emcpowers = self._composite_device_list(self._get_emcpower())
+        self.block_devices = block_devices
+        self.emcpowers = self.block_devices.composite_device_list(self._get_emcpower())
 
     def all(self):
         return self.emcpowers
@@ -48,7 +48,7 @@ class EMCPower(DeviceHelper):
             # and /dev/emcpowerXX in case they have more than 26 devices
             for device_path in glob.glob("/dev/emcpower?*"):
                 try:
-                    device_major_minor = self._dev_major_minor(device_path)
+                    device_major_minor = self.block_devices.path_to_major_minor(device_path)
 
                     name = os.path.basename(device_path)
 

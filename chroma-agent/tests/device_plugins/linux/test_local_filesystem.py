@@ -49,6 +49,7 @@ class TestLocalFilesystem(CommandCaptureTestCase):
                     'filesystem_type': "swap",
                     'parent': None},
         }
+        block_devices.path_to_major_minor = dev_major_minor
 
         self.add_command(("blkid", "-U", "0420214e-b193-49f0-8b40-a04b7baabbbe"), stdout="/dev/sdb2\n")
 
@@ -58,9 +59,6 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
 """,
             '/proc/mounts': ""
         }):
-            with mock.patch("chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor", side_effect=dev_major_minor):
-                result = LocalFilesystems(block_devices).all()
-                self.assertEqual(result, {
-                    "1:2": ("/", "ext4"),
-                    "3:4": ("swap", 'swap')
-                })
+            result = LocalFilesystems(block_devices).all()
+            self.assertEqual(result, {"1:2": ("/", "ext4"),
+                                      "3:4": ("swap", 'swap')})

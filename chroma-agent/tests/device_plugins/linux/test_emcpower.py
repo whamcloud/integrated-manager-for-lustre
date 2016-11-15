@@ -78,27 +78,22 @@ class TestEMCPower(LinuxAgentTests):
         except KeyError:
             return []
 
-    def mock_dev_major_minor(self, path):
+    def mock_path_to_major_minor(self, path):
         if path in self.devices_data['node_block_devices']:
             return self.devices_data['node_block_devices'][path]
         else:
             return None
 
-    def mock_find_block_devs(self, folder):
-        return self.emcpower_value["find_block_devs"]
-
     def _setup_emcpower(self, devices_filename, dmsetup_filename, emcpower_value):
         dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
+        dm_setup_table.block_devices.path_to_major_minor = self.mock_path_to_major_minor
 
         with mock.patch('logging.Logger.debug', self.mock_debug):
             with mock.patch('glob.glob', self.mock_glob):
                 with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', self.mock_try_run):
-                    with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
-                        with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
+                    self.emcpower_value = emcpower_value
 
-                            self.emcpower_value = emcpower_value
-
-                            return EMCPower(dm_setup_table.block_devices).all()
+                    return EMCPower(dm_setup_table.block_devices).all()
 
     def test_emcpower_pass(self):
         emcpowers = self._setup_emcpower('devices_MdRaid_EMCPower.json', 'dmsetup_MdRaid_EMCPower.json', self.emcpower_value_good)
@@ -112,7 +107,7 @@ class TestEMCPower(LinuxAgentTests):
             self.assertTrue(emcpowers[uuid]['block_device'] == value['mm'])
             self.assertTrue(len(emcpowers[uuid]['drives']) == len(value['device_paths']))
             for i in range(0, len(value['device_paths'])):
-                self.assertTrue(emcpowers[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
+                self.assertTrue(emcpowers[uuid]['drives'][i] == self.devices_data['node_block_devices'].get(value['device_paths'][i]))
 
         self.assertNormalizedPaths(self.emcpower_value_good['normalized_names'])
 

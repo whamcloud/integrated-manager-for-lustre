@@ -1,10 +1,12 @@
+import collections
 import json
+import errno
 import mock
 import os
 from django.utils import unittest
 
 from chroma_agent.device_plugins.linux import DmsetupTable
-from chroma_agent.device_plugins.linux import BlockDevices
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 import chroma_agent.lib.normalize_device_path as ndp
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
@@ -14,9 +16,10 @@ class MockDmsetupTable(DmsetupTable):
         self.lvs = devices_data['lvs']
         self.vgs = devices_data['vgs']
         self.mpaths = {}
-        self.block_devices = mock.Mock()
-        self.block_devices.node_block_devices = devices_data['node_block_devices']
-        self.block_devices.block_device_nodes = devices_data['block_device_nodes']
+        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
+            with mock.patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+                            return_value=(devices_data['block_device_nodes'], devices_data['node_block_devices'])):
+                self.block_devices = BlockDevices()
         self._parse_dm_table(dmsetup_data)
 
 
@@ -129,3 +132,88 @@ class TestBlockDevices(CommandCaptureTestCase):
                                       'filesystem_type': None,
                                       'partition_number': '1234',
                                       'size': 1})
+
+
+class TestDevMajorMinor(LinuxAgentTests):
+
+    MockDevice = collections.namedtuple('MockDevice', 'st_mode st_rdev')
+
+    mock_devices = {'/dev/disk/by-id/adisk': MockDevice(25008, 6)}
+
+    node_block_devices = {'/dev/disk/by-id/adisk': '12:24'}
+
+    def mock_os_stat(self, path):
+        if path in TestDevMajorMinor.mock_devices:
+            return TestDevMajorMinor.mock_devices[path]
+        else:
+            raise OSError(errno.ENOENT, 'No such file or directory.')
+
+    def setUp(self):
+        super(TestDevMajorMinor, self).setUp()
+        self.stat_patcher = mock.patch('os.stat', self.mock_os_stat)
+        self.stat_patcher.start()
+        mock.patch('os.minor', lambda st_rdev: st_rdev * 4).start()
+        mock.patch('os.major', lambda st_rdev: st_rdev * 2).start()
+        mock.patch('stat.S_ISBLK', return_value=True).start()
+        mock.patch('chroma_agent.lib.shell.AgentShell.try_run').start()
+        mock.patch('chroma_agent.utils.BlkId', return_value={0: {'path': self.mock_devices.keys()[0],
+                                                                 'type': 'ext4'}}).start()
+        mock.patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+                   return_value=(None, None)).start()
+        self.addCleanup(mock.patch.stopall)
+        self.block_devices = BlockDevices()
+        self.block_devices.non_existent_paths = set([])
+
+    def test_dev_major_minor_path_exists(self):
+        """ After a successful attempt, path should be removed from no-retry list """
+        path = '/dev/disk/by-id/adisk'
+        self.block_devices.non_existent_paths.add(path)
+        device = self.block_devices._dev_major_minor(path)
+        self.assertNotIn(path, self.block_devices.non_existent_paths)
+        self.assertEqual(device, '12:24')
+
+    def test_dev_major_minor_path_doesnt_exist(self):
+        """ After un-successful attempts, path should be added to no-retry list """
+        path = '/dev/disk/by-id/idontexist'
+        device = self.block_devices._dev_major_minor(path)
+        self.assertIn(path, self.block_devices.non_existent_paths)
+        self.assertEqual(device, None)
+
+    def test_dev_major_minor_path_exists_retries(self):
+        """ With existing path, method only calls stat once """
+        path = '/dev/disk/by-id/adisk'
+        self.stat_patcher.stop()
+        mock_stat = mock.patch('os.stat', return_value=TestDevMajorMinor.mock_devices[path]).start()
+        self.block_devices._dev_major_minor(path)
+        self.assertEqual(mock_stat.call_count, 1)
+        self.assertNotIn(path, self.block_devices.non_existent_paths)
+
+    def test_dev_major_minor_path_retry_doesnt_exist_retries(self):
+        """
+        Test non-existent path retries specified amount, and is subsequently added to the no-retry list.
+        On the next attempt with the same path, there should be no retries.
+        """
+        path = '/dev/disk/by-id/idontexist'
+        self.stat_patcher.stop()
+        self.assertNotIn(path, self.block_devices.non_existent_paths)
+        mock_stat = mock.patch('os.stat').start()
+        mock_stat.side_effect = OSError(errno.ENOENT, 'No such file or directory.')
+        self.block_devices._dev_major_minor(path)
+        self.assertEqual(mock_stat.call_count, BlockDevices.MAXRETRIES)
+        self.assertIn(path, self.block_devices.non_existent_paths)
+        mock_stat.reset_mock()
+        self.block_devices._dev_major_minor(path)
+        self.assertEqual(mock_stat.call_count, 1)
+        self.assertIn(path, self.block_devices.non_existent_paths)
+
+    def test_paths_to_major_minors_paths_exist(self):
+        self.block_devices.node_block_devices = self.node_block_devices
+        devices = self.block_devices.paths_to_major_minors(['/dev/disk/by-id/adisk'])
+        self.assertEqual(len(devices), 1)
+        self.assertEqual(devices, ['12:24'])
+
+    def test_paths_to_major_minors_a_path_doesnt_exist(self):
+        self.block_devices.node_block_devices = self.node_block_devices
+        devices = self.block_devices.paths_to_major_minors(['/dev/disk/by-id/idontexist',
+                                                            '/dev/disk/by-id/adisk'])
+        self.assertEqual(devices, ['12:24'])

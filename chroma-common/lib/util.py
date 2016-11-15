@@ -19,6 +19,7 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 import os
 import time
 import itertools
@@ -263,3 +264,16 @@ def wait_for_result(lambda_expression, logger, timeout=5 * 60, expected_exceptio
 
         time.sleep(1)
         running_time += 1
+
+
+def human_to_bytes(value_str):
+    """
+    Convert something like 1024b, or 1024m to a number of bytes
+    Very straight forward takes the index into the conversion strings and uses that as the 1024 power
+    """
+    conversion = "bkmgtp"
+
+    value = float(value_str[0:-1])
+    index = conversion.index(value_str[-1:].lower())
+
+    return int(value * (1024 ** index))

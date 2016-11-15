@@ -26,12 +26,13 @@ import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.chroma_common.lib import util
 
 
-class DmsetupTable(DeviceHelper):
+class DmsetupTable(object):
     """Uses various devicemapper commands to learn about LVM and Multipath"""
 
     def __init__(self, block_devices):
@@ -71,7 +72,7 @@ class DmsetupTable(DeviceHelper):
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
             name, uuid, size_str = line.split()
-            size = self._human_to_bytes(size_str)
+            size = util.human_to_bytes(size_str)
             yield (name, uuid, size)
 
     def _get_lvs(self, vg_name):
@@ -86,7 +87,7 @@ class DmsetupTable(DeviceHelper):
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
             name, uuid, size_str, path = line.split()
-            size = self._human_to_bytes(size_str)
+            size = util.human_to_bytes(size_str)
             yield (name, uuid, size, path)
 
     def _parse_multipath_params(self, tokens):
@@ -160,12 +161,12 @@ class DmsetupTable(DeviceHelper):
 
         def _read_lv_partition(block_device, parent_lv_name, vg_name):
             # HYD-744: FIXME: compose path in a way that copes with hyphens
-            parent_block_device = self.block_devices.node_block_devices["%s/%s-%s" % (self.MAPPERPATH, vg_name, parent_lv_name)]
+            parent_block_device = self.block_devices.node_block_devices["%s/%s-%s" % (BlockDevices.MAPPERPATH, vg_name, parent_lv_name)]
             self.block_devices.block_device_nodes[block_device]['parent'] = parent_block_device
 
         def _read_mpath_partition(block_device, parent_mpath_name):
             # A non-LV partition
-            parent_block_device = self.block_devices.node_block_devices["%s/%s" % (self.MAPPERPATH, parent_mpath_name)]
+            parent_block_device = self.block_devices.node_block_devices["%s/%s" % (BlockDevices.MAPPERPATH, parent_mpath_name)]
             self.block_devices.block_device_nodes[block_device]['parent'] = parent_block_device
 
         # Make a note of which VGs/LVs are in the table so that we can
@@ -178,7 +179,7 @@ class DmsetupTable(DeviceHelper):
             name = tokens[0].strip(":")
             dm_type = tokens[3]
 
-            node_path = os.path.join(self.MAPPERPATH, name)
+            node_path = os.path.join(BlockDevices.MAPPERPATH, name)
             block_device = self.block_devices.node_block_devices[node_path]
 
             if dm_type in ['linear', 'striped']:
@@ -267,7 +268,7 @@ class DmsetupTable(DeviceHelper):
 
                 # Add this devices to the canonical path list.
                 for device in devices:
-                    ndp.add_normalized_device(device['path'], "%s/%s" % (self.MAPPERPATH, name))
+                    ndp.add_normalized_device(device['path'], "%s/%s" % (BlockDevices.MAPPERPATH, name))
 
                 self.mpaths[name] = {"name": name,
                                      "block_device": block_device,

@@ -70,7 +70,7 @@ unused devices: <none>\n""",
     def mock_try_run(self, arg_list):
         return self.md_value["mdadm"][arg_list[4]]
 
-    def mock_dev_major_minor(self, path):
+    def mock_path_to_major_minor(self, path):
         if path in self.devices_data['node_block_devices']:
             return self.devices_data['node_block_devices'][path]
         else:
@@ -81,17 +81,18 @@ unused devices: <none>\n""",
 
     def _setup_md_raid(self, devices_filename, dmsetup_filename, md_value):
         dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
+        dm_setup_table.block_devices.path_to_major_minor = self.mock_path_to_major_minor
 
         with mock.patch('logging.Logger.debug', self.mock_debug):
             with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', self.mock_try_run):
                 with mock.patch('__builtin__.open', self.mock_open):
-                    with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
-                        with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
+                    with mock.patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs',
+                                    self.mock_find_block_devs):
 
-                            self.md_value = md_value
-                            self.mock_open.md_value = md_value
+                        self.md_value = md_value
+                        self.mock_open.md_value = md_value
 
-                            return MdRaid(dm_setup_table.block_devices).all()
+                        return MdRaid(dm_setup_table.block_devices).all()
 
     def test_mdraid_pass(self):
         mds = self._setup_md_raid('devices_MdRaid_EMCPower.json', 'dmsetup_MdRaid_EMCPower.json', self.md_value_good)
@@ -105,7 +106,7 @@ unused devices: <none>\n""",
             self.assertTrue(mds[uuid]['block_device'] == value['mm'])
             self.assertTrue(len(mds[uuid]['drives']) == len(value['device_paths']))
             for i in range(0, len(value['device_paths'])):
-                self.assertTrue(mds[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
+                self.assertTrue(mds[uuid]['drives'][i] == self.mock_path_to_major_minor(value['device_paths'][i]))
 
         self.assertNormalizedPaths(self.md_value_good['normalized_names'])
 

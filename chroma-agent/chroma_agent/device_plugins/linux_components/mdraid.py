@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -22,17 +22,18 @@
 
 import re
 
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
-class MdRaid(DeviceHelper):
-    """Reads /proc/mdstat"""
+class MdRaid(object):
+    """ Reads /proc/mdstat """
 
     def __init__(self, block_devices):
-        self.mds = self._composite_device_list(self._get_md())
+        self.block_devices = block_devices
+        self.mds = self.block_devices.composite_device_list(self._get_md())
 
     def all(self):
         return self.mds
@@ -41,14 +42,14 @@ class MdRaid(DeviceHelper):
     def _get_md(self):
         try:
             matches = re.finditer("^(md\d+) : active", open('/proc/mdstat').read().strip(), flags = re.MULTILINE)
-            dev_md_nodes = self._find_block_devs(self.MDRAIDPATH)
+            dev_md_nodes = self.block_devices.find_block_devs(BlockDevices.MDRAIDPATH)
 
             devs = []
             for match in matches:
                 # e.g. md0
                 device_name = match.group(1)
                 device_path = "/dev/%s" % device_name
-                device_major_minor = self._dev_major_minor(device_path)
+                device_major_minor = self.block_devices.path_to_major_minor(device_path)
 
                 # Defensive, but perhaps the md device doesn't show up as disk/by-id in which case we can't use it
                 try:

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -19,12 +19,9 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 
-
-class LocalFilesystems(DeviceHelper):
-    """Reads /proc/mounts and /etc/fstab to generate a map of block devices
-    occupied by local filesystems"""
+class LocalFilesystems(object):
+    """ Reads /proc/mounts and /etc/fstab to generate a map of block devices occupied by local filesystems """
 
     def __init__(self, block_devices):
         from chroma_agent.utils import Fstab, Mounts
@@ -32,8 +29,8 @@ class LocalFilesystems(DeviceHelper):
         mounts = Mounts()
         from itertools import chain
         bdev_to_local_fs = {}
-        for dev, mntpnt, fstype in chain(fstab.all(), mounts.all()):
-            major_minor = self._dev_major_minor(dev)
+        for devpath, mntpnt, fstype in chain(fstab.all(), mounts.all()):
+            major_minor = block_devices.path_to_major_minor(devpath)
             if major_minor and fstype != 'lustre' and major_minor in block_devices.block_device_nodes:
                 bdev_to_local_fs[major_minor] = (mntpnt, fstype)
 

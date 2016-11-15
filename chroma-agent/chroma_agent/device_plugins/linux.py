@@ -20,25 +20,15 @@
 # express and approved by Intel in writing.
 
 
-import os
-import glob
-import re
-import errno
-
 from chroma_agent.lib.shell import AgentShell
-from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
-from chroma_agent import utils
 from chroma_agent import config
-import chroma_agent.lib.normalize_device_path as ndp
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.device_plugins.linux_components.zfs import ZfsDevices
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
 from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
-# Python errno doesn't include this code
-errno.NO_MEDIA_ERRNO = 123
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -113,152 +103,3 @@ class LinuxDevicePlugin(DevicePlugin):
         scan_result = self._scan_devices(trigger_plugin_update)
 
         return scan_result
-
-
-class BlockDevices(DeviceHelper):
-    """Reads /sys/block to detect all block devices, resolves SCSI WWIDs where possible, and
-    generates a mapping of major:minor to normalized device node path and vice versa."""
-
-    def __init__(self):
-        self.old_udev = None
-
-        # Build this map to retrieve fstype in _device_node
-        self._major_minor_to_fstype = {}
-        for blkid_dev in utils.BlkId().itervalues():
-            major_minor = self._dev_major_minor(blkid_dev['path'])
-
-            if major_minor:
-                self._major_minor_to_fstype[major_minor] = blkid_dev['type']
-
-        self.block_device_nodes, self.node_block_devices = self._parse_sys_block()
-
-    def _device_node(self, major_minor, path, size, parent, partition_number):
-        # RHEL6 version of scsi_id is located at a different location to the RHEL7 version
-        # work this out at the start then go with it.
-        scsi_id_cmd = None
-
-        for scsi_id_command in ["/sbin/scsi_id", "/lib/udev/scsi_id", ""]:
-            if os.path.isfile(scsi_id_command):
-                scsi_id_cmd = scsi_id_command
-
-        if scsi_id_cmd == None:
-            raise RuntimeError("Unabled to find scsi_id")
-
-        def scsi_id_command(cmd):
-            rc, out, err = AgentShell.run_old(cmd)
-            if rc:
-                return None
-            else:
-                return out.strip()
-
-        # New scsi_id, always operates directly on a device
-        serial_80 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x80", path])
-        serial_83 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x83", path])
-
-        try:
-            type = self._major_minor_to_fstype[major_minor]
-        except KeyError:
-            type = None
-
-        info = {'major_minor': major_minor,
-                'path': path,
-                'serial_80': serial_80,
-                'serial_83': serial_83,
-                'size': size,
-                'filesystem_type': type,
-                'partition_number': partition_number,
-                'parent': parent}
-
-        return info
-
-    def _parse_sys_block(self):
-        mapper_devs = self._find_block_devs(self.MAPPERPATH)
-        by_id_nodes = self._find_block_devs(self.DISKBYIDPATH)
-        by_path_nodes = self._find_block_devs(self.DISKBYPATHPATH)
-        dev_nodes = self._find_block_devs(self.DEVPATH)
-
-        def get_path(major_minor, device_name):
-            # Try to find device nodes for these:
-            fallback_dev_path = os.path.join("/dev/", device_name)
-            # * First look in /dev/mapper
-            if major_minor in mapper_devs:
-                return mapper_devs[major_minor]
-            # * Then try /dev/disk/by-id
-            elif major_minor in by_id_nodes:
-                return by_id_nodes[major_minor]
-            # * Then try /dev/disk/by-path
-            elif major_minor in by_path_nodes:
-                return by_path_nodes[major_minor]
-            # * Then fall back to just /dev
-            elif os.path.exists(fallback_dev_path):
-                return fallback_dev_path
-            else:
-                console_log.warning("Could not find device node for %s (%s)" % (major_minor, fallback_dev_path))
-                return None
-
-        block_device_nodes = {}
-        node_block_devices = {}
-
-        def parse_block_dir(dev_dir, parent = None):
-            """Parse a dir like /sys/block/sda (must contain 'dev' and 'size')"""
-            device_name = dev_dir.split(os.sep)[-1]
-            major_minor = open(os.path.join(dev_dir, "dev")).read().strip()
-            size = int(open(os.path.join(dev_dir, "size")).read().strip()) * 512
-
-            # Exclude zero-sized devices
-            if not size:
-                return
-
-            # Exclude ramdisks, floppy drives, obvious cdroms
-            if re.search("^ram\d+$", device_name) or\
-               re.search("^fd\d+$", device_name) or\
-               re.search("^sr\d+$", device_name):
-                return
-
-            # Exclude read-only or removed devices
-            try:
-                open("/dev/%s" % device_name, 'w')
-            except IOError, e:
-                if e.errno == errno.EROFS or e.errno == errno.NO_MEDIA_ERRNO:
-                    return
-
-            # Resolve a major:minor to a /dev/foo
-            path = get_path(major_minor, device_name)
-            if path:
-                if parent:
-                    partition_number = int(re.search("(\d+)$", device_name).group(1))
-                else:
-                    partition_number = None
-
-                block_device_nodes[major_minor] = self._device_node(major_minor, path, size, parent, partition_number)
-                node_block_devices[path] = major_minor
-
-            return major_minor
-
-        for dev_dir in glob.glob("/sys/block/*"):
-            major_minor = parse_block_dir(dev_dir)
-
-            partitions = glob.glob(os.path.join(dev_dir, "*/dev"))
-            for p in partitions:
-                parse_block_dir(os.path.split(p)[0], parent = major_minor)
-
-        # Finally create the normalized maps for /dev to /dev/disk/by-path & /dev/disk/by-id
-        # and then /dev/disk/by-path & /dev/disk/by-id to /dev/mapper
-        ndp.add_normalized_list(dev_nodes, by_path_nodes)
-        ndp.add_normalized_list(dev_nodes, by_id_nodes)
-        ndp.add_normalized_list(by_path_nodes, mapper_devs)
-        ndp.add_normalized_list(by_id_nodes, mapper_devs)
-
-        return block_device_nodes, node_block_devices
-
-    @classmethod
-    def quick_scan(cls):
-        """
-        Return a very quick list of block devices from a number of sources so we can quickly see changes.
-        """
-        blocks = []
-
-        for path in [cls.SYSBLOCKPATH, cls.MAPPERPATH, cls.DISKBYIDPATH, cls.DISKBYPATHPATH]:
-            blocks.extend(os.listdir(path))
-
-        return blocks

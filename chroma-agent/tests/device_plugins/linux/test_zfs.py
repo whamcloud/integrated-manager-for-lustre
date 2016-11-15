@@ -1,7 +1,7 @@
 from mock import patch
 
 from chroma_agent.device_plugins.linux import ZfsDevices
-from chroma_agent.device_plugins.linux import BlockDevices
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
@@ -44,7 +44,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     @patch('glob.glob', mock_empty_list)
     @patch('logging.Logger.debug', mock_debug)
     @patch('chroma_agent.utils.BlkId', dict)
-    @patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', mock_empty_dict)
+    @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs', mock_empty_dict)
     def _setup_zfs_devices(self):
         blockdevices = BlockDevices()
 

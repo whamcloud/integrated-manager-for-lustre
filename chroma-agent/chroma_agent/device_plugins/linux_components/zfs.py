@@ -18,12 +18,13 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+
+
 import os
 import re
 import glob
 
 from chroma_agent.lib.shell import AgentShell
-from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
@@ -31,9 +32,10 @@ from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ExportedZfsDevice
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_agent.chroma_common.lib import util
 
 
-class ZfsDevices(DeviceHelper):
+class ZfsDevices(object):
     """Reads zfs pools"""
     acceptable_health = ['ONLINE', 'DEGRADED']
 
@@ -117,9 +119,9 @@ class ZfsDevices(DeviceHelper):
         pool, size_str, uuid, health = line.split()
 
         if health in self.acceptable_health:
-            size = self._human_to_bytes(size_str)
+            size = util.human_to_bytes(size_str)
 
-            drive_mms = self._paths_to_major_minors(self._get_all_zpool_devices(pool))
+            drive_mms = block_devices.paths_to_major_minors(self._get_all_zpool_devices(pool))
 
             if drive_mms is None:
                 daemon_log.warn("Could not find major minors for zpool '%s'" % pool)
@@ -224,7 +226,7 @@ class ZfsDevices(DeviceHelper):
         if out.strip() != "no datasets available":
             for line in filter(None, out.split('\n')):
                 name, size_str, uuid = line.split()
-                size = self._human_to_bytes(size_str)
+                size = util.human_to_bytes(size_str)
 
                 if name.startswith("%s/" % pool_name):
                     # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
@@ -260,7 +262,7 @@ class ZfsDevices(DeviceHelper):
         zpool_vols = {}
 
         for zvol_path in glob.glob("/dev/%s/*" % pool_name):
-            major_minor = self._dev_major_minor(zvol_path)
+            major_minor = block_devices.path_to_major_minor(zvol_path)
 
             if major_minor is None:
                 continue
