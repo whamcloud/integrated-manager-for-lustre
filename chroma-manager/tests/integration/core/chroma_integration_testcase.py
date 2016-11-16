@@ -110,14 +110,24 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return self.get_host_validations(host)
 
-    def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
-        """Verify server checks pass for provided addresses"""
+    def _validate_hosts(self, addresses, auth_type):
+        """
+        Verify server checks pass for provided addresses.
+
+        A single validation of the addresses provided that raises an exception if any of the addresses do not
+        pass validation.
+
+        :param addresses: List of addresses to validate for agent install
+        :param auth_type: Type of authentication to use.
+        """
+
         response = self.chroma_manager.post(
-            '/api/test_host/',
-            body = {
-                'objects': [{'address': address, 'auth_type': auth_type} for address in addresses]
-            }
+                '/api/test_host/',
+                body={
+                    'objects': [{'address': address, 'auth_type': auth_type} for address in addresses]
+                }
         )
+
         self.assertEqual(response.successful, True, response.text)
 
         for object in response.json['objects']:
@@ -131,6 +141,22 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     self.assertTrue(result['value'],
                                     "Expected %s to be true for %s, but instead found %s. JSON for host: %s" %
                                     (result['name'], address, result['value'], response.json))
+
+    def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
+        """
+        Verify server checks pass for provided addresses.
+
+        Sometimes the verify check will return failure before returning success. So we actually repeat the call
+        if there are failures. This is not an unreasonable thing to do as a user will just sit and wait for the
+        red boxes to turn to green boxes.
+
+        After a timeout an assertion is raised if the hosts have not all validated.
+
+        :param addresses: List of addresses to validate for agent install
+        :param auth_type: Type of authentication to use.
+        """
+
+        self.wait_for_assert(lambda: self._validate_hosts(addresses, auth_type))
 
     def deploy_agents(self, addresses, auth_type='existing_keys_choice'):
         """Deploy the agent to the addresses provided"""
