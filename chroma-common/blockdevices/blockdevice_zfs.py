@@ -24,6 +24,7 @@ import errno
 import re
 import threading
 import glob
+import time
 
 from collections import defaultdict
 
@@ -52,23 +53,28 @@ class ExportedZfsDevice(object):
             self.unlock_pool()
             raise
 
+        result = None
+
         if self.pool_path not in imported_pools:
             try:
-                shell.Shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
-                self.pool_imported = True
-            except shell.Shell.CommandExecutionError:
-                return False
+                result = self.import_(True, True)
+                self.pool_imported = (result is None)
             except:
                 self.unlock_pool()
                 # log.debug('ExportedZfsDevice released lock on %s due to exception' % self.pool_path)
                 raise
 
-        return True
+        return result is None
 
     def __exit__(self, type, value, traceback):
         try:
             if self.pool_imported is True:
-                shell.Shell.try_run(['zpool', 'export', self.pool_path])
+                result = self.export()
+
+                if result is not None:
+                    raise shell.Shell.CommandExecutionError(shell.Shell.RunResult(1, '', result, False),
+                                                            ['zpool import of %s' % self.pool_path])
+
                 self.pool_imported = False
         finally:
             self.unlock_pool()
@@ -83,7 +89,7 @@ class ExportedZfsDevice(object):
         lock.release()
         # log.debug('ExportedZfsDevice released lock on %s' % self.pool_path)
 
-    def import_(self, force):
+    def import_(self, force, readonly):
         """
         This must be called when doing an import as it will lock the device before doing imports and ensure there is
         no confusion about whether a device is import or not.
@@ -95,6 +101,7 @@ class ExportedZfsDevice(object):
         try:
             return shell.Shell.run_canned_error_message(['zpool', 'import'] +
                                                         (['-f'] if force else []) +
+                                                        (['-o', 'readonly=on'] if readonly else []) +
                                                         [self.pool_path])
         finally:
             self.unlock_pool()
@@ -104,12 +111,28 @@ class ExportedZfsDevice(object):
         This must be called when doing an export as it will lock the device before doing imports and ensure there is
         no confusion about whether a device is import or not.
 
+        Sometimes pools can be busy, in particular it seems when they are imported for short periods of time and then
+        exported. Perhaps ZFS is still doing some work on the pool. If the pool is busy retry, every 5 seconds for 1
+        minute
+
         :return: None if OK else an error message.
         """
         self.lock_pool()
 
         try:
-            return shell.Shell.run_canned_error_message(['zpool', 'export', self.pool_path])
+            timeout = (60 / 5)
+            result = None
+
+            while timeout > 0:
+                result = shell.Shell.run_canned_error_message(['zpool', 'export', self.pool_path])
+
+                if result is None or ('pool is busy' not in result):
+                    return result
+
+                timeout -= 1
+                time.sleep(5)
+
+            return result
         finally:
             self.unlock_pool()
 
@@ -357,7 +380,7 @@ class BlockDeviceZfs(BlockDevice):
 
             return result                                     # result None if already imported and writable
         except shell.Shell.CommandExecutionError:
-            result = ExportedZfsDevice(self._device_path).import_(pacemaker_ha_operation)
+            result = ExportedZfsDevice(self._device_path).import_(pacemaker_ha_operation, False)
             # Check the pool is not readonly, reread the properties because we have just imported it.
             if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
                 return 'zfs pool %s imported but device is readonly' % self._device_path
