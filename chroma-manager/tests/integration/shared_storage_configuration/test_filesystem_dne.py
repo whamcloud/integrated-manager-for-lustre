@@ -1,14 +1,34 @@
-import time
-
 from django.utils.unittest import skip
-
 from testconfig import config
-from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-class TestFilesystemDNE(StatsTestCaseMixin):
+class TestFilesystemDNE(ChromaIntegrationTestCase):
     def setUp(self):
         super(TestFilesystemDNE, self).setUp()
+
+    # List of MDT stats used to verify filesystem has been exercised
+    mdt_stats = [
+        'stats_mkdir',
+        'stats_open',
+        'stats_rmdir',
+        'stats_unlink'
+    ]
+
+    def get_mdt_stats(self, filesystem, index):
+        response = self.chroma_manager.get('/api/target/metric/',
+                                           params={'metrics': ','.join(self.mdt_stats),
+                                                   'latest': 'true',
+                                                   'reduce_fn': 'sum',
+                                                   'kind': 'MDT',
+                                                   'group_by': 'filesystem',
+                                                   'id': next(mdt['id'] for mdt in filesystem['mdts'] if mdt['index'] == index)})
+
+        self.assertEqual(response.successful, True, response.text)
+        self.assertEqual(len(self.mdt_stats), len(response.json.values()[0][0].get('data')), response.json)
+
+        return response.json.values()[0][0].get('data')
 
     def _create_filesystem(self, mdt_count):
         assert mdt_count in [1, 2, 3]
@@ -84,6 +104,7 @@ class TestFilesystemDNE(StatsTestCaseMixin):
                                        params = {'id': self.filesystem_id}).json['objects'][0]
 
     def _check_stats(self, filesystem):
+        """ Check that after exercising file system, relevant stats show expected change after given timeout """
         if config.get('simulator', False):                                          # Don't validate stats on the simulator.
             return
 
@@ -92,7 +113,7 @@ class TestFilesystemDNE(StatsTestCaseMixin):
 
         no_of_files_per_mdt = [3 * (n + 1) for n in range(0, len(mdt_indexes))]     # Write a different number of files to each MDT
 
-        # Get the stats before.
+        # Get the stats before
         start_stats = {}
         for mdt_index in mdt_indexes:
             start_stats[mdt_index] = self.get_mdt_stats(filesystem, mdt_index)
@@ -103,13 +124,11 @@ class TestFilesystemDNE(StatsTestCaseMixin):
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
-        # We have to wait a short time to ensure the manager is updated with the stats. I don't like a sleep but not
-        # sure how to be sure all the updates have happened optimally. Stats are reported every 10 seconds so 15 seconds
-        # should be not to much.
-        time.sleep(15)
+        # Compare start_stats with stats after exercising filesystem, keep retrying until TEST_TIMEOUT expires
+        self.wait_for_assert(lambda: self._compare_stats(mdt_indexes, filesystem, start_stats, no_of_files_per_mdt))
 
-        # Get the stats after, this could be shorter and part of the next loop, but I figure the stats test might expand
-        # and having the whole end state useful.
+    def _compare_stats(self, mdt_indexes, filesystem, start_stats, no_of_files_per_mdt):
+        """ Compare starting stats with retrieved current stats for the relevant MDTs and validate expected change """
         end_stats = {}
         for mdt_index in mdt_indexes:
             end_stats[mdt_index] = self.get_mdt_stats(filesystem, mdt_index)

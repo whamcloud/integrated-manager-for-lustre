@@ -4,7 +4,7 @@ import re
 
 from testconfig import config
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
-from tests.integration.core.constants import TEST_TIMEOUT, LONG_TEST_TIMEOUT
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
 class TestFilesystemDetection(StatsTestCaseMixin):
@@ -211,14 +211,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 )
 
         # Verify all targets detected as unmounted
-        self.wait_until_true(lambda: self.targets_in_state('unmounted'), timeout=TEST_TIMEOUT)
-
-        # Verify detected as unmounted
-        response = self.chroma_manager.get('/api/target/')
-        self.assertEqual(response.successful, True, response.text)
-        targets = response.json['objects']
-        for target in targets:
-            self.assertEqual('unmounted', target['state'], target)
+        self.wait_until_true(lambda: self.targets_in_state('unmounted'))
 
         # Verify filesystem is unavailable
         response = self.chroma_manager.get(
@@ -239,14 +232,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             )
 
         # Verify all targets detected as mounted
-        self.wait_until_true(lambda: self.targets_in_state('mounted'), timeout=TEST_TIMEOUT)
-
-        # Verify all targets detected as mounted
-        response = self.chroma_manager.get('/api/target/')
-        self.assertEqual(response.successful, True, response.text)
-        targets = response.json['objects']
-        for target in targets:
-            self.assertEqual('mounted', target['state'])
+        self.wait_until_true(lambda: self.targets_in_state('mounted'))
 
         # Forget the filesystem and forget the MGT
         self._forget_filesystem()
