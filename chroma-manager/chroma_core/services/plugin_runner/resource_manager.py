@@ -918,10 +918,25 @@ class ResourceManager(object):
             #self._persist_created_hosts(scannable_id, scannable_id, resources)
 
     def session_resource_add_parent(self, scannable_id, local_resource_id, local_parent_id):
+
         with self._instance_lock:
             session = self._sessions[scannable_id]
             record_pk = session.local_id_to_global_id[local_resource_id]
-            parent_pk = session.local_id_to_global_id[local_parent_id]
+
+            # HYD-6845 Test failure: RpcError - missing parent resource
+            # This is the worst kind of hack, no excuses but short of not delivering the the product this
+            # is the best we can come up with. It is possibly an ordering thing that the parent has not been
+            # created at the point the child is created, possibly something else.
+            # If the former then we believe that the code will on the next update have the parent and so update
+            # the child. If not then items in the tree view may show items as leafs that are actually branches and
+            # give the user an option they should not use. For example left them select a disk when it has a partition
+            # Only time will tell but if this patch landed and you are reading this then we never came up with a proper
+            # solution in the time available.
+            try:
+                parent_pk = session.local_id_to_global_id[local_parent_id]
+            except KeyError:
+                return
+
             self._edges.add_parent(record_pk, parent_pk)
             self._resource_modify_parent(record_pk, parent_pk, False)
 
