@@ -25,7 +25,7 @@
       "lustre-modules",
       "lustre-osd-ldiskfs",
       "lustre-osd-zfs",
-      "kernel-devel-3.10.0-327.36.2.el7_lustre"
+      "kernel-devel-3.10.0-514.el7_lustre"
     ],
     "zfs": [
       "zfs"
