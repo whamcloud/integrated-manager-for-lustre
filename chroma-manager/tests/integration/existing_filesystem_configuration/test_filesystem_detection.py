@@ -57,9 +57,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
 
             # Verify it detected the filesystem
-            filesystems = self._filesystems
-            self.assertEqual(len(filesystems), 1)
-            filesystem = filesystems[0]
+            filesystem = self._filesystem
             self.assertEqual(config['filesystem']['name'], filesystem['name'])
             self.assertTrue(filesystem['immutable_state'])
             available_states = [t['state'] for t in filesystem['available_transitions']]
@@ -72,16 +70,33 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 len(config['filesystem']['targets'])
             ))
 
+    def _forget_filesystem(self):
+        filesystem = self._filesystem
+
+        self.set_state(filesystem['resource_uri'],
+                       'forgotten',
+                       verify_successful=False,
+                       msg='Forgetting Filesystem %s' % filesystem['label'])
+        self.assertEqual(len(self.get_list('/api/filesystem/')), 0)
+        self.assertEqual(len(self.get_list('/api/target/')), 1)
+
+        self.set_state(filesystem['mgt']['resource_uri'],
+                       'forgotten',
+                       verify_successful=False,
+                       msg = 'Forgetting MGT %s' % filesystem['mgt']['label'])
+        self.assertEqual(len(self.get_list('/api/target/')), 0)
+
     @property
-    def _filesystems(self):
+    def _filesystem(self):
         # Verify filesystem is available
         response = self.chroma_manager.get(
             '/api/filesystem/',
             params = {'limit': 0}
         )
         self.assertEqual(response.successful, True, response.text)
+        self.assertEqual(len(response.json['objects']), 1)
 
-        return response.json['objects']
+        return response.json['objects'][0]
 
     def test_filesystem_detection_verify_attributes(self):
         self._detect_filesystem()
@@ -124,15 +139,16 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 self.assertEqual(target_host_config['fqdn'], target['failover_server_name'])
 
         # Verify filesystem is available
-        filesystems = self._filesystems
-        self.assertEqual(len(filesystems), 1)
-        filesystem = filesystems[0]
+        filesystem = self._filesystem
         self.assertEqual('available', filesystem['state'])
+
+        # Forget the filesystem and forget the MGT
+        self._forget_filesystem()
 
     def test_filesystem_detection_verify_stats(self):
         self._detect_filesystem()
 
-        filesystem = self._filesystems[0]
+        filesystem = self._filesystem
 
         client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
@@ -147,10 +163,13 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
+        # Forget the filesystem and forget the MGT
+        self._forget_filesystem()
+
     def test_filesystem_detection_verify_mountable(self):
         self._detect_filesystem()
 
-        filesystem = self._filesystems[0]
+        filesystem = self._filesystem
 
         # Verify target attributes
         targets = self.get_list('/api/target/')
@@ -228,6 +247,9 @@ class TestFilesystemDetection(StatsTestCaseMixin):
         targets = response.json['objects']
         for target in targets:
             self.assertEqual('mounted', target['state'])
+
+        # Forget the filesystem and forget the MGT
+        self._forget_filesystem()
 
     def test_lnet_up(self):
         """

@@ -492,7 +492,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         if verify_successful == self.VERIFY_SUCCESS_INSTANT:
             self.assertValue(uri, value_name, value)
-        elif verify_successful == self.VERIFY_SUCCESS_INSTANT:
+        elif verify_successful == self.VERIFY_SUCCESS_WAIT:
             self.wait_for_assert(lambda: self.assertValue(uri, value_name, value))
 
         return command

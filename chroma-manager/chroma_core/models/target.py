@@ -273,11 +273,9 @@ class ManagedTarget(StatefulObject):
                 lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
                 deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
 
-                try:
+                if host.pacemaker_configuration:
                     pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
                     deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'], fix_state=fix_state))
-                except PacemakerConfiguration.DoesNotExist:
-                    pass
 
         return DependAll(deps)
 
