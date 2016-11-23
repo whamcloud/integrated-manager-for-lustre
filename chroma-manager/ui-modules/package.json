@@ -6,7 +6,7 @@
   "license": "MIT",
   "dependencies": {
     "intel-gui": "5.11.11",
-    "intel-help-docs": "1.1.0",
+    "intel-help-docs": "1.2.0",
     "intel-realtime": "5.0.3",
     "intel-view-server": "6.0.3"
   }
