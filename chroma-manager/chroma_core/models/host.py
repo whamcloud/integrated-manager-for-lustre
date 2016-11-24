@@ -1695,10 +1695,12 @@ class UpdateNidsJob(HostListMixin):
                                                               True)))
 
         for target in fs_targets:
-            steps.append((UnmountStep, {'target': target, "host": target.best_available_host()}))
+            steps.append((UnmountStep,
+                          UnmountStep.create_parameters(target, target.best_available_host())))
 
         for target in mgs_targets:
-            steps.append((UnmountStep, {'target': target, "host": target.best_available_host()}))
+            steps.append((UnmountStep,
+                          UnmountStep.create_parameters(target, target.best_available_host())))
 
         # FIXME: HYD-1133: should be marking targets as unregistered
         # so that they get started in the correct order next time

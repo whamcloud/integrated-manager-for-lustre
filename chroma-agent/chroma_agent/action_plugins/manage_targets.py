@@ -26,6 +26,7 @@ import re
 import tempfile
 import time
 import socket
+import sys
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
@@ -131,6 +132,10 @@ def get_resource_locations():
     # FIXME: this may break on non-english systems or new versions of pacemaker
     """Parse `crm_mon -1` to identify where (if anywhere)
        resources (i.e. targets) are running."""
+
+    # If pacemaker is not in the current profile then we have no locations to return.
+    if config.get('settings', 'profile')['pacemaker'] is False:
+        return {}
 
     rc, lines_text, stderr = AgentShell.run_old(["crm_mon", "-1", "-r"])
     if rc != 0:
@@ -284,16 +289,42 @@ def _mkdir_p_concurrent(path):
     mkdir_silent(path)
 
 
-def register_target(device_path, mount_point, backfstype):
-    filesystem = FileSystem(backfstype, device_path)
-
+def create_target_mount_point(mount_point):
     _mkdir_p_concurrent(mount_point)
 
-    filesystem.mount(mount_point)
+    return agent_result_ok
 
-    filesystem.umount()
 
-    return {'label': filesystem.label}
+def remove_target_mount_point(mount_point):
+    error = None
+
+    try:
+        os.rmdir(mount_point)
+    except IOError:
+        error = 'Cannot remove target mount folder: %s' % mount_point
+    except OSError as os_error:
+        if os_error.errno != 2:
+            error = 'Cannot remove target mount folder: %s' % mount_point
+
+    return agent_ok_or_error(error)
+
+
+def register_target(device_path, backfstype):
+    filesystem = FileSystem(backfstype, device_path)
+
+    mount_point = tempfile.mkdtemp(dir='/mnt')
+
+    error = None
+
+    try:
+        error = filesystem.mount(mount_point) or filesystem.umount()
+    finally:
+        os.rmdir(mount_point)
+
+    if error:
+        return agent_error(error)
+
+    return agent_result(filesystem.label)
 
 
 def unconfigure_target_ha(primary, ha_label, uuid):
@@ -321,13 +352,6 @@ def unconfigure_target_ha(primary, ha_label, uuid):
 
 
 def unconfigure_target_store(uuid):
-    try:
-        target = _get_target_config(uuid)
-        os.rmdir(target['mntpt'])
-    except KeyError:
-        console_log.warn("Cannot retrieve target information")
-    except IOError:
-        console_log.warn("Cannot remove target mount folder: %s" % target['mntpt'])
     config.delete('targets', uuid)
 
 
@@ -400,8 +424,6 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     if result.rc == 76:
         return agent_error("A constraint with the name %s-%s already exists" % (ha_label, preference))
 
-    _mkdir_p_concurrent(mount_point)
-
     return agent_result_ok
 
 
@@ -443,18 +465,31 @@ def mount_target(uuid, pacemaker_ha_operation):
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    filesystem.mount(info['mntpt'])
+    error = filesystem.mount(info['mntpt'])
+
+    if error is not None:
+        sys.stderr.write(error)
+        exit(-1)
 
 
 def unmount_target(uuid):
-    # This is called by the Target RA from corosync
+    """
+    This is called by the Target RA from corosync.
+
+    This means the primary caller is the cli and so the respond should behave accordingly
+    """
     info = _get_target_config(uuid)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    filesystem.umount()
+    error = filesystem.umount()
 
-    if agent_result_is_error(export_target(info['device_type'], info['bdev'])):
+    if error is None:
+        blockdevice = BlockDevice(info['device_type'], info['bdev'])
+        error = blockdevice.export()
+
+    if error is not None:
+        sys.stderr.write(error)
         exit(-1)
 
 
@@ -751,4 +786,5 @@ ACTIONS = [purge_configuration, register_target,
            writeconf_target, failback_target,
            failover_target, target_running,
            clear_targets,
+           create_target_mount_point, remove_target_mount_point,
            configure_target_store, unconfigure_target_store]

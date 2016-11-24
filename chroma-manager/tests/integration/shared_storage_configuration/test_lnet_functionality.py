@@ -15,7 +15,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         super(TestLNetFunctionality, self).setUp()
 
         # Create a host with all the bits working.
-        self.create_filesystem_simple()
+        self.create_filesystem_simple(high_availability=True)
 
         host = self.get_list("/api/host/", args={'fqdn': self.TEST_SERVERS[0]['fqdn']})
         self.assertEqual(len(host), 1, "Expected a single host to be returned got %s" % len(host))

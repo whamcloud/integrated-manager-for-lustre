@@ -1,25 +1,24 @@
 {
-  "ui_name": "Managed HA Storage Server",
+  "ui_name": "Managed Non-HA Storage Server",
   "managed": true,
   "worker": false,
-  "name": "base_managed_rh7",
+  "name": "base_managed_non_ha_rh7",
   "initial_state": "managed",
   "rsyslog": true,
   "ntp": true,
   "corosync": false,
-  "corosync2": true,
-  "pacemaker": true,
+  "corosync2": false,
+  "pacemaker": false,
   "bundles": [
     "iml-agent",
     "lustre",
     "e2fsprogs",
     "zfs"
   ],
-  "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
+  "ui_description": "A storage server suitable for creating new non-HA filesystem targets",
   "packages": {
     "iml-agent": [
-      "chroma-agent-management",
-      "pcs"
+      "chroma-agent-management"
     ],
     "lustre": [
       "lustre",

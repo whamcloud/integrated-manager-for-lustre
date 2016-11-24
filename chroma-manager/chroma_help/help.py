@@ -201,6 +201,8 @@ help_text = {
     'discovered_no_new_target': "Discovered no new %ss",
     'discovered_no_new_filesystem': 'Discovered no new filesystems',
     'found_no_primary_mount_point_for_target': 'Found no primary mount point for target %s %s',
+    'create_mount_point_%s_on_host_%s': 'Creating mount point %s on host %s',
+    'remove_mount_point_%s_on_host_%s': 'Removing mount point %s on host %s',
     'found_not_TYPE_for_filesystem': 'Found no %ss for filesystem %s',
     'discovered_filesystem_with_n_MDTs_and_n_OSTs': 'Discovered filesystem %s with %s MDTs and %s OSTs',
     'update_devices': 'Update device info.',

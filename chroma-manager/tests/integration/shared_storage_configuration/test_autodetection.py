@@ -6,7 +6,7 @@ class TestAutodetection(ChromaIntegrationTestCase):
     TEST_SERVERS = [config['lustre_servers'][0]]
 
     def test_simple_detection(self):
-        self.create_filesystem_simple()
+        self.create_filesystem_simple(high_availability=True)
         host_id = self.chroma_manager.get("/api/host/").json['objects'][0]['id']
         mgt = self.chroma_manager.get("/api/filesystem/").json['objects'][0]['mgt']
 

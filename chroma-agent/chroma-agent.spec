@@ -42,7 +42,6 @@ Conflicts: sysklogd
 
 Requires: %{name} = %{version}-%{release}
 Requires: rsyslog
-Requires: pcs
 Requires: libxml2-python
 Requires: python-netaddr
 Requires: python-ethtool

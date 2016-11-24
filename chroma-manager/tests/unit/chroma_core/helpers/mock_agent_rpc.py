@@ -7,6 +7,7 @@ import json
 
 from chroma_core.models import ManagedHost
 from chroma_core.models import ManagedTarget
+from chroma_core.models import ManagedTargetMount
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.disabled_connection import DISABLED_CONNECTION
@@ -150,10 +151,8 @@ class MockAgentRpc(object):
             target = ManagedTarget.objects.get(ha_label = ha_label)
             return agent_result(target.primary_host.fqdn)
         elif cmd == 'register_target':
-            # Assume mount paths are "/mnt/testfs-OST0001" style
-            mount_point = args['mount_point']
-            label = re.search("/mnt/([^\s]+)", mount_point).group(1)
-            return {'label': label}
+            return agent_result(ManagedTargetMount.objects.filter(target__not_deleted=True,
+                                                                  volume_node__path=args['device_path'])[0].target.name)
         elif cmd == 'detect_scan':
             return mock_server['detect-scan']
         elif cmd == 'install_packages':
@@ -224,7 +223,9 @@ class MockAgentRpc(object):
                      'import_target', 'export_target'
                      'set_profile', 'update_profile',
                      'failover_target', 'failback_target',
-                     'configure_network', 'open_firewall', 'close_firewall']:
+                     'create_target_mount_point', 'remove_target_mount_point',
+                     'configure_network',
+                     'open_firewall', 'close_firewall']:
             return agent_result_ok
         elif cmd == 'get_corosync_autoconfig':
             return agent_result({'interfaces': {'eth0': {'dedicated': False,

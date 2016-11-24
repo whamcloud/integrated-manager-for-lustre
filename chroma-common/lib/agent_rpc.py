@@ -34,11 +34,11 @@ def agent_result(value):
 
 
 def agent_ok_or_error(error):
-    '''
+    """
     If error != None then return it as the error else return result_ok
-    :param value: error or None
+    :param error: error or None
     :return:agent_error or agent_result_ok
-    '''
+    """
     if error:
         return agent_error(error)
     else:

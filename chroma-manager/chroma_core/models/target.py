@@ -109,6 +109,11 @@ class ManagedTarget(StatefulObject):
         help_text = "Only used during formatting, indicates that when formatting this target \
         any existing filesystem on the Volume should be overwritten")
 
+    def __init__(self, *args, **kwargs):
+        super(ManagedTarget, self).__init__(*args, **kwargs)
+
+        self._high_availability = None
+
     @property
     def full_volume(self):
         """
@@ -189,6 +194,13 @@ class ManagedTarget(StatefulObject):
         else:
             return None
 
+    @property
+    def high_availability(self):
+        if self._high_availability is None:
+            self._high_availability = all(mtm.host.pacemaker_configuration is not None for mtm in self.managedtargetmount_set.all())
+
+        return self._high_availability
+
     def get_label(self):
         return self.name
 
@@ -247,8 +259,9 @@ class ManagedTarget(StatefulObject):
             lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
             deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
 
-            pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
-            deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
+            if host.pacemaker_configuration is not None:
+                pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
+                deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -273,7 +286,7 @@ class ManagedTarget(StatefulObject):
                 lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
                 deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
 
-                if host.pacemaker_configuration:
+                if host.pacemaker_configuration is not None:
                     pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
                     deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'], fix_state=fix_state))
 
@@ -289,7 +302,7 @@ class ManagedTarget(StatefulObject):
     }
 
     @classmethod
-    def create_for_volume(cls_, volume_id, create_target_mounts = True, **kwargs):
+    def create_for_volume(cls_, volume_id, **kwargs):
         # Local imports to avoid inter-model import dependencies
         volume = Volume.objects.get(pk = volume_id)
 
@@ -333,15 +346,15 @@ class ManagedTarget(StatefulObject):
             mount.save()
             target_mounts.append(mount)
 
-        if create_target_mounts:
-            try:
-                primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
-                create_target_mount(primary_volume_node)
-            except VolumeNode.DoesNotExist:
-                raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
-            except VolumeNode.MultipleObjectsReturned:
-                raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+        try:
+            primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
+            create_target_mount(primary_volume_node)
+        except VolumeNode.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
+        except VolumeNode.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
 
+        if target.high_availability:
             for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
                 create_target_mount(secondary_volume_node)
 
@@ -586,18 +599,25 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
         steps = []
+
+        if self.target.high_availability:
+            for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
+                steps.append((RemoveTargetFromPacemakerConfigStep, {
+                    'target_mount': target_mount,
+                    'target': target_mount.target,
+                    'host': target_mount.host
+                }))
+
         for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
-            steps.append((RemoveTargetFromPacemakerConfigStep, {
-                'target_mount': target_mount,
-                'target': target_mount.target,
-                'host': target_mount.host
-            }))
-        for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
+            steps.append((RemoveTargetMountPointStep,
+                           {'host': target_mount.host,
+                            'mount_point': target_mount.mount_point}))
+
             steps.append((UnconfigureTargetStoreStep, {
-                'target_mount': target_mount,
                 'target': target_mount.target,
                 'host': target_mount.host
             }))
+
         return steps
 
     def on_success(self):
@@ -672,21 +692,46 @@ class ForgetTargetJob(StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
 
+class CreateTargetMountPointStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs['host'],
+                                        'create_target_mount_point',
+                                        {'mount_point': kwargs['mount_point']})
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['create_mount_point_%s_on_host_%s'] % (kwargs['mount_point'], kwargs['host'])
+
+
+class RemoveTargetMountPointStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs['host'],
+                                        'remove_target_mount_point',
+                                        {'mount_point': kwargs['mount_point']})
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['remove_mount_point_%s_on_host_%s'] % (kwargs['mount_point'], kwargs['host'])
+
+
 class RegisterTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         target = kwargs['target']
 
-        result = self.invoke_agent(kwargs['primary_host'], "register_target",
-                                   {'device_path': kwargs['device_path'],
-                                    'mount_point': kwargs['mount_point'],
-                                    'backfstype': kwargs['backfstype']})
+        label = self.invoke_agent_expect_result(kwargs['primary_host'], "register_target",
+                                                 {'device_path': kwargs['device_path'],
+                                                  'backfstype': kwargs['backfstype']})
 
-        if not result['label'] == target.name:
+        if label != target.name:
             # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
             # pass --index to mkfs.lustre, so our name should match what is set after registration
-            raise RuntimeError("Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
+            raise RuntimeError("Registration returned unexpected target name '%s' (expected '%s')" % (label, target.name))
         job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
 
 
@@ -854,11 +899,19 @@ class MountOrImportStep(Step):
                                                  'pacemaker_ha_operation': False,
                                                  'validate_importable': True})
 
-                result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                         "start_target",
-                                                         {'ha_label': kwargs['target'].ha_label})
+                if kwargs['use_ha_framework'] is True:
+                    mounted_location = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                                       "start_target",
+                                                                       {'ha_label': kwargs['target'].ha_label})
+                else:
+                    self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                    "mount_target",
+                                                    {'uuid': kwargs['target'].uuid,
+                                                     'pacemaker_ha_operation': False})
 
-                kwargs['target'].update_active_mount(result)
+                    mounted_location = kwargs['active_volume_node'].host.fqdn
+
+                kwargs['target'].update_active_mount(mounted_location)
             else:
                 self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
                                                 'import_target',
@@ -906,7 +959,8 @@ class MountOrImportStep(Step):
         return {'target': target,
                 'inactive_volume_nodes': inactive_volume_nodes,
                 'active_volume_node': active_volume_node,
-                'start_target': start_target}
+                'start_target': start_target,
+                'use_ha_framework': target.high_availability}
 
 
 class ConfigureTargetJob(StateChangeJob):
@@ -939,6 +993,10 @@ class ConfigureTargetJob(StateChangeJob):
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             backfstype = BlockDevice(device_type, target_mount.volume_node.path).preferred_fstype
 
+            steps.append((CreateTargetMountPointStep,
+                           {'host': target_mount.host,
+                            'mount_point': target_mount.mount_point}))
+
             steps.append((ConfigureTargetStoreStep, {'host': target_mount.host,
                                                      'target': target_mount.target,
                                                      'target_mount': target_mount,
@@ -946,11 +1004,12 @@ class ConfigureTargetJob(StateChangeJob):
                                                      'volume_node': target_mount.volume_node,
                                                      'device_type': target_mount.target.volume.storage_resource.to_resource_class().device_type()}))
 
-        for target_mount in target_mounts:
-            steps.append((AddTargetToPacemakerConfigStep, {'host': target_mount.host,
-                                                           'target': target_mount.target,
-                                                           'target_mount': target_mount,
-                                                           'volume_node': target_mount.volume_node}))
+        if self.target.high_availability:
+            for target_mount in target_mounts:
+                steps.append((AddTargetToPacemakerConfigStep, {'host': target_mount.host,
+                                                               'target': target_mount.target,
+                                                               'target_mount': target_mount,
+                                                               'volume_node': target_mount.volume_node}))
 
         return steps
 
@@ -959,9 +1018,9 @@ class ConfigureTargetJob(StateChangeJob):
 
         prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
         deps.append(DependOn(prim_mtm.host.lnet_configuration, 'lnet_up'))
-
         for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            deps.append(DependOn(target_mount.host.pacemaker_configuration, 'started'))
+            if target_mount.host.pacemaker_configuration:
+                deps.append(DependOn(target_mount.host.pacemaker_configuration, 'started'))
 
         return DependAll(deps)
 
@@ -1009,7 +1068,6 @@ class RegisterTargetJob(StateChangeJob):
                 'primary_host': primary_mount.host,
                 'target': self.target,
                 'device_path': path,
-                'mount_point': primary_mount.mount_point,
                 'backfstype': backfstype
             })]
         else:
@@ -1081,8 +1139,11 @@ class StartTargetJob(StateChangeJob):
             lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == target_mount.host_id)
             deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state = 'unmounted'))
 
-            pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id)
-            deps.append(DependOn(pacemaker_configuration, 'started', fix_state = 'unmounted'))
+            try:
+                pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id)
+                deps.append(DependOn(pacemaker_configuration, 'started', fix_state = 'unmounted'))
+            except PacemakerConfiguration.DoesNotExist:     # If we have no PacemakerConfiguration then we can't depend on it.
+                pass
 
         return DependAny(deps)
 
@@ -1099,8 +1160,26 @@ class UnmountStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
 
-        self.invoke_agent_expect_result(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
+        if kwargs['use_ha_framework']:
+            self.invoke_agent_expect_result(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
+        else:
+            self.invoke_agent_expect_result(kwargs['host'], "unmount_target", {'uuid': target.uuid})
+
         target.active_mount = None
+
+    @classmethod
+    def create_parameters(cls, target, host):
+        """
+        Create the kwargs appropriate for the MakeTargetActive step.
+
+        :param target: The lustre target to be stopped / unmounted
+        :param host: The host target to targeted for the unmount
+        :return:
+        """
+
+        return {'target': target,
+                'host': host,
+                'use_ha_framework': target.high_availability}
 
 
 class StopTargetJob(StateChangeJob):
@@ -1126,7 +1205,8 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [(UnmountStep,
+                 UnmountStep.create_parameters(self.target, self.target.best_available_host()))]
 
 
 class PreFormatCheck(Step):

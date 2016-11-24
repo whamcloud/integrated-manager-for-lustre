@@ -1099,18 +1099,15 @@ class RealRemoteOperations(RemoteOperations):
                     mcast_port = self.get_corosync_port(server['fqdn'])
                     if mcast_port:
                         self.command(address, firewall.remote_remove_port_cmd(mcast_port, 'udp'))
-
-                rpm_q_result = self.command(address, "rpm -q chroma-agent", return_codes=RETURN_CODES_ALL)
-                if rpm_q_result.rc == 0:
-                    # Stop the agent
-                    self.command(
-                        address,
-                        'service chroma-agent stop'
-                    )
-                    # Keep going if it failed - may be none there.
-                    self.command(address, 'rm -rf /var/lib/chroma/*', return_codes=RETURN_CODES_ALL)
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % address)
+
+            if self.command(address, "rpm -q chroma-agent", return_codes=RETURN_CODES_ALL).rc == 0:
+                # Stop the agent
+                self.command(address, 'service chroma-agent stop')
+                # Keep going if it failed - may be none there.
+
+                self.command(address, 'rm -rf /var/lib/chroma/*', return_codes=RETURN_CODES_ALL)
 
     def clear_lnet_config(self, server_list):
         """

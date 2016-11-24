@@ -47,21 +47,24 @@ class TestFileSystemLdiskfs(CommandCaptureTestCase):
 
     def test_mount_different_rc_fail_initial(self):
         """ Test when initial mount fails and the rc doesn't cause a retry, exception is raised """
-        self.add_commands(CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'), rc=1,
+        self.add_commands(CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'),
+                                                rc=1, stdout='Davey', stderr='Jones',
                                                 executions_remaining=1))
 
-        self.assertRaises(RuntimeError, self.filesystem.mount, '/mnt/OST0000')
+        self.assertEqual(self.filesystem.mount('/mnt/OST0000'), "Error (1) mounting '/mnt/OST0000': 'Davey' 'Jones'")
 
         self.assertRanAllCommandsInOrder()
 
     def test_mount_fail_second(self):
         """ Test when initial mount fails and the retry fails, exception is raised """
-        self.add_commands(CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'), rc=5,
+        self.add_commands(CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'),
+                                                rc=5,
                                                 executions_remaining=1),
-                          CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'), rc=5,
+                          CommandCaptureCommand(('mount', '-t', 'lustre', '/dev/sda1', '/mnt/OST0000'),
+                                                rc=5, stdout='Eric', stderr='Cantona',
                                                 executions_remaining=1))
 
-        self.assertRaises(RuntimeError, self.filesystem.mount, '/mnt/OST0000')
+        self.assertEqual(self.filesystem.mount('/mnt/OST0000'), "Error (5) mounting '/mnt/OST0000': 'Eric' 'Cantona'")
 
         self.assertRanAllCommandsInOrder()
 

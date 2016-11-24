@@ -9,7 +9,7 @@ class TestStartingAndStoppingTargets(ChromaIntegrationTestCase):
 
     def test_management_target_stops_and_starts(self):
 
-        self.add_hosts([config['lustre_servers'][0]['address']])
+        self.add_hosts([config['lustre_servers'][0]['address']], high_availability=True)
         volumes = self.get_usable_volumes()
 
         response = self.chroma_manager.post('/api/target/', body = {

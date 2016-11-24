@@ -190,7 +190,7 @@ class UpdateScan(object):
 
             # Update to active_mount and alerts for monitor-only
             # targets done here instead of resource_locations
-            if target_mount.target.immutable_state:
+            if target_mount.target.immutable_state or (target_mount.target.high_availability is False):
                 target = target_mount.target
                 if mounted_locally:
                     job_scheduler_notify.notify(target, self.started_at, {

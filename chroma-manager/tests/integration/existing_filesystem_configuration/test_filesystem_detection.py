@@ -21,7 +21,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             for host in config['lustre_servers']:
                 self.remote_operations.command(host['address'], "mount -a -t lustre", return_codes=RETURN_CODES_ALL)
 
-            self.add_hosts([l['address'] for l in config['lustre_servers']])
+            self.add_hosts([l['address'] for l in config['lustre_servers']], high_availability=False)
 
             # Verify hosts are immutable
             response = self.chroma_manager.get(

@@ -27,7 +27,7 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
             return
 
         # We add the hosts to cause ZFS to be installed.
-        self.add_hosts([server['address'] for server in self.config_servers])
+        self.add_hosts([server['address'] for server in self.config_servers], high_availability=False)
 
         # Replace the name with the new name on each server, replace this way to ensure the order is not changed
         for server in config['lustre_servers']:

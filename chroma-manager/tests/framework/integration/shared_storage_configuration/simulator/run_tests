@@ -11,7 +11,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
-
+#TESTS="tests/integration/shared_storage_configuration/test_power_control.py"
 trap "
 set +e
 cd $CHROMA_DIR/../..

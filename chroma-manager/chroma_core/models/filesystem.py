@@ -217,8 +217,7 @@ class RemoveFilesystemJob(StateChangeJob):
         # Whether the MGS was officially up or not, try stopping it, idempotent so will succeed either way
         if mgs_target.state in ['mounted', 'unmounted']:
             steps.append((UnmountStep,
-                          {"target": mgs_target,
-                           "host": mgs_primary_mount.host}))
+                          UnmountStep.create_parameters(mgs_target, mgs_primary_mount.host)))
 
         steps.append((MountOrImportStep,
                       MountOrImportStep.create_parameters(mgs_target,

@@ -84,3 +84,15 @@ class FileSystemZfs(FileSystem, BlockDeviceZfs):
         :return: return True if both device identifiers reference the same object
         """
         return device2_uuid == BlockDeviceZfs('zfs', device1_path).uuid
+
+    def mount(self, mount_point):
+        """ :return: Mount the file system, raise an exception on error. """
+        self._initialize_modules()
+
+        return super(FileSystemZfs, self).mount(mount_point)
+
+    def umount(self):
+        """ :return: Umount the file system, raise an exception on error. """
+        self._initialize_modules()
+
+        return super(FileSystemZfs, self).umount()

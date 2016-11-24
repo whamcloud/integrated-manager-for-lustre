@@ -34,7 +34,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """Return the profile currently running on the host."""
         return self.chroma_manager.get('/api/server_profile/?name=%s' % host['server_profile']['name']).json['objects'][0]
 
-    def get_best_host_profile(self, address):
+    def get_best_host_profile(self, address, high_availability):
         """
         Return the most suitable profile for the host.
 
@@ -61,7 +61,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                             for profile in all_profiles
                             if (profile['managed'] == config.get("managed", False) and
                                 profile['worker'] is False and
-                                profile['user_selectable'] is True)]
+                                profile['user_selectable'] is True and
+                                (high_availability == profile['pacemaker']))]
 
         # Finally get one that pass all the tests, get the whole list and validate there is only one choice
         filtered_profile = [profile
@@ -197,12 +198,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Wait for deployment to complete
         self.wait_for_commands(self.chroma_manager, command_ids)
 
-    def set_host_profiles(self, hosts):
+    def set_host_profiles(self, hosts, high_availability):
         # Set the profile for each new host
         response = self.chroma_manager.post(
             '/api/host_profile/',
             body = {
-                'objects': [{'host': h['id'], 'profile': self.get_best_host_profile(h['address'])['name']} for h in hosts]
+                'objects': [{'host': h['id'],
+                             'profile': self.get_best_host_profile(h['address'], high_availability)['name']} for h in hosts]
             }
         )
         self.assertEqual(response.successful, True, response.text)
@@ -258,14 +260,14 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
-    def _add_hosts(self, addresses, auth_type):
+    def _add_hosts(self, addresses, auth_type, high_availability):
         """Add a list of lustre servers to chroma and ensure lnet ends in the correct state."""
         if self.simulator:
             self.register_simulated_hosts(addresses)
         else:
             self.validate_hosts(addresses, auth_type)
             self.deploy_agents(addresses, auth_type)
-            self.set_host_profiles(self.get_hosts(addresses))
+            self.set_host_profiles(self.get_hosts(addresses), high_availability)
 
         # Verify the new hosts are now in the database and in the correct state
         new_hosts = self.get_hosts(addresses)
@@ -287,7 +289,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return new_hosts
 
-    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+    def add_hosts(self, addresses, auth_type='existing_keys_choice', high_availability=None):
         """
         Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
 
@@ -298,13 +300,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         :param auth_type: Type of authentication to add
         :return: Host configured in IML.
         """
+
+        # If the caller didn't specify high availability then make the assumption that 1 host is non-HA and 2+ are not.
+        high_availability = (len(addresses) > 1) if high_availability is None else high_availability
+
         if self.quick_setup:
             existing_hosts = self.get_hosts()
             addresses_to_add = list(set(addresses) - set([host['address'] for host in existing_hosts]))
         else:
             addresses_to_add = addresses
 
-        self._add_hosts(addresses_to_add, auth_type)
+        self._add_hosts(addresses_to_add, auth_type, high_availability)
 
         return self.get_hosts(addresses)
 
@@ -322,14 +328,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             hosts = [host for host in hosts if host['address'] in addresses]
         return hosts
 
-    def create_filesystem_simple(self, name = 'testfs', hsm = False):
+    def create_filesystem_simple(self, name='testfs', hsm=False, high_availability=None):
         """
         Create the simplest possible filesystem on a single server.
 
         DEPRECATED - Please don't use this as it is an unsupported
         configuration. Please instead use create_filesystem_standard.
         """
-        self.add_hosts([self.TEST_SERVERS[0]['address']])
+        self.add_hosts([self.TEST_SERVERS[0]['address']],
+                       high_availability=high_availability)
 
         self.wait_usable_volumes(3)
 
@@ -401,21 +408,22 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         filesystem = self.get_filesystem(filesystem_id)
 
-        # osts come back as uri's by default we want the objects so convert.
+        # osts come back as uri's by default we want the objects so convert and ensure they are in OST order.
         filesystem['osts'] = [self.get_json_by_uri(ost_uri) for ost_uri in filesystem['osts']]
+        filesystem['osts'].sort(key=lambda ost: ost['name'])
 
         self._standard_filesystem_layout = {
-            'mgt': {'primary_host': self.get_json_by_uri(filesystem['mgt']['primary_server']),
-                    'failover_host': self.get_json_by_uri(filesystem['mgt']['failover_servers'][0]),
+            'mgt': {'primary_host': hosts[0],
+                    'failover_host': hosts[1],
                     'volume': filesystem['mgt']['volume']},
-            'mdt': {'primary_host': self.get_json_by_uri(filesystem['mdts'][0]['primary_server']),
-                    'failover_host': self.get_json_by_uri(filesystem['mdts'][0]['failover_servers'][0]),
+            'mdt': {'primary_host': hosts[1],
+                    'failover_host': hosts[0],
                     'volume': filesystem['mdts'][0]['volume']},
-            'ost1': {'primary_host': self.get_json_by_uri(filesystem['osts'][0]['primary_server']),
-                     'failover_host': self.get_json_by_uri(filesystem['osts'][0]['failover_servers'][0]),
+            'ost1': {'primary_host': hosts[2],
+                     'failover_host': hosts[3],
                      'volume': filesystem['osts'][0]['volume']},
-            'ost2': {'primary_host': self.get_json_by_uri(filesystem['osts'][1]['primary_server']),
-                     'failover_host': self.get_json_by_uri(filesystem['osts'][1]['failover_servers'][0]),
+            'ost2': {'primary_host': hosts[3],
+                     'failover_host': hosts[2],
                      'volume': filesystem['osts'][1]['volume']},
         }
 
@@ -460,8 +468,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
 
-        # Verify mgs and fs targets in pacemaker config for hosts
-        self.remote_operations.check_ha_config(hosts, filesystem['name'])
+        # Verify mgs and fs targets in pacemaker config for hosts (if only a single host then the install was probably
+        # non-HA and so do not check
+        if len(hosts) > 1:
+            self.remote_operations.check_ha_config(hosts, filesystem['name'])
 
         return filesystem_id
 

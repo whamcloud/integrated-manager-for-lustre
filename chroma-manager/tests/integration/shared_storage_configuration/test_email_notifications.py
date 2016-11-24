@@ -35,7 +35,7 @@ class TestEmailNotifications(ChromaIntegrationTestCase):
             'user': user['resource_uri']
         })
 
-        host = self.add_hosts([config['lustre_servers'][0]['address']])[0]
+        host = self.add_hosts([config['lustre_servers'][0]['address']], high_availability=True)[0]
         self.remote_operations.stop_pacemaker(host['address'])
 
         dir_list = self.remote_operations.list_dir(self.manager['fqdn'], '%s/messages' % self.SETTINGS_DIR)

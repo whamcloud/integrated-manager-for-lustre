@@ -816,7 +816,13 @@ class FakeServer(utils.Persisted):
 
         return self._devices.format(self.fqdn, device, mkfsoptions, target)
 
-    def register_target(self, device_path, mount_point, backfstype):
+    def create_target_mount_point(self, mount_point):
+        return agent_result_ok
+
+    def remove_target_mount_point(self, mount_point):
+        return agent_result_ok
+
+    def register_target(self, device_path, backfstype):
 
         # FIXME: arbitrary choice of which NID to use, correctly this should be
         # whichever NID LNet uses to route to the MGS, or what is set
@@ -825,7 +831,7 @@ class FakeServer(utils.Persisted):
 
         label = self._devices.register(self.fqdn, device_path, nid)
 
-        return {'label': label}
+        return agent_result(label)
 
     def open_firewall(self, port, address, proto, description, persist):
         return agent_result_ok

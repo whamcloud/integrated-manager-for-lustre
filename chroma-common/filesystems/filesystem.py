@@ -38,6 +38,11 @@ class FileSystem(object):
     class_override = None
     __metaclass__ = abc.ABCMeta
 
+    RC_MOUNT_SUCCESS = 0
+    RC_MOUNT_INPUT_OUTPUT_ERROR = 5
+    RC_MOUNT_ALREADY = 17
+    RC_UNMOUNT_ALREADY = 32
+
     class UnknownFileSystem(KeyError):
         pass
 
@@ -88,16 +93,33 @@ class FileSystem(object):
         return 0
 
     def mount(self, mount_point):
-        """ :return: Mount the file system, raise an exception on error. """
-        self._initialize_modules()
+        """
+        :param mount_point: Path to mount the device
+        :return:  None on success, error message on error.
+        """
+        error = None
 
-        return shell.Shell.try_run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
+        result = shell.Shell.run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
+
+        if result.rc not in (self.RC_MOUNT_SUCCESS, self.RC_MOUNT_ALREADY):
+            error = "Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr)
+
+        return error
 
     def umount(self):
-        """ :return: Umount the file system, raise an exception on error. """
-        self._initialize_modules()
+        """
+        Umount the file system
 
-        return shell.Shell.try_run(["umount", self._device_path])
+        :return:  None on success, error message on error.
+        """
+        error = None
+
+        result = shell.Shell.run(["umount", self._device_path])
+
+        if result.rc not in (self.RC_MOUNT_SUCCESS, self.RC_UNMOUNT_ALREADY):
+            error = "Error (%s) unmounting '%s': '%s' '%s'" % (result.rc, self._device_path, result.stdout, result.stderr)
+
+        return error
 
     def mount_path(self, target_name):
         """

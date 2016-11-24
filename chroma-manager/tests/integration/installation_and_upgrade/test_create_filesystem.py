@@ -5,18 +5,20 @@ from tests.integration.installation_and_upgrade.test_installation_and_upgrade im
 
 
 class TestCreateFilesystem(TestInstallationAndUpgrade):
-    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+    def add_hosts(self, addresses, auth_type='existing_keys_choice', high_availability=None):
         # Override add hosts functionality for older APIs
 
         # if the host_profile api endpoint exists or using simulator, can use current logic
         response = self.chroma_manager.get('/api/host_profile/')
         if response.successful or self.simulator:
-            new_hosts = super(TestCreateFilesystem, self).add_hosts(addresses, auth_type)
+            new_hosts = super(TestCreateFilesystem, self).add_hosts(addresses,
+                                                                    auth_type=auth_type,
+                                                                    high_availability=high_availability)
         else:
             # otherwise we need to use the old way of adding hosts
             host_create_command_ids = []
             for host_address in addresses:
-                profile = self.get_best_host_profile(host_address)
+                profile = self.get_best_host_profile(host_address, high_availability)
                 response = self.chroma_manager.post(
                     '/api/test_host/',
                     body = {

@@ -34,7 +34,7 @@ class TestEvents(ChromaIntegrationTestCase):
 
 class TestAlerting(ChromaIntegrationTestCase):
     def test_alerts(self):
-        fs_id = self.create_filesystem_simple()
+        fs_id = self.create_filesystem_simple(high_availability=True)
 
         fs = self.get_json_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]

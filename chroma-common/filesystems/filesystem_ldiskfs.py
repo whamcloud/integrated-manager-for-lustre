@@ -33,9 +33,6 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
     # in the read from blkid. But listing both is safe.
     _supported_filesystems = ['ldiskfs', 'ext4']
 
-    RC_MOUNT_SUCCESS = 0
-    RC_MOUNT_INPUT_OUTPUT_ERROR = 5
-
     def __init__(self, fstype, device_path):
         super(FileSystemLdiskfs, self).__init__(fstype, device_path)
 
@@ -66,7 +63,13 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
         return int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
     def mount(self, mount_point):
+        """
+        :param mount_point: Path to mount the device
+        :return:  None on success, error message on error.
+        """
         self._initialize_modules()
+
+        error = None
 
         result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
@@ -74,12 +77,26 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
             # HYD-1040: Sometimes we should retry on a failed registration
             result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
-        if result.rc != self.RC_MOUNT_SUCCESS:
-            raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
+        if result.rc not in (self.RC_MOUNT_SUCCESS, self.RC_MOUNT_ALREADY):
+            error = "Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr)
+
+        return error
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted
     def umount(self):
-        return shell.Shell.try_run(["umount", os.path.realpath(self._device_path)])
+        """
+        Umount the file system
+
+        :return:  None on success, error message on error.
+        """
+        error = None
+
+        result = shell.Shell.run(["umount", os.path.realpath(self._device_path)])
+
+        if result.rc not in (self.RC_MOUNT_SUCCESS, self.RC_UNMOUNT_ALREADY):
+            error = "Error (%s) unmounting '%s': '%s' '%s'" % (result.rc, os.path.realpath(self._device_path), result.stdout, result.stderr)
+
+        return error
 
     def mkfs(self, target_name, options):
         self._initialize_modules()
