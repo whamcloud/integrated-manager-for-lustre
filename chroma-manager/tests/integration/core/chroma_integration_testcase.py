@@ -702,3 +702,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         logger.debug("LNetConfiguration info %s" % lnet_configuration)
 
         return self.LNetInfo(nids, network_interfaces, lnet_configuration, host)
+
+    def targets_in_state(self, state):
+        response = self.chroma_manager.get('/api/target/')
+        self.assertEqual(response.successful, True, response.text)
+
+        targets = response.json['objects']
+        mounted_targets = [t for t in targets if t['state'] == state]
+
+        return len(mounted_targets) == len(targets)

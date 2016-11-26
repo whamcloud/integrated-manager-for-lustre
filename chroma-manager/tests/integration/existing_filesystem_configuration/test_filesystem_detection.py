@@ -1,11 +1,10 @@
 
 
 import re
-import time
 
 from testconfig import config
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
-from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import TEST_TIMEOUT, LONG_TEST_TIMEOUT
 
 
 class TestFilesystemDetection(StatsTestCaseMixin):
@@ -192,8 +191,8 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                     "on %s type lustre" % target_config['mount_path']
                 )
 
-        # Wait for audit
-        time.sleep(30)
+        # Verify all targets detected as unmounted
+        self.wait_until_true(lambda: self.targets_in_state('unmounted'), timeout=TEST_TIMEOUT)
 
         # Verify detected as unmounted
         response = self.chroma_manager.get('/api/target/')
@@ -220,8 +219,8 @@ class TestFilesystemDetection(StatsTestCaseMixin):
                 "mount -a -t lustre"
             )
 
-        # Wait for audit
-        time.sleep(30)
+        # Verify all targets detected as mounted
+        self.wait_until_true(lambda: self.targets_in_state('mounted'), timeout=TEST_TIMEOUT)
 
         # Verify all targets detected as mounted
         response = self.chroma_manager.get('/api/target/')
