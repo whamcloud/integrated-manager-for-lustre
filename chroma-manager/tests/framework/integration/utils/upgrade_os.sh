@@ -22,7 +22,6 @@ fi
 # Fetch the cobbler repo file for the version we are upgrading to, and clean the repo of
 # the data form the previous repo file.
 curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
-yum clean all
 
 # On RHEL systems, we need to set the releasever
 if which subscription-manager; then
@@ -41,7 +40,24 @@ if which subscription-manager; then
     subscription-manager release --set=\${release}
 fi
 
-epel_repo=\$(yum repolist | sed -n -e 's/^\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')
+# Clean the yum metadata and fetch fresh data since we just changed all of the
+# available repos. In addition to just wanting to be sure that the rest of the
+# testing doesn't have bad cache data, the yum repolist below annoyingly
+# doesn't actually cause it to fetch fresh data even after a clean, and will
+# fail to parse the resulting output if the metadata has expired, so we must
+# also makecache explicitly.
+yum clean all
+yum makecache
+
+# This sed finds the exact name of the epel repo from a yum repolist, as this
+# can vary from OS version to version. We also exclude an explanation point from
+# the beginning of the name if it exists. This exclamation point is present when
+# the repo metadata has expired. This can happen if even just the above makecache
+# takes longer to complete then the expiry for yum metadata, and is thus a valid
+# state we should protect against. We don't want our test framework dependent on
+# the expiry setting for the underlying systems when we really don't care what the
+# state of the metadata is on a repo we're disabling.
+epel_repo=\$(yum repolist | sed -n -e 's/^!\?\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')
 
 if [ -n "\${epel_repo}" ]; then
     yum-config-manager --disable \${epel_repo}
