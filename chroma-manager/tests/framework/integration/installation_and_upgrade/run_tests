@@ -178,23 +178,19 @@ done
 
 echo \"Now with EPEL configured\"
 
-cat <<EOF > /etc/yum.repos.d/epel.repo
-[epel]
-name=epel
-baseurl=http://${COBBLER_SERVER:-10.14.80.10}/cobbler/repo_mirror/addon-epel\$(rpm --eval %rhel)-x86_64/
-enabled=1
-priority=1
-gpgcheck=0
-sslverify=0
-EOF
+yum-config-manager --enable *[eE][pP][eE][lL]*
 yum makecache
 
 if expect ../upgrade.exp; then
     echo \"Installation unexpectedly succeeded with EPEL configured\"
-    rm -f /etc/yum.repos.d/epel.repo
     exit 1
 fi
-rm -f /etc/yum.repos.d/epel.repo
+
+echo \"Re-disabling EPEL to continue\"
+
+yum-config-manager --disable *[eE][pP][eE][lL]*
+yum clean all
+yum makecache
 
 if $RHEL; then
     release=\$(lsb_release -sr || sed -n -e '1s/.* release \(.*\) .*/\1/p' /etc/issue)

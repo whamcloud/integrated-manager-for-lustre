@@ -49,19 +49,7 @@ fi
 yum clean all
 yum makecache
 
-# This sed finds the exact name of the epel repo from a yum repolist, as this
-# can vary from OS version to version. We also exclude an explanation point from
-# the beginning of the name if it exists. This exclamation point is present when
-# the repo metadata has expired. This can happen if even just the above makecache
-# takes longer to complete then the expiry for yum metadata, and is thus a valid
-# state we should protect against. We don't want our test framework dependent on
-# the expiry setting for the underlying systems when we really don't care what the
-# state of the metadata is on a repo we're disabling.
-epel_repo=\$(yum repolist | sed -n -e 's/^!\?\\([^ ]*[eE][pP][eE][lL][^ ]*\\).*/\\1/p')
-
-if [ -n "\${epel_repo}" ]; then
-    yum-config-manager --disable \${epel_repo}
-fi
+yum-config-manager --disable *[eE][pP][eE][lL]*
 
 rpm -qa | sort >/tmp/before_upgrade
 yum -y upgrade
