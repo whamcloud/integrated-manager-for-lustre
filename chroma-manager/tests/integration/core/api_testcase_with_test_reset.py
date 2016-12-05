@@ -140,9 +140,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.wait_until_true(self.api_contactable)
                 self.remote_operations.unmount_clients()
                 self.api_force_clear()
-                self._fetch_help(lambda: self.remote_operations.clear_ha(self.TEST_SERVERS),
-                                 ['chris.gearing@intel.com'],
-                                 'soft clear ha failure')
+                self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
             if config.get('managed'):
@@ -195,9 +193,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                                   "==== stopping test %s =====" % self)
 
                 if len(down_nodes) and (self.down_node_expected is False):
-                    self._fetch_help(lambda: 1 / 0,
-                                     ['chris.gearing@intel.com'],
-                                     "After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
 
@@ -294,11 +289,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                             print step['console']
                             print step['backtrace']
                             print ''
-
-                            if 'Unable to update any nodes' in step['console']:
-                                self._fetch_help(lambda: 1 / 0,
-                                                 ['chris.gearing@intel.com'],
-                                                 'Unable to update any nodes: %s' % step['description'])
             elif disposition == "TIMED OUT":
                 if job['state'] != "complete":
                     print "Job %s incomplete:" % job['id']
@@ -627,7 +617,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.reset_chroma_manager_db()
         self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
         if config.get('managed'):
-            self.remote_operations.clear_ha(config['lustre_servers'])
+            self.remote_operations.clear_ha(self.TEST_SERVERS)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):

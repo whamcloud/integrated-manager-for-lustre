@@ -891,10 +891,9 @@ class RealRemoteOperations(RemoteOperations):
                                            "hostname",
                                            expected_return_code=None).rc == 0
 
-            self._test_case._fetch_help(lambda: self._test_case.assertTrue(False,
-                                                                           "Timed out waiting for host %s to come back online.\n"
-                                                                           "Host is actually alive %s" % (hostname, host_alive)),
-                                        ['chris.gearing@intel.com'])
+            self._test_case.assertTrue(False,
+                                       "Timed out waiting for host %s to come back online.\n"
+                                       "Host is actually alive %s" % (hostname, host_alive))
 
         if monitor_server:
             result = self._ssh_address(
