@@ -58,24 +58,32 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         """ test the process of using full partition paths and device basenames to resolve device paths """
         return ZfsDevices()._get_all_zpool_devices(pool_name)
 
-    def test_imported_zfs(self):
-        """ Check when zpool is already imported which has datasets, only the datasets (not zpool) are reported """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
-    zfsPool1        1T    1234567890ABCDE    ONLINE
-    zfsPool2        1G    111111111111111    OFFLINE\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool1"), stdout="""\
-zfsPool1
-        /dev/disk/by-id/scsi-SCSI_DISK_1-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool1"), stdout="""\
-zfsPool1
-        scsi-SCSI_DISK_1   9.94G   228K    9.94G   -       0%      0%\n"""),
+    def test_already_imported_zfs(self):
+        """
+        Check when zpool is already imported which has datasets, and no more pools to import,
+        only the datasets (not zpool) are reported
+        """
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
+zfsPool2\n"""),
+                          CommandCaptureCommand(("zpool", "import"), rc=1),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
+zfsPool2\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", 'zfsPool2'),
+                                                stdout="""zfsPool2        1G    111111111111111    OFFLINE\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
+zfsPool2\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", 'zfsPool1'),
+                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", 'zfsPool1'),
+                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", 'zfsPool1'),
+                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
                           CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""
-    zfsPool1        1T    1234567890ABCDE
-    zfsPool1/mgt    1T    ABCDEF123456789
-    zfsPool1/mgs    1T    AAAAAAAAAAAAAAA
-    zfsPool2        1G    111111111111111
-    zfsPool2/mgt    1G    222222222222222\n"""),
-                          CommandCaptureCommand(("zpool", "import"), rc=1))
+zfsPool1        1T    1234567890ABCDE
+zfsPool1/mgt    1T    ABCDEF123456789
+zfsPool1/mgs    1T    AAAAAAAAAAAAAAA
+zfsPool2        1G    111111111111111
+zfsPool2/mgt    1G    222222222222222\n"""))
 
         zfs_devices = self._setup_zfs_devices()
 
@@ -86,7 +94,7 @@ zfsPool1
 
     def test_exported_zfs_datasets_zvols(self):
         """ Check when zpool is imported which has datasets, only the datasets (not zpool) are reported """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
                           CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
      id: 1234567890ABCDE
   state: ONLINE
@@ -142,7 +150,7 @@ zfsPool1
 
     def test_exported_zfs_no_datasets_zvols(self):
         """ Check when zpool is imported which has no datasets or zvols, only the zpool is reported """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
                           CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
      id: 1234567890ABCDE
   state: ONLINE

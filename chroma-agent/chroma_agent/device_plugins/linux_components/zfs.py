@@ -53,23 +53,31 @@ class ZfsDevices(object):
 
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
+        zpool_names = set()
         try:
-            self._search_for_active(block_devices)
-            self._search_for_inactive(block_devices)
+            zpool_names.update(self._search_for_active())
+            zpool_names.update(self._search_for_inactive())
+
+            for zpool_name in zpool_names:
+                with ExportedZfsDevice(zpool_name) as available:
+                    if available:
+                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", zpool_name])
+                        self._add_zfs_pool(out, block_devices)
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
             self._zvols = {}
 
-    def _search_for_active(self, block_devices):
-        # First look for active/imported zpools
-        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health"])
+    def _search_for_active(self):
+        """ Return list of active/imported zpool names """
+        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name"])
 
-        for line in filter(None, out.split('\n')):
-            self._add_zfs_pool(line, block_devices)
+        return [line.strip() for line in filter(None, out.split('\n'))]
 
-    def _search_for_inactive(self, block_devices):
-        # importable zpools
+    def _search_for_inactive(self):
+        """
+        Return list of importable zpool names by parsing the 'zpool import' command output
+
         # [root@lotus-33vm17 ~]# zpool import
         #    pool: lustre
         #      id: 5856902799170956568
@@ -80,6 +88,9 @@ class ZfsDevices(object):
         # 	lustre                             ONLINE
         # 	  scsi-0QEMU_QEMU_HARDDISK_disk15  ONLINE
         # 	  scsi-0QEMU_QEMU_HARDDISK_disk14  ONLINE
+        #
+        #  ... (repeats for all discovered zpools)
+        """
         try:
             out = AgentShell.try_run(["zpool", "import"])
         except AgentShell.CommandExecutionError as e:
@@ -89,30 +100,28 @@ class ZfsDevices(object):
             else:
                 raise e
 
-        imports = {}
-        pool_name = None
+        zpool_names = []
+        zpool_name = None
 
         for line in filter(None, out.split("\n")):
             match = re.match("(\s*)pool: (\S*)", line)
-            if match:
-                pool_name = match.group(2)
+            if match is not None:
+                zpool_name = match.group(2)
 
             match = re.match("(\s*)state: (\S*)", line)
-            if match:
-                if pool_name:
-                    imports[pool_name] = match.group(2)
-                    pool_name = None
+            if match is not None:
+                if zpool_name:
+                    if match.group(2) in self.acceptable_health:
+                        zpool_names.append(zpool_name)
+                    else:
+                        daemon_log.warning("Not scanning zpool %s because it is %s." % (zpool_name, match.group(2)))
                 else:
-                    daemon_log.warning("Found a zpool import state but had no pool_name")
+                    daemon_log.warning("Found a zpool import state but had no zpool name")
 
-        for pool, state in imports.iteritems():
-            if state in self.acceptable_health:
-                with ExportedZfsDevice(pool) as available:
-                    if available:
-                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", pool])
-                        self._add_zfs_pool(out, block_devices)
-            else:
-                daemon_log.warning("Not scanning zpool %s because it is %s." % (pool, state))
+                # After each 'state' line is encountered, move onto the next zpool name
+                zpool_name = None
+
+        return zpool_names
 
     def _add_zfs_pool(self, line, block_devices):
         pool, size_str, uuid, health = line.split()
