@@ -126,8 +126,10 @@ kernel modules are functioning properly.
         self.assertRanAllCommandsInOrder()
 
     def test_uuid(self):
-        self.add_command(('zfs', 'get', '-H', '-o', 'value', 'guid', self.blockdevice._device_path),
-                         stdout='169883839435093209\n')
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout=self.blockdevice._device_path),
+                          CommandCaptureCommand(('zfs', 'get', '-H', '-o', 'value', 'guid', self.blockdevice._device_path),
+                                                stdout='169883839435093209\n'))
 
         self.assertEqual('169883839435093209', self.blockdevice.uuid)
         self.assertRanAllCommandsInOrder()

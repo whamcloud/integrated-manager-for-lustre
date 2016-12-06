@@ -32,39 +32,55 @@ from ..lib import shell
 from blockdevice import BlockDevice
 
 
-class ExportedZfsDevice(object):
+class ZfsDevice(object):
     """
-    This allows the enclosed code to read the status, attributes etc of a zfs device that is not currently imported to the machine.
-    The code imports in read only mode and then exports the device whilst the enclosed code can then operate on the device as if
-    it was locally active.
+    This provide two functions.
+
+    Function 1 is to provide locking so that within IML only a single access it made to a zpool device. This in itself
+    is not an issue but as code may import/export a device it provides that a zpool is not exported/imported whilst
+    something else is using it. It also means we can create atomic functions for zpool changes.
+
+    Function 2 is to provide for code to read the status, attributes etc of a zfs device that is not currently imported
+    to the machine. The code imports in read only mode and then exports the device whilst the enclosed code can then
+    operate on the device as if it was locally active.
     """
     import_locks = defaultdict(lambda: threading.RLock())
 
-    def __init__(self, device_path):
+    def __init__(self, device_path, try_import):
+        """
+        :param device_path: Device path to lock the use of an potential import
+        :param try_import: If the device is not imported, import / export it (when used as with). If try_import is false
+        then the caller must deal with ensuring the device is accessible.
+        """
         self.pool_path = device_path.split('/')[0]
         self.pool_imported = False
+        self.try_import = try_import
+        self.available = not try_import         # If we are not going to try to import it, then presume it is available
 
     def __enter__(self):
         self.lock_pool()
 
-        try:
-            imported_pools = shell.Shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
-        except:
-            self.unlock_pool()
-            raise
-
-        result = None
-
-        if self.pool_path not in imported_pools:
+        if self.try_import:
             try:
-                result = self.import_(True, True)
-                self.pool_imported = (result is None)
+                imported_pools = shell.Shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
             except:
                 self.unlock_pool()
-                # log.debug('ExportedZfsDevice released lock on %s due to exception' % self.pool_path)
                 raise
 
-        return result is None
+            result = None
+
+            if self.pool_path not in imported_pools:
+                try:
+                    result = self.import_(True, True)
+                    self.pool_imported = (result is None)
+                except:
+                    self.unlock_pool()
+                    # log.debug('ZfsDevice released lock on %s due to exception' % self.pool_path)
+                    raise
+
+            self.available = (result is None)
+
+        return self
 
     def __exit__(self, type, value, traceback):
         try:
@@ -82,12 +98,12 @@ class ExportedZfsDevice(object):
     def lock_pool(self):
         lock = self.import_locks[self.pool_path]
         lock.acquire()
-        # log.debug('ExportedZfsDevice acquired lock on %s' % self.pool_path)
+        # log.debug('ZfsDevice acquired lock on %s' % self.pool_path)
 
     def unlock_pool(self):
         lock = self.import_locks[self.pool_path]
         lock.release()
-        # log.debug('ExportedZfsDevice released lock on %s' % self.pool_path)
+        # log.debug('ZfsDevice released lock on %s' % self.pool_path)
 
     def import_(self, force, readonly):
         """
@@ -178,20 +194,21 @@ class BlockDeviceZfs(BlockDevice):
         """
         self._assert_zpool('filesystem_info')
 
-        try:
-            device_names = shell.Shell.try_run(['zfs', 'list', '-H', '-o', 'name', '-r', self._device_path]).split('\n')
+        with ZfsDevice(self._device_path, False):
+            try:
+                device_names = shell.Shell.try_run(['zfs', 'list', '-H', '-o', 'name', '-r', self._device_path]).split('\n')
 
-            datasets = [line.split('/', 1)[1] for line in device_names if '/' in line]
+                datasets = [line.split('/', 1)[1] for line in device_names if '/' in line]
 
-            if datasets:
-                return "Dataset%s '%s' found on zpool '%s'" % ('s' if (len(datasets) > 1) else '',
-                                                               ','.join(datasets),
-                                                               self._device_path)
-            return None
-        except OSError:                             # zfs not found
-            return "Unable to execute commands, check zfs is installed."
-        except shell.Shell.CommandExecutionError as e:    # no zpool 'self._device_path' found
-            return str(e)
+                if datasets:
+                    return "Dataset%s '%s' found on zpool '%s'" % ('s' if (len(datasets) > 1) else '',
+                                                                   ','.join(datasets),
+                                                                   self._device_path)
+                return None
+            except OSError:                             # zfs not found
+                return "Unable to execute commands, check zfs is installed."
+            except shell.Shell.CommandExecutionError as e:    # no zpool 'self._device_path' found
+                return str(e)
 
     @property
     def filesystem_type(self):
@@ -213,14 +230,13 @@ class BlockDeviceZfs(BlockDevice):
         :return: uuid of zfs device (usually zpool or dataset)
         """
         out = ""
+
         try:
-            out = shell.Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+            with ZfsDevice(self._device_path, True) as zfs_device:
+                if zfs_device.available:
+                    out = shell.Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
         except OSError:                                     # Zfs not found.
             pass
-        except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
-            with ExportedZfsDevice(self.device_path) as available:
-                if available:
-                    out = shell.Shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
 
         lines = [l for l in out.split("\n") if len(l) > 0]
 
@@ -242,28 +258,29 @@ class BlockDeviceZfs(BlockDevice):
         :return: dictionary of zfs properties
         """
         if reread or not self._zfs_properties:
-            self._zfs_properties = {}
+            with ZfsDevice(self._device_path, False):
+                self._zfs_properties = {}
 
-            try:
-                ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-            except OSError:                                     # Zfs not found.
-                return self._zfs_properties
-            except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
-                with ExportedZfsDevice(self.device_path) as available:
-                    if available:
-                        ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-                    else:
-                        return self._zfs_properties
-
-            for line in ls.split("\n"):
                 try:
-                    key, value = line.split('\t')
+                    ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
+                except OSError:                                     # Zfs not found.
+                    return self._zfs_properties
+                except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
+                    with ZfsDevice(self._device_path, True) as zfs_device:
+                        if zfs_device.available:
+                            ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
+                        else:
+                            return self._zfs_properties
 
-                    self._zfs_properties[key] = value
-                except ValueError:                              # Be resilient to things we don't understand.
-                    if log:
-                        log.info("zfs get for %s returned %s which was not parsable." % (self._device_path, line))
-                    pass
+                for line in ls.split("\n"):
+                    try:
+                        key, value = line.split('\t')
+
+                        self._zfs_properties[key] = value
+                    except ValueError:                              # Be resilient to things we don't understand.
+                        if log:
+                            log.info("zfs get for %s returned %s which was not parsable." % (self._device_path, line))
+                        pass
 
         return self._zfs_properties
 
@@ -278,28 +295,29 @@ class BlockDeviceZfs(BlockDevice):
         self._assert_zpool('zpool_properties')
 
         if reread or not self._zpool_properties:
-            self._zpool_properties = {}
+            with ZfsDevice(self._device_path, False):
+                self._zpool_properties = {}
 
-            try:
-                ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
-            except OSError:                                     # Zfs not found.
-                return self._zpool_properties
-            except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
-                with ExportedZfsDevice(self.device_path) as available:
-                    if available:
-                        ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
-                    else:
-                        return self._zpool_properties
-
-            for line in ls.strip().split("\n"):
                 try:
-                    _, key, value, _ = line.split('\t')
+                    ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
+                except OSError:                                     # Zfs not found.
+                    return self._zpool_properties
+                except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
+                    with ZfsDevice(self._device_path, True) as zfs_device:
+                        if zfs_device.available:
+                            ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
+                        else:
+                            return self._zpool_properties
 
-                    self._zpool_properties[key] = value
-                except ValueError:                              # Be resilient to things we don't understand.
-                    if log:
-                        log.info("zpool get for %s returned %s which was not parsable." % (self._device_path, line))
-                    pass
+                for line in ls.strip().split("\n"):
+                    try:
+                        _, key, value, _ = line.split('\t')
+
+                        self._zpool_properties[key] = value
+                    except ValueError:                              # Be resilient to things we don't understand.
+                        if log:
+                            log.info("zpool get for %s returned %s which was not parsable." % (self._device_path, line))
+                        pass
 
         return self._zpool_properties
 
@@ -359,6 +377,7 @@ class BlockDeviceZfs(BlockDevice):
         :return: None for success meaning the zpool is imported
         """
         self._initialize_modules()
+
         try:
             self._assert_zpool('import_')
         except NotZpoolException:
@@ -366,26 +385,27 @@ class BlockDeviceZfs(BlockDevice):
 
             return blockdevice.import_(pacemaker_ha_operation)
 
-        try:
-            shell.Shell.try_run(['zpool', 'list', self._device_path])
+        with ZfsDevice(self._device_path, False) as zfs_device:
+            try:
+                shell.Shell.try_run(['zpool', 'list', self._device_path])
 
-            result = None
+                result = None
 
-            # Zpool is imported but make sure it is not readonly. re-read properties to detect changes
-            if self.zpool_properties(True).get('readonly') == 'on':
-                result = self.export()
+                # Zpool is imported but make sure it is not readonly. re-read properties to detect changes
+                if self.zpool_properties(True).get('readonly') == 'on':
+                    result = self.export()
 
-                if result is None:
-                    result = self.import_(pacemaker_ha_operation)
+                    if result is None:
+                        result = self.import_(pacemaker_ha_operation)
 
-            return result                                     # result None if already imported and writable
-        except shell.Shell.CommandExecutionError:
-            result = ExportedZfsDevice(self._device_path).import_(pacemaker_ha_operation, False)
-            # Check the pool is not readonly, reread the properties because we have just imported it.
-            if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
-                return 'zfs pool %s imported but device is readonly' % self._device_path
+                return result                                     # result None if already imported and writable
+            except shell.Shell.CommandExecutionError:
+                result = zfs_device.import_(pacemaker_ha_operation, False)
+                # Check the pool is not readonly, reread the properties because we have just imported it.
+                if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
+                    return 'zfs pool %s imported but device is readonly' % self._device_path
 
-            return result
+                return result
 
     def export(self):
         """
@@ -405,12 +425,13 @@ class BlockDeviceZfs(BlockDevice):
 
             return blockdevice.export()
 
-        try:
-            shell.Shell.try_run(['zpool', 'list', self._device_path])
-        except shell.Shell.CommandExecutionError:
-            return None                                     # zpool is not imported so nothing to do.
+        with ZfsDevice(self._device_path, False) as zfs_device:
+            try:
+                shell.Shell.try_run(['zpool', 'list', self._device_path])
+            except shell.Shell.CommandExecutionError:
+                return None                                     # zpool is not imported so nothing to do.
 
-        return ExportedZfsDevice(self._device_path).export()
+            return zfs_device.export()
 
     def purge_filesystem_configuration(self, filesystem_name, log):
         """
@@ -422,35 +443,36 @@ class BlockDeviceZfs(BlockDevice):
         :return: None on success or error message
         """
 
-        try:
-            shell_result = shell.Shell.run(["zfs", "canmount=on", self._device_path])
-
-            if shell_result.rc != 0:
-                return "ZFS failed to set canmount=on property on device %s, error was %s" % \
-                       (self._device_path, shell_result.stderr)
-
-            shell_result = shell.Shell.run(["zfs", "mount", self._device_path])
-
-            if shell_result.rc != 0:
-                return "ZFS failed to mount device %s, error was %s" % (self._device_path, shell_result.stderr)
-
-            for config_entry in glob.glob("/%s/CONFIGS/%s-*" % (self._device_path, filesystem_name)):
-                shell_result = shell.Shell.run(["rm", config_entry])
+        with ZfsDevice(self._device_path, False):
+            try:
+                shell_result = shell.Shell.run(["zfs", "canmount=on", self._device_path])
 
                 if shell_result.rc != 0:
-                    return "ZFS failed to purge filesystem (%s) information from device %s, error was %s" % \
-                           (filesystem_name, self._device_path, shell_result.stderr)
-        finally:
-            # Try both these commands, report failure but we really don't have a way out if they fail.
-            shell_result_unmount = shell.Shell.run(["zfs", "unmount", self._device_path])
-            shell_result_canmount = shell.Shell.run(["zfs", "canmount=off", self._device_path])
+                    return "ZFS failed to set canmount=on property on device %s, error was %s" % \
+                           (self._device_path, shell_result.stderr)
 
-            if shell_result_unmount.rc != 0:
-                return "ZFS failed to unmount device %s, error was %s" % (self._device_path, shell_result_unmount.stderr)
+                shell_result = shell.Shell.run(["zfs", "mount", self._device_path])
 
-            if shell_result_canmount.rc != 0:
-                return "ZFS failed to set canmount=off property on device %s, error was %s" % \
-                       (self._device_path, shell_result_canmount.stderr)
+                if shell_result.rc != 0:
+                    return "ZFS failed to mount device %s, error was %s" % (self._device_path, shell_result.stderr)
+
+                for config_entry in glob.glob("/%s/CONFIGS/%s-*" % (self._device_path, filesystem_name)):
+                    shell_result = shell.Shell.run(["rm", config_entry])
+
+                    if shell_result.rc != 0:
+                        return "ZFS failed to purge filesystem (%s) information from device %s, error was %s" % \
+                               (filesystem_name, self._device_path, shell_result.stderr)
+            finally:
+                # Try both these commands, report failure but we really don't have a way out if they fail.
+                shell_result_unmount = shell.Shell.run(["zfs", "unmount", self._device_path])
+                shell_result_canmount = shell.Shell.run(["zfs", "canmount=off", self._device_path])
+
+                if shell_result_unmount.rc != 0:
+                    return "ZFS failed to unmount device %s, error was %s" % (self._device_path, shell_result_unmount.stderr)
+
+                if shell_result_canmount.rc != 0:
+                    return "ZFS failed to set canmount=off property on device %s, error was %s" % \
+                           (self._device_path, shell_result_canmount.stderr)
 
         return None
 

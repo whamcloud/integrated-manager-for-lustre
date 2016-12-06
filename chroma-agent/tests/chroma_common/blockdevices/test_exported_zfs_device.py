@@ -3,23 +3,23 @@ import threading
 import mock
 from collections import defaultdict
 
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ExportedZfsDevice
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ZfsDevice
 from tests.command_capture_testcase import CommandCaptureCommand
 from tests.command_capture_testcase import CommandCaptureTestCase
 from chroma_agent.chroma_common.lib.util import ExceptionThrowingThread
 from chroma_agent.chroma_common.lib.shell import BaseShell
 
 
-class TestExportedZfsDevice(CommandCaptureTestCase):
+class TestZfsDevice(CommandCaptureTestCase):
     def setUp(self):
-        super(TestExportedZfsDevice, self).setUp()
+        super(TestZfsDevice, self).setUp()
 
         self.zpool_name = 'Dave'
 
         # Reset the locks or 1 test failing kills all the other.s
-        ExportedZfsDevice.import_locks = defaultdict(lambda: threading.RLock())
+        ZfsDevice.import_locks = defaultdict(lambda: threading.RLock())
 
-        self.lock = ExportedZfsDevice.import_locks[self.zpool_name]
+        self.lock = ZfsDevice.import_locks[self.zpool_name]
         self.thread_running = False
 
         self.assertEqual(type(self.lock), threading._RLock)
@@ -43,7 +43,7 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
                                                         (('-o', 'readonly=on') if readonly else ()) +
                                                         (self.zpool_name,)))
 
-                ExportedZfsDevice(self.zpool_name).import_(force, readonly)
+                ZfsDevice(self.zpool_name, False).import_(force, readonly)
 
                 self.assertRanAllCommandsInOrder()
 
@@ -51,9 +51,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
         self._add_import_commands()
         self._add_export_commands()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         exported_zfs_device.__exit__(0, 0, 0)
 
         self.assertRanAllCommandsInOrder()
@@ -62,9 +62,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
         self._add_import_commands()
         self._add_export_commands()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         self.assertEqual(self.lock._RLock__count, 1)
 
         exported_zfs_device.__exit__(0, 0, 0)
@@ -77,8 +77,8 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
 
         for count in range(1, 10):
             self._add_import_commands()
-            exported_zfs_devices.insert(0, ExportedZfsDevice(self.zpool_name))
-            self.assertEqual(exported_zfs_devices[0].__enter__(), True)
+            exported_zfs_devices.insert(0, ZfsDevice(self.zpool_name, True))
+            self.assertEqual(exported_zfs_devices[0].__enter__().available, True)
             self.assertEqual(self.lock._RLock__count, count)
 
         for count in range(9, 0, -1):
@@ -93,9 +93,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
     def test_simple_lock_no_import(self):
         self._add_import_commands(self.zpool_name)
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         self.assertEqual(self.lock._RLock__count, 1)
 
         exported_zfs_device.__exit__(0, 0, 0)
@@ -106,22 +106,22 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
     def import_(self):
         self.add_command(('zpool', 'import', self.zpool_name))
         self.thread_running = True
-        ExportedZfsDevice(self.zpool_name).import_(False, False)
+        ZfsDevice(self.zpool_name, True).import_(False, False)
         self.thread_running = False
 
     def export(self):
         self._add_export_commands()
         self.thread_running = True
-        ExportedZfsDevice(self.zpool_name).export()
+        ZfsDevice(self.zpool_name, True).export()
         self.thread_running = False
 
     def test_import_blocks(self):
         self._add_import_commands()
         self._add_export_commands()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         self.assertEqual(self.lock._RLock__count, 1)
 
         # Now this thread should block.
@@ -148,9 +148,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
         self._add_import_commands()
         self._add_export_commands()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         self.assertEqual(self.lock._RLock__count, 1)
 
         # Now this thread should block.
@@ -176,7 +176,7 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
     def test_error_in_list(self):
         self.add_commands(CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'), rc=1))
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
         try:
             self.assertEqual(exported_zfs_device.__enter__(), True)
@@ -189,9 +189,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
         self.add_commands(CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'), stdout='Boris'),
                           CommandCaptureCommand(('zpool', 'import', '-f', '-o', 'readonly=on', self.zpool_name), rc=1))
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), False)
+        self.assertEqual(exported_zfs_device.__enter__().available, False)
 
         self.assertEqual(self.lock._RLock__count, 1)
 
@@ -205,9 +205,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
         self._add_import_commands()
         self.add_commands(CommandCaptureCommand(('zpool', 'export', self.zpool_name), rc=1))
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
 
         self.assertEqual(self.lock._RLock__count, 1)
 
@@ -230,9 +230,9 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
 
         mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.time.sleep').start()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
         exported_zfs_device.__exit__(0, 0, 0)
 
         self.assertRanAllCommandsInOrder()
@@ -246,11 +246,20 @@ class TestExportedZfsDevice(CommandCaptureTestCase):
 
         mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.time.sleep').start()
 
-        exported_zfs_device = ExportedZfsDevice(self.zpool_name)
+        exported_zfs_device = ZfsDevice(self.zpool_name, True)
 
-        self.assertEqual(exported_zfs_device.__enter__(), True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
 
         try:
             exported_zfs_device.__exit__(0, 0, 0)
         except BaseShell.CommandExecutionError:
             pass
+
+    def test_no_import_silient(self):
+        exported_zfs_device = ZfsDevice(self.zpool_name, False)
+
+        self.assertEqual(exported_zfs_device.available, True)
+        self.assertEqual(exported_zfs_device.__enter__().available, True)
+        exported_zfs_device.__exit__(0, 0, 0)
+
+        self.assertRanAllCommandsInOrder()

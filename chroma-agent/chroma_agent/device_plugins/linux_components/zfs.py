@@ -29,7 +29,7 @@ import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ExportedZfsDevice
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ZfsDevice
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.chroma_common.lib import util
@@ -59,8 +59,8 @@ class ZfsDevices(object):
             zpool_names.update(self._search_for_inactive())
 
             for zpool_name in zpool_names:
-                with ExportedZfsDevice(zpool_name) as available:
-                    if available:
+                with ZfsDevice(zpool_name, True) as zfs_device:
+                    if zfs_device.available:
                         out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", zpool_name])
                         self._add_zfs_pool(out, block_devices)
         except OSError:                 # OSError occurs when ZFS is not installed.

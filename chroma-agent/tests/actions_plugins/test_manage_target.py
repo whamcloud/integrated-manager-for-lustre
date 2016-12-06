@@ -100,6 +100,8 @@ class TestFormatTarget(CommandCaptureTestCase):
                                                 stdout="%s\n" % block_device.preferred_fstype),
                           CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"),
                                                 stdout="123456789\n"),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"),
+                                                stdout='lustre1'),
                           CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1/OST0000"),
                                                 stdout="9845118046416187754"),
                           CommandCaptureCommand(("zfs", "get", "-H", "-o", "value", "guid", "lustre1/MDT0000"),
