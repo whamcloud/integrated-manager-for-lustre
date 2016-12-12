@@ -18,6 +18,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     of tests, please see the *_testcase_mixin modules in this same directory.
     """
 
+    def __init__(self, methodName='runTest'):
+        super(ChromaIntegrationTestCase, self).__init__(methodName)
+        self._standard_filesystem_layout = None
+
     def get_named_profile(self, profile_name):
         all_profiles = self.chroma_manager.get('/api/server_profile/').json['objects']
         filtered_profile = [profile for profile in all_profiles if profile['name'] == profile_name]
@@ -355,22 +359,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
     @property
     def standard_filesystem_layout(self):
-        if not hasattr(self, '_standard_filesystem_layout'):
-            # Only want to calculate once in case ordering is nondeterministic
-            hosts = self.get_hosts()
-            self.assertGreaterEqual(4, len(hosts),
-                "Must have added at least 4 hosts before calling standard_filesystem_layout. Found '%s'" % hosts)
+        self.assertIsNotNone(self._standard_filesystem_layout)
 
-            # Count how many of the reported Luns are ready for our test
-            # (i.e. they have both a primary and a failover node)
-            ha_volumes = self.wait_for_shared_volumes(4, 4)
-
-            self._standard_filesystem_layout = {
-                'mgt': {'primary_host': hosts[0], 'failover_host': hosts[1], 'volume': ha_volumes[0]},
-                'mdt': {'primary_host': hosts[1], 'failover_host': hosts[0], 'volume': ha_volumes[1]},
-                'ost1': {'primary_host': hosts[2], 'failover_host': hosts[3], 'volume': ha_volumes[2]},
-                'ost2': {'primary_host': hosts[3], 'failover_host': hosts[2], 'volume': ha_volumes[3]},
-            }
         return self._standard_filesystem_layout
 
     def create_filesystem_standard(self, test_servers, name = 'testfs'):
@@ -380,7 +370,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(test_servers), 4)
         servers = [s['address'] for s in test_servers[:4]]
-        self.add_hosts(servers)
+        hosts = self.add_hosts(servers)
 
         # Set up power control for fencing -- needed to ensure that
         # failover completes. Pacemaker won't fail over the resource
@@ -388,39 +378,48 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         if config['failover_is_configured']:
             self.configure_power_control(servers)
 
-        # Set primary and failover mounts explicitly and check they
-        # are respected
-        self.set_volume_mounts(
-            self.standard_filesystem_layout['mgt']['volume'],
-            self.standard_filesystem_layout['mgt']['primary_host']['id'],
-            self.standard_filesystem_layout['mgt']['failover_host']['id']
-        )
-        self.set_volume_mounts(
-            self.standard_filesystem_layout['mdt']['volume'],
-            self.standard_filesystem_layout['mdt']['primary_host']['id'],
-            self.standard_filesystem_layout['mdt']['failover_host']['id']
-        )
-        self.set_volume_mounts(
-            self.standard_filesystem_layout['ost1']['volume'],
-            self.standard_filesystem_layout['ost1']['primary_host']['id'],
-            self.standard_filesystem_layout['ost1']['failover_host']['id']
-        )
-        self.set_volume_mounts(
-            self.standard_filesystem_layout['ost2']['volume'],
-            self.standard_filesystem_layout['ost2']['primary_host']['id'],
-            self.standard_filesystem_layout['ost2']['failover_host']['id']
-        )
+        self.assertGreaterEqual(4, len(hosts),
+                                "Must have added at least 4 hosts before calling standard_filesystem_layout. Found '%s'" % hosts)
+
+        # Count how many of the reported Luns are ready for our test
+        # (i.e. they have both a primary and a failover node)
+        ha_volumes = self.wait_for_shared_volumes(4, 4)
+
+        # Set primary and failover mounts explicitly and check they are respected
+        self.set_volume_mounts(ha_volumes[0], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[1], hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(ha_volumes[2], hosts[2]['id'], hosts[3]['id'])
+        self.set_volume_mounts(ha_volumes[3], hosts[3]['id'], hosts[2]['id'])
 
         # Create new filesystem
-        return self.create_filesystem(
-            {
-                'name': name,
-                'mgt': {'volume_id': self.standard_filesystem_layout['mgt']['volume']['id']},
-                'mdts': [{'volume_id': self.standard_filesystem_layout['mdt']['volume']['id'], 'conf_params': {}}],
-                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [self.standard_filesystem_layout['ost1']['volume'], self.standard_filesystem_layout['ost2']['volume']]],
-                'conf_params': {}
-            }
-        )
+        filesystem_id = self.create_filesystem({'name': name,
+                                                'mgt': {'volume_id': ha_volumes[0]['id']},
+                                                'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': {}}],
+                                                'osts': [{'volume_id': ha_volumes[2]['id'], 'conf_params': {}},
+                                                         {'volume_id': ha_volumes[3]['id'], 'conf_params': {}}],
+                                                'conf_params': {}})
+
+        filesystem = self.get_filesystem(filesystem_id)
+
+        # osts come back as uri's by default we want the objects so convert.
+        filesystem['osts'] = [self.get_json_by_uri(ost_uri) for ost_uri in filesystem['osts']]
+
+        self._standard_filesystem_layout = {
+            'mgt': {'primary_host': self.get_json_by_uri(filesystem['mgt']['primary_server']),
+                    'failover_host': self.get_json_by_uri(filesystem['mgt']['failover_servers'][0]),
+                    'volume': filesystem['mgt']['volume']},
+            'mdt': {'primary_host': self.get_json_by_uri(filesystem['mdts'][0]['primary_server']),
+                    'failover_host': self.get_json_by_uri(filesystem['mdts'][0]['failover_servers'][0]),
+                    'volume': filesystem['mdts'][0]['volume']},
+            'ost1': {'primary_host': self.get_json_by_uri(filesystem['osts'][0]['primary_server']),
+                     'failover_host': self.get_json_by_uri(filesystem['osts'][0]['failover_servers'][0]),
+                     'volume': filesystem['osts'][0]['volume']},
+            'ost2': {'primary_host': self.get_json_by_uri(filesystem['osts'][1]['primary_server']),
+                     'failover_host': self.get_json_by_uri(filesystem['osts'][1]['failover_servers'][0]),
+                     'volume': filesystem['osts'][1]['volume']},
+        }
+
+        return filesystem_id
 
     def create_filesystem(self, filesystem, verify_successful = True):
         """

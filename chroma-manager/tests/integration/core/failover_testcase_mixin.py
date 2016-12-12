@@ -112,9 +112,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
             command = response.json
             failback_target_command_ids.append(command['id'])
 
-        self._fetch_help(lambda: self.wait_for_commands(self.chroma_manager, failback_target_command_ids),
-                         ['chris.gearing@intel.com'],
-                         'failed to failback')
+        self.wait_for_commands(self.chroma_manager, failback_target_command_ids)
 
         # Wait for the targets to move back to their original server.
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state))
@@ -160,26 +158,25 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         hosts = response.json['objects']
 
         for target in targets:
-            if target['volume']['id'] in volumes_to_expected_hosts:
-                expected_host = volumes_to_expected_hosts[target['volume']['id']]
-                active_host = target['active_host']
-                if active_host is not None:
-                    active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
-                logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
+            expected_host = volumes_to_expected_hosts[target['volume']['id']]
+            active_host = target['active_host']
+            if active_host is not None:
+                active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
+            logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
 
-                # Check manager's view
-                if assert_true:
-                    self.assertEqual(expected_host['resource_uri'], target['active_host'])
-                else:
-                    if not expected_host['resource_uri'] == target['active_host']:
-                        return False
-
-                # Check corosync's view
-                is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
-                logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
-                if assert_true:
-                    self.assertEqual(is_running, True)
-                elif not is_running:
+            # Check manager's view
+            if assert_true:
+                self.assertEqual(expected_host['resource_uri'], target['active_host'])
+            else:
+                if not expected_host['resource_uri'] == target['active_host']:
                     return False
+
+            # Check corosync's view
+            is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
+            logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
+            if assert_true:
+                self.assertEqual(is_running, True)
+            elif not is_running:
+                return False
 
         return True

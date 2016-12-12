@@ -44,31 +44,30 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         self.ha_volumes = self.wait_for_shared_volumes(4, 2)
 
-        self.mgt_volume = self.ha_volumes[0]
-        self.mdt_volumes = self.ha_volumes[1:(1 + mdt_count)]
-        self.ost_volumes = self.ha_volumes[4:5]
+        mgt_volume = self.ha_volumes[0]
+        mdt_volumes = self.ha_volumes[1:(1 + mdt_count)]
+        ost_volumes = self.ha_volumes[4:5]
 
-        for volume in [self.mgt_volume] + self.mdt_volumes + self.ost_volumes:
+        for volume in [mgt_volume] + mdt_volumes + ost_volumes:
             self.set_volume_mounts(volume, self.hosts[0]['id'], self.hosts[1]['id'])
 
         self.filesystem_id = self.create_filesystem({'name': 'testfs',
-                                                     'mgt': {'volume_id': self.mgt_volume['id'],
+                                                     'mgt': {'volume_id': mgt_volume['id'],
                                                              'conf_params': {},
                                                              'reformat': True},
                                                      'mdts': [{
                                                                   'volume_id': v['id'],
                                                                   'conf_params': {},
                                                                   'reformat': True
-                                                              } for v in self.mdt_volumes],
+                                                              } for v in mdt_volumes],
                                                      'osts': [{
                                                                   'volume_id': v['id'],
                                                                   'conf_params': {},
                                                                   'reformat': True
-                                                              } for v in self.ost_volumes],
+                                                              } for v in ost_volumes],
                                                      'conf_params': {}})
 
-        return self.chroma_manager.get('/api/filesystem',
-                                       params = {'id': self.filesystem_id}).json['objects'][0]
+        return self.get_filesystem(self.filesystem_id)
 
     def _add_mdt(self, index, mdt_count):
         mdt_volumes = self.ha_volumes[1 + index:(1 + index + mdt_count)]
@@ -84,8 +83,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         for create_command in create_commands:
             self.wait_for_command(self.chroma_manager, create_command)
-
-        self.mdt_volumes += mdt_volumes
 
         return self.chroma_manager.get('/api/filesystem',
                                        params = {'id': self.filesystem_id}).json['objects'][0]

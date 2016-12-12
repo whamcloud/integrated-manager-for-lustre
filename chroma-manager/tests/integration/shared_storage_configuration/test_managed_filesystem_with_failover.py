@@ -11,9 +11,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
     TEST_SERVERS = config['lustre_servers'][0:4]
 
     def _test_create_filesystem_with_failover(self):
-        filesystem_id = self._fetch_help(lambda: self.create_filesystem_standard(self.TEST_SERVERS),
-                                         ['chris.gearing@intel.com'],
-                                         'Test createfile system failed')
+        filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)
 
         filesystem = self.get_filesystem(filesystem_id)
 
@@ -26,9 +24,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         }
 
         # Verify targets are started on the correct hosts
-        self._fetch_help(lambda: self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state),
-                         ['chris.gearing@intel.com'],
-                         'Verify targets failed')
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
         # Mount the filesystem
         self.assertTrue(filesystem['mount_command'])
