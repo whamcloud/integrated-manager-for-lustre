@@ -124,7 +124,7 @@ timeout=180
 EOF
     $PROXY yum install -y python-setuptools
     $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
-    if [[ \$(lsb_release -sr) =~ 6.* ]]; then
+    if [[ \$(lsb_release -sr) = 6.* ]]; then
         $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel-firmware
         if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
             rpm -Uvh --oldpackage kernel-firmware-*.rpm
