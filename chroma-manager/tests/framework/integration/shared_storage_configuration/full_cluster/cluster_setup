@@ -53,13 +53,12 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup manager on integration test runner, use rsync incase the connection is slow
-ssh root@$TEST_RUNNER yum install -y rsync
-rsync -avz $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+# Install and setup manager on integration test runner
+scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 # install cman here to test that the fence-agents-iml package is being a
-# "duck-like" replacement for fence -agents since cman depends on
+# 'duck-like' replacement for fence -agents since cman depends on
 # fence-agents
 yum -y install expect cman
 # Install from the installation package
