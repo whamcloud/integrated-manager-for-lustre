@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -50,13 +50,13 @@ def gerrit_changes(user, change_id):
 
 
 def run_command(args, exit_on_error=True):
-    result = Shell.run(args)
+    result = Shell.run(['time'] + args)
 
     if result.rc and exit_on_error:
         print "%s exited with error code %s, stdout %s" % (' '.join(args), result.rc, result.stderr)
         sys.exit(result.rc)
 
-    print "%s returned %s" % (" ".join(args), result.rc)
+    print "%s returned %s:%s:%s" % (" ".join(args), result.rc, result.stdout, result.stderr)
 
     return result
 
@@ -80,9 +80,12 @@ def make_pristine():
     # done the git submodule init, so the repo is not truely in existence.
     if os.path.isdir('chroma-externals'):
         os.chdir('chroma-externals')
+        run_command(['git', 'status'])
         run_command(['git', 'reset', '--hard'])
         run_command(['git', 'clean', '-dfx'])
         os.chdir('..')
+    else:
+        run_command(['git', 'submodule', 'init'])
 
 
 def fetch_chroma_externals(user, externals_sha1):
@@ -112,24 +115,26 @@ def fetch_chroma_externals(user, externals_sha1):
     run_command(['git', 'submodule', 'update'])
 
 
+def main():
+    make_pristine()
+
+    fetch_externals = run_command(['git', 'submodule', 'update'], False)
+
+    if fetch_externals.rc:
+        if 'fatal: reference is not a tree' not in fetch_externals.stderr:
+            print "git submodule update returned an unexpected error."
+            print "rc=%s" % fetch_externals.rc
+            print "stdout=%s" % fetch_externals.stdout
+            print "stderr=%s" % fetch_externals.stderr
+            sys.exit(-1)
+
+        user = git_user()
+
+        externals_sha1_re = re.search('fatal: reference is not a tree: ([a-z0-9]+)', fetch_externals.stderr)
+        externals_sha1 = externals_sha1_re.groups()[0]
+
+        fetch_chroma_externals(user, externals_sha1)
+
 # End of functions, start of execution.
-run_command(['git', 'submodule', 'init'])
 
-make_pristine()
-
-fetch_externals = run_command(['git', 'submodule', 'update'], False)
-
-if fetch_externals.rc:
-    if 'fatal: reference is not a tree' not in fetch_externals.stderr:
-        print "git submodule update returned an unexpected error."
-        print "rc=%s" % fetch_externals.rc
-        print "stdout=%s" % fetch_externals.stdout
-        print "stderr=%s" % fetch_externals.stderr
-        sys.exit(-1)
-
-    user = git_user()
-
-    externals_sha1_re = re.search('fatal: reference is not a tree: ([a-z0-9]+)', fetch_externals.stderr)
-    externals_sha1 = externals_sha1_re.groups()[0]
-
-    fetch_chroma_externals(user, externals_sha1)
+main()
