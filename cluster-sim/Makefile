@@ -4,7 +4,7 @@ include ../include/Makefile.version
 ifeq ($(DISTRO_TAG), el6)
 	FENCE_AGENTS_URL    := http://vault.centos.org/6.4/os/x86_64/Packages/fence-agents-3.1.5-25.el6.x86_64.rpm
 else ifeq ($(DISTRO_TAG), el7)
-	FENCE_AGENTS_URL    := http://mirror.centos.org/centos-7/7/os/x86_64/Packages/fence-agents-{common,apc}-4.0.11-27.el7.x86_64.rpm
+	FENCE_AGENTS_URL    := http://mirror.centos.org/centos-7/7/os/x86_64/Packages/fence-agents-{common,apc}-4.0.11-47.el7.x86_64.rpm
 else
 	$(error "Unknown major distro version $(DISTRO_TAG)")
 endif
@@ -55,6 +55,7 @@ $(RPM2CPIO):
 # by manager. Different rpms required in el6/el7 distros.
 $(FENCE_APC): $(RPM2CPIO)
 	echo "Distro: $(DISTRO)"
+	set -e; \
 	tmpdir=$$(mktemp -d -t fence.XXXX); \
 	venv=$$(dirname $$(dirname $(FENCE_APC))); \
 	cd $$tmpdir && curl --remote-name-all $(FENCE_AGENTS_URL); \
