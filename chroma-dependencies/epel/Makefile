@@ -33,7 +33,7 @@ ALL_RPMS       := pcapy-0.10.8-5.el7.x86_64.rpm \
                   erlang-stdlib-R16B-03.11.el7.x86_64.rpm \
                   erlang-syntax_tools-R16B-03.11.el7.x86_64.rpm \
                   erlang-tools-R16B-03.11.el7.x86_64.rpm \
-                  dkms-2.2.0.3-34.git.9e0394d.el7.noarch.rpm
+		  dkms-2.3-1.20161202gitde1dca9.el7.noarch.rpm
 # this python-daemon silliness is because, bucking convention (and avoiding
 # duplication), there is an actual pypi package named python-daemon and there
 # is a heuristic in all of this requirements generation to remove any leading
@@ -82,7 +82,7 @@ ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   wxBase-2.8.12-1.el6.x86_64.rpm \
                   wxGTK-2.8.12-1.el6.x86_64.rpm \
                   wxGTK-gl-2.8.12-1.el6.x86_64.rpm \
-                  dkms-2.2.0.3-34.git.9e0394d.el6.noarch.rpm
+		  dkms-2.3-1.20161202gitde1dca9.el6.noarch.rpm
 REQUIREMENTS   += python-daemon==1.5.2
 else
 $(error "Unknown major el version $(EL_MAJOR)")
