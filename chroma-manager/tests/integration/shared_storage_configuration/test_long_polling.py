@@ -176,17 +176,21 @@ class TestLongPollingLocks(LongPollingTestCase):
 
         self._wait_response_count(1)
 
-        # Do an update because this locks the host but makes no others changes.
-        self.chroma_manager.post("/api/command/", body={'jobs': [{'class_name': 'UpdateJob',
-                                                                  'args': {'host_id': host['id']}}],
-                                                        'message': "Test Long Polling Locks"})
+        # To stop races, allow the long polling thread to exit before we start checking
+        # It needs an update to /api/host before the thread can join
+        self.long_polling_end_point.exit = True
+
+        # Do an update because this locks the host but makes no others changes
+        response = self.chroma_manager.post("/api/command/", body={'jobs': [{'class_name': 'UpdateJob',
+                                                                             'args': {'host_id': host['id']}}],
+                                                                   'message': "Test Long Polling Locks"})
 
         self._wait_response_count(2)
 
-        # To stop races, allow the long polling thread to exit before we start checking
-        # It needs an update to exit, so this is just playing safe.
-        self.long_polling_end_point.exit = True
         self.long_polling_end_point.join()
+
+        # Ensure update command completes before we exit the test
+        self.wait_for_command(self.chroma_manager, response.json['id'])
 
         # The locks should be the only change, and hence the thing that triggered the update
         original_host = self.long_polling_end_point.responses[0].json['objects'][0]
