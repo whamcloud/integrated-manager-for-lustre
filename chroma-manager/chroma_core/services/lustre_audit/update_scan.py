@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -268,7 +268,8 @@ class UpdateScan(object):
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
-                                        managedtargetmount__host=self.host).downcast()
+                                        managedtargetmount__host=self.host,
+                                        managedtargetmount__not_deleted=True).downcast()
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             log.warning("Discarding metrics for unknown target: %s" % target_name)
