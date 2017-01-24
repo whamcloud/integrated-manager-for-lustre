@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -90,7 +90,7 @@ def configure_corosync2_stage_2(ring0_name, ring1_name, new_node_fqdn, mcast_por
                                                       mcastport=mcast_port), None, None)]
 
     config_params = {
-        'token': '5000',
+        'token': '17000',
         'fail_recv_const': '10',
         'transport': 'udp',
         'rrpmode': 'passive',

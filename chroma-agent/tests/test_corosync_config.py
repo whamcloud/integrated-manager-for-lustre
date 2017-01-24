@@ -251,7 +251,7 @@ class TestConfigureCorosync(CommandCaptureTestCase):
                          "--addr1", str(r1.bindnetaddr),
                          "--mcast1", str(r1.mcastaddr),
                          "--mcastport1", str(r1.mcastport),
-                         "--token", "5000",
+                         "--token", "17000",
                          "--fail_recv_const", "10"))
 
         # ...then corosync / pcsd
