@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -34,6 +34,9 @@ STR_TO_SEVERITY = dict([(logging.getLevelName(level), level) for level in [
     logging.CRITICAL,
     logging.WARNING,
     logging.DEBUG]])
+
+# Default django max_length for CharField
+CHARFIELD_MAX_LENGTH = 1024
 
 
 class DeletableDowncastableManager(DowncastManager):

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,15 +23,23 @@
 import os
 import uuid
 from collections import namedtuple
+
 from django.db import models
 from django.utils.timezone import now as tznow
 
 from chroma_core.services import log_register
-from chroma_core.lib.job import DependOn, DependAll, Step
+from chroma_core.lib.job import DependOn
+from chroma_core.lib.job import DependAll
+from chroma_core.lib.job import Step
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.client_mount import LustreClientMount
-from chroma_core.models.jobs import StatefulObject, StateChangeJob, Job, AdvertisedJob
-from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models.jobs import StateChangeJob
+from chroma_core.models.jobs import StatefulObject
+from chroma_core.models.jobs import Job
+from chroma_core.models.jobs import AdvertisedJob
+from chroma_core.models.utils import DeletableDowncastableMetaclass
+from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
+from chroma_core.models.utils import MeasuredEntity
 from chroma_help.help import help_text
 from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
@@ -83,11 +91,24 @@ class CopytoolOperation(models.Model):
     started_at = models.DateTimeField(null = True, blank = True)
     updated_at = models.DateTimeField(null = True, blank = True)
     finished_at = models.DateTimeField(null = True, blank = True)
-    processed_bytes = models.BigIntegerField(null = True, blank = True, help_text = "Count of bytes processed so far for running operation")
-    total_bytes = models.BigIntegerField(null = True, blank = True, help_text = "Expected total bytes for running operation")
-    path = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), null = True, blank = True, help_text = "Lustre path of file")
-    fid = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), null = True, blank = True, help_text = "Lustre FID of file")
-    info = models.CharField(max_length = 256, null = True, blank = True, help_text = "Additional information, if available")
+    processed_bytes = models.BigIntegerField(null = True,
+                                             blank = True,
+                                             help_text = "Count of bytes processed so far for running operation")
+    total_bytes = models.BigIntegerField(null = True,
+                                         blank = True,
+                                         help_text = "Expected total bytes for running operation")
+    path = models.CharField(max_length = CHARFIELD_MAX_LENGTH,
+                            null = True,
+                            blank = True,
+                            help_text = "Lustre path of file")
+    fid = models.CharField(max_length = CHARFIELD_MAX_LENGTH,
+                           null = True,
+                           blank = True,
+                           help_text = "Lustre FID of file")
+    info = models.CharField(max_length = 256,
+                            null = True,
+                            blank = True,
+                            help_text = "Additional information, if available")
 
     def __str__(self):
         return "%s %s" % (self.STATE_CHOICES[self.state][1],
@@ -160,13 +181,21 @@ class Copytool(StatefulObject, MeasuredEntity):
     HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL = 131072  # characters
 
     host = models.ForeignKey('ManagedHost', related_name="copytools")
-    index = models.IntegerField(default = 0, help_text = "Instance index, used to uniquely identify per-host path-filesystem-archive instances")
-    bin_path = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Path to copytool binary on HSM worker node")
+    index = models.IntegerField(default = 0,
+                                help_text = "Instance index, used to uniquely identify per-host path-filesystem-archive instances")
+    bin_path = models.CharField(max_length = CHARFIELD_MAX_LENGTH,
+                                help_text = "Path to copytool binary on HSM worker node")
     archive = models.IntegerField(default = 1, help_text = "HSM archive number")
     filesystem = models.ForeignKey('ManagedFilesystem')
-    mountpoint = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Lustre mountpoint on HSM worker node", default = "/mnt/lustre")
-    hsm_arguments = models.CharField(max_length = HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL, help_text = "Copytool arguments that are specific to the HSM implementation")
-    uuid = models.CharField(max_length = len("%s" % uuid.uuid4()), null = True, blank = True, help_text = "UUID as assigned by cdt")
+    mountpoint = models.CharField(max_length = CHARFIELD_MAX_LENGTH,
+                                  help_text = "Lustre mountpoint on HSM worker node",
+                                  default = "/mnt/lustre")
+    hsm_arguments = models.CharField(max_length = HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL,
+                                     help_text = "Copytool arguments that are specific to the HSM implementation")
+    uuid = models.CharField(max_length = len("%s" % uuid.uuid4()),
+                            null = True,
+                            blank = True,
+                            help_text = "UUID as assigned by cdt")
     pid = models.IntegerField(null = True, blank = True, help_text = "Current PID, if known")
     client_mount = models.ForeignKey('LustreClientMount', null = True, blank = True, related_name = 'copytools')
 

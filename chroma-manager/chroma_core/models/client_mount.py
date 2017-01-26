@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,11 +20,10 @@
 # express and approved by Intel in writing.
 
 
-import os
-
 from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
 from chroma_core.models.jobs import DeletableStatefulObject
 from chroma_core.models.jobs import StateChangeJob
@@ -37,7 +36,10 @@ from chroma_help.help import help_text
 class LustreClientMount(DeletableStatefulObject):
     host = models.ForeignKey('ManagedHost', help_text = "Mount host", related_name="client_mounts")
     filesystem = models.ForeignKey('ManagedFilesystem', help_text = "Mounted filesystem")
-    mountpoint = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Filesystem mountpoint on host", null = True, blank = True)
+    mountpoint = models.CharField(max_length = CHARFIELD_MAX_LENGTH,
+                                  help_text = "Filesystem mountpoint on host",
+                                  null = True,
+                                  blank = True)
 
     states = ['unmounted', 'mounted', 'removed']
     initial_state = 'unmounted'
