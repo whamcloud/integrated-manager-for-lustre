@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -26,6 +26,7 @@ import Queue
 
 from chroma_core.services.log import log_register
 from chroma_core.models import PowerControlDevice, PowerControlDeviceUnavailableAlert, IpmiBmcUnavailableAlert
+from settings import DISABLE_POWER_CONTROL_DEVICE_MONITORING
 
 
 log = log_register(__name__.split('.')[-1])
@@ -78,6 +79,9 @@ class PowerDeviceMonitor(threading.Thread):
             raise e
 
     def _check_monitored_device(self):
+        if DISABLE_POWER_CONTROL_DEVICE_MONITORING:
+            return
+
         if self.device.is_ipmi:
             # Check to see if we can log into each BMC and that they're
             # responsive to commands.

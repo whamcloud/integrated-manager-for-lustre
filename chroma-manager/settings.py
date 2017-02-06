@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -259,6 +259,16 @@ STATS_FLUSH_RATE = 20                       # Flush 20 times per expiration inte
 # When agent sends VPD 0x80 and 0x83 serial numbers, which do we prefer to use
 # for the canonical device serial on the manager?  Favorite first.
 SERIAL_PREFERENCE = ['serial_83', 'serial_80']
+
+# Use this to disable the manager's monitoring of your power control devices
+# (eg, BMC, PDU outlets, etc.) This is necessary for sites where the manager
+# server does not have access to the power control devices itself. However,
+# IML will then *NO LONGER REPORT ANY FAILURE IN ANY POWER CONTROL DEVICES*.
+# If power control becomes non-operational, automatic failover will not occur
+# on failure, and manual intervention will be required to restore service to
+# your file system. We recommend putting external monitoring in place if you
+# disable this monitoring from the IML Manager.
+DISABLE_POWER_CONTROL_DEVICE_MONITORING = False
 
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
