@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -95,9 +95,16 @@ def fetch_chroma_externals(user, externals_sha1):
         print "Unable to find git commit for chroma-externals sha1 %s" % externals_sha1
         sys.exit(-1)
 
+    # Find the chroma-externals changeset
+    try:
+        ce_changeset = next(change for change in changes if change['project'] == 'chroma-externals')
+    except StopIteration:
+        print "Unable to find the chroma-externals changeset"
+        sys.exit(-1)
+
     # Find the patch set ref
     try:
-        ref = next(change['ref'] for change in changes[0]['patchSets'] if change['revision'] == externals_sha1)
+        ref = next(change['ref'] for change in ce_changeset['patchSets'] if change['revision'] == externals_sha1)
     except StopIteration:
         print "Unable to find gerrit patchset for chroma-externals sha1 %s" % externals_sha1
         sys.exit(-1)
