@@ -36,6 +36,7 @@ from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models import StonithNotEnabledAlert
 from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
@@ -293,6 +294,22 @@ class ManagedTarget(StatefulObject):
         # Local imports to avoid inter-model import dependencies
         volume = Volume.objects.get(pk = volume_id)
 
+        try:
+            primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
+
+        except VolumeNode.DoesNotExist:
+            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
+        except VolumeNode.MultipleObjectsReturned:
+            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+
+        host = primary_volume_node.host
+        corosync_configuration = host.corosync_configuration
+        stonith_not_enabled = len(StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id)) > 0
+
+        if stonith_not_enabled:
+            raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
+
+
         target = cls_(**kwargs)
         target.volume = volume
 
@@ -334,13 +351,7 @@ class ManagedTarget(StatefulObject):
             target_mounts.append(mount)
 
         if create_target_mounts:
-            try:
-                primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
-                create_target_mount(primary_volume_node)
-            except VolumeNode.DoesNotExist:
-                raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
-            except VolumeNode.MultipleObjectsReturned:
-                raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+            create_target_mount(primary_volume_node)
 
             for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
                 create_target_mount(secondary_volume_node)

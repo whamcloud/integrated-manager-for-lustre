@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -31,6 +31,7 @@ from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.models import CorosyncNoPeersAlert
+from chroma_core.models import StonithNotEnabledAlert
 from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register(__name__)
@@ -108,6 +109,11 @@ class Service(ChromaService):
             nodes = body['crm_info']['nodes']
             dt = body['crm_info']['datetime']
 
+            options = body['crm_info'].get('options', {
+                'stonith_enabled': None
+            })
+            stonith_enabled = options['stonith_enabled']
+
             try:
                 dt = IMLDateTime.parse(dt)
             except ValueError:
@@ -120,8 +126,8 @@ class Service(ChromaService):
                         self._host_status[peer_node_identifier].datetime < dt)
 
             peers_str = "; ".join(["%s: online=%s, new=%s" %
-                                    (peer_node_identifier, data['online'], is_new(peer_node_identifier))
-                                    for peer_node_identifier, data in nodes.items()])
+                                   (peer_node_identifier, data['online'], is_new(peer_node_identifier))
+                                   for peer_node_identifier, data in nodes.items()])
             log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
             # NB: This will ignore any unknown peers in the report.
@@ -136,8 +142,11 @@ class Service(ChromaService):
             if unknown_nodes:
                 log.warning("Unknown nodes in report from %s: %s" % (fqdn, unknown_nodes))
 
+            if stonith_enabled is not None:
+                StonithNotEnabledAlert.notify(host.corosync_configuration, stonith_enabled is False)
+
             CorosyncNoPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) == 1)
-            #CorosyncToManyPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) > 2)
+            # CorosyncToManyPeersAlert.notify(host.corosync_configuration, len(cluster_nodes) > 2)
 
             #  Consider all nodes in the peer group for this reporting agent
             for host in cluster_nodes:
@@ -179,7 +188,7 @@ class Service(ChromaService):
 
                     #  Keep internal track of the hosts state.
                     self._host_status[node_identifier] = self.HostStatus(status=host_reported_online,
-                                                                       datetime=dt)
+                                                                         datetime=dt)
 
     def run(self):
         super(Service, self).run()

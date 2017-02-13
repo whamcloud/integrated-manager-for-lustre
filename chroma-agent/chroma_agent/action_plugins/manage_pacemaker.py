@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -163,7 +163,7 @@ def _do_configure_pacemaker(pc):
                                 {"no-quorum-policy": no_quorum_policy,
                                  "symmetric-cluster": "true",
                                  "cluster-infrastructure": "openais",
-                                 "stonith-enabled": "false"})
+                                 "stonith-enabled": "true"})
 
     def set_rsc_default(name, value):
         '''
@@ -176,8 +176,8 @@ def _do_configure_pacemaker(pc):
                                                     "--attr-name", name, "--attr-value", value])
 
     return set_rsc_default("resource-stickiness", "1000") or \
-           set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW) or \
-           set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
+        set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW) or \
+        set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
 
 
 def configure_fencing(agents):
@@ -194,7 +194,7 @@ def configure_fencing(agents):
         node.set_fence_attributes(idx, agent)
 
     pc.create_update_properyset("cib-bootstrap-options",
-                                {"stonith-enabled": "true" if (len(agents) > 0) else "false"})
+                                {"stonith-enabled": "true"})
 
 
 def set_node_standby(node):

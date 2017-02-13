@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -92,6 +92,15 @@ class CorosyncPlugin(DevicePlugin):
                 nodes.update({host: node.attrib})
 
             return_dict['nodes'] = nodes
+
+            return_dict['options'] = {
+                'stonith_enabled': False
+            }
+
+            cluster_options = root.find('summary/cluster_options')
+
+            if cluster_options is not None:
+                return_dict['options'].update({'stonith_enabled': cluster_options.get('stonith-enabled') == 'true'})
 
         return return_dict
 

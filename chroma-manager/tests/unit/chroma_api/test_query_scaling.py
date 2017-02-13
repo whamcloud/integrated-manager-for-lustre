@@ -8,7 +8,7 @@ from chroma_api.log import LogResource
 from chroma_api.target import TargetResource
 from chroma_api.volume import VolumeResource
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import LogMessage, ManagedHost, LNetConfiguration, VolumeNode, Volume, ManagedFilesystem, ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst
+from chroma_core.models import LogMessage, ManagedHost, LNetConfiguration, VolumeNode, Volume, ManagedFilesystem, ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst, CorosyncConfiguration
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import fake_log_message, synthetic_volume
 
@@ -132,6 +132,7 @@ class TestQueryScaling(ChromaApiTestCase):
 
             host = ManagedHost.objects.create(fqdn = hostname, nodename = hostname, address = hostname)
             LNetConfiguration.objects.get_or_create(host = host)
+            CorosyncConfiguration.objects.get_or_create(host=host)
 
     def _create_san_volumes(self, n_servers, n_volumes):
         """SAN-like volume configuration with each volume connected to all servers"""

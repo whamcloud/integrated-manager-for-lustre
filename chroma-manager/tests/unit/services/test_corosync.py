@@ -6,6 +6,7 @@ from django.utils.timezone import now
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
+from chroma_core.models import StonithNotEnabledAlert
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.models import PacemakerConfiguration
@@ -35,7 +36,8 @@ class CorosyncTestCase(IMLUnitTestCase):
                          utc_iso_date_str="2013-01-11T19:04:07+00:00",
                          node_status_list=None,
                          corosync_state='started',
-                         pacemaker_state='started'):
+                         pacemaker_state='started',
+                         stonith_enabled=True):
         """Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
@@ -52,19 +54,25 @@ class CorosyncTestCase(IMLUnitTestCase):
             for hs in node_status_list:
                 node = hs[0]
                 status = hs[1]  # 'true' or 'false'
-                node_dict = {node.nodename: {
-                                "name": node.nodename, "standby": "false",
-                                "standby_onfail": "false",
-                                "expected_up": "true",
-                                "is_dc": "true", "shutdown": "false",
-                                "online": status, "pending": "false",
-                                "type": "member", "id": node.nodename,
-                                "resources_running": "0", "unclean": "false"}}
+                node_dict = {
+                    node.nodename: {
+                        "name": node.nodename, "standby": "false",
+                        "standby_onfail": "false",
+                        "expected_up": "true",
+                        "is_dc": "true", "shutdown": "false",
+                        "online": status, "pending": "false",
+                        "type": "member", "id": node.nodename,
+                        "resources_running": "0", "unclean": "false"
+                    }
+                }
                 nodes.update(node_dict)
 
         #  Second create the message with the nodes and other envelope data.
         message = {"crm_info": {"nodes": nodes,
-                                "datetime": utc_iso_date_str},
+                                "datetime": utc_iso_date_str,
+                                "options": {
+                                    "stonith_enabled": stonith_enabled
+                                }},
                    "state": {'pacemaker': pacemaker_state,
                              'corosync': corosync_state}}
 
@@ -320,3 +328,23 @@ class CorosyncTests(CorosyncTestCase):
                     job_scheduler_notify.notify.assert_any_call(node.pacemaker_configuration,
                                                                 MOCKED_NOW_VALUE,
                                                                 {'state': pacemaker_state})
+
+    def test_stonith_not_enabled(self):
+        """Users may set stonith to enabled=False (or may remove the option)
+
+        Make sure we raise an alert in this case
+        """
+
+        msg_date = "2013-01-11T19:04:07+00:00"
+        node1 = self.make_managed_host('node1')
+        node2 = self.make_managed_host('node2')
+        nodes = ((node1, ONLINE), (node2, ONLINE))
+
+        self.corosync_service.on_data(
+            node1.fqdn, self.get_test_message(msg_date,
+                                              nodes,
+                                              stonith_enabled=False)
+        )
+
+        alerts_raised = StonithNotEnabledAlert.objects.count()
+        self.assertEqual(alerts_raised, 1)

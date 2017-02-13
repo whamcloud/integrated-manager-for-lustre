@@ -82,6 +82,31 @@ class PacemakerConfiguration(DeletableStatefulObject):
         pass
 
 
+class StonithNotEnabledAlert(AlertStateBase):
+    default_severity = logging.ERROR
+
+    class Meta:
+        app_label = 'chroma_core'
+        db_table = AlertStateBase.table_name
+
+    def alert_message(self):
+        return help_text['stonith_not_enabled'] % self.alert_item
+
+    def end_event(self):
+        return AlertEvent(
+            message_str=help_text['stonith_enabled'] % self.alert_item,
+            alert_item=self.alert_item,
+            alert=self,
+            severity=logging.INFO)
+
+    @property
+    def affected_objects(self):
+        """
+        :return: A list of objects that are affected by this alert
+        """
+        return [self.alert_item.host]
+
+
 class PacemakerStoppedAlert(AlertStateBase):
     # Pacemaker being down is never solely responsible for a filesystem
     # being unavailable: if a target is offline we will get a separate

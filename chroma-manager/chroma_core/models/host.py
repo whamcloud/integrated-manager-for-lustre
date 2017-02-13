@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -700,9 +700,9 @@ class RebootIfNeededStep(Step):
         # Check if we are running the required (lustre) kernel
         kernel_status = self.invoke_agent(host, 'kernel_status')
 
-        reboot_needed = (kernel_status['running'] != kernel_status['required']
-                         and kernel_status['required']
-                         and kernel_status['required'] in kernel_status['available'])
+        reboot_needed = (kernel_status['running'] != kernel_status['required'] and
+                         kernel_status['required'] and
+                         kernel_status['required'] in kernel_status['available'])
         if reboot_needed:
             self.log("Reboot of %s required to switch from running kernel %s to required %s" % (
                 host, kernel_status['running'], kernel_status['required']))

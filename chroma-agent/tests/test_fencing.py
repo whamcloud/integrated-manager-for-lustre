@@ -107,17 +107,6 @@ class TestAgentConfiguration(FencingTestCase):
         # HYD-2104: Ensure that the N_fence_agent attribute was added last.
         self.assertRanAllCommandsInOrder()
 
-    def test_empty_agents_clears_fence_config(self):
-        for key in self.fake_node_attributes:
-            self.add_command(('crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key))
-
-        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="false"/>\n'))
-
-        configure_fencing([])
-
-        # HYD-2104: Ensure that the N_fence_agent attribute was removed first.
-        self.assertRanAllCommandsInOrder()
-
     def test_node_standby(self):
         self.add_command(('crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'))
         set_node_standby(self.fake_node_hostname)

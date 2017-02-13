@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -221,6 +221,8 @@ help_text = {
 
     'access_denied_eula': 'To proceed, a superuser must first login and accept the EULA.',
     'continue_as_anonymous': 'Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software.',
+    'stonith_not_enabled': 'stonith-enabled is false on %s. This can cause device corruption. Target creation is forbidden in this state. Ensure that stonith-enabled is set to true.',
+    'stonith_enabled': 'stonith-enabled set to true on %s',
     'eula': """
         <h4>Intel&reg; Enterprise Edition for Lustre* software</h4>
         <br />

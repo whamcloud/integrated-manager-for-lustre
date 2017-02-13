@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -217,6 +217,9 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
         #  Second create the message with the nodes and other envelope data.
         message = {'crm_info': {'nodes': nodes,
+                                'options': {
+                                    'stonith_enabled': True
+                                },
                                 'datetime': utc_iso_date_str},
                    'state': {'corosync': self._server.state['corosync'].state,
                              'pacemaker': self._server.state['pacemaker'].state}}
@@ -239,7 +242,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         log.debug('cluster nodes:  %s' % self._server._cluster.state['nodes'])
 
         nodes = [(node_dict['nodename'], node_dict['online']) for node_dict
-                            in self._server._cluster.state['nodes'].values()]
+                 in self._server._cluster.state['nodes'].values()]
 
         log.debug('Nodes and state:  %s' % nodes)
 
