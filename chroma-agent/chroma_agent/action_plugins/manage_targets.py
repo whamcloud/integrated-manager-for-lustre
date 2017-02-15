@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -473,9 +473,14 @@ def import_target(device_type, path, pacemaker_ha_operation, validate_importable
     blockdevice = BlockDevice(device_type, path)
 
     error = blockdevice.import_(pacemaker_ha_operation)
+    if error:
+        console_log.error("Error importing pool: '%s'" % error)
 
     if (error is None) and (validate_importable is True):
         error = blockdevice.export()
+
+        if error:
+            console_log.error("Error exporting pool: '%s'" % error)
 
     return agent_ok_or_error(error)
 
@@ -491,7 +496,12 @@ def export_target(device_type, path):
 
     blockdevice = BlockDevice(device_type, path)
 
-    return agent_ok_or_error(blockdevice.export())
+    error = blockdevice.export()
+
+    if error:
+      console_log.error("Error exporting pool: '%s'" % error)
+
+    return agent_ok_or_error(error)
 
 
 def _wait_target(ha_label, started):
@@ -699,9 +709,10 @@ def target_running(uuid):
     from chroma_agent.utils import Mounts
     try:
         info = _get_target_config(uuid)
-    except (KeyError, TypeError):
+    except (KeyError, TypeError) as e:
         # it can't possibly be running here if the config entry for
         # it doesn't even exist, or if the store doesn't even exist!
+        console_log.warning("Exception getting target config: '%s'" % e)
         _exit(1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -711,6 +722,7 @@ def target_running(uuid):
         if (mntpnt == info['mntpt']) and filesystem.devices_match(device, info['bdev'], uuid):
             _exit(0)
 
+    console_log.warning("Did not find mount with matching mntpt and device for %s" % uuid)
     _exit(1)
 
 
