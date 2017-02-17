@@ -11,6 +11,7 @@ ALL_RPMS       := pcapy-0.10.8-5.el7.x86_64.rpm \
                   python-ordereddict-1.1-6.el7.noarch.rpm \
                   python-simplejson-3.3.3-1.el7.x86_64.rpm \
                   python-anyjson-0.3.3-3.el7.noarch.rpm \
+                  python2-paramiko-1.16.1-2.el7.noarch.rpm \
                   python2-crypto-2.6.1-13.el7.x86_64.rpm \
                   libtomcrypt-1.17-23.el7.x86_64.rpm \
                   libtommath-0.42.0-4.el7.x86_64.rpm \
@@ -39,14 +40,14 @@ ALL_RPMS       := pcapy-0.10.8-5.el7.x86_64.rpm \
 # duplication), there is an actual pypi package named python-daemon and there
 # is a heuristic in all of this requirements generation to remove any leading
 # python- from package names supplied in $(ALL_RPMS)
-REQUIREMENTS   += pycrypto==2.6.1 python-daemon==1.6
-NO_REQUIREMENT += python2-crypto python2-ecdsa erlang-erts erlang-mnesia \
-                  erlang-os_mon erlang-sasl erlang-xmerl erlang-asn1 \
-                  erlang-compiler erlang-crypto erlang-hipe erlang-inets \
-                  erlang-kernel erlang-otp_mibs erlang-public_key \
-                  erlang-runtime_tools erlang-snmp erlang-ssl erlang-stdlib \
-                  erlang-syntax_tools erlang-tools python-simplejson \
-                  libtomcrypt libtommath
+REQUIREMENTS   += pycrypto==2.6.1 python-daemon==1.6 paramiko==1.16.1
+NO_REQUIREMENT += python2-crypto python2-ecdsa python2-paramiko \
+                  erlang-erts erlang-mnesia erlang-os_mon erlang-sasl \
+                  erlang-xmerl erlang-asn1 erlang-compiler erlang-crypto \
+                  erlang-hipe erlang-inets erlang-kernel erlang-otp_mibs \
+                  erlang-public_key erlang-runtime_tools erlang-snmp \
+                  erlang-ssl erlang-stdlib erlang-syntax_tools erlang-tools \
+                  python-simplejson libtomcrypt libtommath
 else ifeq ($(EL_MAJOR), 6)
 ALL_RPMS       := pcapy-0.10.5-6.el6.x86_64.rpm \
                   python-argparse-1.2.1-2.el6.noarch.rpm \
