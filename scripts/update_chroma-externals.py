@@ -32,10 +32,15 @@ from chroma_common.lib.shell import Shell
 def gerrit_changes(user, change_id):
     changes = []
 
+    if user:
+        user_at = "%s@" % user
+    else:
+        user_at = ''
+
     for line in run_command(['ssh',
                              '-p',
                              '29418',
-                             '%s@review.whamcloud.com' % user,
+                             '%sreview.whamcloud.com' % user_at,
                              'gerrit query',
                              '--format', 'JSON',
                              '--patch-sets', change_id]).stdout.split('\n'):
@@ -49,24 +54,25 @@ def gerrit_changes(user, change_id):
     return changes
 
 
-def run_command(args, exit_on_error=True):
+def run_command(args, exit_on_error=True, silent=False):
     result = Shell.run(['time'] + args)
 
     if result.rc and exit_on_error:
         print "%s exited with error code %s, stdout %s" % (' '.join(args), result.rc, result.stderr)
         sys.exit(result.rc)
 
-    print "%s returned %s:%s:%s" % (" ".join(args), result.rc, result.stdout, result.stderr)
+    if not silent:
+        print "%s returned %s:%s:%s" % (" ".join(args), result.rc, result.stdout, result.stderr)
 
     return result
 
 
 def git_user():
     try:
-        fetch_url = run_command(['bash', '-c', 'git remote show origin | grep "Fetch URL:"']).stdout
-        user = re.search("Fetch URL: [a-z]*://([a-z]*)", fetch_url).groups()[0]
+        fetch_url = run_command(['git', 'remote', 'show', 'origin']).stdout
+        user = re.search("Fetch URL: ((https?|ssh)://([a-z]*)@", fetch_url).groups()[1]
     except:
-        user = 'hudson'
+        user = None
 
     print "Git user is %s" % user
 
@@ -109,11 +115,16 @@ def fetch_chroma_externals(user, externals_sha1):
         print "Unable to find gerrit patchset for chroma-externals sha1 %s" % externals_sha1
         sys.exit(-1)
 
+    if user:
+        user_at = "%s@" % user
+    else:
+        user_at = ''
+
     # Now fetch the appropriate sha1 from gerrit.
     os.chdir('chroma-externals')
     run_command(['git',
                  'fetch',
-                 'ssh://%s@review.whamcloud.com:29418/chroma-externals' % user,
+                 'ssh://%sreview.whamcloud.com:29418/chroma-externals' % user_at,
                  ref])
     run_command(['git', 'checkout', 'FETCH_HEAD'])
     os.chdir('..')
@@ -141,6 +152,17 @@ def main():
         externals_sha1 = externals_sha1_re.groups()[0]
 
         fetch_chroma_externals(user, externals_sha1)
+
+    # Show where chroma-externals is now
+    print "chroma-externals now at:"
+    os.chdir('chroma-externals')
+    print run_command(['git', 'log', '--format=short', '-n', '1'], silent=True).stdout
+    os.chdir('..')
+
+    # Verify that chroma-externals has content in it
+    if not len(os.listdir("chroma-externals")):
+        print "chroma-externals dir is empty.  Update failed."
+        sys.exit(-1)
 
 # End of functions, start of execution.
 
