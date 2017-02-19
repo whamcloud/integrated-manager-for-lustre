@@ -648,12 +648,12 @@ class RealRemoteOperations(RemoteOperations):
             rsc_locations = configuration.findall('./configuration/constraints/rsc_location')
             self._test_case.assertTrue(host_has_location(rsc_locations,
                                                          host),
-                                       configuration)
+                                       xml.tostring(configuration))
 
             primatives = configuration.findall('./configuration/resources/primitive')
             self._test_case.assertTrue(has_primitive(primatives,
                                                      filesystem_name),
-                                       configuration)
+                                       xml.tostring(configuration))
 
     def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
         """

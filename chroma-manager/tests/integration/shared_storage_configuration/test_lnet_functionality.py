@@ -15,17 +15,15 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         super(TestLNetFunctionality, self).setUp()
 
         # Create a host with all the bits working.
-        self.create_filesystem_simple()
+        self.create_filesystem_standard(self.TEST_SERVERS)
 
-        host = self.get_list("/api/host/", args={'fqdn': self.TEST_SERVERS[0]['fqdn']})
-        self.assertEqual(len(host), 1, "Expected a single host to be returned got %s" % len(host))
-        self.host = host[0]
+        self.hosts = self.get_list("/api/host/", args={'fqdn': self.TEST_SERVERS[0]['fqdn']})
 
         self.states = ['lnet_up', 'lnet_down', 'lnet_unloaded']
         self.state_order = itertools.cycle([1, 0, 2, 0, 2, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0, 1, 0, 2, 0, 1, 0, 2, 1, 0, 1, 2, 0, 1, 2, 1, 2, 1, 2, 0, 2, 1, 2, 1, 0, 2, 1, 2, 1, 0])
 
     def test_nids(self):
-        lnetinfo = self._get_lnet_info(self.host)
+        lnetinfo = self._get_lnet_info(self.hosts[0])
 
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
@@ -42,7 +40,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         self.post_by_uri('/api/nid/', {'objects': objects})
 
         # Now see what we have.
-        lnetinfo = self._get_lnet_info(self.host)
+        lnetinfo = self._get_lnet_info(self.hosts[0])
 
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
@@ -78,9 +76,9 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
             self._change_lnet_state()
 
             # Ensure that the update worked, we have deleted.
-            self.assertEqual(len(self._get_lnet_info(self.host).nids),
+            self.assertEqual(len(self._get_lnet_info(self.hosts[0]).nids),
                              len(lnetinfo.nids) - 1,
-                             self._get_lnet_info(self.host).nids)
+                             self._get_lnet_info(self.hosts[0]).nids)
 
             # Now try posting it back.
             self.post_by_uri('/api/nid/', nid)
@@ -89,13 +87,13 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
             self._change_lnet_state()
 
             # Ensure that the update worked, we have deleted and posted one.
-            self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids))
+            self.assertEqual(len(self._get_lnet_info(self.hosts[0]).nids), len(lnetinfo.nids))
 
-            self.assertEqual(lnetinfo.nids, self._get_lnet_info(self.host).nids)
+            self.assertEqual(lnetinfo.nids, self._get_lnet_info(self.hosts[0]).nids)
 
         # Finally and as much so that we leave everything in a nice state for others. Delete the configuration
         # but do this with lnet_unload.
-        self.set_state(self.host['lnet_configuration'], 'lnet_unloaded')
+        self.set_state(self.hosts[0]['lnet_configuration'], 'lnet_unloaded')
 
         objects = []
         for interface in lnetinfo.network_interfaces:
@@ -105,22 +103,23 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         self.post_by_uri('/api/nid/', {'objects': objects})
 
         # Because lnet is not loaded we should see 0 nids.
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 0, self._get_lnet_info(self.host))
+        self.assertEqual(len(self._get_lnet_info(self.hosts[0]).nids), 0, self._get_lnet_info(self.hosts[0]))
 
         # But if lnet is up we should receive 1 nid back - because 1 nid is always reported by lnet.
-        self.set_state(self.host['lnet_configuration'], 'lnet_up')
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 1, self._get_lnet_info(self.host))
+        self.set_state(self.hosts[0]['lnet_configuration'], 'lnet_up')
+        self.assertEqual(len(self._get_lnet_info(self.hosts[0]).nids), 1, self._get_lnet_info(self.hosts[0]))
 
     def _change_lnet_state(self):
         state = self.states[self.state_order.next()]
-        self.set_state(self.host['lnet_configuration'], state)
+        self.set_state(self.hosts[0]['lnet_configuration'], state)
 
         return state
 
     def test_lnet_reverse_dependencies(self):
-        response = self.set_state_dry_run(self.host['lnet_configuration'], 'lnet_down')
+        for host in self.hosts:
+            response = self.set_state_dry_run(host['lnet_configuration'], 'lnet_down')
 
-        self.assertEqual(len(response['dependency_jobs']), 3)
+            self.assertEqual(len(response['dependency_jobs']), 1, response['dependency_jobs'])
 
-        for dependency_job in response['dependency_jobs']:
-            self.assertEqual(dependency_job['class'], 'StopTargetJob')
+            for dependency_job in response['dependency_jobs']:
+                self.assertEqual(dependency_job['class'], 'StopTargetJob')

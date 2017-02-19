@@ -14,14 +14,34 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         reused_name = 'testfs'
         other_name = 'foofs'
 
-        fs_id = self.create_filesystem_simple(name=reused_name)
+        # The test uses a custom filesystem creation using 3 disks instead of the
+        # usual 4 because we need the other 2 disks for later in the test.
+        servers = [s['address'] for s in self.TEST_SERVERS[:4]]
+        hosts = self.add_hosts(servers)
+        self.configure_power_control(servers)
+
+        ha_volumes = self.wait_for_shared_volumes(5, 4)
+
+        self.set_volume_mounts(ha_volumes[0], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[1], hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(ha_volumes[2], hosts[2]['id'], hosts[3]['id'])
+        self.set_volume_mounts(ha_volumes[3], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[4], hosts[3]['id'], hosts[2]['id'])
+
+        fs_id = self.create_filesystem({'name': reused_name,
+                                        'mgt': {'volume_id': ha_volumes[0]['id']},
+                                        'mdts': [{'volume_id': ha_volumes[1]['id'],
+                                                  'conf_params': {}}],
+                                        'osts': [{'volume_id': ha_volumes[2]['id'],
+                                                  'conf_params': {}}],
+                                        'conf_params': {}})
 
         fs = self.chroma_manager.get("/api/filesystem/%s/" % fs_id,
                                      params={'dehydrate__osts': True}).json
         mgt_id = fs['mgt']['id']
 
         def create_for_mgs(name, reformat=False):
-            ha_volumes = self.wait_usable_volumes(2)
+            ha_volumes = self.wait_for_shared_volumes(2, 4)
 
             mdt_volume = ha_volumes[0]
             ost_volumes = [ha_volumes[1]]
@@ -50,7 +70,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Filter out the paths by removing anything with a leading /.
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
-        self.cleanup_zfs_pools([config['lustre_servers'][0]],
+        self.cleanup_zfs_pools(self.TEST_SERVERS[:2],
                                self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)

@@ -85,10 +85,10 @@ class ManagedCopytoolTestCase(ChromaIntegrationTestCase):
         return response.json['copytool']
 
     def setUp(self):
-        self.TEST_SERVERS = [self.config_servers[0], self.config_workers[0]]
+        self.TEST_SERVERS.append(self.config_workers[0])
         super(ManagedCopytoolTestCase, self).setUp()
 
-        filesystem_id = self.create_filesystem_simple(hsm = True)
+        filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS, hsm = True)
         self.filesystem = self.get_json_by_uri('/api/filesystem/%s' % filesystem_id)
         self.worker = self.add_hosts([self.config_workers[0]['address']])[0]
         self.copytool = self._create_copytool()

@@ -33,7 +33,7 @@ class TestTargets(ChromaIntegrationTestCase):
         self.wait_for_command(self.chroma_manager, delete_command['id'])
 
     def test_create_ost(self):
-        filesystem_id = self.create_filesystem_simple()
+        filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)
         filesystem_uri = "/api/filesystem/%s/" % filesystem_id
 
         volume = self.get_usable_volumes()[0]

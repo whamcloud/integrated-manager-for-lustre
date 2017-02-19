@@ -322,48 +322,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             hosts = [host for host in hosts if host['address'] in addresses]
         return hosts
 
-    def create_filesystem_simple(self, name = 'testfs', hsm = False):
-        """
-        Create the simplest possible filesystem on a single server.
-
-        DEPRECATED - Please don't use this as it is an unsupported
-        configuration. Please instead use create_filesystem_standard.
-        """
-        self.add_hosts([self.TEST_SERVERS[0]['address']])
-
-        self.wait_usable_volumes(3)
-
-        ha_volumes = self.get_usable_volumes()
-
-        mgt_volume = ha_volumes[0]
-        mdt_volume = ha_volumes[1]
-        ost_volumes = [ha_volumes[2]]
-        mdt_params = {}
-        if hsm:
-            mdt_params['mdt.hsm_control'] = "enabled"
-        return self.create_filesystem(
-            {
-                'name': name,
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': mdt_params
-                }],
-                'osts': [{
-                    'volume_id': v['id'],
-                    'conf_params': {}
-                } for v in ost_volumes],
-                'conf_params': {}
-            }
-        )
-
     @property
     def standard_filesystem_layout(self):
         self.assertIsNotNone(self._standard_filesystem_layout)
 
         return self._standard_filesystem_layout
 
-    def create_filesystem_standard(self, test_servers, name = 'testfs'):
+    def create_filesystem_standard(self, test_servers, name='testfs', hsm=False):
         """Create a standard, basic filesystem configuration.
         One MGT, one MDT, in an active/active pair
         Two OSTs in an active/active pair"""
@@ -391,10 +356,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.set_volume_mounts(ha_volumes[2], hosts[2]['id'], hosts[3]['id'])
         self.set_volume_mounts(ha_volumes[3], hosts[3]['id'], hosts[2]['id'])
 
+        # Configure for hsm if needed
+        mdt_params = {}
+        if hsm:
+            mdt_params['mdt.hsm_control'] = "enabled"
+
         # Create new filesystem
         filesystem_id = self.create_filesystem({'name': name,
                                                 'mgt': {'volume_id': ha_volumes[0]['id']},
-                                                'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': {}}],
+                                                'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': mdt_params}],
                                                 'osts': [{'volume_id': ha_volumes[2]['id'], 'conf_params': {}},
                                                          {'volume_id': ha_volumes[3]['id'], 'conf_params': {}}],
                                                 'conf_params': {}})
