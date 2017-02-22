@@ -1047,13 +1047,21 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             self._ssh_address(server, 'sync; sync')
 
+    def has_chroma_agent(self, server):
+        result = self._ssh_address(server,
+                                   'which chroma-agent',
+                                   expected_return_code = None
+                                  )
+        return result.rc == 0
+
     def stop_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, '/etc/init.d/chroma-agent stop')
+            if self.has_chroma_agent(server):
+                self._ssh_address(server, 'service chroma-agent stop')
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, '/etc/init.d/chroma-agent start')
+            self._ssh_address(server, 'service chroma-agent start')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
