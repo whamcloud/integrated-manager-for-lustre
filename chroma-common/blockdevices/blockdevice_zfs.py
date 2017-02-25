@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -496,9 +496,25 @@ class BlockDeviceZfs(BlockDevice):
                 error = 'Error preparing nodes for ZFS multimount protection. gethostid failed with %s' \
                         % result.stderr
 
+        def disable_if_exists(name):
+            status = shell.Shell.run(['systemctl', 'status', name])
+
+            if status.rc != 4:
+                return shell.Shell.run_canned_error_message([
+                    'systemctl',
+                    'disable',
+                    name
+                ])
+
         if error is None:
-            # Ensure the zfs.target is disabled
-            error = shell.Shell.run_canned_error_message(['systemctl', 'disable', 'zfs.target'])
+            error = reduce(
+                lambda x, y: x if x is not None else disable_if_exists(y),
+                ['zfs.target',
+                 'zfs-import-scan',
+                 'zfs-import-cache',
+                 'zfs-mount'],
+                None
+            )
 
         # https://github.com/zfsonlinux/zfs/issues/3801 describes a case where dkms will not rebuild zfs/spl in the
         # case of an upgrade. The command below ensures that dkms updates zfs/spl after our install which may have lead
