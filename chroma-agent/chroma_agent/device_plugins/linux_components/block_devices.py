@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -247,12 +247,19 @@ class BlockDevices(object):
                re.search("^sr\d+$", device_name):
                 return
 
-            # Exclude read-only or removed devices
+            # Exclude read-only devices and removed media or devices
             try:
-                open("/dev/%s" % device_name, 'w')
-            except IOError, e:
-                if e.errno == errno.EROFS or e.errno == errno.NO_MEDIA_ERRNO:
+                # Never use 'w' in the built-in open() or it'll create a 0 length file where a
+                # device was removed!
+                fd = os.open("/dev/%s" % device_name, os.O_WRONLY)
+            except OSError, e:
+                # EROFS: Device is read-only
+                # ENOENT: No such file or directory
+                # NO_MEDIA_ERRNO: No medium found
+                if e.errno in [errno.EROFS, errno.ENOENT, errno.NO_MEDIA_ERRNO]:
                     return
+            else:
+                os.close(fd)
 
             # Resolve a major:minor to a /dev/foo
             path = get_path(major_minor, device_name)
