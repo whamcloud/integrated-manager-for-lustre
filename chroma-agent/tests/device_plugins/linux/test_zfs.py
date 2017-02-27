@@ -122,10 +122,10 @@ zfsPool2/mgt    1G    222222222222222\n"""))
     zfsPool3  ONLINE
       scsi-SCSI_DISK_3  ONLINE"""),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool3"),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool3"),
                                                 rc=1, stderr="cannot import 'zfsPool3': no such pool available"),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool1")),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
                                                 stdout="""
     zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
@@ -178,10 +178,10 @@ zfsPool1
     zfsPool3  ONLINE
       scsi-SCSI_DISK_3  ONLINE"""),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool3"),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool3"),
                                                 rc=1, stderr="cannot import 'zfsPool3': no such pool available"),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool1")),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
                                                 stdout="""
     zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),

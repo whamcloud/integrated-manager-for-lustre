@@ -117,7 +117,7 @@ class ZfsDevice(object):
         try:
             return shell.Shell.run_canned_error_message(['zpool', 'import'] +
                                                         (['-f'] if force else []) +
-                                                        (['-o', 'readonly=on'] if readonly else []) +
+                                                        (['-N', '-o', 'readonly=on', '-o', 'cachefile=none'] if readonly else []) +
                                                         [self.pool_path])
         finally:
             self.unlock_pool()
