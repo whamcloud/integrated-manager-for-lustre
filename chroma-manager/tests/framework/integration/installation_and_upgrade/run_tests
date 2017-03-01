@@ -134,7 +134,10 @@ unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_filesystem_stop.xml $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_stop_before_update"
 
 . $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/upgrade_os.sh
-upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]})
+if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}); then
+    echo "Upgrade failed"
+    exit 1
+fi
 
 # Install and setup manager
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp

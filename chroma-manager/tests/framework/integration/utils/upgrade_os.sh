@@ -61,12 +61,18 @@ fi
 
 rpm -qa | sort >/tmp/after_upgrade
 
-# The yum upgrade will have restored the /etc/yum.repos.d/CentOS-*.repo
+# The yum upgrade might have restored the /etc/yum.repos.d/CentOS-*.repo
 # files so remove them here
-rm /etc/yum.repos.d/CentOS-*.repo
+if ls /etc/yum.repos.d/CentOS-*.repo; then
+    rm /etc/yum.repos.d/CentOS-*.repo
+fi
 
 # TODO: we really ought to reboot here
 #       a new kernel was surely installed and real users would reboot here" | dshbak -c
+
+    if [ ${PIPESTATUS[0]} != 0 ]; then
+        return 1
+    fi
 
     echo "End operating system upgrade"
 
