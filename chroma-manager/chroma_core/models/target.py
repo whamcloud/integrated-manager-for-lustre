@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -1260,6 +1260,7 @@ class UpdateManagedTargetMount(Step):
             mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
                                                                                   path=filesystem.mount_path(target.name)),
                                                    logger=job_log,
+                                                   timeout = 60 * 60,
                                                    expected_exception_classes=[VolumeNode.DoesNotExist])
 
             mtm.volume_node.primary = primary
