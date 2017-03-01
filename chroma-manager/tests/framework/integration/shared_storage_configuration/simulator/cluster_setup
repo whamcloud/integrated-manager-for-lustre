@@ -107,9 +107,8 @@ cd /home/chromatest/chroma_test_env/chroma/chroma-dependencies/nginx
 RPM_FILE="\$(make rpm_file)"
 yum localinstall -y "/home/chromatest/chroma_test_env/chroma/chroma-externals/\$RPM_FILE"
 
-cd /home/chromatest/chroma_test_env/chroma/chroma-dependencies/nodejs
-RPM_FILE="\$(make rpm_file)"
-yum localinstall -y "/home/chromatest/chroma_test_env/chroma/chroma-externals/\$RPM_FILE"
+MAJOR="\$(rpm --eval %rhel)"
+yum localinstall -y /home/chromatest/chroma_test_env/chroma/chroma-externals/{nodejs-*,libuv-*,npm-*}.el\$MAJOR.*.rpm
 EOF
 
 ssh chromatest@$CHROMA_MANAGER <<EOF

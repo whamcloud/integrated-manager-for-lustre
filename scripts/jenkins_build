@@ -53,7 +53,8 @@ update_nodejs_version()
 {
   sudo yum -y erase nodejs;
   major=$(rpm --eval %rhel)
-  sudo yum -y install $PWD/chroma-externals/nodejs-*.el$major.*.rpm
+  arch=$(rpm --eval %_arch)
+  sudo yum -y install $PWD/chroma-externals/nodejs-*.el$major.$arch.rpm
 }
 
 pre_build()
