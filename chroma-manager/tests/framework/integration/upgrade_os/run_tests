@@ -35,7 +35,10 @@ unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS/../shared_storage_configuration/test_cluster_setup.py $TESTS/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
 . $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/upgrade_os.sh
-upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]})
+if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}); then
+    echo "Upgrade failed"
+    exit 1
+fi
 
 echo "Test existing filesystem is still there and functional"
 
