@@ -97,16 +97,17 @@ def fetch_chroma_externals(user, externals_sha1):
         sys.exit(-1)
 
     # Find the chroma-externals changeset
-    try:
-        ce_changeset = next(change for change in changes if change['project'] == 'chroma-externals')
-    except StopIteration:
-        print "Unable to find the chroma-externals changeset"
-        sys.exit(-1)
+    ref = None
+    for change in changes:
+        if change['project'] == 'chroma-externals':
+            for patchset in change['patchSets']:
+                if patchset['revision'] == externals_sha1:
+                    ref = patchset['ref']
+                    break
+            if ref:
+                break
 
-    # Find the patch set ref
-    try:
-        ref = next(change['ref'] for change in ce_changeset['patchSets'] if change['revision'] == externals_sha1)
-    except StopIteration:
+    if not ref:
         print "Unable to find gerrit patchset for chroma-externals sha1 %s" % externals_sha1
         sys.exit(-1)
 
