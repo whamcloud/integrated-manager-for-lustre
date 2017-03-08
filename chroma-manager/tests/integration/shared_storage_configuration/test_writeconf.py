@@ -20,12 +20,9 @@ class TestWriteconf(ChromaIntegrationTestCase):
            to just remove this file"""
         self.assertGreaterEqual(len(self.config_servers), 4)
 
-        self.hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address'],
-            config['lustre_servers'][2]['address'],
-            config['lustre_servers'][3]['address']
-        ])
+        host_addresses = [h['address'] for h in config['lustre_servers'][:4]]
+        self.hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         volumes = self.wait_for_shared_volumes(4, 4)
 
@@ -36,22 +33,18 @@ class TestWriteconf(ChromaIntegrationTestCase):
         self.set_volume_mounts(mdt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
         self.set_volume_mounts(ost_volume, self.hosts[2]['id'], self.hosts[3]['id'])
 
-        self.filesystem_id = self.create_filesystem(
-                {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': {}
-
-                }],
-                'osts': [{
-                    'volume_id': ost_volume['id'],
-                    'conf_params': {}
-                }],
-                'conf_params': {}
-            }
-        )
+        self.filesystem_id = self.create_filesystem(self.hosts,
+                                                    {'name': 'testfs',
+                                                     'mgt': {'volume_id': mgt_volume['id']},
+                                                     'mdts': [{
+                                                         'volume_id': mdt_volume['id'],
+                                                         'conf_params': {}
+                                                     }],
+                                                     'osts': [{
+                                                         'volume_id': ost_volume['id'],
+                                                         'conf_params': {}
+                                                     }],
+                                                     'conf_params': {}})
 
         self._exercise_simple(self.filesystem_id)
 

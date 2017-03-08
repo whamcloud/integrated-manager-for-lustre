@@ -5,10 +5,9 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 class TestHosts(ChromaIntegrationTestCase):
     def test_hosts_add_existing_filesystem(self):
         # Create a file system and then add new hosts/volumes to it
-        hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address']
-        ])
+        host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
+        hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         volumes = self.wait_for_shared_volumes(3, 2)
 
@@ -19,7 +18,8 @@ class TestHosts(ChromaIntegrationTestCase):
         self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
         self.set_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
 
-        filesystem_id = self.create_filesystem({'name': 'testfs',
+        filesystem_id = self.create_filesystem(hosts,
+                                               {'name': 'testfs',
                                                 'mgt': {'volume_id': mgt_volume['id']},
                                                 'mdts': [{'volume_id': mdt_volume['id'],
                                                           'conf_params': {}}],

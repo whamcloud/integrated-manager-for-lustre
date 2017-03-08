@@ -7,7 +7,9 @@ class TestVolumes(ChromaIntegrationTestCase):
     #     # Testing that volumes mounted on a server known to Chroma
     #     # are not included in the list of usable volumes. Repro of HYD-1669.
     #     # Create a file system.
-    #     self.add_hosts([config['lustre_servers'][0]['address']])
+    #     host_addresses = [config['lustre_servers'][0]['address']]
+    #     hosts = self.add_hosts(host_addresses)
+    #     self.configure_power_control(host_addresses)
     #
     #     ha_volumes = self.get_usable_volumes()
     #     self.assertGreaterEqual(len(ha_volumes), 3)
@@ -15,21 +17,17 @@ class TestVolumes(ChromaIntegrationTestCase):
     #     mgt_volume = ha_volumes[0]
     #     mdt_volume = ha_volumes[1]
     #     ost_volumes = [ha_volumes[2]]
-    #     self.create_filesystem(
-    #             {
-    #             'name': 'testfs',
-    #             'mgt': {'volume_id': mgt_volume['id']},
-    #             'mdt': {
-    #                 'volume_id': mdt_volume['id'],
-    #                 'conf_params': {}
-    #             },
-    #             'osts': [{
-    #                 'volume_id': v['id'],
-    #                 'conf_params': {}
-    #             } for v in ost_volumes],
-    #             'conf_params': {}
-    #         }
-    #     )
+    #     self.create_filesystem(hosts,
+    #                            {'name': 'testfs',
+    #                             'mgt': {'volume_id': mgt_volume['id']},
+    #                             'mdt': {
+    #                                 'volume_id': mdt_volume['id'],
+    #                                 'conf_params': {}},
+    #                             'osts': [{
+    #                                 'volume_id': v['id'],
+    #                                 'conf_params': {}
+    #                             } for v in ost_volumes],
+    #                             'conf_params': {}})
     #     host_id = self.chroma_manager.get("/api/host").json['objects'][0]['id']
     #
     #     # Force remove the hosts (and thus the file system) so that they are
@@ -54,10 +52,9 @@ class TestVolumes(ChromaIntegrationTestCase):
         # Create a file system and tear it down, then verify after
         # tear down that the volumes from the file system no longer
         # appear in the database. Repro of HYD-1143.
-        hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address']
-        ])
+        host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
+        hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         volumes = self.wait_for_shared_volumes(3, 2)
 
@@ -68,21 +65,16 @@ class TestVolumes(ChromaIntegrationTestCase):
         self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
         self.set_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
 
-        self.create_filesystem(
-            {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': {}
-                }],
-                'osts': [{
-                    'volume_id': ost_volume['id'],
-                    'conf_params': {}
-                }],
-                'conf_params': {}
-            }
-        )
+        self.create_filesystem(hosts,
+                               {'name': 'testfs',
+                                'mgt': {'volume_id': mgt_volume['id']},
+                                'mdts': [{
+                                    'volume_id': mdt_volume['id'],
+                                    'conf_params': {}}],
+                                'osts': [{
+                                    'volume_id': ost_volume['id'],
+                                    'conf_params': {}}],
+                                'conf_params': {}})
 
         self.graceful_teardown(self.chroma_manager)
 

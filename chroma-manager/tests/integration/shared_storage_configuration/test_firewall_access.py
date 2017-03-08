@@ -70,7 +70,9 @@ class TestFirewall(ChromaIntegrationTestCase):
         """
         self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
 
-        self.hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
+        host_addresses = [s['address'] for s in self.TEST_SERVERS]
+        self.hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         volumes = self.wait_for_shared_volumes(4, 4)
 
@@ -83,23 +85,18 @@ class TestFirewall(ChromaIntegrationTestCase):
         self.set_volume_mounts(ost1_volume, self.hosts[2]['id'], self.hosts[3]['id'])
         self.set_volume_mounts(ost2_volume, self.hosts[3]['id'], self.hosts[2]['id'])
 
-        self.filesystem_id = self.create_filesystem({
-            'name': 'testfs',
-            'mgt': {'volume_id': mgt_volume['id']},
-            'mdts': [{
-                'volume_id': mdt_volume['id'],
-                'conf_params': {}
-
-            }],
-            'osts': [{
-                'volume_id': ost1_volume['id'],
-                'conf_params': {}
-            }, {
-                'volume_id': ost2_volume['id'],
-                'conf_params': {}
-            }],
-            'conf_params': {}
-        })
+        self.filesystem_id = self.create_filesystem(self.hosts,
+                                                    {'name': 'testfs',
+                                                     'mgt': {'volume_id': mgt_volume['id']},
+                                                     'mdts': [{
+                                                         'volume_id': mdt_volume['id'],
+                                                         'conf_params': {}}],
+                                                    'osts': [{
+                                                        'volume_id': ost1_volume['id'],
+                                                        'conf_params': {}}, {
+                                                        'volume_id': ost2_volume['id'],
+                                                        'conf_params': {}}],
+                                                    'conf_params': {}})
 
         mcast_ports = {}
 

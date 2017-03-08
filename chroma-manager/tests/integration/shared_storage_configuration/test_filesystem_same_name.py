@@ -16,19 +16,23 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
 
         # The test uses a custom filesystem creation using 3 disks instead of the
         # usual 4 because we need the other 2 disks for later in the test.
-        servers = [s['address'] for s in self.TEST_SERVERS[:4]]
-        hosts = self.add_hosts(servers)
-        self.configure_power_control(servers)
+        host_addresses = [s['address'] for s in self.TEST_SERVERS[:4]]
+        hosts = self.add_hosts(host_addresses)
+
+        # Since the test code seems to rely on this ordering, we should
+        # check for it right away and blow up if it's not as we expect.
+        self.assertEqual([h['address'] for h in hosts], host_addresses)
+
+        self.configure_power_control(host_addresses)
 
         ha_volumes = self.wait_for_shared_volumes(5, 4)
 
         self.set_volume_mounts(ha_volumes[0], hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(ha_volumes[1], hosts[1]['id'], hosts[0]['id'])
-        self.set_volume_mounts(ha_volumes[2], hosts[2]['id'], hosts[3]['id'])
-        self.set_volume_mounts(ha_volumes[3], hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(ha_volumes[4], hosts[3]['id'], hosts[2]['id'])
+        self.set_volume_mounts(ha_volumes[1], hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ha_volumes[2], hosts[1]['id'], hosts[0]['id'])
 
-        fs_id = self.create_filesystem({'name': reused_name,
+        fs_id = self.create_filesystem(hosts[:2],
+                                       {'name': reused_name,
                                         'mgt': {'volume_id': ha_volumes[0]['id']},
                                         'mdts': [{'volume_id': ha_volumes[1]['id'],
                                                   'conf_params': {}}],
@@ -40,12 +44,16 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
                                      params={'dehydrate__osts': True}).json
         mgt_id = fs['mgt']['id']
 
-        def create_for_mgs(name, reformat=False):
-            ha_volumes = self.wait_for_shared_volumes(2, 4)
+        def create_for_mgs(name, hosts_to_use, reformat=False):
+            ha_volumes = self.wait_for_shared_volumes(2, len(hosts_to_use))
+
+            self.set_volume_mounts(ha_volumes[0], hosts_to_use[0]['id'], hosts_to_use[1]['id'])
+            self.set_volume_mounts(ha_volumes[1], hosts_to_use[1]['id'], hosts_to_use[0]['id'])
 
             mdt_volume = ha_volumes[0]
             ost_volumes = [ha_volumes[1]]
-            return self.create_filesystem({'name': name,
+            return self.create_filesystem(hosts_to_use,
+                                          {'name': name,
                                            'mgt': {'id': mgt_id},
                                            'mdts': [{'volume_id': mdt_volume['id'],
                                                      'conf_params': {},
@@ -55,7 +63,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
                                                      'reformat': reformat} for v in ost_volumes],
                                            'conf_params': {}})
 
-        other_fs_id = create_for_mgs(other_name)
+        other_fs_id = create_for_mgs(other_name, hosts[2:4])
 
         response = self.chroma_manager.delete(fs['resource_uri'])
         self.assertEqual(response.status_code, 202)
@@ -70,16 +78,18 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Filter out the paths by removing anything with a leading /.
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
+        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:2])
         self.cleanup_zfs_pools(self.TEST_SERVERS[:2],
                                self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)
+        self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:2])
 
         # Our other FS should be untouched
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects']), 1)
         self.assertState("/api/filesystem/%s/" % other_fs_id, 'available')
 
-        reused_fs_id = create_for_mgs(reused_name, reformat=True)
+        reused_fs_id = create_for_mgs(reused_name, hosts[:2], reformat=True)
 
         self.assertState("/api/filesystem/%s/" % reused_fs_id, 'available')
         self.assertState("/api/filesystem/%s/" % other_fs_id, 'available')

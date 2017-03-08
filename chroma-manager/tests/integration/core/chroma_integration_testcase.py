@@ -259,7 +259,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
     def _add_hosts(self, addresses, auth_type):
-        """Add a list of lustre servers to chroma and ensure lnet ends in the correct state."""
+        """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""
         if self.simulator:
             self.register_simulated_hosts(addresses)
         else:
@@ -289,7 +289,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
         """
-        Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
+        Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state.
 
         If the quick_setup is enabled then this will shortcut by adding any hosts in the list of addresses that do not
         already exists.
@@ -334,14 +334,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         Two OSTs in an active/active pair"""
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(test_servers), 4)
-        servers = [s['address'] for s in test_servers[:4]]
-        hosts = self.add_hosts(servers)
+        host_addresses = [s['address'] for s in test_servers[:4]]
+        hosts = self.add_hosts(host_addresses)
 
-        # Set up power control for fencing -- needed to ensure that
-        # failover completes. Pacemaker won't fail over the resource
-        # if it can't STONITH the primary.
-        if config['failover_is_configured']:
-            self.configure_power_control(servers)
+        self.configure_power_control(host_addresses)
 
         self.assertGreaterEqual(4, len(hosts),
                                 "Must have added at least 4 hosts before calling standard_filesystem_layout. Found '%s'" % hosts)
@@ -362,7 +358,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             mdt_params['mdt.hsm_control'] = "enabled"
 
         # Create new filesystem
-        filesystem_id = self.create_filesystem({'name': name,
+        filesystem_id = self.create_filesystem(hosts,
+                                               {'name': name,
                                                 'mgt': {'volume_id': ha_volumes[0]['id']},
                                                 'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': mdt_params}],
                                                 'osts': [{'volume_id': ha_volumes[2]['id'], 'conf_params': {}},
@@ -391,21 +388,21 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return filesystem_id
 
-    def create_filesystem(self, filesystem, verify_successful = True):
+    def create_filesystem(self, hosts, filesystem, verify_successful = True):
         """
         Specify a filesystem to be created by chroma.
 
         Example usage:
-            filesystem_id = self.create_filesystem(
-                {
-                    'name': 'testfs',
-                    'mgt': {'volume_id': mgt_volume['id']},
-                    'mdts': [{'volume_id': mdt_volume['id'], 'conf_params': {}}],
-                    'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
-                    'conf_params': {}
-                }
-            )
+            filesystem_id = self.create_filesystem(hosts,
+                                                   {'name': 'testfs',
+                                                    'mgt': {'volume_id': mgt_volume['id']},
+                                                    'mdts': [{'volume_id': mdt_volume['id'], 'conf_params': {}}],
+                                                    'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
+                                                    'conf_params': {}})
         """
+        # Ensure the hosts for the filesystem have power control, in case the
+        # test author forgot, to ensure we test with a supported configuration.
+        self.verify_power_control_configured(hosts)
 
         response = self.chroma_manager.post(
             '/api/filesystem/',
@@ -422,13 +419,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             verify_successful=verify_successful,
             timeout = LONG_TEST_TIMEOUT
         )
-
-        response = self.chroma_manager.get(
-            '/api/host/',
-            params = {'limit': 0}
-        )
-        self.assertTrue(response.successful, response.text)
-        hosts = response.json['objects']
 
         # Verify mgs and fs targets in pacemaker config for hosts
         self.remote_operations.check_ha_config(hosts, filesystem['name'])
@@ -584,7 +574,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertTrue(response.successful, response.text)
         return response.json
 
-    def configure_power_control(self, servers):
+    def configure_power_control(self, host_addresses):
+        # Set up power control for fencing -- needed to ensure that
+        # failover completes. Pacemaker won't fail over the resource
+        # if it can't STONITH the primary.
         if not config.get('power_control_types', False):
             return
 
@@ -619,7 +612,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         for outlet in config['pdu_outlets']:
             new = {'identifier': outlet['identifier'],
                    'device': power_devices[outlet['pdu']]['resource_uri']}
-            if 'host' in outlet and outlet['host'] in servers:
+            if 'host' in outlet and outlet['host'] in host_addresses:
                 hosts = self.get_list("/api/host/", args = {'limit': 0})
                 try:
                     host = [h for h in hosts if h['address'] == outlet['host']][0]
@@ -637,6 +630,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             except StopIteration:
                 obj = self.create_power_control_device_outlet(new)
                 logger.debug("Created %s" % obj)
+
+    def verify_power_control_configured(self, hosts):
+        outlets = self.get_list('/api/power_control_device_outlet/')
+        hosts_with_outlets = set(o['host'] for o in outlets if o['host'] is not None)
+        expected_hosts = set(h['resource_uri'] for h in hosts)
+        for host in expected_hosts:
+            self.assertIn(host,
+                          hosts_with_outlets,
+                          "Attempted to create a filesystem on a host without power control. Hosts expected: (%s) Hosts found to have outlets: (%s)" % (
+                              expected_hosts,
+                              hosts_with_outlets))
 
     LNetInfo = namedtuple("LNetInfo", ("nids", "network_interfaces", "lnet_configuration", "host"))
 
