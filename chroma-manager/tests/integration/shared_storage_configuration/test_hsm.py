@@ -13,10 +13,9 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 class TestHsmCoordinatorControl(ChromaIntegrationTestCase):
     def _create_with_params(self, enabled=False):
-        self.hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address']
-        ])
+        host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
+        self.hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         # Since the test code seems to rely on this ordering, we should
         # check for it right away and blow up if it's not as we expect.
@@ -39,22 +38,16 @@ class TestHsmCoordinatorControl(ChromaIntegrationTestCase):
         else:
             mdt_params = {'mdt.hsm_control': 'disabled'}
 
-        self.filesystem_id = self.create_filesystem(
-                {
-                'name': 'testfs',
-                'mgt': {'volume_id': mgt_volume['id']},
-                'mdts': [{
-                    'volume_id': mdt_volume['id'],
-                    'conf_params': mdt_params
-
-                }],
-                'osts': [{
-                    'volume_id': ost_volume['id'],
-                    'conf_params': {}
-                }],
-                'conf_params': {'llite.max_cached_mb': '16'}
-            }
-        )
+        self.filesystem_id = self.create_filesystem(self.hosts,
+                                                    {'name': 'testfs',
+                                                     'mgt': {'volume_id': mgt_volume['id']},
+                                                     'mdts': [{
+                                                         'volume_id': mdt_volume['id'],
+                                                         'conf_params': mdt_params}],
+                                                     'osts': [{
+                                                         'volume_id': ost_volume['id'],
+                                                         'conf_params': {}}],
+                                                    'conf_params': {'llite.max_cached_mb': '16'}})
 
     def _test_params(self):
         mds = config['lustre_servers'][0]['address']

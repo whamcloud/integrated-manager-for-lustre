@@ -162,7 +162,9 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         self.remote_operations.await_server_boot(self.TEST_SERVERS[0]['fqdn'])
 
         # Add two hosts
-        hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS[:2]])
+        host_addresses = [s['address'] for s in self.TEST_SERVERS[:2]]
+        hosts = self.add_hosts(host_addresses)
+        self.configure_power_control(host_addresses)
 
         # Wait for the host to have reported the volumes and discovered HA configuration.
         ha_volumes = self.wait_for_shared_volumes(4, 2)
@@ -174,12 +176,9 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
 
         # Create new filesystem such that the mgs/mdt is on the host we
         # failed over and the osts are not.
-        self.create_filesystem(
-            {
-                'name': 'testfs',
-                'mgt': {'volume_id': ha_volumes[0]['id']},
-                'mdts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[1:2]],
-                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
-                'conf_params': {}
-            }
-        )
+        self.create_filesystem(hosts,
+                               {'name': 'testfs',
+                                'mgt': {'volume_id': ha_volumes[0]['id']},
+                                'mdts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[1:2]],
+                                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
+                                'conf_params': {}})

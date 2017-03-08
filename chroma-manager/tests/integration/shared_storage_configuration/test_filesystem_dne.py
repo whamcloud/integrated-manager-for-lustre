@@ -33,14 +33,14 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
     def _create_filesystem(self, mdt_count):
         assert mdt_count in [1, 2, 3]
 
-        self.hosts = self.add_hosts([config['lustre_servers'][0]['address'],
-                                     config['lustre_servers'][1]['address']])
+        host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
+        self.hosts = self.add_hosts(host_addresses)
 
         # Since the test code seems to rely on this ordering, we should
         # check for it right away and blow up if it's not as we expect.
-        self.assertEqual([h['address'] for h in self.hosts],
-                         [config['lustre_servers'][0]['address'],
-                          config['lustre_servers'][1]['address']])
+        self.assertEqual([h['address'] for h in self.hosts], host_addresses)
+
+        self.configure_power_control(host_addresses)
 
         self.ha_volumes = self.wait_for_shared_volumes(4, 2)
 
@@ -51,7 +51,8 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         for volume in [mgt_volume] + mdt_volumes + ost_volumes:
             self.set_volume_mounts(volume, self.hosts[0]['id'], self.hosts[1]['id'])
 
-        self.filesystem_id = self.create_filesystem({'name': 'testfs',
+        self.filesystem_id = self.create_filesystem(self.hosts,
+                                                    {'name': 'testfs',
                                                      'mgt': {'volume_id': mgt_volume['id'],
                                                              'conf_params': {},
                                                              'reformat': True},
