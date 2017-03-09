@@ -32,15 +32,10 @@ from chroma_common.lib.shell import Shell
 def gerrit_changes(user, change_id):
     changes = []
 
-    if user:
-        user_at = "%s@" % user
-    else:
-        user_at = ''
-
     for line in run_command(['ssh',
                              '-p',
                              '29418',
-                             '%sreview.whamcloud.com' % user_at,
+                             '%sreview.whamcloud.com' % ('%s@' % user if user else ''),
                              'gerrit query',
                              '--format', 'JSON',
                              '--patch-sets', change_id]).stdout.split('\n'):
@@ -70,7 +65,7 @@ def run_command(args, exit_on_error=True, silent=False):
 def git_user():
     try:
         fetch_url = run_command(['git', 'remote', 'show', 'origin']).stdout
-        user = re.search("Fetch URL: ((https?|ssh)://([a-z]*)@", fetch_url).groups()[1]
+        user = re.search("Fetch URL: (https?|ssh)://([a-z]*)@", fetch_url).groups()[1]
     except:
         user = None
 
@@ -115,16 +110,11 @@ def fetch_chroma_externals(user, externals_sha1):
         print "Unable to find gerrit patchset for chroma-externals sha1 %s" % externals_sha1
         sys.exit(-1)
 
-    if user:
-        user_at = "%s@" % user
-    else:
-        user_at = ''
-
     # Now fetch the appropriate sha1 from gerrit.
     os.chdir('chroma-externals')
     run_command(['git',
                  'fetch',
-                 'ssh://%sreview.whamcloud.com:29418/chroma-externals' % user_at,
+                 'ssh://%sreview.whamcloud.com:29418/chroma-externals' % ('%s@' % user if user else ''),
                  ref])
     run_command(['git', 'checkout', 'FETCH_HEAD'])
     os.chdir('..')
