@@ -115,7 +115,13 @@ def get_resource_locations():
     """Parse `crm_mon -1` to identify where (if anywhere)
        resources (i.e. targets) are running."""
 
-    rc, lines_text, stderr = AgentShell.run_old(["crm_mon", "-1", "-r"])
+    try:
+        rc, lines_text, stderr = AgentShell.run_old(["crm_mon", "-1", "-r"])
+    except OSError, e:
+        # ENOENT is fine here.  Pacemaker might not be installed yet.
+        if e.errno != errno.ENOENT:
+            raise
+
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
         return {"crm_mon_error": {"rc": rc,
