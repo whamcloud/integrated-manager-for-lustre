@@ -593,15 +593,24 @@ def stop_target(ha_label):
 
     Return: Value using simple return protocol
     '''
-    error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
+    # HYD-7230: brute force, try up to 3 times to stop the target
+    i = 0
+    while True:
+        i += 1
 
-    if error:
-        return agent_error(error)
+        # Issue the command to Pacemaker to stop the target
+        error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
 
-    if _wait_target(ha_label, False):
-        return agent_result_ok
+        if error:
+            return agent_error(error)
 
-    return agent_error("failed to stop target %s" % ha_label)
+        if _wait_target(ha_label, False):
+            return agent_result_ok
+
+        if i < 4:
+            console_log.info("failed to stop target %s" % ha_label)
+        else:
+            return agent_error("failed to stop target %s" % ha_label)
 
 
 def _move_target(target_label, dest_node):
@@ -613,6 +622,7 @@ def _move_target(target_label, dest_node):
     :return: None if successful or an error message if an error occurred.
     """
 
+    # Issue the command to Pacemaker to move the target
     arg_list = ['crm_resource', '--resource', target_label, '--move', '--node', dest_node]
 
     # For on going debug purposes, lets get the resource locations at the beginning. This provides useful

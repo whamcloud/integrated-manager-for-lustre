@@ -486,7 +486,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 command_id = json['command']['id']
 
             if command_id:
-                command = self.wait_for_command(self.chroma_manager, command_id, verify_successful=(verify_successful != self.VERIFY_SUCCESS_NO), msg=msg)
+                command = self.wait_for_command(self.chroma_manager, command_id, verify_successful=(verify_successful != self.VERIFY_SUCCESS_NO), msg=msg, timeout=LONG_TEST_TIMEOUT)
             else:
                 command = None
 
@@ -785,7 +785,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.assertTrue(command_id)
                 remove_host_command_ids.append(command_id)
 
-            self.wait_for_commands(chroma_manager, remove_host_command_ids)
+            self.wait_for_commands(chroma_manager,
+                                   remove_host_command_ids,
+                                   timeout=LONG_TEST_TIMEOUT)
 
         self.assertDatabaseClear()
 
