@@ -151,6 +151,8 @@ kernel modules are functioning properly.
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.pool_name)),
+                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.blockdevice._device_path.split('/')[0]),
                           CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
                                                 stdout=self.zpool_properties))
 
@@ -161,6 +163,8 @@ kernel modules are functioning properly.
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), executions_remaining=1),
+                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.pool_name),
                           CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
                                                 stdout=self.zpool_properties_readonly,
                                                 executions_remaining=1),
@@ -169,6 +173,8 @@ kernel modules are functioning properly.
                           CommandCaptureCommand(('zpool', 'export', self.pool_name)),
                           CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
                           CommandCaptureCommand(('zpool', 'import', self.pool_name)),
+                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.pool_name),
                           CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
                                                 stdout=self.zpool_properties))
 
@@ -180,6 +186,8 @@ kernel modules are functioning properly.
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
                           CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])),
+                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.blockdevice._device_path.split('/')[0]),
                           CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
                                                 stdout=self.zpool_properties))
 
@@ -190,6 +198,8 @@ kernel modules are functioning properly.
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
         self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name)),
+                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.pool_name),
                           CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
                                                 stdout=self.zpool_properties))
 
@@ -219,8 +229,10 @@ kernel modules are functioning properly.
     def test_property_values(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
-                         stdout=example_data.zfs_example_properties)
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.pool_name),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
+                                                stdout=example_data.zfs_example_properties))
 
         zfs_properties = self.blockdevice.zfs_properties(False)
 
@@ -232,8 +244,10 @@ kernel modules are functioning properly.
     def test_targets(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
-                         stdout=example_data.zfs_example_properties)
+        self.add_commands(CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
+                                                stdout='%s\n' % self.pool_name),
+                          CommandCaptureCommand(('zfs', 'get', '-Hp', '-o', 'property,value', 'all', self.blockdevice._device_path),
+                                                stdout=example_data.zfs_example_properties))
 
         target_info = self.blockdevice.targets(None, None, None)
 

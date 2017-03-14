@@ -253,7 +253,8 @@ def format_target(device_type, target_name, device, backfstype,
         if value is not None:
             options.append("--%s=%s" % (name, value))
 
-    block_device = BlockDevice(device_type, device)
+    # cache BlockDevice to store knowledge of the device_type at this path
+    BlockDevice(device_type, device)
     filesystem = FileSystem(backfstype, device)
 
     return filesystem.mkfs(target_name, options)
@@ -499,7 +500,7 @@ def export_target(device_type, path):
     error = blockdevice.export()
 
     if error:
-      console_log.error("Error exporting pool: '%s'" % error)
+        console_log.error("Error exporting pool: '%s'" % error)
 
     return agent_ok_or_error(error)
 
