@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -60,9 +60,41 @@ class FileSystemZfs(FileSystem, BlockDeviceZfs):
         return "%s/%s" % (self._device_path, target_name)
 
     def mkfs(self, target_name, options):
+        """
+        Retrieve new target dataset path and pass in call to mkfs.lustre.
+        Set failmode to panic for underlying zpool and ensure correct property values set when creating dataset by
+        supplying mkfsoptions which are passed to the underlying backfs tools (zfs in this case).
+
+        :param target_name: lustre target name
+        :param options: list of options to supply to mkfs command
+        :return: dict of new target info
+        """
         self._initialize_modules()
 
+        # set 'failmode=panic' property on underlying device (zpool)
+        BlockDeviceZfs('zfs', self._device_path).failmode = 'panic'
+
         new_path = self.mount_path(target_name)
+
+        # set 'mountpoint=none' for created ZfsDatasets
+        try:
+            options_idx = next(options.index(option) for option in options if '--mkfsoptions=' in option)
+        except StopIteration:
+            # no mkfsoptions option exists, add one
+            options.append('--mkfsoptions="mountpoint=none"')
+        else:
+            # retrieve list of mkfsoptions from existing parameter string
+            mkfsoptions = options[options_idx].split('=', 1)[1].strip('"').split(' -o ')
+            try:
+                mountpoint_idx = next(mkfsoptions.index(option) for option in mkfsoptions if 'mountpoint=' in option)
+            except StopIteration:
+                pass
+            else:
+                # we want to overwrite any existing mountpoint property value, so first remove
+                mkfsoptions.pop(mountpoint_idx)
+
+            mkfsoptions.append('mountpoint=none')
+            options[options_idx] = '--mkfsoptions="%s"' % ' -o '.join([opt for opt in mkfsoptions])
 
         shell.Shell.try_run(["mkfs.lustre"] + options + [new_path])
 

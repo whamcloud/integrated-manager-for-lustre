@@ -249,6 +249,30 @@ class BlockDeviceZfs(BlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
+    @property
+    def failmode(self):
+        try:
+            self._assert_zpool('failmode')
+        except NotZpoolException:
+            blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
+
+            return blockdevice.failmode
+        else:
+            with ZfsDevice(self._device_path, False):
+                return shell.Shell.try_run(["zpool", "get", "-Hp", "failmode", self._device_path]).split()[2]
+
+    @failmode.setter
+    def failmode(self, value):
+        try:
+            self._assert_zpool('failmode')
+        except NotZpoolException:
+            blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
+
+            blockdevice.failmode = value
+        else:
+            with ZfsDevice(self._device_path, False):
+                shell.Shell.try_run(["zpool", "set", "failmode=%s" % value, self._device_path])
+
     def zfs_properties(self, reread, log=None):
         """
         Try to retrieve the properties for a zfs device at self._device_path.
