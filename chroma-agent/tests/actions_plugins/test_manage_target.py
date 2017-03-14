@@ -92,9 +92,10 @@ class TestFormatTarget(CommandCaptureTestCase):
         assert "Unknown device type %s" % block_device.device_type
 
     def _setup_run_exceptions(self, block_device, run_args):
-        self._run_command = CommandCaptureCommand(run_args)
+        self._run_command = CommandCaptureCommand(tuple(filter(None, run_args)))
 
-        self.add_commands(CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"),
+        self.add_commands(CommandCaptureCommand(("zpool", "set", "failmode=panic", "lustre1")),
+                          CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"),
                                                 stdout="Inode size: 1024\nInode count: 1024\n"),
                           CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"),
                                                 stdout="%s\n" % block_device.preferred_fstype),
@@ -119,6 +120,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                        ("mkfs.lustre",
                                         "--mdt",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MDT0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -135,6 +137,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                        ("mkfs.lustre",
                                         "--mgs",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MGS0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -151,6 +154,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                        ("mkfs.lustre",
                                         "--ost",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MDT0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -168,6 +172,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                         "--ost",
                                         "--mgsnode=1.2.3.4@tcp",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "OST0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -186,6 +191,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                         "--mgsnode=1.2.3.4@tcp",
                                         "--mgsnode=1.2.3.5@tcp",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "OST0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -204,6 +210,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                         "--ost",
                                         "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "OST0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -223,6 +230,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                         "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
                                         "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "OST0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -242,6 +250,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                        ("mkfs.lustre",
                                         "--mgs",
                                         "--mdt", "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MGS0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -261,6 +270,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                         "--param",
                                         "baz=qux thud",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MGS0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -277,6 +287,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                        ("mkfs.lustre",
                                         "--dryrun",
                                         "--backfstype=%s" % block_device.preferred_fstype,
+                                        '--mkfsoptions="mountpoint=none"' if block_device.device_type == 'zfs' else '',
                                         self._mkfs_path(block_device, "MGS0000")))
 
             manage_targets.format_target(device = block_device.device_path,
@@ -292,7 +303,7 @@ class TestFormatTarget(CommandCaptureTestCase):
             self._setup_run_exceptions(block_device,
                                        ("mkfs.lustre",
                                         "--index=0",
-                                        "--mkfsoptions=-x 30 --y --z=83",
+                                        '--mkfsoptions=%s' % ('-x 30 --y --z=83' if block_device.device_type == 'linux' else '"mountpoint=none"'),
                                         "--backfstype=%s" % block_device.preferred_fstype,
                                         self._mkfs_path(block_device, "MGS0000")))
 
@@ -301,7 +312,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                          target_name = "MGS0000",
                                          backfstype = block_device.preferred_fstype,
                                          index=0,
-                                         mkfsoptions='-x 30 --y --z=83')
+                                         mkfsoptions='-x 30 --y --z=83' if block_device.device_type == 'linux' else '"mountpoint=none"')
             self.assertRanCommand(self._run_command)
 
     def test_other_opts(self):
@@ -309,7 +320,7 @@ class TestFormatTarget(CommandCaptureTestCase):
             self._setup_run_exceptions(block_device,
                                        ("mkfs.lustre",
                                         "--index=42",
-                                        "--mkfsoptions=-x 30 --y --z=83",
+                                        '--mkfsoptions=%s' % ('-x 30 --y --z=83' if block_device.device_type == 'linux' else '"mountpoint=none"'),
                                         "--backfstype=%s" % block_device.preferred_fstype,
                                         self._mkfs_path(block_device, "MGS0000")))
 
@@ -318,7 +329,7 @@ class TestFormatTarget(CommandCaptureTestCase):
                                          target_name = "MGS0000",
                                          backfstype = block_device.preferred_fstype,
                                          index=42,
-                                         mkfsoptions='-x 30 --y --z=83')
+                                         mkfsoptions='-x 30 --y --z=83' if block_device.device_type == 'linux' else '"mountpoint=none"')
 
             self.assertRanCommand(self._run_command)
 
