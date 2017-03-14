@@ -258,24 +258,17 @@ class BlockDeviceZfs(BlockDevice):
         :return: dictionary of zfs properties
         """
         if reread or not self._zfs_properties:
-            with ZfsDevice(self._device_path, False):
+            with ZfsDevice(self._device_path, True) as zfs_device:
                 self._zfs_properties = {}
 
-                try:
-                    ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-                except OSError:                                     # Zfs not found.
+                if not zfs_device.available:
                     return self._zfs_properties
-                except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
-                    with ZfsDevice(self._device_path, True) as zfs_device:
-                        if zfs_device.available:
-                            ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-                        else:
-                            return self._zfs_properties
+
+                ls = shell.Shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
 
                 for line in ls.split("\n"):
                     try:
                         key, value = line.split('\t')
-
                         self._zfs_properties[key] = value
                     except ValueError:                              # Be resilient to things we don't understand.
                         if log:
@@ -295,24 +288,17 @@ class BlockDeviceZfs(BlockDevice):
         self._assert_zpool('zpool_properties')
 
         if reread or not self._zpool_properties:
-            with ZfsDevice(self._device_path, False):
+            with ZfsDevice(self._device_path, True) as zfs_device:
                 self._zpool_properties = {}
 
-                try:
-                    ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
-                except OSError:                                     # Zfs not found.
+                if not zfs_device.available:
                     return self._zpool_properties
-                except shell.Shell.CommandExecutionError:                 # Error is probably because device is not imported.
-                    with ZfsDevice(self._device_path, True) as zfs_device:
-                        if zfs_device.available:
-                            ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
-                        else:
-                            return self._zpool_properties
+
+                ls = shell.Shell.try_run(["zpool", "get", "-Hp", "all", self._device_path])
 
                 for line in ls.strip().split("\n"):
                     try:
                         _, key, value, _ = line.split('\t')
-
                         self._zpool_properties[key] = value
                     except ValueError:                              # Be resilient to things we don't understand.
                         if log:
@@ -403,7 +389,7 @@ class BlockDeviceZfs(BlockDevice):
                 result = zfs_device.import_(pacemaker_ha_operation, False)
                 # Check the pool is not readonly, reread the properties because we have just imported it.
                 if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
-                    return 'zfs pool %s imported but device is readonly' % self._device_path
+                    return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path
 
                 return result
 
