@@ -53,6 +53,12 @@ yum-config-manager --disable *[eE][pP][eE][lL]*
 
 rpm -qa | sort >/tmp/before_upgrade
 yum -y upgrade
+
+if [[ ! \$(lsb_release -r -s) =~ ${upgrade_distro_version}(\\.[0-9]*.*)?$ ]]; then
+    echo \"O/S didn't actually upgrade\"
+    exit 1
+fi
+
 rpm -qa | sort >/tmp/after_upgrade
 
 # The yum upgrade will have restored the /etc/yum.repos.d/CentOS-*.repo
