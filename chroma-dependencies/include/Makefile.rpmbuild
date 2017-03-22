@@ -5,11 +5,11 @@ TARBALL    ?= $(shell ls $(CURDIR)/*.tar* | head -1)
 SPECFILE   ?= $(shell ls $(CURDIR)/*.spec | head -1)
 SOURCEDIR  ?= $(CURDIR)
 
-RPM_NAME    = $(shell $(TOP)/include/parse_spec -n $(SPECFILE))
-RPM_VERSION = $(shell $(TOP)/include/parse_spec -v $(SPECFILE))
-RPM_RELEASE = $(shell $(TOP)/include/parse_spec -r $(SPECFILE))
-RPM_ARCH    = $(shell $(TOP)/include/parse_spec -a $(SPECFILE))
-ALL_ARCH_RPMS    = $(shell with_arch=true RPM_OPTS="$(RPM_OPTS)" $(TOP)/include/parse_spec -s $(SPECFILE))
+RPM_NAME    = $(shell RPM_OPTS='$(RPM_OPTS)' $(TOP)/include/parse_spec -n $(SPECFILE))
+RPM_VERSION = $(shell RPM_OPTS='$(RPM_OPTS)' $(TOP)/include/parse_spec -v $(SPECFILE))
+RPM_RELEASE = $(shell RPM_OPTS='$(RPM_OPTS)' $(TOP)/include/parse_spec -r $(SPECFILE))
+RPM_ARCH    = $(shell RPM_OPTS='$(RPM_OPTS)' $(TOP)/include/parse_spec -a $(SPECFILE))
+ALL_ARCH_RPMS    = $(shell with_arch=true RPM_OPTS='$(RPM_OPTS)' $(TOP)/include/parse_spec -s $(SPECFILE))
 ALL_TARGETS  = $(patsubst %, $(RPM_DIR)/%,$(ALL_ARCH_RPMS))
 # XXX - what happens when the version is updated across two make runs?
 #       the RPMS that were built before the update won't get cleaned out

@@ -15,22 +15,22 @@ NAME            ?= $(patsubst python-%,%,$(RPM_NAME))
 REQUIREMENT     ?= $(NAME)==$(RPM_VERSION)
 
 rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
-	set -e;                                                                                                 \
-	if $(PLAT_BUILD_OK); then                                                                               \
-		for dep in $(DEPS); do                                                                          \
-			$(MAKE) -C ../$$dep pkg_install;                                                        \
-		done;                                                                                           \
-		$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@; \
-		for dep in $(DEPS); do                                                                          \
-			$(MAKE) -C ../$$dep pkg_uninstall;                                                      \
-		done;                                                                                           \
-		echo $(SRPM) > .last_build_srpm;                                                                \
+	set -e;                                                                                                     \
+	if $(PLAT_BUILD_OK); then                                                                                   \
+		for dep in $(DEPS); do                                                                              \
+			$(MAKE) -C ../$$dep pkg_install;                                                            \
+		done;                                                                                               \
+		$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS='$(RPM_OPTS)' RPMBUILD_OPTS='$(RPMBUILD_OPTS)' $@; \
+		for dep in $(DEPS); do                                                                              \
+			$(MAKE) -C ../$$dep pkg_uninstall;                                                          \
+		done;                                                                                               \
+		echo $(SRPM) > .last_build_srpm;                                                                    \
 	fi
 
 install pkg_install: rpms
 	set -e;                                                                                                     \
 	if $(PLAT_BUILD_OK); then                                                                                   \
-		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
+		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS='$(RPM_OPTS)' SPECFILE=$(RPM_NAME).spec $@; \
 	fi
 
 uninstall pkg_uninstall:
@@ -40,7 +40,7 @@ uninstall pkg_uninstall:
 	fi
 
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
-	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
+	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS="$(RPM_OPTS)" RPMBUILD_OPTS="$(RPMBUILD_OPTS)" $@
 
 $(TOP)/../chroma-externals/$(SRPM):
 	set -e;                                                              \
