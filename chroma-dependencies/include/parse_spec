@@ -68,6 +68,7 @@ rpm_query()
     else
       subname=${name#*$basename-}
       if ! grep -q -e "^%files $subname *$" \
+                   -e "^%files .* $subname *$" \
                    -e "^%files  *-n  *%{name}-$subname *$" $specfile; then
         filespresent=false
       fi

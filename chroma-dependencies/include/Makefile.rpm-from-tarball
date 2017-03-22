@@ -28,7 +28,7 @@ rpms: $(SPECNAME) $(TARBALL) ../include/Makefile.rpmbuild ../include/Makefile.in
 	        $(MAKE) -C ../epel pkg_install INSTALL_PKGS=$(dep); \
 	    fi;                                                     \
 	done
-	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
+	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS='$(RPM_OPTS)' RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 	set -e;                                                       \
 	for dep in $(DEPS); do                                        \
         if [ -a ../$$dep/Makefile ]; then                             \
@@ -39,10 +39,10 @@ rpms: $(SPECNAME) $(TARBALL) ../include/Makefile.rpmbuild ../include/Makefile.in
 	done
 
 install pkg_install: rpms
-	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS=$(RPM_OPTS) SPECFILE="$(SPECNAME)" $@
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS='$(RPM_OPTS)' SPECFILE="$(SPECNAME)" $@
 
 uninstall pkg_uninstall:
-	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS=$(RPM_OPTS) SPECFILE="$(SPECNAME)" $@
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS='$(RPM_OPTS)' SPECFILE="$(SPECNAME)" $@
 
 # Grab a tarball and build without all the python stuff
 ifeq ($(TARBALL_NOT_PYTHON), TRUE)
