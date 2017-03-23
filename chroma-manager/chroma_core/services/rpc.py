@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -112,7 +112,7 @@ class RunOneRpc(threading.Thread):
     response (result or exception) from the execution thread."""
 
     _outstanding = 0
-    _throttle_limit = 5
+    _throttle_limit = 75
     _throttled_locks = []
 
     def __init__(self, rpc, body, response_conn_pool):
@@ -130,6 +130,7 @@ class RunOneRpc(threading.Thread):
                 if RunOneRpc._outstanding > RunOneRpc._throttle_limit:
                     rpc_complete_event = threading.Event()
                     RunOneRpc._throttled_locks.append(rpc_complete_event)
+                    log.info("_throttled_locks: '%s'" % RunOneRpc._throttled_locks)
                     log.info("Throttled rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
                     rpc_complete_event.wait()
                     log.info("Released rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
@@ -164,15 +165,16 @@ class RunOneRpc(threading.Thread):
             }
             log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
         finally:
-            if rpc_throttle:
-                try:
-                    rpc_complete_event = RunOneRpc._throttled_locks.pop(0)
-                    rpc_complete_event.set()
-                except IndexError:
-                    pass
-                RunOneRpc._outstanding -= 1
-
-        django.db.connection.close()
+            try:
+                if rpc_throttle:
+                    try:
+                        rpc_complete_event = RunOneRpc._throttled_locks.pop(0)
+                        rpc_complete_event.set()
+                    except IndexError:
+                        pass
+                    RunOneRpc._outstanding -= 1
+            finally:
+                django.db.connection.close()
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
             with Producer(connection) as producer:
