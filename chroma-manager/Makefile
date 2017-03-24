@@ -222,6 +222,7 @@ rpms: cleandist tarball
 	gzip -c chroma-config.1 > chroma-config.1.gz
 	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
+	set -e;                                                \
 	dist=$$(rpm --eval %dist);                             \
 	dist=$${dist/.centos/};                                \
 	rpmbuild --define "_topdir $$(pwd)/_topdir"            \

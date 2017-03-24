@@ -19,11 +19,12 @@ REQUIREMENT  ?= $(RPM_NAME)==$(RPM_VERSION)
 rpms: $(ALL_TARGETS)
 
 $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
+	set -e;                                                                 \
 	mkdir -p $(RPM_TOP)/{RPMS/{noarch,i686,x86_64},SRPMS,BUILD,TMP};        \
 	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS;                      \
 	dist=$$(rpm --eval %dist);                                              \
 	dist=$${dist/.centos/};                                                 \
-	sudo yum-builddep -y $(SPECFILE) &&                                     \
+	sudo yum-builddep -y $(SPECFILE);                                       \
 	rpmbuild --define '%_topdir $(RPM_TOP)'                                 \
 		 --define '%_sourcedir $(SOURCEDIR)'                            \
 	         --define '%_tmppath $(RPM_TOP)/TMP'                            \
@@ -31,7 +32,7 @@ $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 	         --define '%debug_package %{nil}'                               \
 	         $(RPM_OPTS)                                                    \
 	         $(RPMBUILD_OPTS)                                               \
-	         -ba $(SPECFILE) &&                                             \
+	         -ba $(SPECFILE);                                               \
 	touch $(RPM_LAST_BUILT);                                                \
 	echo "$(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).src.rpm" > .last_built; \
 	cp $(SPECFILE) $(SPECFILE).last_built
@@ -41,6 +42,7 @@ cleanRPMS:
 	# no list of RPMS to clean, so just clean the whole RPMS tree.
 	# this should only ever happen during a transition to this new
 	# cleanRPMS method
+	set -e;                                              \
 	if [ -z "$(CLEAN_RPMS)" ]; then                      \
 	  find $(RPM_DIR) -type f -print | while read f; do  \
 	    rm -f $$f;                                       \
@@ -65,8 +67,9 @@ cleanTMPDIR:
 	rm -rf $(RPM_TOP)/TMP/*
 
 cleanPLATTREE:
+	set -e;                                                                                   \
 	for d in $(RPM_TOP){/{RPMS{/{noarch,i686,x86_64},},SRPMS,BUILD,TMP,SPECS,BUILDROOT},}; do \
-		[ -f $$d ] && rmdir $$d || true; \
+		[ -f $$d ] && rmdir $$d || true;                                                  \
 	done
 
 clean: cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR

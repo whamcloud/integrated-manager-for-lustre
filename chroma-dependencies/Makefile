@@ -20,6 +20,7 @@ cleanrepo: TARGET=cleanrepo
 
 requirements::
 	# these are the ones provided by EL
+	set -e;                                                                         \
 	{ echo "../chroma-externals/netaddr-0.7.5.zip";                                 \
 	if [ $(shell rpm --eval '%{?rhel}') -lt 7 ]; then                               \
 	    echo "paramiko==1.7.5";                                                     \
@@ -33,6 +34,7 @@ $(SUBDIRS): do_cleanrepo force
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)
 
 do_cleanrepo:
+	set -e;                          \
 	if [ $(TARGET) = install ]; then \
 		make cleanrepo;          \
 		mkdir $(REPO);           \
@@ -42,6 +44,7 @@ do_cleanrepo:
 force :;
 
 repo: install
+	set -e;                        \
 	for dir in repo*; do           \
 		pushd $$dir;           \
 		createrepo --pretty .; \

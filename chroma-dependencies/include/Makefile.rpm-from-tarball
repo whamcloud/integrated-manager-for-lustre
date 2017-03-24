@@ -20,20 +20,22 @@ else
 endif
 
 rpms: $(SPECNAME) $(TARBALL) ../include/Makefile.rpmbuild ../include/Makefile.install
-	for dep in $(DEPS); do                                               \
-	    if [ -a ../$$dep/Makefile ]; then                                \
-	        $(MAKE) -C ../$$dep pkg_install;                             \
-        else                                                             \
-	        $(MAKE) -C ../epel pkg_install INSTALL_PKGS=$(dep);          \
-	    fi                                                               \
+	set -e;                                                     \
+	for dep in $(DEPS); do                                      \
+	    if [ -a ../$$dep/Makefile ]; then                       \
+	        $(MAKE) -C ../$$dep pkg_install;                    \
+        else                                                        \
+	        $(MAKE) -C ../epel pkg_install INSTALL_PKGS=$(dep); \
+	    fi;                                                     \
 	done
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
-	for dep in $(DEPS); do                                               \
-        if [ -a ../$$dep/Makefile ]; then                                \
-		    $(MAKE) -C ../$$dep pkg_uninstall;                           \
-        else                                                             \
-    		$(MAKE) -C ../epel pkg_uninstall INSTALL_PKGS=$(dep);        \
-	    fi                                                               \
+	set -e;                                                       \
+	for dep in $(DEPS); do                                        \
+        if [ -a ../$$dep/Makefile ]; then                             \
+		    $(MAKE) -C ../$$dep pkg_uninstall;                \
+        else                                                          \
+    		$(MAKE) -C ../epel pkg_uninstall INSTALL_PKGS=$(dep); \
+	    fi;                                                       \
 	done
 
 install pkg_install: rpms
@@ -56,6 +58,7 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile ../include/pypi-rpm_spec.ed ../include/
 	# python package
 	rm -rf tmp
 	mkdir tmp
+	set -e;                                  \
 	cd tmp &&                                \
 	if [ $(TARBALL_EXT) = zip ]; then        \
 	    unzip ../$(TARBALL);                 \
@@ -66,16 +69,19 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile ../include/pypi-rpm_spec.ed ../include/
 	fi
 	# seriously?  where do these people get their software packaging
 	# licenses from?
-	if [ ! -d tmp/$(TARBALL_NAME)-$(TARBALL_VERSION) -a \
-	     -d tmp/$(TARBALL_NAME) ]; then \
+	set -e;                                                            \
+	if [ ! -d tmp/$(TARBALL_NAME)-$(TARBALL_VERSION) -a                \
+	     -d tmp/$(TARBALL_NAME) ]; then                                \
 	    mv tmp/$(TARBALL_NAME) tmp/$(TARBALL_NAME)-$(TARBALL_VERSION); \
 	fi
+	set -e;                                      \
 	cd tmp/$(TARBALL_NAME)-$(TARBALL_VERSION) && \
 	python setup.py bdist_rpm --spec-only &&     \
 	mv dist/$(SPECNAME) ../..
 	cp $(SPECNAME){,.orig}
 	ed $(SPECNAME) < ../include/pypi-rpm_spec.ed 2>/dev/null
 	echo -e "/^Source0:/c\nSource0: %{tgz_name}-%{unmangled_version}.$(TARBALL_EXT)\n.\n1;\$$s/^python/%{__python}/g\n.\nw\nq" | ed $(SPECNAME) 2>/dev/null
+	set -e;                                                             \
 	if ! $(USES_DISTUTILS) &&                                           \
 	   grep setuptools tmp/$(TARBALL_NAME)-$(TARBALL_VERSION)/setup.py; \
 	   then                                                             \
@@ -101,15 +107,16 @@ $(TARBALL):
 download: $(CHROMA_EXTERNALS_DIR)/$(TARBALL)
 
 clean:
-	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM \
+	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM       \
 						cleanBUILDDIR cleanTMPDIR \
 						cleanPLATTREE
 
 distclean:
 	rm -rf $(RPM_TOP)
 	rm -f $(TARBALL) $(SPECNAME){,.{orig,last_built}} .last_built
+	set -e;                                                         \
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
-		rm -f spec.ed; \
+		rm -f spec.ed;                                          \
 	fi
 
 cleanrepo:
