@@ -7,6 +7,7 @@ CHROMA_EXTERNALS_DIR := $(TOP)/../chroma-externals/$(CHROMA_EXTERNALS_SUBDIR)/
 rpms: $(addprefix $(CHROMA_EXTERNALS_DIR),$(ALL_RPMS))
 
 requirements:
+	set -e;                                                \
 	for rpm in $(ALL_RPMS); do                             \
 		base=$${rpm##*/};                              \
 		name=$${base%-*};                              \
@@ -31,7 +32,8 @@ REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
 
 decruftinate:
 	@echo "Checking for cruft in $(CURDIR)..."
-	@rpm_name() {                                        \
+	@set -e;                                             \
+	rpm_name() {                                         \
 	  base=$${1##*/};                                    \
 	  name=$${base%-*};                                  \
 	  version=$${name%-*};                               \
@@ -79,26 +81,27 @@ $(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)%.rpm
 	ln $^ $(REPO)/
 
 $(CHROMA_EXTERNALS_DIR)%.rpm:
-	name=$(notdir $@); \
-	if [ x$(JENKINS_ROOT_URL) != x ]; then \
-	    arch=$${name%%.rpm}; \
-	    arch=$${arch##*.}; \
-	    if [ $$arch = src ]; then \
-	        rpmsdir=SRPMS; \
-	        rpmtype="src"; \
-	    else \
-	        rpmsdir=RPMS/$$arch; \
-	        rpmtype="bin "; \
-	    fi; \
-	    src=$(SRC_REPO)/$$rpmsdir/$$name; \
-	else \
-	    rpmtype="bin "; \
-	    src="$(SRC_REPO)"; \
-	    if $(INITIAL_IN_TREE); then \
-	        src+="/"$${name:0:1}; \
-	    fi; \
-	    src+=/"$$name"; \
-	fi; \
+	set -e;                                                           \
+	name=$(notdir $@);                                                \
+	if [ x$(JENKINS_ROOT_URL) != x ]; then                            \
+	    arch=$${name%%.rpm};                                          \
+	    arch=$${arch##*.};                                            \
+	    if [ $$arch = src ]; then                                     \
+	        rpmsdir=SRPMS;                                            \
+	        rpmtype="src";                                            \
+	    else                                                          \
+	        rpmsdir=RPMS/$$arch;                                      \
+	        rpmtype="bin ";                                           \
+	    fi;                                                           \
+	    src=$(SRC_REPO)/$$rpmsdir/$$name;                             \
+	else                                                              \
+	    rpmtype="bin ";                                               \
+	    src="$(SRC_REPO)";                                            \
+	    if $(INITIAL_IN_TREE); then                                   \
+	        src+="/"$${name:0:1};                                     \
+	    fi;                                                           \
+	    src+=/"$$name";                                               \
+	fi;                                                               \
 	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 $$rpmtype" $$src
 

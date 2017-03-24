@@ -28,6 +28,7 @@ endif
 #$(INCLUDE_DIR)/Makefile.lustre_versions-$(DISTRO): $(call to-md5,$(INCLUDE_DIR)/Makefile.lustre_build_meta)
 $(INCLUDE_DIR)/Makefile.lustre_versions-$(DISTRO): $(INCLUDE_DIR)/Makefile.lustre_build_meta.md5
 	# any of this is only needed by make download
+	set -e;                                                                                      \
 	if [ $(MAKECMDGOALS) != download ]; then                                                     \
 	    touch $@;                                                                                \
 	    exit 0;                                                                                  \

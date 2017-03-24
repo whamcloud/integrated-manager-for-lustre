@@ -15,6 +15,7 @@ NAME            ?= $(patsubst python-%,%,$(RPM_NAME))
 REQUIREMENT     ?= $(NAME)==$(RPM_VERSION)
 
 rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
+	set -e;                                                                                                 \
 	if $(PLAT_BUILD_OK); then                                                                               \
 		for dep in $(DEPS); do                                                                          \
 			$(MAKE) -C ../$$dep pkg_install;                                                        \
@@ -27,11 +28,13 @@ rpms: $(RPM_NAME).spec ../include/Makefile.rpmbuild ../include/Makefile.install
 	fi
 
 install pkg_install: rpms
+	set -e;                                                                                                     \
 	if $(PLAT_BUILD_OK); then                                                                                   \
 		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
 	fi
 
 uninstall pkg_uninstall:
+	set -e;                                                                                                     \
 	if $(PLAT_BUILD_OK); then                                                                                   \
 		$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@; \
 	fi
@@ -40,16 +43,18 @@ cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
 $(TOP)/../chroma-externals/$(SRPM):
+	set -e;                                                              \
 	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 src" $(LOCATION); \
 
 $(RPM_NAME).spec: $(TOP)/../chroma-externals/$(SRPM) spec.ed
 	# if we are building a different version than last time, clean
 	# everything up
+	set -e;                                                              \
 	if [ -n "$(LAST_BUILT_SRPM)" -a                                      \
 		     "$(LAST_BUILT_SRPM)" != "$(SRPM)" ]; then               \
-	    touch $(RPM_NAME).spec;                                     \
-	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean; \
+	    touch $(RPM_NAME).spec;                                          \
+	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean;      \
 	fi
 	rm -f $@
 	rpm2cpio < $(TOP)/../chroma-externals/$(SRPM) | cpio -id
@@ -69,6 +74,7 @@ clean: $(LAST_BUILT) $(RPM_NAME).spec
 						cleanPLATTREE
 	# clean the stuff from the last built one, not necessarily the one
 	# being built
+	set -e;                                   \
 	rpm -qlp $(LAST_BUILT) | while read f; do \
 		rm -f $$f;                        \
 	done
@@ -78,8 +84,9 @@ clean: $(LAST_BUILT) $(RPM_NAME).spec
 distclean: clean
 	rm -rf $(RPM_TOP)
 	rm -f $(SRPM) $(LAST_BUILT)
+	set -e;                                                         \
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
-		rm -f spec.ed; \
+		rm -f spec.ed;                                          \
 	fi
 
 cleanrepo:

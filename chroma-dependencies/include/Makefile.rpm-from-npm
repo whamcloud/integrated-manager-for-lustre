@@ -15,6 +15,7 @@ BUILD_DEPS_TGZ	 := $(TARBALL_NAME)-modules.tar.gz
 SPECNAME         ?= $(TARBALL_NAME).spec
 
 rpms: $(SPECNAME) $(TARBALL) $(BUILD_DEPS_TGZ)
+	set -e;                                  \
 	for dep in $(DEPS); do                   \
 		$(MAKE) -C ../$$dep pkg_install; \
 	done
@@ -28,9 +29,10 @@ $(BUILD_DEPS_TGZ): $(BUILD_MODULES)
 	tar -czf $@ node_modules
 
 node_modules/%:
-	name=$$(basename $@); project_name=nodejs-$$name; \
-	$(MAKE) -C ../$$project_name tarball; \
-	mkdir -p $@; \
+	set -e;                                                                \
+	name=$$(basename $@); project_name=nodejs-$$name;                      \
+	$(MAKE) -C ../$$project_name tarball;                                  \
+	mkdir -p $@;                                                           \
 	tar -xzf ../$$project_name/$$name*.tgz -C $@ --transform='s|package||'
 
 $(SPECNAME): $(TARBALL) spec.ed Makefile
@@ -47,11 +49,12 @@ spec.ed:
 	touch spec.ed
 
 $(TARBALL):
-	if [ -f "$(RPM_TOP)/SOURCES/$(TARBALL)" ]; then \
-		ln "$(RPM_TOP)/SOURCES/$(TARBALL)" .; \
-	else \
+	set -e;                                                         \
+	if [ -f "$(RPM_TOP)/SOURCES/$(TARBALL)" ]; then                 \
+		ln "$(RPM_TOP)/SOURCES/$(TARBALL)" .;                   \
+	else                                                            \
 		CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-		cache_get -s "$(SHA1SUM)" $(LOCATION); \
+		cache_get -s "$(SHA1SUM)" $(LOCATION);                  \
 	fi
 
 tarball: $(TARBALL)
@@ -64,8 +67,9 @@ clean:
 distclean:
 	rm -rf $(RPM_TOP)
 	rm -f $(TARBALL) $(SPECNAME){,.{orig,last_built}} .last_built
+	set -e;                                                         \
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
-		rm -f spec.ed; \
+		rm -f spec.ed;                                          \
 	fi
 
 download:
