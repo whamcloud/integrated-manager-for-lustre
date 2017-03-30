@@ -1,6 +1,7 @@
 include ../../chroma-dependencies/include/Makefile.distro
 include ../../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
 
+override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
 RPMS			:= zfs spl zfs-dkms dkms libuutil1 libnvpair1 libzfs2 libzpool2
 EXCLUDES		:=
 DESC			:= ZFS

@@ -43,6 +43,7 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile
 	cp $(SPECNAME){,.orig}
 	(cat spec.ed ; echo -e "w\nq") | ed $(SPECNAME) 2>/dev/null
 	rm -fr tmp
+	rpm $(RPM_OPTS) -q --specfile $(SPECNAME)
 
 spec.ed:
 	# make an empty one if it doesn't exist already
