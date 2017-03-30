@@ -8,6 +8,8 @@ CHROMA_EXTERNALS_SUBDIR := e2fsprogs
 
 SRC_REPO = $(URL)/$(E2FSPROGS_VERSION)/$(DISTRO_TAG)
 
+override REPO := $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
+
 ALL_RPMS = e2fsprogs-$(E2FSPROGS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 	   e2fsprogs-devel-$(E2FSPROGS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
 	   e2fsprogs-libs-$(E2FSPROGS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
