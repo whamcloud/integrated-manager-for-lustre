@@ -211,7 +211,12 @@ tarball: version gui
 	# workaround setuptools
 	touch .chroma-manager.py
 	touch .production_supervisord.conf
-	python setup.py sdist
+	if ! python setup.py sdist > sdist.out; then       \
+	    echo "python setup.py sdist failed.  stdout:"; \
+	    cat sdist.out;                                 \
+	    exit 1;                                        \
+	fi
+	rm -f sdist.out
 	rm -f .chroma-manager.py
 	rm -f .production_supervisord.conf
 

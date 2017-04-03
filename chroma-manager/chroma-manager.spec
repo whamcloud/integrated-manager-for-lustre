@@ -154,7 +154,7 @@ done
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
 %build
-%{__python} setup.py build
+%{__python} setup.py -q build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.py build/lib
 cp -a production_supervisord.conf build/lib
@@ -163,7 +163,7 @@ cp -a mime.types build/lib
 cp -a agent-bootstrap-script.template build/lib
 
 %install
-%{__python} setup.py install --skip-build --root=%{buildroot}
+%{__python} setup.py -q install --skip-build --root=%{buildroot}
 install -d -p $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
