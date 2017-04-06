@@ -52,7 +52,7 @@ from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfil
 from chroma_core.lib.util import CommandLine, CommandError
 from chroma_core.chroma_common.lib.ntp import NTPConfig
 from chroma_core.chroma_common.lib.firewall_control import FirewallControl
-from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL6
+from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL7
 
 log = logging.getLogger('installation')
 try:
@@ -256,7 +256,7 @@ class ServiceConfig(CommandLine):
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
         # special case where service requires legacy service control
-        rabbit_service = ServiceControlEL6("rabbitmq-server")
+        rabbit_service = ServiceControlEL7("rabbitmq-server")
 
         error = rabbit_service.enable()
         if error:
@@ -268,8 +268,17 @@ class ServiceConfig(CommandLine):
         #        blocking subprocess.communicate().
         #        we need to figure out why
         # FIXME: this should also be converted to use the common Shell utility class
-        self.try_shell(["service", "rabbitmq-server", "restart"],
-                       mystderr=None, mystdout=None)
+        #self.try_shell(["service", "rabbitmq-server", "restart"],
+        #               mystderr=None, mystdout=None)
+        # ServiceControlEL7 really needs a _restart() method
+        error = rabbit_service._stop()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = rabbit_service._start()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
 
     def _setup_rabbitmq_credentials(self):
         # Enable use from dev_setup as a nonroot user on linux
