@@ -59,13 +59,24 @@ server {
         index index.html;
     }
 
-    location /gui {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist;
-        
+    location /gui/node_modules/socket-worker/dist {
+        alias {{APP_PATH}}/ui-modules/node_modules/@iml/socket-worker/dist;
+
         etag on;
         expires 1y;
         add_header Cache-Control "public";
-      
+
+        gzip on;
+        gzip_types application/x-javascript application/javascript text/javascript;
+    }
+
+    location /gui {
+        alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist;
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control "public";
+        
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
     }
