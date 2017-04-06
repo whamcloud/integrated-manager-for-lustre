@@ -22,20 +22,12 @@ endif
 rpms: $(SPECNAME) $(TARBALL) ../include/Makefile.rpmbuild ../include/Makefile.install
 	set -e;                                                     \
 	for dep in $(DEPS); do                                      \
-	    if [ -a ../$$dep/Makefile ]; then                       \
-	        $(MAKE) -C ../$$dep pkg_install;                    \
-        else                                                        \
-	        $(MAKE) -C ../epel pkg_install INSTALL_PKGS=$(dep); \
-	    fi;                                                     \
+	    $(MAKE) -C ../$$dep pkg_install;                        \
 	done
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS='$(RPM_OPTS)' RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 	set -e;                                                       \
 	for dep in $(DEPS); do                                        \
-        if [ -a ../$$dep/Makefile ]; then                             \
-		    $(MAKE) -C ../$$dep pkg_uninstall;                \
-        else                                                          \
-    		$(MAKE) -C ../epel pkg_uninstall INSTALL_PKGS=$(dep); \
-	    fi;                                                       \
+	    $(MAKE) -C ../$$dep pkg_uninstall;                        \
 	done
 
 install pkg_install: rpms

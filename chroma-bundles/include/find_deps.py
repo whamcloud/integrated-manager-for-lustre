@@ -92,9 +92,12 @@ class YumDepFinder(object):
 
     def disable_all_repos(self):
         for repo in self.yb.repos.findRepos("*"):
+            # these are hardcoded to the distro defaults and our own
+            # infrastructure right now
+            # these probably need to be externally specified
             if repo.id != "base" and repo.id != "core-0" and \
-               repo.id != "updates" and \
-               not fnmatch.fnmatch(repo.id, "updates-*"):
+               repo.id != "updates" and repo.id != "updates-centos7.3-x86_64" and \
+               repo.id != "addon-epel7-x86_64":
                 repo.disable()
 
     def add_repo(self, repo, num):
