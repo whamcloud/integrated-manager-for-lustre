@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,6 +24,7 @@ import json
 import threading
 import sys
 import traceback
+import time
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -146,8 +147,8 @@ class SimpleConnectionQuota(object):
         self._semaphore.acquire()
         if django.db.connection.connection == DISABLED_CONNECTION:
             django.db.connection.connection = None
-        #connection = load_backend(self.database['ENGINE']).DatabaseWrapper(self.database, self.db_alias)
-        #return connection
+        # connection = load_backend(self.database['ENGINE']).DatabaseWrapper(self.database, self.db_alias)
+        # return connection
 
     def release(self, connection):
         # Close the connection if present, and hand back our token
@@ -430,7 +431,7 @@ class JobCollection(object):
                         for job in jobs:
                             log.debug("Command %s job %s: %s %s" % (command_id, job.id, job.errored, job.cancelled))
                     self._commands[command_id].completed(errored, cancelled)
-                    #Command.objects.filter(pk = command_id).update(errored = errored, cancelled = cancelled, complete = True)
+                    # Command.objects.filter(pk = command_id).update(errored = errored, cancelled = cancelled, complete = True)
 
     def update_many(self, jobs, new_state):
         for job in jobs:
@@ -562,7 +563,7 @@ class JobScheduler(object):
 
         if job.steps:
             thread = RunJobThread(self.progress, self._db_quota, job, job.steps)
-            assert not job.id in self._run_threads
+            assert job.id not in self._run_threads
             self._run_threads[job.id] = thread
 
             thread.start()
@@ -749,7 +750,7 @@ class JobScheduler(object):
             return
 
         # Drop if it's not in an allowed state
-        if from_states and not instance.state in from_states:
+        if from_states and instance.state not in from_states:
             log.info("_notify: Dropping update to %s because %s is not in %s" % (instance, instance.state, from_states))
             return
 
@@ -922,11 +923,11 @@ class JobScheduler(object):
                             ))
                         if hasattr(lock.locked_item, 'not_deleted') and lock.locked_item.not_deleted is None:
                             log.debug("Job %d: purging %s/%s" %
-                                     (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                                      (job.id, lock.locked_item.__class__, lock.locked_item.id))
                             ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
                         else:
                             log.debug("Job %d: updating write-locked %s/%s" %
-                                     (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                                      (job.id, lock.locked_item.__class__, lock.locked_item.id))
 
                             # Ensure that any notifications prior to release of the writelock are not
                             # applied
@@ -989,7 +990,10 @@ class JobScheduler(object):
         "Return sorted sequence of target_data dicts, such that sequential MDTs/OSTs will be distributed across hosts."
         volumes_ids = map(operator.itemgetter('volume_id'), targets_data)
         host_ids = dict(VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list('volume_id', 'host_id'))
-        key = lambda td: host_ids[int(td['volume_id'])]
+
+        def key(td):
+            return host_ids[int(td['volume_id'])]
+
         for host_id, target_group in itertools.groupby(sorted(targets_data, key=key), key=key):
             for index, target_data in enumerate(target_group):
                 target_data['index'] = index
@@ -1018,8 +1022,8 @@ class JobScheduler(object):
             from django.db import transaction
             with transaction.commit_on_success():
                 mount, created = LustreClientMount.objects.get_or_create(
-                                                        host = host,
-                                                        filesystem = filesystem)
+                    host = host,
+                    filesystem = filesystem)
                 mount.mountpoint = mountpoint
                 mount.save()
 
@@ -1222,9 +1226,24 @@ class JobScheduler(object):
                 fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
                 agent_ssh = AgentSsh(address, timeout = 5)
                 auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-                rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
-                log.info("Getting FQDN for '%s': %s" % (address, stdout))
-                nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
+                tries = 1
+                fqdn = None
+                while tries < 31:
+                    rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
+                    log.info("%setting FQDN for '%s': %s" %
+                             ("G" if tries < 2 else "Try #%s g" % tries, address, stdout))
+                    try:
+                        nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
+                        break
+                    except ValueError:
+                        pass
+                    tries += 1
+                    if tries > 10:
+                        time.sleep(1)
+
+                if not fqdn:
+                    log.error("Failed getting FQDN for '%s'.  Are name resolution services broken?" % address)
+                    # TODO: we should bubble this error up to the user
 
                 if root_pw:
                     install_method = ManagedHost.INSTALL_SSHPSW
@@ -1370,7 +1389,7 @@ class JobScheduler(object):
                     model_klass = ContentType.objects.get_by_natural_key(*obj_key).model_class()
                     stateful_object = model_klass.objects.get(pk=obj_id)
 
-                    ## Used to leverage the ObjectCache, but this suspect now:  HYD-3155
+                    # Used to leverage the ObjectCache, but this suspect now:  HYD-3155
                     # stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
 
                     log.debug("available_transitions object: %s, state: %s" % (stateful_object, stateful_object.state))
@@ -1549,7 +1568,7 @@ class JobScheduler(object):
         :return: command id that caused updates to be sent.
         """
 
-        host_ids = [host.id for host in ManagedHost.objects.all()] if include_host_ids  is None else include_host_ids
+        host_ids = [host.id for host in ManagedHost.objects.all()] if include_host_ids is None else include_host_ids
         host_ids = host_ids if exclude_host_ids is None else list(set(host_ids) - set(exclude_host_ids))
 
         if host_ids:
