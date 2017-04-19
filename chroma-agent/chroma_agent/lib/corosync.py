@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -169,18 +169,24 @@ def find_subnet(network, prefixlen):
     return shadow_network
 
 
-def find_unused_port(ring0, timeout = 10):
+def find_unused_port(ring0, timeout=10, batch_count=10000):
     from random import choice
 
     dest_addr = ring0.mcastaddr
-    ports = range(32767, 65535, 2)
+    port_min = 32767
+    port_max = 65535
+    ports = range(port_min, port_max, 2)
+    portrange_str = "%s-%s" % (port_min, port_max)
 
     firewall_control.add_rule(0, 'tcp', 'find unused port', persist=False, address=ring0.mcastaddr)
 
     try:
         networking.subscribe_multicast(ring0)
-        console_log.debug("Sniffing for packets to %s on %s" % (dest_addr, ring0.name))
-        cap = networking.start_cap(ring0, timeout, "host %s and udp" % dest_addr)
+        console_log.info("Sniffing for packets to %s on %s within port range %s" % (dest_addr,
+                                                                                    ring0.name,
+                                                                                    portrange_str))
+        cap = networking.start_cap(ring0, timeout, "host %s and udp and portrange %s" % (dest_addr,
+                                                                                         portrange_str))
 
         def recv_packets(header, data):
             tgt_port = networking.get_dport_from_packet(data)
@@ -195,11 +201,11 @@ def find_unused_port(ring0, timeout = 10):
         start = time.time()
         while time.time() - start < timeout:
             try:
-                packet_count += cap.dispatch(-1, recv_packets)
+                packet_count += cap.dispatch(batch_count, recv_packets)
             except Exception, e:
                 raise RuntimeError("Error reading from the network: %s" % str(e))
 
-        console_log.debug("Finished after %d seconds, sniffed: %d" % (timeout, packet_count))
+        console_log.info("Finished after %d seconds, sniffed: %d" % (time.time() - start, packet_count))
     finally:
         firewall_control.remove_rule(0, 'tcp', 'find unused port', persist=False,
                                      address=ring0.mcastaddr)
