@@ -89,6 +89,7 @@ build()
     export NPM_CONFIG_CACHE_MIN=360000
     export NPM_CONFIG_PREFIX=~/.npm-global
     export PATH=~/.npm-global/bin:$PATH
+    curl -o $PWD/chroma-manager/chroma_ui/static/js/lib/highcharts.js https://github.highcharts.com/v2.2.1/highcharts.src.js
     make
     build_dependencies
 }
