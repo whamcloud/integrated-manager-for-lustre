@@ -187,7 +187,19 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            raise RuntimeError('process_rules(): remote shell command failed unexpectedly, is firewall-cmd running?')
+            from chroma_common.lib.shell import Shell
+            raise RuntimeError('''process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
+systemctl status firewalld:
+%s
+
+systemctl status polkit:
+%s
+
+journalctl -n 100:
+%s''' % (result.rc, result.stdout, result.stderr,
+         Shell.run(['systemctl', 'status', 'firewalld']).stdout,
+         Shell.run(['systemctl', 'status', 'polkit']).stdout,
+         Shell.run(['journalctl', '-n', '100']).stdout))
 
         if result.stdout.strip() == '':
             return None
