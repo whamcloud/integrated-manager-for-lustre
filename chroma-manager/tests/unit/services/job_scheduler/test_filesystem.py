@@ -163,19 +163,17 @@ class TestFSTransitions(JobTestCaseWithHost):
             ManagedFilesystem.objects.get(pk = self.fs.pk)
 
     def test_fs_removal_mgt_offline(self):
-        """Test that removing a filesystem whose MGT is offline leaves the MGT offline at completion"""
+        """Test that removing a filesystem whose MGT is offline starts the MGT and can remove successfully"""
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'unmounted')
         self.fs = self.set_and_assert_state(self.fs, 'removed')
-        self.assertState(self.mgt.managedtarget_ptr, 'unmounted')
+        self.assertState(self.mgt.managedtarget_ptr, 'mounted')
         with self.assertRaises(ManagedFilesystem.DoesNotExist):
             ManagedFilesystem.objects.get(pk = self.fs.pk)
 
     def test_fs_removal_mgt_online(self):
-        """Test that removing a filesystem whose MGT is online leaves the MGT online at completion, but
-        stops it in the course of the removal (for the debugfs-ing)"""
+        """Test removing a filesystem whose MGT is online."""
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
-        with self.assertInvokes('stop_target', {'ha_label': freshen(self.mgt).ha_label}):
-            self.fs = self.set_and_assert_state(self.fs, 'removed')
+        self.fs = self.set_and_assert_state(self.fs, 'removed')
         self.assertState(self.mgt, 'mounted')
         with self.assertRaises(ManagedFilesystem.DoesNotExist):
             ManagedFilesystem.objects.get(pk = self.fs.pk)
