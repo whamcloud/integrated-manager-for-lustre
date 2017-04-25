@@ -64,6 +64,9 @@ kernel modules are functioning properly.
     def setUp(self):
         super(TestBlockDeviceZFS, self).setUp()
 
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+        mock.patch('os.mkdir').start()
         self.patch_init_modules = mock.patch.object(BlockDeviceZfs, '_initialize_modules')
         self.patch_init_modules.start()
 
