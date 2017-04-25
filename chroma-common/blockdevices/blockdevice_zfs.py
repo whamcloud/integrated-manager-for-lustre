@@ -396,26 +396,27 @@ class BlockDeviceZfs(BlockDevice):
             return blockdevice.import_(pacemaker_ha_operation)
 
         with ZfsDevice(self._device_path, False) as zfs_device:
-            try:
-                shell.Shell.try_run(['zpool', 'list', self._device_path])
+            result = zfs_device.import_(pacemaker_ha_operation, False)
 
-                result = None
+            if result is not None and 'a pool with that name already exists' in result:
 
-                # Zpool is imported but make sure it is not readonly. re-read properties to detect changes
                 if self.zpool_properties(True).get('readonly') == 'on':
+                    # Zpool is already imported readonly. Export and re-import writeable.
                     result = self.export()
 
-                    if result is None:
-                        result = self.import_(pacemaker_ha_operation)
+                    if result is not None:
+                        return "zpool was imported readonly, and failed to export: '%s'" % result
 
-                return result                                     # result None if already imported and writable
-            except shell.Shell.CommandExecutionError:
-                result = zfs_device.import_(pacemaker_ha_operation, False)
-                # Check the pool is not readonly, reread the properties because we have just imported it.
-                if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
-                    return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path
+                    result = self.import_(pacemaker_ha_operation)
 
-                return result
+                    if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
+                        return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path 
+
+                else:
+                    # zpool is already imported and writable, nothing to do.
+                    return None
+
+            return result
 
     def export(self):
         """
@@ -436,12 +437,13 @@ class BlockDeviceZfs(BlockDevice):
             return blockdevice.export()
 
         with ZfsDevice(self._device_path, False) as zfs_device:
-            try:
-                shell.Shell.try_run(['zpool', 'list', self._device_path])
-            except shell.Shell.CommandExecutionError:
-                return None                                     # zpool is not imported so nothing to do.
+            result = zfs_device.export()
 
-            return zfs_device.export()
+            if result is not None and 'no such pool' in result:
+                # Already not imported, nothing to do
+                return None
+
+            return result
 
     def purge_filesystem_configuration(self, filesystem_name, log):
         """

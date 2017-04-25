@@ -149,12 +149,7 @@ kernel modules are functioning properly.
     def test_import_success_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', self.pool_name)),
-                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
-                                                stdout='%s\n' % self.blockdevice._device_path.split('/')[0]),
-                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
-                                                stdout=self.zpool_properties))
+        self.add_commands(CommandCaptureCommand(('zpool', 'import', self.pool_name)))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -162,21 +157,7 @@ kernel modules are functioning properly.
     def test_import_existing_readonly(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name), executions_remaining=1),
-                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
-                                                stdout='%s\n' % self.pool_name),
-                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
-                                                stdout=self.zpool_properties_readonly,
-                                                executions_remaining=1),
-                          CommandCaptureCommand(('zpool', 'list', self.pool_name),
-                                                executions_remaining=1),
-                          CommandCaptureCommand(('zpool', 'export', self.pool_name)),
-                          CommandCaptureCommand(('zpool', 'list', self.pool_name), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', self.pool_name)),
-                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
-                                                stdout='%s\n' % self.pool_name),
-                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
-                                                stdout=self.zpool_properties))
+        self.add_commands(CommandCaptureCommand(('zpool', 'import', self.pool_name)))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -184,12 +165,7 @@ kernel modules are functioning properly.
     def test_import_success_with_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.blockdevice._device_path.split('/')[0]), rc=1),
-                          CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])),
-                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
-                                                stdout='%s\n' % self.blockdevice._device_path.split('/')[0]),
-                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
-                                                stdout=self.zpool_properties))
+        self.add_commands(CommandCaptureCommand(('zpool', 'import', '-f', self.blockdevice._device_path.split('/')[0])))
 
         self.assertIsNone(self.blockdevice.import_(True))
         self.assertRanAllCommandsInOrder()
@@ -197,11 +173,7 @@ kernel modules are functioning properly.
     def test_import_existing_non_pacemaker(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_commands(CommandCaptureCommand(('zpool', 'list', self.pool_name)),
-                          CommandCaptureCommand(('zpool', 'list', '-H', '-o', 'name'),
-                                                stdout='%s\n' % self.pool_name),
-                          CommandCaptureCommand(('zpool', 'get', '-Hp', 'all', self.pool_name),
-                                                stdout=self.zpool_properties))
+        self.add_commands(CommandCaptureCommand(('zpool', 'import', self.pool_name)))
 
         self.assertIsNone(self.blockdevice.import_(False))
         self.assertRanAllCommandsInOrder()
@@ -212,7 +184,6 @@ kernel modules are functioning properly.
     def test_export_success(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.pool_name))
         self.add_command(('zpool', 'export', self.pool_name))
 
         self.assertIsNone(self.blockdevice.export())
@@ -221,7 +192,7 @@ kernel modules are functioning properly.
     def test_export_missing(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
 
-        self.add_command(('zpool', 'list', self.pool_name), rc=1)
+        self.add_command(('zpool', 'export', self.pool_name))
 
         self.assertIsNone(self.blockdevice.export())
         self.assertRanAllCommandsInOrder()
