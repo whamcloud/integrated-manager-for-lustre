@@ -1,5 +1,6 @@
 
 from testconfig import config
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
@@ -45,7 +46,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         mgt_id = fs['mgt']['id']
 
         def create_for_mgs(name, hosts_to_use, reformat=False):
-            ha_volumes = self.wait_for_shared_volumes(2, len(hosts_to_use))
+            ha_volumes = self.wait_for_shared_volumes(2, 4)
 
             self.set_volume_mounts(ha_volumes[0], hosts_to_use[0]['id'], hosts_to_use[1]['id'])
             self.set_volume_mounts(ha_volumes[1], hosts_to_use[1]['id'], hosts_to_use[0]['id'])
@@ -67,7 +68,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
 
         response = self.chroma_manager.delete(fs['resource_uri'])
         self.assertEqual(response.status_code, 202)
-        self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+        self.wait_for_command(self.chroma_manager, response.json['command']['id'], timeout=LONG_TEST_TIMEOUT)
 
         # Now remove any zfs datasets, this is a topic to be discussed, but until we remove the datasets
         # we cannot create a new filesystem. If IML does it directly as part of remove filesystem which it could
@@ -78,7 +79,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Filter out the paths by removing anything with a leading /.
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
-        self.cleanup_zfs_pools(self.TEST_SERVERS[:2],
+        self.cleanup_zfs_pools(self.TEST_SERVERS[:4],
                                self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)
