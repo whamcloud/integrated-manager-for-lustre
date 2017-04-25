@@ -309,7 +309,6 @@ class ManagedTarget(StatefulObject):
         if stonith_not_enabled:
             raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
 
-
         target = cls_(**kwargs)
         target.volume = volume
 
@@ -906,10 +905,12 @@ class MountOrImportStep(Step):
                                                   volume_node.path,
                                                   volume_node.volume.storage_resource.to_resource_class().device_type())
 
-            if host == volume_node.host:
+            if host is not None and host == volume_node.host:
                 active_volume_node = target_volume_info
             else:
                 inactive_volume_nodes.append(target_volume_info)
+
+        job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
 
         assert ((host is not None) and (active_volume_node is not None)) or \
                ((host is None) and (active_volume_node is None))
