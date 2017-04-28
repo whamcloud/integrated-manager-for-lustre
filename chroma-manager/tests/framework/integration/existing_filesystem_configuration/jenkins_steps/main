@@ -6,7 +6,7 @@
 set_defaults false
 check_for_autopass
 
-export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
@@ -19,14 +19,14 @@ set -x
 trap "set +e
 set -x
 # Gather logs from nodes
-python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG
+python $CHROMA_DIR/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG
 
-chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
+$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
 
-chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
+$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 # see if this cures the 401 errors from jenkins
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     set +x
@@ -45,7 +45,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
+$CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
 
 setup_rc=0
 test_run_rc=0
@@ -86,12 +86,12 @@ for dne in true false; do
 
             # Don't stop on error for this case because if one iteration of this loop fails we still want to perform the other iterations
             cat $TEST_SPECIFIC_CLUSTER_CONFIG
-            if ! chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup; then
+            if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup; then
                 let setup_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} setup failed"
                 continue
             fi
-            if ! chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests; then
+            if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests; then
                 let test_run_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} run failed"
                 continue
@@ -116,15 +116,15 @@ if $MEASURE_COVERAGE; then
   echo "
 [paths]
 source1 =
-    $WORKSPACE/chroma/chroma-manager/
+    $WORKSPACE/$CHROMA_DIR/chroma-manager/
     /usr/share/chroma-manager/
 source2 =
-    $WORKSPACE/chroma/chroma-agent/chroma_agent/
+    $WORKSPACE/$CHROMA_DIR/chroma-agent/chroma_agent/
     /usr/lib/python$python_version/site-packages/chroma_agent/
 
 [report]
 include =
-    $WORKSPACE/chroma/*
+    $WORKSPACE/$CHROMA_DIR/*
 omit =
     *junk.py
     */tests/*

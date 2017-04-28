@@ -20,7 +20,7 @@ mkdir -p $PWD/coverage_reports
 
 ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION-current.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
 USE_FENCE_XVM=false
 
 PREVIOUS_INSTALL_DIR=previous_install

@@ -6,7 +6,7 @@
 set_defaults false
 check_for_autopass
 
-export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
@@ -23,7 +23,7 @@ cleanup() {
         exec 2>$tmpfile
         env >&2
     fi
-    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1 || true
+    python $CHROMA_DIR/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1 || true
     # look for known failures in the logs
     if grep "LDISKFS-fs (.*): group descriptors corrupted" $WORKSPACE/test_logs/*-messages.log; then
         echo "bug: TEI-39" test_output
@@ -39,12 +39,12 @@ cleanup() {
         echo "bug: HYD-2948"
     fi
 
-    if [ -f chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster ]; then
-        chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
+    if [ -f $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster ]; then
+        $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
     else
         {
         echo "*****************************************************************"
-        echo "chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster could not be found"
+        echo "$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster could not be found"
         if $got_aborted; then
             echo "this job was aborted!!"
         fi
@@ -70,10 +70,10 @@ echo \"Got SIGTERM\"
 ps axf
 exit 1" TERM
 
-chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
+$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 # see if this cures the 401 errors from jenkins
-eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     set +x
@@ -90,8 +90,8 @@ fi
 
 echo "Beginning automated test run..."
 export MEASURE_COVERAGE=$MEASURE_COVERAGE
-chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
-chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/run_tests
+$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
+$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/run_tests
 echo "Automated test run complete."
 
 # Combine coverage reports from the different nodes.
@@ -102,15 +102,15 @@ if $MEASURE_COVERAGE; then
   echo "
 [paths]
 source1 =
-    $WORKSPACE/chroma/chroma-manager/
+    $WORKSPACE/$CHROMA_DIR/chroma-manager/
     /usr/share/chroma-manager/
 source2 =
-    $WORKSPACE/chroma/chroma-agent/chroma_agent/
+    $WORKSPACE/$CHROMA_DIR/chroma-agent/chroma_agent/
     /usr/lib/python$python_version/site-packages/chroma_agent/
 
 [report]
 include =
-    $WORKSPACE/chroma/*
+    $WORKSPACE/$CHROMA_DIR/*
 omit =
     *junk.py
     */tests/*
