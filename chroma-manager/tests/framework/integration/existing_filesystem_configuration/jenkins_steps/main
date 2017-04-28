@@ -33,11 +33,6 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
     sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
     set -x
 fi
-pushd /etc/yum.repos.d/
-for f in *.repo; do
-  sed -i -e 's/distro=el6\.[0-9]/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
-done
-popd
 
 # Disable EPEL
 yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64" | dshbak -c
