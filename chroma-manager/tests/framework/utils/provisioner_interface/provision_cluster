@@ -18,7 +18,7 @@ sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
        $CLUSTER_CONFIG_TEMPLATE
 
 # Pass the template through the test json to provisioner json interpreter
-python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py $CLUSTER_CONFIG_TEMPLATE provisioner_input.json || (echo "test_json2provisioner_json.py failed. Input: `cat $CLUSTER_CONFIG_TEMPLATE`" && exit 1)
+python $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py $CLUSTER_CONFIG_TEMPLATE provisioner_input.json || (echo "test_json2provisioner_json.py failed. Input: `cat $CLUSTER_CONFIG_TEMPLATE`" && exit 1)
 cat provisioner_input.json
 
 # Actually call the provisioner. Once the command returns, provisioning is complete.
@@ -39,7 +39,7 @@ if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' p
 fi
 
 # Pass the provisioner output back through an interpreter back to our test json format
-if ! python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json $CLUSTER_CONFIG; then
+if ! python $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json $CLUSTER_CONFIG; then
     echo "provisioner_json2test_json.py failed. Input: $(cat provisioner_output.json)"
     exit 1
 fi

@@ -4,7 +4,7 @@ set -ex
 
 [ -r localenv ] && . localenv
 
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/services/services_cluster_config.json"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
