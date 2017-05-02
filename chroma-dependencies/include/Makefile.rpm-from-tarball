@@ -90,6 +90,7 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile ../include/pypi-rpm_spec.ed ../include/
 	fi
 	(cat spec.ed ; echo -e "w\nq") | ed $(SPECNAME) 2>/dev/null
 	rm -rf tmp
+	rpm $(RPM_OPTS) -q --specfile $(SPECNAME)
 endif
 endif
 

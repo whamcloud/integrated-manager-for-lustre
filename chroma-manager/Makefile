@@ -4,6 +4,17 @@ NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
 
 NPM_VERSION ?= 3.10.6
 
+define set_env_for_npm
+export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/; \
+mkdir -p ~/.npm-global;                                                                              \
+mkdir -p ~/.npm-global-cache;                                                                        \
+export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
+export NPM_CONFIG_CACHE=~/.npm-global-cache;                                                         \
+export NPM_CONFIG_CACHE_MIN=360000;                                                                  \
+export NPM_CONFIG_PREFIX=~/.npm-global;                                                              \
+export PATH=~/.npm-global/bin:$$PATH
+endef
+
 ARCH := $(shell echo $$(uname -m))
 
 # Fixup proxies if needed
@@ -77,14 +88,18 @@ npm: $(HOME)/.node-gyp
 ifneq ($(NPM), $(NPM_VERSION))
 	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
 	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
+	set -e;                                                               \
+	$(set_env_for_npm) &&                                                 \
 	/tmp/package/bin/npm-cli.js install -g /tmp/npm-$(NPM_VERSION).tgz -d
 endif
 
 ui-modules: npm
 	@echo "Setting up ui-modules"; \
-	export NODE_ENV=production && \
-	cd ui-modules && \
-	npm i -d && \
+	set -e;                        \
+	$(set_env_for_npm) &&          \
+	export NODE_ENV=production &&  \
+	cd ui-modules &&               \
+	npm i -d &&                    \
 	npm prune
 
 ui-modules-dev: npm

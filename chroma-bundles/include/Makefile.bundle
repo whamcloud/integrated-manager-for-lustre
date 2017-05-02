@@ -1,5 +1,12 @@
-REPO        := $(patsubst %/,%,$(REPO))
-BUNDLE_RPMS := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXCLUDES)")
+REPO         := $(patsubst %/,%,$(REPO))
+ret          := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXCLUDES)"; echo "rc=$$?")
+.SHELLSTATUS := $(subst rc=,,$(lastword $(ret)))
+BUNDLE_RPMS  := $(filter-out rc=%,$(ret))
+ifneq ($(.SHELLSTATUS), 0)
+  foo := $(shell for p in $(BUNDLE_RPMS); do echo "whatrequires $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatrequires $$p; echo "whatprovides $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatprovides $$p; done)
+  $(warning $(foo))
+  $(error Missing dependencies: $(BUNDLE_RPMS))
+endif
 VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
@@ -17,6 +24,7 @@ repo:
 	mkdir repo
 
 repo/%.rpm: $(REPO)/%.rpm repo Makefile ../include/Makefile.bundle
+	rm -f $@
 	ln $< $@
 	touch $@
 

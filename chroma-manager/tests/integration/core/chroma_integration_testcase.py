@@ -1,4 +1,5 @@
 import logging
+import time
 
 from collections import namedtuple
 from testconfig import config
@@ -126,10 +127,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """
 
         response = self.chroma_manager.post(
-                '/api/test_host/',
-                body={
-                    'objects': [{'address': address, 'auth_type': auth_type} for address in addresses]
-                }
+            '/api/test_host/',
+            body={
+                'objects': [{'address': address, 'auth_type': auth_type} for address in addresses]
+            }
         )
 
         self.assertEqual(response.successful, True, response.text)
@@ -581,7 +582,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         if not config.get('power_control_types', False):
             return
 
-        logger.info("Configuring power control")
+        logger.info("Configuring power control on %s" % host_addresses)
 
         # clear out existing power stuff
         self.api_clear_resource('power_control_type')
@@ -630,6 +631,25 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             except StopIteration:
                 obj = self.create_power_control_device_outlet(new)
                 logger.debug("Created %s" % obj)
+
+        # now show that it worked
+        tries = 1
+        while True:
+            exit_loop = True
+            for host_address in host_addresses:
+                fencible_nodes = \
+                    self.remote_operations.get_fence_nodes_list(host_address,
+                                                                ignore_failure=True)
+                logger.debug("Fencible nodes on %s are: %s" %
+                             (host_address, fencible_nodes))
+                if len(fencible_nodes) < 1:
+                    exit_loop = False
+            if exit_loop or tries > 10:
+                break
+            tries += 1
+            time.sleep(1)
+
+        self.assertTrue(exit_loop, "All nodes have fencing set up")
 
     def verify_power_control_configured(self, hosts):
         outlets = self.get_list('/api/power_control_device_outlet/')

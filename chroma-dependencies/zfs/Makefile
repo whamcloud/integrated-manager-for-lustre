@@ -4,23 +4,26 @@ include ../include/Makefile.lustre_build_meta
 include $(INCLUDE_DIR)/Makefile.zfs_version-$(DISTRO)
 LUSTRE_KERNEL_RELEASE	 = $(KERNEL_RELEASE)_lustre.x86_64
 
+override REPO           := $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
+
 CHROMA_EXTERNALS_SUBDIR := zfs
 SRC_REPO		:= $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=$(DISTRO),ib_stack=inkernel/artifact/artifacts
-ALL_RPMS		:= zfs-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   zfs-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm \
-			   spl-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   spl-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm \
+ALL_RPMS		:= zfs-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm        \
+			   zfs-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm   \
+			   spl-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm        \
+			   spl-dkms-$(ZFS_RELEASE).$(DISTRO_TAG).noarch.rpm   \
 			   libnvpair1-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   libuutil1-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
-			   libzfs2-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm \
+			   libuutil1-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm  \
+			   libzfs2-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm    \
 			   libzpool2-$(ZFS_RELEASE).$(DISTRO_TAG).x86_64.rpm
 
-NO_REQUIREMENT		:= zfs zfs-dkms spl spl-dkms \
+NO_REQUIREMENT		:= zfs zfs-dkms spl spl-dkms              \
 			   libnvpair1 libuutil1 libzfs2 libzpool2
 
 $(INCLUDE_DIR)/Makefile.zfs_version-$(DISTRO): $(INCLUDE_DIR)/Makefile.lustre_build_meta.md5
 	# any of this is only needed by make download
-	if [ "$(MAKECMDGOALS)" != "download" ]; then                                                     \
+	set -e;                                                                                      \
+	if [ "$(MAKECMDGOALS)" != "download" ]; then                                                 \
 	    touch $@;                                                                                \
 	    exit 0;                                                                                  \
 	fi;                                                                                          \

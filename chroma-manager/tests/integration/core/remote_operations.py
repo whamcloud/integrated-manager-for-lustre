@@ -47,6 +47,9 @@ class RemoteOperations(object):
         else:
             return float(json.loads(host['properties'])['distro_version'])
 
+    def get_fence_nodes_list(self, address, ignore_failure=False):
+        return ["fake", "fake"]
+
 
 class SimulatorRemoteOperations(RemoteOperations):
     def __init__(self, test_case, simulator):
@@ -993,8 +996,14 @@ class RealRemoteOperations(RemoteOperations):
         )
         return re.search('is running', result.stdout)
 
-    def get_fence_nodes_list(self, address):
-        result = self._ssh_address(address, "fence_chroma -o list")
+    def get_fence_nodes_list(self, address, ignore_failure=False):
+        result = self._ssh_address(address, "fence_chroma -o list",
+                                   expected_return_code=None if ignore_failure else 0)
+
+        if result.rc != 0:
+            logger.debug("fence_chroma stderr: %s" % result.stderr)
+            return []
+
         # -o list returns:
         # host1,\n
         # host2,\n
