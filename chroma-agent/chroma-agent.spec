@@ -26,6 +26,7 @@ Requires: python-setuptools
 Requires: python-requests >= 2.6.0
 Requires: python-tablib yum-utils
 Requires: initscripts
+Requires: nodejs >= 1:6.9.4-2
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
