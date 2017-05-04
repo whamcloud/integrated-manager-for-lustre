@@ -27,7 +27,7 @@ Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
 Requires: python-supervisor
-Requires: python-jsonschema
+Requires: python-jsonschema < 0.9.0
 Requires: python-ordereddict
 Requires: python-uuid
 Requires: python-paramiko
@@ -42,7 +42,7 @@ Requires: postgresql-server
 Requires: python-psycopg2
 Requires: rabbitmq-server
 Requires: ntp
-Requires: Django >= 1.4
+Requires: Django >= 1.4, Django < 1.5
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.11
 Requires: django-picklefield

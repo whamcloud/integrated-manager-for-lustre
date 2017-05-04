@@ -19,8 +19,6 @@ set -ex
 # Install non-python/pipable dependencies
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++
-# don't need EPEL any more
-yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then

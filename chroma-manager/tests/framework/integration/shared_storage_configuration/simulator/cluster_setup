@@ -23,9 +23,6 @@ yum install -y git python-virtualenv python-setuptools python-devel gcc make gra
 # only install (as dependency for pycurl, required by fencing.py) on el7
 [[ \$(rpm --eval %rhel) == 7 ]] && yum install -y libcurl-devel
 
-# don't need EPEL any more
-yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
-
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then
     useradd chromatest

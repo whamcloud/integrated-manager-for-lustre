@@ -98,7 +98,7 @@ help_text = {
     'hostname_valid': 'Indicates if the self-reported hostname of the storage server is valid (resolves to a non-loopback address).',
     'fqdn_resolves': 'Indicates if a DNS lookup at the manager server, of the self-reported fully-qualified domain name (FQDN) of the storage server, succeeded.',
     'fqdn_matches': 'Indicates if there is match between the DNS lookup at the manager server of the user-supplied hostname, and the DNS lookup at the storage server of the self-reported fully-qualified domain name (FQDN) of the storage server.',
-    'yum_valid_repos': 'Indicates if the storage server\'s yum configuration has been found to be free of problematic and unsupported software repositories (e.g. EPEL).',
+    'yum_valid_repos': 'Indicates if the storage server\'s yum configuration has been found to be free of problematic and unsupported software repositories.',
     'yum_can_update': 'Indicates if the storage server is able to access a repository of packages provided by the Linux distribution vendor. This requirement ensures that yum can satisfy vendor-provided dependencies and obtain vendor-provided software updates.',
     'openssl': 'Indicates if OpenSSL is working as expected.',
     'rewrite_target_configuration-dialog': 'Select all servers for which the NIDs were re-read by clicking the <strong>Rescan NIDs</strong> button.  Then click <b>Run</b> to rewrite the Lustre target configuration for targets associated with the selected servers.',

@@ -94,6 +94,7 @@ class YumDepFinder(object):
         for repo in self.yb.repos.findRepos("*"):
             if repo.id != "base" and repo.id != "core-0" and \
                repo.id != "updates" and \
+               not fnmatch.fnmatch(repo.id, "*epel*") and \
                not fnmatch.fnmatch(repo.id, "updates-*"):
                 repo.disable()
 

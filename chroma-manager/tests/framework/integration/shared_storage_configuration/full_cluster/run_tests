@@ -19,6 +19,17 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 trap "set +e
 collect_reports" EXIT
 
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
+repoquery -q epel-release | grep epel-release || {
+    yum repolist
+    repoquery -qi epel-release
+    yum-config-manager | grep -e "==================" -e "enabled = "
+    repoquery -qi epel-release
+    echo "not doing yum-config-manager --enable addon-epel7-x86_64"
+    echo "not doing repoquery -qi epel-release"
+    yum repolist
+}' | dshbak -c
+
 echo "Begin running tests..."
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
