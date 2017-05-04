@@ -17,7 +17,7 @@ cd $CHROMA_DIR/../..
 mkdir -p test_reports
 scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/
 mkdir -p test_logs
-scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*.log ./test_logs/
+scp chromatest@$CHROMA_MANAGER:$REL_CHROMA_DIR/chroma-manager/*.log ./test_logs/
 scp root@$CHROMA_MANAGER:/var/log/messages ./test_logs/
 if $MEASURE_COVERAGE; then
   mkdir -p coverage_reports
@@ -28,13 +28,14 @@ if $MEASURE_COVERAGE; then
     coverage combine
 EOF
   scp chromatest@$CHROMA_MANAGER:/var/tmp/.coverage ./.coverage.raw
-fi
-" EXIT
+fi" EXIT
 
-echo "Begin running tests..."
 ssh chromatest@$CHROMA_MANAGER <<EOF
 source chroma_test_env/bin/activate
-cd chroma_test_env/chroma/chroma-manager
+cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
+
+echo "Begin running tests..."
 PYTHONPATH=. nosetests --verbosity=2 --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
 EOF
+
 echo "End running tests."

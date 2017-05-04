@@ -8,26 +8,29 @@ PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 set_defaults false
 check_for_autopass
 
-export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager/tests/simulator.json"}
+export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/simulator.json"}
 
 # Get the chroma-externals repo as pip is going to need it
 scripts/update_chroma-externals.py
 
-cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
+cd $CHROMA_DIR/chroma-manager
 
 # Release the provisioned cluster (at the exit of this script)
-trap "chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
+trap "$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
 
 # Provision cluster to run tests on
 cd $WORKSPACE/chroma_test_env/
-chroma/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
+$CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 # Use the server profiles for the managed servers that matches the distro we're testing on
 sed -i -e "s/\(\"profile\": *\)\"base_managed_RH[0-9]\"/\1\"base_managed_RH${TEST_DISTRO_VERSION[0]}\"/g" $CLUSTER_CONFIG_TEMPLATE
 
+# a version of $CHROMA_DIR that is relative
+export REL_CHROMA_DIR=${CHROMA_DIR#$PWD/}
+
 echo "Beginning automated test run..."
-chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/cluster_setup
-chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/run_tests
+$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/cluster_setup
+$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/run_tests
 find ./test_reports/ -type f -size 0 -exec rm {} \; || true
 echo "Automated test run complete."
 
@@ -36,12 +39,12 @@ if $MEASURE_COVERAGE; then
   echo "
 [paths]
 source1 =
-    $WORKSPACE/chroma/
-    /home/chromatest/chroma_test_env/chroma/
+    $CHROMA_DIR/
+    /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/
 
 [report]
 include =
-    $WORKSPACE/chroma/*
+    $CHROMA_DIR/*
 omit =
     *junk.py
     */tests/*
