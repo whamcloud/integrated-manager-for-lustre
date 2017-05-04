@@ -182,10 +182,7 @@ class BlockDevices(object):
         serial_80 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x80", path])
         serial_83 = scsi_id_command([scsi_id_cmd, "-g", "-p", "0x83", path])
 
-        try:
-            type = self._major_minor_to_fstype[major_minor]
-        except KeyError:
-            type = None
+        type = self._major_minor_to_fstype.get(major_minor)
 
         info = {'major_minor': major_minor,
                 'path': path,

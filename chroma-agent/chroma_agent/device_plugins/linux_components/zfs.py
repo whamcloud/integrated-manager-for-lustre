@@ -244,7 +244,7 @@ class ZfsDevices(object):
                                                                      'serial_80': None,
                                                                      'serial_83': None,
                                                                      'size': size,
-                                                                     'filesystem_type': None,
+                                                                     'filesystem_type': 'zfs',
                                                                      'parent': None}
 
                     # Do this to cache the device, type see blockdevice and filesystem for info.
