@@ -7,14 +7,14 @@ f.close()
 
 servers = []
 workers = []
+all_nodes = []
 for server in config["lustre_servers"]:
     if server.get("profile") and \
        server["profile"] == "posix_copytool_worker":
         workers.append(server["address"])
     else:
         servers.append(server["address"])
-
-all_nodes = servers[:]
+    all_nodes.append(server["address"])
 
 if len(config['chroma_managers']) > 0:
     chroma_manager = config['chroma_managers'][0]
