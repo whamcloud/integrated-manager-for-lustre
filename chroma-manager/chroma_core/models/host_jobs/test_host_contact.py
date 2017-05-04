@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -120,16 +120,12 @@ class TestHostConnectionStep(Step):
             check_for_epel = """
 python -c "from yum import YumBase
 yb = YumBase()
-has_epel = yb.repos.repos.get('epel') is not None
-if has_epel:
-    exit(has_epel)
-has_packages = len([p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'python-fedora-django']) > 0
-exit(has_packages)"
+exit (not len([p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'epel-release']))"
 """
 
             rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_for_epel)
             if rc == 1:
-                job_log.error("Failed configuration check on '%s': EPEL repository detected in yum configuration" % address)
+                job_log.error("Failed configuration check on '%s': EPEL repository not detected in yum configuration" % address)
                 pass_epel_check = False
 
         except AgentException:

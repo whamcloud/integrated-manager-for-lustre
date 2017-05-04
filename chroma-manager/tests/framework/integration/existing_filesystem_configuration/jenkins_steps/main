@@ -33,9 +33,7 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
     sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
     set -x
 fi
-
-# Disable EPEL
-yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64" | dshbak -c
+popd" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

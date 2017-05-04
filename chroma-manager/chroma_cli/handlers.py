@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -183,8 +183,8 @@ class Handler(object):
             raise JobConfirmationRequired(ns.verb, ns.subject, job['confirmation'])
 
         kwargs = {
-                'jobs': [job],
-                'message': "%s created by CLI" % job['class_name']
+            'jobs': [job],
+            'message': "%s created by CLI" % job['class_name']
         }
         self.output(self.api.endpoints['command'].create(**kwargs))
 
@@ -261,10 +261,10 @@ class Handler(object):
 class ServerHandler(Handler):
     nouns = ["server", "srv", "mgs", "mds", "oss"]
     job_map = {
-            'reboot': "RebootHostJob", 'shutdown': "ShutdownHostJob",
-            'poweroff': "PoweroffHostJob", 'poweron': "PoweronHostJob",
-            'powercycle': "PowercycleHostJob",
-            'force_remove': "ForceRemoveHostJob"
+        'reboot': "RebootHostJob", 'shutdown': "ShutdownHostJob",
+        'poweroff': "PoweroffHostJob", 'poweron': "PoweronHostJob",
+        'powercycle': "PowercycleHostJob",
+        'force_remove': "ForceRemoveHostJob"
     }
     verbs = ["show", "list", "add", "remove"] + job_map.keys()
     contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
@@ -305,7 +305,7 @@ class ServerHandler(Handler):
             'hostname_valid': "The system hostname on %s either does not resolve, or resolves to a loopback address",
             'fqdn_resolves': "The self-reported fqdn on %s does not resolve on the manager",
             'fqdn_matches': "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI",
-            'yum_valid_repos': "The yum configuration on %s contains invalid repository entries (e.g. EPEL)",
+            'yum_valid_repos': "The yum configuration on %s contains invalid repository entries",
             'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages",
             'openssl': "Unable to verify that OpenSSL is working as expected for %s"
         }
@@ -485,7 +485,7 @@ class FilesystemHandler(Handler):
         formatted_volumes = []
         for target in [kwargs['mgt']] + kwargs['mdts'] + kwargs['osts']:
             # Skip resolved MGS host
-            if not 'volume_id' in target:
+            if 'volume_id' not in target:
                 continue
 
             if ns.reformat:
@@ -512,7 +512,7 @@ class FilesystemHandler(Handler):
 class TargetHandler(Handler):
     nouns = ["target", "tgt", "mgt", "mdt", "ost"]
     job_map = {
-            'failover': "FailoverTargetJob", 'failback': "FailbackTargetJob"
+        'failover': "FailoverTargetJob", 'failback': "FailbackTargetJob"
     }
     verbs = ["list", "show", "add", "remove", "start", "stop"] + job_map.keys()
 
@@ -590,7 +590,6 @@ class NidsHandler(Handler):
         # Relearn really makes no sense now, the nids are always known, but this keeps compatibility
         host = self.api.endpoints['host'].show(ns.subject)
         kwargs = {'message': "Updating device info on %s" % host.label,
-                  'jobs': [{'class_name': 'UpdateDevicesJob', 'args': {
-                      'hosts': [host]
-        }}]}
+                  'jobs': [{'class_name': 'UpdateDevicesJob',
+                            'args': {'hosts': [host]}}]}
         self.output(self.api.endpoints['command'].create(**kwargs))

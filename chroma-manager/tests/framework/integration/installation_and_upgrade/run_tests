@@ -179,20 +179,20 @@ for ip in \$ips; do
     fi
 done
 
-echo \"Now with EPEL configured\"
-
-yum-config-manager --enable *[eE][pP][eE][lL]*
-yum makecache
+echo \"Now with EPEL disabled\"
 
 if expect ../upgrade.exp; then
-    echo \"Installation unexpectedly succeeded with EPEL configured\"
+    echo \"Installation unexpectedly succeeded with EPEL disabled\"
     exit 1
 fi
 
-echo \"Re-disabling EPEL to continue\"
-
 yum-config-manager --disable *[eE][pP][eE][lL]*
 yum clean all
+yum makecache
+
+echo \"Re-enabling EPEL to continue\"
+
+yum-config-manager --enable *[eE][pP][eE][lL]*
 yum makecache
 
 if $RHEL; then

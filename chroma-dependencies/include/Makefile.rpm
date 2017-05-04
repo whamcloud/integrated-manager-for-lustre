@@ -53,7 +53,7 @@ $(RPM_NAME).spec: $(TOP)/../chroma-externals/$(SRPM) spec.ed
 	set -e;                                                              \
 	if [ -n "$(LAST_BUILT_SRPM)" -a                                      \
 		     "$(LAST_BUILT_SRPM)" != "$(SRPM)" ]; then               \
-	    touch $@;                                          \
+	    touch $@;                                                        \
 	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean;      \
 	fi
 	rm -f $@
