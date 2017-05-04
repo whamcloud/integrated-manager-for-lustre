@@ -25,6 +25,7 @@ import sys
 import re
 import os
 import json
+from os.path import expanduser
 
 from chroma_common.lib.shell import Shell
 
@@ -152,8 +153,16 @@ def main():
 
     # Verify that chroma-externals has content in it
     if not len(os.listdir("chroma-externals")):
-        print "chroma-externals dir is empty.  Update failed."
-        sys.exit(-1)
+        print "chroma-externals dir is empty.  Trying hack."
+        # this little hack will only work reliably on the new jenkins
+        run_command(['cp', '-al',
+                     expanduser("~/workspace/manager-for-lustre/.git/modules"),
+                     '.git/'])
+        run_command(['git', 'submodule', 'init'])
+        run_command(['git', 'submodule', 'update'])
+        if not len(os.listdir("chroma-externals")):
+            print "chroma-externals dir is still empty.  Even the hack failed."
+            sys.exit(-1)
 
 # End of functions, start of execution.
 
