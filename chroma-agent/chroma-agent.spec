@@ -11,11 +11,6 @@ Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh
 Source3: logrotate.cfg
-Source4: node_modules/@mfl/block-device-listener/dist/block-device-listener
-Source5: node_modules/@mfl/block-device-listener/udev-rules/99-iml-device-scanner.rules
-Source6: node_modules/@mfl/device-scanner-daemon/dist/device-scanner-daemon
-Source7: node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.socket
-Source8: node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.service
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -98,15 +93,15 @@ mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 mkdir -p $RPM_BUILD_ROOT/usr/lib/udev/
+cp node_modules/@mfl/block-device-listener/dist/block-device-listener $RPM_BUILD_ROOT/usr/lib/udev/block-device-listener
 mkdir -p $RPM_BUILD_ROOT/etc/udev/rules.d/
+cp node_modules/@mfl/block-device-listener/udev-rules/99-iml-device-scanner.rules $RPM_BUILD_ROOT/etc/udev/rules.d/99-iml-device-scanner.rules
 mkdir -p $RPM_BUILD_ROOT/etc/systemd/system/
+cp node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.socket $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.socket
+cp node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.service $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.service
 mkdir -p $RPM_BUILD_ROOT/sbin/
+cp node_modules/@mfl/device-scanner-daemon/dist/device-scanner-daemon $RPM_BUILD_ROOT/sbin/device-scanner-daemon
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
-install -m 744 %{SOURCE4} $RPM_BUILD_ROOT/usr/lib/udev/block-device-listener
-install -m 744 %{SOURCE5} $RPM_BUILD_ROOT/etc/udev/rules.d/
-install -m 744 %{SOURCE6} $RPM_BUILD_ROOT/sbin/device-scanner-daemon
-install -m 744 %{SOURCE7} $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.socket
-install -m 744 %{SOURCE8} $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.service
 # Nuke source code (HYD-1849)
 find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
