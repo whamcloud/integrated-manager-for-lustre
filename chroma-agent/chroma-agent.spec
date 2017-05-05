@@ -159,8 +159,9 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
 %attr(0644,root,root)/etc/logrotate.d/chroma-agent
-%attr(0744,root,root)/sbin/device-scanner-daemon
 %attr(0744,root,root)/usr/lib/udev/block-device-listener
+%attr(0744,root,root)/etc/udev/rules.d/99-iml-device-scanner.rules
+%attr(0744,root,root)/sbin/device-scanner-daemon
 %attr(0744,root,root)/etc/systemd/system/device-scanner.service
 %attr(0744,root,root)/etc/systemd/system/device-scanner.socket
 %files -f management.files management
