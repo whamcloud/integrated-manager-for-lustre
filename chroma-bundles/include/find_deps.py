@@ -86,7 +86,8 @@ class YumDepFinder(object):
             else:
                 if name.find(' ') > -1:
                     name = name[0:name.find(' ')]
-                self.missing_deps.append(name)
+                if name not in self.all_pkg_names:
+                    self.missing_deps.append(name)
 
         return
 
@@ -97,7 +98,8 @@ class YumDepFinder(object):
             # these probably need to be externally specified
             if repo.id != "base" and repo.id != "core-0" and \
                repo.id != "updates" and repo.id != "updates-centos7.3-x86_64" and \
-               repo.id != "addon-epel7-x86_64":
+               repo.id != "addon-epel7-x86_64" and \
+               repo.id != "copr-be.cloud.fedoraproject.org_results_brianjmurrell_manager-for-lustre-dependencies_epel-7-x86_64_":
                 repo.disable()
 
     def add_repo(self, repo, num):

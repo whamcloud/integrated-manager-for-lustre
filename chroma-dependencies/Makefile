@@ -19,7 +19,7 @@ debug: TARGET=debug
 cleanrepo: TARGET=cleanrepo
 
 requirements::
-	# these are the ones provided by EL and EPEL
+	# these are the ones provided by EL and EPEL and our own repo
 	set -e;                                                   \
 	{ echo "../chroma-externals/netaddr-0.7.5.zip";           \
 	if [ $(shell rpm --eval '%{?rhel}') -lt 7 ]; then         \
@@ -32,6 +32,13 @@ requirements::
 	    echo "python-daemon==1.6 ";                           \
 	fi;                                                       \
 	echo "amqp==1.4.5";                                       \
+	echo "Django==1.4.5";                                     \
+	echo "django-picklefield==0.1.9";                         \
+	echo "django-tastypie==0.9.11";                           \
+	echo "dse==3.3.0";                                        \
+	echo "gevent==1.0.1";                                     \
+	echo "greenlet==0.4.2";                                   \
+	echo "httpagentparser==1.5.0";                            \
 	echo "kombu==3.0.19";                                     \
 	echo "mimeparse==0.1.3";                                  \
 	echo "networkx==1.7";                                     \
@@ -41,6 +48,8 @@ requirements::
 	echo "meld3==0.6.10";                                     \
 	echo "ordereddict==1.1";                                  \
 	echo "psycopg2==2.0.14";                                  \
+	echo "South==0.7.5";                                      \
+	echo "tablib==0.9.11";                                    \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
 	    $(TOP)/../chroma-manager/requirements.tmp
 
