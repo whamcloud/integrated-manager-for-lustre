@@ -97,6 +97,10 @@ mv $RPM_BUILD_ROOT/usr/{,s}bin/chroma-copytool-monitor
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
+mkdir -p $RPM_BUILD_ROOT/usr/lib/udev/
+mkdir -p $RPM_BUILD_ROOT/etc/udev/rules.d/
+mkdir -p $RPM_BUILD_ROOT/etc/systemd/system/
+mkdir -p $RPM_BUILD_ROOT/sbin/
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 install -m 744 %{SOURCE4} $RPM_BUILD_ROOT/usr/lib/udev/block-device-listener
 install -m 744 %{SOURCE5} $RPM_BUILD_ROOT/etc/udev/rules.d/
