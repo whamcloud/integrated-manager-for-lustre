@@ -1,7 +1,7 @@
 DEV_REPO ?= $(shell PYTHONPATH=$(CURDIR)../chroma-manager python -c 'import settings; print settings.DEV_REPO_PATH')
 
 include ../include/Makefile.version
-inclue ../include/Makefile.npm
+include ../include/Makefile.npm
 
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.

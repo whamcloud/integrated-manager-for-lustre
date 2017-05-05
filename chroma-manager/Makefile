@@ -1,5 +1,5 @@
 include ../include/Makefile.version
-inclue ../include/Makefile.npm
+include ../include/Makefile.npm
 
 ARCH := $(shell echo $$(uname -m))
 
