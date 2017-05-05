@@ -1,6 +1,7 @@
 include LICENSE.txt
 include Target
 include logrotate.cfg
+graft node_modules
 include chroma_agent/templates/corosync.conf
 include chroma_agent/templates/ifcfg-nic
 include chroma_agent/templates/chroma-copytool

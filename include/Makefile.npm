@@ -1,0 +1,14 @@
+NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
+
+NPM_VERSION ?= 3.10.6
+
+define set_env_for_npm
+export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/; \
+mkdir -p ~/.npm-global;                                                                              \
+mkdir -p ~/.npm-global-cache;                                                                        \
+export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
+export NPM_CONFIG_CACHE=~/.npm-global-cache;                                                         \
+export NPM_CONFIG_CACHE_MIN=360000;                                                                  \
+export NPM_CONFIG_PREFIX=~/.npm-global;                                                              \
+export PATH=~/.npm-global/bin:$$PATH
+endef

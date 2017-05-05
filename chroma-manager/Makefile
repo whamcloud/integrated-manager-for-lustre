@@ -1,19 +1,5 @@
 include ../include/Makefile.version
-
-NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
-
-NPM_VERSION ?= 3.10.6
-
-define set_env_for_npm
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/; \
-mkdir -p ~/.npm-global;                                                                              \
-mkdir -p ~/.npm-global-cache;                                                                        \
-export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
-export NPM_CONFIG_CACHE=~/.npm-global-cache;                                                         \
-export NPM_CONFIG_CACHE_MIN=360000;                                                                  \
-export NPM_CONFIG_PREFIX=~/.npm-global;                                                              \
-export PATH=~/.npm-global/bin:$$PATH
-endef
+inclue ../include/Makefile.npm
 
 ARCH := $(shell echo $$(uname -m))
 
@@ -79,40 +65,15 @@ develop: version ui-modules
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-$(HOME)/.node-gyp:
-	@echo "copying nodejs headers"; \
-	mkdir -p $HOME/.node-gyp && \
-	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
-
-npm: $(HOME)/.node-gyp
-ifneq ($(NPM), $(NPM_VERSION))
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
-	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
-	set -e;                                                               \
-	$(set_env_for_npm) &&                                                 \
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-$(NPM_VERSION).tgz -d
-endif
-
-ui-modules: npm
+ui-modules:
 	@echo "Setting up ui-modules"; \
 	set -e;                        \
 	$(set_env_for_npm) &&          \
 	export NODE_ENV=production &&  \
 	cd ui-modules &&               \
 	npm i -d &&                    \
-	npm prune
-
-ui-modules-dev: npm
-	@echo "Setting up ui-modules for dev"; \
-	cd ui-modules && \
-	npm i && \
-	cd node_modules/@iml/gui && \
-	npm i --only=dev && \
-	cd ../../intel-realtime && \
-	npm i --only=dev && \
-	cd ../@iml/view-server && \
-	npm i --only=dev;
-
+	npm prune \
+	curl -o node_modules/@iml/old-gui/static/js/lib/highcharts.js https://github.highcharts.com/v2.2.1/highcharts.src.js
 
 gui: ui-modules
 	@echo "Building GUI for deployment";
@@ -276,4 +237,4 @@ docs: requirements version
 	fi; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs download gui ui-modules npm
+.PHONY: docs download gui ui-modules

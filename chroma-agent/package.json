@@ -1,0 +1,11 @@
+{
+  "name": "chroma-agent",
+  "version": "3.1.1.0",
+  "description": "chroma-agent dependencies",
+  "author": "MFL Team",
+  "license": "MIT",
+  "dependencies": {
+    "@mfl/block-device-listener": "0.1.0",
+    "@mfl/device-scanner-daemon": "0.1.0"
+  }
+}
