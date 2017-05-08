@@ -66,7 +66,7 @@ set_defaults() {
        [[ $slave =~ 7.*\&\&ssi ]]; then
         export JENKINS_DISTRO="el7"
         if ${upgrade_test}; then
-            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.2"}
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}
             export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.3"}
         else
             export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}

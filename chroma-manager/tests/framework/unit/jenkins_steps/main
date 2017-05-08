@@ -10,7 +10,7 @@ check_for_autopass
 scripts/update_chroma-externals.py
 
 # Pip install requirements
-cd $WORKSPACE/chroma_unit_test_env/chroma/chroma-manager
+cd $CHROMA_DIR/chroma-manager
 make requirements
 python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
@@ -22,7 +22,7 @@ python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 # quite like life outside of it.
 # https://github.com/pypa/virtualenv/issues/355
 python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
-pushd $WORKSPACE/chroma_unit_test_env/lib/python$python_version/site-packages
+pushd $WORKSPACE/chroma_test_env/lib/python$python_version/site-packages
 patch -R -p1 <<"EOF" || true
 diff --git a/behave/model.py b/behave/model.py
 index 1183e1b..371c8dd 100644
@@ -71,7 +71,7 @@ EOC
 
   cd $WORKSPACE
   coverage combine
-  coverage xml --include="$WORKSPACE/chroma_unit_test_env/chroma/*" --omit="*junk.py,*/tests/*" --ignore-errors
+  coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
 else
   python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml tests/unit/ <<EOC
 yes
