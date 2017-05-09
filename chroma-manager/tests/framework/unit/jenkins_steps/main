@@ -19,6 +19,12 @@ q
 EOF
 fi
 
+if ! grep "'NAME': 'chroma$WORKSPACE_NUMBER" $CHROMA_DIR/chroma-manager/settings.py; then
+    echo "failed to set database number with /'NAME': 'chroma'/s/',/$WORKSPACE_NUMBER',/"
+    grep "'NAME': 'chroma" $CHROMA_DIR/chroma-manager/settings.py; then
+    exit 1
+fi
+
 # Get the chroma-externals repo as pip is going to need it
 scripts/update_chroma-externals.py
 
