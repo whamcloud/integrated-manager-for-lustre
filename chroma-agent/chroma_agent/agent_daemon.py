@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -168,8 +168,9 @@ def main():
         daemon_log.info("Entering main loop")
         try:
             conf = config.get('settings', 'server')
-        except KeyError:
-            daemon_log.error("No configuration found (must be registered before running the agent service)")
+        except (KeyError, TypeError) as e:
+            daemon_log.error("No configuration found (must be registered before running the agent service), "
+                             "details: %s" % e)
             return
 
         if config.profile_managed is False:
