@@ -17,12 +17,12 @@ if [ -n "$WORKSPACE_NUMBER" ]; then
 w
 q
 EOF
-fi
 
-if ! grep "'NAME': 'chroma$WORKSPACE_NUMBER" $CHROMA_DIR/chroma-manager/settings.py; then
-    echo "failed to set database number with /'NAME': 'chroma'/s/',/$WORKSPACE_NUMBER',/"
-    grep "'NAME': 'chroma" $CHROMA_DIR/chroma-manager/settings.py; then
-    exit 1
+    if ! grep "'NAME': 'chroma$WORKSPACE_NUMBER" $CHROMA_DIR/chroma-manager/settings.py; then
+        echo "failed to set database number with /'NAME': 'chroma'/s/',/$WORKSPACE_NUMBER',/"
+        grep "'NAME': 'chroma" $CHROMA_DIR/chroma-manager/settings.py
+        exit 1
+    fi
 fi
 
 # Get the chroma-externals repo as pip is going to need it
