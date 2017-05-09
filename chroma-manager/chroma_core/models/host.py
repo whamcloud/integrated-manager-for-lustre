@@ -307,8 +307,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                      "args": {"host": self,
                               "server_profile": server_profile}}]
 
-    @property
-    def pacemaker_configuration(self):
+    def _get_configuration(self, configuration_name):
         '''
         We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
         return None when there is no forward reference. So for now we have to place this reference reference handles in
@@ -316,48 +315,33 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         :return: Reference to object or None if not object.
         '''
         try:
-            return self._pacemaker_configuration
-        except PacemakerConfiguration.DoesNotExist:
+            configuration = getattr(self, '_%s_configuration' % configuration_name)
+        except (PacemakerConfiguration.DoesNotExist,
+                CorosyncConfiguration.DoesNotExist,
+                NTPConfiguration.DoesNotExist,
+                RSyslogConfiguration.DoesNotExist):
             return None
+
+        if configuration.state == 'removed':
+            return None
+        else:
+            return configuration
+
+    @property
+    def pacemaker_configuration(self):
+        return self._get_configuration('pacemaker')
 
     @property
     def corosync_configuration(self):
-        '''
-        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
-        return None when there is no forward reference. So for now we have to place this reference reference handles in
-        that return none if there is no reference
-        :return: Reference to object or None if not object.
-        '''
-        try:
-            return self._corosync_configuration
-        except CorosyncConfiguration.DoesNotExist:
-            return None
+        return self._get_configuration('corosync')
 
     @property
     def ntp_configuration(self):
-        '''
-        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
-        return None when there is no forward reference. So for now we have to place this reference reference handles in
-        that return none if there is no reference
-        :return: Reference to object or None if not object.
-        '''
-        try:
-            return self._ntp_configuration
-        except NTPConfiguration.DoesNotExist:
-            return None
+        return self._get_configuration('ntp')
 
     @property
     def rsyslog_configuration(self):
-        '''
-        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
-        return None when there is no forward reference. So for now we have to place this reference reference handles in
-        that return none if there is no reference
-        :return: Reference to object or None if not object.
-        '''
-        try:
-            return self._rsyslog_configuration
-        except RSyslogConfiguration.DoesNotExist:
-            return None
+        return self._get_configuration('rsyslog')
 
 
 class Volume(models.Model):
@@ -1147,16 +1131,26 @@ class DeleteHostStep(Step):
             # then crash, then get restarted.
             pass
 
+        # Remove associated lustre mounts
+        for mount in host.client_mounts.all():
+            mount.mark_deleted()
+
+        # Remove configuration objects. This needs done *before* removing outlets.
+        for configuration in [host.pacemaker_configuration, host.corosync_configuration, host.ntp_configuration, host.rsyslog_configuration]:
+            if configuration:
+                configuration.set_state('removed')
+                configuration.mark_deleted()
+                configuration.save()
+
         # Remove associations with PDU outlets, or delete IPMI BMCs
+        # This is done intentionally after the configurations are removed so
+        # the trigger for fencing reconfiguration will behave properly.
         for outlet in host.outlets.select_related():
             if outlet.device.is_ipmi:
                 outlet.mark_deleted()
         host.outlets.update(host=None)
 
-        # Remove associated lustre mounts
-        for mount in host.client_mounts.all():
-            mount.mark_deleted()
-
+        # Mark the host itself deleted
         host.mark_deleted()
         if kwargs['force']:
             host.state = 'removed'

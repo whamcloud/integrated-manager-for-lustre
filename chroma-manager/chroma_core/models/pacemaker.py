@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -29,6 +29,7 @@ from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
 from chroma_core.models import Job
+from chroma_core.models import SchedulingError
 from chroma_core.models import StateLock
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
@@ -407,11 +408,15 @@ class ConfigureHostFencingJob(Job):
     def description(self):
         return "Configure fencing agent on %s" % self.host
 
+    def create_locks(self):
+        return [StateLock(
+            job = self,
+            locked_item = self.host.pacemaker_configuration,
+            write = True
+        )]
+
     def get_steps(self):
         return [(ConfigureHostFencingStep, {'host': self.host})]
-
-    def get_deps(self):
-        return DependOn(self.host, 'managed', acceptable_states=self.host.not_state('removed'))
 
 
 class ConfigureHostFencingStep(Step):
@@ -421,8 +426,13 @@ class ConfigureHostFencingStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if host.immutable_state:
-            return
+
+        if host.state != 'managed':
+            raise SchedulingError("Attempted to configure a fencing device while the host %s was in state %s. Expected host to be in state 'managed'. Please ensure your host has completed set up and configure power control again." % (host.fqdn, host.state))
+
+        if not host.pacemaker_configuration:
+            # Shouldn't normally happen, but makes debugging our own bugs easier.
+            raise RuntimeError("Attemped to configure fencing on a host that does not yet have a pacemaker configuration.")
 
         agent_kwargs = []
         for outlet in host.outlets.select_related().all():
