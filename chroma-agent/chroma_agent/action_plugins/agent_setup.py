@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -42,6 +42,7 @@ agent_service = ServiceControl.create('chroma-agent')
 
 
 def _service_is_running():
+    # returns True if running
     return agent_service.running
 
 
@@ -79,8 +80,7 @@ def deregister_server():
 
 
 def register_server(url, ca, secret, address =None):
-
-    if _service_is_running() is None:
+    if _service_is_running() is True:
         console_log.warning("chroma-agent service was running before registration, stopping.")
         agent_service.stop()
 
@@ -110,8 +110,8 @@ def register_server(url, ca, secret, address =None):
 
 
 def reregister_server(url, address):
-    "Update manager url and register agent address with manager."
-    if _service_is_running() is None:
+    """ Update manager url and register agent address with manager """
+    if _service_is_running() is True:
         console_log.warning("chroma-agent service was running before registration, stopping.")
         agent_service.stop()
 
