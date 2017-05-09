@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -296,7 +296,10 @@ class SessionTable(object):
         else:
             daemon_log.info("SessionTable.terminate %s/%s" % (plugin_name, session.id))
             session.teardown()
-            del self._sessions[plugin_name]
+            try:
+                del self._sessions[plugin_name]
+            except KeyError:
+                pass
 
     def terminate_all(self):
         for session in self._sessions.values():
