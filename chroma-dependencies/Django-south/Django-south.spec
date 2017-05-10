@@ -2,7 +2,7 @@
 
 Name:           Django-south
 Version:        0.7.5
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Intelligent schema migrations for Django apps
 
 Group:          Development/Languages
@@ -38,6 +38,9 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/*
 
 %changelog
+* Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 0.7.5-3
+- new package built with tito
+
 * Wed Jul 18 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.7.5-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
 
