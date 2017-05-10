@@ -1,0 +1,33 @@
+This could be done in Copr as a pure pypi source module except that
+the setup.py says there is a test suite but there is not and so the
+%check is wrong.  Also due to a bug:
+- https://github.com/fedora-python/pyp2rpm/issues/122
+
+So we used pyp2rpm on Fedora (because the one in EL7 is pretty old and does
+not support the epel7 template) and modified the resulting specfile to remove
+the %check
+
+$ pyp2rpm -d $(rpm --eval %{_topdir}) -t epel7 httpagentparser-1.5.0.tar.gz > python-httpagentparser.spec
+$ ed <<"EOF" python-httpagentparser.spec
+/%check/;/^$/d
+g/__python3/s//__python2/g
+g/%{python3_pkgversion}/s/%{python3_pkgversion}/2/g
+g/python3_sitelib/s//python2_sitelib/g
+w
+q
+EOF
+
+And due to: https://github.com/fedora-python/pyp2rpm/issues/118
+
+$ ed <<EOF python-httpagentparser.spec
+/^Source0:/s/$/http:\/\/pypi\.python\.org\/packages\/source\/h\/httpagentparser\/httpagentparser-1.5.0.tar.gz/
+w
+q
+EOF
+
+And due to https://github.com/fedora-python/pyp2rpm/issues/119:
+$ ed <<EOF python-httpagentparser.spec
+/python2-setuptools/s/python2-setuptools/python-setuptools/
+w
+q
+EOF
