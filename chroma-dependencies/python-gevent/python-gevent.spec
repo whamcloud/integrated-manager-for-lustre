@@ -3,7 +3,7 @@
 
 Name:           python-%{pypi_name}
 Version:        1.0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Coroutine-based network library
 
 License:        TODO
@@ -63,5 +63,8 @@ rm -rf html/.{doctrees,buildinfo}
 %doc html 
 
 %changelog
+* Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 1.0.1-2
+- new package built with tito
+
 * Fri May 05 2017 Brian J. Murrell <brian.murrell@intel.com> 1.0.1-1
 - Initial package.
