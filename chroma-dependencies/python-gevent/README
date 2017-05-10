@@ -1,0 +1,33 @@
+This could be done in Copr as a pure pypi source module except for 
+two bugs:
+- https://github.com/fedora-python/pyp2rpm/issues/121
+- https://github.com/fedora-python/pyp2rpm/issues/116
+
+So we used pyp2rpm on Fedora (because the one in EL7 is pretty old and does
+not support the epel7 template) and modified the resulting specfile to add the
+BuildRequires: python2-gevent and set the PYTHONPATH for sphinx-build
+
+$ pyp2rpm -d $(rpm --eval %{_topdir}) -t epel7 gevent-1.0.1.tar.gz > python-gevent.spec
+$ ed <<"EOF" python-gevent.spec
+/BuildRequires/i
+BuildRequires:  python2-gevent
+.
+/sphinx-build doc html/s/^/PYTHONPATH=$PWD:$PWD\/doc /
+w
+q
+EOF
+
+And due to: https://github.com/fedora-python/pyp2rpm/issues/118
+
+$ ed <<EOF python-gevent.spec
+/^Source0:/s/$/http:\/\/pypi\.python\.org\/packages\/source\/g\/gevent\/gevent-1.0.1.zip/
+w
+q
+EOF
+
+And due to https://github.com/fedora-python/pyp2rpm/issues/119:
+$ ed <<EOF python-gevent.spec
+/python2-setuptools/s/python2-setuptools/python-setuptools/
+w
+q
+EOF
