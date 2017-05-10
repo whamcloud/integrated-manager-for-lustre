@@ -1,0 +1,44 @@
+This could be done in Copr as a pure pypi source module except for two
+bugs:
+- https://github.com/fedora-python/pyp2rpm/issues/115
+  - fixed in 3.2.2
+
+So we used pyp2rpm on Fedora (because the one in EL7 is pretty old and does
+not support the epel7 template) and modified the resulting specfile to remove
+the invalid %files reference:
+
+$ pyp2rpm -d $(rpm --eval %{_topdir}) -t epel7 greenlet-0.4.2.zip > python-greenlet.spec
+$ ed <<EOF python-greenlet.spec
+/%{python2_sitearch}\/%{pypi_name}/d
+/%{python3_sitearch}\/%{pypi_name}/d
+w
+q
+EOF
+And due to: https://github.com/fedora-python/pyp2rpm/issues/118
+
+$ ed <<EOF python-greenlet.spec
+/^Source0:/s/$/http:\/\/pypi\.python\.org\/packages\/source\/g\/greenlet\/greenlet-0\.4\.2\.zip/
+w
+q
+EOF
+
+And due to https://github.com/fedora-python/pyp2rpm/issues/119:
+$ ed <<EOF python-greenlet.spec
+/python2-setuptools/s/python2-setuptools/python-setuptools/
+w
+q
+EOF
+
+And due to https://github.com/fedora-python/pyp2rpm/issues/120:
+$ ed <<EOF python-greenlet.spec
+/%files -n python2-%{pypi_name}/a
+%{_includedir}/python%{python2_version}
+%{_libdir}/python%{python2_version}
+.
+/%files -n python%{python3_pkgversion}-%{pypi_name}/a
+%{_includedir}/python%{python3_version}m
+%{_libdir}/python%{python3_version}
+.
+w
+q
+EOF
