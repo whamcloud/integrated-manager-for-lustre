@@ -29,7 +29,6 @@ chroma-dependencies/*/*.noarch.rpm
 chroma-dependencies/*/*.x86_64.rpm
 chroma-dependencies/*/*.spec.orig
 chroma-dependencies/*/*.spec.last_built
-chroma-dependencies/*/*.patch
 chroma-dependencies/repodata
 chroma-dependencies/robinhood/lustre
 chroma-dependencies/python-django/simplejson-init.py

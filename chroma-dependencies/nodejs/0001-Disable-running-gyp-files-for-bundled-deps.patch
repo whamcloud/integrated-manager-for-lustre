@@ -1,0 +1,25 @@
+From 54cb96f338bd162dcf1301b7d7a46eea2a56befb Mon Sep 17 00:00:00 2001
+From: Zuzana Svetlikova <zsvetlik@redhat.com>
+Date: Wed, 22 Mar 2017 19:13:10 +0100
+Subject: [PATCH] Disable running gyp files for bundled deps
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index a2b64e63b4..7b0847d1d5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -77,7 +77,7 @@ $(NODE_G_EXE): config.gypi out/Makefile
+ 	$(MAKE) -C out BUILDTYPE=Debug V=$(V)
+ 	if [ ! -r $@ -o ! -L $@ ]; then ln -fs out/Debug/$(NODE_EXE) $@; fi
+ 
+-out/Makefile: common.gypi deps/uv/uv.gyp deps/http_parser/http_parser.gyp deps/zlib/zlib.gyp deps/v8/build/toolchain.gypi deps/v8/build/features.gypi deps/v8/tools/gyp/v8.gyp node.gyp config.gypi
++out/Makefile: common.gypi deps/v8/build/toolchain.gypi deps/v8/build/features.gypi deps/v8/tools/gyp/v8.gyp node.gyp config.gypi
+ 	$(PYTHON) tools/gyp_node.py -f make
+ 
+ config.gypi: configure
+-- 
+2.12.0
+

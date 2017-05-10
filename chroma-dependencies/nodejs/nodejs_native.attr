@@ -1,0 +1,2 @@
+%__nodejs_native_requires %{_rpmconfigdir}/nodejs_native.req
+%__nodejs_native_path ^/usr/lib.*/node_modules/.*\\.node$

@@ -1,0 +1,103 @@
+From fbb5821dc3d967e916a187ee009e955530d2ce8d Mon Sep 17 00:00:00 2001
+From: Ben Noordhuis <info@bnoordhuis.nl>
+Date: Tue, 28 Feb 2017 13:56:40 -0500
+Subject: [PATCH 4/4] Fix compatibility with GCC 7
+
+Signed-off-by: Stephen Gallagher <sgallagh@redhat.com>
+---
+ deps/v8/src/objects-body-descriptors.h |  2 +-
+ deps/v8/src/objects-inl.h              | 21 +++++++++++++++++++++
+ deps/v8/src/objects.h                  | 20 ++++----------------
+ 3 files changed, 26 insertions(+), 17 deletions(-)
+
+diff --git a/deps/v8/src/objects-body-descriptors.h b/deps/v8/src/objects-body-descriptors.h
+index 91cb8883be88739eab2b10df71f6f0d08aab436e..a1c3634bd762d7e03b4c87d38aa14a9a3ce318e4 100644
+--- a/deps/v8/src/objects-body-descriptors.h
++++ b/deps/v8/src/objects-body-descriptors.h
+@@ -97,11 +97,11 @@ class FixedBodyDescriptor final : public BodyDescriptorBase {
+     IterateBodyImpl<StaticVisitor>(heap, obj, start_offset, end_offset);
+   }
+ 
+   template <typename StaticVisitor>
+   static inline void IterateBody(HeapObject* obj, int object_size) {
+-    IterateBody(obj);
++    IterateBody<StaticVisitor>(obj);
+   }
+ };
+ 
+ 
+ // This class describes a body of an object of a variable size
+diff --git a/deps/v8/src/objects-inl.h b/deps/v8/src/objects-inl.h
+index 11f4d7498d7558f56037483004a3d5839154516b..72208c2f00f4a9ff47ae487fa9a42f8f82cf12ea 100644
+--- a/deps/v8/src/objects-inl.h
++++ b/deps/v8/src/objects-inl.h
+@@ -34,10 +34,31 @@
+ #include "src/v8memory.h"
+ 
+ namespace v8 {
+ namespace internal {
+ 
++template <typename Derived, typename Shape, typename Key>
++uint32_t HashTable<Derived, Shape, Key>::Hash(Key key) {
++  if (Shape::UsesSeed) {
++    return Shape::SeededHash(key, GetHeap()->HashSeed());
++  } else {
++    return Shape::Hash(key);
++  }
++}
++
++
++template <typename Derived, typename Shape, typename Key>
++uint32_t HashTable<Derived, Shape, Key>::HashForObject(Key key,
++                                                       Object* object) {
++  if (Shape::UsesSeed) {
++    return Shape::SeededHashForObject(key, GetHeap()->HashSeed(), object);
++  } else {
++    return Shape::HashForObject(key, object);
++  }
++}
++
++
+ PropertyDetails::PropertyDetails(Smi* smi) {
+   value_ = smi->value();
+ }
+ 
+ 
+diff --git a/deps/v8/src/objects.h b/deps/v8/src/objects.h
+index d1632c9deb298218faea31886ffdb0a8e0201cdc..47b02dadcff9658c9fcfe629e137667015e12079 100644
+--- a/deps/v8/src/objects.h
++++ b/deps/v8/src/objects.h
+@@ -3259,26 +3259,14 @@ class HashTableBase : public FixedArray {
+ 
+ 
+ template <typename Derived, typename Shape, typename Key>
+ class HashTable : public HashTableBase {
+  public:
+-  // Wrapper methods
+-  inline uint32_t Hash(Key key) {
+-    if (Shape::UsesSeed) {
+-      return Shape::SeededHash(key, GetHeap()->HashSeed());
+-    } else {
+-      return Shape::Hash(key);
+-    }
+-  }
+-
+-  inline uint32_t HashForObject(Key key, Object* object) {
+-    if (Shape::UsesSeed) {
+-      return Shape::SeededHashForObject(key, GetHeap()->HashSeed(), object);
+-    } else {
+-      return Shape::HashForObject(key, object);
+-    }
+-  }
++  // Wrapper methods.  Defined in src/objects-inl.h
++  // to break a cycle with src/heap/heap.h.
++  inline uint32_t Hash(Key key);
++  inline uint32_t HashForObject(Key key, Object* object);
+ 
+   // Returns a new HashTable object.
+   MUST_USE_RESULT static Handle<Derived> New(
+       Isolate* isolate, int at_least_space_for,
+       MinimumCapacity capacity_option = USE_DEFAULT_MINIMUM_CAPACITY,
+-- 
+2.12.0
+

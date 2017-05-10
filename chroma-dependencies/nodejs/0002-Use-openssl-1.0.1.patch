@@ -1,0 +1,648 @@
+From 91d1a67b8cc249af59929cd1a76629a2614860bd Mon Sep 17 00:00:00 2001
+From: Haikel Guemar <hguemar@fedoraproject.org>
+Date: Tue, 26 Jul 2016 22:50:22 +0200
+Subject: [PATCH 2/4] Use openssl 1.0.1
+
+Based on Solaris patches from upstream #2783
+https://github.com/nodejs/node/issues/2783
+---
+ doc/api/tls.md        |   6 ++
+ src/node_constants.cc |   5 ++
+ src/node_crypto.cc    | 201 ++++++++++++++++++++++++++++++++++++++++++++++----
+ src/node_crypto.h     |  16 ++++
+ src/tls_wrap.cc       |   8 ++
+ 5 files changed, 223 insertions(+), 13 deletions(-)
+
+diff --git a/doc/api/tls.md b/doc/api/tls.md
+index 3784210ba7b6c046b39d74b45e44538041d35ae2..3c9d72b8d5ef81d15773aed077bd00d2041c9e93 100644
+--- a/doc/api/tls.md
++++ b/doc/api/tls.md
+@@ -113,10 +113,16 @@ handshake extensions:
+ * ALPN/NPN - Allows the use of one TLS server for multiple protocols (HTTP,
+   SPDY, HTTP/2)
+ * SNI - Allows the use of one TLS server for multiple hostnames with different
+   SSL certificates.
+ 
++  **NOTE**: dueto a design flaw in node **SNI cannot be
++  used on the server side**, even so all parameters in related functions are
++  accepted for compatibility reasons. And thus the related events will not
++  fire unless one aranges this explicitly. This may change, when the OS
++  provides OpenSSL v1.0.2 or better and node gets linked to this version.
++
+ *Note*: Use of ALPN is recommended over NPN. The NPN extension has never been
+ formally defined or documented and generally not recommended for use.
+ 
+ ### Client-initiated renegotiation attack mitigation
+ 
+diff --git a/src/node_constants.cc b/src/node_constants.cc
+index 2e6be8df37c345a383d8a78898daf2a147d90630..239eadbac8ea8e601745a63347a8bb301c22d1b1 100644
+--- a/src/node_constants.cc
++++ b/src/node_constants.cc
+@@ -12,11 +12,14 @@
+ #include <signal.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ 
+ #if HAVE_OPENSSL
++# include <openssl/opensslconf.h>
++# ifndef OPENSSL_NO_EC
+ # include <openssl/ec.h>
++# endif
+ # include <openssl/ssl.h>
+ # ifndef OPENSSL_NO_ENGINE
+ #  include <openssl/engine.h>
+ # endif  // !OPENSSL_NO_ENGINE
+ #endif
+@@ -974,16 +977,18 @@ void DefineOpenSSLConstants(Local<Object> target) {
+     NODE_DEFINE_CONSTANT(target, RSA_PKCS1_PSS_PADDING);
+ #endif
+ 
+ #if HAVE_OPENSSL
+   // NOTE: These are not defines
++# ifndef OPENSSL_NO_EC
+   NODE_DEFINE_CONSTANT(target, POINT_CONVERSION_COMPRESSED);
+ 
+   NODE_DEFINE_CONSTANT(target, POINT_CONVERSION_UNCOMPRESSED);
+ 
+   NODE_DEFINE_CONSTANT(target, POINT_CONVERSION_HYBRID);
+ #endif
++#endif
+ }
+ 
+ void DefineSystemConstants(Local<Object> target) {
+   // file access modes
+   NODE_DEFINE_CONSTANT(target, O_RDONLY);
+diff --git a/src/node_crypto.cc b/src/node_crypto.cc
+index 482ec230c0f4500b63b705d705a142e63ff179e5..c5630f30d0bef75ced53b36062bb1f0324dbdb9d 100644
+--- a/src/node_crypto.cc
++++ b/src/node_crypto.cc
+@@ -22,10 +22,86 @@
+ #include <limits.h>  // INT_MAX
+ #include <math.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#ifndef SSL_get_server_tmp_key
++/*
++	1.0.2 SSL_get_server_tmp_key(s, pk) "backport". BAD HACK!!!
++	NOTE: This imports "foreign" knowledge and thus will break, when SESS_CERT
++	      or CERT_PKEY change, which is definitely the case for the later for
++	      all OpenSSL lib vers != 1.0.1. So don't try to bind to something else!
++ */
++# define SSL_PKEY_NUM            8
++typedef struct cert_pkey_st {
++    X509 *x509;
++    EVP_PKEY *privatekey;
++    /* Digest to use when signing */
++    const EVP_MD *digest;
++} CERT_PKEY;
++
++typedef struct sess_cert_st {
++    STACK_OF(X509) *cert_chain; /* as received from peer (not for SSL2) */
++    /* The 'peer_...' members are used only by clients. */
++    int peer_cert_type;
++    CERT_PKEY *peer_key;        /* points to an element of peer_pkeys (never
++                                 * NULL!) */
++    CERT_PKEY peer_pkeys[SSL_PKEY_NUM];
++    /*
++     * Obviously we don't have the private keys of these, so maybe we
++     * shouldn't even use the CERT_PKEY type here.
++     */
++# ifndef OPENSSL_NO_RSA
++    RSA *peer_rsa_tmp;          /* not used for SSL 2 */
++# endif
++# ifndef OPENSSL_NO_DH
++    DH *peer_dh_tmp;            /* not used for SSL 2 */
++# endif
++# ifndef OPENSSL_NO_ECDH
++    EC_KEY *peer_ecdh_tmp;
++# endif
++    int references;             /* actually always 1 at the moment */
++} SESS_CERT;
++
++static long SSL_get_server_tmp_key(SSL *s, void *parg) {
++	if (s->server || !s->session || !s->session->sess_cert)
++		return 0;
++	else {
++		SESS_CERT *sc;
++		EVP_PKEY *ptmp;
++		int rv = 0;
++		sc = s->session->sess_cert;
++#if !defined(OPENSSL_NO_RSA) && !defined(OPENSSL_NO_DH) && !defined(OPENSSL_NO_EC) && !defined(OPENSSL_NO_ECDH)
++		if (!sc->peer_rsa_tmp && !sc->peer_dh_tmp && !sc->peer_ecdh_tmp)
++			return 0;
++#endif
++		ptmp = EVP_PKEY_new();
++		if (!ptmp)
++			return 0;
++		if (0) ;
++#ifndef OPENSSL_NO_RSA
++		else if (sc->peer_rsa_tmp)
++			rv = EVP_PKEY_set1_RSA(ptmp, sc->peer_rsa_tmp);
++#endif
++#ifndef OPENSSL_NO_DH
++		else if (sc->peer_dh_tmp)
++			rv = EVP_PKEY_set1_DH(ptmp, sc->peer_dh_tmp);
++#endif
++#ifndef OPENSSL_NO_ECDH
++		else if (sc->peer_ecdh_tmp)
++			rv = EVP_PKEY_set1_EC_KEY(ptmp, sc->peer_ecdh_tmp);
++#endif
++		if (rv) {
++			*(EVP_PKEY **)parg = ptmp;
++			return 1;
++		}
++		EVP_PKEY_free(ptmp);
++		return 0;
++	}
++}
++#endif /* SSL_get_server_tmp_key */
++
+ #define THROW_AND_RETURN_IF_NOT_STRING_OR_BUFFER(val, prefix)                  \
+   do {                                                                         \
+     if (!Buffer::HasInstance(val) && !val->IsString()) {                       \
+       return env->ThrowTypeError(prefix " must be a string or a buffer");      \
+     }                                                                          \
+@@ -161,11 +237,15 @@ template int SSLWrap<TLSWrap>::SelectNextProtoCallback(
+ #ifdef NODE__HAVE_TLSEXT_STATUS_CB
+ template int SSLWrap<TLSWrap>::TLSExtStatusCallback(SSL* s, void* arg);
+ #endif
+ 
+ template void SSLWrap<TLSWrap>::DestroySSL();
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+ template int SSLWrap<TLSWrap>::SSLCertCallback(SSL* s, void* arg);
++#else
++template int SSLWrap<TLSWrap>::SSLCertCallback(SSL* s, X509 **x509, EVP_PKEY **pkey);
++#endif
+ template void SSLWrap<TLSWrap>::WaitForCertCb(CertCb cb, void* arg);
+ 
+ #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
+ template int SSLWrap<TLSWrap>::SelectALPNCallback(
+     SSL* s,
+@@ -281,12 +361,16 @@ void SecureContext::Initialize(Environment* env, Local<Object> target) {
+   env->SetProtoMethod(t, "setCert", SecureContext::SetCert);
+   env->SetProtoMethod(t, "addCACert", SecureContext::AddCACert);
+   env->SetProtoMethod(t, "addCRL", SecureContext::AddCRL);
+   env->SetProtoMethod(t, "addRootCerts", SecureContext::AddRootCerts);
+   env->SetProtoMethod(t, "setCiphers", SecureContext::SetCiphers);
++#ifndef OPENSSL_NO_ECDH
+   env->SetProtoMethod(t, "setECDHCurve", SecureContext::SetECDHCurve);
++#endif
++#ifndef OPENSSL_NO_DH
+   env->SetProtoMethod(t, "setDHParam", SecureContext::SetDHParam);
++#endif
+   env->SetProtoMethod(t, "setOptions", SecureContext::SetOptions);
+   env->SetProtoMethod(t, "setSessionIdContext",
+                       SecureContext::SetSessionIdContext);
+   env->SetProtoMethod(t, "setSessionTimeout",
+                       SecureContext::SetSessionTimeout);
+@@ -514,12 +598,24 @@ int SSL_CTX_use_certificate_chain(SSL_CTX* ctx,
+     SSL_CTX_clear_extra_chain_certs(ctx);
+ 
+     for (int i = 0; i < sk_X509_num(extra_certs); i++) {
+       X509* ca = sk_X509_value(extra_certs, i);
+ 
+-      // NOTE: Increments reference count on `ca`
+-      r = SSL_CTX_add1_chain_cert(ctx, ca);
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
++		// If ctx->cert->key != NULL create ctx->cert->key->chain if not
++		// already there, push 'ca' to this chain and finally increment the ca
++		// reference count by 1 (this is the diff between *_add1_* and *_add0_*
++		// - the later increments by 0 ;-)) and return 1. Otherwise or if
++		// something fails in between, return 0.
++		r = SSL_CTX_add1_chain_cert(ctx, ca);
++#else
++		// Create ctx->extra_certs if not already there, just push 'ca' to this
++		// chain and return 1. If something fails, return 0.
++		// NOTE: 1.0.1- does not support multiple certs having its own chain in
++		//       a single context. There is just one: extra_chain!
++		r = SSL_CTX_add_extra_chain_cert(ctx, ca);
++#endif
+ 
+       if (!r) {
+         ret = 0;
+         *issuer = nullptr;
+         goto end;
+@@ -868,10 +964,11 @@ void SecureContext::SetCiphers(const FunctionCallbackInfo<Value>& args) {
+   const node::Utf8Value ciphers(args.GetIsolate(), args[0]);
+   SSL_CTX_set_cipher_list(sc->ctx_, *ciphers);
+ }
+ 
+ 
++#ifndef OPENSSL_NO_ECDH
+ void SecureContext::SetECDHCurve(const FunctionCallbackInfo<Value>& args) {
+   SecureContext* sc;
+   ASSIGN_OR_RETURN_UNWRAP(&sc, args.Holder());
+   Environment* env = sc->env();
+ 
+@@ -895,12 +992,14 @@ void SecureContext::SetECDHCurve(const FunctionCallbackInfo<Value>& args) {
+   SSL_CTX_set_options(sc->ctx_, SSL_OP_SINGLE_ECDH_USE);
+   SSL_CTX_set_tmp_ecdh(sc->ctx_, ecdh);
+ 
+   EC_KEY_free(ecdh);
+ }
++#endif
+ 
+ 
++#ifndef OPENSSL_NO_DH
+ void SecureContext::SetDHParam(const FunctionCallbackInfo<Value>& args) {
+   SecureContext* sc;
+   ASSIGN_OR_RETURN_UNWRAP(&sc, args.This());
+   Environment* env = sc->env();
+   ClearErrorOnReturn clear_error_on_return;
+@@ -935,10 +1034,11 @@ void SecureContext::SetDHParam(const FunctionCallbackInfo<Value>& args) {
+   DH_free(dh);
+ 
+   if (!r)
+     return env->ThrowTypeError("Error setting temp DH parameter");
+ }
++#endif
+ 
+ 
+ void SecureContext::SetOptions(const FunctionCallbackInfo<Value>& args) {
+   SecureContext* sc;
+   ASSIGN_OR_RETURN_UNWRAP(&sc, args.Holder());
+@@ -1952,10 +2052,11 @@ void SSLWrap<Base>::GetEphemeralKeyInfo(
+         info->Set(env->type_string(),
+                   FIXED_ONE_BYTE_STRING(env->isolate(), "DH"));
+         info->Set(env->size_string(),
+                   Integer::New(env->isolate(), EVP_PKEY_bits(key)));
+         break;
++#ifndef OPENSSL_NO_ECDH
+       case EVP_PKEY_EC:
+         {
+           EC_KEY* ec = EVP_PKEY_get1_EC_KEY(key);
+           int nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec));
+           EC_KEY_free(ec);
+@@ -1964,10 +2065,11 @@ void SSLWrap<Base>::GetEphemeralKeyInfo(
+           info->Set(env->name_string(),
+                     OneByteString(args.GetIsolate(), OBJ_nid2sn(nid)));
+           info->Set(env->size_string(),
+                     Integer::New(env->isolate(), EVP_PKEY_bits(key)));
+         }
++#endif
+     }
+     EVP_PKEY_free(key);
+   }
+ 
+   return args.GetReturnValue().Set(info);
+@@ -2382,11 +2484,16 @@ void SSLWrap<Base>::WaitForCertCb(CertCb cb, void* arg) {
+   cert_cb_arg_ = arg;
+ }
+ 
+ 
+ template <class Base>
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+ int SSLWrap<Base>::SSLCertCallback(SSL* s, void* arg) {
++#else
++/* NOTE: For now this callback gets usually never called dueto design flaws */
++int SSLWrap<Base>::SSLCertCallback(SSL* s, X509 **x509, EVP_PKEY **pkey) {
++#endif
+   Base* w = static_cast<Base*>(SSL_get_app_data(s));
+ 
+   if (!w->is_server())
+     return 1;
+ 
+@@ -2451,23 +2558,57 @@ void SSLWrap<Base>::CertCbDone(const FunctionCallbackInfo<Value>& args) {
+     ASSIGN_OR_RETURN_UNWRAP(&sc, ctx.As<Object>());
+     w->sni_context_.Reset();
+     w->sni_context_.Reset(env->isolate(), ctx);
+ 
+     int rv;
++	X509* x509;
++	EVP_PKEY* pkey;
++	STACK_OF(X509)* chain;
+ 
+     // NOTE: reference count is not increased by this API methods
+-    X509* x509 = SSL_CTX_get0_certificate(sc->ctx_);
+-    EVP_PKEY* pkey = SSL_CTX_get0_privatekey(sc->ctx_);
+-    STACK_OF(X509)* chain;
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
++	x509 = SSL_CTX_get0_certificate(sc->ctx_);
++	pkey = SSL_CTX_get0_privatekey(sc->ctx_);
++	rv = SSL_CTX_get0_chain_certs(sc->ctx_, &chain);
++#else
++	SSL *ssl = SSL_new(sc->ctx_);
++	rv = SSL_CTX_get_extra_chain_certs(sc->ctx_, &chain);
++	if (ssl) {
++		SSL_set_connect_state(ssl);	/* just cleanup/reset state - cheap */
++		x509 = SSL_get_certificate(ssl);
++		SSL_free(ssl);
++	} else {
++		x509 = NULL;
++		pkey = NULL;
++	}
++#endif
+ 
+-    rv = SSL_CTX_get0_chain_certs(sc->ctx_, &chain);
+-    if (rv)
+-      rv = SSL_use_certificate(w->ssl_, x509);
+-    if (rv)
+-      rv = SSL_use_PrivateKey(w->ssl_, pkey);
+-    if (rv && chain != nullptr)
+-      rv = SSL_set1_chain(w->ssl_, chain);
++	if (rv)
++		rv = SSL_use_certificate(w->ssl_, x509);
++	if (rv)
++		rv = SSL_use_PrivateKey(w->ssl_, pkey);
++	if (rv && chain != nullptr) {
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
++		// replaces w->ssl_->cert->key->chain with a copy of the given chain,
++		// which is allowed to be NULL
++		rv = SSL_set1_chain(w->ssl_, chain);
++#else
++		// just replace the extra chain with the given chain - 1.0.1- does not
++		// support chain per cert
++		SSL_CTX_clear_extra_chain_certs(w->ssl_->ctx);
++		if (chain != NULL) {
++			int i;
++			SSL_CTX* ctx = w->ssl_->ctx;
++			for (i = 0; i < sk_X509_num(chain); i++) {
++				// can't do anything: however others might be ok and still
++				// satisfy requirements
++				SSL_CTX_add_extra_chain_cert(ctx, sk_X509_value(chain,i));
++			}
++		}
++		rv = 1;
++#endif
++	}
+     if (rv)
+       rv = w->SetCACerts(sc);
+     if (!rv) {
+       unsigned long err = ERR_get_error();  // NOLINT(runtime/int)
+       if (!err)
+@@ -2527,14 +2668,18 @@ void SSLWrap<Base>::SetSNIContext(SecureContext* sc) {
+ }
+ 
+ 
+ template <class Base>
+ int SSLWrap<Base>::SetCACerts(SecureContext* sc) {
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+   int err = SSL_set1_verify_cert_store(ssl_, SSL_CTX_get_cert_store(sc->ctx_));
+   if (err != 1)
+     return err;
+-
++#else
++  // there is no ssl_->cert->verify_store in <= 1.0.1. So no need to: free the
++  // old store, set the new one to it and increment its ref count.
++#endif
+   STACK_OF(X509_NAME)* list = SSL_dup_CA_list(
+       SSL_CTX_get_client_CA_list(sc->ctx_));
+ 
+   // NOTE: `SSL_set_client_CA_list` takes the ownership of `list`
+   SSL_set_client_CA_list(ssl_, list);
+@@ -2808,11 +2953,15 @@ inline int VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx) {
+ 
+   // Server does not need to check the whitelist.
+   SSL* ssl = static_cast<SSL*>(
+       X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+   if (SSL_is_server(ssl))
++#else
++  if (ssl->server)
++#endif
+     return 1;
+ 
+   // Client needs to check if the server cert is listed in the
+   // whitelist when it is issued by the specific rootCAs.
+   CheckResult ret = CheckWhitelistedServerCert(ctx);
+@@ -2891,11 +3040,25 @@ void Connection::New(const FunctionCallbackInfo<Value>& args) {
+   if (is_server)
+     SSL_set_info_callback(conn->ssl_, SSLInfoCallback);
+ 
+   InitNPN(sc);
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+   SSL_set_cert_cb(conn->ssl_, SSLWrap<Connection>::SSLCertCallback, conn);
++#else
++  /* 1.0.1 and less have no general cert callback. The closest for a client is
++     SSL_CTX_set_client_cert_cb(conn->ssl_->ctx, SSLWrap<Connection>::SSLCertCallback);
++     but on the client it is not needed/used by this implementation. Since this
++     the SSLCertCallback actually calls lib/_tls_wrap.js:oncertcb(), which in
++     turn loadSNI() and this the actual SNICallback of the JSON object, sets
++     the context and finally requestOCSP() and certCbDone(). Not sure, why
++     the SNICallback of the JSON object, doesn't get invoked via
++     SelectSNIContextCallback_() - design flaw because lets do 2 things at once
++     (i.e. do SNICallback and attach the certs ca chain), however, this means
++     no server side support for the SNI TLS/OCSP_state extension anymore.
++   */
++#endif
+ 
+ #ifdef SSL_CTRL_SET_TLSEXT_SERVERNAME_CB
+   if (is_server) {
+     SSL_CTX_set_tlsext_servername_callback(sc->ctx_, SelectSNIContextCallback_);
+   } else if (args[2]->IsString()) {
+@@ -4476,10 +4639,11 @@ void PublicKeyCipher::Cipher(const FunctionCallbackInfo<Value>& args) {
+   args.GetReturnValue().Set(vbuf);
+   delete[] out_value;
+ }
+ 
+ 
++#ifndef OPENSSL_NO_DH
+ void DiffieHellman::Initialize(Environment* env, Local<Object> target) {
+   Local<FunctionTemplate> t = env->NewFunctionTemplate(New);
+ 
+   const PropertyAttribute attributes =
+       static_cast<PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
+@@ -4877,12 +5041,14 @@ bool DiffieHellman::VerifyContext() {
+   if (!DH_check(dh, &codes))
+     return false;
+   verifyError_ = codes;
+   return true;
+ }
++#endif
+ 
+ 
++#ifndef OPENSSL_NO_ECDH
+ void ECDH::Initialize(Environment* env, Local<Object> target) {
+   HandleScope scope(env->isolate());
+ 
+   Local<FunctionTemplate> t = env->NewFunctionTemplate(New);
+ 
+@@ -5106,10 +5272,11 @@ void ECDH::SetPrivateKey(const FunctionCallbackInfo<Value>& args) {
+     return env->ThrowError("Failed to set generated public key");
+   }
+ 
+   EC_POINT_free(pub);
+ }
++#endif
+ 
+ 
+ void ECDH::SetPublicKey(const FunctionCallbackInfo<Value>& args) {
+   Environment* env = Environment::GetCurrent(args);
+ 
+@@ -5659,10 +5826,11 @@ void GetHashes(const FunctionCallbackInfo<Value>& args) {
+   EVP_MD_do_all_sorted(array_push_back<EVP_MD>, &ctx);
+   args.GetReturnValue().Set(ctx.arr);
+ }
+ 
+ 
++# ifndef OPENSSL_NO_EC
+ void GetCurves(const FunctionCallbackInfo<Value>& args) {
+   Environment* env = Environment::GetCurrent(args);
+   const size_t num_curves = EC_get_builtin_curves(nullptr, 0);
+   Local<Array> arr = Array::New(env->isolate(), num_curves);
+   EC_builtin_curve* curves;
+@@ -5683,10 +5851,11 @@ void GetCurves(const FunctionCallbackInfo<Value>& args) {
+     free(curves);
+   }
+ 
+   args.GetReturnValue().Set(arr);
+ }
++#endif
+ 
+ 
+ bool VerifySpkac(const char* data, unsigned int len) {
+   bool i = 0;
+   EVP_PKEY* pkey = nullptr;
+@@ -5995,12 +6164,16 @@ void InitCrypto(Local<Object> target,
+ 
+   Environment* env = Environment::GetCurrent(context);
+   SecureContext::Initialize(env, target);
+   Connection::Initialize(env, target);
+   CipherBase::Initialize(env, target);
++# ifndef OPENSSL_NO_EC
+   DiffieHellman::Initialize(env, target);
++#endif
++#ifndef OPENSSL_NO_ECDH
+   ECDH::Initialize(env, target);
++#endif
+   Hmac::Initialize(env, target);
+   Hash::Initialize(env, target);
+   Sign::Initialize(env, target);
+   Verify::Initialize(env, target);
+ 
+@@ -6016,11 +6189,13 @@ void InitCrypto(Local<Object> target,
+   env->SetMethod(target, "randomBytes", RandomBytes);
+   env->SetMethod(target, "timingSafeEqual", TimingSafeEqual);
+   env->SetMethod(target, "getSSLCiphers", GetSSLCiphers);
+   env->SetMethod(target, "getCiphers", GetCiphers);
+   env->SetMethod(target, "getHashes", GetHashes);
++# ifndef OPENSSL_NO_EC
+   env->SetMethod(target, "getCurves", GetCurves);
++#endif
+   env->SetMethod(target, "publicEncrypt",
+                  PublicKeyCipher::Cipher<PublicKeyCipher::kPublic,
+                                          EVP_PKEY_encrypt_init,
+                                          EVP_PKEY_encrypt>);
+   env->SetMethod(target, "privateDecrypt",
+diff --git a/src/node_crypto.h b/src/node_crypto.h
+index 175206c40df58602b0c24d039b8b5a8bb6f56ba3..5ecc43b08d0b4d97311f09271a26f5a735a6e018 100644
+--- a/src/node_crypto.h
++++ b/src/node_crypto.h
+@@ -16,12 +16,16 @@
+ #include "base-object-inl.h"
+ 
+ #include "v8.h"
+ 
+ #include <openssl/ssl.h>
++# ifndef OPENSSL_NO_EC
+ #include <openssl/ec.h>
++# endif
++# ifndef OPENSSL_NO_ECDH
+ #include <openssl/ecdh.h>
++# endif
+ #ifndef OPENSSL_NO_ENGINE
+ # include <openssl/engine.h>
+ #endif  // !OPENSSL_NO_ENGINE
+ #include <openssl/err.h>
+ #include <openssl/evp.h>
+@@ -100,12 +104,16 @@ class SecureContext : public BaseObject {
+   static void SetCert(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void AddCACert(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void AddCRL(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void AddRootCerts(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void SetCiphers(const v8::FunctionCallbackInfo<v8::Value>& args);
++#ifndef OPENSSL_NO_ECDH
+   static void SetECDHCurve(const v8::FunctionCallbackInfo<v8::Value>& args);
++#endif
++# ifndef OPENSSL_NO_DH
+   static void SetDHParam(const v8::FunctionCallbackInfo<v8::Value>& args);
++#endif
+   static void SetOptions(const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void SetSessionIdContext(
+       const v8::FunctionCallbackInfo<v8::Value>& args);
+   static void SetSessionTimeout(
+       const v8::FunctionCallbackInfo<v8::Value>& args);
+@@ -273,11 +281,15 @@ class SSLWrap {
+                                 unsigned char* outlen,
+                                 const unsigned char* in,
+                                 unsigned int inlen,
+                                 void* arg);
+   static int TLSExtStatusCallback(SSL* s, void* arg);
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+   static int SSLCertCallback(SSL* s, void* arg);
++#else
++  static int SSLCertCallback(SSL* s, X509 **x509, EVP_PKEY **pkey);
++#endif
+   static void SSLGetter(v8::Local<v8::String> property,
+                         const v8::PropertyCallbackInfo<v8::Value>& info);
+ 
+   void DestroySSL();
+   void WaitForCertCb(CertCb cb, void* arg);
+@@ -635,10 +647,11 @@ class PublicKeyCipher {
+             EVP_PKEY_cipher_init_t EVP_PKEY_cipher_init,
+             EVP_PKEY_cipher_t EVP_PKEY_cipher>
+   static void Cipher(const v8::FunctionCallbackInfo<v8::Value>& args);
+ };
+ 
++#ifndef OPENSSL_NO_DH
+ class DiffieHellman : public BaseObject {
+  public:
+   ~DiffieHellman() override {
+     if (dh != nullptr) {
+       DH_free(dh);
+@@ -680,11 +693,13 @@ class DiffieHellman : public BaseObject {
+ 
+   bool initialised_;
+   int verifyError_;
+   DH* dh;
+ };
++#endif
+ 
++# ifndef OPENSSL_NO_ECDH
+ class ECDH : public BaseObject {
+  public:
+   ~ECDH() override {
+     if (key_ != nullptr)
+       EC_KEY_free(key_);
+@@ -717,10 +732,11 @@ class ECDH : public BaseObject {
+   bool IsKeyValidForCurve(const BIGNUM* private_key);
+ 
+   EC_KEY* key_;
+   const EC_GROUP* group_;
+ };
++#endif
+ 
+ bool EntropySource(unsigned char* buffer, size_t length);
+ #ifndef OPENSSL_NO_ENGINE
+ void SetEngine(const v8::FunctionCallbackInfo<v8::Value>& args);
+ #endif  // !OPENSSL_NO_ENGINE
+diff --git a/src/tls_wrap.cc b/src/tls_wrap.cc
+index d1b1aeccdd95b00b3fd0421c08fd7816cd70d182..a6e63d7c1ccc81e6f7d782dffe833234b003de15 100644
+--- a/src/tls_wrap.cc
++++ b/src/tls_wrap.cc
+@@ -140,11 +140,19 @@ void TLSWrap::InitSSL() {
+   }
+ #endif  // SSL_CTRL_SET_TLSEXT_SERVERNAME_CB
+ 
+   InitNPN(sc_);
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+   SSL_set_cert_cb(ssl_, SSLWrap<TLSWrap>::SSLCertCallback, this);
++#else
++  /* 1.0.1 and less have at most for the client side the function
++     SSL_CTX_set_client_cert_cb(ssl_->ctx, SSLWrap<TLSWrap>::SSLCertCallback);
++     but on the client it is not needed/used by this implementation.
++     For more info see comments in src/node_crypto.cc Connection::New().
++   */
++#endif
+ 
+   if (is_server()) {
+     SSL_set_accept_state(ssl_);
+   } else if (is_client()) {
+     // Enough space for server response (hello, cert)
+-- 
+2.12.0
+
