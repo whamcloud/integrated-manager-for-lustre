@@ -6,13 +6,26 @@
 set_defaults false
 check_for_autopass
 
+# figure out which parallel invocation we might be
+WORKSPACE_NUMBER=${WORKSPACE/$HOME\/workspace\/unit-tests@/}
+WORKSPACE_NUMBER=${WORKSPACE_NUMBER%%/*}
+
+if [ -n "$WORKSPACE_NUMBER" ]; then
+    # use the database created for the workspace number
+    ed <<EOF $CHROMA_DIR/chroma-manager/settings.py
+/'NAME': 'chroma'/s/',/$WORKSPACE_NUMBER',/
+w
+q
+EOF
+fi
+
 # Get the chroma-externals repo as pip is going to need it
 scripts/update_chroma-externals.py
 
 # Pip install requirements
 cd $CHROMA_DIR/chroma-manager
 make requirements
-python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
+python tests/utils/pip_install_requirements.py $PWD/../chroma-externals
 
 #
 # patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff
