@@ -23,10 +23,10 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPO
 EOF
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
-yum-config-manager --add-repo https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre-dependencies/epel-7-x86_64/
+yum-config-manager --add-repo https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-x86_64/
 yum -y install distribution-gpg-keys-copr
-if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre-dependencies*; then
-    rpm --import https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre-dependencies/pubkey.gpg
+if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
+    rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
 fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
