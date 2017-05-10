@@ -3,7 +3,7 @@
 
 Name:           python-%{pypi_name}
 Version:        1.5.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Extracts OS Browser etc information from http user agent string
 
 License:        http://www.opensource.org/licenses/mit-license.php
@@ -52,5 +52,8 @@ rm -rf %{pypi_name}.egg-info
 %{python2_sitelib}/%{pypi_name}-%{version}-py?.?.egg-info
 
 %changelog
+* Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 1.5.0-2
+- new package built with tito
+
 * Fri May 05 2017 Brian J. Murrell <brian.murrell@intel.com> 1.5.0-1
 - Initial package.
