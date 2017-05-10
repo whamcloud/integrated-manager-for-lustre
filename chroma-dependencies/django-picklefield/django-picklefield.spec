@@ -4,7 +4,7 @@
 
 Name:           django-picklefield
 Version:        0.1.9
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Implementation of a pickled object field
 
 Group:          Development/Languages
@@ -52,6 +52,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 0.1.9-3
+- new package built with tito
+
 * Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.1.9-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
 
