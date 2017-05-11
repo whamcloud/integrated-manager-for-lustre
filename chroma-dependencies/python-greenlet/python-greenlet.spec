@@ -3,7 +3,7 @@
 
 Name:           python-%{pypi_name}
 Version:        0.4.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Lightweight in-process concurrent programming
 
 License:        MIT License
@@ -87,6 +87,9 @@ rm -rf html/.{doctrees,buildinfo}
 %doc html 
 
 %changelog
+* Thu May 11 2017 Brian J. Murrell <brian.murrell@intel.com> 0.4.2-3
+- Add missed file due to .gitignore (brian.murrell@intel.com)
+
 * Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 0.4.2-2
 - new package built with tito
 
