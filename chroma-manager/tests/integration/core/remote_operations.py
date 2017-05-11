@@ -402,6 +402,8 @@ class RealRemoteOperations(RemoteOperations):
                           print_result(ping_gw_result),
                           ping_result2_report))
 
+            return Shell.RunResult(1, "", "", timeout=False)
+
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
