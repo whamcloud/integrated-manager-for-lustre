@@ -16,7 +16,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
-trap "set +e; collect_reports; cleanup" EXIT
+trap "set +e; collect_reports" EXIT
 
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
 repoquery -q epel-release | grep epel-release || {

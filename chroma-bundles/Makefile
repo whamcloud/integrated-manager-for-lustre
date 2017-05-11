@@ -34,7 +34,7 @@ lesskey.out: lesskey.in
 	lesskey -o $@ $<
 
 EULA.txt: ../chroma-manager/chroma_help/help.py
-	python include/get_eula.py | html2text -o $@
+	python include/get_eula.py | html2text > $@
 
 rpms:
 	@echo "I don't know how to make RPMS!"

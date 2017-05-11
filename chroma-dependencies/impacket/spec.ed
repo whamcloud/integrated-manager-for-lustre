@@ -1,8 +1,0 @@
-/^%define tgz_name/s/ I/ i/
-/^License: UNKNOWN/i
-# LICENSE in source tarball says ASL ('slightly' modified in that they've just replaced Apache with their company name)
-.
-+1s/UNKNOWN/ASL/
-/^%define version 0.9.9.0_dev/s/0_dev/9/
-/^%define unmangled_version 0.9.9.0-dev/s/0-dev/9/
-/^%setup/s/\(-n %{tgz_name}\)-%{unmangled_version}/\1/g

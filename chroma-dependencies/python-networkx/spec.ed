@@ -1,4 +1,0 @@
-/^Release/s/^\(Release:.*\)/\1.wc1/
-/%defattr/a
-%doc /usr/share/doc/%{tgz_name}-%{unmangled_version}/*
-.

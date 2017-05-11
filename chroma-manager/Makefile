@@ -269,14 +269,14 @@ download: requirements.txt
 	pip-python install --download ../chroma-externals -r requirements.txt
 
 docs: requirements.txt version
-	set -e ; \
-	if [ -z $(VIRTUAL_ENV) ] ; then \
-		virtualenv myenv; \
-		. myenv/bin/activate; \
-		CACHE=$$(pwd)/../chroma-externals; \
-		echo "# Using pip cache at $$CACHE"; \
+	set -e;                                                         \
+	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
+		virtualenv myenv;                                       \
+		. myenv/bin/activate;                                   \
+		CACHE=$$(pwd)/../chroma-externals;                      \
+		echo "# Using pip cache at $$CACHE";                    \
 		python tests/utils/pip_install_requirements.py $$CACHE; \
-	fi; \
+	fi;                                                             \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
 .PHONY: docs download gui ui-modules npm
