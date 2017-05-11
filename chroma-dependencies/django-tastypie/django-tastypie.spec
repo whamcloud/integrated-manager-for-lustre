@@ -4,7 +4,7 @@
 
 Name:           django-tastypie
 Version:        0.9.11
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Tastypie is an webservice API framework for Django
 
 Group:          Development/Languages
@@ -83,6 +83,9 @@ cp -p LICENSE README.rst AUTHORS -t %{buildroot}%{docdir}
 %exclude %{docdir}/html/.buildinfo
 
 %changelog
+* Thu May 11 2017 Brian J. Murrell <brian.murrell@intel.com> 0.9.11-5
+- Add missed file due to .gitignore (brian.murrell@intel.com)
+
 * Wed May 10 2017 Brian J. Murrell <brian.murrell@intel.com> 0.9.11-4
 - new package built with tito
 
