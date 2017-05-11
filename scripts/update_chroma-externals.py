@@ -23,10 +23,10 @@
 
 import sys
 import re
-import os
 import json
-from os.path import expanduser
-
+from os import chdir, listdir, path
+# Add chroma-common source directory to sys.path as env may not have access otherwise
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'chroma-common'))
 from chroma_common.lib.shell import Shell
 
 
@@ -80,12 +80,12 @@ def make_pristine():
 
     # We can only make it pristine if it actually exists. It may be that there is not repo yet because we have only
     # done the git submodule init, so the repo is not truely in existence.
-    if os.path.isdir('chroma-externals'):
-        os.chdir('chroma-externals')
+    if path.isdir('chroma-externals'):
+        chdir('chroma-externals')
         run_command(['git', 'status'])
         run_command(['git', 'reset', '--hard'])
         run_command(['git', 'clean', '-dfx'])
-        os.chdir('..')
+        chdir('..')
     else:
         run_command(['git', 'submodule', 'init'])
 
@@ -113,13 +113,13 @@ def fetch_chroma_externals(user, externals_sha1):
         sys.exit(-1)
 
     # Now fetch the appropriate sha1 from gerrit.
-    os.chdir('chroma-externals')
+    chdir('chroma-externals')
     run_command(['git',
                  'fetch',
                  'ssh://%sreview.whamcloud.com:29418/chroma-externals' % ('%s@' % user if user else ''),
                  ref])
     run_command(['git', 'checkout', 'FETCH_HEAD'])
-    os.chdir('..')
+    chdir('..')
 
     # Submodule init should now work just fine.
     run_command(['git', 'submodule', 'update'])
@@ -147,20 +147,20 @@ def main():
 
     # Show where chroma-externals is now
     print "chroma-externals now at:"
-    os.chdir('chroma-externals')
+    chdir('chroma-externals')
     print run_command(['git', 'log', '--format=short', '-n', '1'], silent=True).stdout
-    os.chdir('..')
+    chdir('..')
 
     # Verify that chroma-externals has content in it
-    if not len(os.listdir("chroma-externals")):
+    if not len(listdir("chroma-externals")):
         print "chroma-externals dir is empty.  Trying hack."
         # this little hack will only work reliably on the new jenkins
         run_command(['cp', '-al',
-                     expanduser("~/workspace/manager-for-lustre/.git/modules"),
+                     path.expanduser("~/workspace/manager-for-lustre/.git/modules"),
                      '.git/'])
         run_command(['git', 'submodule', 'init'])
         run_command(['git', 'submodule', 'update'])
-        if not len(os.listdir("chroma-externals")):
+        if not len(listdir("chroma-externals")):
             print "chroma-externals dir is still empty.  Even the hack failed."
             sys.exit(-1)
 

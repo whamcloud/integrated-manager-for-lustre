@@ -19,6 +19,7 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/scm_version.py
 
 develop: version
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common; \
 	python setup.py develop
 
 cleandist:
@@ -29,6 +30,7 @@ production:
 
 tarball: version
 	rm -f MANIFEST
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common; \
 	python setup.py sdist
 
 rpms: production cleandist tarball
@@ -38,9 +40,10 @@ rpms: production cleandist tarball
 	cp chroma-agent-init.sh lustre-modules-init.sh logrotate.cfg \
 	   _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
-	dist=$$(rpm --eval %dist);                             \
-	dist=$${dist/.centos/};                                \
-	rpmbuild --define "_topdir $$(pwd)/_topdir"            \
+	export PYTHONPATH=$$PYTHONPATH:$$(pwd)/../chroma-common;  \
+	dist=$$(rpm --eval %dist);                                \
+	dist=$${dist/.centos/};                                   \
+	rpmbuild --define "_topdir $$(pwd)/_topdir"               \
 		 --define "version $(PACKAGE_VERSION)"         \
 		 --define "package_release $(PACKAGE_RELEASE)" \
 		 --define "%dist $$dist"                       \

@@ -25,7 +25,7 @@ import re
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 class MdRaid(object):

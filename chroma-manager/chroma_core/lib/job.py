@@ -23,7 +23,7 @@
 import django.db.models
 
 from chroma_core.services import log_register
-from chroma_core.chroma_common.lib.agent_rpc import agent_result
+from chroma_common.lib.agent_rpc import agent_result
 
 job_log = log_register('job')
 

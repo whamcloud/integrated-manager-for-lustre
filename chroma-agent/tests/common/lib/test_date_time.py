@@ -2,9 +2,9 @@ import datetime
 import mock
 
 from django.utils import unittest
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
-from chroma_agent.chroma_common.lib.date_time import FixedOffset
-from chroma_agent.chroma_common.lib.date_time import LocalOffset
+from chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import FixedOffset
+from chroma_common.lib.date_time import LocalOffset
 
 
 class TestIMLDateTime(unittest.TestCase):
@@ -79,7 +79,7 @@ class TestLocalOffset(unittest.TestCase):
         self.MockDateTime.utc_time = datetime.datetime(year=2010, month=4, day=20, hour=20, minute=13, second=2)
         self.MockDateTime.now_time = datetime.datetime(year=2010, month=4, day=20, hour=21, minute=13, second=2)
 
-        mock.patch('chroma_agent.chroma_common.lib.date_time.datetime', self.MockDateTime).start()
+        mock.patch('chroma_common.lib.date_time.datetime', self.MockDateTime).start()
 
     def test_properties_gmt(self):
         local_offset = LocalOffset()

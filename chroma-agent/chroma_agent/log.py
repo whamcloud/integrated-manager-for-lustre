@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,7 +25,7 @@ from logging.handlers import SysLogHandler
 import os
 import sys
 
-from chroma_agent.chroma_common.lib.exception_sandbox import ExceptionSandBox
+from chroma_common.lib.exception_sandbox import ExceptionSandBox
 
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested

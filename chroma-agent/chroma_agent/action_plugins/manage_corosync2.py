@@ -29,10 +29,10 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib.corosync import CorosyncRingInterface
 from chroma_agent.action_plugins.manage_corosync_common import InterfaceInfo
 
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error
-from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
+from chroma_common.lib.service_control import ServiceControl
+from chroma_common.lib.firewall_control import FirewallControl
+from chroma_common.lib.agent_rpc import agent_error
+from chroma_common.lib.agent_rpc import agent_ok_or_error
 
 PCS_TCP_PORT = 2224
 

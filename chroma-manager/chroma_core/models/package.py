@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,7 +24,7 @@ from django.db import models
 from django.db.models import CharField, ForeignKey, IntegerField
 
 from chroma_core.services import log_register
-from chroma_core.chroma_common.lib.package_version_info import VersionInfo
+from chroma_common.lib.package_version_info import VersionInfo
 
 log = log_register('package_update')
 

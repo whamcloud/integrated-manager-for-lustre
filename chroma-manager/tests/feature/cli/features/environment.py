@@ -7,7 +7,7 @@ import json
 import mock
 
 from chroma_core.lib.util import chroma_settings
-from chroma_core.chroma_common.lib.name_value_list import NameValueList
+from chroma_common.lib.name_value_list import NameValueList
 
 
 def patch_test_host_contact_task(context, result_attrs = {}):

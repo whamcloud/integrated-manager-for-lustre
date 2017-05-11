@@ -1,7 +1,7 @@
 import mock
 
-from chroma_agent.chroma_common.filesystems.filesystem_zfs import FileSystemZfs
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from chroma_common.filesystems.filesystem_zfs import FileSystemZfs
+from chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 

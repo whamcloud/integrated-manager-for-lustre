@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2016 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,7 +23,7 @@
 import chroma_agent.device_plugins.audit
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.log import console_log
 
 
