@@ -21,7 +21,6 @@ chroma-dependencies/*/.last_built_srpm
 chroma-dependencies/*/6.[345]
 chroma-dependencies/*/7.1.1503
 chroma-dependencies/*/7.3.1611
-chroma-dependencies/*/*.zip
 chroma-dependencies/*/*.src.rpm
 chroma-dependencies/*/*.noarch.rpm
 chroma-dependencies/*/*.x86_64.rpm
