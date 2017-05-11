@@ -372,7 +372,36 @@ class RealRemoteOperations(RemoteOperations):
         logger.info("SSH address = %s, args = %s" % (address, args))
 
         # Create ssh connection
-        ssh.connect(address, **args)
+        try:
+            ssh.connect(address, **args)
+        except paramiko.ssh_exception.SSHException, e:
+            def print_result(r):
+                return "rc: %s\n\nstdout:\n%s\n\nstderr:\n%s" % \
+                       (r.rc, r.stdout, r.stderr)
+
+            ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+            ifconfig_result = Shell.run(['ifconfig', '-a'])
+            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+            ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', '10.14.80.1'])
+            if ping_result1.rc != 0:
+                time.sleep(30)
+                ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+                ping_result2_report = "\n30s later ping: %s" % \
+                                       print_result(ping_result2)
+            logger.error("Error connecting to %s: %s.  "
+                         "Performing some diagnostics...\n"
+                         "ping: %s"
+                         "ifconfig -a: %s"
+                         "ip route ls: %s"
+                         "ping gateway: %s"
+                         "%s" % \
+                         (address, e,
+                          print_result(ping_result1),
+                          print_result(ifconfig_result),
+                          print_result(ip_route_ls_result),
+                          print_result(ping_gw_result),
+                          ping_result2_report))
+
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
