@@ -15,7 +15,7 @@
 
 Name:           python-django
 Version:        1.4.5
-Release:        2.wc2%{?dist}
+Release:        3.wc2%{?dist}
 Summary:        A high-level Python Web framework
 
 Group:          Development/Languages
@@ -323,6 +323,9 @@ cd tests
 
 
 %changelog
+* Thu May 11 2017 Brian J. Murrell <brian.murrell@intel.com> 1.4.5-3.wc2
+- new package built with tito
+
 * Thu May 04 2017 Brian J. Murrell <brian.murrell@intel.com> 1.4.5-2.wc2
 - Applied https://github.com/django/django/commit/cf114cffea5482a32064de86c61417d511c2edca
   - needed on newer EL6.3
