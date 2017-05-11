@@ -28,7 +28,6 @@ chroma-dependencies/*/*.spec.orig
 chroma-dependencies/*/*.spec.last_built
 chroma-dependencies/repodata
 chroma-dependencies/robinhood/lustre
-chroma-dependencies/python-django/simplejson-init.py
 chroma-dependencies/rabbitmq-server/rabbitmq-script-wrapper
 chroma-dependencies/rabbitmq-server/rabbitmq-server.init
 chroma-dependencies/rabbitmq-server/rabbitmq-server.logrotate
