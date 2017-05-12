@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -44,11 +44,11 @@ from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
 # least this long.
-MIN_SHUTDOWN_DURATION = 10
+MIN_SHUTDOWN_DURATION = 5  # 10
 # Simulated duration, in seconds, from the time a server is started until
 # it's running. When simulating a startup, it will always take at least
 # this long.
-MIN_STARTUP_DURATION = 20
+MIN_STARTUP_DURATION = 5  # 20
 
 
 class PacemakerState(utils.DictStruct):
@@ -665,27 +665,34 @@ class FakeServer(utils.Persisted):
                            ring1_name=None,
                            ring0_ipaddr=None, ring0_prefix=None,
                            ring1_ipaddr=None, ring1_prefix=None):
+        log.debug("Locking in configure_corosync")
         with self._lock:
             self.state['corosync'].mcast_port = new_mcast_port
             self.save()
+            log.debug("Returning from configure_corosync")
             return agent_result_ok
 
     def configure_corosync2_stage_1(self, mcast_port, pcs_password):
+        log.debug("Locking in configure_corosync2_stage_1")
         with self._lock:
             self.state['corosync'].mcast_port = mcast_port
             self.save()
+            log.debug("Returning from configure_corosync2_stage_1")
             return agent_result_ok
 
     def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, create_cluster, mcast_port, pcs_password):
         return agent_result_ok
 
     def change_mcast_port(self, old_mcast_port, new_mcast_port):
+        log.debug("Locking in change_mcast_port")
         with self._lock:
             self.state['corosync'].mcast_port = new_mcast_port
             self.save()
+            log.debug("Returning from change_mcast_port")
             return agent_result_ok
 
     def get_corosync_autoconfig(self):
+        log.debug("Locking in get_corosync_autoconfig")
         with self._lock:
             port_names = {'tcp': 'eth', 'o2ib': 'ib'}
             inet4_addresses = []
@@ -696,6 +703,7 @@ class FakeServer(utils.Persisted):
                 inet4_addresses.append(inet4_address)
                 names.append('%s%s' % (port_names[interface['type']], interface['interface_no']))
 
+            log.debug("Returning from get_corosync_autoconfig")
             return agent_result({'interfaces': {names[0]: {'dedicated': False,
                                                            'ipaddr': inet4_addresses[0],
                                                            'prefix': 24},
