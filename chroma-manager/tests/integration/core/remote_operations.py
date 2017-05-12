@@ -8,6 +8,7 @@ import paramiko
 import re
 import os
 import json
+import subprocess
 
 from testconfig import config
 
@@ -382,25 +383,48 @@ class RealRemoteOperations(RemoteOperations):
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
             ifconfig_result = Shell.run(['ifconfig', '-a'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
-            ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', '10.14.80.1'])
+            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+            try:
+                gw = [l for l in ip_route_ls_result.stdout.split('\n') \
+                      if l.startswith("default ")][0].split()[2]
+                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
+                ping_gw_report = "\nping gateway (%s): %s" % \
+                                  (gw, print_result(ping_gw_result))
+            except:
+                ping_gw_report = "\nUnable to ping gatewy.  " \
+                                 "No gateway could be found in:\n" % \
+                                 ip_route_ls_result.stdout
             if ping_result1.rc != 0:
                 time.sleep(30)
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                                        print_result(ping_result2)
-            logger.error("Error connecting to %s: %s.  "
-                         "Performing some diagnostics...\n"
-                         "ping: %s"
-                         "ifconfig -a: %s"
-                         "ip route ls: %s"
-                         "ping gateway: %s"
-                         "%s" % \
-                         (address, e,
-                          print_result(ping_result1),
-                          print_result(ifconfig_result),
-                          print_result(ip_route_ls_result),
-                          print_result(ping_gw_result),
-                          ping_result2_report))
+            msg = "Error connecting to %s: %s.\n" \
+                  "Please add the following to " \
+                  "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/29\n" \
+                  "Performing some diagnostics...\n" \
+                  "ping: %s\n" \
+                  "ifconfig -a: %s\n" \
+                  "ip route ls: %s" \
+                  "%s" \
+                  "%s" % \
+                  (address, e,
+                   print_result(ping_result1),
+                   print_result(ifconfig_result),
+                   print_result(ip_route_ls_result),
+                   ping_gw_report,
+                   ping_result2_report)
+
+            logger.error(msg)
+
+            DEVNULL = open(os.devnull, 'wb')
+            p = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE,
+                                 stdout=DEVNULL, stderr=DEVNULL)
+            p.communicate(input=b'To: brian.murrell@intel.com\n' \
+                                 'Subject: GH#29\n\n' +
+                                 msg)
+            p.wait()
+            DEVNULL.close()
 
             return Shell.RunResult(1, "", "", timeout=False)
 
