@@ -383,7 +383,6 @@ class RealRemoteOperations(RemoteOperations):
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
             ifconfig_result = Shell.run(['ifconfig', '-a'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
-            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
             try:
                 gw = [l for l in ip_route_ls_result.stdout.split('\n') \
                       if l.startswith("default ")][0].split()[2]
