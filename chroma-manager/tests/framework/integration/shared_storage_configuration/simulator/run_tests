@@ -37,8 +37,7 @@ python manage.py supervisor  &> /dev/null &
 supervisor_pid=\$!
 
 echo "Begin running tests..."
-nosetests --stop --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
-sleep 99999
+nosetests --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
 
 kill \$supervisor_pid
 EOF
