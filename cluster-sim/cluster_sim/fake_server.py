@@ -116,6 +116,7 @@ class FakeServer(utils.Persisted):
                                                    'lnd_network': nid[2]}
                 interface_no += 1
 
+        log.debug('initialised network interfaces: %s' % str(self.network_interfaces))
         self.boot_time = IMLDateTime.utcnow()
         self.id = server_id
 
@@ -691,6 +692,7 @@ class FakeServer(utils.Persisted):
             inet4_addresses = []
             names = []
 
+            log.debug('get_corosync_autoconfig() network interfaces: %s' % str(self.network_interfaces))
             for inet4_address in self.network_interfaces.keys():
                 interface = self.network_interfaces[inet4_address]
                 inet4_addresses.append(inet4_address)
