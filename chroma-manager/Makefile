@@ -247,7 +247,9 @@ rpms: cleandist tarball
 	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist} | sed -e 's/\(\.el[0-9][0-9]*\)\.centos/\1/').$(ARCH).rpm dist/
 	rm -rf _topdir
 
-requirements:
+requirements: requirements.txt
+
+requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile
 	rm -f requirements.tmp
 	$(MAKE) -C ../chroma-dependencies requirements
 	{ echo "# DO NOT UPDATE THIS FILE MANUALLY.";                                         \
@@ -255,17 +257,18 @@ requirements:
 	echo "# If you want to add a new requirement please see:";                            \
 	echo "# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements";  \
 	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file."; \
-	sort < requirements.tmp; } > requirements.txt
+	sort < requirements.tmp; } > $@
 	rm -f requirements.tmp
-	if grep ^make requirements.txt; then                      \
+	set -e;                                                   \
+	if grep ^make $@; then                                    \
 		echo "why is this not quiet like it should be?";  \
-		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
+		sed -i -e '/^make\[[0-9]\]: /d' $@;               \
 	fi
 
-download: requirements
+download: requirements.txt
 	pip-python install --download ../chroma-externals -r requirements.txt
 
-docs: requirements version
+docs: requirements.txt version
 	set -e ; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
 		virtualenv myenv; \

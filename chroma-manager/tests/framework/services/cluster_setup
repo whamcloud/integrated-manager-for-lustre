@@ -19,8 +19,6 @@ set -ex
 # Install non-python/pipable dependencies
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++
-# don't need EPEL any more
-yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then
@@ -92,57 +90,6 @@ local   all         chroma                            trust' /var/lib/pgsql/data
 service postgresql restart
 EOF
 
-# Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
-# We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
-TEST_DEPS="$REL_CHROMA_DIR/chroma-manager/tests/framework/services/test_dependencies"
-(tar -czf - --exclude="$REL_CHROMA_DIR/chroma-externals*" .; tar -czf - $(sed -e "s|^|$REL_CHROMA_DIR/chroma-externals/|" < $TEST_DEPS); tar -czf - $REL_CHROMA_DIR/chroma-externals/*.zip $REL_CHROMA_DIR/chroma-externals/*.tar.*) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; tar -C chroma_test_env -xizf -"
+. $CHROMA_DIR/chroma-manager/tests/framework/utils/install_deps.sh
 
-ssh root@$CHROMA_MANAGER <<EOF
-set -ex
-cd /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-dependencies/nginx
-RPM_FILE="\$(make rpm_file)"
-yum localinstall -y "/home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-externals/\$RPM_FILE"
-
-MAJOR="\$(rpm --eval %rhel)"
-yum localinstall -y /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-externals/{nodejs-*,libuv-*,npm-*}.el\$MAJOR.*.rpm
-EOF
-
-ssh chromatest@$CHROMA_MANAGER <<EOF
-set -ex
-virtualenv chroma_test_env
-source chroma_test_env/bin/activate
-cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
-make requirements
-python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
-
-if $MEASURE_COVERAGE; then
-  cat <<EOC > /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc
-[run]
-data_file = /var/tmp/.coverage
-parallel = True
-source = /home/chromatest/chroma_test_env/$REL_CHROMA_DIR
-EOC
-  # https://github.com/pypa/virtualenv/issues/355
-  python_version=\$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
-  cat <<EOC  > /home/chromatest/chroma_test_env/lib/python\$python_version/site-packages/sitecustomize.py
-import coverage
-cov = coverage.coverage(config_file='/home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc', auto_data=True)
-cov.start()
-cov._warn_no_data = False
-cov._warn_unimported_source = False
-EOC
-fi
-
-# Enable DEBUG logging
-cat <<"EOF1" > local_settings.py
-import logging
-LOG_LEVEL = logging.DEBUG
-EOF1
-
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
-export NPM_CONFIG_PYTHON=/usr/bin/python
-mkdir -p ~/.npm-global
-export NPM_CONFIG_PREFIX=~/.npm-global
-export PATH=~/.npm-global/bin:\$PATH
-make develop
-EOF
+. $CHROMA_DIR/chroma-manager/tests/framework/utils/make_develop.sh
