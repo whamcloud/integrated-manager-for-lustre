@@ -116,7 +116,10 @@ class FakeServer(utils.Persisted):
                                                    'lnd_network': nid[2]}
                 interface_no += 1
 
-        log.debug('initialised network interfaces: %s' % str(self.network_interfaces))
+        if len(self.network_interfaces) < 2:
+            log.error('host %s not enough initialised network interfaces: %s' % (self.fqdn,
+                                                                                 str(self.network_interfaces)))
+
         self.boot_time = IMLDateTime.utcnow()
         self.id = server_id
 
@@ -672,9 +675,13 @@ class FakeServer(utils.Persisted):
             return agent_result_ok
 
     def configure_corosync2_stage_1(self, mcast_port, pcs_password):
+        log.debug('corosync2_stage_1: %s' % str(self))
         with self._lock:
+            log.debug('cc2s1: in lock %s' % str(self._lock))
             self.state['corosync'].mcast_port = mcast_port
+            log.debug('cc2s1: changed corosync mcast_port to %s' % mcast_port)
             self.save()
+            log.debug('cc2s1: after save')
             return agent_result_ok
 
     def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, create_cluster, mcast_port, pcs_password):
@@ -692,12 +699,11 @@ class FakeServer(utils.Persisted):
             inet4_addresses = []
             names = []
 
-            log.debug('get_corosync_autoconfig() network interfaces: %s' % str(self.network_interfaces))
             for inet4_address in self.network_interfaces.keys():
                 interface = self.network_interfaces[inet4_address]
                 inet4_addresses.append(inet4_address)
                 names.append('%s%s' % (port_names[interface['type']], interface['interface_no']))
-            log.debug('get_corosync_autoconfig() inet4_addresses: %s' % str(inet4_addresses))
+
             if len(inet4_addresses) < 2:
                 log.error('get_corosync_autoconfig() not enough network interfaces')
 
