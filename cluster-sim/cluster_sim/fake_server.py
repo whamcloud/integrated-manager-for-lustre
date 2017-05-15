@@ -38,7 +38,7 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
@@ -697,14 +697,21 @@ class FakeServer(utils.Persisted):
                 interface = self.network_interfaces[inet4_address]
                 inet4_addresses.append(inet4_address)
                 names.append('%s%s' % (port_names[interface['type']], interface['interface_no']))
+            log.debug('get_corosync_autoconfig() inet4_addresses: %s' % str(inet4_addresses))
+            if len(inet4_addresses) < 2:
+                log.error('get_corosync_autoconfig() not enough network interfaces')
 
-            return agent_result({'interfaces': {names[0]: {'dedicated': False,
-                                                           'ipaddr': inet4_addresses[0],
-                                                           'prefix': 24},
-                                                names[1]: {'dedicated': True,
-                                                           'ipaddr': inet4_addresses[1],
-                                                           'prefix': 24}},
-                                 'mcast_port': self.state['corosync'].mcast_port})
+            try:
+                return agent_result({'interfaces': {names[0]: {'dedicated': False,
+                                                               'ipaddr': inet4_addresses[0],
+                                                               'prefix': 24},
+                                                    names[1]: {'dedicated': True,
+                                                               'ipaddr': inet4_addresses[1],
+                                                               'prefix': 24}},
+                                     'mcast_port': self.state['corosync'].mcast_port})
+            except:
+                log.error('DBGTN: %s' % inet4_addresses)
+                return agent_error('not enough network interfaces %s' % inet4_addresses)
 
     def start_pacemaker(self):
         with self._lock:
