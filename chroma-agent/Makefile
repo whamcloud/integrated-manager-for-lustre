@@ -1,6 +1,7 @@
 DEV_REPO ?= $(shell PYTHONPATH=$(CURDIR)../chroma-manager python -c 'import settings; print settings.DEV_REPO_PATH')
 
 include ../include/Makefile.version
+include ../include/Makefile.npm
 
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.
@@ -18,12 +19,19 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> chroma_agent/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/scm_version.py
 
-develop: version
+develop: version node_modules
 	python setup.py develop
 
 cleandist:
 	rm -rf dist
 	mkdir dist
+
+node_modules:
+	@echo "Setting up agent node-modules"; \
+	set -e;                        \
+	$(set_env_for_npm) &&          \
+	export NODE_ENV=production &&  \
+	npm i 
 
 production:
 
@@ -31,7 +39,7 @@ tarball: version
 	rm -f MANIFEST
 	python setup.py sdist
 
-rpms: production cleandist tarball
+rpms: node_modules production cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES

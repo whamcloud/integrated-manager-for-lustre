@@ -92,8 +92,16 @@ mv $RPM_BUILD_ROOT/usr/{,s}bin/chroma-copytool-monitor
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
+mkdir -p $RPM_BUILD_ROOT/usr/lib/udev/
+cp node_modules/@mfl/block-device-listener/dist/block-device-listener $RPM_BUILD_ROOT/usr/lib/udev/block-device-listener
+mkdir -p $RPM_BUILD_ROOT/etc/udev/rules.d/
+cp node_modules/@mfl/block-device-listener/udev-rules/99-iml-device-scanner.rules $RPM_BUILD_ROOT/etc/udev/rules.d/99-iml-device-scanner.rules
+mkdir -p $RPM_BUILD_ROOT/etc/systemd/system/
+cp node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.socket $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.socket
+cp node_modules/@mfl/device-scanner-daemon/systemd-units/device-scanner.service $RPM_BUILD_ROOT/etc/systemd/system/device-scanner.service
+mkdir -p $RPM_BUILD_ROOT/sbin/
+cp node_modules/@mfl/device-scanner-daemon/dist/device-scanner-daemon $RPM_BUILD_ROOT/sbin/device-scanner-daemon
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
-
 # Nuke source code (HYD-1849)
 find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
@@ -151,7 +159,11 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
 %attr(0644,root,root)/etc/logrotate.d/chroma-agent
-
+%attr(0744,root,root)/usr/lib/udev/block-device-listener
+%attr(0744,root,root)/etc/udev/rules.d/99-iml-device-scanner.rules
+%attr(0744,root,root)/sbin/device-scanner-daemon
+%attr(0744,root,root)/etc/systemd/system/device-scanner.service
+%attr(0744,root,root)/etc/systemd/system/device-scanner.socket
 %files -f management.files management
 %defattr(-,root,root)
 
