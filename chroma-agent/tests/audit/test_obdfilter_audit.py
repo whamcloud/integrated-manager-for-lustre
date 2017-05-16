@@ -8,7 +8,9 @@ from tests.test_utils import PatchedContextTestCase
 class TestObdfilterAudit(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
+        # 2.9.58_jobstats modules file has entries for obdfilter as well as ost, which is not necessarily the case,
+        # 2.9.58_86_g2383a62 modules file has ost but no obdfilter entries. Both are valid scenarios.
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_jobstats/oss")
         super(TestObdfilterAudit, self).setUp()
         self.audit = ObdfilterAudit()
 

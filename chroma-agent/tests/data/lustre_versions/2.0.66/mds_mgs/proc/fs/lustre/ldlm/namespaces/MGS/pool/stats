@@ -1,9 +1,0 @@
-snapshot_time             1314641961.242062 secs.usecs
-granted                   9416 samples [locks] 2 9 83278 745038
-grant                     9 samples [locks] 1 1 9 9
-grant_rate                9416 samples [locks/s] 0 4 9 23
-cancel_rate               9416 samples [locks/s] 0 0 0 0
-grant_plan                9416 samples [locks/s] 2 76800 160067 5898984939
-slv                       9416 samples [slv] 4673 9216000000 9271361329 -7299063307489477543
-recalc_freed              9425 samples [locks] 0 0 0 0
-recalc_timing             9416 samples [sec] 1 25199 34614 634999016

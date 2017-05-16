@@ -1,9 +1,0 @@
-snapshot_time             1314641976.169576 secs.usecs
-hits                      441416 samples [pages]
-misses                    4555 samples [pages]
-readpage not consecutive  9565 samples [pages]
-miss inside window        6 samples [pages]
-failed grab_cache_page    42961 samples [pages]
-read but discarded        48 samples [pages]
-read-ahead to EOF         22 samples [pages]
-hit max r-a issue         145 samples [pages]

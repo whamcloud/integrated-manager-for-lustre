@@ -1,6 +1,0 @@
-snapshot_time             1418049063.91844 secs.usecs
-create                    2 samples [reqs]
-statfs                    3 samples [reqs]
-get_info                  1 samples [reqs]
-set_info_async            1 samples [reqs]
-connect                   1 samples [reqs]

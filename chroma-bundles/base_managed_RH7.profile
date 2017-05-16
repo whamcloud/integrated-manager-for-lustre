@@ -11,23 +11,21 @@
   "pacemaker": true,
   "bundles": [
     "iml-agent",
-    "lustre",
-    "e2fsprogs",
-    "zfs"
+    "external"
   ],
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
   "packages": {
     "iml-agent": [
       "chroma-agent-management"
     ],
-    "lustre": [
+    "external": [
       "lustre",
-      "lustre-modules",
-      "lustre-osd-ldiskfs",
-      "lustre-osd-zfs",
-      "kernel-devel-3.10.0-514.10.2.el7_lustre"
-    ],
-    "zfs": [
+      "lustre-dkms",
+      "kmod-lustre-osd-ldiskfs",
+      "lustre-osd-zfs-mount",
+      "kernel-[0-9]*_lustre",
+      "kernel-devel-[0-9]*_lustre",
+      "zfs-dkms",
       "zfs"
     ]
   },
