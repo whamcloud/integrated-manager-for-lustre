@@ -25,7 +25,7 @@ rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
 yum-config-manager --add-repo https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-x86_64/
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
-yum-config-manager --add-repo https://build.hpdd.intel.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64,build_type=server,distro=el7,ib_stack=inkernel/artifact/artifacts/
+yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64,build_type=server,distro=el7,ib_stack=inkernel/artifact/artifacts/
 sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' /etc/yum.repos.d/build.hpdd.intel.com_job_lustre-master_lastSuccessfulBuild_arch\=x86_64\,build_type\=server\,distro\=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
 yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
