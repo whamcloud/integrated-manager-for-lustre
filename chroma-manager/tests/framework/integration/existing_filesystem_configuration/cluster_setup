@@ -89,30 +89,12 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 retries=50
 timeout=180
 
-[jenkins-repo-lustre]
-name=jenkins-repo-lustre
-baseurl=${JENKINS_URL/\/\////$JENKINS_USER:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
-enabled=1
-priority=1
-gpgcheck=0
-sslverify=0
-retries=50
-timeout=180
 EOF
-    $PROXY yum install -y python-setuptools
-    $PROXY yum install -y python2-coverage
-    if [[ \$(lsb_release -sr) = 6.* ]]; then
-        $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel-firmware
-        if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
-            rpm -Uvh --oldpackage kernel-firmware-*.rpm
-        fi
-        rm kernel-firmware-*.rpm
-    fi
-    $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel
-    if ! rpm -q \$(rpm -qp kernel-*.rpm); then
-        rpm -ivh --oldpackage kernel*.rpm
-    fi
-    yum -y install lustre-modules lustre lustre-osd-ldiskfs
+    $PROXY yum -y install python-setuptools python2-coverage
+    pushd /tmp/
+    tar xzvf lustre-ldiskfs-el7-installer.tar.gz
+    lustre-ldiskfs/install
+    popd
 fi
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')

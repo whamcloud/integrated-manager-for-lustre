@@ -745,7 +745,7 @@ def register_profile(profile_file):
     log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
 
     # Validate: check all referenced bundles exist
-    validate_bundles = set(data['bundles'] + data['packages'].keys())
+    validate_bundles = set(data['bundles'])
     missing_bundles = []
     for bundle_name in validate_bundles:
         if not Bundle.objects.filter(bundle_name=bundle_name).exists():
@@ -783,10 +783,11 @@ def register_profile(profile_file):
 
     for bundle_name, package_list in data['packages'].items():
         for package_name in package_list:
-            ServerProfilePackage.objects.get_or_create(
-                server_profile=profile,
-                bundle=Bundle.objects.get(bundle_name=bundle_name),
-                package_name=package_name)
+            if bundle_name != "external":
+                ServerProfilePackage.objects.get_or_create(
+                    server_profile=profile,
+                    bundle=Bundle.objects.get(bundle_name=bundle_name),
+                    package_name=package_name)
 
     profile.serverprofilevalidation_set.all().delete()
     for validation in data['validation']:
