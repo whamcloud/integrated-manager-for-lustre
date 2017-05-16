@@ -1,0 +1,4 @@
+nid                      refs state  last   max   rtr   min    tx   min queue
+10.14.83.68@tcp             1    NA    -1     8     8     8     8     7 0
+10.14.83.65@tcp             1    NA    -1     8     8     8     8     6 0
+10.14.83.69@tcp             1    NA    -1     8     8     8     8     6 0

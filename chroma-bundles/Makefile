@@ -41,7 +41,3 @@ rpms:
 
 docs download:
 	@echo "Nothing to do here"
-
-create_installer: create_installer.in $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
-	sed -e "s/@ZFS_VERSION@/$(ZFS_RELEASE)/" < $< > $@
-	chmod 755 $@

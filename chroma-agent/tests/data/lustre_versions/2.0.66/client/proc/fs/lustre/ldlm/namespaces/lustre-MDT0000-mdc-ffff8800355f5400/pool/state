@@ -1,9 +1,0 @@
-LDLM pool state (ldlm-pool-lustre-MDT0000-mdc-ffff8800355f5400-1):
-  SLV: 9215676000
-  CLV: 5052
-  LVF: 1
-  GR:  0
-  CR:  0
-  GS:  0
-  G:   2
-  L:   255991

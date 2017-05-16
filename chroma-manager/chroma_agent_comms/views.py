@@ -363,7 +363,8 @@ def setup(request, key):
     repos = ""
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
-        repos += """[%s]
+        if bundle.bundle_name != "external":
+            repos += """[%s]
 name=%s
 baseurl={0}/%s/$releasever/
 enabled=0
