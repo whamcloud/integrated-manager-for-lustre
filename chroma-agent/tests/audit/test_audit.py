@@ -13,7 +13,7 @@ from tests.command_capture_testcase import CommandCaptureTestCase
 class TestAuditScanner(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
         super(TestAuditScanner, self).setUp()
 
     def test_audit_scanner(self):
@@ -26,7 +26,7 @@ class TestAuditScanner(PatchedContextTestCase):
 class TestLocalAudit(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
         super(TestLocalAudit, self).setUp()
         self.audit = LocalAudit()
 

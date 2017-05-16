@@ -29,16 +29,9 @@ http_caching=packages
 .
 wq
 EOF
-for key in CentOS-7 redhat-release; do
-    if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key ]; then
-        rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key
-    fi
-done
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
-if ! yum repolist | grep addon-epel; then
-    yum -y install epel-release
-fi
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
+yum-config-manager --add-repo https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-x86_64/
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
 yum -y install ed
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
@@ -48,7 +41,21 @@ gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 .
 wq
 EOF
-$LOCAL_CLUSTER_SETUP" | dshbak -c
+if [[ \$HOSTNAME = *vm*9 ]]; then
+    build_type=client
+    yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-b2_10/lastSuccessfulBuild/arch=x86_64,build_type=\$build_type,distro=el7,ib_stack=inkernel/artifact/artifacts/
+    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-b2_10_lastSuccessfulBuild_arch\=x86_64\,build_type\=\$build_type\,distro=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
+else
+    build_type=server
+    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful/
+    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_.repo
+fi
+yum-config-manager --add-repo https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
+sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_e2fsprogs-master_arch\=x86_64\,distro\=el7_lastSuccessfulBuild_artifact__topdir_RPMS_.repo
+yum -y install distribution-gpg-keys-copr
+if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
+    rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

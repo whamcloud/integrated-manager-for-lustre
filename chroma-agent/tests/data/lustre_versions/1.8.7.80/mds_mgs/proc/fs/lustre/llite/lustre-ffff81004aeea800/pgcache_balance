@@ -1,3 +1,0 @@
-cpu	page count	budget		reblnc count	gen	hit	miss	cross
-0	2000    	385986  	0       	8000	6000	2000	0
-Total budget: 385986, page max: 385986, rebalance cnt: 0

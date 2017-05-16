@@ -1,0 +1,40 @@
+snapshot_time:         1497699032.815131041 (secs.nsecs)
+
+                           read      |     write
+pages per bulk r/w     rpcs  % cum % |  rpcs        % cum %
+1:		         2 100 100   |    0   0   0
+2:		         0   0 100   |    0   0   0
+4:		         0   0 100   |    0   0   0
+8:		         0   0 100   |    0   0   0
+16:		         0   0 100   |    0   0   0
+32:		         0   0 100   |    0   0   0
+64:		         0   0 100   |    0   0   0
+128:		         0   0 100   |    0   0   0
+256:		         0   0 100   |    0   0   0
+512:		         0   0 100   |    2 100 100
+
+                           read      |     write
+discontiguous pages    rpcs  % cum % |  rpcs        % cum %
+0:		         2 100 100   |    2 100 100
+
+                           read      |     write
+discontiguous blocks   rpcs  % cum % |  rpcs        % cum %
+0:		         2 100 100   |    2 100 100
+
+                           read      |     write
+disk fragmented I/Os   ios   % cum % |  ios         % cum %
+2:		         0   0   0   |    2 100 100
+
+                           read      |     write
+disk I/Os in flight    ios   % cum % |  ios         % cum %
+1:		         0   0   0   |    2  50  50
+2:		         0   0   0   |    2  50 100
+
+                           read      |     write
+I/O time (1/1000s)     ios   % cum % |  ios         % cum %
+2:		         0   0   0   |    2 100 100
+
+                           read      |     write
+disk I/O size          ios   % cum % |  ios         % cum %
+512K:		         0   0   0   |    2  50  50
+1M:		         0   0   0   |    2  50 100

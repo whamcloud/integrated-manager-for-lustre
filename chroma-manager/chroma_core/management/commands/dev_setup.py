@@ -37,7 +37,7 @@ class Command(BaseCommand):
         profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed_RH7.profile")
 
         if options['no_bundles']:
-            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood', 'zfs']:
+            for bundle in ['iml-agent', 'external']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive
@@ -87,7 +87,7 @@ have 3 options:
 Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
 that work.
-    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
+    """ % {'bundle_url': "http://build.hpdd.intel.com/job/manager-for-lustre/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
         for profile_path in glob.glob(os.path.join(os.path.dirname(profile_path), '*.profile')):

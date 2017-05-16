@@ -1,7 +1,0 @@
-snapshot_time             1314641958.705774 secs.usecs
-req_waittime              1 samples [usec] 16 16 16 256
-req_qdepth                1 samples [reqs] 0 0 0 0
-req_active                1 samples [reqs] 1 1 1 1
-req_timeout               1 samples [sec] 10 10 10 100
-reqbuf_avail              3 samples [bufs] 128 128 384 49152
-seq_query                 1 samples [usec] 42064 42064 42064 1769380096

@@ -85,18 +85,22 @@ set_defaults() {
         export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
         export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
-        if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" -o \
-             "$distro" = "ssi-el7" -o \
-             "$distro" = "el7" ] || \
-           [[ $slave =~ 7.*\&\&ssi ]]; then
-            if [[ $slave = rhel*\&\&ssi ]]; then
-                export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"rhel"}
-            else
-                export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
-            fi
-            export JENKINS_DISTRO="el7"
+    if [[ $slave = rhel*\&\&ssi ]]; then
+        export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"rhel"}
+    else
+        export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
+    fi
+
+    if [ "$BUILD_JOB_NAME" = "chroma-reviews-el7" -o \
+         "$distro" = "ssi-el7" -o \
+         "$distro" = "el7" ] || \
+       [[ $slave =~ 7.*\&\&ssi ]]; then
+        export JENKINS_DISTRO="el7"
+        if ${upgrade_test}; then
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}
+            export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.3"}
         else
-            export JENKINS_DISTRO="el6.4"
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}
         fi
     else
         export WORKSPACE=workspace
