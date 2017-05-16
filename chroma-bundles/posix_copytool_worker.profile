@@ -11,15 +11,14 @@
   "pacemaker": false,
   "bundles": [
     "iml-agent",
-    "lustre-client"
+    "external"
   ],
   "ui_description": "An HSM agent node using the POSIX copytool",
   "packages": {
     "iml-agent": [
       "chroma-agent-management"
     ],
-    "lustre-client": [
-      "lustre-client-modules",
+    "external": [
       "lustre-client"
     ]
   }

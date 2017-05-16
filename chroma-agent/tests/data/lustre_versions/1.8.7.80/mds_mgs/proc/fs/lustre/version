@@ -1,3 +1,0 @@
-lustre: 1.8.7.80
-kernel: patchless_client
-build:  jenkins-wc1-ge93c4da-PRISTINE-2.6.18-274.3.1.el5_lustre.gb18a13c

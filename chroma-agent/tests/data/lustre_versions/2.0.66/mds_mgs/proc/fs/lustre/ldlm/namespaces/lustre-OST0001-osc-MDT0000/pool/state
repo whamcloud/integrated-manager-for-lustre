@@ -1,9 +1,0 @@
-LDLM pool state (ldlm-pool-lustre-OST0001-osc-MDT0000-2):
-  SLV: 0
-  CLV: 0
-  LVF: 1
-  GR:  0
-  CR:  0
-  GS:  0
-  G:   0
-  L:   1
