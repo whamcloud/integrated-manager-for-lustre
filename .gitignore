@@ -20,7 +20,6 @@ chroma-bundles/*/*.tar.gz
 chroma-bundles/ee-*.tar.gz
 chroma-bundles/EULA.txt
 chroma-bundles/lesskey.out
-chroma-bundles/create_installer
 chroma-bundles/ieel-*.tar.gz
 chroma-manager/myenv/
 chroma-manager/chroma_test_env/

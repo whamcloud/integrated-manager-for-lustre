@@ -1,0 +1,3 @@
+grp_accounting:
+- id:      0
+  usage:   { inodes:                  290, kbytes:                 3640 }
