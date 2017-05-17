@@ -10,10 +10,7 @@
   "corosync2": true,
   "pacemaker": true,
   "bundles": [
-    "iml-agent",
-    "lustre",
-    "e2fsprogs",
-    "zfs"
+    "iml-agent"
   ],
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
   "packages": {

@@ -10,9 +10,7 @@
   "corosync2": false,
   "pacemaker": false,
   "bundles": [
-    "iml-agent",
-    "lustre-client",
-    "robinhood"
+    "iml-agent"
   ],
   "ui_description": "A server running the Robinhood Policy Engine",
   "packages": {
