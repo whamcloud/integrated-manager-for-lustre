@@ -745,7 +745,7 @@ def register_profile(profile_file):
     log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
 
     # Validate: check all referenced bundles exist
-    validate_bundles = set(data['bundles'] + data['packages'].keys())
+    validate_bundles = set(data['bundles'])
     missing_bundles = []
     for bundle_name in validate_bundles:
         if not Bundle.objects.filter(bundle_name=bundle_name).exists():
