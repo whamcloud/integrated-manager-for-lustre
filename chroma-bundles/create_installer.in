@@ -9,32 +9,14 @@ usage() {
 ldiskfs_installer() {
     local DISTRO=$1
 
-    tar -xzf ../$DISTRO/e2fsprogs-*-bundle.tar.gz
-
-    rm -rf meta repodata lustre-osd-zfs-* lustre-dkms-*
-
     # create an installer for the user
     cat <<"EOF" > install
 #!/bin/sh
 
-if ! rpm -q $(rpm -qp kernel-firmware-*.rpm); then
-    rpm -Uvh --oldpackage kernel-firmware-*.rpm
-fi
-if ! rpm -q $(rpm -qp kernel-[0-9]*.rpm); then
-    rpm -ivh --oldpackage kernel-[0-9]*.rpm
-fi
-
-PKGS=""
-for pkg in e2fsprogs-devel libcom_err-devel kernel-headers kernel-devel; do
-    if rpm -q $pkg >/dev/null; then
-        PKGS+=" $pkg-*.rpm"
-    fi
-done
-
-yum -y install lustre-modules-[0-9]*.rpm lustre-[0-9]*.rpm \
-       lustre-osd-ldiskfs-[0-9]*.rpm lustre-osd-ldiskfs-mount-[0-9]*.rpm \
-       e2fsprogs-[0-9]*.rpm $PKGS e2fsprogs-libs-[0-9]*.rpm \
-       libcom_err-[0-9]*.rpm libss-[0-9]*.rpm
+yum -y install lustre-modules lustre lustre-osd-ldiskfs
+       lustre-osd-ldiskfs-mount e2fsprogs e2fsprogs-devel
+       libcom_err-devel kernel-headers kernel-devel
+       e2fsprogs-libs libcom_err libss
 
 echo "You need to reboot to activate the Lustre kernel"
 
@@ -47,25 +29,21 @@ zfs_installer() {
 
     ZFS_VERSION=@ZFS_VERSION@
 
-    tar -xzf ../$DISTRO/zfs-*-bundle.tar.gz
-
-    rm -rf meta repodata kernel-* lustre-osd-ldiskfs-* lustre-modules-*
-
     # create an installer for the user
     cat <<EOF > install
 #!/bin/sh
 
-yum -y install dkms-*.$DISTRO.noarch.rpm \
-               zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
-               lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
-               lustre-osd-zfs-mount-[0-9]*.rpm lustre-[0-9]*.rpm \
+yum -y install dkms \
+               zfs-dkms spl-dkms \
+               lustre-dkms lustre-osd-zfs \
+               lustre-osd-zfs-mount lustre \
                kernel-devel-\$(uname -r) kernel-headers-\$(uname -r) \
-               spl-$ZFS_VERSION.$DISTRO.x86_64.rpm \
-               libnvpair1-$ZFS_VERSION.$DISTRO.x86_64.rpm \
-               libuutil1-$ZFS_VERSION.$DISTRO.x86_64.rpm \
-               libzfs2-$ZFS_VERSION.$DISTRO.x86_64.rpm \
-               libzpool2-$ZFS_VERSION.$DISTRO.x86_64.rpm \
-               zfs-$ZFS_VERSION.$DISTRO.x86_64.rpm
+               spl \
+               libnvpair1 \
+               libuutil1 \
+               libzfs2 \
+               libzpool2 \
+               zfs
 EOF
 
 }
@@ -90,7 +68,6 @@ for DISTRO in el6 el7; do
     
     cd lustre-$BACKING_STORE
 
-    tar -xzf ../$DISTRO/lustre-[0-9]*-bundle.tar.gz
     ${1}_installer "$DISTRO"
 
     chmod 755 install
