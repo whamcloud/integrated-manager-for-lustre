@@ -285,6 +285,10 @@ class ClusterSimulator(Persisted):
         for cluster in self.clusters.values():
             cluster.clear_resources()
 
+        for server in self.servers.values():
+            server.reset_state()
+            server.save()
+
     def remove_server(self, fqdn):
         log.info("remove_server %s" % fqdn)
 

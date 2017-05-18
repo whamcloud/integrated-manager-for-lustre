@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -38,17 +38,17 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
 # least this long.
-MIN_SHUTDOWN_DURATION = 10
+MIN_SHUTDOWN_DURATION = 5  # 10
 # Simulated duration, in seconds, from the time a server is started until
 # it's running. When simulating a startup, it will always take at least
 # this long.
-MIN_STARTUP_DURATION = 20
+MIN_STARTUP_DURATION = 5  # 20
 
 
 class PacemakerState(utils.DictStruct):
