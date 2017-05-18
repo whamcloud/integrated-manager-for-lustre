@@ -40,6 +40,3 @@ rm -rf %{buildroot}
 %files -f base.files
 %defattr(-,root,root)
 %{python_sitelib}/chroma_common-*.egg-info/*
-
-%files -f devel.files devel
-%defattr(-,root,root)
