@@ -185,7 +185,8 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
     def get_test_message(self,
                          utc_iso_date_str='2013-01-11T19:04:07+00:00',
                          node_status_list=None):
-        '''Simulate a message from the Corosync agent plugin
+        """
+        Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
 
@@ -197,30 +198,33 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         TODO: This method is also in tests/unit/services/test_corosync.py.
         Some effort shoudl be considered to consolidate this, so that both
         tests can use the same source.
-        '''
+        """
 
-        #  First whack up some fake node data based on input infos
-        nodes = {}
-        if node_status_list is not None:
-            for hs in node_status_list:
-                node = hs[0]
-                status = hs[1] and 'true' or 'false'
-                node_dict = {node: {
-                    'name': node, 'standby': 'false',
-                    'standby_onfail': 'false',
-                    'expected_up': 'true',
-                    'is_dc': 'true', 'shutdown': 'false',
-                    'online': status, 'pending': 'false',
-                    'type': 'member', 'id': node,
-                    'resources_running': '0', 'unclean': 'false'}}
-                nodes.update(node_dict)
+        # If corosync / pacemaker is not yet running then crm_info should be empty
+        crm_info = {}
+        if not ((self._server.state['corosync'].state == 'stopped') or
+                (self._server.state['pacemaker'].state == 'stopped')):
+            nodes = {}
+            if node_status_list is not None:
+                for hs in node_status_list:
+                    node = hs[0]
+                    status = hs[1] and 'true' or 'false'
+                    node_dict = {node: {
+                        'name': node, 'standby': 'false',
+                        'standby_onfail': 'false',
+                        'expected_up': 'true',
+                        'is_dc': 'true', 'shutdown': 'false',
+                        'online': status, 'pending': 'false',
+                        'type': 'member', 'id': node,
+                        'resources_running': '0', 'unclean': 'false'}}
+                    nodes.update(node_dict)
+
+            crm_info = {'nodes': nodes,
+                        'options': {'stonith_enabled': True},
+                        'datetime': utc_iso_date_str}
 
         #  Second create the message with the nodes and other envelope data.
-        message = {'crm_info': {'nodes': nodes,
-                                'options': {
-                                    'stonith_enabled': True
-                                },
-                                'datetime': utc_iso_date_str},
+        message = {'crm_info': crm_info,
                    'state': {'corosync': self._server.state['corosync'].state,
                              'pacemaker': self._server.state['pacemaker'].state}}
 

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -38,17 +38,17 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
 # least this long.
-MIN_SHUTDOWN_DURATION = 10
+MIN_SHUTDOWN_DURATION = 5  # 10
 # Simulated duration, in seconds, from the time a server is started until
 # it's running. When simulating a startup, it will always take at least
 # this long.
-MIN_STARTUP_DURATION = 20
+MIN_STARTUP_DURATION = 5  # 20
 
 
 class PacemakerState(utils.DictStruct):
@@ -115,6 +115,10 @@ class FakeServer(utils.Persisted):
                                                    'lnd_type': nid[1],
                                                    'lnd_network': nid[2]}
                 interface_no += 1
+
+        if len(self.network_interfaces) < 2:
+            log.error('host %s not enough initialised network interfaces: %s' % (self.fqdn,
+                                                                                 str(self.network_interfaces)))
 
         self.boot_time = IMLDateTime.utcnow()
         self.id = server_id
@@ -671,9 +675,13 @@ class FakeServer(utils.Persisted):
             return agent_result_ok
 
     def configure_corosync2_stage_1(self, mcast_port, pcs_password):
+        log.debug('corosync2_stage_1: %s' % str(self))
         with self._lock:
+            log.debug('cc2s1: in lock %s' % str(self._lock))
             self.state['corosync'].mcast_port = mcast_port
+            log.debug('cc2s1: changed corosync mcast_port to %s' % mcast_port)
             self.save()
+            log.debug('cc2s1: after save')
             return agent_result_ok
 
     def configure_corosync2_stage_2(self, ring0_name, ring1_name, new_node_fqdn, create_cluster, mcast_port, pcs_password):
@@ -696,13 +704,20 @@ class FakeServer(utils.Persisted):
                 inet4_addresses.append(inet4_address)
                 names.append('%s%s' % (port_names[interface['type']], interface['interface_no']))
 
-            return agent_result({'interfaces': {names[0]: {'dedicated': False,
-                                                           'ipaddr': inet4_addresses[0],
-                                                           'prefix': 24},
-                                                names[1]: {'dedicated': True,
-                                                           'ipaddr': inet4_addresses[1],
-                                                           'prefix': 24}},
-                                 'mcast_port': self.state['corosync'].mcast_port})
+            if len(inet4_addresses) < 2:
+                log.error('get_corosync_autoconfig() not enough network interfaces')
+
+            try:
+                return agent_result({'interfaces': {names[0]: {'dedicated': False,
+                                                               'ipaddr': inet4_addresses[0],
+                                                               'prefix': 24},
+                                                    names[1]: {'dedicated': True,
+                                                               'ipaddr': inet4_addresses[1],
+                                                               'prefix': 24}},
+                                     'mcast_port': self.state['corosync'].mcast_port})
+            except:
+                log.error('DBGTN: %s' % inet4_addresses)
+                return agent_error('not enough network interfaces %s' % inet4_addresses)
 
     def start_pacemaker(self):
         with self._lock:

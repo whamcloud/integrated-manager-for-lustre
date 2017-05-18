@@ -285,20 +285,23 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             job_steps = [self.get_json_by_uri(s) for s in job['steps']]
             if disposition == "FAILED":
                 if job['errored']:
-                    print "Job %s Errored:" % job['id']
+                    print "Job %s Errored (%s):" % (job['id'], job['description'])
                     print job
                     print ''
                     for step in job_steps:
                         if step['state'] == 'failed':
-                            print "Step %s (%s) failed:" % (step['id'], step['description'])
-                            print step['console']
-                            print step['backtrace']
+                            print "Step %s failed:" % step['id']
+                            for k, v in step.iteritems():
+                                print "%s: %s" % (k, v)
                             print ''
 
-                            if 'Unable to update any nodes' in step['console']:
-                                self._fetch_help(lambda: 1 / 0,
-                                                 ['chris.gearing@intel.com'],
-                                                 'Unable to update any nodes: %s' % step['description'])
+                    waiting_steps = [self.get_json_by_uri(s) for s in job['wait_for']]
+                    for step in waiting_steps:
+                        print "Job %s is waiting on step %s:" % (job['id'], step['id'])
+                        for k, v in step.iteritems():
+                            print "%s: %s" % (k, v)
+                        print ''
+
             elif disposition == "TIMED OUT":
                 if job['state'] != "complete":
                     print "Job %s incomplete:" % job['id']
