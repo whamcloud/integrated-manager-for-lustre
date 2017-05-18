@@ -8,6 +8,7 @@ Name: %{name}
 Version: %{version}
 Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
+License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
