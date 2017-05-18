@@ -125,8 +125,8 @@ class UpdateScan(object):
             if expected_mount.active and expected_mount.filesystem.name not in actual_fs_mounts:
                 update = dict(state = 'unmounted', mountpoint = None)
                 job_scheduler_notify.notify(expected_mount,
-                                          self.started_at,
-                                          update)
+                                            self.started_at,
+                                            update)
                 log.info("updated mount %s on %s -> inactive" % (expected_mount.mountpoint, self.host))
 
         for actual_mount in client_mounts:
@@ -138,8 +138,8 @@ class UpdateScan(object):
                     update = dict(state = 'mounted',
                                   mountpoint = actual_mount['mountpoint'])
                     job_scheduler_notify.notify(mount,
-                                              self.started_at,
-                                              update)
+                                                self.started_at,
+                                                update)
                     log.info("updated mount %s on %s -> active" % (actual_mount['mountpoint'], self.host))
             except IndexError:
                 log.info("creating new mount %s on %s" % (actual_mount['mountpoint'], self.host))
@@ -209,7 +209,7 @@ class UpdateScan(object):
             # then this is a problem.
             crm_mon_error = self.host_data['resource_locations']['crm_mon_error']
             if ManagedTarget.objects.filter(immutable_state = False, managedtargetmount__host = self.host).count():
-                log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!\n"\
+                log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!\n"
                           "crm_mon returned rc=%s,stdout=%s,stderr=%s" % (self.host,
                                                                           crm_mon_error['rc'],
                                                                           crm_mon_error['stdout'],
@@ -220,7 +220,7 @@ class UpdateScan(object):
             try:
                 target = ManagedTarget.objects.get(ha_label = resource_name)
             except ManagedTarget.DoesNotExist:
-                #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
+                # audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                 continue
 
             # If we're operating on a Managed* rather than a purely monitored target
@@ -251,8 +251,8 @@ class UpdateScan(object):
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
-                                        managedtargetmount__host=self.host,
-                                        managedtargetmount__not_deleted=True).downcast()
+                                               managedtargetmount__host=self.host,
+                                               managedtargetmount__not_deleted=True).downcast()
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             log.warning("Discarding metrics for unknown target: %s" % target_name)
