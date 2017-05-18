@@ -286,7 +286,10 @@ class ClusterSimulator(Persisted):
             cluster.clear_resources()
 
         for server in self.servers.values():
-            server.reset_state()
+            # FIXME: we should completely clear state but apparently we're reliant on some of the keys between tests!
+            # server.reset_state()
+            server.stop_corosync()
+            server.stop_pacemaker()
             server.save()
 
     def remove_server(self, fqdn):
