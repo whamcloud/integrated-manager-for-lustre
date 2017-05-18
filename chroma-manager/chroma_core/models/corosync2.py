@@ -104,6 +104,8 @@ class AutoConfigureCorosyncStep(Step):
             if corosync_configuration.mcast_port is not None:
                 cls.peer_mcast_ports[corosync_configuration.host.fqdn] = corosync_configuration.mcast_port
 
+        logging.info('db corosync entries: %s' % str(current_db_entries))
+
         # Now we need to remove any corosync configurations that have been deleted.
         for corosync_configuration in Corosync2Configuration._base_manager.filter(not_deleted=None):
             # Only remove the entries that are not currently in the db - a host may be deleted and re-added
@@ -112,6 +114,8 @@ class AutoConfigureCorosyncStep(Step):
 
         # Do this at the end because this could be different from the DB if this is an update.
         cls.peer_mcast_ports[new_fqdn] = mcast_port
+
+        logging.info('peer mcast port corosync entries: %s' % str(cls.peer_mcast_ports[new_fqdn]))
 
         # Return list of peers, but peers do not include ourselves.
         peers = [match_fqdn for match_fqdn, match_mcast_port in cls.peer_mcast_ports.items() if match_mcast_port == mcast_port]
@@ -140,6 +144,8 @@ class AutoConfigureCorosyncStep(Step):
 
     def run(self, kwargs):
         corosync_configuration = kwargs['corosync_configuration']
+        assert corosync_configuration.host.state == 'packages_installed', 'packages have to be installed before ' \
+                                                                          'corosync can be configured'
 
         # detect local interfaces for use in corosync 'rings', network level configuration only
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
@@ -158,7 +164,7 @@ class AutoConfigureCorosyncStep(Step):
                                          'ring1_prefix': ring1_config['prefix']})
 
         logging.info("Node %s returned corosync configuration %s" % (corosync_configuration.host.fqdn,
-                                                                      config))
+                                                                     config))
 
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
@@ -174,12 +180,19 @@ class AutoConfigureCorosyncStep(Step):
             # otherwise we have to action on the host we are adding because it is the first node in the cluster
             # TODO: Harden this up a little so it tries to pick a peer that is actively communicating, might be useful
             # when adding a new host in place of an old host.
+            actioning_host = corosync_configuration.host
             if corosync_peers:
-                actioning_host_fqdn = corosync_peers[0]
-            else:
-                actioning_host_fqdn = corosync_configuration.host.fqdn
+                logging.info('peers discovered: %s' % str(corosync_peers))
+                peer = ManagedHost.objects.get(fqdn=corosync_peers[0])
+                if peer.state == 'packages_installed':
+                    logging.info('peer[0] state: %s' % peer.state)
+                    actioning_host = peer
+                else:
+                    logging.info('peer corosync config ignored as host state == %s (not packages_installed)' %
+                                 peer.state)
 
-            actioning_host = ManagedHost.objects.get(fqdn = actioning_host_fqdn)
+            logging.info('actioning host for %s corosync configuration stage 2: %s' % (corosync_configuration.host.fqdn,
+                                                                                       actioning_host.fqdn))
 
             # Stage 1 configures pcsd on the host being added, sets the password, enables and starts it etc.
             self.invoke_agent_expect_result(corosync_configuration.host,
@@ -197,7 +210,7 @@ class AutoConfigureCorosyncStep(Step):
                                              'new_node_fqdn': corosync_configuration.host.fqdn,
                                              'mcast_port': config['mcast_port'],
                                              'pcs_password': self._pcs_password,
-                                             'create_cluster': actioning_host_fqdn == corosync_configuration.host.fqdn})
+                                             'create_cluster': actioning_host == corosync_configuration.host})
 
             logging.info("Node %s corosync configuration complete" % corosync_configuration.host.fqdn)
 
