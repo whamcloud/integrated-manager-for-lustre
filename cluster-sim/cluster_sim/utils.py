@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -88,14 +88,11 @@ class Persisted(object):
     filename = None
     default_state = {}
 
-    def _load_default(self):
-        self.state = deepcopy(self.default_state)
-
     def __init__(self, path):
         self.path = path
 
         if not self.path:
-            self._load_default()
+            self.reset_state()
         else:
             try:
                 self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
@@ -103,11 +100,11 @@ class Persisted(object):
                 # Now fixup and DictStruct's in the data
                 DictStruct.convert_dict(self.state)
             except IOError:
-                self._load_default()
+                self.reset_state()
 
     def save(self):
         if self.path:
-            json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent = 4)
+            json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent=4)
 
     def delete(self):
         if not self.path:
@@ -120,3 +117,6 @@ class Persisted(object):
                 pass
             else:
                 raise
+
+    def reset_state(self):
+        self.state = deepcopy(self.default_state)
