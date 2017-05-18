@@ -186,7 +186,7 @@ class AutoConfigureCorosyncStep(Step):
             if corosync_peers:
                 logging.info('peers discovered: %s' % str(corosync_peers))
                 peer = ManagedHost.objects.get(fqdn=corosync_peers[0])
-                if peer.state == 'packages_installed':
+                if peer.state in ['managed', 'packages_installed']:
                     logging.info('peer[0] state: %s' % peer.state)
                     actioning_host = peer
                 else:
