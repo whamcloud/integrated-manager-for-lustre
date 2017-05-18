@@ -17,11 +17,9 @@
     "iml-agent": [
       "chroma-agent-management"
     ],
-    "lustre-client": [
+    "external": [
       "lustre-client-modules",
-      "lustre-client"
-    ],
-    "robinhood": [
+      "lustre-client",
       "robinhood-lhsm",
       "robinhood-webgui",
       "robinhood-adm"

@@ -17,7 +17,7 @@
     "iml-agent": [
       "chroma-agent-management"
     ],
-    "lustre-client": [
+    "external": [
       "lustre-client-modules",
       "lustre-client"
     ]
