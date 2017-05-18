@@ -286,7 +286,9 @@ class ClusterSimulator(Persisted):
             cluster.clear_resources()
 
         for server in self.servers.values():
-            server.reset_state()
+            # server.reset_state()
+            server.stop_corosync()
+            server.stop_pacemaker()
             server.save()
 
     def remove_server(self, fqdn):
