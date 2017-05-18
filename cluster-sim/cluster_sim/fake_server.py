@@ -38,7 +38,7 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
 from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
@@ -91,6 +91,7 @@ class FakeServer(utils.Persisted):
         'lnet_up': False,
         'stats': None,
         'packages': {},
+        'client_mounts': {},
         'corosync': CorosyncState('stopped', 3000),
         'pacemaker': PacemakerState('stopped')
     }
