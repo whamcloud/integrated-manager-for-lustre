@@ -139,13 +139,7 @@ class AutoConfigureCorosyncStep(Step):
                                                     string.digits) for _ in range(cls._pcs_password_length))
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-
-        # update objects
-        host = ManagedHost.objects.get(fqdn=kwargs['corosync_configuration'].host.fqdn)
-        corosync_configuration = host.corosync_configuration
-
-        assert host.state == 'packages_installed', 'packages have to be installed before corosync can be configured'
+        corosync_configuration = kwargs['corosync_configuration']
 
         # detect local interfaces for use in corosync 'rings', network level configuration only
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
@@ -169,6 +163,8 @@ class AutoConfigureCorosyncStep(Step):
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
         with peer_mcast_ports_configuration_lock[config['mcast_port']]:
+            from chroma_core.models import ManagedHost
+
             corosync_peers = self._corosync_peers(corosync_configuration.host.fqdn, config['mcast_port'])
 
             logging.debug("Node %s has corosync peers %s" % (corosync_configuration.host.fqdn,

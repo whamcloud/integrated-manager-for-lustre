@@ -13,9 +13,11 @@ class TestCorosyncConfiguration(TestJobs):
 
         mock_corosync_configuration = mock.MagicMock()
         mock_corosync_configuration.host.fqdn = 'bob.monkhouse.show'
+        mock_corosync_configuration.host.state = 'packages_installed'
 
         mock_actioning_host = mock.MagicMock()
         mock_actioning_host.fqdn = 'bruce.forsyth.show'
+        mock_actioning_host.state = 'packages_installed'
 
         mock.patch('chroma_core.models.AutoConfigureCorosyncStep._corosync_peers', return_value=[mock_actioning_host.fqdn]).start()
 
