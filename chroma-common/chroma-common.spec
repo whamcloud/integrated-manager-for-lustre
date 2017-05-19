@@ -28,6 +28,9 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 
+# Nuke .py[c,o] files as they are not needed
+find -L $RPM_BUILD_ROOT -type f -name "*.py[c,o]" | xargs rm
+
 touch base.files
 for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.py'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
