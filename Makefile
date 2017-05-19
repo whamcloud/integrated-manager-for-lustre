@@ -42,7 +42,7 @@ deps: repo
 
 tags:
 	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
-	ctags --python-kinds=-i -R --exclude=chroma-\*/myenv\* --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-externals --exclude=chroma-manager/chroma_ui* --exclude=chroma-manager/ui-modules .
+	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-externals --exclude=chroma-manager/ui-modules .
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
 chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
