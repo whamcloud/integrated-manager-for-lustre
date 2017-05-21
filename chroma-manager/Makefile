@@ -2,10 +2,9 @@ include ../include/Makefile.version
 
 NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
 
-NPM_VERSION ?= 3.10.6
+NPM_VERSION ?= 4.6.1
 
 define set_env_for_npm
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/; \
 mkdir -p ~/.npm-global;                                                                              \
 mkdir -p ~/.npm-global-cache;                                                                        \
 export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
@@ -79,14 +78,9 @@ develop: version ui-modules
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-$(HOME)/.node-gyp:
-	@echo "copying nodejs headers"; \
-	mkdir -p $HOME/.node-gyp && \
-	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
-
-npm: $(HOME)/.node-gyp
+npm:
 ifneq ($(NPM), $(NPM_VERSION))
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
+	curl https://registry.npmjs.org/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
 	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
 	set -e;                                                               \
 	$(set_env_for_npm) &&                                                 \
