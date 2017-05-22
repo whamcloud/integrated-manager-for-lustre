@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -21,7 +21,7 @@
 
 
 from collections import namedtuple, defaultdict
-from ..lib import util
+from ..lib import util, shell
 import abc
 
 _cached_device_types = {}
@@ -152,7 +152,6 @@ class BlockDevice(object):
         """
         return None
 
-    @abc.abstractmethod
     def purge_filesystem_configuration(self, filesystem_name, log):
         """
         Purge the details of the filesystem from the mgs blockdevice.  This routine presumes that the blockdevice
@@ -162,4 +161,7 @@ class BlockDevice(object):
         :param log: The logger to use for log messages.
         :return: None on success or error message on failure
         """
-        pass
+        shell_result = shell.Shell.run(['lctl', 'erase_lcfg', filesystem_name])
+
+        if shell_result.rc != 0:
+            return "Purge filesystem failed to purge %s with error '%s'" % (filesystem_name, shell_result.stderr)

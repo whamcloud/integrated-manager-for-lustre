@@ -230,19 +230,11 @@ kernel modules are functioning properly.
 
     def test_purge_filesystem_information(self):
         self.blockdevice = BlockDeviceZfs('zfs', self.dataset_path)
-        device_path = self.blockdevice._device_path
 
-        self.add_commands(CommandCaptureCommand(('zfs', 'canmount=on', device_path)),
-                          CommandCaptureCommand(('zfs', 'mount', device_path)),
-                          CommandCaptureCommand(('rm', 'testfs-a')),
-                          CommandCaptureCommand(('rm', 'testfs-b')),
-                          CommandCaptureCommand(('zfs', 'unmount', device_path)),
-                          CommandCaptureCommand(('zfs', 'canmount=off', device_path)))
+        self.add_commands(CommandCaptureCommand(('lctl', 'erase_lcfg', 'testfs')))
 
-        with mock.patch.object(glob, 'glob', return_value=['testfs-a', 'testfs-b']) as mock_glob:
+        with mock.patch.object(glob, 'glob', return_value=['testfs-a', 'testfs-b']):
             result = self.blockdevice.purge_filesystem_configuration('testfs', None)
-
-        mock_glob.assert_called_once_with('/%s/CONFIGS/%s-*' % (device_path, 'testfs'))
 
         self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()

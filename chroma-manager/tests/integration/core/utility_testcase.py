@@ -195,12 +195,12 @@ class UtilityTestCase(TestCase):
 
         Typical usage.
         self._fetch_help(lambda: self.assertEqual(commandResult, True),
-                         ['chris.gearing@intel.com'],
+                         ['joe.grund@intel.com', 'tom.nabarro@intel.com', 'william.c.johnson@intel.com'],
                          'Send the cavalry',
                          callback=lambda: check_if_significant(data))
 
         self._fetch_help(lambda: self.assertEqual(commandResult, True),
-                         ['chris.gearing@intel.com'],
+                         ['joe.grund@intel.com', 'tom.nabarro@intel.com', 'william.c.johnson@intel.com'],
                          lambda: 'Send the cavalry',
                          callback=lambda: check_if_significant(data))
 
