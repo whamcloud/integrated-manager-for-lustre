@@ -280,14 +280,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             job_steps = [self.get_json_by_uri(s) for s in job['steps']]
             if disposition == "FAILED":
                 if job['errored']:
-                    print "Job %s Errored:" % job['id']
+                    print "Job %s Errored (%s):" % (job['id'], job['description'])
                     print job
                     print ''
                     for step in job_steps:
                         if step['state'] == 'failed':
-                            print "Step %s (%s) failed:" % (step['id'], step['description'])
-                            print step['console']
-                            print step['backtrace']
+                            print "Step %s failed:" % step['id']
+                            for k, v in step.iteritems():
+                                print "%s: %s" % (k, v)
                             print ''
             elif disposition == "TIMED OUT":
                 if job['state'] != "complete":
