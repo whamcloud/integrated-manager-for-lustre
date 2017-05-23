@@ -45,9 +45,7 @@ requirements::
 	    $(TOP)/../chroma-manager/requirements.tmp
 
 $(SUBDIRS): do_cleanrepo force
-	echo "jenkins_fold:start:chroma-dependencies $(TARGET)"
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)
-	echo "jenkins_fold:end:chroma-dependencies $(TARGET)"
 
 do_cleanrepo:
 	set -e;                          \
