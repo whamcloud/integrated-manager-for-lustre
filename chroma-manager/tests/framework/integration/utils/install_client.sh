@@ -4,19 +4,11 @@ ssh root@$CLIENT_1 "exec 2>&1; set -xe
 mkdir lustre_client_rpms
 cd lustre_client_rpms
 
-# default to new $releasever'd client repo
-RELEASEVER='\$releasever/'
-
-# but allow compatibility with old releases, in particular for pre-3.0 upgrade testing
-if ${OLD_CLIENT:-false}; then
-    RELEASEVER=\"\"
-fi
-
 # Add the client repo
 cat << EOF > /etc/yum.repos.d/lustre-client.repo
 [lustre-client]
 name=lustre-client
-baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64%2Cbuild_type=client%2Cdistro=el\$RELEASEVER%2Cib_stack=inkernel/artifact/artifacts/
+baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64%2Cbuild_type=client%2Cdistro=el\$releasever%2Cib_stack=inkernel/artifact/artifacts/
 enabled=1
 sslverify=0
 gpgcheck=0
