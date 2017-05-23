@@ -8,8 +8,8 @@
     "@iml/gui": "6.0.9",
     "@iml/old-gui": "1.1.2",
     "intel-help-docs": "1.2.0",
-    "intel-realtime": "5.1.0",
-    "@iml/view-server": "6.3.4",
+    "intel-realtime": "5.1.1",
+    "@iml/view-server": "6.3.5",
     "@iml/socket-worker": "3.2.0"
   }
 }
