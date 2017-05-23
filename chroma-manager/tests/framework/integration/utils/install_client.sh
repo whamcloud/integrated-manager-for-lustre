@@ -12,11 +12,11 @@ if ${OLD_CLIENT:-false}; then
     RELEASEVER=\"\"
 fi
 
-# Add the client repo created on the manager at installation
+# Add the client repo
 cat << EOF > /etc/yum.repos.d/lustre-client.repo
 [lustre-client]
 name=lustre-client
-baseurl=https://$CHROMA_MANAGER/client/\$RELEASEVER
+baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64%2Cbuild_type=client%2Cdistro=el\$RELEASEVER%2Cib_stack=inkernel/artifact/artifacts/
 enabled=1
 sslverify=0
 gpgcheck=0

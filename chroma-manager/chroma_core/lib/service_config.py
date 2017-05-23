@@ -788,7 +788,7 @@ def register_profile(profile_file):
                     server_profile=profile,
                     bundle=Bundle.objects.get(bundle_name=bundle_name),
                     package_name=package_name)
-    
+
     profile.serverprofilevalidation_set.all().delete()
     for validation in data['validation']:
         profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
