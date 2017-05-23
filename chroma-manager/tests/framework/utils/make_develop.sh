@@ -40,7 +40,6 @@ EOF1
 
 mkdir -p ~/.npm-global
 export NPM_CONFIG_PYTHON=/usr/bin/python
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
 export NPM_CONFIG_PREFIX=~/.npm-global
 export PATH=\$PATH:~/.npm-global/bin
 make develop"
