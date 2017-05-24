@@ -24,7 +24,8 @@ Requires: python-argparse
 Requires: python-daemon
 Requires: python-setuptools
 Requires: python-requests >= 2.6.0
-Requires: python-tablib yum-utils
+Requires: python2-tablib
+Requires: yum-utils
 Requires: initscripts
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5

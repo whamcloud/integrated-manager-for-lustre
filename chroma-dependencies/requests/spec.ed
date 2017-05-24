@@ -1,9 +1,0 @@
-/^Url:/a
-BuildRequires:  python-devel
-BuildRequires:  python-setuptools
-.
-/^%install/a
-# work around a "fix" introduced by
-# https://github.com/kennethreitz/requests/issues/778
-sed -i -e '/PYTHONDONTWRITEBYTECODE/d' setup.py
-.

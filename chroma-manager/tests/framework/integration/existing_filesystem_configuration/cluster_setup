@@ -6,33 +6,9 @@ spacelist_to_commalist() {
 
 [ -r localenv ] && . localenv
 
-# Remove test results and coverage reports from previous run
-rm -rfv $PWD/test_reports/*
-rm -rfv $PWD/coverage_reports/.coverage*
-mkdir -p $PWD/test_reports
-mkdir -p $PWD/coverage_reports
-
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
-USE_FENCE_XVM=false
 
-eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
-
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
-
-echo "Beginning cluster installation and setup..."
-
-# put some keys on the nodes for easy access by developers
-# and make sure EPEL is enabled
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
-cat <<\"EOF\" >> /root/.ssh/authorized_keys
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPOT9PQ/jwhQJgrggPhYr5uIMgJ7szKTLDCNtPIXiBEkFiCf9jtGP9I6wat83r8g7tRCk7NVcMm0e0lWbidqpdqKdur9cTGSOSRMp7x4z8XB8tqs0lk3hWefQROkpojzSZE7fo/IT3WFQteMOj2yxiVZYFKJ5DvvjdN8M2Iw8UrFBUJuXv5CQ3xV66ZvIcYkth3keFk5ZjfsnDLS3N1lh1Noj8XbZFdSRC++nbWl1HfNitMRm/EBkRGVP3miWgVNfgyyaT9lzHbR8XA7td/fdE5XrTpc7Mu38PE7uuXyLcR4F7l brian@brian-laptop
-EOF
-yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
+. $CHROMA_DIR/chroma-manager/tests/framework/utils/cluster_setup.sh
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER) "exec 2>&1; set -xe
@@ -41,8 +17,7 @@ if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
 retries=50
 timeout=180
 EOF
-    $PROXY yum install -y python-setuptools
-    $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
+    $PROXY yum install -y python-setuptools python2-coverage
 fi
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
@@ -125,7 +100,7 @@ retries=50
 timeout=180
 EOF
     $PROXY yum install -y python-setuptools
-    $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
+    $PROXY yum install -y python2-coverage
     if [[ \$(lsb_release -sr) = 6.* ]]; then
         $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel-firmware
         if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then

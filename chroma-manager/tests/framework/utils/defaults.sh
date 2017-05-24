@@ -13,6 +13,8 @@ spacelist_to_commalist() {
 set_defaults() {
     upgrade_test="$1"
 
+    export CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
+
     d=${0%/*}
     if [[ $d != /* ]]; then
         d=${PWD}/$d

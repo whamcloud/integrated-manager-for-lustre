@@ -26,16 +26,16 @@ BuildRequires: python-setuptools
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
-Requires: python-supervisor
-Requires: python-jsonschema < 0.9.0
+Requires: python2-supervisor
+Requires: python2-jsonschema < 0.9.0
 Requires: python-ordereddict
 Requires: python-uuid
 Requires: python-paramiko
-Requires: python-kombu >= 3.0.19
+Requires: python2-kombu >= 3.0.19
 Requires: python-daemon
 Requires: python-requests >= 2.6.0
 Requires: python-networkx
-Requires: python-httpagentparser
+Requires: python2-httpagentparser
 Requires: python-gunicorn
 Requires: pygobject2
 Requires: postgresql-server
@@ -50,7 +50,7 @@ Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
-Requires: python-gevent >= 1.0.1
+Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Conflicts: chroma-agent
