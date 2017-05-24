@@ -1,19 +1,5 @@
 include ../include/Makefile.version
 
-NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
-
-NPM_VERSION ?= 4.6.1
-
-define set_env_for_npm
-mkdir -p ~/.npm-global;                                                                              \
-mkdir -p ~/.npm-global-cache;                                                                        \
-export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
-export NPM_CONFIG_CACHE=~/.npm-global-cache;                                                         \
-export NPM_CONFIG_CACHE_MIN=360000;                                                                  \
-export NPM_CONFIG_PREFIX=~/.npm-global;                                                              \
-export PATH=~/.npm-global/bin:$$PATH
-endef
-
 ARCH := $(shell echo $$(uname -m))
 
 # Fixup proxies if needed
@@ -78,42 +64,15 @@ develop: version ui-modules
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-npm:
-ifneq ($(NPM), $(NPM_VERSION))
-	echo "jenkins_fold:start:NPM"
-	curl https://registry.npmjs.org/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
-	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
-	set -e;                                                               \
-	$(set_env_for_npm) &&                                                 \
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-$(NPM_VERSION).tgz -d
-	echo "jenkins_fold:end:NPM"
-endif
-
-ui-modules: npm
+ui-modules:
 	echo "jenkins_fold:start:Setting up ui-modules"
 	@echo "Setting up ui-modules"; \
 	set -e;                        \
-	$(set_env_for_npm) &&          \
 	export NODE_ENV=production &&  \
 	cd ui-modules &&               \
 	npm i -d &&                    \
 	npm prune
 	echo "jenkins_fold:end:Setting up ui-modules"
-
-ui-modules-dev: npm
-	@echo "Setting up ui-modules for dev"; \
-	cd ui-modules && \
-	npm i && \
-	cd node_modules/@iml/gui && \
-	npm i --only=dev && \
-	cd ../../intel-realtime && \
-	npm i --only=dev && \
-	cd ../@iml/view-server && \
-	npm i --only=dev;
-
-
-gui: ui-modules
-	@echo "Building GUI for deployment";
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -212,7 +171,7 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version gui
+tarball: version ui-modules
 	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
@@ -287,4 +246,4 @@ docs: requirements.txt version
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"
 
-.PHONY: docs download gui ui-modules npm
+.PHONY: docs download ui-modules
