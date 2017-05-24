@@ -17,4 +17,4 @@ EOF
 # disable the server repo
 yum-config-manager --disable lustre
 
-yum -y install kmod-lustre-client"
+yum -y install lustre-client"
