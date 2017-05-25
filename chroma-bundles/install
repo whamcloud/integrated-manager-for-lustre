@@ -492,9 +492,14 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             need_compat = _backup_repo(old_bundles, bundle, meta)
 
         if bundle in new_bundles:
-            if meta['filename'] != "":
+            _mkdir_p(install_location)
+            if meta['filename'] == "":
+                # write fake bundle metadata to the metadata file
+                with open(os.path.join(install_location, "meta",),
+                          'w') as outfile:
+                    json.dump(meta, outfile)
+            else:
                 # Extract the new bundle
-                _mkdir_p(install_location)
                 _unpack_repo(meta['filename'], install_location)
                 # While CentOS uses just the numerical version, RHEL appends the
                 # installation type, so allow aliases and create a symlink pointing the
