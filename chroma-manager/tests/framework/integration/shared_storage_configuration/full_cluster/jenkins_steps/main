@@ -10,10 +10,9 @@ check_for_autopass
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
 cd $WORKSPACE
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/$ARCHIVE_NAME\""
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
-set -x
+
+echo "+ curl -f -k -O \"$JOB_URL/$ARCHIVE_NAME\""
+curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"///
 
 got_aborted=false
 # Gather logs from nodes and release the cluster at exit

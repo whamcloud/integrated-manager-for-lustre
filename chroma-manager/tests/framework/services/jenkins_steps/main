@@ -27,7 +27,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 pdsh -R ssh -l root -S -w $CHROMA_MANAGER $TEST_RUNNER "exec 2>&1; set -xe
 cd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e \"s/distro=${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION}/distro=$JENKINS_DISTRO/\" -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+  sed -i -e \"s/distro=${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION}/distro=$JENKINS_DISTRO/\" \$f
 done" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

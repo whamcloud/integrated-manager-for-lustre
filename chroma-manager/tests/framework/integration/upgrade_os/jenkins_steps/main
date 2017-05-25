@@ -10,9 +10,7 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/chroma-manager
 SLAVE=${slave:?"Need to set slave"}
 
 cd $WORKSPACE
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/$ARCHIVE_NAME"
-set -x
+curl -f -k -O "$JOB_URL/chroma-bundles/$ARCHIVE_NAME"
 
 # Gather logs from nodes and release the cluster at exit
 cleanup() {
