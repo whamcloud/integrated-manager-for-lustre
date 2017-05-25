@@ -10,7 +10,8 @@
   "corosync2": false,
   "pacemaker": false,
   "bundles": [
-    "iml-agent"
+    "iml-agent",
+    "external"
   ],
   "ui_description": "An HSM agent node using the POSIX copytool",
   "packages": {
@@ -18,7 +19,6 @@
       "chroma-agent-management"
     ],
     "external": [
-      "lustre-client-modules",
       "lustre-client"
     ]
   }

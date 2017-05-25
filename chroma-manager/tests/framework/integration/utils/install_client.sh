@@ -17,5 +17,5 @@ EOF
 # disable the server repo
 yum-config-manager --disable lustre
 
-yum -y install lustre-client "
+yum -y install lustre-client"
 

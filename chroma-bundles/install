@@ -308,6 +308,17 @@ def _new_bundles(upgrade):
 
         bundles[meta['name'] + "-" + meta['distro']] = meta
 
+    # mock up a fake "external" bundle
+    meta = {
+        "name": "external",
+        "distro": "el7",
+        "version": "0.0.0",
+        "description": "fake bundle as a placeholder for externally available packages",
+        "filename": "",
+        "distro_version": "7"
+    }
+    bundles[meta['name'] + "-" + meta['distro']] = meta
+
     return bundles
 
 

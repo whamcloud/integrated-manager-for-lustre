@@ -178,13 +178,15 @@ def kernel_status():
     :return: {'running': {'kernel-X.Y.Z'}, 'required': <'kernel-A.B.C' or None>}
     """
     running_kernel = "kernel-%s" % AgentShell.try_run(["uname", "-r"]).strip()
+
+    # a required kernel is a lustre patched kernel since we are building
+    # storage servers that can support both ldiskfs and zfs
     try:
-        required_kernel_stdout = AgentShell.try_run(["rpm", "-qR", "lustre-modules"])
+        required_kernel_stdout = \
+            [k for k in AgentShell.try_run(["rpm", "-q", "kernel"]).split('\n') \
+             if "_lustre" in k][0]
     except AgentShell.CommandExecutionError:
-        try:
-            required_kernel_stdout = AgentShell.try_run(["rpm", "-qR", "lustre-client-modules"])
-        except AgentShell.CommandExecutionError:
-            required_kernel_stdout = None
+        required_kernel_stdout = None
 
     required_kernel = None
     if required_kernel_stdout:
