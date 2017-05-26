@@ -19,6 +19,7 @@
       "chroma-agent-management"
     ],
     "external": [
+      "lustre",
       "lustre-dkms",
       "lustre-osd-ldiskfs-mount",
       "lustre-osd-zfs-mount",
