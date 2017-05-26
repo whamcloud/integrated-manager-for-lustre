@@ -23,8 +23,8 @@
       "lustre-dkms",
       "lustre-osd-ldiskfs-mount",
       "lustre-osd-zfs-mount",
-      "kernel-*_lustre",
-      "kernel-devel-*_lustre",
+      "kernel-[0-9]*_lustre",
+      "kernel-devel-[0-9]*_lustre",
       "zfs"
     ]
   },
