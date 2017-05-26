@@ -68,7 +68,9 @@ sslclientcert = {2}
 
     def test_kernel_status(self):
         def try_run(args):
-            if args == ["rpm", "-q", "kernel"]:
+            if args == ["uname", "-r"]:
+                return "2.6.32-358.2.1.el6.x86_64\n"
+            elif args == ["rpm", "-q", "kernel"]:
                 return """kernel-2.6.32-358.2.1.el6.x86_64
 kernel-2.6.32-358.18.1.el6_lustre.x86_64
 """
