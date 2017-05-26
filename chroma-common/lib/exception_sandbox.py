@@ -42,7 +42,7 @@ def exceptionSandBox(logger, exception_value, message='Exception raised in sandb
                 ex_type, ex, tb = sys.exc_info()
                 data = traceback.format_exc(tb).splitlines()
                 logger.debug('%s:\n%s' % (message + ' START',
-                                          '\n'.join(data[1:3] + ['  ...'] + data[-3:] + [message + ' END'])))
+                                          '\n'.join(data[1:] + [message + ' END'])))
             return exception_value
         return wrapper
 

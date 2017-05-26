@@ -24,11 +24,4 @@ class FencingTestCase(unittest.TestCase):
         self.raise_exception = True
 
         self.assertEqual(self.function1(), 1)
-        self.mock_logger.debug.assert_called_once_with("""Exception raised in sandbox START:
-  File "/home/share/chroma/chroma-agent/chroma_agent/chroma_common/lib/exception_sandbox.py", line 40, in wrapper
-    return function(*args, **kwargs)
-  ...
-  File "/home/share/chroma/chroma-agent/tests/chroma_common/lib/test_sandbox_exception.py", line 14, in function1
-    raise Exception()
-Exception
-Exception raised in sandbox END""")
+        self.mock_logger.debug.assert_called_once()
