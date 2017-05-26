@@ -45,7 +45,7 @@ for DISTRO in el6 el7; do
 
     # arrange for cleanup of the dir on exit for any reason
     trap "rm -rf lustre-$BACKING_STORE" EXIT
-    
+
     cd lustre-$BACKING_STORE
 
     ${1}_installer
