@@ -165,18 +165,11 @@ def kernel_status():
     # a required kernel is a lustre patched kernel since we are building
     # storage servers that can support both ldiskfs and zfs
     try:
-        required_kernel_stdout = \
+        required_kernel = \
             [k for k in AgentShell.try_run(["rpm", "-q", "kernel"]).split('\n') \
              if "_lustre" in k][0]
     except AgentShell.CommandExecutionError:
-        required_kernel_stdout = None
-
-    required_kernel = None
-    if required_kernel_stdout:
-        for line in required_kernel_stdout.split("\n"):
-            if line.startswith('kernel'):
-                required_kernel = "kernel-%s.%s" % (line.split(" = ")[1],
-                                                    platform.machine())
+        required_kernel = None
 
     available_kernels = []
     for installed_kernel in AgentShell.try_run(["rpm", "-q", "kernel"]).split("\n"):
