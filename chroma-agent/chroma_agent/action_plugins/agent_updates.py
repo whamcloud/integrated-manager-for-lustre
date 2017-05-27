@@ -185,7 +185,7 @@ def kernel_status():
         required_kernel = \
             [k for k in AgentShell.try_run(["rpm", "-q", "kernel"]).split('\n') \
              if "_lustre" in k][0]
-    except AgentShell.CommandExecutionError:
+    except (AgentShell.CommandExecutionError, IndexError):
         required_kernel = None
 
     available_kernels = []
