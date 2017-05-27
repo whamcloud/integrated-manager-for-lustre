@@ -48,8 +48,13 @@ gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 .
 wq
 EOF
-yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64,build_type=server,distro=el7,ib_stack=inkernel/artifact/artifacts/
-sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-master_lastSuccessfulBuild_arch\=x86_64\,build_type\=server\,distro\=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
+if [[ \$HOSTNAME = *vm*9 ]]; then
+    build_type=client
+else
+    build_type=server
+fi
+yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64,build_type=\$build_type,distro=el7,ib_stack=inkernel/artifact/artifacts/
+sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-master_lastSuccessfulBuild_arch\=x86_64\,build_type\=\$build_type\,distro\=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
 yum-config-manager --add-repo https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_e2fsprogs-master_arch\=x86_64\,distro\=el7_lastSuccessfulBuild_artifact__topdir_RPMS_.repo
 yum -y install distribution-gpg-keys-copr
