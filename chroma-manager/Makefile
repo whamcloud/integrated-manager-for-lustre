@@ -276,14 +276,14 @@ download: requirements.txt
 
 docs: requirements.txt version
 	echo "jenkins_fold:start:Make Docs"
-	set -e ; \
-	if [ -z $(VIRTUAL_ENV) ] ; then \
-		virtualenv myenv; \
-		. myenv/bin/activate; \
-		CACHE=$$(pwd)/../chroma-externals; \
-		echo "# Using pip cache at $$CACHE"; \
+	set -e;                                                         \
+	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
+		virtualenv myenv;                                       \
+		. myenv/bin/activate;                                   \
+		CACHE=$$(pwd)/../chroma-externals;                      \
+		echo "# Using pip cache at $$CACHE";                    \
 		python tests/utils/pip_install_requirements.py $$CACHE; \
-	fi; \
+	fi;                                                             \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"
 

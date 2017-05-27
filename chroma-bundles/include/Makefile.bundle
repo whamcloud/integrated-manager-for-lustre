@@ -1,5 +1,5 @@
 REPO         := $(patsubst %/,%,$(REPO))
-ret          := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXCLUDES)"; echo "rc=$$?")
+ret          := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXCLUDES)" 2>/dev/null; echo "rc=$$?")
 .SHELLSTATUS := $(subst rc=,,$(lastword $(ret)))
 BUNDLE_RPMS  := $(filter-out rc=%,$(ret))
 ifneq ($(.SHELLSTATUS), 0)

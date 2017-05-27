@@ -1,2 +1,0 @@
-/^BuildRequires:  python-mimeparse/;/^$/s/^/#/
-/%check/;/^$/d
