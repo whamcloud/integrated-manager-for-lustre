@@ -34,7 +34,6 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     if action == 'clean':
         cmd = ['yum', 'clean', 'all'] + (repo_arg if repo_arg else ["--enablerepo=*"])
     elif action == 'install':
-        tries = 10
         cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
     elif action == 'remove':
         cmd = ['yum', 'remove', '-y'] + repo_arg + list(packages)
@@ -61,12 +60,12 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
         result = AgentShell.run(cmd)
 
         if result.rc in valid_rc_values:
-            # if action was install, make sure the packages got installed
-            # yum seems to be willing to experience a failure and not return
-            # a non-zero exit code
-            if AgentShell.run(['rpm', '-q', list(packages)]).rc == 0:
-                return result.stdout
+            return result.stdout
         else:
+            # if we were trying to install, clean the metadata before
+            # trying again
+            if action == 'install':
+                AgentShell.run(['yum', 'clean', 'metadata'])
             daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
             if hyd_3885 == 0:
                 daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
