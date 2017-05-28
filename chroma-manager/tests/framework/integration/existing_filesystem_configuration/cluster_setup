@@ -94,10 +94,18 @@ EOF
     pushd /tmp/
     tar xzvf lustre-ldiskfs-el7-installer.tar.gz
     tries=0
-    while [ $tries -lt 10 ] && ! rpm -q lustre; do
-        lustre-ldiskfs/install
-        let tries+=1
+    failed=true
+    while $failed [ \$tries -lt 10 ]; do
+        if ! lustre-ldiskfs/install; then
+            yum clean metadata
+            let tries+=1
+        else
+            failed=false
+        fi
     done
+    if $failed; then
+        exit 1
+    fi
     popd
 fi
 # https://github.com/pypa/virtualenv/issues/355
