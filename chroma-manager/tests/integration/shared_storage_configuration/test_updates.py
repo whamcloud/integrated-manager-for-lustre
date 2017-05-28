@@ -1,8 +1,13 @@
 from django.utils.unittest import skipIf
 from testconfig import config
+from time import sleep
+import logging
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
+
+logger = logging.getLogger('test')
+logger.setLevel(logging.DEBUG)
 
 @skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
 class TestUpdates(ChromaIntegrationTestCase):
@@ -20,11 +25,16 @@ class TestUpdates(ChromaIntegrationTestCase):
 
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
-        packages = self.get_list("/api/package/", {'host': host['id'], 'limit': 0})
         original_packages = {}
-        for p in packages:
-            if host['resource_uri'] in p['installed_hosts']:
-                original_packages[p['name']] = (p['epoch'], p['version'], p['release'], p['arch'])
+        this_time = 0
+        while len(original_packages) == 0 and this_time < 10:
+            packages = self.get_list("/api/package/", {'host': host['id'], 'limit': 0})
+            logger.debug("packages: %s" % packages)
+            for p in packages:
+                if host['resource_uri'] in p['installed_hosts']:
+                    original_packages[p['name']] = (p['epoch'], p['version'], p['release'], p['arch'])
+            sleep(5)
+            this_time += 1
 
         self.assertNotEqual(len(original_packages), 0)
 
