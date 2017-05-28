@@ -95,7 +95,7 @@ EOF
     tar xzvf lustre-ldiskfs-el7-installer.tar.gz
     tries=0
     failed=true
-    while $failed [ \$tries -lt 10 ]; do
+    while \$failed && [ \$tries -lt 10 ]; do
         if ! lustre-ldiskfs/install; then
             yum clean metadata
             let tries+=1
