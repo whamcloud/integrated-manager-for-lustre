@@ -178,8 +178,11 @@ lustre-backend-fs
     def test_set_profile_fail(self):
         # Three times because yum will try three times.
         self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"))
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')))
 
         config.update('settings', 'profile', {'managed': False})
 
