@@ -103,7 +103,7 @@ EOF
             failed=false
         fi
     done
-    if $failed; then
+    if \$failed; then
         exit 1
     fi
     popd
