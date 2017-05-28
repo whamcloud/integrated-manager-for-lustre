@@ -93,7 +93,11 @@ EOF
     $PROXY yum -y install python-setuptools python2-coverage
     pushd /tmp/
     tar xzvf lustre-ldiskfs-el7-installer.tar.gz
-    lustre-ldiskfs/install
+    tries=0
+    while [ $tries -lt 10 ] && ! rpm -q lustre; do
+        lustre-ldiskfs/install
+        let tries+=1
+    done
     popd
 fi
 # https://github.com/pypa/virtualenv/issues/355
