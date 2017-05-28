@@ -40,6 +40,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
 
     repo_arg = []
     valid_rc_values = [0]                               # Some errors values other than 0 are valid.
+    tries = 2
     if fromrepo:
         repo_arg = ['--disablerepo=*', '--enablerepo=%s' % ','.join(fromrepo)]
     elif enablerepo:
@@ -50,6 +51,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     if action == 'clean':
         cmd = ['yum', 'clean', 'all'] + (repo_arg if repo_arg else ["--enablerepo=*"])
     elif action == 'install':
+        tries = 10
         cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
     elif action == 'remove':
         cmd = ['yum', 'remove', '-y'] + repo_arg + list(packages)
@@ -71,16 +73,20 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     # We sometimes see intermittent failures in test, and possibly out of test, that occur
     # 1 in 50 (estimate) times. yum commands are idempotent and so trying the command three
     # times has no downside and changes the estimated chance of fail to 1 in 12500.
-    for hyd_3885 in range(2, -1, -1):
-        rc, stdout, stderr = AgentShell.run_old(cmd)
+    for hyd_3885 in range(tries, -1, -1):
+        result = AgentShell.run(cmd)
 
-        if rc in valid_rc_values:
-            return stdout
+        if result.rc in valid_rc_values:
+            # if action was install, make sure the packages got installed
+            # yum seems to be willing to experience a failure and not return
+            # a non-zero exit code
+            if AgentShell.run(['rpm', '-q', list(packages)]).rc == 0:
+                return result.stdout
         else:
             daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
             if hyd_3885 == 0:
                 daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
-                raise AgentShell.CommandExecutionError(AgentShell.RunResult(rc, stdout, stderr, False), cmd)   # Out of retries so raise for the caller..
+                raise AgentShell.CommandExecutionError(result, cmd)   # Out of retries so raise for the caller..
 
 
 def yum_check_update(repos):

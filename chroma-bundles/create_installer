@@ -9,7 +9,7 @@ usage() {
 ldiskfs_installer() {
     # create an installer for the user
     cat <<"EOF" > install
-#!/bin/sh
+#!/bin/sh -e
 
 yum -y install --exclude kmod-lustre-osd-zfs lustre
 
@@ -21,7 +21,7 @@ EOF
 zfs_installer() {
     # create an installer for the user
     cat <<EOF > install
-#!/bin/sh
+#!/bin/sh -e
 
 yum -y install lustre-dkms lustre zfs
 EOF
