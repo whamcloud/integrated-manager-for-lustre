@@ -150,10 +150,12 @@ class BaseFakeLustrePlugin(DevicePlugin):
                 'recovery_status': {}
             })
 
-        if first:
-            packages = self._server.scan_packages()
-        else:
-            packages = None
+        # In this world of fake-ness there is no session restarting so only
+        # sending package scan updates on session startup (like we do with
+        # the real agent) doesn't really allow for the manager to notice
+        # package scan changes, so in this world of fakeness, send a package
+        # scan on every session update as they are cheap to do here
+        packages = self._server.scan_packages()
 
         return {
             'resource_locations': self._server._cluster.resource_locations(),

@@ -228,7 +228,7 @@ class FakeServer(utils.Persisted):
                 'installed': installed
             }
 
-        return {'e2fsprogs': packages}
+        return {'external': packages}
 
     def install_packages(self, repos, packages):
         for package in packages:
