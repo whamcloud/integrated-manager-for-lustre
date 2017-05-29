@@ -230,7 +230,7 @@ class FakeServer(utils.Persisted):
             }
             log.debug("  %s: available: %s, installed: %s" % (package, available_version, installed))
 
-        return {'e2fsprogs': packages}
+        return {'external': packages}
 
     def install_packages(self, repos, packages):
         for package in packages:
