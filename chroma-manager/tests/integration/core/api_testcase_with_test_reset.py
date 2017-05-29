@@ -533,6 +533,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if of_severity is not None:  # Severity should be 'ERROR', 'WARNING', 'INFO'
             data['severity'] = of_severity
         alerts = self.get_list("/api/alert/", data)
+        logger.debug("alerts: %s" % alerts)
         self.assertNotIn(uri, [a['alert_item'] for a in alerts])
 
     def assertHasAlert(self, uri, of_severity=None, of_type=None):
