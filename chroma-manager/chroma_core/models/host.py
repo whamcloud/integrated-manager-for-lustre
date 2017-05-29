@@ -723,6 +723,7 @@ class InstallPackagesStep(Step):
                                                           'packages': kwargs['packages']})
 
         updates_available = package.update(host, package_report)
+        self.log("raising UpdatesAvailableAlert 1: %s" % updates_available)
         UpdatesAvailableAlert.notify(host, updates_available)
 
 

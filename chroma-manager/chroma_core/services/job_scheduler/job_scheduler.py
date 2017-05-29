@@ -676,6 +676,7 @@ class JobScheduler(object):
                     log.error("Host volumes failed to rebalance: " + traceback.format_exc())
 
             if 'needs_update' in updated_attrs:
+                log.debug("raising UpdatesAvailableAlert 2: %s" % changed_item.needs_update)
                 UpdatesAvailableAlert.notify(changed_item, changed_item.needs_update)
 
         if isinstance(changed_item, ManagedTarget):
