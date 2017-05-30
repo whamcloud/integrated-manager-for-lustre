@@ -85,6 +85,7 @@ class UpdateScan(object):
                 job_scheduler_notify.notify(self.host, self.started_at, {'properties': properties})
 
     def update_packages(self, packages):
+        log.debug("running update_packages(%s)" % packages)
         if not packages:
             # Packages is allowed to be None
             # (means is not the initial message, or there was a problem talking to RPM or yum)
