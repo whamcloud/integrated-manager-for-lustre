@@ -1,6 +1,5 @@
 from django.utils.unittest import skipIf
 from testconfig import config
-from time import sleep
 import logging
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -8,6 +7,7 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
+
 
 @skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
 class TestUpdates(ChromaIntegrationTestCase):
@@ -25,21 +25,22 @@ class TestUpdates(ChromaIntegrationTestCase):
 
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
+        packages = self.get_list("/api/package/", {'host': host['id'], 'limit': 0})
+        logger.debug("packages: %s" % packages)
+
         original_packages = {}
-        this_time = 0
-        while len(original_packages) == 0 and this_time < 10:
-            packages = self.get_list("/api/package/", {'host': host['id'], 'limit': 0})
-            logger.debug("packages: %s" % packages)
-            for p in packages:
-                if host['resource_uri'] in p['installed_hosts']:
-                    original_packages[p['name']] = (p['epoch'], p['version'], p['release'], p['arch'])
-            sleep(5)
-            this_time += 1
+        for p in packages:
+            if host['resource_uri'] in p['installed_hosts']:
+                original_packages[p['name']] = (p['epoch'], p['version'], p['release'], p['arch'])
 
         self.assertNotEqual(len(original_packages), 0)
 
-        # No alerts ERROR should be high at this point
-        self.assertNoAlerts(host['resource_uri'], of_type='UpdatesAvailableAlert')
+        # We could have an alert at this point that got raised in the time
+        # between the host being added and when the packages are installed
+        # So now that the packages are installed wait for the alert to clear
+        # before proceeding with the update
+        self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
+                                                         of_type='UpdatesAvailableAlert'))
 
         # Subsequently chroma-manager is upgraded
         # =======================================
@@ -48,7 +49,7 @@ class TestUpdates(ChromaIntegrationTestCase):
         # The causes the agent to see higher versions of available packages, so an
         # alert is raised to indicate the need to upgrade
         self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'],
-            of_type='UpdatesAvailableAlert'))
+                             of_type='UpdatesAvailableAlert'))
         alerts = self.get_list("/api/alert/", {'active': True,
                                                'alert_type': 'UpdatesAvailableAlert'})
 
@@ -87,7 +88,7 @@ class TestUpdates(ChromaIntegrationTestCase):
         }).json
         self.wait_for_command(self.chroma_manager, command['id'])
         self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
-            of_type='UpdatesAvailableAlert'))
+                             of_type='UpdatesAvailableAlert'))
 
         # Check that a new package really did get installed
         for package_name, package_version in upgrade_packages.items():
