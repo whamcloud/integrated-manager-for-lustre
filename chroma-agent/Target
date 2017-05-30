@@ -63,7 +63,7 @@ Target_start() {
     if Target_status >/dev/null 2>&1; then
         # ocf_log info "Target $TARGET is already started."
         dbg "Target $TARGET is already started."
-        return $OCF_SUCCESSs
+        return $OCF_SUCCESS
     fi
 
     if ! grep -e 'lustre$' /proc/filesystems >/dev/null; then
