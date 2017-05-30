@@ -2,7 +2,7 @@ include ../include/Makefile.version
 
 NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
 
-NPM_VERSION ?= 4.6.1
+NPM_VERSION ?= 3.10.10
 
 define set_env_for_npm
 mkdir -p ~/.npm-global;                                                                              \
