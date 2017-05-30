@@ -28,10 +28,13 @@ cleandist:
 production:
 
 tarball: version
+	echo "jenkins_fold:start:Make Agent Tarball"
 	rm -f MANIFEST
 	python setup.py sdist
+	echo "jenkins_fold:end:Make Agent Tarball"
 
 rpms: production cleandist tarball
+	echo "jenkins_fold:start:Make Agent RPMS"
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES
@@ -47,6 +50,7 @@ rpms: production cleandist tarball
 		 -bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir
+	echo "jenkins_fold:end:Make Agent RPMS"
 
 docs download:
 	@echo "Nothing to do here"
