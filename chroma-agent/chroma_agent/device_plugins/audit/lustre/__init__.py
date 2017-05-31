@@ -30,7 +30,6 @@ from tablib.packages import yaml
 from chroma_agent.utils import Mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-from chroma_agent.log import console_log
 
 
 # HYD-2307 workaround
@@ -257,8 +256,6 @@ class TargetAudit(LustreAudit):
             try:
                 metrics[metric] = self.read_int_metric(target, metric)
             except IOError:
-                # log it while we port to master
-                console_log.debug("Missing metric: %s %s" % (target, metric))
                 # Don't bomb on missing metrics, just skip 'em.
                 pass
 
