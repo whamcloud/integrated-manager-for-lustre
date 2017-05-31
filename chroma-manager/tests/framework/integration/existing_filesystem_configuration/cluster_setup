@@ -96,8 +96,8 @@ EOF
     tries=0
     failed=true
     while \$failed && [ \$tries -lt 10 ]; do
-        if ! lustre-ldiskfs/install; then
-            yum clean metadata
+        if ! bash -x lustre-ldiskfs/install; then
+            yum --enablerepo=lustre clean metadata
             let tries+=1
         else
             failed=false
