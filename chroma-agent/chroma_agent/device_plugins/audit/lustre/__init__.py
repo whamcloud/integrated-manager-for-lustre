@@ -154,8 +154,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     def version(self):
         """Returns a string representation of the local Lustre version."""
         try:
-            stats = self.dict_from_file("/proc/fs/lustre/version")
-            return stats["lustre:"]
+            return self.read_string("/sys/fs/lustre/version")
         except IOError:
             return "0.0.0"
 
@@ -176,7 +175,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     def health_check(self):
         """Returns a string containing Lustre's idea of its own health."""
-        return self.read_string("/proc/fs/lustre/health_check")
+        return self.read_string("/sys/fs/lustre/health_check")
 
     def is_healthy(self):
         """Returns a boolean based on our determination of Lustre's health."""
@@ -189,7 +188,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         try:
             return [dict(zip(['index', 'state', 'type', 'name',
                               'uuid', 'refcount'], line.split()))
-                    for line in self.read_lines('/proc/fs/lustre/devices')]
+                    for line in self.read_lines('/sys/kernel/debug/lustre/devices')]
         except IOError:
             return []
 
