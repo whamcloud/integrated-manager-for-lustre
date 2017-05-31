@@ -79,12 +79,14 @@ do_cleanrepo:
 force :;
 
 repo: install
+	echo "jenkins_fold:start:Create Repos"
 	set -e;                        \
 	for dir in repo*; do           \
 		pushd $$dir;           \
 		createrepo --pretty .; \
 		popd;                  \
 	done
+	echo "jenkins_fold:end:Create Repos"
 
 FORCE:
 

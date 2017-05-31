@@ -14,10 +14,13 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_diagnostics/scm_version.py
 
 tarball: version
+	echo "jenkins_fold:start:Make Diagnostics Tarball"
 	rm -f MANIFEST
 	python setup.py sdist
+	echo "jenkins_fold:end:Make Diagnostics Tarball"
 
 rpms: cleandist tarball
+	echo "jenkins_fold:start:Make Diagnostics RPMS"
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-diagnostics-*.tar.gz _topdir/SOURCES
@@ -28,6 +31,7 @@ rpms: cleandist tarball
 		-bb _topdir/SPECS/chroma-diagnostics.spec
 	mv _topdir/RPMS/noarch/chroma-diagnostics-*.noarch.rpm dist/
 	rm -rf _topdir
+	echo "jenkins_fold:end:Make Diagnostics RPMS"
 
 docs download:
 	@echo "Nothing to do here"
