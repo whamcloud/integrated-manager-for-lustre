@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+import sys
 import traceback
 
 '''
@@ -32,36 +33,16 @@ for there needs.
 '''
 
 
-class ExceptionSandBox(object):
-
-    debug_on = None         # Set to none so we can trap someone not setting it.
-
-    def __init__(self, logger):
-        self.logger = logger
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exception_type, value, _traceback):
-        assert ExceptionSandBox.debug_on != None
-
-        if exception_type and not ExceptionSandBox.debug_on:
-            backtrace = '\n'.join(traceback.format_exception(type, value, _traceback))
-            self.logger.error("Unhandled error in thread %s: %s" % (self.__class__.__name__, backtrace))
-            return True
-
-    @classmethod
-    def enable_debug(cls, debug_on):
-        # debug_on means the exception is passed up and things get real bad!
-        ExceptionSandBox.debug_on = debug_on
-
-
-def exceptionSandBox(logger, exception_value):
+def exceptionSandBox(logger, exception_value, message='Exception raised in sandbox'):
     def real_decorator(function):
         def wrapper(*args, **kwargs):
-            with ExceptionSandBox(logger):
+            try:
                 return function(*args, **kwargs)
-
+            except Exception:
+                ex_type, ex, tb = sys.exc_info()
+                data = traceback.format_exc(tb).splitlines()
+                logger.debug('%s:\n%s' % (message + ' START',
+                                          '\n'.join(data[1:] + [message + ' END'])))
             return exception_value
         return wrapper
 
