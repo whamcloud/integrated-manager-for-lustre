@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
+# Copyright 2013-2017 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -40,8 +40,8 @@ JOB_STATS_LIMIT = 20  # only return the most active jobs
 def local_audit_classes():
     import chroma_agent.device_plugins.audit.lustre
     return [cls for cls in
-                [getattr(chroma_agent.device_plugins.audit.lustre, name) for name in
-                    dir(chroma_agent.device_plugins.audit.lustre) if name.endswith('Audit')]
+            [getattr(chroma_agent.device_plugins.audit.lustre, name) for name in
+             dir(chroma_agent.device_plugins.audit.lustre) if name.endswith('Audit')]
             if hasattr(cls, 'is_available') and cls.is_available()]
 
 
@@ -85,7 +85,10 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         corresponding Lustre module is loaded.
         """
         modname = cls.__name__.replace('Audit', '').lower()
-        filter = lambda line: line.startswith(modname)
+
+        def filter(line):
+            return line.startswith(modname)
+
         obj = cls()
         try:
             modules = list(obj.read_lines("/proc/modules", filter))
@@ -128,8 +131,8 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
                 name = match.group('name')
                 stats[name] = {
-                        'count': int(match.group('count')),
-                        'units': match.group('units')
+                    'count': int(match.group('count')),
+                    'units': match.group('units')
                 }
                 if match.group("min_max_sum") is not None:
                     stats[name].update({
@@ -154,8 +157,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     def version(self):
         """Returns a string representation of the local Lustre version."""
         try:
-            stats = self.dict_from_file("/proc/fs/lustre/version")
-            return stats["lustre:"]
+            return self.read_string("/sys/fs/lustre/version")
         except IOError:
             return "0.0.0"
 
@@ -176,7 +178,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
     def health_check(self):
         """Returns a string containing Lustre's idea of its own health."""
-        return self.read_string("/proc/fs/lustre/health_check")
+        return self.read_string("/sys/fs/lustre/health_check")
 
     def is_healthy(self):
         """Returns a boolean based on our determination of Lustre's health."""
@@ -189,7 +191,7 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         try:
             return [dict(zip(['index', 'state', 'type', 'name',
                               'uuid', 'refcount'], line.split()))
-                    for line in self.read_lines('/proc/fs/lustre/devices')]
+                    for line in self.read_lines('/sys/kernel/debug/lustre/devices')]
         except IOError:
             return []
 
@@ -481,16 +483,16 @@ class ObdfilterAudit(TargetAudit):
 
                 name = bucket.group('name')
                 bucket_vals = {
-                          'read': {
-                            'count': int(bucket.group('read_count')),
-                            'pct': int(bucket.group('read_pct')),
-                            'cum_pct': int(bucket.group('read_cum_pct'))
-                          },
-                          'write': {
-                            'count': int(bucket.group('write_count')),
-                            'pct': int(bucket.group('write_pct')),
-                            'cum_pct': int(bucket.group('write_cum_pct'))
-                          }
+                    'read': {
+                        'count': int(bucket.group('read_count')),
+                        'pct': int(bucket.group('read_pct')),
+                        'cum_pct': int(bucket.group('read_cum_pct'))
+                    },
+                    'write': {
+                        'count': int(bucket.group('write_count')),
+                        'pct': int(bucket.group('write_pct')),
+                        'cum_pct': int(bucket.group('write_cum_pct'))
+                    }
                 }
                 histograms[hist_key]['buckets'][name] = bucket_vals
 
@@ -574,7 +576,7 @@ class ObdfilterAudit(TargetAudit):
     def _gather_raw_metrics(self):
         metrics = self.raw_metrics['lustre']
         try:
-            metrics['jobid_var'] = self.read_string('/proc/fs/lustre/jobid_var')
+            metrics['jobid_var'] = self.read_string('/sys/fs/lustre/jobid_var')
         except IOError:
             metrics['jobid_var'] = 'disable'
         for ost in [dev for dev in self.devices() if dev['type'] == 'obdfilter']:
