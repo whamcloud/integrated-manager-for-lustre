@@ -23,7 +23,7 @@ zfs_installer() {
     cat <<EOF > install
 #!/bin/sh -e
 
-yum -y install lustre-dkms lustre zfs
+yum -y install lustre-dkms lustre zfs kernel-devel-[0-9]\*_lustre
 EOF
 
 }
