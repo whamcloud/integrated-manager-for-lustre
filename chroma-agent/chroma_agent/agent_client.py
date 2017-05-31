@@ -299,7 +299,7 @@ class SessionTable(object):
             try:
                 del self._sessions[plugin_name]
             except KeyError:
-                pass
+                daemon_log.warning("SessionTable.terminate session object already gone")
 
     def terminate_all(self):
         for session in self._sessions.values():
