@@ -558,16 +558,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         )
         self.assertTrue(response.successful, response.text)
 
-#    def verify_volume_mounts(self, volume, expected_primary_host_id, expected_secondary_host_id):
-#        """
-#        Verify that a given volume has the expected values for its primary and secondary hosts.
-#        """
-#        for node in volume['volume_nodes']:
-#            if node['primary']:
-#                self.assertEqual(node['host_id'], int(expected_primary_host_id))
-#            elif node['use']:
-#                self.assertEqual(node['host_id'], int(expected_secondary_host_id))
-#
     def create_power_control_type(self, body):
         response = self.chroma_manager.post("/api/power_control_type/",
                                             body = body)
