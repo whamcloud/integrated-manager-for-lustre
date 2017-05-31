@@ -35,14 +35,6 @@ class TestLustreAuditScanner(PatchedContextTestCase):
                 chroma_agent.device_plugins.audit.lustre.local_audit_classes()]
         self.assertEqual(list, ['LnetAudit', 'MdtAudit', 'MgsAudit'])
 
-    def test_18x_audit_scanner(self):
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/1.8.7.80/mds_mgs")
-        super(TestLustreAuditScanner, self).setUp()
-        list = [cls.__name__ for cls in
-                chroma_agent.device_plugins.audit.lustre.local_audit_classes()]
-        self.assertEqual(list, ['LnetAudit', 'MdsAudit', 'MgsAudit'])
-
 
 class TestLustreAudit(PatchedContextTestCase):
     def setUp(self):
@@ -53,10 +45,11 @@ class TestLustreAudit(PatchedContextTestCase):
         self.audit = LustreAudit()
 
     def test_version(self):
-        self.assertEqual(self.audit.version, "2.0.66")
+        self.assertEqual(self.audit.version, "2.10.0")
 
     def test_version_info(self):
-        self.assertEqual(self.audit.version_info, self.audit.LustreVersion(2, 0, 66))
+        self.assertEqual(self.audit.version_info,
+                         self.audit.LustreVersion(2, 10, 0))
 
 
 class TestGitLustreVersion(PatchedContextTestCase):
@@ -111,8 +104,9 @@ class TestLustreAuditGoodHealth(PatchedContextTestCase):
     def setUp(self):
         self.test_root = tempfile.mkdtemp()
         super(TestLustreAuditGoodHealth, self).setUp()
-        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
-        f = open(os.path.join(self.test_root, "proc/fs/lustre/health_check"), "w+")
+        os.makedirs(os.path.join(self.test_root, "sys/fs/lustre"))
+        f = open(os.path.join(self.test_root,
+                              "sys/fs/lustre/health_check"), "w+")
         f.write("healthy\n")
         f.close()
         self.audit = LustreAudit()
@@ -131,8 +125,9 @@ class TestLustreAuditBadHealth(PatchedContextTestCase):
     def setUp(self):
         self.test_root = tempfile.mkdtemp()
         super(TestLustreAuditBadHealth, self).setUp()
-        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
-        f = open(os.path.join(self.test_root, "proc/fs/lustre/health_check"), "w+")
+        os.makedirs(os.path.join(self.test_root, "sys/fs/lustre"))
+        f = open(os.path.join(self.test_root,
+                              "sys/fs/lustre/health_check"), "w+")
         f.write("NOT HEALTHY\n")
         f.close()
         self.audit = LustreAudit()
