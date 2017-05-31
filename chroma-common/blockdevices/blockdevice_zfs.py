@@ -22,13 +22,13 @@
 import os
 import errno
 import re
-import shutil
 import time
 
 from collections import defaultdict
 from lockfile import LockFile, LockTimeout
 from ..lib import shell
 from blockdevice import BlockDevice
+from ..lib.util import pid_exists
 
 
 class ZfsDevice(object):
@@ -44,8 +44,8 @@ class ZfsDevice(object):
     operate on the device as if it was locally active.
     """
 
-    ZPOOL_LOCK_DIR = '/var/lib/chroma/zfs_locks-%d' % os.getpid()
-    LOCK_ACQUIRE_TIMEOUT = 60
+    ZPOOL_LOCK_DIR = '/var/lib/chroma/zfs_locks'
+    LOCK_ACQUIRE_TIMEOUT = 10
 
     lock_refcount = defaultdict(int)
     locks_dir_initialized = False
@@ -108,16 +108,11 @@ class ZfsDevice(object):
         """
         Attempt to acquire a lock on a given zpool through a lockfile, increment the reference count each time
         this method is called, regardless of whether acquire is actually called. Keep trying until we know
-        we are locking the zpool. Reset refcount if i_am_locking returns False (current thread+process is not locking).
+        we are locking the zpool.
 
-        Lock acquire polls the timeout internally until LOCK_ACQUIRE_TIMEOUT is reached.
-
-        :param force: when set to True, if the lock cannot be acquired then force/break the lock
+        Lock acquire polls the timeout at intervals of LOCK_ACQUIRE_TIMEOUT.
         """
-
         if ZfsDevice.locks_dir_initialized == False:
-            shutil.rmtree(self.ZPOOL_LOCK_DIR, ignore_errors=True)
-
             # ensure lock directory exists
             try:
                 os.mkdir(self.ZPOOL_LOCK_DIR)
@@ -129,8 +124,19 @@ class ZfsDevice(object):
         while not self.lock.i_am_locking():
             try:
                 self.lock.acquire(self.LOCK_ACQUIRE_TIMEOUT)
+                with open(self.lock.lock_file, 'w') as f:
+                    f.writelines(str(self.lock.pid))
             except LockTimeout:
-                pass
+                # prune locks owned by non-existent processes
+                with open(self.lock.lock_file, 'r') as f:
+                    contents = f.readlines()
+
+                assert len(contents) == 1 and contents[0].isdigit(), \
+                    'unexpected contents of lockfile %s: %s' % (self.lock.lock_file, contents)
+
+                # validate pid holding lock exists
+                if not pid_exists(int(contents[0])):
+                    self.lock.break_lock()
 
         self.lock_refcount[self.lock_unique_id] += 1
 
@@ -449,7 +455,7 @@ class BlockDeviceZfs(BlockDevice):
                     result = self.import_(pacemaker_ha_operation)
 
                     if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
-                        return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path 
+                        return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path
 
                 else:
                     # zpool is already imported and writable, nothing to do.
