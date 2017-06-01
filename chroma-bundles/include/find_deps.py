@@ -88,7 +88,7 @@ class YumDepFinder(object):
             # these probably need to be externally specified
             if repo.id != "base" and repo.id != "core-0" and \
                repo.id != "updates" and repo.id != "updates-centos7.3-x86_64" and \
-               repo.id != "extras" and \
+               repo.id != "extras" and repo.id != "extras-centos7.3-x86_64" and \
                repo.id != "addon-epel7-x86_64" and repo.id != "epel" and \
                repo.id != "copr-be.cloud.fedoraproject.org_results_managerforlustre_manager-for-lustre_epel-7-x86_64_":
                 repo.disable()
