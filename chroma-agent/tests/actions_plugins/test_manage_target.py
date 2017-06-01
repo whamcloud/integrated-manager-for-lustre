@@ -77,6 +77,14 @@ class TestFormatTarget(CommandCaptureTestCase):
     block_device_list = [BlockDevice('linux', '/dev/foo'),
                          BlockDevice('zfs', 'lustre1')]
 
+    def setUp(self):
+        super(TestFormatTarget, self).setUp()
+
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+
+        self.addCleanup(mock.patch.stopall)
+
     def _mkfs_path(self, block_device, target_name):
         """ The mkfs path could be different for different block_device types. Today it isn't but it was when this
         method was added and so rather than remove the method I've made it return the same value for both cases and
@@ -358,6 +366,12 @@ class TestXMLParsing(unittest.TestCase):
 
 
 class TestCheckBlockDevice(CommandCaptureTestCase):
+    def setUp(self):
+        super(TestCheckBlockDevice, self).setUp()
+
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+
     def test_occupied_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="ext4\n"))
 

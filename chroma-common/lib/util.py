@@ -1,26 +1,10 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import os
+import errno
 import time
 import itertools
 import threading
@@ -278,3 +262,33 @@ def human_to_bytes(value_str):
     index = conversion.index(value_str[-1:].lower())
 
     return int(value * (1024 ** index))
+
+
+def pid_exists(pid):
+    """ Check whether pid exists in the current process table. """
+    assert type(pid) is int, 'supplied pid must be a digit'
+
+    if pid < 0:
+        return False
+    if pid == 0:
+        # According to "man 2 kill" PID 0 refers to every process
+        # in the process group of the calling process.
+        # On certain systems 0 is a valid PID but we have no way
+        # to know that in a portable fashion.
+        raise ValueError('invalid PID 0')
+
+    try:
+        os.kill(pid, 0)
+    except OSError as err:
+        if err.errno == errno.ESRCH:
+            # ESRCH == No such process
+            return False
+        elif err.errno == errno.EPERM:
+            # EPERM clearly means there's a process to deny access to
+            return True
+        else:
+            # According to "man 2 kill" possible error values are
+            # (EINVAL, EPERM, ESRCH)
+            raise
+    else:
+        return True

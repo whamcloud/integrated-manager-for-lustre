@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 """
@@ -42,6 +25,7 @@ agent_service = ServiceControl.create('chroma-agent')
 
 
 def _service_is_running():
+    # returns True if running
     return agent_service.running
 
 
@@ -79,8 +63,7 @@ def deregister_server():
 
 
 def register_server(url, ca, secret, address =None):
-
-    if _service_is_running() is None:
+    if _service_is_running() is True:
         console_log.warning("chroma-agent service was running before registration, stopping.")
         agent_service.stop()
 
@@ -110,8 +93,8 @@ def register_server(url, ca, secret, address =None):
 
 
 def reregister_server(url, address):
-    "Update manager url and register agent address with manager."
-    if _service_is_running() is None:
+    """ Update manager url and register agent address with manager """
+    if _service_is_running() is True:
         console_log.warning("chroma-agent service was running before registration, stopping.")
         agent_service.stop()
 

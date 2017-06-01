@@ -1,31 +1,12 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import logging
 from logging.handlers import SysLogHandler
 import os
 import sys
-
-from chroma_agent.chroma_common.lib.exception_sandbox import ExceptionSandBox
 
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
@@ -47,12 +28,10 @@ if logging_in_debug_mode or 'nosetests' in sys.argv[0]:
     daemon_log.setLevel(logging.DEBUG)
     copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)
-    ExceptionSandBox.enable_debug(True)                 # Not an obvious place to do this, but easy to find
 else:
     daemon_log.setLevel(logging.WARN)
     copytool_log.setLevel(logging.WARN)
     console_log.setLevel(logging.WARN)
-    ExceptionSandBox.enable_debug(False)                # Not an obvious place to do this, but easy to find
 
 agent_loggers = [daemon_log, console_log, copytool_log]
 
