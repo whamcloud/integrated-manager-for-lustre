@@ -22,13 +22,13 @@ yum install -y git python-virtualenv python-setuptools python-devel gcc make gra
 
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then
-    useradd chromatest
+    useradd -b /localhome chromatest
 fi
 su chromatest
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
 exit
-cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
+cat .ssh/id_rsa.pub >> ~chromatest/.ssh/authorized_keys
 scp .ssh/* chromatest@$CHROMA_MANAGER:.ssh/
 
 # Configure rabbitmq
