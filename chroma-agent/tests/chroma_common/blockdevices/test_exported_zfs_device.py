@@ -3,6 +3,8 @@ import shutil
 import mock
 import time
 
+from errno import ESRCH
+from random import randint
 from collections import defaultdict
 from lockfile import LockFile
 
@@ -22,6 +24,7 @@ class TestZfsDevice(CommandCaptureTestCase):
         super(TestZfsDevice, self).setUp()
 
         self.zpool_name = 'Dave'
+        ZfsDevice.lock_refcount = defaultdict(int)
 
         self.addCleanup(mock.patch.stopall)
 
@@ -51,11 +54,12 @@ class TestZfsDeviceImportExport(TestZfsDevice):
             pid = 12345
 
         mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.LockFile', autospec=MockLockFile).start()
+        mock.patch('__builtin__.open').start()
 
-        ZfsDevice.lock_refcount = defaultdict(int)
         self.zfs_device = ZfsDevice(self.zpool_name, False)
         self.zfs_device.lock_unique_id = 'mockhost_mockthread.mockpid:%s' % self.zpool_name
         self.zfs_device.lock.path = '%s/%s' % (ZfsDevice.ZPOOL_LOCK_DIR, self.zpool_name)
+        self.zfs_device.lock.lock_file = self.zfs_device.lock.path + '.lock'
         self.zfs_device.lock.reset_mock()
 
         self.zfs_device.lock.acquire.return_value = None
@@ -68,13 +72,6 @@ class TestZfsDeviceImportExport(TestZfsDevice):
     def _toggle_lock(self, timeout=0):
         self.zfs_device.lock.i_am_locking.return_value ^= True
         self.zfs_device.lock.is_locked.return_value ^= True
-
-    def _acquire_returns(self, timeout=0):
-        self.idx += 1
-        try:
-            raise self.acquire_actions[self.idx]
-        except TypeError:
-            self.acquire_actions[self.idx](self)
 
     def test_import(self):
         for force in [True, False]:
@@ -94,48 +91,6 @@ class TestZfsDeviceImportExport(TestZfsDevice):
 
                 self.assertRanAllCommandsInOrder()
                 self.zfs_device.lock.reset_mock()
-
-    # def test_import_locked(self):
-    #     self.reset_command_capture()
-    #
-    #     self.zfs_device.lock.acquire.side_effect = LockTimeout
-    #
-    #     with self.assertRaises(LockTimeout):
-    #         self.zfs_device.import_(False, False)
-    #
-    #     self.assertEqual(self.zfs_device.lock.acquire.call_count,
-    #                      (ZPOOL_LOCK_TIMEOUT / LOCK_ACQUIRE_TIMEOUT) + 1)
-    #
-    #     self.assertEqual(ZfsDevice.lock_refcount.get(self.zfs_device.lock_unique_id), None)
-    #     self.assertEqual(self.zfs_device.lock.release.call_count, 0)
-    #     self.assertEqual(self.zfs_device.lock.break_lock.call_count, 0)
-    #
-    #     self.assertRanAllCommandsInOrder()
-
-    # def test_import_force_locked(self):
-    #     self.reset_command_capture()
-    #
-    #     self.add_commands(CommandCaptureCommand(('zpool', 'import', '-f', '-N', '-o', 'readonly=on', '-o',
-    #                                              'cachefile=none', self.zpool_name,)))
-    #
-    #     # simulate 2 lock timeouts and then a successful lock acquire as side effects
-    #     self.idx = -1
-    #     self.acquire_actions = (LockTimeout, self._toggle_lock)
-    #     self.zfs_device.lock.acquire.side_effect = self._acquire_returns
-    #
-    #     self.zfs_device.import_(True, True, True)
-    #
-    #     delattr(self, 'acquire_actions')
-    #     delattr(self, 'idx')
-    #
-    #     self.zfs_device.lock.acquire.assert_has_calls([mock.call(LOCK_ACQUIRE_TIMEOUT),
-    #                                                    mock.call(LOCK_ACQUIRE_TIMEOUT)])
-    #
-    #     self.zfs_device.lock.break_lock.assert_called_once_with()
-    #     self.zfs_device.lock.release.assert_called_once_with()
-    #     self.assertEqual(ZfsDevice.lock_refcount.get(self.zfs_device.lock_unique_id), 0)
-    #
-    #     self.assertRanAllCommandsInOrder()
 
     def test_import_writable(self):
         self._add_import_commands()
@@ -369,3 +324,104 @@ class TestZfsDeviceLockFile(TestZfsDevice):
 
     def test_export_blocks(self):
         self._blocking_test_base(self.export)
+
+    def test_not_locked(self):
+        """ check pid is inserted into lockfile after being acquired """
+        zfs_device = ZfsDevice(self.zpool_name, False)
+
+        zfs_device.lock_pool()
+
+        with open(zfs_device.lock.lock_file) as f:
+            contents = f.readlines()
+
+        self.assertEqual(zfs_device.lock.pid, os.getpid())
+        self.assertEqual(contents, [str(zfs_device.lock.pid)])
+
+    def _create_owned_lockfile(self):
+        zfs_device = ZfsDevice(self.zpool_name, False)
+
+        # create lock file and write another processes pid into its content
+        other_pid = int(zfs_device.lock.pid)
+
+        while other_pid == int(zfs_device.lock.pid):
+            other_pid = randint(1000, 2000)
+
+        with open(zfs_device.lock.lock_file, 'w') as f:
+            f.writelines(str(other_pid))
+
+        return zfs_device
+
+    def test_locked_existing_pid(self):
+        """
+        check lock action blocks if owner pid is running, the fourth time lock.acquire is called, the process givens
+        by the PID is found to be non-existent and the lock is broken and reacquired and given the current process' PID
+        """
+        zfs_device = self._create_owned_lockfile()
+
+        no_such_process_exception = OSError()
+        no_such_process_exception.errno = ESRCH
+        mock_kill = mock.Mock()
+        mock_kill.side_effect = (True, True, True, no_such_process_exception)
+
+        with open(zfs_device.lock.lock_file) as f:
+            contents = f.readlines()
+
+        self.assertNotEqual(contents, [str(zfs_device.lock.pid)])
+
+        with mock.patch('os.kill', mock_kill):
+            self.assertFalse(zfs_device.lock.i_am_locking())
+            zfs_device.lock_pool()
+
+        self.assertTrue(zfs_device.lock.i_am_locking())
+
+        with open(zfs_device.lock.lock_file) as f:
+            contents = f.readlines()
+
+        self.assertEqual(mock_kill.call_count, 4)
+        self.assertEqual(contents, [str(zfs_device.lock.pid)])
+        self.assertEqual(ZfsDevice.lock_refcount.get(zfs_device.lock_unique_id), 1)
+
+    def test_locked_nonexistent_pid(self):
+        """ check lock is broken when owner pid is not running """
+        zfs_device = self._create_owned_lockfile()
+
+        no_such_process_exception = OSError()
+        no_such_process_exception.errno = ESRCH
+        mock_kill = mock.Mock()
+        mock_kill.side_effect = no_such_process_exception
+
+        with open(zfs_device.lock.lock_file) as f:
+            contents = f.readlines()
+
+        self.assertNotEqual(contents, [str(zfs_device.lock.pid)])
+
+        with mock.patch('os.kill', mock_kill):
+            self.assertFalse(zfs_device.lock.i_am_locking())
+            zfs_device.lock_pool()
+
+        self.assertTrue(zfs_device.lock.i_am_locking())
+
+        with open(zfs_device.lock.lock_file) as f:
+            contents = f.readlines()
+
+        self.assertEqual(mock_kill.call_count, 1)
+        self.assertEqual(contents, [str(zfs_device.lock.pid)])
+        self.assertEqual(ZfsDevice.lock_refcount.get(zfs_device.lock_unique_id), 1)
+
+    def test_not_initialised(self):
+        """ check lock directory is initialised """
+        ZfsDevice.locks_dir_initialized = False
+        zfs_device = ZfsDevice(self.zpool_name, False)
+
+        mock_mkdir = mock.Mock()
+        with mock.patch('os.mkdir', mock_mkdir):
+            zfs_device.lock_pool()
+
+            mock_mkdir.assert_called_once_with(ZfsDevice.ZPOOL_LOCK_DIR)
+            mock_mkdir.reset_mock()
+
+            zfs_device.lock_pool()
+
+            mock_mkdir.assert_not_called()
+
+        ZfsDevice.locks_dir_initialized = False
