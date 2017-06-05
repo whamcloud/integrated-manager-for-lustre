@@ -279,7 +279,10 @@ class SessionTable(object):
         else:
             daemon_log.info("SessionTable.terminate %s/%s" % (plugin_name, session.id))
             session.teardown()
-            del self._sessions[plugin_name]
+            try:
+                del self._sessions[plugin_name]
+            except KeyError:
+                daemon_log.warning("SessionTable.terminate session object already gone")
 
     def terminate_all(self):
         for session in self._sessions.values():
