@@ -14,6 +14,7 @@ from chroma_agent.chroma_common.lib import util
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error
 from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_function
+from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_function
 from chroma_agent import config
 
 
@@ -69,6 +70,20 @@ def initialise_block_device_drivers():
     console_log.info("Initialising drivers for block device types")
     for cls in util.all_subclasses(BlockDevice):
         error = cls.initialise_driver(config.profile_managed)
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
+
+
+# When the agent is stopped we want to allow block devices to do any termination that they might need, this function
+# may also be called by the manager.
+@agent_daemon_teardown_function()
+def terminate_block_device_drivers():
+    console_log.info("Terminating drivers for block device types")
+    for cls in util.all_subclasses(BlockDevice):
+        error = cls.terminate_driver(config.profile_managed)
 
         if error:
             return agent_error(error)

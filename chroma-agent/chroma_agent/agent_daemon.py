@@ -29,6 +29,7 @@ from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.log import daemon_log, daemon_log_setup, console_log_setup, increase_loglevel, decrease_loglevel
 from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_functions
+from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_functions
 
 
 class ServerProperties(object):
@@ -207,4 +208,9 @@ def main():
         # NB I would rather ensure cleanup by using 'with', but this
         # is python 2.4-compatible code
         context.close()
+
+    # Call any agent daemon startup methods that were registered.
+    for function in agent_daemon_teardown_functions:
+        function()
+
     daemon_log.info("Terminating")

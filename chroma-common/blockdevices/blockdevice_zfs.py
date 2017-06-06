@@ -540,3 +540,21 @@ class BlockDeviceZfs(BlockDevice):
                     break
 
         return error
+
+    @classmethod
+    def terminate_driver(cls, managed_mode):
+        # prune locks owned by THIS process
+        lockfiles = os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)
+
+        for lockfile in lockfiles:
+            with open(ZfsDevice.ZPOOL_LOCK_DIR + lockfile, 'r') as f:
+                contents = f.readlines()
+
+            assert len(contents) == 1 and contents[0].isdigit(), \
+                'unexpected contents of lockfile %s: %s' % (lockfile, contents)
+
+            # validate pid holding lock is THIS process' pid
+            if os.getpid() == int(contents[0]):
+                os.remove(ZfsDevice.ZPOOL_LOCK_DIR + lockfile)
+
+        return None

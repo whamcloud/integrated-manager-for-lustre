@@ -99,6 +99,10 @@ class BlockDevice(object):
     def initialise_driver(cls, managed_mode):
         return None
 
+    @classmethod
+    def terminate_driver(cls, managed_mode):
+        return None
+
     @abc.abstractmethod
     def mgs_targets(self, log):
         """
