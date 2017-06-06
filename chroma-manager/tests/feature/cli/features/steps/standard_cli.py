@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-from __future__ import print_function
 import os
 from behave import *
 from nose.tools import *
@@ -92,5 +86,5 @@ def step(context, message):
         ok_(message not in "".join(context.stdout.readlines()))
     except AssertionError:
         context.stdout.seek(0)
-        print(context.stdout.readlines())
+        print context.stdout.readlines()
         raise
