@@ -89,27 +89,18 @@ else
   behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
 fi
 
-cd ../chroma-agent
-nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml $COVERAGE_STRING
+for component in "agent" "common"; do
+  cd $CHROMA_DIR/chroma-$component
+  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-$component-unit-test-results.xml $COVERAGE_STRING
 
-if $MEASURE_COVERAGE; then
-  mv .coverage $WORKSPACE/.coverage.chroma_agent_unit_tests
+  if $MEASURE_COVERAGE; then
+    mv .coverage $WORKSPACE/.coverage.chroma_${component}_unit_tests
 
-  cd $WORKSPACE
-  coverage combine
-  coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
-fi
-
-cd ../chroma-common
-nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-common-unit-test-results.xml $COVERAGE_STRING
-
-if $MEASURE_COVERAGE; then
-  mv .coverage $WORKSPACE/.coverage.chroma_common_unit_tests
-
-  cd $WORKSPACE
-  coverage combine
-  coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
-fi
+    cd $WORKSPACE
+    coverage combine
+    coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
+  fi
+done
 
 set -e
 
