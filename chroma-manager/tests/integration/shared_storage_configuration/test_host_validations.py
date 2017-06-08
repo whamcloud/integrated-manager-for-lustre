@@ -1,6 +1,6 @@
 from testconfig import config
 from django.utils.unittest import skipIf
-from tests.chroma_common.lib.name_value_list import NameValueList
+from chroma_common.lib.name_value_list import NameValueList
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 

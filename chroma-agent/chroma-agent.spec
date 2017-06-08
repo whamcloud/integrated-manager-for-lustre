@@ -28,6 +28,7 @@ Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
 Requires: chroma-diagnostics >= %{version}
+Requires: chroma-common = %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif

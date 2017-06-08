@@ -6,6 +6,7 @@ cleanup() {
         exec 2>$tmpfile
         env >&2
     fi
+    export PYTHONPATH=$CHROMA_DIR/chroma-common:$PYTHONPATH
     python $CHROMA_DIR/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1 || true
     # look for known failures in the logs
     if grep "LDISKFS-fs (.*): group descriptors corrupted" $WORKSPACE/test_logs/*-messages.log; then

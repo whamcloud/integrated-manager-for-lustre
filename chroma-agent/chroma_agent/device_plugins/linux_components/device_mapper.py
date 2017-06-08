@@ -11,8 +11,8 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.lib import util
+from chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_common.lib import util
 
 
 class DmsetupTable(object):

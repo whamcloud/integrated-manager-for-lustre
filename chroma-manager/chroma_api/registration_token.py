@@ -12,7 +12,7 @@ from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import CustomModelResource
 from chroma_core.models import RegistrationToken
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 
 import settings
 

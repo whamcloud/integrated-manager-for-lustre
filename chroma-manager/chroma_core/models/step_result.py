@@ -10,7 +10,7 @@ from django.db import models
 
 from picklefield.fields import PickledObjectField
 
-from chroma_core.chroma_common.lib import util
+from chroma_common.lib import util
 from chroma_core.lib.job import Step
 
 MAX_STATE_STRING = 32

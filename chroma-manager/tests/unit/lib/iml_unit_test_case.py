@@ -2,7 +2,10 @@ from django.test import TestCase
 
 from chroma_core.models import Command
 from chroma_core.services.log import log_register
+from chroma_common.lib import util
 
+# Manager unit tests should not use threading, see comment in util.py
+util._use_threads_default = False
 log = log_register('iml_test_case')
 
 

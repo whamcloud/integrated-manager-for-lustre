@@ -9,7 +9,7 @@ import socket
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.lib import fence_agents
-from chroma_agent.chroma_common.lib import util
+from chroma_common.lib import util
 
 
 class PacemakerError(Exception):

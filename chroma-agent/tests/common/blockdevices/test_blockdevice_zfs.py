@@ -2,8 +2,8 @@ import glob
 import mock
 
 from os import path
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
-from tests.chroma_common.blockdevices.blockdevice_base_tests import BaseTestBD
+from chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from tests.common.blockdevices.blockdevice_base_tests import BaseTestBD
 from tests.data.chroma_common import example_data
 from tests.command_capture_testcase import CommandCaptureCommand
 

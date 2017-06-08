@@ -4,10 +4,11 @@
 
 
 import abc
+import re
 from collections import namedtuple
 from operator import attrgetter
-from tests.chroma_common.lib import util
-import re
+
+from chroma_common.lib import util
 
 
 class RemoteFirewallControl(object):

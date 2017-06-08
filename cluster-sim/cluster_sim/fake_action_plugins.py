@@ -10,7 +10,7 @@ from chroma_agent.lib.pacemaker import PacemakerConfigurationError
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class FakeActionPlugins():

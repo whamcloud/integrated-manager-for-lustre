@@ -5,7 +5,7 @@ from tests.unit.chroma_core import helpers
 from chroma_core.lib.job import Step
 from chroma_core.services.log import log_register
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
-from chroma_core.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
+from chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 
 log = log_register('iml_test_case')
 
@@ -169,4 +169,3 @@ class InvokeAgentInvoke(object):
         return (self.host_fqdn == other.host_fqdn and
                 self.command == other.command and
                 self.args == other.args)
-

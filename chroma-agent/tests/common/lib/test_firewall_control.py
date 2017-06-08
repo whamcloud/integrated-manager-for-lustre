@@ -2,9 +2,9 @@ import tempfile
 import mock
 import abc
 
-from chroma_agent.chroma_common.lib import util
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
+from chroma_common.lib import util
+from chroma_common.lib.firewall_control import FirewallControl
+from chroma_common.lib.firewall_control import FirewallControlEL6
 from tests.command_capture_testcase import CommandCaptureTestCase
 from tests.command_capture_testcase import CommandCaptureCommand
 

@@ -22,6 +22,7 @@ cleanup() {
         tmpfile=/tmp/abort.$$.debug
         exec 2>/tmp/tmpfile
     fi
+    export PYTHONPATH=chroma/chroma-common:$PYTHONPATH
     python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1
     chroma/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster || true
     echo "exit trap done"

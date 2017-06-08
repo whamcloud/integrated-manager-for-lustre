@@ -1,6 +1,6 @@
 import mock
 from django.utils import unittest
-from chroma_agent.chroma_common.lib.ntp import NTPConfig
+from chroma_common.lib.ntp import NTPConfig
 
 
 class TestNTPConfig(unittest.TestCase):

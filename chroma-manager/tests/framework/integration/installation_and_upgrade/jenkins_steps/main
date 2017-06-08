@@ -19,6 +19,7 @@ set -x
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e
+export PYTHONPATH=chroma/chroma-common:$PYTHONPATH
 python \"$CHROMA_DIR\"/chroma-manager/tests/integration/utils/chroma_log_collector.py \"$WORKSPACE/test_logs\" $CLUSTER_CONFIG || true
 \"$CHROMA_DIR\"/chroma-manager/tests/framework/utils/provisioner_interface/release_cluster" EXIT
 

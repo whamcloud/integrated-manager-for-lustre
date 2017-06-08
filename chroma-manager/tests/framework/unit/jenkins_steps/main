@@ -26,6 +26,7 @@ scripts/update_chroma-externals.py
 cd $CHROMA_DIR/chroma-manager
 make requirements
 python tests/utils/pip_install_requirements.py $PWD/../chroma-externals
+export PYTHONPATH=$PWD/../chroma-common:$PYTHONPATH
 
 #
 # patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff

@@ -22,7 +22,7 @@ from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
 from chroma_core.services.rpc import RpcClientFactory
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from chroma_common.lib.date_time import IMLDateTime
 import chroma_core.services.log
 
 

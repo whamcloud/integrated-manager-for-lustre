@@ -15,7 +15,7 @@ from testconfig import config
 from tests.utils.http_requests import HttpRequests
 from tests.utils.http_requests import AuthorizedHttpRequests
 
-from tests.chroma_common.lib import util
+from chroma_common.lib import util
 
 from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
 

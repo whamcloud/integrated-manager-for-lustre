@@ -11,9 +11,9 @@ from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
 from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
-from chroma_agent.chroma_common.lib.service_control import ServiceControlEL6
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
+from chroma_common.lib.firewall_control import FirewallControlEL6
+from chroma_common.lib.service_control import ServiceControlEL6
+from chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class FakeEtherInfo(object):
