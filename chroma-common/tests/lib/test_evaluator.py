@@ -1,9 +1,8 @@
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
-
 from chroma_common.lib.evaluator import safe_eval
+from chroma_common.test.iml_unit_testcase import ImlUnitTestCase
 
 
-class TestEvaluator(IMLUnitTestCase):
+class TestEvaluator(ImlUnitTestCase):
     def test_good_evaluation(self):
         var1 = 101242123
         var_2 = 12124.242442
