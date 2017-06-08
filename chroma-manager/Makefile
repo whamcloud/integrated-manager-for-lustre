@@ -226,8 +226,8 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 	rm -f requirements.tmp
 	set -e;                                               \
 	if grep ^make $@; then                                \
-		echo "why is this not quiet like it should be?";  \
-		sed -i -e '/^make\[[0-9]\]: /d' $@;               \
+	    echo "why is this not quiet like it should be?";  \
+	    sed -i -e '/^make\[[0-9]\]: /d' $@;               \
 	fi
 	echo "jenkins_fold:end:Make requirements.txt"
 
@@ -241,11 +241,11 @@ docs: requirements.txt version
 	set -e;                                                     \
 	export PYTHONPATH=$$(pwd)/../chroma-common:$$PYTHONPATH;    \
 	if [ -z $(VIRTUAL_ENV) ] ; then                             \
-		virtualenv myenv;                                       \
-		. myenv/bin/activate;                                   \
-		CACHE=$$(pwd)/../chroma-externals;                      \
-		echo "# Using pip cache at $$CACHE";                    \
-		python tests/utils/pip_install_requirements.py $$CACHE; \
+	    virtualenv myenv;                                       \
+	    . myenv/bin/activate;                                   \
+	    CACHE=$$(pwd)/../chroma-externals;                      \
+	    echo "# Using pip cache at $$CACHE";                    \
+	    python tests/utils/pip_install_requirements.py $$CACHE; \
 	fi;                                                         \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"

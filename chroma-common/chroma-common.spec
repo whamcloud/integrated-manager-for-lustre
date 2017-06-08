@@ -35,12 +35,6 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 
-touch test.files
-for test_file in $(find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_common/test/ -type f -name '*.py*'); do
-  install_file=${test_file/$RPM_BUILD_ROOT\///}
-  echo "${install_file}" >> test.files
-done
-
 %clean
 rm -rf %{buildroot}
 
@@ -48,5 +42,5 @@ rm -rf %{buildroot}
 %exclude %{python_sitelib}/chroma_common/test
 %{python_sitelib}/*
 
-%files -f test.files test
-%defattr(-,root,root)
+%files test
+%{python_sitelib}/chroma_common/test

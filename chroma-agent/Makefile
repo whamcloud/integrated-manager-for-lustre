@@ -47,10 +47,10 @@ rpms: production cleandist tarball
 	dist=$$(rpm --eval %dist);                                \
 	dist=$${dist/.centos/};                                   \
 	rpmbuild --define "_topdir $$(pwd)/_topdir"               \
-		 --define "version $(PACKAGE_VERSION)"                \
-		 --define "package_release $(PACKAGE_RELEASE)"        \
-		 --define "%dist $$dist"                              \
-		 -bb _topdir/SPECS/chroma-agent.spec
+	     --define "version $(PACKAGE_VERSION)"                \
+	     --define "package_release $(PACKAGE_RELEASE)"        \
+	     --define "%dist $$dist"                              \
+	     -bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir
 	echo "jenkins_fold:end:Make Agent RPMS"
