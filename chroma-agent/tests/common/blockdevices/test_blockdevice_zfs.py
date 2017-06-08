@@ -5,7 +5,7 @@ from os import path
 from chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from tests.common.blockdevices.blockdevice_base_tests import BaseTestBD
 from tests.data.chroma_common import example_data
-from tests.command_capture_testcase import CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureCommand
 
 
 class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):

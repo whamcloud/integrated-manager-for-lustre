@@ -3,8 +3,7 @@ import threading
 import mock
 from collections import defaultdict
 
-from tests.command_capture_testcase import CommandCaptureCommand
-from tests.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureCommand, CommandCaptureTestCase
 from chroma_common.blockdevices.blockdevice_zfs import ZfsDevice
 from chroma_common.lib.util import ExceptionThrowingThread
 from chroma_common.lib.shell import BaseShell

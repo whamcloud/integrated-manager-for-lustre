@@ -7,7 +7,7 @@ from mock import patch
 from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
 from chroma_agent import config
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 
 

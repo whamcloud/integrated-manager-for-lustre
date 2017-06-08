@@ -7,7 +7,7 @@ import mock
 import errno
 
 from chroma_common.lib.shell import Shell
-from tests.lib.agent_unit_testcase import AgentUnitTestCase
+from iml_unit_testcase import ImlUnitTestCase
 
 
 class CommandCaptureCommand(object):
@@ -22,7 +22,7 @@ class CommandCaptureCommand(object):
         return '"%s" returning %s' % (' '.join(self.args), self.rc)
 
 
-class CommandCaptureTestCase(AgentUnitTestCase):
+class CommandCaptureTestCase(ImlUnitTestCase):
     CommandNotFound = 123456
 
     def setUp(self):

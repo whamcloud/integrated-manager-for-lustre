@@ -1,8 +1,8 @@
 import sys
 import mock
 
-from tests.command_capture_testcase import CommandCaptureTestCase
-from tests.command_capture_testcase import CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase
+from chroma_common.test.command_capture_testcase import CommandCaptureCommand
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
 from chroma_agent.action_plugins.manage_corosync2 import change_mcast_port

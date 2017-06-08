@@ -2,7 +2,7 @@ import mock
 
 from chroma_common.filesystems.filesystem_zfs import FileSystemZfs
 from chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestFileSystemZFS(CommandCaptureTestCase):
