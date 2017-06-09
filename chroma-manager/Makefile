@@ -210,7 +210,7 @@ rpms: cleandist tarball
 
 requirements: requirements.txt
 
-requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile
+requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile requirements.dev
 	echo "jenkins_fold:start:Make requirements.txt"
 	rm -f requirements.tmp
 	$(MAKE) -C ../chroma-dependencies requirements
@@ -230,7 +230,7 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 
 download: requirements.txt
 	echo "jenkins_fold:start:Install Python requirements"
-	pip-python install --download ../chroma-externals -r requirements.txt
+	pip install -r requirements.txt
 	echo "jenkins_fold:end:Install Python requirements"
 
 docs: requirements.txt version
@@ -239,9 +239,7 @@ docs: requirements.txt version
 	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
 		virtualenv myenv;                                       \
 		. myenv/bin/activate;                                   \
-		CACHE=$$(pwd)/../chroma-externals;                      \
-		echo "# Using pip cache at $$CACHE";                    \
-		python tests/utils/pip_install_requirements.py $$CACHE; \
+		pip install -r requirements.txt;                        \
 	fi;                                                             \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"

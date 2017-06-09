@@ -21,7 +21,7 @@ cleanrepo: TARGET=cleanrepo
 requirements::
 	# these are the ones provided by EL and EPEL and our own repo
 	set -e;                                                   \
-	{ echo "../chroma-externals/netaddr-0.7.5.zip";           \
+	{ echo "https://github.com/drkjam/netaddr/archive/rel-0.7.5.tar.gz"; \
 	if [ $(shell rpm --eval '%{?rhel}') -lt 7 ]; then         \
 	    echo "paramiko==1.7.5";                               \
 	    echo "pycrypto==2.0.1";                               \
@@ -55,7 +55,6 @@ requirements::
 	echo "nose==1.2.1";                                       \
 	echo "supervisor==3.0b1";                                 \
 	echo "pyparsing==1.5.6";                                  \
-	echo "kombu==3.0.19";                                     \
 	echo "jsonschema==0.8.0";                                 \
 	echo "nose-testconfig==0.8";                              \
 	echo "mock==1.0.1";                                       \
