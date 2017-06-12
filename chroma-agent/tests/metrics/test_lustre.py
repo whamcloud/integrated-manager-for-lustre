@@ -20,7 +20,7 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def test_mdsmgs_metrics(self):
         """Test that the various MGS/MDS metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
-                                     "data/lustre_versions/2.0.66/mds_mgs")
+                                      "data/lustre_versions/2.0.66/mds_mgs")
 
         audit = LocalAudit()
 
@@ -34,7 +34,7 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def test_mdt_hsm_metrics(self):
         """Test that the HSM metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
-                                     "data/lustre_versions/2.5.0/mds")
+                                      "data/lustre_versions/2.5.0/mds")
 
         audit = LocalAudit()
 
@@ -67,6 +67,7 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
 
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
+        print "metrics: %s" % metrics
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
         self.assertEqual(metrics['lnet']['recv_count'], 156747)
         self.assertEqual(len(metrics['target']), 7)
