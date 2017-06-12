@@ -87,7 +87,7 @@ class TestMissingLustreVersion(PatchedContextTestCase):
     def setUp(self):
         self.test_root = tempfile.mkdtemp()
         super(TestMissingLustreVersion, self).setUp()
-        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+        os.makedirs(os.path.join(self.test_root, "sys/fs/lustre"))
         self.audit = LustreAudit()
 
     def test_version(self):
