@@ -216,6 +216,7 @@ class FakeServer(utils.Persisted):
         raise CallbackAfterResponse(None, _restart)
 
     def scan_packages(self):
+        log.debug("scan_packages")
         packages = {}
         for package, available_version in self._simulator.available_packages(self.node_type).items():
             try:
@@ -227,6 +228,7 @@ class FakeServer(utils.Persisted):
                 'available': [available_version],
                 'installed': installed
             }
+            log.debug("  %s: available: %s, installed: %s" % (package, available_version, installed))
 
         return {'external': packages}
 

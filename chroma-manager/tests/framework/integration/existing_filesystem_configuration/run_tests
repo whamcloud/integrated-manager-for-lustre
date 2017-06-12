@@ -15,7 +15,7 @@ CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-TESTS=${TESTS:-"tests/integration/existing_filesystem_configuration/"}
+TESTS=${TESTS:-"tests/integration/existing_filesystem_configuration/test_filesystem_detection.py:TestFilesystemDetection.test_filesystem_detection_verify_mountable"}
 
 trap "set +e; collect_reports; cleanup" EXIT
 
