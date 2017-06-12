@@ -4,6 +4,7 @@
 
 
 import xml.etree.ElementTree as xml
+import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
@@ -42,11 +43,11 @@ class CorosyncPlugin(DevicePlugin):
         1.1.7-6.el6 (Build 148fccfd5985c5590cc601123c6c16e966b85d14)
     """
 
+    # This is the message that crm_mon will report
+    # when corosync is not running
     COROSYNC_CONNECTION_FAILURE = ("Connection to cluster failed: "
                                    "connection failed")
 
-    # This is the message that crm_mon will report
-    # when corosync is not running
     def _parse_crm_as_xml(self, raw):
         """ Parse the crm_mon response
 
@@ -95,7 +96,13 @@ class CorosyncPlugin(DevicePlugin):
         """
 
         crm_command = ['crm_mon', '--one-shot', '--as-xml']
-        rc, stdout, stderr = AgentShell.run_old(crm_command)
+        try:
+            rc, stdout, stderr = AgentShell.run_old(crm_command)
+        except OSError, e:
+            # ENOENT is fine here.  Pacemaker might not be installed yet.
+            if e.errno != errno.ENOENT:
+                raise
+
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
             daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
                                (rc, crm_command, stdout, stderr))
