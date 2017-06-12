@@ -1,9 +1,0 @@
-snapshot_time             1328809138.219533 secs.usecs
-req_waittime              80 samples [usec] 37 1038 8785 2996513
-req_active                80 samples [reqs] 1 1 80 80
-ost_create                2 samples [usec] 78 575 653 336709
-ost_get_info              1 samples [usec] 37 37 37 1369
-ost_connect               1 samples [usec] 1038 1038 1038 1077444
-ost_statfs                9 samples [usec] 47 144 855 93693
-ost_set_info              1 samples [usec] 1034 1034 1034 1069156
-obd_ping                  66 samples [usec] 66 155 5168 418142
