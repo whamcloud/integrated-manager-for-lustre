@@ -149,7 +149,7 @@ agent_tests:
 			| tee ../chroma-agent/unit.log; \
 	exit $${PIPESTATUS[0]}
 
-unit_tests:
+unit_tests unit-tests:
 	@echo "Running standard unit tests..."
 	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
