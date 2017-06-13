@@ -53,16 +53,7 @@ class SupervisorStatus(object):
     def __init__(self):
         username = None
         password = None
-
-        if settings.DEBUG:
-            # In development, use inet_http_server set up by django-supervisor
-            username = hashlib.md5(settings.SECRET_KEY).hexdigest()[:7]
-            password = hashlib.md5(username).hexdigest()
-
-            url = "http://localhost:9100/RPC2"
-        else:
-            # In production, use static inet_http_server settings
-            url = "http://localhost:9100/RPC2"
+        url = "http://localhost:9100/RPC2"
 
         self._xmlrpc = xmlrpclib.ServerProxy(
             'http://127.0.0.1',
