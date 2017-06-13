@@ -870,16 +870,8 @@ class MountOrImportStep(Step):
             else:
                 return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
 
-    @classmethod
-    def create_parameters(cls, target, host, start_target):
-        """
-        Create the kwargs appropriate for the MakeTargetActive step.
-
-        :param target: The lustre target to be made available to host (and hence unavailable to other hosts)
-        :param host: The host target to be made available to, or None if target to be made unavailable on all hosts
-        :param start_target: True means the target is started False means it is just imported.
-        :return:
-        """
+    @staticmethod
+    def _get_active_inactive_volume_nodes(target, host):
         inactive_volume_nodes = []
         active_volume_node = None
 
@@ -893,10 +885,35 @@ class MountOrImportStep(Step):
             else:
                 inactive_volume_nodes.append(target_volume_info)
 
+        return active_volume_node, inactive_volume_nodes
+
+    @classmethod
+    def create_parameters(cls, target, host, start_target):
+        """
+        Create the kwargs appropriate for the MakeTargetActive step.
+
+        :param target: The lustre target to be made available to host (and hence unavailable to other hosts)
+        :param host: The host target to be made available to, or None if target to be made unavailable on all hosts
+        :param start_target: True means the target is started False means it is just imported.
+        :return:
+        """
+        if host is not None:
+            job_log.info("create_parameters: looking for active_volume_node for host '%s', target '%s', "
+                         "volume '%s', initial volume_nodes: '%s'" % (host, target, target.volume.label,
+                                                                      target.volume.volumenode_set.all()))
+
+            util.wait_for_result(lambda: VolumeNode.objects.get(host=host, volume=target.volume),
+                                 logger=job_log,
+                                 timeout=60 * 60,
+                                 expected_exception_classes=[VolumeNode.DoesNotExist])
+
+        active_volume_node, inactive_volume_nodes = cls._get_active_inactive_volume_nodes(target, host)
+
         job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
 
-        assert ((host is not None) and (active_volume_node is not None)) or \
-               ((host is None) and (active_volume_node is None))
+        assert ((host is None) or (active_volume_node is not None)), "active_volume_node not found for host '%s' " \
+                                                                     "out of volume_nodes '%s'" % (host,
+                                                                                                   target.volume.volumenode_set.all())
 
         return {'target': target,
                 'inactive_volume_nodes': inactive_volume_nodes,
