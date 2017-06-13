@@ -30,12 +30,12 @@ wq
 EOF
 for key in CentOS-7 redhat-release; do
     if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-$key ]; then
-        rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-$key
+        rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key
     fi
 done
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
-yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
