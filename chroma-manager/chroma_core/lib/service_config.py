@@ -29,6 +29,8 @@ from django.core.management import ManagementUtility
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
+from tastypie.models import ApiKey
+
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
@@ -570,6 +572,17 @@ class ServiceConfig(CommandLine):
             log.info("User '%s' successfully created." % username)
         else:
             log.info("User accounts already created")
+
+        API_USERNAME = "api"
+
+        try:
+            User.objects.get(username=API_USERNAME)
+            log.info("API user already created")
+        except User.DoesNotExist:
+            api_user = User.objects.create_superuser(API_USERNAME, "", User.objects.make_random_password())
+            api_user.groups.add(Group.objects.get(name='superusers'))
+            ApiKey.objects.get_or_create(user=api_user)
+            log.info("API user created")
 
         return error
 

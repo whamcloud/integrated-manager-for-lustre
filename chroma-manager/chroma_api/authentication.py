@@ -5,7 +5,7 @@
 
 import settings
 
-from tastypie.authentication import Authentication
+from tastypie.authentication import Authentication, ApiKeyAuthentication
 from tastypie.authorization import Authorization, DjangoAuthorization
 from django.utils.crypto import constant_time_compare
 
@@ -32,7 +32,11 @@ class CsrfAuthentication(Authentication):
     CSRF hoops.  We should check if someone is authenticating by key instead
     of username/password, and if so avoid applying the CSRF check.
     """
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if ApiKeyAuthentication().is_authenticated(request, object):
+            return True
+
         if request.method != "POST":
             return True
 
@@ -48,7 +52,11 @@ class CsrfAuthentication(Authentication):
 class AnonymousAuthentication(CsrfAuthentication):
     """Tastypie authentication class which only allows in
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if ApiKeyAuthentication().is_authenticated(request, object):
+            return True
+
         # If any authentication in the class hierarchy refuses, we refuse
         if not super(AnonymousAuthentication, self).is_authenticated(request, object):
             return False
