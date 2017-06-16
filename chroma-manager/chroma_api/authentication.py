@@ -15,7 +15,7 @@ from django.utils.crypto import constant_time_compare
 def has_api_key(request):
     result = ApiKeyAuthentication().is_authenticated(request)
 
-    return isinstance(result, HttpUnauthorized)
+    return not isinstance(result, HttpUnauthorized)
 
 class CsrfAuthentication(Authentication):
     """Tastypie authentication class for rejecting POSTs
