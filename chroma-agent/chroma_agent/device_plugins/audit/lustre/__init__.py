@@ -349,11 +349,16 @@ class MdtAudit(TargetAudit):
         }
 
     def read_stats(self, target):
-        """Aggregate mish-mash of MDT stats into one stats dict."""
+        """
+        Aggregate mish-mash of MDT stats into one stats dict.
+
+        As of lustre version 2.9.58, some of the expected stats have moved to /proc/fs/lustre/mds/MDS/mdt
+        """
         stats = {}
-        for stats_file in "mdt/stats md_stats".split():
-            path = os.path.join(self.target_root, "mdt", target, stats_file)
+        for stats_file in ["mdt/%s/md_stats" % target, "mds/MDS/mdt/stats"]:
+            path = os.path.join(self.target_root, stats_file)
             stats.update(self.stats_dict_from_file(path))
+
         return stats
 
     def get_client_count(self, target):

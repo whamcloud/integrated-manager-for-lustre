@@ -1,0 +1,10 @@
+snapshot_time             1314641981.872652 secs.usecs
+read_bytes                1892 samples [bytes] 4096 1048576 502628352
+write_bytes               15203 samples [bytes] 4096 1048576 15311790080
+get_info                  50382 samples [reqs]
+destroy                   50254 samples [reqs]
+punch                     127 samples [reqs]
+sync                      231 samples [reqs]
+preprw                    17095 samples [reqs]
+commitrw                  17095 samples [reqs]
+ping                      270 samples [reqs]
