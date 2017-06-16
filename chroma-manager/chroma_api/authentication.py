@@ -27,14 +27,10 @@ class CsrfAuthentication(Authentication):
     In principle you can argue that any CSRF attacks on JSON APIs are
     the browser's (read: end user's) fault, not ours.  In the wild, that
     is a very unhelpful attitude.
-
-    TODO: it is annoying for non-browser clients to have to jump through the
-    CSRF hoops.  We should check if someone is authenticating by key instead
-    of username/password, and if so avoid applying the CSRF check.
     """
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
-        if ApiKeyAuthentication().is_authenticated(request, object):
+        if ApiKeyAuthentication().is_authenticated(request):
             return True
 
         if request.method != "POST":
@@ -54,7 +50,7 @@ class AnonymousAuthentication(CsrfAuthentication):
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
-        if ApiKeyAuthentication().is_authenticated(request, object):
+        if ApiKeyAuthentication().is_authenticated(request):
             return True
 
         # If any authentication in the class hierarchy refuses, we refuse
