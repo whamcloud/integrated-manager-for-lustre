@@ -5,10 +5,17 @@
 
 import settings
 
+from tastypie.http import HttpUnauthorized
+
 from tastypie.authentication import Authentication, ApiKeyAuthentication
 from tastypie.authorization import Authorization, DjangoAuthorization
 from django.utils.crypto import constant_time_compare
 
+
+def has_api_key(request):
+    result = ApiKeyAuthentication().is_authenticated(request)
+
+    return isinstance(result, HttpUnauthorized)
 
 class CsrfAuthentication(Authentication):
     """Tastypie authentication class for rejecting POSTs
@@ -30,7 +37,7 @@ class CsrfAuthentication(Authentication):
     """
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
-        if ApiKeyAuthentication().is_authenticated(request):
+        if has_api_key(request):
             return True
 
         if request.method != "POST":
@@ -50,7 +57,7 @@ class AnonymousAuthentication(CsrfAuthentication):
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
-        if ApiKeyAuthentication().is_authenticated(request):
+        if has_api_key(request):
             return True
 
         # If any authentication in the class hierarchy refuses, we refuse
