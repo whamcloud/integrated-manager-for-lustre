@@ -1,0 +1,15 @@
+fsname: testfs
+flags: 0x20     gen: 13
+testfs-MDT0000
+testfs-OST0000
+testfs-OST0001
+
+Secure RPC Config Rules:
+
+imperative_recovery_state:
+    state: full
+    nonir_clients: 0
+    nidtbl_version: 11
+    notify_duration_total: 0.011842663
+    notify_duation_max: 0.006428147
+    notify_count: 3
