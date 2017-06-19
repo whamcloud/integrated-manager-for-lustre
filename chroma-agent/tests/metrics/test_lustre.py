@@ -65,7 +65,6 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
 #        """Test that the various OSS metrics are collected and aggregated (2.4+)."""
 #        self.test_root = os.path.join(self.tests,
 #                                      "data/lustre_versions/2.9.58_86_g2383a62/oss")
-#                                      # "data/lustre_versions/2.5.0/oss")
 #
 #        audit = LocalAudit()
 #        metrics = audit.metrics()['raw']['lustre']

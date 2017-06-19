@@ -1,5 +1,0 @@
-snapshot_time             1314641981.908311 secs.usecs
-set_info_async            4 samples [reqs]
-create                    519 samples [reqs]
-llog_connect              1 samples [reqs]
-ping                      317 samples [reqs]
