@@ -350,8 +350,10 @@ class RealRemoteOperations(RemoteOperations):
                        (r.rc, r.stdout, r.stderr)
 
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+            ping_result2_report = ""
             ifconfig_result = Shell.run(['ifconfig', '-a'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+
             try:
                 gw = [l for l in ip_route_ls_result.stdout.split('\n')
                       if l.startswith("default ")][0].split()[2]
@@ -362,11 +364,13 @@ class RealRemoteOperations(RemoteOperations):
                 ping_gw_report = "\nUnable to ping gatewy.  " \
                                  "No gateway could be found in:\n" % \
                                  ip_route_ls_result.stdout
+
             if ping_result1.rc != 0:
                 time.sleep(30)
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
+                
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
                   "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
