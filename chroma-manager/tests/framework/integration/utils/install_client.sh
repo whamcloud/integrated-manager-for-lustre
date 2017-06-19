@@ -8,7 +8,7 @@ cd lustre_client_rpms
 cat << EOF > /etc/yum.repos.d/lustre-client.repo
 [lustre-client]
 name=lustre-client
-baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64%2Cbuild_type=client%2Cdistro=el\\\$releasever%2Cib_stack=inkernel/artifact/artifacts/
+baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64%2Cbuild_type=client%2Cdistro=el7%2Cib_stack=inkernel/artifact/artifacts/
 enabled=1
 sslverify=0
 gpgcheck=0
