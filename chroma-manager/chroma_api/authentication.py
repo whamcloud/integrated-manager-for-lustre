@@ -5,10 +5,17 @@
 
 import settings
 
-from tastypie.authentication import Authentication
+from tastypie.http import HttpUnauthorized
+
+from tastypie.authentication import Authentication, ApiKeyAuthentication
 from tastypie.authorization import Authorization, DjangoAuthorization
 from django.utils.crypto import constant_time_compare
 
+
+def has_api_key(request):
+    result = ApiKeyAuthentication().is_authenticated(request)
+
+    return not isinstance(result, HttpUnauthorized)
 
 class CsrfAuthentication(Authentication):
     """Tastypie authentication class for rejecting POSTs
@@ -27,12 +34,12 @@ class CsrfAuthentication(Authentication):
     In principle you can argue that any CSRF attacks on JSON APIs are
     the browser's (read: end user's) fault, not ours.  In the wild, that
     is a very unhelpful attitude.
-
-    TODO: it is annoying for non-browser clients to have to jump through the
-    CSRF hoops.  We should check if someone is authenticating by key instead
-    of username/password, and if so avoid applying the CSRF check.
     """
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if has_api_key(request):
+            return True
+
         if request.method != "POST":
             return True
 
@@ -48,7 +55,11 @@ class CsrfAuthentication(Authentication):
 class AnonymousAuthentication(CsrfAuthentication):
     """Tastypie authentication class which only allows in
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if has_api_key(request):
+            return True
+
         # If any authentication in the class hierarchy refuses, we refuse
         if not super(AnonymousAuthentication, self).is_authenticated(request, object):
             return False
