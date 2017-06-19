@@ -36,6 +36,13 @@ done
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
+/enabled/a
+gpgcheck=1
+gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+.
+wq
+EOF
 if [[ \$HOSTNAME = *vm*9 ]]; then
     build_type=client
 else
@@ -49,13 +56,6 @@ yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
     rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
 fi
-ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
-/enabled/a
-gpgcheck=1
-gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
-.
-wq
-EOF
 " | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
