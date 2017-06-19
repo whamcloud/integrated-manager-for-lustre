@@ -123,7 +123,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         Use this version of this check if you want test execution to continue
         and just want a boolean to check if it is as expected.
         """
-        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = False)
+        return self.check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, False)
 
     def verify_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
         """
@@ -132,49 +132,4 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         Use this version of this check if you expect the targets to be on their
         proper hosts already and want test execution to be halted if not.
         """
-        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = True)
-
-    def _check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true):
-        """
-        Private function providing shared logic for public facing target active host checks.
-        """
-        response = self.chroma_manager.get(
-            '/api/target/',
-            params = {
-                'filesystem_id': filesystem_id,
-            }
-        )
-        self.assertTrue(response.successful, response.text)
-        targets = response.json['objects']
-
-        response = self.chroma_manager.get(
-            '/api/host/',
-            params = {
-            }
-        )
-        self.assertTrue(response.successful, response.text)
-        hosts = response.json['objects']
-
-        for target in targets:
-            expected_host = volumes_to_expected_hosts[target['volume']['id']]
-            active_host = target['active_host']
-            if active_host is not None:
-                active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
-            logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
-
-            # Check manager's view
-            if assert_true:
-                self.assertEqual(expected_host['resource_uri'], target['active_host'])
-            else:
-                if not expected_host['resource_uri'] == target['active_host']:
-                    return False
-
-            # Check corosync's view
-            is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
-            logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
-            if assert_true:
-                self.assertEqual(is_running, True)
-            elif not is_running:
-                return False
-
-        return True
+        return self.check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, True)

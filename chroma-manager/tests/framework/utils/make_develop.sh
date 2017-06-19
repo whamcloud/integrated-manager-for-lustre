@@ -12,7 +12,7 @@ if ${INSTALL_PYCURL:-false}; then
         pip install --compile \$(pwd)/../chroma-externals/pycurl-7.43.0.tar.gz
     fi
 fi
-python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
+pip install -r requirements.txt
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc

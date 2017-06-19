@@ -343,6 +343,58 @@ class RealRemoteOperations(RemoteOperations):
         stderr, and exit status. It will verify that the exit status of the
         command matches expected_return_code unless expected_return_code=None.
         """
+
+        def host_test(address, issue_num):
+            def print_result(r):
+                return "rc: %s\n\nstdout:\n%s\n\nstderr:\n%s" % \
+                       (r.rc, r.stdout, r.stderr)
+
+            ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+            ifconfig_result = Shell.run(['ifconfig', '-a'])
+            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+            try:
+                gw = [l for l in ip_route_ls_result.stdout.split('\n')
+                      if l.startswith("default ")][0].split()[2]
+                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
+                ping_gw_report = "\nping gateway (%s): %s" % \
+                    (gw, print_result(ping_gw_result))
+            except:
+                ping_gw_report = "\nUnable to ping gatewy.  " \
+                                 "No gateway could be found in:\n" % \
+                                 ip_route_ls_result.stdout
+            if ping_result1.rc != 0:
+                time.sleep(30)
+                ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+                ping_result2_report = "\n30s later ping: %s" % \
+                    print_result(ping_result2)
+            msg = "Error connecting to %s: %s.\n" \
+                  "Please add the following to " \
+                  "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
+                  "Performing some diagnostics...\n" \
+                  "ping: %s\n" \
+                  "ifconfig -a: %s\n" \
+                  "ip route ls: %s" \
+                  "%s" \
+                  "%s" % \
+                  (address, e,
+                   issue_num,
+                   print_result(ping_result1),
+                   print_result(ifconfig_result),
+                   print_result(ip_route_ls_result),
+                   ping_gw_report,
+                   ping_result2_report)
+
+            logger.error(msg)
+
+            DEVNULL = open(os.devnull, 'wb')
+            p = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE,
+                                 stdout=DEVNULL, stderr=DEVNULL)
+            p.communicate(input=b'To: brian.murrell@intel.com\n'
+                          'Subject: GH#%s\n\n' % issue_num +
+                          msg)
+            p.wait()
+            DEVNULL.close()
+
         logger.debug("remote_command[%s]: %s" % (address, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -376,55 +428,7 @@ class RealRemoteOperations(RemoteOperations):
         try:
             ssh.connect(address, **args)
         except paramiko.ssh_exception.SSHException, e:
-            def print_result(r):
-                return "rc: %s\n\nstdout:\n%s\n\nstderr:\n%s" % \
-                       (r.rc, r.stdout, r.stderr)
-
-            ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
-            ifconfig_result = Shell.run(['ifconfig', '-a'])
-            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
-            try:
-                gw = [l for l in ip_route_ls_result.stdout.split('\n') \
-                      if l.startswith("default ")][0].split()[2]
-                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
-                ping_gw_report = "\nping gateway (%s): %s" % \
-                                  (gw, print_result(ping_gw_result))
-            except:
-                ping_gw_report = "\nUnable to ping gatewy.  " \
-                                 "No gateway could be found in:\n" % \
-                                 ip_route_ls_result.stdout
-            if ping_result1.rc != 0:
-                time.sleep(30)
-                ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
-                ping_result2_report = "\n30s later ping: %s" % \
-                                       print_result(ping_result2)
-            msg = "Error connecting to %s: %s.\n" \
-                  "Please add the following to " \
-                  "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/29\n" \
-                  "Performing some diagnostics...\n" \
-                  "ping: %s\n" \
-                  "ifconfig -a: %s\n" \
-                  "ip route ls: %s" \
-                  "%s" \
-                  "%s" % \
-                  (address, e,
-                   print_result(ping_result1),
-                   print_result(ifconfig_result),
-                   print_result(ip_route_ls_result),
-                   ping_gw_report,
-                   ping_result2_report)
-
-            logger.error(msg)
-
-            DEVNULL = open(os.devnull, 'wb')
-            p = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE,
-                                 stdout=DEVNULL, stderr=DEVNULL)
-            p.communicate(input=b'To: brian.murrell@intel.com\n' \
-                                 'Subject: GH#29\n\n' +
-                                 msg)
-            p.wait()
-            DEVNULL.close()
-
+            host_test(address, "29")
             return Shell.RunResult(1, "", "", timeout=False)
 
         transport = ssh.get_transport()
@@ -433,7 +437,12 @@ class RealRemoteOperations(RemoteOperations):
         channel.settimeout(timeout)
 
         # Actually execute the command
-        channel.exec_command(command)
+        try:
+            channel.exec_command(command)
+        except paramiko.transport.Socket, e:
+            host_test(address, "72")
+            return Shell.RunResult(1, "", "", timeout=False)
+
         if buffer:
             stdin = channel.makefile('wb')
             stdin.write(buffer)
@@ -523,7 +532,7 @@ class RealRemoteOperations(RemoteOperations):
         return result.stdout
 
     def rename_file(self, address, current_path, new_path):
-        #Warning! This will force move by overwriting destination file
+        # Warning! This will force move by overwriting destination file
         self._ssh_address(address, 'mv -f %s %s' % (current_path, new_path))
 
     def create_file(self, address, file_content, file_path):
@@ -1112,8 +1121,7 @@ class RealRemoteOperations(RemoteOperations):
     def has_chroma_agent(self, server):
         result = self._ssh_address(server,
                                    'which chroma-agent',
-                                   expected_return_code = None
-                                  )
+                                   expected_return_code = None)
         return result.rc == 0
 
     def stop_agents(self, server_list):

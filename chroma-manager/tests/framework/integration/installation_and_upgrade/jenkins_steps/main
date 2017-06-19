@@ -36,6 +36,12 @@ retries=100
 timeout=300
 EOF" | dshbak -c
 
+RHEL=false
+if [[ $slave =~ rhel[0-9]+&&.* ]]; then
+    RHEL=true
+fi
+export RHEL
+
 echo "Beginning automated test run..."
 set +x
 export JENKINS_PULL

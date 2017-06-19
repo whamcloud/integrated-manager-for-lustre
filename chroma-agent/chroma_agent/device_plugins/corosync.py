@@ -1,26 +1,10 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2017 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import xml.etree.ElementTree as xml
+import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
@@ -59,11 +43,11 @@ class CorosyncPlugin(DevicePlugin):
         1.1.7-6.el6 (Build 148fccfd5985c5590cc601123c6c16e966b85d14)
     """
 
+    # This is the message that crm_mon will report
+    # when corosync is not running
     COROSYNC_CONNECTION_FAILURE = ("Connection to cluster failed: "
                                    "connection failed")
 
-    # This is the message that crm_mon will report
-    # when corosync is not running
     def _parse_crm_as_xml(self, raw):
         """ Parse the crm_mon response
 
@@ -112,7 +96,13 @@ class CorosyncPlugin(DevicePlugin):
         """
 
         crm_command = ['crm_mon', '--one-shot', '--as-xml']
-        rc, stdout, stderr = AgentShell.run_old(crm_command)
+        try:
+            rc, stdout, stderr = AgentShell.run_old(crm_command)
+        except OSError, e:
+            # ENOENT is fine here.  Pacemaker might not be installed yet.
+            if e.errno != errno.ENOENT:
+                raise
+
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
             daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
                                (rc, crm_command, stdout, stderr))
