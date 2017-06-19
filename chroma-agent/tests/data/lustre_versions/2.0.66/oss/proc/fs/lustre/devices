@@ -1,6 +1,0 @@
-  0 UP mgc MGC10.141.0.1@tcp 117c491f-c761-2931-b12d-aa3c7af918f8 5
-  1 UP ost OSS OSS_uuid 3
-  2 UP obdfilter lustre-OST0000 lustre-OST0000_UUID 7
-  3 UP obdfilter lustre-OST0001 lustre-OST0001_UUID 7
-  4 UP obdfilter lustre-OST0002 lustre-OST0002_UUID 7
-  5 UP obdfilter lustre-OST0003 lustre-OST0003_UUID 7
