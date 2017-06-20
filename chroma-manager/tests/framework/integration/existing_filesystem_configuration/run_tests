@@ -1,7 +1,6 @@
 #!/bin/bash -ex
 
 . $CHROMA_DIR/chroma-manager/tests/framework/utils/collect_reports.sh
-. $CHROMA_DIR/chroma-manager/tests/framework/utils/cleanup.sh
 
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
@@ -18,7 +17,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 TESTS=${TESTS:-"tests/integration/existing_filesystem_configuration/"}
 
-trap "set +e; collect_reports; cleanup" EXIT
+trap "set +e; collect_reports" EXIT
 
 echo "Begin running tests..."
 
