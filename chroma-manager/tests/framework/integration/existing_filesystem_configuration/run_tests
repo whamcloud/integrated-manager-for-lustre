@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
 . $CHROMA_DIR/chroma-manager/tests/framework/utils/collect_reports.sh
+. $CHROMA_DIR/chroma-manager/tests/framework/utils/cleanup.sh
 
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
