@@ -34,8 +34,12 @@ for key in CentOS-7 redhat-release; do
     fi
 done
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
+if ! yum repolist | grep addon-epel; then
+    yum -y install epel-release
+fi
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+yum -y install ed
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
 /enabled/a
 gpgcheck=1
@@ -43,7 +47,7 @@ gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 .
 wq
 EOF
-" | dshbak -c
+$LOCAL_CLUSTER_SETUP" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

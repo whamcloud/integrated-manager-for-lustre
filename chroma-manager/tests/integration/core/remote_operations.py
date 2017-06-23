@@ -335,7 +335,8 @@ class RealRemoteOperations(RemoteOperations):
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
-    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
+    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None,
+                     as_root = True):
         """
         Executes a command on a remote server over ssh.
 
@@ -350,7 +351,7 @@ class RealRemoteOperations(RemoteOperations):
                        (r.rc, r.stdout, r.stderr)
 
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
-            ifconfig_result = Shell.run(['ifconfig', '-a'])
+            ip_addr_result = Shell.run(['ip', 'addr', 'ls'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
             try:
                 gw = [l for l in ip_route_ls_result.stdout.split('\n')
@@ -379,7 +380,7 @@ class RealRemoteOperations(RemoteOperations):
                   (address, e,
                    issue_num,
                    print_result(ping_result1),
-                   print_result(ifconfig_result),
+                   print_result(ip_addr_result),
                    print_result(ip_route_ls_result),
                    ping_gw_report,
                    ping_result2_report)
@@ -412,7 +413,7 @@ class RealRemoteOperations(RemoteOperations):
 
             if 'user' in host_config:
                 args['username'] = host_config['user']
-                if args['username'] != 'root':
+                if args['username'] != 'root' and as_root:
                     command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
 
             if 'identityfile' in host_config:
@@ -869,7 +870,8 @@ class RealRemoteOperations(RemoteOperations):
         server_config = self._fqdn_to_server_config(fqdn)
         self._ssh_address(
             server_config['host'],
-            server_config['destroy_command']
+            server_config['destroy_command'],
+            self._host_of_server(server_config).get('virsh_as_root', True)
         )
 
         i = 0
@@ -893,7 +895,8 @@ class RealRemoteOperations(RemoteOperations):
 
         result = self._ssh_address(
             boot_server['host'],
-            boot_server['start_command']
+            boot_server['start_command'],
+            self._host_of_server(boot_server).get('virsh_as_root', True)
         )
         node_status = result.stdout
         if re.search('started', node_status):
@@ -937,7 +940,8 @@ class RealRemoteOperations(RemoteOperations):
                     logger.info("attempting to restart %s" % boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
-                        boot_server['status_command']
+                        boot_server['status_command'],
+                        self._host_of_server(boot_server).get('virsh_as_root', True)
                     )
                     node_status = result.stdout
                     if re.search('running', node_status):
@@ -1164,7 +1168,9 @@ class RealRemoteOperations(RemoteOperations):
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(address, clear_ha_script.read())
+                        self._ssh_address(address, "ring1_iface=%s\n%s" %
+                                          (server['corosync_config']['ring1_iface'],
+                                           clear_ha_script.read()))
 
                     self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
                     self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
