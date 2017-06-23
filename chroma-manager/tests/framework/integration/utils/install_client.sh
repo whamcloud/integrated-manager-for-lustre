@@ -18,13 +18,15 @@ EOF
 yum-config-manager --disable lustre
 
 # install kernel kmod-lustre-client was built for
-# TODO: derive this rather than hard-coding
+# TODO: derive this rather than hard coding
 yum -y install kernel-3.10.0-514.21.1.el7
 
 # Installed a kernel, so need a reboot
 sync
 sync
 nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0"
+
+sleep 240
 
 ssh root@$CLIENT_1 "exec 2>&1; set -xe
 yum -y install lustre-client
