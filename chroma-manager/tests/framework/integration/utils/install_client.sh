@@ -25,8 +25,13 @@ EOF
 yum-config-manager --disable lustre
 
 yum -y install --disablerepo=* --enablerepo=temp-updates kernel-3.10.0-514.21.1.el7
+reboot"
 
+sleep 30
+
+ssh root@$CLIENT_1 "exec 2>&1; set -xe
 yum -y install lustre-client
 
-sleep 9999
-modprobe lustre"
+modinfo lustre
+modprobe lustre
+lsmod| grep lustra"
