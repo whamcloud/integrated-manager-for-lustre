@@ -12,26 +12,19 @@ baseurl=https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x
 enabled=1
 sslverify=0
 gpgcheck=0
-
-[temp-updates]
-name=temp-updates
-baseurl=http://mirror.centos.org/centos/7/updates/x86_64/
-enabled=1
-sslverify=0
-gpgcheck=0
 EOF
 
 # disable the server repo
 yum-config-manager --disable lustre
 
-yum -y install --disablerepo=* --enablerepo=temp-updates kernel-3.10.0-514.21.1.el7
+# install kernel kmod-lustre-client was built for
+# TODO: derive this rather than hard-coding
+yum -y install kernel-3.10.0-514.21.1.el7
 
 # Installed a kernel, so need a reboot
 sync
 sync
 nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0"
-
-sleep 240
 
 ssh root@$CLIENT_1 "exec 2>&1; set -xe
 yum -y install lustre-client
