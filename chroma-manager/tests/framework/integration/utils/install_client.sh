@@ -28,5 +28,6 @@ yum -y install --disablerepo=* --enablerepo=lustre-server kernel kernel-devel ke
 
 yum -y install lustre-client
 
+sleep 9999
 modprobe lustre"
 
