@@ -24,8 +24,9 @@ EOF
 # disable the server repo
 yum-config-manager --disable lustre
 
-yum -y install --disablerepo=* --enablerepo=temp-updates kernel-3.10.0-514.21.1.el7
-reboot"
+yum -y install --disablerepo=* --enablerepo=temp-updates kernel-3.10.0-514.21.1.el7"
+
+ssh root@$CLIENT_1 "exec 2>&1; reboot"
 
 sleep 30
 
