@@ -37,5 +37,4 @@ ssh root@$CLIENT_1 "exec 2>&1; set -xe
 yum -y install lustre-client
 
 modinfo lustre
-modprobe lustre
-lsmod| grep lustra"
+modprobe lustre"
