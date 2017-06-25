@@ -29,7 +29,7 @@ http_caching=packages
 wq
 EOF
 for key in CentOS-7 redhat-release; do
-    if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-$key ]; then
+    if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key ]; then
         rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key
     fi
 done
