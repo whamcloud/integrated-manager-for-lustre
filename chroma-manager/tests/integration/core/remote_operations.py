@@ -474,7 +474,7 @@ class RealRemoteOperations(RemoteOperations):
 
         # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
-            self._test_case.assertEqual(rc, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
+            self._test_case.assertEqual(rc, expected_return_code, "rc (%s) != expected_return_code (%s), stdout: '%s', stderr: '%s'" % (rc, expected_return_code, stdout, stderr))
 
         return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
