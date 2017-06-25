@@ -871,7 +871,7 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(
             server_config['host'],
             server_config['destroy_command'],
-            self._host_of_server(server_config).get('virsh_as_root', True)
+            as_root=self._host_of_server(server_config).get('virsh_as_root', True)
         )
 
         i = 0
@@ -896,7 +896,7 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(
             boot_server['host'],
             boot_server['start_command'],
-            self._host_of_server(boot_server).get('virsh_as_root', True)
+            as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
         )
         node_status = result.stdout
         if re.search('started', node_status):
@@ -941,7 +941,7 @@ class RealRemoteOperations(RemoteOperations):
                     result = self._ssh_address(
                         boot_server['host'],
                         boot_server['status_command'],
-                        self._host_of_server(boot_server).get('virsh_as_root', True)
+                        as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
                     )
                     node_status = result.stdout
                     if re.search('running', node_status):
