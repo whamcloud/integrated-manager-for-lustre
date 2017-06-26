@@ -136,7 +136,7 @@ fi
 # re-enable needed repos needed for the upgraded version
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
-yum-config-manager --ensable managerforlustre-manager-for-lustre
+yum-config-manager --enable managerforlustre-manager-for-lustre
 yum-config-manager --enable mirror.centos.org_centos_7_extras_x86_64_" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
