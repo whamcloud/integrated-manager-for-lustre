@@ -45,7 +45,7 @@ def setup_groups(app, **kwargs):
 
         # Allow fs admins to dismiss alerts
         grant_write(fsadmin_group, chroma_core.models.AlertState)
-        for alert_klass in all_subclasses(chroma_core.models.AlertState):
+        for alert_klass in all_subclasses(chroma_core.models.AlertStateBase):
             grant_write(fsadmin_group, alert_klass)
 
         fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")

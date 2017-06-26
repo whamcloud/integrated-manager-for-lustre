@@ -11,6 +11,7 @@ import httpagentparser
 from tastypie.resources import Resource
 from tastypie.authorization import Authorization
 
+from chroma_api.validation_utils import validate
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.services.log import custom_log_register
 
@@ -34,7 +35,7 @@ class ClientErrorResource(Resource):
         always_return_data = False
         object_class = dict  # Not used, but required
 
-    def get_resource_uri(self, bundle):
+    def get_resource_uri(self, bundle=None):
         return None  # not used, but required
 
     def _init_log(self):
@@ -50,7 +51,8 @@ class ClientErrorResource(Resource):
         log_path = os.path.join(settings.LOG_PATH, log_filename)
         self.logger = custom_log_register(__name__, log_path)
 
-    def obj_create(self, bundle, request=None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
 
         # Creating the log in here limits the log to being created only by the user that
         # ultimately wants to write to it.  Moving initialization of this log to __init__

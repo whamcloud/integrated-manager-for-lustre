@@ -20,7 +20,7 @@ from chroma_api.lnet_configuration import LNetConfigurationResource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
 from chroma_core.models import Nid
-from chroma_api.validation_utils import ChromaValidation
+from chroma_api.validation_utils import ChromaValidation, validate
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
@@ -51,12 +51,12 @@ class NidValidation(ChromaValidation):
             if not errors:
                 self.validate_resources([self.URIInfo(nids_data.get('lnet_configuration', None), LNetConfigurationResource),
                                          self.URIInfo(nids_data['network_interface'], NetworkInterfaceResource)],
-                                         errors)
+                                         errors, request)
 
             if not errors:
                 # Check the lnd_type passed is valid for the network_interface
-                if ('lnd_type' in nids_data) and (nids_data['lnd_type'] not in NetworkInterfaceResource().get_via_uri(nids_data['network_interface']).lnd_types):
-                    errors['lnd_type'].append("lnd_type %s not valid for interface %s" % (nids_data['lnd_type'], NetworkInterfaceResource().get_via_uri(nids_data['network_interface'])))
+                if ('lnd_type' in nids_data) and (nids_data['lnd_type'] not in NetworkInterfaceResource().get_via_uri(nids_data['network_interface'], request).lnd_types):
+                    errors['lnd_type'].append("lnd_type %s not valid for interface %s" % (nids_data['lnd_type'], NetworkInterfaceResource().get_via_uri(nids_data['network_interface'], request)))
 
         return errors
 
@@ -99,14 +99,17 @@ class NidResource(ChromaModelResource):
                      'lnet_configuration': ALL_WITH_RELATIONS,
                      'id': ['exact']}
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
+
         if 'objects' in bundle.data:
             nids_data = bundle.data['objects']
         else:
             nids_data = [bundle.data]
 
         for nid_data in nids_data:
-            nid_data['network_interface'] = NetworkInterfaceResource().get_via_uri(nid_data['network_interface']).id
+            nid_data['network_interface'] = NetworkInterfaceResource().get_via_uri(nid_data['network_interface'], bundle.request).id
 
         command_id = JobSchedulerClient.update_nids(nids_data)
 
@@ -120,10 +123,11 @@ class NidResource(ChromaModelResource):
                                   'command': dehydrate_command(command)
                               })
 
-    def obj_update(self, bundle, request = None, **kwargs):
-        self.obj_create(bundle, request, **kwargs)
+    @validate                        
+    def obj_update(self, bundle, **kwargs):
+        self.obj_create(bundle, **kwargs)
 
-    def obj_delete_list(self, request, **kwargs):
+    def obj_delete_list(self, bundle, **kwargs):
         """
         A ORM-specific implementation of ``obj_delete_list``.
 
@@ -131,13 +135,13 @@ class NidResource(ChromaModelResource):
         the instance.
         """
         try:
-            obj_list = self.obj_get_list(request, **kwargs)
+            obj_list = self.obj_get_list(bundle, **kwargs)
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 
         self._nids_delete(obj_list)
 
-    def obj_delete(self, request=None, **kwargs):
+    def obj_delete(self, bundle, **kwargs):
         """
         A ORM-specific implementation of ``obj_delete``.
 
@@ -145,7 +149,7 @@ class NidResource(ChromaModelResource):
         the instance.
         """
         try:
-            obj = self.obj_get(request, **kwargs)
+            obj = self.obj_get(bundle, **kwargs)
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 

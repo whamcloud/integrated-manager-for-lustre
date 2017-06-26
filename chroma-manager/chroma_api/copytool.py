@@ -16,6 +16,7 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_core.models import Copytool, CopytoolOperation, ManagedHost, ManagedFilesystem
 from chroma_core.models.copytool import resolve_key
 from chroma_api.utils import StatefulModelResource, MetricResource, custom_response
+from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.host import HostResource
 from chroma_api.filesystem import FilesystemResource
@@ -100,12 +101,12 @@ class CopytoolValidation(Validation):
                 errors['hsm_arguments'].append(error)
 
         try:
-            HostResource().get_via_uri(bundle.data['host'])
+            HostResource().get_via_uri(bundle.data['host'], request)
         except ManagedHost.DoesNotExist:
             errors['host'].append("Host not found in DB")
 
         try:
-            FilesystemResource().get_via_uri(bundle.data['filesystem'])
+            FilesystemResource().get_via_uri(bundle.data['filesystem'], request)
         except ManagedFilesystem.DoesNotExist:
             errors['filesystem'].append("Filesystem not found in DB")
 
@@ -131,8 +132,8 @@ class CopytoolResource(StatefulModelResource, MetricResource):
         # This is stupid... Wanted to do it in the model, but the
         # polymorphic stuff messes with the usual save() path.
         existing_filter = dict(
-            host = HostResource().get_via_uri(bundle.data['host']),
-            filesystem = HostResource().get_via_uri(bundle.data['filesystem']),
+            host = HostResource().get_via_uri(bundle.data['host'], bundle.request),
+            filesystem = HostResource().get_via_uri(bundle.data['filesystem'], bundle.request),
             bin_path = bundle.data['bin_path'],
             archive = bundle.data['archive']
         )
@@ -149,7 +150,9 @@ class CopytoolResource(StatefulModelResource, MetricResource):
         filters.update(CopytoolOperationResource.active_filter)
         return CopytoolOperation.objects.filter(**filters).count()
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
         # NB: This is safe because we've already validated the input.
         host_id = resolve(bundle.data['host'])[2]['pk']
         filesystem_id = resolve(bundle.data['filesystem'])[2]['pk']

@@ -27,7 +27,7 @@ class LustreClientMountTests(ChromaApiTestCase):
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         str(mount.id))
+                         mount.id)
 
         job = RemoveHostJob(host = self.host)
 
@@ -49,7 +49,7 @@ class LustreClientMountTests(ChromaApiTestCase):
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         str(mount.id))
+                         mount.id)
 
         job = ForceRemoveHostJob(host = self.host)
 

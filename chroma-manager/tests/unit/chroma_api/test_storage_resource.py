@@ -27,7 +27,6 @@ class TestStorageResourceResource(ChromaApiTestCase):
 
     def test_alias_put(self):
         """Check that the 'alias' attribute is validated as non-blank during PUTs"""
-
         response = self.api_client.post("/api/storage_resource/", data = {
             'plugin_name': 'loadable_plugin',
             'class_name': 'TestScannableResource',
@@ -42,7 +41,7 @@ class TestStorageResourceResource(ChromaApiTestCase):
         response = self.api_client.put(resource['resource_uri'], data = {
             'alias': valid_alias
         })
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
         response = self.api_client.get(resource['resource_uri'])
         self.assertEqual(self.deserialize(response)['alias'], valid_alias)
 
