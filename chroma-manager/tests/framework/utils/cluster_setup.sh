@@ -60,3 +60,18 @@ fi
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
+
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CLIENT_1 ${WORKERS[@]}) "exec 2>&1; set -xe
+# install kernel kmod-lustre-client was built for
+# TODO: derive this rather than hard coding
+yum -y install kernel-3.10.0-514.21.1.el7
+
+# Installed a kernel, so need a reboot
+sync
+sync
+nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+sleep 240
