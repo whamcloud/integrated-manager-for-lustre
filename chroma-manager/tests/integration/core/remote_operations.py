@@ -290,6 +290,14 @@ class SimulatorRemoteOperations(RemoteOperations):
             'lustre': (0, '2.9.0', '1', 'x86_64')
         })
 
+    def scan_packages(self):
+        """
+        Trigger update packages (with empty dict) on simulator (runs on all fake servers).
+        Necessary because sim doesn't do a package scan on every (fake) plug-in update,
+        whereas the real agent does.
+        """
+        self._simulator.update_packages({})
+
     def get_package_version(self, fqdn, package):
         return self._simulator.servers[fqdn].get_package_version(package)
 
@@ -1237,6 +1245,9 @@ class RealRemoteOperations(RemoteOperations):
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
+
+    def scan_packages(self, fqdn):
+        raise NotImplementedError()
 
     def get_package_version(self, fqdn, package):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
