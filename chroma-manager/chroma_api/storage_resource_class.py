@@ -83,7 +83,7 @@ class StorageResourceClassResource(ChromaModelResource):
         detail_allowed_methods = ['get']
         ordering = ['class_name']
 
-    def override_urls(self):
+    def prepend_urls(self):
         from django.conf.urls.defaults import url
         return [
             url(r"^(?P<resource_name>%s)/(?P<storage_plugin__module_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_detail'), name="dispatch_detail"),

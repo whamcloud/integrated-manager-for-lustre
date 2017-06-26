@@ -21,8 +21,8 @@ class HaClusterResource(Resource):
     def get_object_list(self, request):
         return HaCluster.all_clusters()
 
-    def obj_get_list(self, request=None, **kwargs):
-        return self.get_object_list(request)
+    def obj_get_list(self, bundle, **kwargs):
+        return self.get_object_list(bundle.request)
 
     class Meta:
         resource_name = 'ha_cluster'

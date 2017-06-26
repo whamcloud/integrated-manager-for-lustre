@@ -10,6 +10,7 @@ from collections import defaultdict
 import django.contrib.auth as auth
 
 from chroma_api.authentication import CsrfAuthentication
+from chroma_api.validation_utils import validate
 from tastypie.authorization import Authorization
 from tastypie.resources import Resource
 from tastypie import fields
@@ -89,10 +90,12 @@ class SessionResource(Resource):
         resource_name = 'session'
         validation = SessionValidation()
 
-    def get_resource_uri(self, bundle):
-        return self.get_resource_list_uri()
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
         """Authenticate a session using username + password authentication"""
         username = bundle.data['username']
         password = bundle.data['password']

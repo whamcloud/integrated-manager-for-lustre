@@ -61,7 +61,7 @@ class ResolvingFormValidation(FormValidation):
         """
         data = bundle.data
 
-        if not request:
+        if not bundle.request:
             raise RuntimeError("Must be used with an incoming request")
 
         # Ensure we get a bound Form, regardless of the state of the bundle.
@@ -84,7 +84,7 @@ class ResolvingFormValidation(FormValidation):
 
 
 class DeleteablePowerObjectResource(CustomModelResource):
-    def obj_delete(self, request=None, **kwargs):
+    def obj_delete(self, bundle, **kwargs):
         """
         A ORM-specific implementation of ``obj_delete``.
 
@@ -98,7 +98,7 @@ class DeleteablePowerObjectResource(CustomModelResource):
 
         if not hasattr(obj, 'delete'):
             try:
-                obj = self.obj_get(request, **kwargs)
+                obj = self.obj_get(bundle, **kwargs)
             except ObjectDoesNotExist:
                 raise NotFound("A model instance matching the provided arguments could not be found.")
 

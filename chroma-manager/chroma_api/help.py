@@ -36,7 +36,7 @@ class HelpResource(Resource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
 
-    def override_urls(self):
+    def prepend_urls(self):
         from django.conf.urls import url
         return [
             url(r"^(?P<resource_name>%s)/conf_param/$" % self._meta.resource_name, self.wrap_view('conf_param_help'), name="api_conf_param_help"),

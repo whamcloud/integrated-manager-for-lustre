@@ -107,7 +107,7 @@ class TestAuthentication(ChromaIntegrationTestCase):
         user['password2'] = 'bar'
         user['old_password'] = 'foo'
         response = basic_user_requests.put(user['resource_uri'], user)
-        self.assertEqual(response.status_code, 202, response.content)
+        self.assertEqual(response.status_code, 200, response.content)
 
         # Log back in with my new password
         basic_user_requests = AuthorizedHttpRequests(basic_user['username'], user['password1'],

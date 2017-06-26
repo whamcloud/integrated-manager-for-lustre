@@ -15,6 +15,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Job, StateLock
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_api.chroma_model_resource import ChromaModelResource
+from chroma_api.validation_utils import validate
 
 
 class StateLockResource(Resource):
@@ -174,7 +175,8 @@ class JobResource(ChromaModelResource):
         always_return_data = True
         validation = JobValidation()
 
-    def obj_update(self, bundle, request, **kwargs):
+    @validate
+    def obj_update(self, bundle, **kwargs):
         job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 

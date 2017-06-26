@@ -15,6 +15,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.services import log_register
 from chroma_api.utils import dehydrate_command
 from chroma_api.utils import custom_response, StatefulModelResource
+from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
 from long_polling_api import LongPollingAPI
@@ -58,9 +59,10 @@ class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
     def dispatch(self, request_type, request, **kwargs):
         return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
-    def obj_update(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_update(self, bundle, **kwargs):
         if 'pk' in kwargs:
-            return super(LNetConfigurationResource, self).obj_update(bundle, request, **kwargs)
+            return super(LNetConfigurationResource, self).obj_update(bundle, **kwargs)
 
         lnet_configurations_data = bundle.data.get('objects', [bundle.data])
 
@@ -77,7 +79,7 @@ class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
         except ObjectDoesNotExist:
             command = None
 
-        raise custom_response(self, request, http.HttpAccepted,
+        raise custom_response(self, bundle.request, http.HttpAccepted,
                               {
                                   'command': dehydrate_command(command)
                               })
