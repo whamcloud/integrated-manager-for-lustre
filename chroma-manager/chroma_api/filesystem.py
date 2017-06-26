@@ -19,6 +19,7 @@ from tastypie.validation import Validation
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
+from chroma_api.validation_utils import validate
 from chroma_core.lib import conf_param
 
 
@@ -386,7 +387,9 @@ class FilesystemResource(MetricResource, ConfParamResource):
         validation = FilesystemValidation()
         always_return_data = True
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
 
         filesystem_id, command_id = JobSchedulerClient.create_filesystem(bundle.data)
         filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)

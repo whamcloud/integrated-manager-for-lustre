@@ -157,7 +157,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
             if row_count:
                 self.assertHttpOK(response)
             else:
-                self.assertHttpNotFound(response)
+                self.assertHttpUnauthorized(response)
 
     def test_patch(self):
         """Test that normal users cannot patch"""
@@ -178,4 +178,4 @@ class TestTokenAuthorization(ChromaApiTestCase):
             if allowed:
                 self.assertHttpAccepted(patch_response)
             else:
-                self.assertHttpNotFound(patch_response)
+                self.assertHttpUnauthorized(patch_response)

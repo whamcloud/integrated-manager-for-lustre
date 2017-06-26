@@ -15,6 +15,7 @@ from chroma_core.services import log_register
 from chroma_api.utils import StatefulModelResource
 from chroma_api.utils import BulkResourceOperation
 from chroma_api.utils import dehydrate_command
+from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.urls import api
 
@@ -53,8 +54,10 @@ class CorosyncConfigurationResource(StatefulModelResource, BulkResourceOperation
                      'id': ['exact'],
                      'host__fqdn': ['exact', 'startswith']}
 
-    def obj_update(self, bundle, request = None, **kwargs):
-        super(CorosyncConfigurationResource, self).obj_update(bundle, request, **kwargs)
+    @validate
+    def obj_update(self, bundle, **kwargs):
+        request = bundle.request
+        super(CorosyncConfigurationResource, self).obj_update(bundle, **kwargs)
 
         def _update_corosync_configuration(self, corosync_configuration, request, **kwargs):
             network_interface_ids = [resolve(interwork_interface)[2]['pk'] for interwork_interface in corosync_configuration['network_interfaces']]
