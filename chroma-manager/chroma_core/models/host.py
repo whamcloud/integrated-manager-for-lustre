@@ -1525,8 +1525,6 @@ proxy=_none_
         return locks
 
     def on_success(self):
-        from chroma_core.models.host import UpdatesAvailableAlert
-
         UpdatesAvailableAlert.notify(self.host, False)
 
     class Meta:
