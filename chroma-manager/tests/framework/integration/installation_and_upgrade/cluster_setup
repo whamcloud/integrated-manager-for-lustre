@@ -18,8 +18,8 @@ fi
 # for now at least, we need to disable epel before installing the upgrade-from version
 yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
 # and the IML and extras repos
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
-yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+yum-config-manager --disable managerforlustre-manager-for-lustre
+yum-config-manager --disable mirror.centos.org_centos_7_extras_x86_64_
 
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
