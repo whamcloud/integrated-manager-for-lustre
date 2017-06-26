@@ -28,12 +28,7 @@ class TestUpdates(ChromaIntegrationTestCase):
 
         self.assertNotEqual(len(original_packages), 0)
 
-        # We could have an alert at this point that got raised in the time
-        # between the host being added and when the packages are installed
-        # So now that the packages are installed wait for the alert to clear
-        # before proceeding with the update
-        self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
-                                                         of_type='UpdatesAvailableAlert'))
+        self.assertNoAlerts(host['resource_uri'], of_type='UpdatesAvailableAlert')
 
         # Subsequently chroma-manager is upgraded
         # =======================================

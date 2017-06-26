@@ -166,9 +166,9 @@ def kernel_status():
     # storage servers that can support both ldiskfs and zfs
     try:
         required_kernel = \
-            [k for k in AgentShell.try_run(["rpm", "-q", "kernel"]).split('\n') \
-             if "_lustre" in k][0]
-    except (AgentShell.CommandExecutionError, IndexError):
+            next(k for k in AgentShell.try_run(["rpm", "-q", "kernel"]).split('\n')
+                 if "_lustre" in k)
+    except (AgentShell.CommandExecutionError, StopIteration):
         required_kernel = None
 
     available_kernels = []
