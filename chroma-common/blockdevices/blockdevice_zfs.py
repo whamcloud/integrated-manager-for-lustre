@@ -14,13 +14,16 @@ from ..lib import shell
 from blockdevice import BlockDevice
 from ..lib.util import pid_exists
 
-log = logging.getLogger(__name__)
+try:
+    from chroma_agent.log import daemon_log as log
+except ImportError:
+    log = logging.getLogger(__name__)
 
-if not log.handlers:
-    handler = logging.FileHandler('/var/log/chroma-agent.log')
-    handler.setFormatter(logging.Formatter("[%(asctime)s: %(levelname)s/%(name)s] %(message)s"))
-    log.addHandler(handler)
-    log.setLevel(logging.DEBUG)
+    if not log.handlers:
+        handler = logging.FileHandler('blockdevice_zfs.log')
+        handler.setFormatter(logging.Formatter("[%(asctime)s: %(levelname)s/%(name)s] %(message)s"))
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
 
 
 def get_lockfile_pid(lockfile):
