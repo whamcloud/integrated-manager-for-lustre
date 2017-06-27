@@ -44,7 +44,7 @@ Requires: rabbitmq-server
 Requires: ntp
 Requires: Django >= 1.4, Django < 1.5
 Requires: Django-south >= 0.7.4
-Requires: django-tastypie = 0.9.12
+Requires: django-tastypie = 0.9.11
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
