@@ -46,9 +46,8 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     elif action == 'repoquery':
         cmd = ['repoquery'] + repo_arg + ['-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
     elif action == 'check-update':
-        cmd = ['repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.'
-               '%{arch} %{repoid}', '--pkgnarrow=updates'] + repo_arg + \
-            list(packages)
+        cmd = ['yum', 'check-update', '-q'] + repo_arg + list(packages)
+        valid_rc_values = [0, 100]                      # check-update returns 100 if updates are available.
     else:
         raise RuntimeError('Unknown yum util action %s' % action)
 
