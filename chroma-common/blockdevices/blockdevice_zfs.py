@@ -6,12 +6,21 @@ import os
 import errno
 import re
 import time
+import logging
 
 from collections import defaultdict
 from lockfile import LockFile, LockTimeout
 from ..lib import shell
 from blockdevice import BlockDevice
 from ..lib.util import pid_exists
+
+log = logging.getLogger(__name__)
+
+if not log.handlers:
+    handler = logging.FileHandler('/var/log/chroma-agent.log')
+    handler.setFormatter(logging.Formatter("[%(asctime)s: %(levelname)s/%(name)s] %(message)s"))
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
 
 
 def get_lockfile_pid(lockfile):
@@ -126,6 +135,9 @@ class ZfsDevice(object):
                 # validate pid holding lock exists
                 if not pid_exists(pid):
                     self.lock.break_lock()
+                else:
+                    log.warning('lock acquire on lockfile %s timed out, lock owned by PID %s' % (self.lock.lock_file,
+                                                                                                 pid))
 
         self.lock_refcount[self.lock_unique_id] += 1
 
