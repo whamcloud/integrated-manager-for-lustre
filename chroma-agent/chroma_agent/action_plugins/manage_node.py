@@ -83,7 +83,7 @@ def initialise_block_device_drivers():
 def terminate_block_device_drivers():
     console_log.info("Terminating drivers for block device types")
     for cls in util.all_subclasses(BlockDevice):
-        error = cls.terminate_driver(config.profile_managed)
+        error = cls.terminate_driver()
 
         if error:
             return agent_error(error)

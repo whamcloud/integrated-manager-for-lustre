@@ -100,7 +100,7 @@ class BlockDevice(object):
         return None
 
     @classmethod
-    def terminate_driver(cls, managed_mode):
+    def terminate_driver(cls):
         return None
 
     @abc.abstractmethod

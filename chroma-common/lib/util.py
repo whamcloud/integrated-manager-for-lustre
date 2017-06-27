@@ -12,6 +12,7 @@ import platform
 from collections import namedtuple
 from collections import MutableSequence
 import sys
+import signal
 
 
 def running_nose_tests():
@@ -278,7 +279,7 @@ def pid_exists(pid):
         raise ValueError('invalid PID 0')
 
     try:
-        os.kill(pid, 0)
+        os.kill(pid, signal.SIG_DFL)
     except OSError as err:
         if err.errno == errno.ESRCH:
             # ESRCH == No such process

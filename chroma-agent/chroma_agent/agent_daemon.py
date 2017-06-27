@@ -177,6 +177,7 @@ def main():
         def teardown_callback(*args, **kwargs):
             agent_client.stop()
             agent_client.join()
+            [function() for function in agent_daemon_teardown_functions]
 
         if not args.foreground:
             handlers = {
@@ -191,8 +192,7 @@ def main():
             signal.signal(signal.SIGUSR2, increase_loglevel)
 
         # Call any agent daemon startup methods that were registered.
-        for function in agent_daemon_startup_functions:
-            function()
+        [function() for function in agent_daemon_startup_functions]
 
         agent_client.start()
         # Waking-wait to pick up signals
@@ -209,8 +209,7 @@ def main():
         # is python 2.4-compatible code
         context.close()
 
-    # Call any agent daemon startup methods that were registered.
-    for function in agent_daemon_teardown_functions:
-        function()
+    # Call any agent daemon teardown methods that were registered.
+    [function() for function in agent_daemon_teardown_functions]
 
     daemon_log.info("Terminating")

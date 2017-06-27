@@ -14,6 +14,16 @@ from blockdevice import BlockDevice
 from ..lib.util import pid_exists
 
 
+def get_lockfile_pid(lockfile):
+    with open(os.path.join(lockfile), 'r') as f:
+        contents = f.readlines()
+
+    assert len(contents) == 1 and contents[0].isdigit(), \
+        'unexpected contents of lockfile %s: %s' % (lockfile, contents)
+
+    return int(contents[0])
+
+
 class ZfsDevice(object):
     """
     This provide two functions.
@@ -95,7 +105,7 @@ class ZfsDevice(object):
 
         Lock acquire polls the timeout at intervals of LOCK_ACQUIRE_TIMEOUT.
         """
-        if ZfsDevice.locks_dir_initialized == False:
+        if ZfsDevice.locks_dir_initialized is False:
             # ensure lock directory exists
             try:
                 os.mkdir(self.ZPOOL_LOCK_DIR)
@@ -111,14 +121,10 @@ class ZfsDevice(object):
                     f.writelines(str(self.lock.pid))
             except LockTimeout:
                 # prune locks owned by non-existent processes
-                with open(self.lock.lock_file, 'r') as f:
-                    contents = f.readlines()
-
-                assert len(contents) == 1 and contents[0].isdigit(), \
-                    'unexpected contents of lockfile %s: %s' % (self.lock.lock_file, contents)
+                pid = get_lockfile_pid(self.lock.lock_file)
 
                 # validate pid holding lock exists
-                if not pid_exists(int(contents[0])):
+                if not pid_exists(pid):
                     self.lock.break_lock()
 
         self.lock_refcount[self.lock_unique_id] += 1
@@ -542,19 +548,17 @@ class BlockDeviceZfs(BlockDevice):
         return error
 
     @classmethod
-    def terminate_driver(cls, managed_mode):
+    def terminate_driver(cls):
         # prune locks owned by THIS process
-        lockfiles = os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)
+        lockfile_paths = [os.path.join(f, ZfsDevice.ZPOOL_LOCK_DIR) for f in os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)]
 
-        for lockfile in lockfiles:
-            with open(ZfsDevice.ZPOOL_LOCK_DIR + lockfile, 'r') as f:
-                contents = f.readlines()
-
-            assert len(contents) == 1 and contents[0].isdigit(), \
-                'unexpected contents of lockfile %s: %s' % (lockfile, contents)
+        def validate_or_remove(path):
+            pid = get_lockfile_pid(path)
 
             # validate pid holding lock is THIS process' pid
-            if os.getpid() == int(contents[0]):
-                os.remove(ZfsDevice.ZPOOL_LOCK_DIR + lockfile)
+            if os.getpid() == pid:
+                os.remove(path)
+
+        map(validate_or_remove, lockfile_paths)
 
         return None
