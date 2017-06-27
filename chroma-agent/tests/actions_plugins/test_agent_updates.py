@@ -98,8 +98,7 @@ kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'bar', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
+                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
 jasper-libs.x86_64                                                                             1.900.1-16.el6_6.3                                                                             myrepo
 """),
                           CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
@@ -124,8 +123,7 @@ kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
 
         def isfile(arg):
@@ -147,8 +145,7 @@ kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
         def isfile(arg):
