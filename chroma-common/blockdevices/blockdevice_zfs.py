@@ -564,14 +564,20 @@ class BlockDeviceZfs(BlockDevice):
 
     @classmethod
     def terminate_driver(cls):
-        lockfile_paths = [os.path.join(f, ZfsDevice.ZPOOL_LOCK_DIR) for f in os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)]
+        """
+        Iterate through existing lockfiles and for each check if pid written into lock is THIS process' pid and
+        if so, remove lockfile. If no pid written into lockfile, ignore (linklockfiles).
+        """
+        lockfile_paths = [os.path.join(ZfsDevice.ZPOOL_LOCK_DIR, name) for name in os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)]
 
         def validate_or_remove(path):
-            pid = get_lockfile_pid(path)
-
-            # validate pid holding lock is THIS process' pid
-            if os.getpid() == pid:
-                os.remove(path)
+            try:
+                pid = get_lockfile_pid(path)
+            except AssertionError:
+                pass
+            else:
+                if os.getpid() == pid:
+                    os.remove(path)
 
         # prune locks owned by THIS process
         map(validate_or_remove, lockfile_paths)

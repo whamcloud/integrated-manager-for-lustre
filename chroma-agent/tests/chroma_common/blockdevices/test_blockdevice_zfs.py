@@ -2,13 +2,13 @@ import glob
 import mock
 
 from os import path
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs, ZfsDevice
 from tests.chroma_common.blockdevices.blockdevice_base_tests import BaseTestBD
 from tests.data.chroma_common import example_data
 from tests.command_capture_testcase import CommandCaptureCommand
 
 
-class TestBlockDeviceZFS(BaseTestBD.BaseTestBlockDevice):
+class TestBlockDeviceZfs(BaseTestBD.BaseTestBlockDevice):
     pool_name = 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333'
     dataset_path = '/'.join([pool_name, 'ost_index0'])
 
@@ -62,7 +62,7 @@ kernel modules are functioning properly.
                                 '-\treadonly\ton\t-\n'
 
     def setUp(self):
-        super(TestBlockDeviceZFS, self).setUp()
+        super(TestBlockDeviceZfs, self).setUp()
 
         mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
         mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
@@ -365,3 +365,56 @@ kernel modules are functioning properly.
 
         self.assertEqual(result, None)
         self.assertRanAllCommandsInOrder()
+
+    def _base_terminate_driver_test(self, getpid_retval, listdir_retval, lockfilepid_retval):
+        mock_remove = mock.Mock()
+        mock.patch('os.remove', mock_remove).start()
+        mock_getpid = mock.Mock(return_value=getpid_retval)
+        mock.patch('os.getpid', mock_getpid).start()
+        mock_listdir = mock.Mock(return_value=listdir_retval)
+        mock.patch('os.listdir', mock_listdir).start()
+        mock_lockfilepid = mock.Mock(return_value=lockfilepid_retval)
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.get_lockfile_pid', mock_lockfilepid).start()
+
+        result = BlockDeviceZfs.terminate_driver()
+
+        self.assertEqual(result, None)
+
+        return mock_remove, mock_getpid, mock_listdir, mock_lockfilepid
+
+    def test_terminate_driver_active_locks_this_process(self):
+        mock_remove, mock_getpid, mock_listdir, mock_lockfilepid = self._base_terminate_driver_test(1234,
+                                                                                                    ['pool1'],
+                                                                                                    1234)
+        mock_remove.assert_called_once_with('%s/pool1' % ZfsDevice.ZPOOL_LOCK_DIR)
+        mock_getpid.assert_called_once_with()
+        mock_listdir.assert_called_once_with(ZfsDevice.ZPOOL_LOCK_DIR)
+        mock_lockfilepid.assert_called_once_with('%s/pool1' % ZfsDevice.ZPOOL_LOCK_DIR)
+
+    def test_terminate_driver_active_locks_other_process(self):
+        mock_remove, mock_getpid, mock_listdir, mock_lockfilepid = self._base_terminate_driver_test(1233,
+                                                                                                    ['pool1'],
+                                                                                                    1234)
+        assert mock_remove.call_args_list == []
+        mock_getpid.assert_called_once_with()
+        mock_listdir.assert_called_once_with(ZfsDevice.ZPOOL_LOCK_DIR)
+        mock_lockfilepid.assert_called_once_with('%s/pool1' % ZfsDevice.ZPOOL_LOCK_DIR)
+
+    def test_terminate_driver_file_with_no_pid(self):
+        mock_remove = mock.Mock()
+        mock.patch('os.remove', mock_remove).start()
+        mock_getpid = mock.Mock(return_value=1234)
+        mock.patch('os.getpid', mock_getpid).start()
+        mock_listdir = mock.Mock(return_value=['pool1'])
+        mock.patch('os.listdir', mock_listdir).start()
+        mock_lockfilepid = mock.Mock(side_effect=AssertionError)
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.get_lockfile_pid', mock_lockfilepid).start()
+
+        result = BlockDeviceZfs.terminate_driver()
+
+        self.assertEqual(result, None)
+
+        assert mock_remove.call_args_list == []
+        assert mock_getpid.call_args_list == []
+        mock_listdir.assert_called_once_with(ZfsDevice.ZPOOL_LOCK_DIR)
+        mock_lockfilepid.assert_called_once_with('%s/pool1' % ZfsDevice.ZPOOL_LOCK_DIR)
