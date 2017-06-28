@@ -186,7 +186,10 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         """
         Test to ensure that we cannot delete MDT0
         """
-        filesystem = self._create_filesystem(3)
+        filesystem = self._fetch_help(lambda: self._create_filesystem(3),
+                                      ['tom.nabarro@intel.com'],
+                                      'create filesystem failure in test_md0_undeletable with lustre 2.10.50',
+                                      timeout=99999)
         self.assertEqual(len(filesystem['mdts']), 3)
         self.assertEqual(len(filesystem['osts']), 1)
         self._check_stats(filesystem)
