@@ -33,6 +33,8 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
 
     if action == 'clean':
         cmd = ['yum', 'clean', 'all'] + (repo_arg if repo_arg else ["--enablerepo=*"])
+    elif action == 'makecache':
+        cmd = ['yum', 'makecache', 'fast']
     elif action == 'install':
         cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
     elif action == 'remove':

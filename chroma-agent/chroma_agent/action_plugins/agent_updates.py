@@ -102,6 +102,7 @@ def install_packages(repos, packages):
     """
     if packages != []:
         yum_util('clean')
+        yum_util('makecache')
 
         out = yum_util('requires', enablerepo=repos, packages=packages)
         for requirement in [l.strip() for l in out.strip().split("\n")]:
