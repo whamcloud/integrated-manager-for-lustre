@@ -32,6 +32,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 if [ "$TEST_DISTRO_NAME" = "el" -a                  \
      $(ssh root@$TEST_RUNNER "lsb_release -i -s") = \
      CentOS ]; then
+    fake_test_pass "tests_skipped_because_RHEL_cant_upgrade_CentOS" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
     exit 0
 fi
 
