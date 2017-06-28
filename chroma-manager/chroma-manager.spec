@@ -372,7 +372,6 @@ fi
 %{manager_root}/tests/plugins/*
 %{manager_root}/tests/integration/*
 %{manager_root}/tests/chroma_common/*
-%{manager_root}/tests/integration/core/clear_ha_el?.sh
 %attr(0755,root,root)%{manager_root}/tests/integration/run_tests
 
 %files -f devel.files devel

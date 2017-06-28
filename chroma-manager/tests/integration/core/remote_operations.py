@@ -1152,11 +1152,20 @@ class RealRemoteOperations(RemoteOperations):
                 firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
 
                 if config.get('pacemaker_hard_reset', False):
-                    clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                        "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
+                    self._ssh_address(address, 'systemctl stop corosync')
+                    self._ssh_address(address, 'systemctl stop pacemaker')
+                    self._ssh_address(address, 'systemctl stop pcsd')
 
-                    with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(address, clear_ha_script.read())
+                    self._ssh_address(address, 'systemctl disable corosync')
+                    self._ssh_address(address, 'systemctl disable pacemaker')
+                    self._ssh_address(address, 'systemctl disable pcsd')
+
+                    self._ssh_address(address, 'ifconfig eth1 0.0.0.0 down')
+
+                    self._ssh_address(address, 'rm -f /etc/sysconfig/network-scripts/ifcfg-eth1; '
+                                               'rm -f /etc/corosync/corosync.conf; '
+                                               'rm -f /var/lib/pacemaker/cib/*; '
+                                               'rm -f /var/lib/corosync/*')
 
                     self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
                     self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
@@ -1179,25 +1188,14 @@ class RealRemoteOperations(RemoteOperations):
                     # remove firewall rules previously added for corosync
                     mcast_port = self.get_corosync_port(server['fqdn'])
                     if mcast_port:
-                        self._ssh_address(
-                            address,
-                            firewall.remote_remove_port_cmd(mcast_port, 'udp')
-                        )
+                        self._ssh_address(address, firewall.remote_remove_port_cmd(mcast_port, 'udp'))
 
                 rpm_q_result = self._ssh_address(address, "rpm -q chroma-agent", expected_return_code=None)
                 if rpm_q_result.rc == 0:
                     # Stop the agent
-                    self._ssh_address(
-                        address,
-                        'service chroma-agent stop'
-                    )
-                    self._ssh_address(
-                        address,
-                        '''
-                        rm -rf /var/lib/chroma/*;
-                        ''',
-                        expected_return_code = None  # Keep going if it failed - may be none there.
-                    )
+                    self.stop_agents([address])
+                    # Keep going if it failed - may be none there.
+                    self._ssh_address(address, 'rm -rf /var/lib/chroma/*', expected_return_code=None)
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % address)
 
