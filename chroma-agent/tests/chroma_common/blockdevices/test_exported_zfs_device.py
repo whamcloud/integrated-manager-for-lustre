@@ -48,12 +48,13 @@ class TestZfsDeviceImportExport(TestZfsDevice):
     def setUp(self):
         super(TestZfsDeviceImportExport, self).setUp()
 
-        class MockLockFile(LockFile):
-            # add attributes to mock that would be created at runtime and therefore cannot be autospecced
-            unique_name = None
-            pid = 12345
+        mock_lock_file = mock.Mock(autospec=LockFile)
+        # add attributes to mock that would be created at runtime and therefore cannot be autospecced
+        mock_lock_file.unique_name = ''
+        mock_lock_file.pid = 12345
 
-        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.LockFile', autospec=MockLockFile).start()
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.LockFile',
+                   return_value=mock_lock_file).start()
         mock.patch('__builtin__.open').start()
 
         self.zfs_device = ZfsDevice(self.zpool_name, False)
@@ -339,6 +340,9 @@ class TestZfsDeviceLockFile(TestZfsDevice):
 
     def _create_owned_lockfile(self):
         zfs_device = ZfsDevice(self.zpool_name, False)
+
+        assert zfs_device.lock_unique_id == '%s:%s' % (zfs_device.lock.unique_name, self.zpool_name)
+        assert zfs_device.lock.lock_file == '%s/%s.lock' % (ZfsDevice.ZPOOL_LOCK_DIR, self.zpool_name)
 
         # create lock file and write another processes pid into its content
         other_pid = int(zfs_device.lock.pid)

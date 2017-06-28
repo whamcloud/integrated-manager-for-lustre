@@ -27,7 +27,7 @@ except ImportError:
 
 
 def get_lockfile_pid(lockfile):
-    with open(os.path.join(lockfile), 'r') as f:
+    with open(lockfile, 'r') as f:
         contents = f.readlines()
 
     assert len(contents) == 1 and contents[0].isdigit(), \
@@ -61,13 +61,13 @@ class ZfsDevice(object):
         :param try_import: If the device is not imported, import / export it (when used as with). If try_import is false
         then the caller must deal with ensuring the device is accessible.
         """
-        self.pool_path = device_path.split('/')[0]
+        self.pool_path = device_path.split(os.path.sep)[0]
 
         # Scope of a single process
-        self.lock = LockFile('%s/%s' % (self.ZPOOL_LOCK_DIR, self.pool_path))
+        self.lock = LockFile(os.path.join(self.ZPOOL_LOCK_DIR, self.pool_path))
 
         # unique identifier used as key for reference counting lock calls on pool/thread/process
-        self.lock_unique_id = '%s:%s' % (self.lock.unique_name, self.pool_path)
+        self.lock_unique_id = ':'.join([self.lock.unique_name, self.pool_path])
         self.pool_imported = False
         self.try_import = try_import
         self.available = not try_import         # If we are not going to try to import it, then presume it is available
@@ -564,7 +564,6 @@ class BlockDeviceZfs(BlockDevice):
 
     @classmethod
     def terminate_driver(cls):
-        # prune locks owned by THIS process
         lockfile_paths = [os.path.join(f, ZfsDevice.ZPOOL_LOCK_DIR) for f in os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)]
 
         def validate_or_remove(path):
@@ -574,6 +573,7 @@ class BlockDeviceZfs(BlockDevice):
             if os.getpid() == pid:
                 os.remove(path)
 
+        # prune locks owned by THIS process
         map(validate_or_remove, lockfile_paths)
 
         return None
