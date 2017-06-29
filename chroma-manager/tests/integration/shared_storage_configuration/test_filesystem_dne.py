@@ -42,11 +42,11 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         self.configure_power_control(host_addresses)
 
-        self.ha_volumes = self.wait_for_shared_volumes(4, 2)
+        self.ha_volumes = self.wait_for_shared_volumes(5, 2)
 
         mgt_volume = self.ha_volumes[0]
         mdt_volumes = self.ha_volumes[1:(1 + mdt_count)]
-        ost_volumes = self.ha_volumes[4:5]
+        ost_volumes = self.ha_volumes[4]
 
         for volume in [mgt_volume] + mdt_volumes + ost_volumes:
             self.set_volume_mounts(volume, self.hosts[0]['id'], self.hosts[1]['id'])
