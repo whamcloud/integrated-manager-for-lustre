@@ -15,7 +15,7 @@ mcast_groups = {}
 
 
 def mcast_port(vm_host_ip, cluster_number, bridge):
-    if not bridge in mcast_groups:
+    if bridge not in mcast_groups:
         octets = [int(o) for o in vm_host_ip.split('.')]
         mcast_base = octets[0] + 6000 + octets[1] + octets[2] + octets[3] * cluster_number * 30
         group_port = len(mcast_groups) * 2
@@ -78,7 +78,7 @@ if config.get('lustre_servers'):
         if start_command and start_command.startswith("virsh start"):
             # until the provisioner is giving us an idempotent start
             # command adjust them so they are so
-            server['start_command'] = '%s || [ "$(virsh domstate %s)" = "running" ]' % \
+            server['start_command'] = '%s || [ $(virsh domstate %s) = running ]' % \
                 (start_command, server['nodename'])
             # and until the server is providing a reset command
             # create our own
@@ -88,7 +88,7 @@ if config.get('lustre_servers'):
         # command adjust them so they are so
         destroy_command = server.get('destroy_command', None)
         if destroy_command and destroy_command.startswith("virsh destroy"):
-            server['destroy_command'] = '[ "$(virsh domstate %s)" = "shut off" ] || %s' % \
+            server['destroy_command'] = '[ $(virsh domstate %s) = shut\ off ] || %s' % \
                 (server['nodename'], destroy_command)
 
 

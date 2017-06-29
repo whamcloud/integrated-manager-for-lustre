@@ -36,6 +36,8 @@ yumdownloader lustre-client lustre-client-modules
 # other dependencies and the 'kernel = ' at the beggining of the line.
 KERNEL_VERSION_AND_RELEASE=\"\$(rpm -qpR lustre-client-modules-* | sed -n -e '/^kernel =/s/.* = //p')\";
 
+yum -y install redhat-lsb-core
+
 if [[ \$(lsb_release -sr) = 6.* ]]; then
     yumdownloader kernel-firmware-\$KERNEL_VERSION_AND_RELEASE
 

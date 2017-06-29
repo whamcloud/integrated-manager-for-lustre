@@ -31,7 +31,12 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # Install and setup manager on integration test runner
-scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+if $JENKINS; then
+    ARCHIVE_PATH=.
+else
+    ARCHIVE_PATH=chroma-bundles
+fi
+scp $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 # install cman here to test that the fence-agents-iml package is being a
@@ -114,15 +119,25 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 # Install and setup integration tests on integration test runner
-scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+if ! $JENKINS; then
+    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+fi
+scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests python-mock
+if $JENKINS; then
+    $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+    CMIT=chroma-manager-integration-tests
+else
+    CMIT=/root/${CMIT##*/}
+fi
+if ! $PROXY yum -y install \$CMIT python-mock; then
+    $PROXY yum clean all
+    $PROXY yum -y install \$CMIT python-mock
+fi
 
 # Set up fencing on the vm host
 if $USE_FENCE_XVM; then

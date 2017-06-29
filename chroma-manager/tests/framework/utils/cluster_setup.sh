@@ -22,6 +22,7 @@ cat <<\"EOF\" >> /root/.ssh/authorized_keys
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPOT9PQ/jwhQJgrggPhYr5uIMgJ7szKTLDCNtPIXiBEkFiCf9jtGP9I6wat83r8g7tRCk7NVcMm0e0lWbidqpdqKdur9cTGSOSRMp7x4z8XB8tqs0lk3hWefQROkpojzSZE7fo/IT3WFQteMOj2yxiVZYFKJ5DvvjdN8M2Iw8UrFBUJuXv5CQ3xV66ZvIcYkth3keFk5ZjfsnDLS3N1lh1Noj8XbZFdSRC++nbWl1HfNitMRm/EBkRGVP3miWgVNfgyyaT9lzHbR8XA7td/fdE5XrTpc7Mu38PE7uuXyLcR4F7l brian@brian-laptop
 EOF
 # instruct any caching proxies to only cache packages
+yum -y install ed
 ed /etc/yum.conf <<EOF
 /^$/i
 http_caching=packages
@@ -29,13 +30,17 @@ http_caching=packages
 wq
 EOF
 for key in CentOS-7 redhat-release; do
-    if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-$key ]; then
+    if [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key ]; then
         rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-\$key
     fi
 done
 yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
+if ! yum repolist | grep addon-epel; then
+    yum -y install epel-release
+fi
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+yum -y install ed
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
 /enabled/a
 gpgcheck=1
@@ -43,7 +48,7 @@ gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 .
 wq
 EOF
-" | dshbak -c
+$LOCAL_CLUSTER_SETUP" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
