@@ -24,8 +24,18 @@ python \"$CHROMA_DIR\"/chroma-manager/tests/integration/utils/chroma_log_collect
 
 $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
-# see if this cures the 401 errors from jenkins
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+# we can't currently upgrade a CentOS 7.3 node to RHEL 7.4 so just NOOP
+# out if that's the case we are testing
+# pity we have to wait for a provisioning to complete to bail out here
+if [ "$TEST_DISTRO_NAME" = "el" -a                  \
+     $(ssh root@$TEST_RUNNER "lsb_release -i -s") = \
+     CentOS ]; then
+    fake_test_pass "tests_skipped_because_RHEL_cant_upgrade_CentOS" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
+    exit 0
+fi
+
 ssh root@$TEST_RUNNER "exec 2>&1; set -e; set +x
 sed -i -e 's/Aitahd9u/"$JENKINS_PULL"/g' /etc/yum.repos.d/autotest.repo"
 
