@@ -8,7 +8,7 @@ spacelist_to_commalist() {
 
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
 
-. $CHROMA_DIR/chroma-manager/tests/framework/utils/cluster_setup.sh
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/cluster_setup.sh
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER) "exec 2>&1; set -xe
