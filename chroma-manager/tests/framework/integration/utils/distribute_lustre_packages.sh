@@ -4,7 +4,8 @@
 CACHE_DIR=/var/cache/yum/x86_64/7/lustre
 TAR_NAME=lustre-kernel-packages.tar.gz
 
-ssh root@$CLIENT_1 "exec 2>&1; set -xe
+ssh root@$CLIENT_1 "exec 2>&1
+# disabled for debug: set -xe
 
 # because the site seems to be frequently overloaded, extend retries and
 # timeout. set keepcache to populate cache with downloaded packages
@@ -12,7 +13,13 @@ sed -i -e '/enabled/a keepcache=1' -e '/enabled/a retries=20' -e '/enabled/a tim
 
 # we are only downloading packages to populate cache, don't concern ourselves
 # with broken dependencies for the time being
-yum install --downloadonly --skip-broken kernel-*_lustre
+n=0
+until [ $n -ge 5 ]
+do
+    yum install --downloadonly --skip-broken kernel-*_lustre && break
+    n=$[$n+1]
+    sleep 5
+done
 
 cd $CACHE_DIR
 tar -cvf ~/$TAR_NAME ./*"
