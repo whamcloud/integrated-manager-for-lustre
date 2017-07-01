@@ -41,13 +41,13 @@ wq
 EOF
 if [[ \$HOSTNAME = *vm*9 ]]; then
     build_type=client
-    whamcloud_repo=job/lustre-b2_10/lastSuccessfulBuild/arch=x86_64,build_type=\$build_type,distro=el7,ib_stack=inkernel/artifact/artifacts/
+    yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-b2_10/lastSuccessfulBuild/arch=x86_64,build_type=\$build_type,distro=el7,ib_stack=inkernel/artifact/artifacts/
+    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-b2_10_lastSuccessfulBuild_arch\=x86_64\,build_type\=\$build_type\,distro=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
 else
     build_type=server
-    whamcloud_repo=lustre-b2_10_last_successful/
+    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful/
+    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_.repo
 fi
-yum-config-manager --add-repo https://build.whamcloud.com/\$whamcloud_repo
-sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_${\$whamcloud_repo/\//_}.repo
 yum-config-manager --add-repo https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_e2fsprogs-master_arch\=x86_64\,distro\=el7_lastSuccessfulBuild_artifact__topdir_RPMS_.repo
 yum -y install distribution-gpg-keys-copr
