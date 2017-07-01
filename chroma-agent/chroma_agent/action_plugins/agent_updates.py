@@ -101,7 +101,8 @@ def install_packages(repos, packages):
     :return: package report of the format given by the lustre device plugin
     """
     if packages != []:
-        yum_util('clean')
+        # maybe we should just do clean metadata, want to be able to use cached packages if they exist!
+        # yum_util('clean')
 
         out = yum_util('requires', enablerepo=repos, packages=packages)
         for requirement in [l.strip() for l in out.strip().split("\n")]:

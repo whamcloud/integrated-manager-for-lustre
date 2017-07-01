@@ -58,3 +58,5 @@ fi
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
+
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/distribute_lustre_packages.sh
