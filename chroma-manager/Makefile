@@ -62,7 +62,7 @@ develop: version ui-modules
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
-	python manage.py dev_setup $(DEV_SETUP_BUNDLES)
+	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
 ui-modules:
 	echo "jenkins_fold:start:Setting up ui-modules"
@@ -103,10 +103,10 @@ sim simulator: $(CLUSTER_SIM_BIN) running_supervisor
 	cluster-sim --config $(CLUSTER_SIM_CFG) register $(CLUSTER_SIM_REGISTER_ARGS)
 
 dev_setup: nuke_db nuke_logs
-	@python manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
+	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
 
 supervisor: dev_setup
-	@python manage.py supervisor || exit $$?
+	@./manage.py supervisor || exit $$?
 
 running_supervisor:
 	@nc -w1 -d localhost $(TEST_HTTPD_PORT) || { \
@@ -151,7 +151,7 @@ agent_tests:
 
 unit_tests:
 	@echo "Running standard unit tests..."
-	@python manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
+	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
 
 feature_tests:
