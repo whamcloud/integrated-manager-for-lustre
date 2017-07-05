@@ -24,6 +24,4 @@ global-exclude .eslintrc
 global-exclude .eslintignore
 global-exclude .jscsrc
 prune ui-modules/node_modules/path-is-absolute
-prune ui-modules/node_modules/intel-realtime/test
-prune ui-modules/node_modules/@iml/view-server/test
 prune ui-modules/node_modules/.bin
