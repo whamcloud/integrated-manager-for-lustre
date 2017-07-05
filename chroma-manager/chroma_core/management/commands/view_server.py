@@ -27,7 +27,7 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        VIEW_SERVER_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', '@iml', 'view-server', 'dist', 'source')
+        VIEW_SERVER_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', '@iml', 'view-server', 'dist')
         CONF = os.path.join(VIEW_SERVER_DIR, "conf.json")
 
         conf = {
@@ -43,5 +43,5 @@ class Command(BaseCommand):
 
         json.dump(conf, open(CONF, 'w'), indent=2)
 
-        cmdline = ["node", VIEW_SERVER_DIR + '/server.js']
+        cmdline = ["node", VIEW_SERVER_DIR + '/bundle.js']
         print " ".join(cmdline)
