@@ -121,3 +121,16 @@ install_production: reset_cluster
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 ssi_tests: reset_cluster
 	chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main
+
+requirements:
+	make -C chroma-manager requirements
+
+chroma_test_env: requirements chroma_test_env/bin/activate
+
+chroma_test_env/bin/activate: chroma-manager/requirements.txt
+	test -d chroma_test_env || virtualenv --no-site-packages chroma_test_env
+	chroma_test_env/bin/pip install -r chroma-manager/requirements.txt
+	touch chroma_test_env/bin/activate
+
+unit_tests: chroma_test_env
+	sh -c '. chroma_test_env/bin/activate; make -C chroma-manager unit_tests'
