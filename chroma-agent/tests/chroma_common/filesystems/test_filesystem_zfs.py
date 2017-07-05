@@ -15,6 +15,9 @@ class TestFileSystemZFS(CommandCaptureTestCase):
         self.type_prop_mock = mock.PropertyMock(return_value='zfs')
         mock.patch.object(BlockDeviceZfs, 'filesystem_type', self.type_prop_mock).start()
 
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+
         self.patch_init_modules = mock.patch.object(FileSystemZfs, '_initialize_modules')
         self.patch_init_modules.start()
 
