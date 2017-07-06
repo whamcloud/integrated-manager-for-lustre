@@ -84,6 +84,7 @@ set_defaults() {
         export BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
         export JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
         export WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+    fi
 
     if [[ $slave = rhel*\&\&ssi ]]; then
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"rhel"}
@@ -110,4 +111,4 @@ set_defaults() {
     set_distro_vars "$JENKINS_DISTRO"
 
     export CLUSTER_CONFIG="cluster_cfg.json"
-} # end of set_defaults()
+} # end of set_defaults(*)
