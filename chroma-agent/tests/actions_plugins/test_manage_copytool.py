@@ -4,9 +4,10 @@ import mock
 
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, _copytool_vars
+from tests.lib.agent_unit_testcase import AgentUnitTestCase
 
 
-class TestCopytoolManagement(CommandCaptureTestCase):
+class TestCopytoolManagement(CommandCaptureTestCase, AgentUnitTestCase):
     def setUp(self):
         super(TestCopytoolManagement, self).setUp()
 
@@ -53,25 +54,29 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                                        self.ct_arguments)
 
     def test_start_monitored_copytool(self):
-        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'start')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'start')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')))
+        self.single_commands(CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'start', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'start', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id)))
 
         self.assertAgentOK(start_monitored_copytool(self.ct_id))
         self.assertRanAllCommandsInOrder()
 
     def test_stop_monitored_copytool(self):
-        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
+        self.single_commands(CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')))
 
-        with mock.patch('os.path.exists', return_value = True):
+        with mock.patch('os.path.exists', return_value=True):
             self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()
@@ -79,41 +84,49 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self.mock_os_remove.assert_called_with('/etc/init.d/chroma-copytool-%s' % self.ct_id)
 
     def test_start_should_be_idempotent(self):
-        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'start')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'start')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')))
+        self.single_commands(CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'start', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'start', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id)))
 
         self.assertAgentOK(start_monitored_copytool(self.ct_id))
         self.assertRanAllCommandsInOrder()
 
     def test_stop_should_be_idempotent1(self):
-        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'stop')),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
+        self.single_commands(CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-monitor-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'stop', 'chroma-copytool-%s' % self.ct_id)),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')))
 
-        with mock.patch('os.path.exists', return_value = True):
+        with mock.patch('os.path.exists', return_value=True):
             self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
-        with mock.patch('os.path.exists', return_value = False):
+        with mock.patch('os.path.exists', return_value=False):
             self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()
 
     def test_stop_should_be_idempotent2(self):
-        self.single_commands(CommandCaptureCommand(('/sbin/service', 'chroma-copytool-monitor-%s' % self.ct_id, 'status'), rc=1),
-                             CommandCaptureCommand(('/sbin/service', 'chroma-copytool-%s' % self.ct_id, 'status'), rc=1))
+        self.single_commands(CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-monitor-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')),
+                             CommandCaptureCommand(('systemctl', 'is-active', 'chroma-copytool-%s' % self.ct_id), rc=1),
+                             CommandCaptureCommand(('systemctl', 'daemon-reload')))
 
-        with mock.patch('os.path.exists', return_value = True):
+        with mock.patch('os.path.exists', return_value=True):
             self.assertAgentOK(stop_monitored_copytool(self.ct_id))
 
         self.assertRanAllCommandsInOrder()

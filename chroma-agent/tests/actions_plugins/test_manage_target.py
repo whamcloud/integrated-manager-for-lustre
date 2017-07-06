@@ -1,11 +1,11 @@
 import mock
+from django.utils import unittest
 
 from chroma_agent.action_plugins import manage_targets
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-
-from django.utils import unittest
+from tests.lib.agent_unit_testcase import AgentUnitTestCase
 
 
 class TestWriteconfTarget(CommandCaptureTestCase):
@@ -365,12 +365,12 @@ class TestXMLParsing(unittest.TestCase):
         self.assertEqual('c2890397-e0a2-4759-8f4e-df5ed64e1518', manage_targets._get_nvpairid_from_xml(self.xml_example))
 
 
-class TestCheckBlockDevice(CommandCaptureTestCase):
+class TestCheckBlockDevice(CommandCaptureTestCase, AgentUnitTestCase):
     def setUp(self):
         super(TestCheckBlockDevice, self).setUp()
 
-        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
-        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
 
     def test_occupied_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="ext4\n"))
@@ -408,7 +408,7 @@ class TestCheckBlockDevice(CommandCaptureTestCase):
         pass
 
 
-class TestCheckImportExport(CommandCaptureTestCase):
+class TestCheckImportExport(CommandCaptureTestCase, AgentUnitTestCase):
     """
     Test that the correct blockdevice methods are called, implementation of methods tested in
     test_blockdevice_zfs therefore don't repeat command capturing here

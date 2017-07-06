@@ -10,8 +10,8 @@ from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-from iml_common.lib.firewall_control import FirewallControlEL6
-from iml_common.lib.service_control import ServiceControlEL6
+from iml_common.lib.firewall_control import FirewallControlEL7
+from iml_common.lib.service_control import ServiceControlEL7
 from iml_common.lib.agent_rpc import agent_result_ok
 
 
@@ -109,12 +109,12 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         self.conf_template = env.get_template('corosync.conf')
 
         # mock out firewall control calls and check with assert_has_calls in tests
-        self.mock_add_port = mock.patch.object(FirewallControlEL6, '_add_port', return_value=None).start()
-        self.mock_remove_port = mock.patch.object(FirewallControlEL6, '_remove_port', return_value=None).start()
+        self.mock_add_port = mock.patch.object(FirewallControlEL7, '_add_port', return_value=None).start()
+        self.mock_remove_port = mock.patch.object(FirewallControlEL7, '_remove_port', return_value=None).start()
 
-        # mock out service control objects with ServiceControlEL6 spec and check with assert_has_calls in tests
+        # mock out service control objects with ServiceControlEL7 spec and check with assert_has_calls in tests
         # this assumes, quite rightly, that manage_corosync and manage_corosync2 will not both be used in the same test
-        self.mock_corosync_service = mock.create_autospec(ServiceControlEL6)
+        self.mock_corosync_service = mock.create_autospec(ServiceControlEL7)
         self.mock_corosync_service.enable.return_value = None
         self.mock_corosync_service.disable.return_value = None
         mock.patch('chroma_agent.action_plugins.manage_corosync.corosync_service',
@@ -122,11 +122,16 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         mock.patch('chroma_agent.action_plugins.manage_corosync2.corosync_service',
                    self.mock_corosync_service).start()
 
-        self.mock_pcsd_service = mock.create_autospec(ServiceControlEL6)
+        self.mock_pcsd_service = mock.create_autospec(ServiceControlEL7)
         self.mock_pcsd_service.enable.return_value = None
         self.mock_pcsd_service.start.return_value = None
         mock.patch('chroma_agent.action_plugins.manage_corosync2.pcsd_service',
                    self.mock_pcsd_service).start()
+
+        mock.patch('chroma_agent.action_plugins.manage_corosync.firewall_control',
+                   FirewallControlEL7()).start()
+        mock.patch('chroma_agent.action_plugins.manage_corosync2.firewall_control',
+                   FirewallControlEL7()).start()
 
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)
