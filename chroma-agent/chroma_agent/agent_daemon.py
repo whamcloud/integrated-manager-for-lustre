@@ -29,6 +29,7 @@ from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.log import daemon_log, daemon_log_setup, console_log_setup, increase_loglevel, decrease_loglevel
 from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_functions
+from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_functions
 
 
 class ServerProperties(object):
@@ -176,6 +177,7 @@ def main():
         def teardown_callback(*args, **kwargs):
             agent_client.stop()
             agent_client.join()
+            [function() for function in agent_daemon_teardown_functions]
 
         if not args.foreground:
             handlers = {
@@ -190,8 +192,7 @@ def main():
             signal.signal(signal.SIGUSR2, increase_loglevel)
 
         # Call any agent daemon startup methods that were registered.
-        for function in agent_daemon_startup_functions:
-            function()
+        [function() for function in agent_daemon_startup_functions]
 
         agent_client.start()
         # Waking-wait to pick up signals
@@ -207,4 +208,8 @@ def main():
         # NB I would rather ensure cleanup by using 'with', but this
         # is python 2.4-compatible code
         context.close()
+
+    # Call any agent daemon teardown methods that were registered.
+    [function() for function in agent_daemon_teardown_functions]
+
     daemon_log.info("Terminating")
