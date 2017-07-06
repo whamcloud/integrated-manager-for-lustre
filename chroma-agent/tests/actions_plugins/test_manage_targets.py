@@ -2,7 +2,7 @@ import mock
 
 
 from chroma_agent.action_plugins import manage_targets
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestManagePacemaker(CommandCaptureTestCase):

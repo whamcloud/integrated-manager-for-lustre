@@ -24,7 +24,7 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.utils import MeasuredEntity
 from chroma_help.help import help_text
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 log = log_register(__name__.split('.')[-1])
 

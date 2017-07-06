@@ -2,7 +2,7 @@ import tempfile
 import shutil
 import mock
 
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, _copytool_vars
 
 

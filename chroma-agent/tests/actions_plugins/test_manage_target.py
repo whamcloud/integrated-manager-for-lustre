@@ -1,9 +1,9 @@
 import mock
 
 from chroma_agent.action_plugins import manage_targets
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.blockdevices.blockdevice import BlockDevice
+from iml_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 from django.utils import unittest
 
@@ -80,8 +80,8 @@ class TestFormatTarget(CommandCaptureTestCase):
     def setUp(self):
         super(TestFormatTarget, self).setUp()
 
-        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
-        mock.patch('chroma_agent.chroma_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
+        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
+        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
 
         self.addCleanup(mock.patch.stopall)
 

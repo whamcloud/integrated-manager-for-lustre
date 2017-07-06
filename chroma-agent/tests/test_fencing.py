@@ -3,7 +3,7 @@ import mock
 from chroma_agent.action_plugins.manage_pacemaker import configure_fencing, set_node_standby, set_node_online
 from chroma_agent.action_plugins import manage_corosync
 from chroma_agent.lib.pacemaker import PacemakerNode
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 cib_configured_result = '''<cib epoch="99" num_updates="1" admin_epoch="0" validate-with="pacemaker-1.2" cib-last-written="Wed Feb 11 02:41:36 2015" update-origin="lotus-33vm15" update-client="cibadmin" crm_feature_set="3.0.7" have-quorum="1" dc-uuid="lotus-33vm16">

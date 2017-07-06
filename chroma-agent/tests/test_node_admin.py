@@ -1,7 +1,7 @@
 import mock
 from chroma_agent.lib import node_admin
-from chroma_agent.chroma_common.lib.util import PlatformInfo
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.lib.util import PlatformInfo
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestNodeAdmin(CommandCaptureTestCase):

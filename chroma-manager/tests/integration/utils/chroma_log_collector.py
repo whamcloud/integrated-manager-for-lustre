@@ -11,7 +11,7 @@ import json
 import re
 import sys
 
-from chroma_common.lib.shell import Shell
+from iml_common.lib.shell import Shell
 
 
 class ChromaLogCollector(object):

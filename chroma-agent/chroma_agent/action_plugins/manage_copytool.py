@@ -14,8 +14,8 @@ from chroma_agent.config_store import ConfigKeyExistsError
 from chroma_agent.cli import raw_result
 from chroma_agent.copytool_monitor import Copytool, COPYTOOL_PROGRESS_INTERVAL
 from chroma_agent.log import copytool_log
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
+from iml_common.lib.service_control import ServiceControl
+from iml_common.lib.agent_rpc import agent_error, agent_result_ok
 
 
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))

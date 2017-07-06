@@ -1,8 +1,6 @@
 import sys
 import mock
 
-from tests.command_capture_testcase import CommandCaptureTestCase
-from tests.command_capture_testcase import CommandCaptureCommand
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
 from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
 from chroma_agent.action_plugins.manage_corosync2 import change_mcast_port
@@ -11,9 +9,10 @@ from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
 from chroma_agent.action_plugins.manage_corosync_common import configure_network
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
-from chroma_agent.chroma_common.lib.firewall_control import FirewallControlEL6
-from chroma_agent.chroma_common.lib.service_control import ServiceControlEL6
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.lib.firewall_control import FirewallControlEL6
+from iml_common.lib.service_control import ServiceControlEL6
+from iml_common.lib.agent_rpc import agent_result_ok
 
 
 class FakeEtherInfo(object):

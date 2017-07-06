@@ -9,7 +9,7 @@ import re
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from iml_common.lib.exception_sandbox import exceptionSandBox
 
 
 class EMCPower(object):
