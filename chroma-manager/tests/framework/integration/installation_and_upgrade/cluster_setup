@@ -1,5 +1,11 @@
 #!/bin/bash -ex
 
+if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
+    RHEL=true
+else
+    RHEL=false
+fi
+
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }

@@ -1,5 +1,11 @@
 #!/bin/bash -ex
 
+if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
+    RHEL=true
+else
+    RHEL=false
+fi
+
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
@@ -103,10 +109,6 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
 fi" | dshbak -c
 
 # Install a client
-source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
-if [ ${IEEL_FROM_VER//./} -lt 3000 ]; then
-    OLD_CLIENT=true
-fi
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 echo "Create and exercise a filesystem..."
