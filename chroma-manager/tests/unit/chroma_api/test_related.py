@@ -12,13 +12,13 @@ class TestRelated(TestCase):
         self.mock_bundle = mock.Mock()
         self.mock_related_bundle = mock.Mock()
 
-        self.mock_related_field.should_full_dehydrate = mock.Mock(return_value=False)
+        self.mock_related_field.should_full_dehydrate = mock.Mock()
         self.mock_related_resource.build_bundle = mock.Mock(return_value=self.mock_related_bundle)
 
 
     def test_related_optional_expanded(self):
         ''' Test that an optional expand overrides a default full of false in dehydrate_related '''
-        self.mock_related_field.full = False
+        self.mock_related_field.should_full_dehydrate.return_value = False
         self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {'dehydrate__test_resource': True}
@@ -37,7 +37,7 @@ class TestRelated(TestCase):
 
     def test_related_default_expanded(self):
         ''' Test that an default full of False works in dehydrate_related '''
-        self.mock_related_field.full = True
+        self.mock_related_field.should_full_dehydrate.return_value = True
         self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {}
@@ -57,7 +57,7 @@ class TestRelated(TestCase):
     def test_related_optional_unexpanded(self):
         ''' Test that an optional no expand overrides a default full of true in dehydrate_related '''
 
-        self.mock_related_field.full = True
+        self.mock_related_field.should_full_dehydrate.return_value = True
         self.mock_related_field.instance_name = 'test_resource'
 
         for false_ in [False, 'false', 'False', 0, '0', None]:
@@ -79,7 +79,7 @@ class TestRelated(TestCase):
     def test_related_default_unexpanded(self):
         ''' Test that an default full of False works in dehydrate_related '''
 
-        self.mock_related_field.full = False
+        self.mock_related_field.should_full_dehydrate.return_value = False
         self.mock_related_field.instance_name = 'test_resource'
 
         self.mock_bundle.request.GET = {}
