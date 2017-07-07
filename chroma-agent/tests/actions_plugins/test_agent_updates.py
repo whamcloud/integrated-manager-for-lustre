@@ -69,7 +69,7 @@ sslclientcert = {2}
 
     def test_kernel_status(self):
         def run(arg_list):
-            values = {("rpm", "-q", "kmod-lustre"):
+            values = {("rpm", "-q", "--whatprovides", "kmod-lustre"):
                       "kmod-lustre-1.2.3-1.el6.x86_64\n",
                       ("uname", "-r"):
                       "2.6.32-358.2.1.el6.x86_64\n",

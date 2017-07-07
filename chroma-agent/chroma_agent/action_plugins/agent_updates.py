@@ -162,7 +162,7 @@ def kernel_status():
     """
     running_kernel = "kernel-%s" % AgentShell.try_run(["uname", "-r"]).strip()
 
-    if AgentShell.run(["rpm", "-q", "kmod-lustre"]).rc == 0:
+    if AgentShell.run(["rpm", "-q", "--whatprovides", "kmod-lustre"]).rc == 0:
         # on a server, a required kernel is a lustre patched kernel since we
         # are building storage servers that can support both ldiskfs and zfs
         try:
