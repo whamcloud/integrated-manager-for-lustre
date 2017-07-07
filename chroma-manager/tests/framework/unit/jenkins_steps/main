@@ -24,10 +24,7 @@ rm -rf chroma-externals .git/modules/chroma-externals
 
 # Pip install requirements
 cd $CHROMA_DIR/chroma-manager
-make requirements
-echo "jenkins_fold:start:pip install -f requirements.txt"
-pip install -r requirements.txt
-echo "jenkins_fold:end:pip install -f requirements.txt"
+make install_requirements
 
 if $MEASURE_COVERAGE; then
   python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml --with-coverage tests/unit/ <<EOC
