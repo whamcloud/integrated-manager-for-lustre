@@ -225,6 +225,7 @@ class ClusterSimulator(Persisted):
         # Packages which the FakeServers will report as available
         self.state['packages'] = {
             'server': {
+                'lustre-ldiskfs-zfs': (0, '1', '1', 'x86_64'),
                 'lustre': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-dkms': (0, '2.1.4', '1', 'x86_64'),
                 'kmod-lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
@@ -236,7 +237,7 @@ class ClusterSimulator(Persisted):
             },
             'worker': {
                 'lustre-client': (0, '2.5.0', '1', 'x86_64'),
-                'lustre-client-modules': (0, '2.5.0', '1', 'x86_64')
+                'kmod-lustre-client': (0, '2.5.0', '1', 'x86_64')
             }
         }
         for packages in self.state['packages'].values():
