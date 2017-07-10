@@ -1536,6 +1536,7 @@ class ManagedTargetMount(models.Model):
     volume_node = models.ForeignKey('VolumeNode')
     primary = models.BooleanField()
     target = models.ForeignKey('ManagedTarget')
+    modified_at = models.DateTimeField(auto_now=True)
 
     def save(self, force_insert = False, force_update = False, using = None):
         # If primary is true, then target must be unique

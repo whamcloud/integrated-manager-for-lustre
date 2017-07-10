@@ -53,6 +53,7 @@ class LogMessage(models.Model):
     tag = models.CharField(max_length = 63)
     message = models.TextField()
     message_class = models.SmallIntegerField()
+    modified_at = models.DateTimeField(auto_now=True)
 
     @classmethod
     def get_message_class(cls, message):
