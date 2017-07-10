@@ -4,6 +4,7 @@
 
 
 from django.db import models
+from django.utils import timezone
 
 import re
 
@@ -53,6 +54,7 @@ class LogMessage(models.Model):
     tag = models.CharField(max_length = 63)
     message = models.TextField()
     message_class = models.SmallIntegerField()
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
     @classmethod
     def get_message_class(cls, message):

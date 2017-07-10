@@ -8,6 +8,7 @@ import logging
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from chroma_core.lib.job import job_log
 from chroma_core.services.rpc import RpcError
@@ -95,6 +96,7 @@ class Command(models.Model):
             help_text = "Human readable string about one sentence long describing\
             the action being done by the command")
     created_at = models.DateTimeField(auto_now_add = True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
 
     def save(self, force_insert=False, force_update=False, using=None):
         """

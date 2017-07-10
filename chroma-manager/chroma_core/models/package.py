@@ -5,6 +5,7 @@
 
 from django.db import models
 from django.db.models import CharField, ForeignKey, IntegerField
+from django.utils import timezone
 
 from chroma_core.services import log_register
 from iml_common.lib.package_version_info import VersionInfo
@@ -15,7 +16,7 @@ log = log_register('package_update')
 class Package(models.Model):
     class Meta:
         app_label = 'chroma_core'
-
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
     name = CharField(max_length=128, unique=True)
 
 
@@ -29,6 +30,7 @@ class PackageVersion(models.Model):
     version = CharField(max_length=128)
     release = CharField(max_length=128)
     arch = CharField(max_length=32)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
 
 class PackageInstallation(models.Model):
@@ -36,8 +38,10 @@ class PackageInstallation(models.Model):
         app_label = 'chroma_core'
         unique_together = ('package_version', 'host')
 
+
     package_version = ForeignKey('PackageVersion')
     host = ForeignKey('ManagedHost')
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
 
 class PackageAvailability(models.Model):
@@ -47,6 +51,7 @@ class PackageAvailability(models.Model):
 
     package_version = ForeignKey('PackageVersion')
     host = ForeignKey('ManagedHost')
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
 
 def update(host, package_report):

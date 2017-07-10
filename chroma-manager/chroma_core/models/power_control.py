@@ -33,6 +33,8 @@ class DeletablePowerControlModel(models.Model):
         abstract = True
         app_label = 'chroma_core'
 
+    modified_at = models.DateTimeField(default=tznow, blank=True)
+
     # Stick this here so we can use it with both device and outlet classes
     def validate_inet_address(self, address):
         # Guard against accidental input of single-digit "addresses" which

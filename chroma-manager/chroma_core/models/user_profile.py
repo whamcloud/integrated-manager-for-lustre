@@ -6,6 +6,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
+from django.utils import timezone
 import json
 
 
@@ -31,6 +32,7 @@ class UserProfile(models.Model):
     accepted_eula = models.BooleanField(default=False)
 
     _gui_config = models.TextField(db_column='gui_config', default='{}')
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
     @property
     def gui_config(self):

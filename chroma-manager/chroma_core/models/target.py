@@ -11,6 +11,7 @@ from collections import namedtuple
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
+from django.utils import timezone
 from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
@@ -1536,6 +1537,7 @@ class ManagedTargetMount(models.Model):
     volume_node = models.ForeignKey('VolumeNode')
     primary = models.BooleanField()
     target = models.ForeignKey('ManagedTarget')
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
     def save(self, force_insert = False, force_update = False, using = None):
         # If primary is true, then target must be unique

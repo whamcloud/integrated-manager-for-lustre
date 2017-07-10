@@ -35,6 +35,7 @@ class StatefulObject(models.Model):
     state_modified_at = models.DateTimeField()
     state = models.CharField(max_length = MAX_STATE_STRING)
     immutable_state = models.BooleanField(default=False)
+    modified_at = models.DateTimeField(default=now, blank=True)
     states = None
     initial_state = None
     route_map = None

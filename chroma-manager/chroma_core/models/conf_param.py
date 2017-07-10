@@ -7,6 +7,7 @@ from django.db import models
 from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
 from chroma_help.help import help_text
+from django.utils import timezone
 
 from chroma_core.models.jobs import Job
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget
@@ -101,6 +102,7 @@ class ConfParam(models.Model):
     # A None value means "lctl conf_param -d", i.e. clear the setting
     value = models.CharField(max_length = 512, blank = True, null = True)
     version = models.IntegerField()
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
 
     class Meta:
         app_label = 'chroma_core'

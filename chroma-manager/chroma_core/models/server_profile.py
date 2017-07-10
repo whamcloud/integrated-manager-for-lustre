@@ -5,6 +5,7 @@
 
 from django.db import models
 from django.db import IntegrityError
+from django.utils import timezone
 
 from chroma_core.models.bundle import Bundle
 
@@ -49,6 +50,7 @@ class ServerProfile(models.Model):
     pacemaker = models.BooleanField(
         help_text = "Boolean, True if the host will manage pacemaker"
     )
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
     @property
     def packages(self):
@@ -106,6 +108,7 @@ class ServerProfilePackage(models.Model):
     bundle = models.ForeignKey(Bundle)
     server_profile = models.ForeignKey(ServerProfile)
     package_name = models.CharField(max_length=255)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
 
 class ServerProfileValidation(models.Model):
@@ -127,3 +130,4 @@ class ServerProfileValidation(models.Model):
     server_profile = models.ForeignKey(ServerProfile)
     test = models.CharField(max_length=256)
     description = models.CharField(max_length=256)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)

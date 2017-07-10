@@ -7,6 +7,7 @@ import os
 import datetime
 
 from django.db import models
+from django.utils import timezone
 
 from chroma_core.models.server_profile import ServerProfile
 from iml_common.lib.date_time import IMLDateTime
@@ -44,6 +45,8 @@ class RegistrationToken(models.Model):
         help_text = "Integer, the number of servers which may register using this token before it expires (default %s)" % DEFAULT_CREDITS)
 
     profile = models.ForeignKey(ServerProfile, null=True)
+
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)
 
     def save(self, *args, **kwargs):
         assert self.profile

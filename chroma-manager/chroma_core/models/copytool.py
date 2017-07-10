@@ -71,6 +71,7 @@ class CopytoolOperation(models.Model):
     state = models.SmallIntegerField(choices = STATE_CHOICES, default = OP_STATES.UNKNOWN)
     type = models.SmallIntegerField(choices = TYPE_CHOICES, default = OP_TYPES.UNKNOWN)
     copytool = models.ForeignKey('Copytool', related_name = 'operations')
+    modified_at = models.DateTimeField(default=tznow, blank=True)                                   
     started_at = models.DateTimeField(null = True, blank = True)
     updated_at = models.DateTimeField(null = True, blank = True)
     finished_at = models.DateTimeField(null = True, blank = True)

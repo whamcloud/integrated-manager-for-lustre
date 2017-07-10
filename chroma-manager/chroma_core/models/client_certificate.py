@@ -5,9 +5,11 @@
 
 
 from django.db import models
+from django.utils import timezone
 
 
 class ClientCertificate(models.Model):
+    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
     host = models.ForeignKey('ManagedHost')
     serial = models.CharField(max_length = 16)
     revoked = models.BooleanField(default = False)

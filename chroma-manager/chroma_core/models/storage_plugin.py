@@ -8,6 +8,7 @@ import logging
 
 from django.db import models
 from django.db.models import Q
+from django.utils.timezone import now
 
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
@@ -27,6 +28,7 @@ class StoragePluginRecord(models.Model):
     """Reference to a module defining a BaseStoragePlugin subclass"""
     module_name = models.CharField(max_length = MAX_NAME_LENGTH)
     internal = models.BooleanField()
+    modified_at = models.DateTimeField(default=now, blank=True)
 
     class Meta:
         unique_together = ('module_name',)
@@ -39,6 +41,7 @@ class StorageResourceClass(models.Model):
     storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete = models.PROTECT)
     class_name = models.CharField(max_length = MAX_NAME_LENGTH)
     user_creatable = models.BooleanField()
+    modified_at = models.DateTimeField(default=now, blank=True)
 
     def __str__(self):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
@@ -56,6 +59,7 @@ class StorageResourceClass(models.Model):
 class StorageResourceRecord(models.Model):
     """Reference to an instance of a BaseStorageResource"""
     resource_class = models.ForeignKey(StorageResourceClass, on_delete = models.PROTECT)
+    modified_at = models.DateTimeField(default=now, blank=True)
 
     # Representing a chroma_core.lib.storage_plugin.GlobalId or LocalId
     # TODO: put some checking for id_strs longer than this field: they
@@ -285,6 +289,7 @@ class StorageResourceAttribute(models.Model):
     # for comparing against at plugin load time to e.g. complain
     # about new fields and/or mung existing records
     key = models.CharField(max_length = 64)
+    modified_at = models.DateTimeField(default=now, blank=True)
 
     class Meta:
         abstract = True
@@ -335,6 +340,7 @@ class StorageResourceAttributeReference(StorageResourceAttribute):
 class StorageResourceClassStatistic(models.Model):
     resource_class = models.ForeignKey(StorageResourceClass)
     name = models.CharField(max_length = 64)
+    modified_at = models.DateTimeField(default=now, blank=True)
 
     class Meta:
         unique_together = ('resource_class', 'name')
@@ -402,6 +408,7 @@ class StorageResourceAlert(AlertStateBase):
 class StorageAlertPropagated(models.Model):
     storage_resource = models.ForeignKey(StorageResourceRecord)
     alert_state = models.ForeignKey(StorageResourceAlert)
+    modified_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('storage_resource', 'alert_state')
