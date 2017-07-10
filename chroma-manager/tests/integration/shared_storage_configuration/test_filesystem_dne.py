@@ -30,6 +30,13 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         return response.json.values()[0][0].get('data')
 
+    def _set_mount(self, volume):
+        # FIXME: Should switch primary host for each volume based on even/odd id to mimic real-life distribution
+        #        of volumes for load balancing purposes
+        # host_id = int(volume['id']) % 2
+        host_id = 0
+        self.set_volume_mounts(volume, self.hosts[host_id]['id'], self.hosts[host_id | 1]['id'])
+
     def _create_filesystem(self, mdt_count):
         assert mdt_count in [1, 2, 3]
 
@@ -46,10 +53,9 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
         mgt_volume = self.ha_volumes[0]
         mdt_volumes = self.ha_volumes[1:(1 + mdt_count)]
-        ost_volumes = self.ha_volumes[4]
+        ost_volumes = self.ha_volumes[4:5]
 
-        for volume in [mgt_volume] + mdt_volumes + ost_volumes:
-            self.set_volume_mounts(volume, self.hosts[0]['id'], self.hosts[1]['id'])
+        map(self._set_mount, [mgt_volume] + mdt_volumes + ost_volumes)
 
         self.filesystem_id = self.create_filesystem(self.hosts,
                                                     {'name': 'testfs',
