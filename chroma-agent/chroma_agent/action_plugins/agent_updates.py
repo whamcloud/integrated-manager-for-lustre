@@ -6,7 +6,6 @@
 import subprocess
 import re
 import os
-import platform
 import errno
 
 from chroma_agent.lib.shell import AgentShell

@@ -32,7 +32,7 @@ repoquery -q epel-release | grep epel-release || {
 echo "Begin running tests..."
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
-NOSE_ARGS=\"$NOSE_ARGS\"
+export NOSE_ARGS=\"$NOSE_ARGS\"
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
