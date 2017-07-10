@@ -8,6 +8,7 @@ from django.db import models
 
 
 class ClientCertificate(models.Model):
+    modified_at = models.DateTimeField(auto_now=True)
     host = models.ForeignKey('ManagedHost')
     serial = models.CharField(max_length = 16)
     revoked = models.BooleanField(default = False)
