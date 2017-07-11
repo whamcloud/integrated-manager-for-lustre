@@ -182,6 +182,7 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         self.assertEqual(len(filesystem['osts']), 1)
         self._check_stats(filesystem)
 
+    @skip('Disabled until LU-9725 is fixed')
     def test_mdt0_undeletable(self):
         """
         Test to ensure that we cannot delete MDT0
