@@ -22,7 +22,7 @@ yum install -y git python-virtualenv python-setuptools python-devel gcc make gra
 
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then
-    useradd -b /localhome chromatest
+    useradd chromatest
 fi
 su chromatest
 mkdir -p ~/.ssh
