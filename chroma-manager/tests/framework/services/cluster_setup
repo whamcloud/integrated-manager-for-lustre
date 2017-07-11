@@ -41,7 +41,7 @@ sed -i "s/Defaults    requiretty/# Defaults    requiretty/g" /etc/sudoers
 sed -i "s/rabbitmq:x:\([0-9]*\):[a-z]*/rabbitmq:x:\1:chromatest/g" /etc/group
 # End witchcraft
 
-export PATH=$PATH:/usr/lib/rabbitmq/bin/
+export PATH=\$PATH:/usr/lib/rabbitmq/bin/
 rabbitmq-plugins enable rabbitmq_management
 service rabbitmq-server start &> rabbitmq_startup.log
 cat rabbitmq_startup.log
