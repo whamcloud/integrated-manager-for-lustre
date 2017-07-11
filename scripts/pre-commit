@@ -87,6 +87,19 @@ CHECKS = [
             '.*/chroma-externals/.*',
         ],
         'print_filename': False
+    },
+    {
+        'output': 'Checking for python executable files...',
+        'command': '[[ -x %s ]] && echo "This file should not be executable!"',
+        'match_files': ['.*\.py$'],
+        'ignore_files': [
+            '.*manage.py',
+            '.*setup.py',
+            '.*/BUILD/.*',
+            '.*/chroma-externals/.*',
+            '.*/chroma-dependencies/.*',
+        ],
+        'print_filename': True
     }
 ]
 
@@ -170,16 +183,6 @@ def main(all_files, exclude = []):
         result = check_files(files, check) or result
 
     sys.exit(result)
-
-# python 2.4 doesn't have any()
-try:
-    any
-except NameError:
-    def any(iterable):
-        for element in iterable:
-            if element:
-                return True
-        return False
 
 
 if __name__ == '__main__':

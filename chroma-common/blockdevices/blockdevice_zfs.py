@@ -5,13 +5,35 @@
 import os
 import errno
 import re
-import threading
 import time
+import logging
 
 from collections import defaultdict
-
+from lockfile import LockFile, LockTimeout
 from ..lib import shell
 from blockdevice import BlockDevice
+from ..lib.util import pid_exists
+
+try:
+    from chroma_agent.log import daemon_log as log
+except ImportError:
+    log = logging.getLogger(__name__)
+
+    if not log.handlers:
+        handler = logging.FileHandler('blockdevice_zfs.log')
+        handler.setFormatter(logging.Formatter("[%(asctime)s: %(levelname)s/%(name)s] %(message)s"))
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
+
+
+def get_lockfile_pid(lockfile):
+    with open(lockfile, 'r') as f:
+        contents = f.readlines()
+
+    assert len(contents) == 1 and contents[0].isdigit(), \
+        'unexpected contents of lockfile %s: %s' % (lockfile, contents)
+
+    return int(contents[0])
 
 
 class ZfsDevice(object):
@@ -26,7 +48,12 @@ class ZfsDevice(object):
     to the machine. The code imports in read only mode and then exports the device whilst the enclosed code can then
     operate on the device as if it was locally active.
     """
-    import_locks = defaultdict(lambda: threading.RLock())
+
+    ZPOOL_LOCK_DIR = '/var/lib/chroma/zfs_locks'
+    LOCK_ACQUIRE_TIMEOUT = 10
+
+    lock_refcount = defaultdict(int)
+    locks_dir_initialized = False
 
     def __init__(self, device_path, try_import):
         """
@@ -34,7 +61,13 @@ class ZfsDevice(object):
         :param try_import: If the device is not imported, import / export it (when used as with). If try_import is false
         then the caller must deal with ensuring the device is accessible.
         """
-        self.pool_path = device_path.split('/')[0]
+        self.pool_path = device_path.split(os.path.sep)[0]
+
+        # Scope of a single process
+        self.lock = LockFile(os.path.join(self.ZPOOL_LOCK_DIR, self.pool_path))
+
+        # unique identifier used as key for reference counting lock calls on pool/thread/process
+        self.lock_unique_id = ':'.join([self.lock.unique_name, self.pool_path])
         self.pool_imported = False
         self.try_import = try_import
         self.available = not try_import         # If we are not going to try to import it, then presume it is available
@@ -57,7 +90,6 @@ class ZfsDevice(object):
                     self.pool_imported = (result is None)
                 except:
                     self.unlock_pool()
-                    # log.debug('ZfsDevice released lock on %s due to exception' % self.pool_path)
                     raise
 
             self.available = (result is None)
@@ -78,14 +110,49 @@ class ZfsDevice(object):
             self.unlock_pool()
 
     def lock_pool(self):
-        lock = self.import_locks[self.pool_path]
-        lock.acquire()
-        # log.debug('ZfsDevice acquired lock on %s' % self.pool_path)
+        """
+        Attempt to acquire a lock on a given zpool through a lockfile, increment the reference count each time
+        this method is called, regardless of whether acquire is actually called. Keep trying until we know
+        we are locking the zpool.
+
+        Lock acquire polls the timeout at intervals of LOCK_ACQUIRE_TIMEOUT.
+        """
+        if ZfsDevice.locks_dir_initialized is False:
+            # ensure lock directory exists
+            try:
+                os.mkdir(self.ZPOOL_LOCK_DIR)
+            except OSError:
+                pass
+
+            ZfsDevice.locks_dir_initialized = True
+
+        while not self.lock.i_am_locking():
+            try:
+                self.lock.acquire(self.LOCK_ACQUIRE_TIMEOUT)
+                with open(self.lock.lock_file, 'w') as f:
+                    f.writelines(str(self.lock.pid))
+            except LockTimeout:
+                # prune locks owned by non-existent processes
+                pid = get_lockfile_pid(self.lock.lock_file)
+
+                # validate pid holding lock exists
+                if not pid_exists(pid):
+                    self.lock.break_lock()
+                else:
+                    log.warning('lock acquire on lockfile %s timed out, lock owned by PID %s' % (self.lock.lock_file,
+                                                                                                 pid))
+
+        self.lock_refcount[self.lock_unique_id] += 1
 
     def unlock_pool(self):
-        lock = self.import_locks[self.pool_path]
-        lock.release()
-        # log.debug('ZfsDevice released lock on %s' % self.pool_path)
+        """
+        Release the held lock, should only be called when holding the lock. Decrement the reference count
+        each time this method is called and release when reference count is equal to one.
+        """
+        self.lock_refcount[self.lock_unique_id] -= 1
+
+        if self.lock_refcount[self.lock_unique_id] == 0:
+            self.lock.release()
 
     def import_(self, force, readonly):
         """
@@ -392,7 +459,7 @@ class BlockDeviceZfs(BlockDevice):
                     result = self.import_(pacemaker_ha_operation)
 
                     if (result is None) and (self.zpool_properties(True).get('readonly') == 'on'):
-                        return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path 
+                        return 'zfs pool %s can only be imported readonly, is it in use?' % self._device_path
 
                 else:
                     # zpool is already imported and writable, nothing to do.
@@ -494,3 +561,25 @@ class BlockDeviceZfs(BlockDevice):
                     break
 
         return error
+
+    @classmethod
+    def terminate_driver(cls):
+        """
+        Iterate through existing lockfiles and for each check if pid written into lock is THIS process' pid and
+        if so, remove lockfile. If no pid written into lockfile, ignore (linklockfiles).
+        """
+        lockfile_paths = [os.path.join(ZfsDevice.ZPOOL_LOCK_DIR, name) for name in os.listdir(ZfsDevice.ZPOOL_LOCK_DIR)]
+
+        def validate_or_remove(path):
+            try:
+                pid = get_lockfile_pid(path)
+            except AssertionError:
+                pass
+            else:
+                if os.getpid() == pid:
+                    os.remove(path)
+
+        # prune locks owned by THIS process
+        map(validate_or_remove, lockfile_paths)
+
+        return None
