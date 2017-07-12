@@ -1,5 +1,6 @@
 
 
+from django.utils.unittest import skip
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
