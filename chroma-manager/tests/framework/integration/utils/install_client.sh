@@ -2,7 +2,7 @@
 ssh root@$CLIENT_1 "exec 2>&1; set -xe
 
 # avoid getting the kernel-debug RPM
-yum -y install --exclude kernel-debug lustre-client
+yum -y install --exclude kernel-debug patchless-lustre-client
 
 # see if we need to reboot into a new kernel
 

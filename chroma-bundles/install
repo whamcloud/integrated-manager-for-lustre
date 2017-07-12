@@ -363,6 +363,30 @@ def _old_bundles():
 
     return bundles
 
+def _create_support_repos():
+
+    with open("/etc/yum.repos.d/chroma_support.repo", "w+") as repo:
+        repo.write("""[managerforlustre-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
+[epel]
+name=Extra Packages for Enterprise Linux 7 - $basearch
+#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
+failovermethod=priority
+enabled=1
+gpgcheck=1
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+gpgkey=https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+""")
+
 def _create_manager_repo():
     manager_repo_dir = tempfile.mkdtemp()
     log.debug("Temporary yum repo at %s" % manager_repo_dir)
@@ -391,6 +415,8 @@ def _install_or_upgrade_packages(upgrade):
     manager_repo_dir = None
     manager_repo_file = None
     old_version, old_release = _get_version()
+
+    _create_support_repos()
 
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()

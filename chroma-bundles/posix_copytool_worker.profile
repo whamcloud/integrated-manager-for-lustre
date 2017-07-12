@@ -19,7 +19,7 @@
       "chroma-agent-management"
     ],
     "external": [
-      "lustre-client"
+      "patchless-lustre-client"
     ]
   }
 }
