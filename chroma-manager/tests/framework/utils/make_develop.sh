@@ -41,4 +41,5 @@ LOG_LEVEL = logging.DEBUG
 EOF1
 
 export NPM_CONFIG_PYTHON=/usr/bin/python
+export PATH=\$PATH:/usr/sbin
 make develop"
