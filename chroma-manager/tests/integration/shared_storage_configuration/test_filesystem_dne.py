@@ -153,6 +153,7 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
             self.assertEqual(diff_stat['stats_unlink'], no_of_files_per_mdt[index])                                # And remove all the files.
 
+    @skip('Disabled until LU-9725 is fixed')
     def test_create_dne_filesystem(self):
         """
         Test that we can create a DNE file system with 2 MDTs
