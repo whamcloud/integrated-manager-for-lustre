@@ -1,0 +1,5 @@
+{
+	portals: all
+	rotor: HASH_RT
+	description: dispatch routed PUT message by hashing source NID for wildcard portals
+}

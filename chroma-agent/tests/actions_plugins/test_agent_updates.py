@@ -68,31 +68,21 @@ sslclientcert = {2}
 
     def test_kernel_status(self):
         def try_run(args):
-            if args == ["rpm", "-qR", "lustre-modules"]:
-                return """/bin/sh
-/bin/sh
-/bin/sh
-kernel = 2.6.32-358.18.1.el6
-rpmlib(CompressedFileNames) <= 3.0.4-1
-rpmlib(FileDigests) <= 4.6.0-1
-rpmlib(PayloadFilesHavePrefix) <= 4.0-1
-rpmlib(PayloadIsXz) <= 5.2-1
-"""
-            elif args == ["uname", "-r"]:
+            if args == ["uname", "-r"]:
                 return "2.6.32-358.2.1.el6.x86_64\n"
             elif args == ["rpm", "-q", "kernel"]:
                 return """kernel-2.6.32-358.2.1.el6.x86_64
-kernel-2.6.32-358.18.1.el6.x86_64
+kernel-2.6.32-358.18.1.el6_lustre.x86_64
 """
 
         with patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=try_run):
             result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
-                'required': 'kernel-2.6.32-358.18.1.el6.x86_64',
+                'required': 'kernel-2.6.32-358.18.1.el6_lustre.x86_64',
                 'running': 'kernel-2.6.32-358.2.1.el6.x86_64',
                 'available': [
                     "kernel-2.6.32-358.2.1.el6.x86_64",
-                    "kernel-2.6.32-358.18.1.el6.x86_64"
+                    "kernel-2.6.32-358.18.1.el6_lustre.x86_64"
                 ]
             })
 
@@ -191,8 +181,11 @@ lustre-backend-fs
     def test_set_profile_fail(self):
         # Three times because yum will try three times.
         self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"))
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')))
 
         config.update('settings', 'profile', {'managed': False})
 
