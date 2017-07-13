@@ -9,7 +9,7 @@ if ${INSTALL_PYCURL:-false}; then
     if [[ \$(rpm --eval %rhel) == 7 ]]; then
         export PYCURL_SSL_LIBRARY=nss
         pip install --upgrade pip
-        pip install --compile \$(pwd)/../chroma-externals/pycurl-7.43.0.tar.gz
+        pip install --compile pycurl==7.43.0
     fi
 fi
 pip install -r requirements.txt
