@@ -35,7 +35,7 @@ source chroma_test_env/bin/activate
 cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
 
 echo "Begin running tests..."
-PYTHONPATH=. nosetests --verbosity=2 --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
+PYTHONPATH=. nosetests --verbosity=2 --with-xunit --xunit-file ~chromatest/test_report.xml $TESTS
 EOF
 
 echo "End running tests."
