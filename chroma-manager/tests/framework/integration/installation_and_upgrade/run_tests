@@ -45,13 +45,10 @@ fi
 # first fetch and install chroma 3.1.1.0
 BUILD_JOB=ieel
 BUILD_NUM=37
-echo "++ curl -s -k \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
-++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
 IEEL_FROM_ARCHIVE=$(curl -s -k "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
 
-echo "+ curl -k -O \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE\""
 curl -k -O "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
 
 # Install and setup old manager

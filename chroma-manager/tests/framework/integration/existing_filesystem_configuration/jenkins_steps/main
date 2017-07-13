@@ -12,7 +12,6 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-ma
 cd $WORKSPACE
 # Copy a fingerprinted file so we can link together the projects in jenkins.
 
-echo "+ curl -f -k -O \"$JOB_URL/$ARCHIVE_NAME\""
 curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 
 got_aborted=false

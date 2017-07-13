@@ -14,8 +14,6 @@ REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration c
 cd $WORKSPACE
 shopt -s expand_aliases
 alias test_aggregation="python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py '${JENKINS_URL}' '${BUILD_JOB_NAME}' '${BUILD_JOB_BUILD_NUMBER}' '$VALID_TEST_JOBS' '$REQUIRED_TEST_JOBS'"
-sanitized_alias=$(echo $(type test_aggregation) | sed -e "s/^test_aggregation is aliased to \`//" -e "s/'$//")
-echo "+ $sanitized_alias"
 test_results=$(test_aggregation 2>&1) || true
 
 cat test_aggregation.log || true
