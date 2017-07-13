@@ -19,6 +19,9 @@ q
 EOF
 fi
 
+# remove any previous chroma-externals content
+rm -rf chroma-externals
+
 # Pip install requirements
 cd $CHROMA_DIR/chroma-manager
 make requirements
