@@ -10,6 +10,9 @@ check_for_autopass
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/services/services_cluster_config.json"}
 
+# remove any previous chroma-externals content
+rm -rf chroma-externals .git/modules/chroma-externals
+
 cd $CHROMA_DIR/chroma-manager
 
 # Release the provisioned cluster (at the exit of this script)
