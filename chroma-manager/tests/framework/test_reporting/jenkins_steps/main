@@ -1,8 +1,5 @@
 #!/bin/bash -ex
 
-# Get the chroma-externals repo as pip is going to need it
-scripts/update_chroma-externals.py
-
 # nose has to be installed separately otherwise we get:
 # Download error on https://pypi.python.org/simple/nose/: [Errno 8] _ssl.c:490: EOF occurred in violation of protocol -- Some packages may not be found!
 pip install --no-index --find-links=file://$(pwd)/chroma-externals nose

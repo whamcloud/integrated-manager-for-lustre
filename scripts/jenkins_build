@@ -63,8 +63,6 @@ pre_build()
     clean_uncommitted_artifacts
     # Nuke these tarballs to deal with name changes
     rm -f chroma-bundles/*.tar.gz
-    # update modules
-    scripts/update_chroma-externals.py
     run_pre_commit_hook
     # we don't currently need this
     #update_nodejs_version

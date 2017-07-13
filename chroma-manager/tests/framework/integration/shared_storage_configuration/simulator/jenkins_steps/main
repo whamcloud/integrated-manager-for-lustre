@@ -10,9 +10,6 @@ check_for_autopass
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/simulator.json"}
 
-# Get the chroma-externals repo as pip is going to need it
-scripts/update_chroma-externals.py
-
 cd $CHROMA_DIR/chroma-manager
 
 # Release the provisioned cluster (at the exit of this script)
