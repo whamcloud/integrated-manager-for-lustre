@@ -1,0 +1,14 @@
+snapshot_time             1497619329.606669949 secs.nsecs
+req_waittime              14893 samples [usec] 7347 0 1117293 259289071
+req_qdepth                14893 samples [reqs] 0 0 0 0
+req_active                14893 samples [reqs] 1 1 14893 14893
+req_timeout               14893 samples [sec] 1 10 14902 14992
+reqbuf_avail              41503 samples [bufs] 63 64 2626533 166229595
+ldlm_plain_enqueue        24 samples [reqs] 1 1 24 24
+mgs_connect               5 samples [usec] 105 12509 33491 380555157
+mgs_target_reg            6 samples [usec] 55 7797 17504 97424388
+mgs_config_read           8 samples [usec] 244 912 4038 2483870
+obd_ping                  14817 samples [usec] 10 155 577920 24715672
+llog_origin_handle_open   15 samples [usec] 24 94 766 42928
+llog_origin_handle_next_block 7 samples [usec] 34 1549 2731 2926151
+llog_origin_handle_read_header 11 samples [usec] 29 3608 5767 14664663

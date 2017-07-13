@@ -118,12 +118,14 @@ class SparseModel(models.Model):
 
     @classmethod
     def __new__(cls, *args, **kwargs):
+        required_class = cls
+
         try:
             if kwargs != {}:
                 if 'record_type' not in kwargs:
                     kwargs['record_type'] = cls.__name__
                 required_class = getattr(chroma_core.models, kwargs['record_type'])
-            else:
+            elif len(args) > 1:
                 # The args will be in the order of the fields, but we add 1 because the cls is appended on the front.
                 record_type_index = [field.attname for field in cls._meta.fields].index('record_type') + 1
                 required_class = getattr(chroma_core.models, args[record_type_index])

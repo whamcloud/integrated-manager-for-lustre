@@ -18,29 +18,29 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
         super(TestLocalLustreMetrics, self).setUp()
 
     def test_mdsmgs_metrics(self):
-        """Test that the various MGS/MDS metrics are collected and aggregated."""
+        """ Test that the various MGS/MDS metrics are collected and aggregated. """
         self.test_root = os.path.join(self.tests,
-                                     "data/lustre_versions/2.0.66/mds_mgs")
+                                      "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
 
         audit = LocalAudit()
 
         self.add_command(CMD, stdout=lctl_output)
 
         metrics = audit.metrics()['raw']['lustre']
-        self.assertEqual(metrics['target']['lustre-MDT0000']['filesfree'], 511954)
-        self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
-        self.assertEqual(metrics['lnet']['send_count'], 218887)
+        self.assertEqual(metrics['target']['testfs-MDT0000']['filesfree'], 4194037)
+        self.assertEqual(metrics['target']['MGS']['num_exports'], 6)
+        self.assertEqual(metrics['lnet']['send_count'], 12868)
 
     def test_mdt_hsm_metrics(self):
-        """Test that the HSM metrics are collected and aggregated."""
+        """ Test that the HSM metrics are collected and aggregated. """
         self.test_root = os.path.join(self.tests,
-                                     "data/lustre_versions/2.5.0/mds")
+                                      "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
 
         audit = LocalAudit()
 
         self.add_command(CMD, stdout=lctl_output)
 
-        metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
+        metrics = audit.metrics()['raw']['lustre']['target']['testfs-MDT0000']['hsm']
         self.assertEqual(metrics['agents']['idle'], 1)
         self.assertEqual(metrics['agents']['busy'], 1)
         self.assertEqual(metrics['agents']['total'], 2)
@@ -53,37 +53,36 @@ class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def test_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
-                                      "data/lustre_versions/2.0.66/oss")
+                                      "data/lustre_versions/2.9.58_86_g2383a62/oss")
 
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
-        self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
-        self.assertEqual(metrics['lnet']['recv_count'], 547181)
+        self.assertEqual(metrics['target']['testfs-OST0000']['filesfree'], 655061)
+        self.assertEqual(metrics['lnet']['recv_count'], 50072)
+        self.assertEqual(len(metrics['target']), 1)
 
-    def test_24_oss_metrics(self):
-        """Test that the various OSS metrics are collected and aggregated (2.4+)."""
+#    def test_24_oss_metrics(self):
+#        """Test that the various OSS metrics are collected and aggregated (2.4+)."""
+#        self.test_root = os.path.join(self.tests,
+#                                      "data/lustre_versions/2.9.58_86_g2383a62/oss")
+#
+#        audit = LocalAudit()
+#        metrics = audit.metrics()['raw']['lustre']
+#        self.assertEqual(metrics['target']['testfs-OST0000']['filesfree'], 655061)
+#        self.assertEqual(metrics['lnet']['recv_count'], 50072)
+#        self.assertEqual(len(metrics['target']), 1)
+
+    def test_stats(self):
+        """ Test that expected values are provided for certain stats used by the UI. """
         self.test_root = os.path.join(self.tests,
-                                      "data/lustre_versions/2.5.0/oss")
+                                      "data/lustre_versions/2.9.58_86_g2383a62/oss")
 
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
-        self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
-        self.assertEqual(metrics['lnet']['recv_count'], 156747)
-        self.assertEqual(len(metrics['target']), 7)
-
-    def test_default_stats(self):
-        """
-        Test that default values are provided for certain stats used by the UI.
-        """
-        self.test_root = os.path.join(self.tests,
-                                      "data/lustre_versions/2.5.0/oss")
-
-        audit = LocalAudit()
-        metrics = audit.metrics()['raw']['lustre']
-        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['read_bytes']['units'], "bytes")
-        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['read_bytes']['sum'], 0)
-        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['write_bytes']['count'], 0)
-        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['write_bytes']['sum'], 0)
+        self.assertEqual(metrics['target']['testfs-OST0000']['stats']['read_bytes']['units'], "bytes")
+        self.assertEqual(metrics['target']['testfs-OST0000']['stats']['read_bytes']['sum'], 0)
+        self.assertEqual(metrics['target']['testfs-OST0000']['stats']['write_bytes']['count'], 2)
+        self.assertEqual(metrics['target']['testfs-OST0000']['stats']['write_bytes']['sum'], 2468000)
 
 
 class TestPathologicalUseCases(PatchedContextTestCase):
@@ -128,17 +127,15 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         # this shouldn't raise a runtime error
         audit.metrics()
 
-        shutil.rmtree(self.test_root)
-
     def test_missing_brw_stats(self):
         """Catch a race where brw_stats hasn't been created yet."""
-        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+        os.makedirs(os.path.join(self.test_root, "sys/kernel/debug/lustre"))
 
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
         f.write("obdfilter 265823 4 - Live 0xffffffffa06b5000")
         f.close()
 
-        f = open(os.path.join(self.test_root, "proc/fs/lustre/devices"), "w+")
+        f = open(os.path.join(self.test_root, "sys/kernel/debug/lustre/devices"), "w+")
         f.write("  2 UP obdfilter test-OST0000 test-OST0000_UUID 5")
         f.close()
 
@@ -156,16 +153,14 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         # this shouldn't raise a runtime error
         audit.metrics()
 
-        shutil.rmtree(self.test_root)
-
     def test_loaded_module_no_device(self):
         """Loaded module with no device entry should be skipped."""
         # We can hit this case fairly readily simply by unmounting
         # targets and leaving modules loaded.  We can simulate it
         # by creating a /proc/modules file with one of our Audit
-        # classes' modules in it and an empty /proc/fs/lustre/devices
+        # classes' modules in it and an empty devices
         # file.
-        os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
+        os.makedirs(os.path.join(self.test_root, "sys/kernel/debug/lustre"))
 
         # Create a modules file with...  I dunno, lnet and mgs entries.
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
@@ -178,7 +173,7 @@ mgc 50620 2 mgs, Live 0xffffffffa0a90000
         f.close()
 
         # Create an empty devices file
-        open(os.path.join(self.test_root, "proc/fs/lustre/devices"), "w").close()
+        open(os.path.join(self.test_root, "sys/kernel/debug/lustre/devices"), "w+").close()
 
         # Ideally, our audit aggregator should never instantiate the
         # audit in the first place.
@@ -189,8 +184,6 @@ mgc 50620 2 mgs, Live 0xffffffffa0a90000
         # device entry, and therefore the audit should be instantiated.
         audit = LocalAudit()
         assert LnetAudit in audit.audit_classes()
-
-        shutil.rmtree(self.test_root)
 
     def test_no_lustre_modules_loaded(self):
         """Audit shouldn't fail if there are no Lustre modules loaded."""
@@ -224,80 +217,107 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         import socket
         self.assertEqual(audit.metrics(), {'raw': {'node': {'hostname': socket.gethostname(), 'cpustats': {'iowait': 10892, 'idle': 3471279, 'total': 3540537, 'user': 24601, 'system': 33763}, 'meminfo': {'MemTotal': 3991680}}}})
 
-        shutil.rmtree(self.test_root)
-
 
 class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.5.0/mds")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
         super(TestMdtMetrics, self).setUp()
-
         self.audit = MdtAudit()
-
         self.add_command(CMD, stdout=lctl_output)
-
         self.metrics = self.audit.metrics()['raw']['lustre']['target']
 
     def test_get_client_count(self):
-        self.assertEqual(self.metrics['lustre-MDT0000']['client_count'], 2)
+        self.assertEqual(self.metrics['testfs-MDT0000']['client_count'], 1)
 
     def test_mdt_stats_list(self):
         """Test that a representative sample of mdt stats is collected."""
-        stats_list = "req_waittime req_qdepth req_active req_timeout reqbuf_avail mds_getattr mds_connect mds_getstatus mds_statfs mds_sync mds_getxattr open close unlink mkdir rmdir getxattr".split()
+        stats_list = "req_waittime " \
+                     "req_qdepth " \
+                     "req_active " \
+                     "req_timeout " \
+                     "reqbuf_avail " \
+                     "ldlm_ibits_enqueue " \
+                     "mds_reint_setattr " \
+                     "mds_reint_open " \
+                     "mds_getattr " \
+                     "mds_connect " \
+                     "mds_get_root " \
+                     "mds_statfs " \
+                     "mds_getxattr " \
+                     "obd_ping " \
+                     "open " \
+                     "close " \
+                     "mknod " \
+                     "getattr " \
+                     "setattr " \
+                     "statfs " \
+                     "getxattr".split()
         for stat in stats_list:
-            assert stat in self.metrics['lustre-MDT0000']['stats'].keys(), "%s is missing" % stat
+            assert stat in self.metrics['testfs-MDT0000']['stats'].keys(), "%s is missing" % stat
 
     def test_mdt_stats_vals(self):
         """Test that the mdt stats contain the correct values."""
-        stats = self.metrics['lustre-MDT0000']['stats']
+        stats = self.metrics['testfs-MDT0000']['stats']
         self.assertEqual(stats['mds_getattr']['units'], "usec")
-        self.assertEqual(stats['mds_sync']['sum'], 4480017)
-        self.assertEqual(stats['mkdir']['units'], "reqs")
-        self.assertEqual(stats['unlink']['count'], 50254)
+        self.assertEqual(stats['mds_get_root']['sum'], 15)
+        self.assertEqual(stats['mknod']['units'], "reqs")
+        self.assertEqual(stats['close']['count'], 8)
 
     def test_mdt_int_metrics(self):
         """Test that the mdt simple integer metrics are collected."""
         int_list = "client_count kbytestotal kbytesfree filestotal filesfree".split()
         for metric in int_list:
-            assert metric in self.metrics['lustre-MDT0000'].keys(), "%s is missing" % metric
+            assert metric in self.metrics['testfs-MDT0000'].keys(), "%s is missing" % metric
 
     def test_mdt_filesfree(self):
         """Test that mdt int metrics are sane."""
-        self.assertEqual(self.metrics['lustre-MDT0000']['filesfree'], 511954)
+        self.assertEqual(self.metrics['testfs-MDT0000']['filesfree'], 4194037)
 
 
 class TestLnetMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
         super(TestLnetMetrics, self).setUp()
         audit = LnetAudit()
         self.metrics = audit.metrics()
 
     def test_lnet_send_count(self):
         """Test that LNet metrics look sane."""
-        self.assertEqual(self.metrics['raw']['lustre']['lnet']['send_count'], 218887)
+        self.assertEqual(self.metrics['raw']['lustre']['lnet']['send_count'], 12868)
 
 
 class TestMgsMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_86_g2383a62/mds_mgs")
         super(TestMgsMetrics, self).setUp()
         audit = MgsAudit()
         self.metrics = audit.metrics()['raw']['lustre']['target']['MGS']
 
     def test_mgs_stats_list(self):
         """Test that a representative sample of mgs stats is collected."""
-        stats_list = "req_waittime req_qdepth req_active req_timeout reqbuf_avail ldlm_plain_enqueue mgs_connect mgs_target_reg obd_ping llog_origin_handle_create llog_origin_handle_next_block llog_origin_handle_read_header".split()
+        stats_list = "req_waittime " \
+                     "req_qdepth " \
+                     "req_active " \
+                     "req_timeout " \
+                     "reqbuf_avail " \
+                     "ldlm_plain_enqueue " \
+                     "mgs_connect " \
+                     "mgs_target_reg " \
+                     "mgs_config_read " \
+                     "obd_ping " \
+                     "llog_origin_handle_open " \
+                     "llog_origin_handle_next_block " \
+                     "llog_origin_handle_read_header".split()
         for stat in stats_list:
             assert stat in self.metrics['stats'].keys()
 
     def test_mgs_stats_vals(self):
         """Test that the mgs stats contain the correct values."""
         self.assertEqual(self.metrics['stats']['reqbuf_avail']['units'], "bufs")
-        self.assertEqual(self.metrics['stats']['mgs_connect']['sumsquare'], 74038)
+        self.assertEqual(self.metrics['stats']['mgs_connect']['sumsquare'], 380555157)
 
     def test_mgs_int_metrics(self):
         """Test that the mgs simple integer metrics are collected."""
@@ -313,7 +333,7 @@ class TestMgsMetrics(PatchedContextTestCase):
 class TestObdfilterMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.9.58_jobstats/oss")
         super(TestObdfilterMetrics, self).setUp()
         audit = ObdfilterAudit()
         self.metrics = audit.metrics()['raw']['lustre']['target']
@@ -328,8 +348,8 @@ class TestObdfilterMetrics(PatchedContextTestCase):
         """Test that the obdfilter stats contain the correct values."""
         self.assertEqual(self.metrics['lustre-OST0000']['stats']['cache_hit']['units'], "pages")
         self.assertEqual(self.metrics['lustre-OST0001']['stats']['write_bytes']['sum'], 15260975104)
-        self.assertEqual(self.metrics['lustre-OST0002']['stats']['read_bytes']['count'], 1842)
-        self.assertEqual(self.metrics['lustre-OST0003']['stats']['statfs']['count'], 14503)
+        self.assertEqual(self.metrics['lustre-OST0000']['stats']['read_bytes']['count'], 1892)
+        self.assertEqual(self.metrics['lustre-OST0001']['stats']['statfs']['count'], 14472)
 
     def test_obdfilter_int_metrics(self):
         """Test that the obdfilter simple integer metrics are collected."""
@@ -339,7 +359,7 @@ class TestObdfilterMetrics(PatchedContextTestCase):
 
     def test_obdfilter_filestotal(self):
         """Test that obdfilter int metrics are sane."""
-        self.assertEqual(self.metrics['lustre-OST0003']['filestotal'], 128000)
+        self.assertEqual(self.metrics['lustre-OST0001']['filestotal'], 128000)
 
     @skipIf(DISABLE_BRW_STATS, "BRW stats disabled because of HYD-2307")
     def test_obdfilter_brw_stats(self):
@@ -377,7 +397,7 @@ class TestObdfilterMetrics(PatchedContextTestCase):
 
 class TestJobStats(PatchedContextTestCase):
     def setUp(self):
-        self.test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.7/oss'))
+        self.test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.9.58_jobstats/oss'))
         super(TestJobStats, self).setUp()
         audit = ObdfilterAudit()
         self.metrics = audit.metrics()['raw']['lustre']

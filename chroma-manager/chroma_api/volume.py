@@ -12,6 +12,7 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.chroma_model_resource import ChromaModelResource
+from chroma_api.validation_utils import validate
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -186,11 +187,12 @@ class VolumeResource(ChromaModelResource):
 
         return objects
 
-    def obj_update(self, bundle, request, **kwargs):
+    @validate
+    def obj_update(self, bundle, **kwargs):
         # FIXME: I'm not exactly sure how cached cached_object_get is -- should
         # we be explicitly getting a fresh one?  I'm just following what the ModelResource
         # obj_update does - jcs
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+        bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
         volume = bundle.data
 
         # Check that we're not trying to modify a Volume that is in

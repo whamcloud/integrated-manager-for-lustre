@@ -1,8 +1,0 @@
-snapshot_time             1314641982.511905 secs.usecs
-req_waittime              3062 samples [usec] 7 1002800 7591577 1290821279583
-req_qdepth                3062 samples [reqs] 0 3 28 56
-req_active                3062 samples [reqs] 1 5 3574 4734
-req_timeout               3062 samples [sec] 1 31 4091 35801
-reqbuf_avail              6176 samples [bufs] 63 64 392679 24968601
-ost_create                2693 samples [usec] 642 8841859 42790762 282740804026776
-ost_statfs                369 samples [usec] 6 125 6200 165032

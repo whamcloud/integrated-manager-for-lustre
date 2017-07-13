@@ -53,37 +53,49 @@ The name of the target.
 END
 }
 
+dbg() {
+    echo "`date` RA $1" >> /var/log/chroma-agent.log
+}
+
 Target_start() {
+    dbg "Target_start()"
     # See if the device is already mounted.
     if Target_status >/dev/null 2>&1; then
-        ocf_log info "Target $TARGET is already started."
+        # ocf_log info "Target $TARGET is already started."
+        dbg "Target $TARGET is already started."
         return $OCF_SUCCESS
     fi
 
     if ! grep -e 'lustre$' /proc/filesystems >/dev/null; then
-        ocf_log err "Couldn't find the lustre module in /proc/filesystems"
+        # ocf_log err "Couldn't find the lustre module in /proc/filesystems"
+        dbg "Couldn't find the lustre module in /proc/filesystems"
         return $OCF_ERR_ARGS
     fi
 
     # start the target
+    dbg "Starting: chroma-agent mount_target --uuid $TARGET --pacemaker_ha_operation 1"
     if ! chroma-agent mount_target --uuid $TARGET --pacemaker_ha_operation 1; then
-        ocf_log err "Couldn't start target $TARGET"
+        # ocf_log err "Couldn't start target $TARGET"
+        dbg "Couldn't start target $TARGET"
         return $OCF_ERR_GENERIC
     fi
     return $OCF_SUCCESS
 }
 
 Target_notify() {
+    dbg "Target_notify()"
     return $OCF_SUCCESS
 }
 
 Target_stop() {
+    dbg "Target_stop()"
     # started already?
     Target_status >/dev/null 2>&1
     if [ $? -eq $OCF_NOT_RUNNING ]; then
         # woo!  nothing to do.
         rc=$OCF_SUCCESS
     else
+        dbg "Unmounting: chroma-agent unmount_target --uuid $TARGET"
         chroma-agent unmount_target --uuid $TARGET
     fi
 
@@ -91,6 +103,7 @@ Target_stop() {
 }
 
 Target_status() {
+    dbg "Target_status()"
     # call the agent to see if it's running
     if chroma-agent target_running --uuid $TARGET >/dev/null 2>&1; then
         rc=$OCF_SUCCESS
@@ -101,14 +114,16 @@ Target_status() {
     fi
 
     if [ "$OP" = "status" ]; then
-        ocf_log info "$msg"
+        dbg "$msg"
+    #    ocf_log info "$msg"
     fi
 
     return $rc
 }
 
 Target_validate_all() {
-	return $OCF_SUCCESS
+    dbg "Target_validate_all()"
+    return $OCF_SUCCESS
 }
 
 if [ $# -ne 1 ]; then
