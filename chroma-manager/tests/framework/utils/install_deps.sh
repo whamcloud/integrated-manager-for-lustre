@@ -1,5 +1,5 @@
 # Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
-# We exclude chroma-externals and copy just what we need to reduce the io load on our builders.	
+# We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
 tar -czf - . | ssh chromatest@$CHROMA_MANAGER "set -ex
 mkdir -p chroma_test_env
 tar -C chroma_test_env -xizf -"
