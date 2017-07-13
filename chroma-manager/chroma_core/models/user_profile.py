@@ -31,6 +31,7 @@ class UserProfile(models.Model):
     accepted_eula = models.BooleanField(default=False)
 
     _gui_config = models.TextField(db_column='gui_config', default='{}')
+    modified_at = models.DateTimeField(auto_now=True)
 
     @property
     def gui_config(self):
