@@ -14,7 +14,7 @@ class Nid(models.Model):
     """Simplified NID representation for those we detect already-configured"""
     lnet_configuration = models.ForeignKey('LNetConfiguration')
     network_interface = models.OneToOneField('NetworkInterface', primary_key = True)
-
+    modified_at = models.DateTimeField(auto_now=True)
     lnd_network = models.IntegerField(null=True,
                                       help_text = "The lustre network number for this link")
     lnd_type = models.CharField(null=True,

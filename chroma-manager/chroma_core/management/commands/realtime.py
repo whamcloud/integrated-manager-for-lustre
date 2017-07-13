@@ -28,7 +28,7 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        REALTIME_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', 'intel-realtime')
+        REALTIME_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node_modules', '@iml/realtime')
         CONF = os.path.join(REALTIME_DIR, "conf.json")
 
         conf = {
