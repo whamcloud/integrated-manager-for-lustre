@@ -17,7 +17,7 @@ class TestUserResource(ChromaApiTestCase):
 
         me['old_password'] = "lustre"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
     def test_HYD995_superuser_muggle(self):
         """Superuser changing normal user's password -- old_password not required"""
@@ -28,7 +28,7 @@ class TestUserResource(ChromaApiTestCase):
         muggle_data['new_password1'] = "newpwd"
         muggle_data['new_password2'] = "newpwd"
         response = self.api_client.put(muggle_data['resource_uri'], data = muggle_data)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
     def test_HYD995_muggle_self(self):
         """Normal user changing his own password -- old_password required"""
@@ -48,7 +48,7 @@ class TestUserResource(ChromaApiTestCase):
 
         me['old_password'] = "muggle123"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
     def test_user_details_update(self):
         """Users should be able to update their details (first/last, email)"""
@@ -69,7 +69,7 @@ class TestUserResource(ChromaApiTestCase):
         me['last_name'] = "Josephson"
         me['email'] = "joebob@joebob.rocks"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
         me = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertEqual(int(me['id']), int(joebob.id))
@@ -83,7 +83,7 @@ class TestUserResource(ChromaApiTestCase):
         superuser['accepted_eula'] = True
 
         response = self.api_client.put("/api/user/%s/" % superuser["id"], data=superuser)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
         superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertTrue(superuser['accepted_eula'])
@@ -115,7 +115,7 @@ class TestUserResource(ChromaApiTestCase):
         superuser["is_superuser"] = False
 
         response = self.api_client.put("/api/user/%s/" % superuser["id"], data=superuser)
-        self.assertHttpAccepted(response)
+        self.assertHttpOK(response)
 
         superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertTrue(superuser['is_superuser'])
@@ -144,7 +144,7 @@ class TestUserResource(ChromaApiTestCase):
         me["accepted_eula"] = True
 
         resp = self.api_client.put("/api/user/%s/" % me["id"], data=me)
-        self.assertHttpAccepted(resp)
+        self.assertHttpOK(resp)
 
         me = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertFalse(me["accepted_eula"])

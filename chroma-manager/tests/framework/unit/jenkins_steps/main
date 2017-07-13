@@ -27,48 +27,6 @@ cd $CHROMA_DIR/chroma-manager
 make requirements
 pip install -r requirements.txt
 
-#
-# patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff
-#
-# you'd think that site.getsitepackages() was the right way to do this,
-# right?  well, you'd be correct except that life in a virtualenv is not
-# quite like life outside of it.
-# https://github.com/pypa/virtualenv/issues/355
-python_version=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[0:2])')
-pushd $WORKSPACE/chroma_test_env/lib/python$python_version/site-packages
-patch -R -p1 <<"EOF" || true
-diff --git a/behave/model.py b/behave/model.py
-index 1183e1b..371c8dd 100644
---- a/behave/model.py
-+++ b/behave/model.py
-@@ -372,6 +372,8 @@ class Scenario(TagStatement, Replayable)
-         self.steps = steps or []
- 
-         self.background = None
-+        self.stderr = None
-+        self.stderr = None
- 
-     def __repr__(self):
-         return '<Scenario "%s">' % self.name
-EOF
-patch -p1 <<"EOF" || true
-diff --git a/behave/model.py b/behave/model.py
-index 1183e1b..371c8dd 100644
---- a/behave/model.py
-+++ b/behave/model.py
-@@ -372,6 +372,8 @@ class Scenario(TagStatement, Replayable)
-         self.steps = steps or []
- 
-         self.background = None
-+        self.stderr = None
-+        self.stdout = None
- 
-     def __repr__(self):
-         return '<Scenario "%s">' % self.name
-EOF
-
-popd
-
 if $MEASURE_COVERAGE; then
   python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml --with-coverage tests/unit/ <<EOC
 yes
