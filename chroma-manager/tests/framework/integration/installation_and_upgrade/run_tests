@@ -42,23 +42,17 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if [ -z "$JENKINS_PULL" ]; then
-    JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
-fi
 # first fetch and install chroma 3.1.1.0
 BUILD_JOB=ieel
 BUILD_NUM=37
-set +x
-echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
+echo "++ curl -s -k \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
 ++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
-IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-set -x
+IEEL_FROM_ARCHIVE=$(curl -s -k "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
-set +x
-echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE\""
-curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-set -x
+
+echo "+ curl -k -O \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE\""
+curl -k -O "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
 
 # Install and setup old manager
 scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
