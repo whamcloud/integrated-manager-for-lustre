@@ -11,11 +11,8 @@ CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/nul
 SLAVE=${slave:?"Need to set slave"}
 
 cd $WORKSPACE
-
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:********* \"$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz\""
-curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
-set -x
+echo "+ curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz \"$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz\""
+curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e

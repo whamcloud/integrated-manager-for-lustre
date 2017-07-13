@@ -14,10 +14,8 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-ma
 
 if $JENKINS; then
     cd $WORKSPACE
-    set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-    echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/$ARCHIVE_NAME\""
-    curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
-    set -x
+    echo "+ curl -f -k -O \"$JOB_URL/$ARCHIVE_NAME\""
+    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"///
 fi
 
 got_aborted=false
