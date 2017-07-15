@@ -14,8 +14,7 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-ma
 
 if $JENKINS; then
     cd $WORKSPACE
-    echo "+ curl -f -k -O \"$JOB_URL/$ARCHIVE_NAME\""
-    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"///
+    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 fi
 
 got_aborted=false
