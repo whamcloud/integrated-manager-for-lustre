@@ -57,14 +57,16 @@ set_defaults() {
     export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
 
     if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
-        {
-            echo "Whoa!  We hit TEI-3576."
-            echo
-            env
-            echo
-            echo "At test run start, env was:"
-            cat /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
-        } | mail -s "TEI-3576" brian.murrell@intel.com
+        if $JENKINS; then
+            {
+                echo "Whoa!  We hit TEI-3576."
+                echo
+                env
+                echo
+                echo "At test run start, env was:"
+                cat /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
+            } | mail -s "TEI-3576" brian.murrell@intel.com
+        fi
 
         # now set it to a sane value
         MEASURE_COVERAGE="false"
