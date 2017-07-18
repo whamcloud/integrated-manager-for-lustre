@@ -416,8 +416,6 @@ def _install_or_upgrade_packages(upgrade):
     manager_repo_file = None
     old_version, old_release = _get_version()
 
-    _create_support_repos()
-
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()
         log.info("{action} Intel(R) Manager for Lustre*".format(action="Upgrading" \
@@ -683,6 +681,8 @@ def main():
 
     if args.platform_check:
         _check_platform()
+
+    _create_support_repos()
 
     if args.epel_check:
         _check_no_epel()
