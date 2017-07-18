@@ -8,7 +8,7 @@
 # (2) Warns the developer it will wipe all data on their cluster.
 # (3) Runs the tests, with an xml report if requested.
 
-NOSE_ARGS=${NOSE_ARGS:-""}
+NOSE_ARGS=${NOSE_ARGS:-"-x"}
 FORCED=false
 CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
 XML_REPORT=''
