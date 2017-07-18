@@ -8,7 +8,7 @@ from django.utils import timezone
 
 
 class Bundle(models.Model):
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)                                   
     bundle_name = models.CharField(primary_key = True, max_length = 50,
                                    help_text = "Unicode string, bundle name")
     version = models.CharField(max_length = 255, default = "0.0.0",

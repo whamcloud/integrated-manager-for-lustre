@@ -96,7 +96,7 @@ class Command(models.Model):
             help_text = "Human readable string about one sentence long describing\
             the action being done by the command")
     created_at = models.DateTimeField(auto_now_add = True)
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)                                   
 
     def save(self, force_insert=False, force_update=False, using=None):
         """

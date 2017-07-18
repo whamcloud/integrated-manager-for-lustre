@@ -46,7 +46,7 @@ class RegistrationToken(models.Model):
 
     profile = models.ForeignKey(ServerProfile, null=True)
 
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
 
     def save(self, *args, **kwargs):
         assert self.profile

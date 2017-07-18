@@ -16,7 +16,8 @@ log = log_register('package_update')
 class Package(models.Model):
     class Meta:
         app_label = 'chroma_core'
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
     name = CharField(max_length=128, unique=True)
 
 
@@ -30,7 +31,7 @@ class PackageVersion(models.Model):
     version = CharField(max_length=128)
     release = CharField(max_length=128)
     arch = CharField(max_length=32)
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
 
 
 class PackageInstallation(models.Model):
@@ -41,7 +42,7 @@ class PackageInstallation(models.Model):
 
     package_version = ForeignKey('PackageVersion')
     host = ForeignKey('ManagedHost')
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
 
 
 class PackageAvailability(models.Model):
@@ -51,7 +52,7 @@ class PackageAvailability(models.Model):
 
     package_version = ForeignKey('PackageVersion')
     host = ForeignKey('ManagedHost')
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
 
 
 def update(host, package_report):

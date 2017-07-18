@@ -5,223 +5,309 @@ from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
 
+tables = [
+    "chroma_core_storageresourceclassstatistic",
+    "chroma_core_packageversion",
+    "chroma_core_alertemail",
+    "chroma_core_copytool",
+    "chroma_core_storageresourceclass",
+    "chroma_core_rsyslogconfiguration",
+    "chroma_core_serverprofilevalidation",
+    "chroma_core_managedtarget",
+    "chroma_core_packageinstallation",
+    "chroma_core_command",
+    "chroma_core_managedfilesystem",
+    "chroma_core_pacemakerconfiguration",
+    "chroma_core_powercontroltype",
+    "chroma_core_alertsubscription",
+    "chroma_core_storagealertpropagated",
+    "chroma_core_managedtargetmount",
+    "chroma_core_nid",
+    "chroma_core_ntpconfiguration",
+    "chroma_core_clientcertificate",
+    "chroma_core_alertstate",
+    "chroma_core_copytooloperation",
+    "chroma_core_volumenode",
+    "chroma_core_packageavailability",
+    "chroma_core_userprofile",
+    "chroma_core_bundle",
+    "chroma_core_logmessage",
+    "chroma_core_managedhost",
+    "chroma_core_serverprofile",
+    "chroma_core_powercontroldeviceoutlet",
+    "chroma_core_corosyncconfiguration",
+    "chroma_core_lustreclientmount",
+    "chroma_core_storageresourceattributeserialized",
+    "chroma_core_registrationtoken",
+    "chroma_core_storagepluginrecord",
+    "chroma_core_serverprofilepackage",
+    "chroma_core_volume",
+    "chroma_core_powercontroldevice",
+    "chroma_core_storageresourcerecord",
+    "chroma_core_package",
+    "chroma_core_storageresourceattributereference",
+    "chroma_core_lnetconfiguration",
+    "chroma_core_confparam"
+]
+
 
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        db.execute("""
+CREATE OR REPLACE FUNCTION insert_modified_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.modified_at IS NULL THEN
+        NEW.modified_at := now();
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_modified_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.modified_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+        """)
+
+        forward_trigger_str = """
+CREATE TRIGGER insert_modified_at
+BEFORE INSERT ON %s
+FOR EACH ROW EXECUTE PROCEDURE insert_modified_at();
+
+CREATE TRIGGER update_modified_at
+BEFORE UPDATE ON %s
+FOR EACH ROW EXECUTE PROCEDURE update_modified_at();
+        """
+
+        db.execute(" ".join(map(lambda x: forward_trigger_str % (x, x), tables)))
+
         # Adding field 'StorageResourceClassStatistic.modified_at'
         db.add_column('chroma_core_storageresourceclassstatistic', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PackageVersion.modified_at'
         db.add_column('chroma_core_packageversion', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'AlertEmail.modified_at'
         db.add_column('chroma_core_alertemail', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Copytool.modified_at'
         db.add_column('chroma_core_copytool', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StorageResourceClass.modified_at'
         db.add_column('chroma_core_storageresourceclass', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'RSyslogConfiguration.modified_at'
         db.add_column('chroma_core_rsyslogconfiguration', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ServerProfileValidation.modified_at'
         db.add_column('chroma_core_serverprofilevalidation', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ManagedTarget.modified_at'
         db.add_column('chroma_core_managedtarget', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PackageInstallation.modified_at'
         db.add_column('chroma_core_packageinstallation', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Command.modified_at'
         db.add_column('chroma_core_command', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ManagedFilesystem.modified_at'
         db.add_column('chroma_core_managedfilesystem', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PacemakerConfiguration.modified_at'
         db.add_column('chroma_core_pacemakerconfiguration', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PowerControlType.modified_at'
         db.add_column('chroma_core_powercontroltype', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
 
         # Adding field 'AlertSubscription.modified_at'
         db.add_column('chroma_core_alertsubscription', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StorageAlertPropagated.modified_at'
         db.add_column('chroma_core_storagealertpropagated', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ManagedTargetMount.modified_at'
         db.add_column('chroma_core_managedtargetmount', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Nid.modified_at'
         db.add_column('chroma_core_nid', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'NTPConfiguration.modified_at'
         db.add_column('chroma_core_ntpconfiguration', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ClientCertificate.modified_at'
         db.add_column('chroma_core_clientcertificate', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'AlertState.modified_at'
         db.add_column('chroma_core_alertstate', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'CopytoolOperation.modified_at'
         db.add_column('chroma_core_copytooloperation', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'VolumeNode.modified_at'
         db.add_column('chroma_core_volumenode', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PackageAvailability.modified_at'
         db.add_column('chroma_core_packageavailability', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'UserProfile.modified_at'
         db.add_column('chroma_core_userprofile', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Bundle.modified_at'
         db.add_column('chroma_core_bundle', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'LogMessage.modified_at'
         db.add_column('chroma_core_logmessage', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ManagedHost.modified_at'
         db.add_column('chroma_core_managedhost', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ServerProfile.modified_at'
         db.add_column('chroma_core_serverprofile', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PowerControlDeviceOutlet.modified_at'
         db.add_column('chroma_core_powercontroldeviceoutlet', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'CorosyncConfiguration.modified_at'
         db.add_column('chroma_core_corosyncconfiguration', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'LustreClientMount.modified_at'
         db.add_column('chroma_core_lustreclientmount', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StorageResourceAttributeSerialized.modified_at'
         db.add_column('chroma_core_storageresourceattributeserialized', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'RegistrationToken.modified_at'
         db.add_column('chroma_core_registrationtoken', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StoragePluginRecord.modified_at'
         db.add_column('chroma_core_storagepluginrecord', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ServerProfilePackage.modified_at'
         db.add_column('chroma_core_serverprofilepackage', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Volume.modified_at'
         db.add_column('chroma_core_volume', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'PowerControlDevice.modified_at'
         db.add_column('chroma_core_powercontroldevice', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StorageResourceRecord.modified_at'
         db.add_column('chroma_core_storageresourcerecord', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'Package.modified_at'
         db.add_column('chroma_core_package', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'StorageResourceAttributeReference.modified_at'
         db.add_column('chroma_core_storageresourceattributereference', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'LNetConfiguration.modified_at'
         db.add_column('chroma_core_lnetconfiguration', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
         # Adding field 'ConfParam.modified_at'
         db.add_column('chroma_core_confparam', 'modified_at',
-                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True),
+                      self.gf('django.db.models.fields.DateTimeField')(default=django.utils.timezone.now, blank=True, editable=False),
                       keep_default=False)
 
 
     def backwards(self, orm):
+        db.execute("DROP FUNCTION IF EXISTS update_modified_at();")
+
+        backward_trigger_str = """
+        DROP TRIGGER IF EXISTS insert_modified_at ON %s;
+        DROP TRIGGER IF EXISTS update_modified_at ON %s;
+        """
+
+        db.execute(" ".join(map(lambda x: backward_trigger_str % (x, x), tables)))
+
         # Deleting field 'StorageResourceClassStatistic.modified_at'
         db.delete_column('chroma_core_storageresourceclassstatistic', 'modified_at')
 

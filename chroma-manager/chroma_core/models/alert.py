@@ -29,7 +29,7 @@ class AlertStateBase(SparseModel):
        issue affected a particular element of the system"""
     alert_item_type = models.ForeignKey(ContentType, null=True)
     alert_item_id = models.PositiveIntegerField(null=True)
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
     alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
@@ -305,7 +305,7 @@ class AlertSubscription(models.Model):
     """Represents a user's election to be notified of specific alert classes"""
     user = models.ForeignKey(User, related_name='alert_subscriptions')
     alert_type = models.ForeignKey(ContentType)
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
     # TODO: alert thresholds?
 
     class Meta:
@@ -327,7 +327,7 @@ class AlertSubscription(models.Model):
 class AlertEmail(models.Model):
     """Record of which alerts an email has been emitted for"""
     alerts = models.ManyToManyField(AlertState)
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)
 
     class Meta:
         app_label = 'chroma_core'

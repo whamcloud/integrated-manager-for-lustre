@@ -455,7 +455,7 @@ class VolumeNode(models.Model):
     volume = models.ForeignKey(Volume)
     host = models.ForeignKey(ManagedHost)
     path = models.CharField(max_length = 512, help_text = "Device node path, e.g. '/dev/sda/'")
-    modified_at = models.DateTimeField(default=tznow, blank=True)                                   
+    modified_at = models.DateTimeField(default=tznow, blank=True, editable=False)                                   
     __metaclass__ = DeletableMetaclass
 
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)

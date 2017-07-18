@@ -102,7 +102,7 @@ class ConfParam(models.Model):
     # A None value means "lctl conf_param -d", i.e. clear the setting
     value = models.CharField(max_length = 512, blank = True, null = True)
     version = models.IntegerField()
-    modified_at = models.DateTimeField(default=timezone.now, blank=True)                                   
+    modified_at = models.DateTimeField(default=timezone.now, blank=True, editable=False)                                   
 
     class Meta:
         app_label = 'chroma_core'
