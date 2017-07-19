@@ -364,7 +364,7 @@ def setup(request, key):
     repos = """[lustre]
 name=Lustre server
 #baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-baseurl=https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el$releasever/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
+baseurl=https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el$releasever/axis-ib_stack/inkernel/builds/48721/archive/artifacts/
 enabled=1
 gpgcheck=0
 
