@@ -18,7 +18,7 @@
       "chroma-agent-management"
     ],
     "external": [
-      "patchless-lustre-client",
+      "lustre-client",
       "robinhood-lhsm",
       "robinhood-webgui",
       "robinhood-adm"

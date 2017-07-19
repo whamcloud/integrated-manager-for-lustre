@@ -362,31 +362,39 @@ def setup(request, key):
 
     # the minimum repos needed on a storage server now
     repos = """[lustre]
-name=added from: https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+name=Lustre server
+#baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+baseurl=https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el$releasever/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-lustre-client]
-name=Copr repo for lustre-client owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/epel-7-$basearch/
-type=rpm-md
-skip_if_unavailable=True
-gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/pubkey.gpg
-repo_gpgcheck=0
+#[managerforlustre-lustre-client]
+#name=Copr repo for lustre-client owned by managerforlustre
+#baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/epel-$releasever-$basearch/
+#type=rpm-md
+#skip_if_unavailable=True
+#gpgcheck=1
+#gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/pubkey.gpg
+#repo_gpgcheck=0
+#enabled=1
+#enabled_metadata=1
+[lustre-client]
+name=Lustre Client
+baseurl=https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/client/axis-distro/el$releasever/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
 enabled=1
-enabled_metadata=1
+gpgcheck=0
 
 [e2fsprogs]
-name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
-baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64%2Cdistro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
+#name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch,distro=el$releasever/lastSuccessfulBuild/artifact/_topdir/RPMS/
+#baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch%2Cdistro=el$releasever/lastSuccessfulBuild/artifact/_topdir/RPMS/
+name=Lustre e2fsprogs
+baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el$releasever/
 enabled=1
 gpgcheck=0
 
 [managerforlustre-manager-for-lustre]
 name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-$releasever-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
@@ -394,22 +402,15 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-
 repo_gpgcheck=0
 enabled=1
 
-[mirror.centos.org_centos_7_extras_x86_64_]
-name=added from: http://mirror.centos.org/centos/7/extras/x86_64/
-baseurl=http://mirror.centos.org/centos/7/extras/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
-
 [epel]
-name=Extra Packages for Enterprise Linux 7 - $basearch
-#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
-mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
+name=Extra Packages for Enterprise Linux $releasever - $basearch
+#baseurl=http://download.fedoraproject.org/pub/epel/$releasever/$basearch
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-$releasever&arch=$basearch
 failovermethod=priority
 enabled=1
 gpgcheck=1
-#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
-gpgkey=https://muug.ca/mirror/fedora-epel/RPM-GPG-KEY-EPEL-7
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-$releasever
+gpgkey=https://muug.ca/mirror/fedora-epel/RPM-GPG-KEY-EPEL-$releasever
 
 """
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
