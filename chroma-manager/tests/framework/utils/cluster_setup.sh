@@ -41,7 +41,7 @@ if [[ \$HOSTNAME = *vm*2 ]]; then
     build_type=client
     #yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-\$build_type-epel-7.repo
     #rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
-    yum-config-manager --add-repo https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el\$releasever/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
+    yum-config-manager --add-repo https://build.hpdd.intel.com/lustre-reviews/configurations/axis-arch/\$basearch/axis-build_type/server/axis-distro/el\$releasever/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
 fi
 
 $LOCAL_CLUSTER_SETUP" | dshbak -c
