@@ -399,7 +399,9 @@ proxy=_none_
 
     server_epoch_seconds = time.time()
 
-    profile_json = json.dumps(server_profile.as_dict)
+    p = server_profile.as_dict
+    p.pop('modified_at')
+    profile_json = json.dumps(p)
 
     # read in script template before populating (parent dir is chroma-manager basedir)
     with open(path.join(path.dirname(path.dirname(path.abspath(__file__))),
