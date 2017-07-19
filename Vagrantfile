@@ -9,8 +9,8 @@ Vagrant.configure("2") do |config|
 	# This simplifies the addition of extra disks for the storage servers.
 	config.vm.box = "manager-for-lustre/centos73-1611-base"
 
-        # no default sync'd folder
-        config.vm.synced_folder ".", "/vagrant", disabled: true
+	# no default sync'd folder
+	config.vm.synced_folder ".", "/vagrant", disabled: true
 
 	# Set the default RAM allocation for each VM.
 	# 1GB is sufficient for demo and training purposes.
@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
 	#     it really only applies for the vbox provider
 	vdisk_root = "#{ENV['HOME']}/VirtualBox\ VMs/vdisks"
 
-        # use the "images" storage pool
+	# use the "images" storage pool
 	config.vm.provider :libvirt do |libvirt, override|
 		override.vm.box = "centos/7"
 		libvirt.storage_pool_name = "images"
@@ -86,6 +86,10 @@ __EOF
 	config.vm.provision "shell", inline: "systemctl enable firewalld"
 	config.vm.provision "shell", inline: "systemctl start firewalld"
 
+	# The VMs will have IPv6 but no IPv6 connectivity so alter
+	# their gai.conf to prefer IPv4 addresses over IPv6
+	config.vm.provision "shell", inline: "echo \"precedence ::ffff:0:0/96  100\" > /etc/gai.conf"
+
 	# A simple way to create a key that can be used to enable
 	# SSH between the virtual guests.
 	#
@@ -121,7 +125,7 @@ __EOF
 Host host
   User #{Etc.getlogin}
 __EOF
-        }
+	}
 	config.vm.provision "file", source: "ssh_config", destination: "/tmp/ssh_config"
 	config.vm.provision "shell", inline: "cp /tmp/ssh_config /root/.ssh/config"
 
@@ -160,7 +164,7 @@ __EOF
 	# Servers are configured in HA pairs
 	#
 	(1..4).each do |ss_idx|
-                vm_num = ss_idx + 4
+		vm_num = ss_idx + 4
 		config.vm.define "vm#{vm_num}", autostart: true do |ss|
 			# Create additional storage to be shared between
 			# the object storage server VMs.
