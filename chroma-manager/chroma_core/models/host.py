@@ -971,8 +971,10 @@ class SetHostProfileStep(Step):
 
         host = kwargs['host']
         server_profile = kwargs['server_profile']
-
-        self.invoke_agent_expect_result(host, 'update_profile', {"profile": server_profile.as_dict})
+        
+        p = server_profile.as_dict
+        p.pop('modified_at')
+        self.invoke_agent_expect_result(host, 'update_profile', {"profile": p})
 
         job_scheduler_notify.notify(host,
                                     tznow(),
