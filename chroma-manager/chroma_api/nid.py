@@ -46,7 +46,8 @@ class NidValidation(ChromaValidation):
                                       "network_interface": self.Expectation(True),
                                       "lnd_type": self.Expectation(int(nids_data['lnd_network'] != -1)),
                                       "resource_uri": self.Expectation(False),
-                                      "lnet_configuration": self.Expectation(False)})
+                                      "lnet_configuration": self.Expectation(False),
+                                      "modified_at": self.Expectation(False)})
 
             if not errors:
                 self.validate_resources([self.URIInfo(nids_data.get('lnet_configuration', None), LNetConfigurationResource),
