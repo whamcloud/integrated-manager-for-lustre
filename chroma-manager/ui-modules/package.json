@@ -5,7 +5,7 @@
   "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "@iml/gui": "6.0.12",
+    "@iml/gui": "6.0.13",
     "@iml/old-gui": "1.1.3",
     "intel-help-docs": "1.2.0",
     "@iml/realtime": "5.1.2",
