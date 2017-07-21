@@ -23,7 +23,7 @@ class TestNodeAdmin(CommandCaptureTestCase):
                                                 '7.21552',
                                                 2.7,
                                                 7,
-                                                '2.6.32-504.12.2.el6.x86_64')
+                                                '3.10.0-327.36.3.el7.x86_64')
 
     def tearDown(self):
         super(TestNodeAdmin, self).tearDown()
