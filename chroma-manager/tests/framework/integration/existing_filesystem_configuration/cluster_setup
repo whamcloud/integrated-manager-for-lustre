@@ -32,8 +32,7 @@ yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
 if ! yum repolist | grep addon-epel; then
     yum -y install epel-release
 fi
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre
-manager-for-lustre-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
@@ -48,7 +47,7 @@ else
     build_type=server
     yum-config-manager --add-repo https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49006/archive/artifacts/
     sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0'
-/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_\${buildtype}_axis-distro_el7_axis-ib_stack_inkernel_builds_49006_archive_artifacts_.repo 
+/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_\${buildtype}_axis-distro_el7_axis-ib_stack_inkernel_builds_49006_archive_artifacts_.repo
 fi
 # can only do this if/when we stop getting the lustre client from our copr repo:
 # yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
