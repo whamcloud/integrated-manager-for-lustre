@@ -388,7 +388,7 @@ gpgcheck=0
 #name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 #baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch%2Cdistro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 name=Lustre e2fsprogs
-baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
+baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
