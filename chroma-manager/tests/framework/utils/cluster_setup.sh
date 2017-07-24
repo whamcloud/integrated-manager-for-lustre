@@ -43,14 +43,7 @@ if [[ \$HOSTNAME = *vm*2 ]]; then
     #rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
     yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_client/
 
-    ed /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_client_.repo << EOF
-1d
-1s/\\\\\$//g
-/^$/i
-gpgcheck=0
-.
-wq
-EOF
+    sed -i -e '1d' -e '2s/^.*$/[lustre-client]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_client_.repo
 fi
 
 $LOCAL_CLUSTER_SETUP" | dshbak -c
