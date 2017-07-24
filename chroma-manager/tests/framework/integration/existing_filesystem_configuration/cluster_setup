@@ -39,6 +39,7 @@ ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
 /enabled/a
 gpgcheck=1
 gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+EOF
 
 if [[ \$HOSTNAME = *vm*[29] ]]; then
     build_type=client
