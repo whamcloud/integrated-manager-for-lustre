@@ -364,7 +364,7 @@ def setup(request, key):
     repos = """[lustre]
 name=Lustre server
 #baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49006/archive/artifacts/
 enabled=1
 gpgcheck=0
 
@@ -380,7 +380,7 @@ gpgcheck=0
 #enabled_metadata=1
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/48896/archive/artifacts/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/49006/archive/artifacts/
 enabled=1
 gpgcheck=0
 
@@ -388,7 +388,7 @@ gpgcheck=0
 #name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 #baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch%2Cdistro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
 name=Lustre e2fsprogs
-baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
+baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
