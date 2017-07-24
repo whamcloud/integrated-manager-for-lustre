@@ -362,25 +362,14 @@ def setup(request, key):
 
     # the minimum repos needed on a storage server now
     repos = """[lustre]
-name=Lustre server
-#baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49006/archive/artifacts/
+name=Lustre Server
+baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
 enabled=1
 gpgcheck=0
 
-#[managerforlustre-lustre-client]
-#name=Copr repo for lustre-client owned by managerforlustre
-#baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/epel-7-$basearch/
-#type=rpm-md
-#skip_if_unavailable=True
-#gpgcheck=1
-#gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/lustre-client/pubkey.gpg
-#repo_gpgcheck=0
-#enabled=1
-#enabled_metadata=1
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/49006/archive/artifacts/
+baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
 enabled=1
 gpgcheck=0
 
