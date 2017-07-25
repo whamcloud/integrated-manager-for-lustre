@@ -11,11 +11,7 @@ CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/nul
 SLAVE=${slave:?"Need to set slave"}
 
 cd $WORKSPACE
-
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:********* \"$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz\""
-curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
-set -x
+curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e
@@ -36,9 +32,6 @@ if [ "$TEST_DISTRO_NAME" = "el" -a                  \
     exit 0
 fi
 
-ssh root@$TEST_RUNNER "exec 2>&1; set -e; set +x
-sed -i -e 's/Aitahd9u/"$JENKINS_PULL"/g' /etc/yum.repos.d/autotest.repo"
-
 # see if this mitigates the near constant failure to complete a yum upgrade from the RH CDN
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 cat <<\"EOF\" >> /etc/yum.conf
@@ -53,9 +46,6 @@ fi
 export RHEL
 
 echo "Beginning automated test run..."
-set +x
-export JENKINS_PULL
-set -x
 $CHROMA_DIR/chroma-manager/tests/framework/integration/installation_and_upgrade/cluster_setup
 $CHROMA_DIR/chroma-manager/tests/framework/integration/installation_and_upgrade/run_tests
 echo "Automated test run complete."
