@@ -71,7 +71,7 @@ server {
     }
 
     location /gui {
-        alias /usr/lib/iml-manager/iml-gui/;
+        alias /usr/lib/iml-manager/iml-gui;
 
         etag on;
         expires 1y;
