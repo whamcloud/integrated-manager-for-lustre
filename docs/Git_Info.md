@@ -6,8 +6,7 @@
 * [Git Basics](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics)
 * [Git Book](https://git-scm.com/book/en/v2)
 
-
- ### Commit Changes
+### Commit Changes
  ``` 
  Runs tests, lint and flow and then you can add comments 
  ```
@@ -24,7 +23,7 @@
   * git commit -m "This is my fix"
 
 
- ### To modify the comment of your last commit, before a push
+## To modify the comment of your last commit, before a push
  
   * git commit —amend
  
@@ -51,7 +50,7 @@
 ## git Commands
 
 
-### List Files inside each commit
+## List Files inside each commit
 
 * git log —names-only
 * git —name-status
