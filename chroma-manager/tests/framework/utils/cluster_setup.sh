@@ -37,9 +37,10 @@ for key in CentOS-7 redhat-release; do
     fi
 done
 
-if [[ \$HOSTNAME = *vm*[29] ]]; then
+if [[ \$HOSTNAME = *vm*2 ]]; then
     build_type=client
-    yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-\$build_type-epel-7.repo
+    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
+    sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_\${build_type}_.repo
 fi
 
 $LOCAL_CLUSTER_SETUP" | dshbak -c
