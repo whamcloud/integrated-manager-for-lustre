@@ -1,4 +1,4 @@
-[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](index.md)
+[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
 
 ## Prerequisites:
 Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.

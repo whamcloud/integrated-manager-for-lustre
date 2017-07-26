@@ -1,3 +1,3 @@
-[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](index.md)
+[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
 
 # Set up IML Cluster

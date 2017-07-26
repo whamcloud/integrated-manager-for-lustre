@@ -1,4 +1,4 @@
-[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](index.md)
+[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
 
 IML preview 1 requires repo files to be setup on each node prior to use.  Different nodes have different repo requirements. A tool like PDSH can be used to setup multiple nodes at once. The repo configs are as follows:
 
