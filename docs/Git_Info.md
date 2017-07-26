@@ -7,7 +7,7 @@
 * [Git Book](https://git-scm.com/book/en/v2)
 
 
- #### Commit Changes
+ ### Commit Changes
  ``` 
  Runs tests, lint and flow and then you can add comments 
  ```
@@ -24,7 +24,7 @@
   * git commit -m "This is my fix"
 
 
- #### To modify the comment of your last commit, before a push
+ ### To modify the comment of your last commit, before a push
  
   * git commit —amend
  
@@ -62,8 +62,8 @@
 
 ### CONFIG
 * git config --list
-* git config --global user.name "Peter Robinson"
-* git config --global user.email peter.timothyx.robinson@intel.com
+* git config --global user.name "John Smith "
+* git config --global user.email john.smith@abc123.com
 * git config --global http.proxy http://my-proxy.com
 * git config --global https.proxy https://my-proxy.com
 
@@ -106,7 +106,6 @@
 * git diff  file.c
 * git diff  --staged
  
-———————————————
 * git rm file.c
 * git mv file1.c  file2.c
  
