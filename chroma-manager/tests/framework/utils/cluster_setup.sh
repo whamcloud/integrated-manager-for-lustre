@@ -39,8 +39,8 @@ done
 
 if [[ \$HOSTNAME = *vm*2 ]]; then
     build_type=client
-    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
-    sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_\${build_type}_.repo
+    yum-config-manager --add-repo https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type/\$build_type/axis-distro/el7/axis-ib_stack/inkernel/builds/49126/archive/artifacts/
+    sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_\${build_type}_axis-distro_el7_axis-ib_stack_inkernel_builds_49126_archive_artifacts_.repo
 fi
 
 $LOCAL_CLUSTER_SETUP" | dshbak -c
