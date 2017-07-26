@@ -8,9 +8,10 @@ from chroma_api.host import ServerProfileResource
 from tastypie.authorization import DjangoAuthorization
 from tastypie.fields import ToOneField, CharField
 from tastypie.validation import Validation
+from tastypie.exceptions import Unauthorized
 
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.utils import CustomModelResource
+from chroma_api.utils import CustomModelResource, DateSerializer
 from chroma_core.models import RegistrationToken
 from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
@@ -21,11 +22,21 @@ class TokenAuthorization(DjangoAuthorization):
     """
     Only allow filesystem_administrators and higher access to registration tokens
     """
-    def apply_limits(self, request, object_list):
+    def read_list(self, object_list, bundle):
+        request = bundle.request
+
         if request.user.groups.filter(name__in = ['filesystem_administrators', 'superusers']).exists():
             return object_list
         else:
             return object_list.none()
+
+    def read_detail(self, object_list, bundle):
+        request = bundle.request
+
+        if request.user.groups.filter(name__in = ['filesystem_administrators', 'superusers']).exists():
+            return True
+        else:
+            raise Unauthorized("You are not allowed to access that resource.")
 
 
 class RegistrationTokenValidation(Validation):
@@ -33,7 +44,7 @@ class RegistrationTokenValidation(Validation):
     Limit which fields are settable during POST and PATCH (because these are
     different sets, setting readonly on the resource fields won't work)
     """
-    def is_valid(self, bundle, request = None):
+    def is_valid(self, bundle, request=None):
         errors = {}
         if request.method == 'POST':
             ALLOWED_CREATION_ATTRIBUTES = ['expiry', 'credits', 'profile']
@@ -68,7 +79,7 @@ class RegistrationTokenResource(CustomModelResource):
     register_command = CharField(help_text="Command line to run on a storage server to register it using this token")
 
     def dehydrate_register_command(self, bundle):
-        server_profile = ServerProfileResource().get_via_uri(bundle.data['profile'])
+        server_profile = ServerProfileResource().get_via_uri(bundle.data['profile'], bundle.request)
 
         return 'curl -k %sagent/setup/%s/%s | python' % (settings.SERVER_HTTP_URL, bundle.obj.secret, '?profile_name=%s' % server_profile.name)
 
@@ -76,6 +87,7 @@ class RegistrationTokenResource(CustomModelResource):
         object_class = RegistrationToken
         authentication = AnonymousAuthentication()
         authorization = TokenAuthorization()
+        serializer = DateSerializer()
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['patch', 'get']
         fields = ['id', 'secret', 'expiry', 'credits', 'cancelled', 'profile', 'register_command']

@@ -44,7 +44,7 @@ Requires: rabbitmq-server
 Requires: ntp
 Requires: Django >= 1.4, Django < 1.5
 Requires: Django-south >= 0.7.4
-Requires: django-tastypie = 0.9.11
+Requires: django-tastypie = 0.9.16
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
@@ -53,6 +53,7 @@ Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
+Requires: supervisor-status
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
