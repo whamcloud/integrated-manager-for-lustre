@@ -1,3 +1,5 @@
+[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](index.md)
+
 ### background
 
 IML manages zfs device access by handling zpool imports and exports with exclusive locks.

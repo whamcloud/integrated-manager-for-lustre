@@ -1,3 +1,5 @@
+[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](index.md)
+
 ## Process for fetching, editing and pushing back code
 ```
 Clone the desired repository
