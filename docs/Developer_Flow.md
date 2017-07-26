@@ -1,10 +1,14 @@
 [**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
 
+# IML Developer Flow
+## Overview
+![iml_flow](md_Graphics/iml_flow.png)
+
 ## Process for fetching, editing and pushing back code
 ```
-Clone the desired repository
+Clone the desired repository, for example, GUI.git
 ```
-* git clone git@github.com:intel-hpdd/gui.git
+* git clone git@github.com:intel-hpdd/GUI.git
 * cd gui
 ```
 List the current branches
@@ -12,13 +16,15 @@ List the current branches
 * git branch 
 * git branch --all
 ```
-Create a new branch called, my-new-branch
+Create a new branch for example, my-new-branch
 ```
 * git branch my-new-branch
 ```
 Change to the branch called, my-new-branch
 ```
 * git checkout my-new-branch
+* Can also do:
+* git checkout -b my-new-branch
 ``` 
   Modify, delete, add code
    Then commit the code
