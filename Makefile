@@ -128,7 +128,7 @@ efs_tests: reset_cluster
 	chroma-manager/tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 requirements:
-	make -C chroma-manager requirements
+	make -C chroma-manager requirements.txt
 
 chroma_test_env: requirements chroma_test_env/bin/activate
 
