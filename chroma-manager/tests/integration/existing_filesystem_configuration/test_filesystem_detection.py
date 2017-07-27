@@ -1,6 +1,7 @@
 
 
 import re
+import time
 
 from testconfig import config
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
@@ -57,6 +58,7 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
 
             # Verify it detected the filesystem
+            time.sleep(9999)
             filesystem = self._filesystem
             self.assertEqual(config['filesystem']['name'], filesystem['name'])
             self.assertTrue(filesystem['immutable_state'])
