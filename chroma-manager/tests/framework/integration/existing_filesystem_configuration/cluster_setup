@@ -32,7 +32,7 @@ yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
 if ! yum repolist | grep addon-epel; then
     yum -y install epel-release
 fi
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/brianjmurrell/manager-for-lustre/repo/epel-7/brianjmurrell-manager-for-lustre-epel-7.repo
 
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
@@ -48,15 +48,15 @@ if [[ \$HOSTNAME = *vm*9 ]]; then
 else
     build_type=server
 fi
-yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
-sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_\${build_type}_.repo
+yum-config-manager --add-repo https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type/\$build_type/axis-distro/el7/axis-ib_stack/inkernel/builds/49126/archive/artifacts/
+sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_\${build_type}_axis-distro_el7_axis-ib_stack_inkernel_builds_49126_archive_artifacts_.repo
 
 yum-config-manager --add-repo https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/downloads.whamcloud.com_public_e2fsprogs_latest_el7_.repo
 
 yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
-    rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+    rpm --import https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg
 fi
 $LOCAL_CLUSTER_SETUP" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then

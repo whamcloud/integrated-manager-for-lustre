@@ -363,13 +363,13 @@ def setup(request, key):
     # the minimum repos needed on a storage server now
     repos = """[lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49126/archive/artifacts/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/$basearch/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/49126/archive/artifacts/
 enabled=1
 gpgcheck=0
 
@@ -379,13 +379,13 @@ baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-manager-for-lustre]
-name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+[brianjmurrell-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/epel-7-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 

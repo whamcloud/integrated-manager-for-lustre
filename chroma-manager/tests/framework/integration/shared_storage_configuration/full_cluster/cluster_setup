@@ -136,7 +136,7 @@ else
 fi
 
 # set up required repos
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/brianjmurrell/manager-for-lustre/repo/epel-7/brianjmurrell-manager-for-lustre-epel-7.repo
 yum -y install epel-release
 
 if ! $PROXY yum -y install \$CMIT python-mock; then
