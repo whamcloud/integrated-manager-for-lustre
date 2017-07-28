@@ -124,7 +124,7 @@ ssi_tests: reset_cluster
 	chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
 efs_tests: reset_cluster
-	pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf"
+	pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf; systemctl disable firewalld; systemctl stop firewalld"
 	chroma-manager/tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 requirements:

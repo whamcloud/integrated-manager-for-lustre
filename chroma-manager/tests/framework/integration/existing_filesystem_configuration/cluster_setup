@@ -121,8 +121,16 @@ fi
 popd
 
 # Make sure the firewall is not in the way
-firewall-cmd --add-port=988/tcp
-firewall-cmd --permanent --add-port=988/tcp
+if firewall-cmd --state; then
+    firewall-cmd --add-port=988/tcp
+    firewall-cmd --permanent --add-port=988/tcp
+else
+    firewall_status=\${PIPESTATUS[0]}
+    if [ \$firewall_status != 252 ]; then
+        echo \"Unknown firewall state: \$firewall_status\"
+        exit 1
+    fi
+fi
 
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
