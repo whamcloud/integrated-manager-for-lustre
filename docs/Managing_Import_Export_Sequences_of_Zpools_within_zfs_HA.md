@@ -1,4 +1,4 @@
-[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
+[**Table of Contents**](index.md)
 
 # Managing Import and Export Sequences of Zpools within zfs HA
 

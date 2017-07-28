@@ -1,4 +1,4 @@
-[**Table of Contents**](README.md)
+[**Table of Contents**](index.md)
 
 # IML Developer Flow
 ## Overview

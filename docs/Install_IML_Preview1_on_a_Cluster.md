@@ -1,4 +1,4 @@
-[**Intel® Manager for Lustre\* Developer Resources Table of Contents**](README.md)
+[**Table of Contents**](index.md)
 
 # IML Lustre Preview1 on a Cluster
 
