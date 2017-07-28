@@ -1,5 +1,3 @@
-# Developer Resources
-
 ### Table of Contents
 
 1. [Introduction](Introduction.md)
