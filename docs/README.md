@@ -4,7 +4,7 @@
 1. [IML Distributed Architecture](IML_Distributed_Architecture.md)
 1. [Developer Flow](Developer_Flow.md)
 1. [IML lustre target sequence diagrams](IML_Lustre_Target_Sequence_Diagrams.md)
-1. How To
+1. ### How To
     - [Create a Virtual HPC Cluster with Vagrant](https://github.com/intel-hpdd/Vagrantfiles/blob/master/README.md)
     - [Install IML on HPC Storage Sandbox](Installing_IML_on_HPC_Storage_Sandbox.md)
     - [Install IML Preview1 on a Cluster](Install_IML_Preview1_on_a_Cluster.md)
