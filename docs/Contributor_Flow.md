@@ -1,6 +1,6 @@
 [**Table of Contents**](index.md)
 
-# IML Developer Flow
+# IML Contributor Workflow
 ## Overview
 ![iml_flow](md_Graphics/iml_flow.png)
 
@@ -80,7 +80,7 @@ Browse to [https://github.com/intel-hpdd]()
 * Choose Reviewers, Labels, Assignees, etc.
 * Click **Create pull request**
 
-## Copy the URL and request a code review on skype
+## Copy the URL and request a code review via email
 
 ### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
 
@@ -103,8 +103,6 @@ git push origin my-new-branch
 ## 5. Jenkins Automated Build Server
 Intel provides a Jenkins build server that performs automated tests and generates IML tarball releases for download.
 
-* See the following link for [Jenkins](http://jenkins.lotus.hpdd.lab.intel.com/) information
-
 
 ## 6. Fedora Copr Automated Build System
 A number of software dependencies for IML reside in the github repository: 
@@ -113,13 +111,15 @@ A number of software dependencies for IML reside in the github repository:
 The dependencies are reflected in our [copr](https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/) project.
 
 
-## 7. Lustre Node
+## 7. Lustre Nodes
 In order to install IML and lustre onto a lustre cluster, the following are necessary:
 
-* A "Bare-metal" set of servers.
-* A virtual machine environment such as vagrant, KVM or docker
-* Network access to the Fedora Copr RPMs.
-* Copy the proper IML tarball to the administrator node of the cluster.
+1. A Lustre Cluster
+    * "Bare-metal" set of servers.
+    * Virtual machine environment such as vagrant, KVM or docker
+
+1. Network access to the Fedora Copr RPMs.
+1. Ability to copy the proper IML tarball to the administrator node of the cluster.
 
 
 
