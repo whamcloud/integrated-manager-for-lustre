@@ -3,7 +3,7 @@ ssh chromatest@$CHROMA_MANAGER "set -ex
 virtualenv chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
-make requirements
+make requirements.txt
 echo \"jenkins_fold:start:pip install requirements.txt\"
 if ${INSTALL_PYCURL:-false}; then
     # install pycurl (as required by fencing.py) on el7

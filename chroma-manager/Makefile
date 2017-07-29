@@ -208,14 +208,12 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	echo "jenkins_fold:end:Make Manager RPMS"
 
-install_requirements: requirements
+install_requirements: requirements.txt
 	echo "jenkins_fold:start:Install Python requirements"
 	pip install --upgrade pip;                              \
 	pip install --upgrade setuptools;                       \
 	pip install -Ur requirements.txt
 	echo "jenkins_fold:end:Install Python requirements"
-
-requirements: requirements.txt
 
 requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile requirements.dev
 	echo "jenkins_fold:start:Make requirements.txt"
