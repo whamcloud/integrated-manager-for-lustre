@@ -262,7 +262,10 @@ class BlockDeviceZfs(BlockDevice):
     @property
     def filesystem_type(self):
         """
-        Verify if any zfs datasets exist on zpool identified by self._device_path
+        Verify if any zfs datasets exist on zpool identified by self._device_path.
+
+        Given the interpretation that `formatting` implies creating datasets on a zpool, this method returns
+        `occupied` if zpool contains datasets and `unoccupied` otherwise.
 
         :return: 'zfs' if occupied or error encountered, None otherwise
         """

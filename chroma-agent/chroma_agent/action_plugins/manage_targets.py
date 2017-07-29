@@ -177,7 +177,7 @@ def check_block_device(path, device_type):
     :param device_type: The type of device the path references
     :return The filesystem type of the filesystem on the device, or None if unoccupied.
     """
-    return agent_ok_or_error(BlockDevice(device_type, path).filesystem_info)
+    return agent_result(BlockDevice(device_type, path).filesystem_type)
 
 
 def format_target(device_type, target_name, device, backfstype,
