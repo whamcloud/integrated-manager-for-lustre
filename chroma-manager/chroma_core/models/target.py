@@ -1138,8 +1138,14 @@ class PreFormatCheck(Step):
         return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'], "check_block_device", {'path': kwargs['path'],
-                                                                               'device_type': kwargs['device_type']})
+        result = self.invoke_agent_expect_result(kwargs['host'],
+                                                 'check_block_device',
+                                                 {'path': kwargs['path'], 'device_type': kwargs['device_type']})
+        if result is not None:
+            error = "Query of block device at %s returned '%s' when expecting to find no filesystem" % (kwargs['path'],
+                                                                                                        result)
+            job_log.error(error)
+            raise RuntimeError(error)
 
 
 class PreFormatComplete(Step):
