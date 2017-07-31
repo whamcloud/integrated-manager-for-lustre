@@ -144,8 +144,8 @@ def configure_server():
 
 
 def start_agent():
-    output = launch_command("/sbin/chkconfig chroma-agent on")
-    output = launch_command("/sbin/service chroma-agent start")
+    output = launch_command("systemctl enable chroma-agent")
+    output = launch_command("systemctl start chroma-agent")
 
 
 def kill_zombies():

@@ -360,7 +360,48 @@ def setup(request, key):
     if token_error:
         return token_error
 
-    repos = ""
+    # the minimum repos needed on a storage server now
+    repos = """[lustre]
+name=Lustre Server
+baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+enabled=1
+gpgcheck=0
+
+[lustre-client]
+name=Lustre Client
+baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
+enabled=1
+gpgcheck=0
+
+[e2fsprogs]
+#name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
+#baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=$basearch%2Cdistro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
+name=Lustre e2fsprogs
+baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
+enabled=1
+gpgcheck=0
+
+[managerforlustre-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
+[epel]
+name=Extra Packages for Enterprise Linux 7 - $basearch
+#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
+failovermethod=priority
+enabled=1
+gpgcheck=1
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+gpgkey=https://muug.ca/mirror/fedora-epel/RPM-GPG-KEY-EPEL-7
+
+"""
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
         if bundle.bundle_name != "external":
