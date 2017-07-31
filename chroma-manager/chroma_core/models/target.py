@@ -1134,8 +1134,8 @@ class PreFormatCheck(Step):
                                                  'check_block_device',
                                                  {'path': kwargs['path'], 'device_type': kwargs['device_type']})
         if result is not None:
-            error = "Block device at %s unexpectedly contains filesystem of type %s" % (kwargs['path'],
-                                                                                        result)
+            error = "Query of block device at %s returned '%s' when expecting to find no filesystem" % (kwargs['path'],
+                                                                                                        result)
             job_log.error(error)
             raise RuntimeError(error)
 
@@ -1178,7 +1178,7 @@ class PostFormatCheck(Step):
 
         if result != expected_fs_type:
             error = "Block device at %s was expected to contain filesystem of type '%s'," \
-                    " found '%s'" % (path, expected_fs_type, result)
+                    " but instead returned '%s'" % (path, expected_fs_type, result)
             job_log.error(error)
             raise RuntimeError(error)
 

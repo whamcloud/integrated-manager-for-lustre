@@ -241,23 +241,28 @@ class BlockDeviceZfs(BlockDevice):
 
         :return: message describing zfs type and datasets found, None otherwise
         """
-        self._assert_zpool('filesystem_info')
+        try:
+            self._assert_zpool('filesystem_info')
+        except NotZpoolException:
+            blockdevice = BlockDevice(self._supported_device_types[0], self._device_path.split('/')[0])
 
-        with ZfsDevice(self._device_path, False):
-            try:
-                device_names = shell.Shell.try_run(['zfs', 'list', '-H', '-o', 'name', '-r', self._device_path]).split('\n')
+            return blockdevice.filesystem_info
+        else:
+            with ZfsDevice(self._device_path, False):
+                try:
+                    device_names = shell.Shell.try_run(['zfs', 'list', '-H', '-o', 'name', '-r', self._device_path]).split('\n')
 
-                datasets = [line.split('/', 1)[1] for line in device_names if '/' in line]
+                    datasets = [line.split('/', 1)[1] for line in device_names if '/' in line]
 
-                if datasets:
-                    return "Dataset%s '%s' found on zpool '%s'" % ('s' if (len(datasets) > 1) else '',
-                                                                   ','.join(datasets),
-                                                                   self._device_path)
-                return None
-            except OSError:                             # zfs not found
-                return "Unable to execute commands, check zfs is installed."
-            except shell.Shell.CommandExecutionError as e:    # no zpool 'self._device_path' found
-                return str(e)
+                    if datasets:
+                        return "Dataset%s '%s' found on zpool '%s'" % ('s' if (len(datasets) > 1) else '',
+                                                                       ','.join(datasets),
+                                                                       self._device_path)
+                    return None
+                except OSError:                             # zfs not found
+                    return "Unable to execute commands, check zfs is installed."
+                except shell.Shell.CommandExecutionError as e:    # no zpool 'self._device_path' found
+                    return str(e)
 
     @property
     def filesystem_type(self):
@@ -269,8 +274,6 @@ class BlockDeviceZfs(BlockDevice):
 
         :return: 'zfs' if occupied or error encountered, None otherwise
         """
-        self._assert_zpool('filesystem_type')
-
         return self.preferred_fstype if self.filesystem_info is not None else None
 
     @property
