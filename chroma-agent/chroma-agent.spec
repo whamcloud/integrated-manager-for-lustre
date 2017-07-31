@@ -28,7 +28,7 @@ Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
 Requires: chroma-diagnostics >= %{version}
-Requires: python2-iml-common
+Requires: python2-iml-common >= 1.0.0, python2-iml-common < 1.1.0
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
