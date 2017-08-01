@@ -18,4 +18,4 @@ pyflakes
 pygraphviz
 sphinx==1.1.3
 werkzeug
-iml-common
+iml-common>=1.1,<1.2
