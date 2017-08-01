@@ -379,7 +379,7 @@ class RealRemoteOperations(RemoteOperations):
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
-                
+
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
                   "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \

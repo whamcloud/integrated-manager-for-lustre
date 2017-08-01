@@ -169,4 +169,3 @@ class InvokeAgentInvoke(object):
         return (self.host_fqdn == other.host_fqdn and
                 self.command == other.command and
                 self.args == other.args)
-
