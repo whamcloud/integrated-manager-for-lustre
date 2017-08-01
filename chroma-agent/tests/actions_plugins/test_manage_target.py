@@ -375,37 +375,51 @@ class TestCheckBlockDevice(CommandCaptureTestCase):
     def test_occupied_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="ext4\n"))
 
-        self.assertAgentError(manage_targets.check_block_device("/dev/sdb", "linux"), "Filesystem found: type 'ext4'")
+        result = manage_targets.check_block_device('/dev/sdb', 'linux')
+        self.assertEqual(result['result'], 'ext4')
         self.assertRanAllCommands()
 
     def test_mbr_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="\n"))
 
-        self.assertAgentOK(manage_targets.check_block_device("/dev/sdb", "linux"))
+        result = manage_targets.check_block_device('/dev/sdb', 'linux')
+        self.assertEqual(result['result'], None)
         self.assertRanAllCommands()
 
     def test_empty_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), rc=2))
 
-        self.assertAgentOK(manage_targets.check_block_device("/dev/sdb", "linux"))
+        result = manage_targets.check_block_device('/dev/sdb', 'linux')
+        self.assertEqual(result['result'], None)
         self.assertRanAllCommands()
 
     def test_occupied_device_zfs(self):
         self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\npool1/dataset_1\n")
 
-        self.assertAgentError(manage_targets.check_block_device("pool1", "zfs"),
-                              "Dataset 'dataset_1' found on zpool 'pool1'")
+        result = manage_targets.check_block_device("pool1", "zfs")
+        self.assertEqual(result['result'], 'zfs')
         self.assertRanAllCommands()
 
     def test_empty_device_zfs(self):
         self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\n")
 
-        self.assertAgentOK(manage_targets.check_block_device("pool1", "zfs"))
+        result = manage_targets.check_block_device("pool1", "zfs")
+        self.assertEqual(result['result'], None)
         self.assertRanAllCommands()
 
-    @unittest.skip('Unimplemented, need to test running check_block_device on a zfs dataset')
     def test_dataset_device_zfs(self):
-        pass
+        self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\npool1/dataset_1\n")
+
+        result = manage_targets.check_block_device("pool1/dataset_1", "zfs")
+        self.assertEqual(result['result'], 'zfs')
+        self.assertRanAllCommands()
+
+    def test_nonexistent_dataset_device_zfs(self):
+        self.add_command(("zfs", "list", "-H", "-o", "name", "-r", "pool1"), stdout="pool1\n")
+
+        result = manage_targets.check_block_device("pool1/dataset_1", "zfs")
+        self.assertEqual(result['result'], None)
+        self.assertRanAllCommands()
 
 
 class TestCheckImportExport(CommandCaptureTestCase):
