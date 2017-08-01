@@ -187,19 +187,28 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            from chroma_common.lib.shell import Shell
-            raise RuntimeError('''process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
-systemctl status firewalld:
-%s
+            if result.rc == 254 and ' is not registered' in result.stderr:
+                from time import sleep
+                # restart polkit to attempt to address https://bugzilla.redhat.com/show_bug.cgi?id=1221483
+                self.remote_access_func(self.address, 'systemctl restart polkit')
+                sleep(2)
 
-systemctl status polkit:
-%s
+                result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
-journalctl -n 100:
-%s''' % (result.rc, result.stdout, result.stderr,
-         Shell.run(['systemctl', 'status', 'firewalld']).stdout,
-         Shell.run(['systemctl', 'status', 'polkit']).stdout,
-         Shell.run(['journalctl', '-n', '100']).stdout))
+                if result.rc != 0:
+                    raise RuntimeError('''process_rules(): remote shell command failed unexpectedly, address: (%s),
+command: (%s), rc: (%s), is firewall-cmd running? (%s) (%s)
+        systemctl status firewalld:
+        %s
+
+        systemctl status polkit:
+        %s
+
+        journalctl -n 100:
+        %s''' % (self.address, self.firewall_list_cmd, result.rc, result.stdout, result.stderr,
+                 self.remote_access_func(self.address, 'systemctl status firewalld').stdout,
+                 self.remote_access_func(self.address, 'systemctl status polkit').stdout,
+                 self.remote_access_func(self.address, 'journalctl -n 100').stdout))
 
         if result.stdout.strip() == '':
             return None
