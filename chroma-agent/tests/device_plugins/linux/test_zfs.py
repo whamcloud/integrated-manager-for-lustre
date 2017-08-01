@@ -3,7 +3,7 @@ from mock import patch, Mock
 from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestZfs(LinuxAgentTests, CommandCaptureTestCase):

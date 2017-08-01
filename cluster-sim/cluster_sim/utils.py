@@ -8,7 +8,7 @@ import json
 import random
 import errno
 import os
-from chroma_common.lib import util
+from iml_common.lib import util
 
 # It is my intention to create a factory class that will actually allow these to be created with a definition
 # like the namedtuple. But this is a first step towards that, and if I fixup the factory class then the consumers of
@@ -32,7 +32,7 @@ class DictStruct(dict):
     Maybe we can even add some post hook to json.loads (to make this happen automagically). I've chosen __dict_struct_type__
     so that we don't get a name clash with something.
 
-    At present I'm not putting this in chroma_common, because I'm not convinced it is good enough yet as an idea, but
+    At present I'm not putting this in iml_common, because I'm not convinced it is good enough yet as an idea, but
     maybe moving forwards with a little more work and generalization we can do that.
     '''
 
