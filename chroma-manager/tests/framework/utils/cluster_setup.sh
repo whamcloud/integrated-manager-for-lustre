@@ -18,6 +18,7 @@ echo "Beginning installation and setup..."
 # put some keys on the nodes for easy access by developers
 # and make sure EPEL is enabled
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+$LOCAL_CLUSTER_SETUP
 cat <<\"EOF\" >> /root/.ssh/authorized_keys
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPOT9PQ/jwhQJgrggPhYr5uIMgJ7szKTLDCNtPIXiBEkFiCf9jtGP9I6wat83r8g7tRCk7NVcMm0e0lWbidqpdqKdur9cTGSOSRMp7x4z8XB8tqs0lk3hWefQROkpojzSZE7fo/IT3WFQteMOj2yxiVZYFKJ5DvvjdN8M2Iw8UrFBUJuXv5CQ3xV66ZvIcYkth3keFk5ZjfsnDLS3N1lh1Noj8XbZFdSRC++nbWl1HfNitMRm/EBkRGVP3miWgVNfgyyaT9lzHbR8XA7td/fdE5XrTpc7Mu38PE7uuXyLcR4F7l brian@brian-laptop
 EOF
@@ -69,9 +70,7 @@ sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a 
 yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
     rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
-fi
-
-$LOCAL_CLUSTER_SETUP" | dshbak -c
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
