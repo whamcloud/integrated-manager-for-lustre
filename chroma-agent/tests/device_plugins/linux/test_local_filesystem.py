@@ -4,7 +4,7 @@ import mock
 from chroma_agent.device_plugins.linux import LocalFilesystems
 from tests.test_utils import patch_open
 from tests.device_plugins.linux.test_linux import MockDmsetupTable, DummyDataTestCase
-from tests.command_capture_testcase import CommandCaptureTestCase
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestNonLocalLvmComponents(DummyDataTestCase):

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from chroma_agent.lib.shell import AgentShell
 import chroma_agent.lib.normalize_device_path as ndp
-from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from iml_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.utils import Mounts

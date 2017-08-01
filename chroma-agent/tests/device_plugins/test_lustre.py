@@ -2,7 +2,7 @@ import os
 import mock
 
 from chroma_agent.device_plugins import lustre
-from tests.command_capture_testcase import CommandCaptureTestCase
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 from django.utils import unittest
 
 from chroma_agent.device_plugins.lustre import LustrePlugin

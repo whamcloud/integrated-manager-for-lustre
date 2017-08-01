@@ -7,7 +7,7 @@ from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import Package, PackageVersion, PackageAvailability
 from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 class TestAudit(IMLUnitTestCase):

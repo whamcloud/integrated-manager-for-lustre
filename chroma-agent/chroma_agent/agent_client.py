@@ -15,8 +15,8 @@ from chroma_agent.plugin_manager import DevicePluginMessageCollection, DevicePlu
 import requests
 from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log, logging_in_debug_mode
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
-from chroma_agent.chroma_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.date_time import IMLDateTime
+from iml_common.lib.util import ExceptionThrowingThread
 
 MAX_BYTES_PER_POST = 8 * 1024 ** 2  # 8MiB, should be <= SSLRenegBufferSize
 
