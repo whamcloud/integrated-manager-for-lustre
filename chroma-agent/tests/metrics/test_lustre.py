@@ -6,7 +6,7 @@ from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
 
 from tests.test_utils import PatchedContextTestCase
-from tests.command_capture_testcase import CommandCaptureTestCase
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 
 CMD = ("lctl", "get_param", "lov.lustre-*.target_obd")
 lctl_output = "lov.lustre-MDT0000-mdtlov.target_obd=\n0: lustre-OST0000_UUID INACTIVE\n1: lustre-OST0001_UUID INACTIVE\n2: lustre-OST0002_UUID ACTIVE\n3: lustre-OST0003_UUID ACTIVE\n"

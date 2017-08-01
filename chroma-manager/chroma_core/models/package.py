@@ -7,7 +7,7 @@ from django.db import models
 from django.db.models import CharField, ForeignKey, IntegerField
 
 from chroma_core.services import log_register
-from chroma_core.chroma_common.lib.package_version_info import VersionInfo
+from iml_common.lib.package_version_info import VersionInfo
 
 log = log_register('package_update')
 
