@@ -51,6 +51,7 @@ class DeletablePowerControlModel(models.Model):
         except socket.gaierror, e:
             raise ValidationError("Unable to resolve %s: %s" % (address, e))
 
+
 class PowerControlType(DeletablePowerControlModel):
     agent = models.CharField(null = False, blank = False, max_length = 255,
             choices = [(a, a) for a in settings.SUPPORTED_FENCE_AGENTS],
