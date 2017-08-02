@@ -92,6 +92,7 @@ Browse to [https://github.com/intel-hpdd]()
 ```
 git push origin my-new-branch
 ```
+
 ## 4. Travis CI Platform
 **Travis**  provides Continuous Integration testing along with generating releases.
 ### Each Pull Request...

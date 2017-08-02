@@ -6,109 +6,6 @@
 * [Git Basics](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics)
 * [Git Book](https://git-scm.com/book/en/v2)
 
-### Commit Changes
- ``` 
- Runs tests, lint and flow and then you can add comments 
- ```
-* git commit -s 
-```
-    — OR -
- No tests, line and flow — you can add comments
- ```
-* git commit -n
-```
-    — OR -
- Simple commit with message
-```
-  * git commit -m "This is my fix"
-
-
-## To modify the comment of your last commit, before a push
- 
-  * git commit —amend
- 
- ```
- To sync with the origin
- ```
- 
- ```List the current origin```
-  * git remote -v
-  * git checkout master
-
-``` fetch and rebase (Instead of fetch and merge)```
-  * git pull  --rebase
-  * git checkout my-new-branch
-
-``` Put your changes on top of what everyone else has done```
-  * git rebase master	
- 
-```Push the branch to the origin```
-
-  * git push origin my-new-branch
-
-
-## git Commands
-
-
-## List Files inside each commit
-
-* git log —names-only
-* git —name-status
-
-* git show
-* git show —pretty=(short|medium|full|fuller|raw)
-
-
-### CONFIG
-* git config --list
-* git config --global user.name "John Smith "
-* git config --global user.email john.smith@abc123.com
-* git config --global http.proxy http://my-proxy.com
-* git config --global https.proxy https://my-proxy.com
-
-
-### Help
-* git help  <verb>
-* git help config
-
-### Init
-* git init
- 
-### Add - Track new files
-* git add *.c
-* git add file.c
-
-### Modify last commit before a push
-* git commit  --amend
-
-### List Tags
-* git tag
-
-### Checkout a previous revision from a tag
-* git checkout v1.2.1
-  * where, v1.2.1 is the tag name.
-
-### Remote - What's the Parent Repo?
-* git remote -v
- 
-### Status
-* git status
-* git status -s
-
-### Log
-* git log --stat
-* git log  -p  -2
-* git log  --pretty=format:"%h  %s"  --graph
-* git log  --since=2.weeks
-
-### Diff
-* git diff  file.c
-* git diff  --staged
- 
-* git rm file.c
-* git mv file1.c  file2.c
- 
-
 ### General Information
 * Snapshots, not Differences
 
@@ -121,4 +18,68 @@
     * Modified - Changed, not commited
     * Staged - Marked to go into the next commit
 
+## Useful git Commands
 
+|Git task|	Notes|	Git commands|
+|--------|-------|--------------|
+| config | List the current config file |  git config --list |
+| | Configure the author name and email address to be used with your commits. Note that Git strips some characters (for example trailing periods) from user.name.| git config --global user.name "Sam Smith"|
+| | |git config --global user.email sam@example.com|
+| | |git config --global http.proxy http://my-proxy.com |
+| | | git config --global https.proxy https://my-proxy.com |
+|Create a new local repository| | git init|
+| Check out a repository | Create a working copy of a local repository:	| git clone /path/to/repository |
+| | For a remote server, use:	| git clone username@host:/path/to/repository|
+| Add files |  Add one or more files to staging (index):|git add <filename>|git add * |
+| | Track new files | git add *.c |
+| | | git add file.c |
+| Commit | Commit changes to head (but not yet to the remote repository):	| git commit -m "Commit message"|
+| | Commit any files you've added with git add, and also commit any files you've changed since then:	| git commit -a |
+| | Commit and signoff, opens editor to add comments | git commit -s |
+| | Commit without running precommit tests | git commit -n |
+| | To modify the comment of your last commit, before a push | git commit —amend |
+| Push | Send changes to the master branch of your remote repository:	| git push origin master|
+| Status |	List the files you've changed and those you still need to add or commit:	|git status|
+| | Short status | git status -s |
+| diff | What changes were made | git diff  file.c |
+| | git diff  --staged |
+| rm | Remove a file | git rm file.c |
+| mv | rename a file | git mv file1.c  file2.c |
+|Connect to a remote repository| If you haven't connected your local repository to a remote server, add the server to be able to push to it:|git remote add origin <server>|
+| Log | List all the commits to this repo | git log |
+| | List the files that were changed in each commit | git log --stat |
+| | | git log —names-only |
+| | |git —name-status |
+| | List changeset from 2 commits ago | git log  -p  -2 |
+| | Format the logs | git log  --pretty=format:"%h  %s"  --graph | 
+| | List commits since 2 weeks ago | git log  --since=2.weeks|
+| | List all currently configured remote repositories:|	git remote -v|
+|Branches| Create a new branch and switch to it:	| git checkout -b <branchname>|
+| | Switch from one branch to another:	|git checkout <branchname>|
+| | List all the branches in your repo, and also tell you what branch you're currently in:	|git branch --all |
+| | Delete the feature branch:	|git branch -d <branchname> |
+| | Push the branch to your remote repository, so others can use it:	| git push origin <branchname> |
+| | Push all branches to your remote repository:	| git push --all origin |
+| | Delete a branch on your remote repository: | git push origin :<branchname> |
+| Update from the remote repository | Fetch and merge changes on the remote server to your working directory:	| git pull |
+| |To merge a different branch into your active branch:	| git merge <branchname> | 
+| | View all the merge conflicts: | git diff |
+| | View the conflicts against the base file: | git diff --base <filename> | 
+| | Preview changes, before merging: | git diff <sourcebranch> <targetbranch> |
+| | After you have manually resolved any conflicts, you mark the changed file:	| git add <filename> |
+| Tags | You can use tagging to mark a significant changeset, such as a release:	|  git tag 1.0.0 <commitID> |
+| | List all tags | git tag |
+| | CommitId is the leading characters of the changeset ID, up to 10, but must be unique. Get the ID using:	| git log |
+| | Push all tags to remote repository:	|  git push --tags origin |
+| | Checkout version v1.2.1 with tag: v1.2.1 |git checkout v1.2.1 |
+| show | List info | git show |
+| | | git show —pretty=(short-medium-full-fuller-raw) |
+| Undo local changes |  If you mess up, you can replace the changes in your working tree with the last content in head: Changes already added to the index, as well as new files, will be kept. |  git checkout -- <filename> |
+| | Instead, to drop all your local changes and commits, fetch the latest history from the server and point your local master branch at it, do this:	| git fetch origin |
+| | | git reset --hard origin/master |
+| To sync with the origin | List the current origin | git remote -v |
+| fetch and rebase (Instead of fetch and merge) | | git pull  --rebase |
+| Search |  Search the working directory for foo():	| git grep "foo()" |
+| Help | |git help  <verb> |
+| | | git help config| 
+| | | |
