@@ -1146,7 +1146,7 @@ class RealRemoteOperations(RemoteOperations):
                 self._ssh_address(server, 'service chroma-agent stop')
             
             running_time = 0
-            while self._ssh_address(server, 'service chroma-agent status').rc == 0 and running_time < TEST_TIMEOUT:
+            while self._ssh_address(server, 'service chroma-agent status', expected_return_code=None).rc == 0 and running_time < TEST_TIMEOUT:
                 sleep(1)
                 running_time += 1
             
