@@ -57,7 +57,8 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
             # HYD-1040: Sometimes we should retry on a failed registration
             result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
 
-        if result.rc != self.RC_MOUNT_SUCCESS:
+        if result.rc != self.RC_MOUNT_SUCCESS or \
+            result.stderr.startswith("e2label: No such file or directory while trying to open"):
             raise RuntimeError("Error (%s) mounting '%s': '%s' '%s'" % (result.rc, mount_point, result.stdout, result.stderr))
 
     # A curiosity with lustre on ldiskfs is that the umount must be on the 'realpath' not the path that was mkfs'd/mounted

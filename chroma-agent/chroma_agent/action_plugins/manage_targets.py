@@ -246,7 +246,17 @@ def format_target(device_type, target_name, device, backfstype,
     BlockDevice(device_type, device)
     filesystem = FileSystem(backfstype, device)
 
-    return filesystem.mkfs(target_name, options)
+    mkfs_ret = filesystem.mkfs(target_name, options)
+
+    # #174: test that the mkfs actually did format the target
+    arg_list = ['tunefs.lustre', device]
+    result = AgentShell.run(arg_list)
+
+    if result.rc not in [0, 17] or \
+        len(filter(lambda x:'Mount type: %s' % backfstype in x, result.stdout)) != 2:
+        raise RuntimeError(result, arg_list)
+
+    return mkfs_ret
 
 
 def _mkdir_p_concurrent(path):
