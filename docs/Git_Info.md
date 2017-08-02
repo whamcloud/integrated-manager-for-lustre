@@ -101,7 +101,8 @@
 | | After the commit and push, return to branch-1 | git checkout branch-1 |
 | | Apply the stash to be right back before the interruption | git stash apply | 
 | | Can also pop the stash stack | git stash pop |
-| | Unapply a stash | git stash show -p stash@{0} | git apply -R |
+| | Unapply a stash | git stash show -p stash@{0} |
+| | | git apply -R |
 | | Create a branch from a stash | git stash branch testchanges |
 | | 
 | | | |
