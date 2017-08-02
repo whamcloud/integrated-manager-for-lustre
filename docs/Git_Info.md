@@ -18,6 +18,13 @@
     * Modified - Changed, not commited
     * Staged - Marked to go into the next commit
 
+* fetch imports commits from a remote repo into your local repo.
+* Commits are stored as remote branches instead of normal local branches.
+* pull = fetch + merge
+* git pull --rebase  origin   ← Same as git pull but instead of git merge, git rebase
+* git pull --rebase  origin  == fetch + rebase
+* Pull Request is a mechanism for a developer to notify team members that they have completed a feature.
+
 ## Useful git Commands
 
 |Git task|	Notes|	Git commands|
@@ -27,6 +34,7 @@
 | | |git config --global user.email sam@example.com|
 | | |git config --global http.proxy http://my-proxy.com |
 | | | git config --global https.proxy https://my-proxy.com |
+| | Alias for pull to do a fetch + rebase (no merge) | pull.rebase=true |
 |Create a new local repository| | git init|
 | Check out a repository | Create a working copy of a local repository:	| git clone /path/to/repository |
 | | For a remote server, use:	| git clone username@host:/path/to/repository|
@@ -39,6 +47,9 @@
 | | Commit and signoff, opens editor to add comments | git commit -s |
 | | Commit without running precommit tests | git commit -n |
 | | To modify the comment of your last commit, before a push | git commit —amend |
+| Squash commits | Squash all commits into one before a push | git log --oneline |
+| | Interactively | git rebase -i (commit hash) |
+| | Squash all commits | git rebase - root -i |
 | Push | Send changes to the master branch of your remote repository:	| git push origin master|
 | Status |	List the files you've changed and those you still need to add or commit:	|git status|
 | | Short status | git status -s |
@@ -48,6 +59,7 @@
 | mv | rename a file | git mv file1.c  file2.c |
 |Connect to a remote repository| If you haven't connected your local repository to a remote server, add the server to be able to push to it:|git remote add origin <server>|
 | Log | List all the commits to this repo | git log |
+| | List one line logs | git log --oneline |
 | | List the files that were changed in each commit | git log --stat |
 | | | git log —names-only |
 | | |git —name-status |
@@ -83,4 +95,13 @@
 | Search |  Search the working directory for foo():	| git grep "foo()" |
 | Help | |git help  <verb> |
 | | | git help config| 
+| stash | Switch branches without doing a commit | git stash |
+| | List the stashes | git stash list |
+| | Switch branch and do other work | git checkout branch-2 |
+| | After the commit and push, return to branch-1 | git checkout branch-1 |
+| | Apply the stash to be right back before the interruption | git stash apply | 
+| | Can also pop the stash stack | git stash pop |
+| | Unapply a stash | git stash show -p stash@{0} | git apply -R |
+| | Create a branch from a stash | git stash branch testchanges |
+| | 
 | | | |
