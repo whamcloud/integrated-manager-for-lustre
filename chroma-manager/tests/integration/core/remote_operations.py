@@ -1144,6 +1144,13 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             if self.has_chroma_agent(server):
                 self._ssh_address(server, 'service chroma-agent stop')
+            
+            running_time = 0
+            while self._ssh_address(server, 'service chroma-agent status').rc == 0 and running_time < TEST_TIMEOUT:
+                sleep(1)
+                running_time += 1
+            
+            self._test_case.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for chroma-agent on %s to stop" % server)
 
     def start_agents(self, server_list):
         for server in server_list:
