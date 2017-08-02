@@ -2,6 +2,8 @@
 
 # Things to Learn
 
+## As a contributor to IML, the following topics and resources are important:
+
 Topic | Link
 ------|-------
 Angular| [https://angularjs.org]()
@@ -31,17 +33,18 @@ Streams, Pipes, Buffers | [https://nodejs.org/api/stream.html]()
 |
 
 <br />
-<br />
 
-Tools | Link
------- | ------
-atom | [https://atom.io/]()
-Charts | [https://d3js.org/]()
-gitkraken | [https://www.gitkraken.com/]()
-sourcetree | [https://www.sourcetreeapp.com/]()
-**npm** | [package.json Description]()
-**VS Code** | [https://code.visualstudio.com/]()
-**yarn** | [https://yarnpkg.com/en/]()
+## Important Tools
+
+Tools | Description | Link
+------ | -----------|-----
+atom | Editor | [https://atom.io/]()
+Charts | Javascript graphics | [https://d3js.org/]()
+gitkraken | Popular Git GUI for Windows, Mac AND Linux| [https://www.gitkraken.com/]()
+sourcetree | Git client for Windows and Mac | [https://www.sourcetreeapp.com/]()
+**npm** | node package manager| [package.json Description]()
+**VS Code** | Recommended Editor / IDE | [https://code.visualstudio.com/]()
+**yarn** |node package manager++  | [https://yarnpkg.com/en/]()
 |
 
 

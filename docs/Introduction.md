@@ -5,7 +5,7 @@
 ## Background
 
 ### **IML** stands for Intel Manager for Lustre
-### **IML** is responsible for the installation, configuration, monitoring, and overall management of Lustre.
+### **IML** is responsible for the installation, configuration, monitoring, and overall management of [Lustre](http://lustre.org/).
 
 Before accessing our source code repository for the first time, new contributors should have a good understanding of the tools and processes in place.
 * Become very familiar with [git](Git_Info.md)
@@ -22,14 +22,13 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 
 | Repo Name | Description |
 |-----------|-------------|
-| [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre) | Consider this as the *Top level* repo filled with python code |
-| [GUI](https://github.com/intel-hpdd/GUI) | The Graphical User Interface for the Single Page Application, IML |
+| [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre) | Consider this as the *Top level* repo populated mostly with python code |
+| [GUI](https://github.com/intel-hpdd/GUI) | The Graphical User Interface for the Single Page Application, IML. Primaryily nodejs with angular and inferno |
 | [manager-for-lustre-dependencies](https://github.com/intel-hpdd/manager-for-lustre-dependencies) | Dependencies needed for IML not available elsewhere. |
-| [view-server](https://github.com/intel-hpdd/view-server) | Serve client-side files |
-| [socket-worker](https://github.com/intel-hpdd/socket-worker_) | Off main thread data munging|
+| [view-server](https://github.com/intel-hpdd/view-server) | Server client-side files |
+| [socket-worker](https://github.com/intel-hpdd/socket-worker) | Off main thread data munging|
 | [realtime](https://github.com/intel-hpdd/realtime) | WebSocket Proxy over RESTful API  |
-| [Vagrantfiles](https://github.com/intel-hpdd/Vagrantfiles) | Used to generate a virtual lustre clustre
-| | |
+| [Vagrantfiles](https://github.com/intel-hpdd/Vagrantfiles) | Used to generate a virtual lustre clustre with vagrant and virtualBox
 
 ## Dependencies for IML
 ### High level python dependencies include:
