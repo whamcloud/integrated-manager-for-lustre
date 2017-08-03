@@ -75,6 +75,10 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
                 'inode_size': self.inode_size,
                 'inode_count': self.inode_count}
 
+    def tunefs(self, target_name):
+        arg_list = ['tunefs.lustre', '--dryrun', self._device_path]
+        return arg_list, shell.Shell.run(arg_list)
+
     def mkfs_options(self, target):
         mkfsoptions = []
 

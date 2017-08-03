@@ -249,12 +249,12 @@ def format_target(device_type, target_name, device, backfstype,
     mkfs_ret = filesystem.mkfs(target_name, options)
 
     # #174: test that the mkfs actually did format the target
-    arg_list = ['tunefs.lustre', device]
-    result = AgentShell.run(arg_list)
+    arg_list, result = filesystem.tunefs(target_name)
+    console_log.debug("tunefs.lustre returned rc: %s, stdout:\n%s" % (result.rc, result.stdout))
 
     if result.rc not in [0, 17] or \
-        len(filter(lambda x:'Mount type: %s' % backfstype in x, result.stdout)) != 2:
-        raise RuntimeError(result, arg_list)
+        len(filter(lambda x:'Mount type: %s' % backfstype in x, result.stdout.splitlines())) != 2:
+        raise RuntimeError(result, arg_list, backfstype)
 
     return mkfs_ret
 
