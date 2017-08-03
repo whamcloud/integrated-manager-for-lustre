@@ -46,7 +46,7 @@ from chroma_core.models.utils import MeasuredEntity
 from chroma_core.models.utils import DeletableMetaclass
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
-from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
 
 import settings

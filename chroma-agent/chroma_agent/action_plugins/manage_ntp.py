@@ -3,9 +3,9 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_agent.chroma_common.lib.ntp import NTPConfig
-from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
-from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from iml_common.lib.ntp import NTPConfig
+from iml_common.lib.agent_rpc import agent_ok_or_error
+from iml_common.lib.service_control import ServiceControl
 
 
 ntp_service = ServiceControl.create('ntpd')

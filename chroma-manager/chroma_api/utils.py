@@ -31,7 +31,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
