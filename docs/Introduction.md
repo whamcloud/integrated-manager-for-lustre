@@ -16,6 +16,8 @@ Before accessing our source code repository for the first time, new contributors
 ## Frontend Code and Backend Code
 IML consists of a **Frontend GUI** that is written primarily in **Node JS** and server-side **Backend** code that is written primarily in **python**. The codebase relies on many external dependencies and uses many services and APIs.
 
+![iml_flow](md_Graphics/2017_0703_back_front.png)
+
 The [IML codebase](https://github.com/intel-hpdd) consists of many repositories due to the varying needs and varying dependencies.
 
 ### The primary IML repos of importance for a contributor are:
@@ -41,6 +43,7 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 
 ## IML Services
 ### IML uses the following linux services:
+* supervisor
 * corosync               
 * gunicorn 
 * http_agent 
