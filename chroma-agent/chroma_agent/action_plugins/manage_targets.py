@@ -246,7 +246,17 @@ def format_target(device_type, target_name, device, backfstype,
     BlockDevice(device_type, device)
     filesystem = FileSystem(backfstype, device)
 
-    return filesystem.mkfs(target_name, options)
+    mkfs_ret = filesystem.mkfs(target_name, options)
+
+    # #174: test that the mkfs actually did format the target
+    arg_list, result = filesystem.tunefs(target_name)
+    console_log.debug("tunefs.lustre returned rc: %s, stdout:\n%s" % (result.rc, result.stdout))
+
+    if result.rc not in [0, 17] or \
+        len(filter(lambda x:'Mount type: %s' % backfstype in x, result.stdout.splitlines())) != 2:
+        raise RuntimeError(result, arg_list, backfstype)
+
+    return mkfs_ret
 
 
 def _mkdir_p_concurrent(path):
@@ -279,7 +289,41 @@ def register_target(device_path, mount_point, backfstype):
 
     _mkdir_p_concurrent(mount_point)
 
-    filesystem.mount(mount_point)
+    result = filesystem.mount(mount_point, return_result=True)
+
+    if result.rc == 108:
+        # does trying right away still fail?
+        console_log.warn("got 108 trying to mount %s, trying again" % device_path)
+        result = filesystem.mount(mount_point, return_result=True)
+        if result.rc == 0:
+            console_log.warn("success mounting %s a second time with no delay" % device_path)
+            raise RuntimeError("mounting %s a second time was successful" % device_path)
+        elif result.rc == 108:
+            mgs = os.listdir("/proc/fs/lustre/mgc/")[0][3:]
+            console_log.warn("got 108 trying to mount %s a second time, trying to lctl ping %s" %
+                             (device_path, mgs))
+            mgs_ping_result = AgentShell.run(['lctl', 'ping', mgs])
+
+            console_log.warn("got %s trying to lctl ping %s" % (mgs_ping_result, mgs))
+            # yes, so do some debugging
+            i = 0
+            # try every 5 seconds for 5 minutes
+            while i < 60 and result.rc == 108:
+                time.sleep(5)
+                result = filesystem.mount(mount_point, return_result=True)
+                if result.rc == 0:
+                    console_log.warn("success mounting %s after %s attempts with a 5 second delay between attempts" %
+                                     (device_path, i))
+                    raise RuntimeError("mounting %s a after %s attempts was successful" % (device_path, i))
+                elif result.rc == 108:
+                    console_log.warn("got 108 trying to mount %s a %s time with 5 second delay between attempts" %
+                                     (device_path, i))
+                i += 1
+            if result.rc == 108:
+               console_log.warn("even after 5 minutes of trying mounting %s failed" %
+                                device_path)
+               raise RuntimeError("even after 5 mniutes of trying, mounting %s failed" %
+                                device_path)
 
     filesystem.umount()
 

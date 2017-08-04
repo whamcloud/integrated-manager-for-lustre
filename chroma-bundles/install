@@ -107,23 +107,6 @@ def _display_eula():
         sys.exit(0)
 
 
-def _check_no_epel():
-    """Check that the EPEL repository is available
-
-    IML requires certain packages from EPEL
-    It MUST be enabled.
-    """
-
-    log.debug("EPEL check ... ")
-
-    #  Most often this check will be enough.
-    with open(os.devnull, 'wb') as DEVNULL:
-        if (subprocess.call(['yum', 'info', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) != 0):
-            log.error("Could not find repository: EPEL. Please enable EPEL and then re-run the installer.")
-            sys.exit(-1)
-
-    log.debug("EPEL check ... Passed")
-
 def _mkdir_p(path):
     try:
         os.makedirs(path)
@@ -376,6 +359,14 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-
 repo_gpgcheck=0
 enabled=1
 
+[extras]
+name=CentOS-7 - Extras
+#baseurl=http://mirror.centos.org/centos/7/extras/x86_64/
+mirrorlist=http://mirrorlist.centos.org/?release=7&arch=$basearch&repo=extras&infra=$infra
+enabled=1
+gpgcheck=1
+gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+
 [epel]
 name=Extra Packages for Enterprise Linux 7 - $basearch
 #baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
@@ -415,8 +406,6 @@ def _install_or_upgrade_packages(upgrade):
     manager_repo_dir = None
     manager_repo_file = None
     old_version, old_release = _get_version()
-
-    _create_support_repos()
 
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()
@@ -671,8 +660,6 @@ def _check_repos():
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--no-epel-check', '-e', action='store_false', default=True,
-                        dest='epel_check', required=False)
     parser.add_argument('--no-repo-check', '-r', action='store_false', default=True,
                         dest='repo_check',  required=False)
     parser.add_argument('--no-platform-check', '-p', action='store_false', default=True,
@@ -684,8 +671,7 @@ def main():
     if args.platform_check:
         _check_platform()
 
-    if args.epel_check:
-        _check_no_epel()
+    _create_support_repos()
 
     if args.repo_check:
         _check_repos()

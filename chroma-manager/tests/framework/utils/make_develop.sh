@@ -4,15 +4,17 @@ virtualenv chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
 make requirements
+echo "jenkins_fold:start:pip install requirements.txt"
 if ${INSTALL_PYCURL:-false}; then
     # install pycurl (as required by fencing.py) on el7
     if [[ \$(rpm --eval %rhel) == 7 ]]; then
         export PYCURL_SSL_LIBRARY=nss
         pip install --upgrade pip
-        pip install --compile \$(pwd)/../chroma-externals/pycurl-7.43.0.tar.gz
+        pip install --compile pycurl==7.43.0
     fi
 fi
 pip install -r requirements.txt
+echo "jenkins_fold:end:pip install requirements.txt"
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc

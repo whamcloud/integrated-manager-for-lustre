@@ -86,6 +86,10 @@ class FileSystemZfs(FileSystem, BlockDeviceZfs):
                 'inode_size': None,
                 'inode_count': None}
 
+    def tunefs(self, target_name):
+        arg_list = ['tunefs.lustre', '--dryrun', self.mount_path(target_name)]
+        return arg_list, shell.Shell.run(arg_list)
+
     def mkfs_options(self, target):
         return []
 

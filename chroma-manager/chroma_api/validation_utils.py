@@ -3,15 +3,33 @@
 # license that can be found in the LICENSE file.
 
 
+from functools import wraps
 from collections import defaultdict
 from collections import namedtuple
 from tastypie.validation import Validation
-from tastypie.exceptions import NotFound
+from tastypie.exceptions import NotFound, ImmediateHttpResponse
 
 from chroma_core.services import log_register
 
 log = log_register(__name__)
 
+
+def validate(fn):
+    @wraps(fn)
+    def _validate(self, bundle, **kwargs):
+        # This looks like a no-op
+        # But tastypie relies heavily on mutation.
+        # This actually upates the bundle in place
+        # and adds an errors property if validation
+        # fails
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        return fn(self, bundle, **kwargs)
+    return _validate
 
 class ChromaValidation(Validation):
     '''
@@ -52,11 +70,12 @@ class ChromaValidation(Validation):
 
         return error_found
 
-    def validate_resources(self, resource_uris, errors):
+    def validate_resources(self, resource_uris, errors, request=None):
         '''
         Simply validates the uri string passed in are valid and return the correct type.
         :param resource_uris: List of uri's to validate
         :param errors: Array to append errors to.
+        :param request: The request.
         :return: True if errors found else False
         '''
 
@@ -67,7 +86,7 @@ class ChromaValidation(Validation):
         for resource_uri in resource_uris:
             if resource_uri.uri:                    # uri can be none meaning the resource is not expected.
                 try:
-                    resource_uri.expected_type().get_via_uri(resource_uri.uri)
+                    resource_uri.expected_type().get_via_uri(resource_uri.uri, request)
                 except (NotFound, resource_uri.expected_type.Meta.object_class.DoesNotExist):
                     error_found = True
                     errors[resource_uri.uri].append("Resource %s was not found" % resource_uri.uri)

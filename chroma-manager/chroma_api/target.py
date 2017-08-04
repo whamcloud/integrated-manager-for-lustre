@@ -24,6 +24,7 @@ from tastypie.validation import Validation
 from tastypie.resources import BadRequest, ImmediateHttpResponse
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
+from chroma_api.validation_utils import validate
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
@@ -188,7 +189,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
         return self.CONTENT_TYPE_ID_TO_KIND[id]
 
-    def full_dehydrate(self, bundle):
+    def full_dehydrate(self, bundle, for_list=False):
         """The first call in the dehydrate cycle.
 
         The ui, calls this directly, in addition to calling through the
@@ -197,7 +198,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
         self._init_cached_fs()
 
-        return super(TargetResource, self).full_dehydrate(bundle)
+        return super(TargetResource, self).full_dehydrate(bundle, for_list)
 
     class Meta:
         # ManagedTarget is a Polymorphic Model which gets related
@@ -225,8 +226,8 @@ class TargetResource(MetricResource, ConfParamResource):
                     'active_host_name', 'ha_label', 'filesystem_name',
                     'filesystem_id']
 
-    def override_urls(self):
-        urls = super(TargetResource, self).override_urls()
+    def prepend_urls(self):
+        urls = super(TargetResource, self).prepend_urls()
         from django.conf.urls.defaults import url
         urls.extend([
             url(r"^(?P<resource_name>%s)/(?P<pk>\d+)/resource_graph/$" % self._meta.resource_name, self.wrap_view('get_resource_graph'), name="api_get_resource_graph"),
@@ -406,7 +407,8 @@ class TargetResource(MetricResource, ConfParamResource):
         for target_data in deserialized['objects']:
             data = self.alter_deserialized_detail_data(request, target_data)
             bundle = self.build_bundle(data=dict_strip_unicode_keys(data))
-            self.is_valid(bundle, request)
+            bundle.request = request
+            self.is_valid(bundle)
 
             target_data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[target_data['kind']]).natural_key()
 
@@ -416,7 +418,16 @@ class TargetResource(MetricResource, ConfParamResource):
                               {'command': dehydrate_command(command),
                                'targets': [self.get_resource_uri(target) for target in targets]})
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
+
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
@@ -426,7 +437,7 @@ class TargetResource(MetricResource, ConfParamResource):
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
         # filesystem validation failure if it doesn't exist, anyhow.
-        self.is_valid(bundle, request)
+        self.is_valid(bundle)
 
         targets, command = JobSchedulerClient.create_targets([bundle.data])
 
@@ -436,7 +447,8 @@ class TargetResource(MetricResource, ConfParamResource):
                                    'target': self.full_dehydrate(self.build_bundle(obj=targets[0])).data})
 
     def get_resource_graph(self, request, **kwargs):
-        target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
+        base_bundle = self.build_bundle(request=request)
+        target = self.cached_obj_get(base_bundle, **self.remove_api_resource_names(kwargs))
 
         from chroma_core.models import AlertState
 

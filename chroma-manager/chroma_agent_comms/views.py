@@ -362,14 +362,20 @@ def setup(request, key):
 
     # the minimum repos needed on a storage server now
     repos = """[lustre]
-name=added from: https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+name=Lustre Server
 baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
 enabled=1
 gpgcheck=0
 
+[lustre-client]
+name=Lustre Client
+baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
+enabled=1
+gpgcheck=0
+
 [e2fsprogs]
-name=added from: https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
-baseurl=https://build.whamcloud.com/job/e2fsprogs-master/arch=x86_64%2Cdistro=el7/lastSuccessfulBuild/artifact/_topdir/RPMS/
+name=Lustre e2fsprogs
+baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
@@ -382,13 +388,6 @@ gpgcheck=1
 gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
-
-[mirror.centos.org_centos_7_extras_x86_64_]
-name=added from: http://mirror.centos.org/centos/7/extras/x86_64/
-baseurl=http://mirror.centos.org/centos/7/extras/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 
 [epel]
 name=Extra Packages for Enterprise Linux 7 - $basearch

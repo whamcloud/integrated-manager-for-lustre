@@ -16,7 +16,7 @@ class MockResource(object):
     Meta.object_class = Meta
 
     @classmethod
-    def get_via_uri(cls, uri):
+    def get_via_uri(cls, uri, request=None):
         if uri == 'valid':
             return uri
         else:

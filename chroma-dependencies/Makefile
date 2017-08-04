@@ -34,7 +34,7 @@ requirements::
 	echo "amqp==1.4.5";                                       \
 	echo "Django==1.4.5";                                     \
 	echo "django-picklefield==0.1.9";                         \
-	echo "django-tastypie==0.9.11";                           \
+	echo "django-tastypie==0.9.16";                           \
 	echo "dse==3.3.0";                                        \
 	echo "gevent==1.0.1";                                     \
 	echo "greenlet==0.4.2";                                   \

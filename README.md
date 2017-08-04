@@ -4,4 +4,4 @@ Simple, but powerful, management tools that provide a unified, consistent view o
 
 ## Online Help
 
-https://intel-hpdd.github.io/help-docs/
+https://intel-hpdd.github.io/Online-Help/
