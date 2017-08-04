@@ -5,6 +5,7 @@
 ## Getting Started
 * [Git Basics](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics)
 * [Git Book](https://git-scm.com/book/en/v2)
+* [Git Bootcamp and Cheat Sheet](https://docs.python.org/devguide/gitbootcamp.html)
 
 ### General Information
 * Snapshots, not Differences
