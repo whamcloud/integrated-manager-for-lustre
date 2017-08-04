@@ -179,7 +179,7 @@ def kernel_status():
                                                     "kmod-lustre-client"]).split('\n')
                      if "kernel >=" in k).split(" >= ")[1]
             required_kernel = AgentShell.try_run(["rpm", "-q", "kernel-%s*" %
-                                                  required_kernel_prefix ]).split('\n')[0]
+                                                  required_kernel_prefix]).split('\n')[0]
         except (AgentShell.CommandExecutionError, StopIteration):
             required_kernel = None
     else:

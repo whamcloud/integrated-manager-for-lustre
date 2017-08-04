@@ -115,7 +115,7 @@ This is the Intel Manager for Lustre Monitoring and Administration Interface
 %package libs
 Summary: Common libraries for Chroma Server
 Group: System/Libraries
-Requires: python2-iml-common
+Requires: python2-iml-common >= 1.1.0, python2-iml-common < 1.2.0
 %description libs
 This package contains libraries for Chroma CLI and Chroma Server.
 
@@ -130,7 +130,8 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
+Requires: python2-iml-common >= 1.1.0, python2-iml-common < 1.2.0
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.

@@ -1130,8 +1130,14 @@ class PreFormatCheck(Step):
         return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'], "check_block_device", {'path': kwargs['path'],
-                                                                               'device_type': kwargs['device_type']})
+        result = self.invoke_agent_expect_result(kwargs['host'],
+                                                 'check_block_device',
+                                                 {'path': kwargs['path'], 'device_type': kwargs['device_type']})
+        if result is not None:
+            error = "Block device at %s unexpectedly contains filesystem of type %s" % (kwargs['path'],
+                                                                                        result)
+            job_log.error(error)
+            raise RuntimeError(error)
 
 
 class PreFormatComplete(Step):
@@ -1148,6 +1154,33 @@ class PreFormatComplete(Step):
         with transaction.commit_on_success():
             kwargs['target'].reformat = True
             kwargs['target'].save()
+
+
+class PostFormatCheck(Step):
+    database = True
+
+    @classmethod
+    def describe(cls, kwargs):
+        return "Verify format of %s:%s" % (kwargs['host'], kwargs['path'])
+
+    def run(self, kwargs):
+        # retrieve path of 'new' volume_node for target
+        target = ManagedTarget.objects.get(name=kwargs['target_name'])
+        path = target.managedtargetmount_set.get(primary=True).volume_node.path
+
+        result = self.invoke_agent_expect_result(kwargs['host'],
+                                                 'check_block_device',
+                                                 {'path': path, 'device_type': kwargs['device_type']})
+
+        # FIXME: get around the fact that preferred_fstype is not the same as what blkid reports
+        expected_fs_type = kwargs['expected_fs_type']
+        expected_fs_type = ('ext4' if expected_fs_type == 'ldiskfs' else expected_fs_type)
+
+        if result != expected_fs_type:
+            error = "Block device at %s was expected to contain filesystem of type '%s'," \
+                    " found '%s'" % (path, expected_fs_type, result)
+            job_log.error(error)
+            raise RuntimeError(error)
 
 
 class MkfsStep(Step):
@@ -1356,7 +1389,11 @@ class FormatTargetJob(StateChangeJob):
                                   'device_type': device_type,
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target})])
+                      (UpdateManagedTargetMount, {'target': self.target}),
+                      (PostFormatCheck, {'host': primary_mount.host,
+                                         'target_name': self.target.name,
+                                         'expected_fs_type': block_device.preferred_fstype,
+                                         'device_type': device_type})])
 
         return steps
 
