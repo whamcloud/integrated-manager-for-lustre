@@ -200,4 +200,8 @@ server {
         autoindex on;
         alias {{REPO_PATH}}/lustre-client/;
     }
+
+    location /iml-srcmap-reverse {
+        proxy_pass http://unix:/var/run/iml-srcmap-reverse.sock;
+    }
 }
