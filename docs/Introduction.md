@@ -23,7 +23,7 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 | Repo Name | Description |
 |-----------|-------------|
 | [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre) | Consider this as the *Top level* repo populated mostly with python code |
-| [GUI](https://github.com/intel-hpdd/GUI) | The Graphical User Interface for the Single Page Application, IML. Primaryily nodejs with angular and inferno |
+| [GUI](https://github.com/intel-hpdd/GUI) | The Graphical User Interface for the Single Page Application, IML. Primarily nodejs with angular and inferno |
 | [manager-for-lustre-dependencies](https://github.com/intel-hpdd/manager-for-lustre-dependencies) | Dependencies needed for IML not available elsewhere. |
 | [view-server](https://github.com/intel-hpdd/view-server) | Server client-side files |
 | [socket-worker](https://github.com/intel-hpdd/socket-worker) | Off main thread data munging|
@@ -32,12 +32,12 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 
 ## Dependencies for IML
 ### High level python dependencies include:
-* The **django** web application framework
-* **Tastypie** webservice API framework for Django used as the REST-api
-* **django-south**, a tool to provide consistent, easy-to-use and database-agnostic migrations for Django applications.
-* **Kombu** messaging library for python
-* **Supervisor**, a system for controlling process state under linux
-* **Robinhood**, a commission-free, online securities brokerage. 
+* The [django](https://www.djangoproject.com/) web application framework
+* [Tastypie](https://django-tastypie.readthedocs.io/en/latest/) webservice API framework for Django used as the REST-api
+* [django-south](https://south.readthedocs.io/en/latest/), a tool to provide consistent, easy-to-use and database-agnostic migrations for Django applications.
+* [Kombu](https://pypi.python.org/pypi/kombu) messaging library for python
+* [Supervisor](http://supervisord.org/, a system for controlling process state under linux
+* **Robinhood** 
 
 ## IML Services
 ### IML uses the following linux services:
