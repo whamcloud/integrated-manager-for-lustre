@@ -48,7 +48,7 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
 
         return int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
-    def mount(self, mount_point):
+    def mount(self, mount_point, return_result=False):
         self._initialize_modules()
 
         result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
@@ -56,6 +56,9 @@ class FileSystemLdiskfs(FileSystem, BlockDeviceLinux):
         if result.rc == self.RC_MOUNT_INPUT_OUTPUT_ERROR:
             # HYD-1040: Sometimes we should retry on a failed registration
             result = shell.Shell.run(['mount', '-t', 'lustre', self._device_path, mount_point])
+
+        if return_result:
+            return result
 
         if result.rc != self.RC_MOUNT_SUCCESS or \
             result.stderr.startswith("e2label: No such file or directory while trying to open"):

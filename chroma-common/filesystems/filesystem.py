@@ -70,9 +70,12 @@ class FileSystem(object):
         """ :return: The inode count of the filesystem, returns 0 if inode count not supported """
         return 0
 
-    def mount(self, mount_point):
+    def mount(self, mount_point, return_result=False):
         """ :return: Mount the file system, raise an exception on error. """
         self._initialize_modules()
+
+        if return_result:
+            return shell.Shell.run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
 
         return shell.Shell.try_run(["mount", "-t", "lustre", "%s" % self._device_path, mount_point])
 
