@@ -32,7 +32,7 @@ server {
     gzip_comp_level 2;
 
     location /favicon.ico {
-      alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist/source/intel.ico;
+      alias /usr/lib/iml-manager/iml-gui/intel.ico;
     }
 
     location /certificate/ {
@@ -71,7 +71,7 @@ server {
     }
 
     location /gui {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/gui/dist;
+        alias /usr/lib/iml-manager/iml-gui;
 
         etag on;
         expires 1y;
