@@ -51,7 +51,7 @@ server {
     }
 
     location /static/webhelp {
-        alias {{APP_PATH}}/ui-modules/node_modules/intel-help-docs/;
+        alias /usr/lib/iml-manager/iml-online-help/;
 
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
