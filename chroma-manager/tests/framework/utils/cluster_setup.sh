@@ -38,9 +38,8 @@ for key in CentOS-7 redhat-release; do
 done
 
 if [[ \$HOSTNAME = *vm*2 ]]; then
-    build_type=client
-    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
-    sed -i -e '1d' -e \"2s/^.*$/[lustre-\$build_type]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_\${build_type}_.repo
+    yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
+    sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"
 fi
 
 $LOCAL_CLUSTER_SETUP" | dshbak -c

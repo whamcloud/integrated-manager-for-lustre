@@ -13,7 +13,11 @@ CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+TESTS_DIR=${TESTS_DIR:-"tests/integration/shared_storage_configuration/"}
+TESTS="$TESTS_DIR/test_aaa_zfs_setup.py:TestConfigureZfsTargets.test_setup_zfs_targets_for_test \
+       $TESTS_DIR/test_filesystem_dne.py:TestFilesystemDNE.test_create_dne_filesystem \
+       $TESTS_DIR/test_filesystem_dne.py:TestFilesystemDNE.test_mdt0_undeletable \
+       $TESTS_DIR/test_managed_filesystem_with_failover.py:TestManagedFilesystemWithFailover.test_create_filesystem_with_failover_oss"
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
 trap "set +e; collect_reports" EXIT
