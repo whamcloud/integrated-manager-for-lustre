@@ -12,7 +12,7 @@ Before accessing our source code repository for the first time, new contributors
 * Be ready to learn new things
 
 ## Frontend Code and Backend Code
-IML consists of a **Frontend GUI** that is written primarily in **Node JS** and server-side **Backend** code that is written primarily in **python**. The codebase relies on many external dependencies and uses many services and APIs.
+IML consists of a **Frontend GUI** that is written primarily in **Node JS** and a server-side **Backend** code that is written primarily in **python**. The codebase relies on many external dependencies and uses many services and APIs.
 
 ![iml_flow](md_Graphics/2017_0803_backend_frontend.png)
 
@@ -21,7 +21,7 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 ### The primary IML repos of importance for a contributor are:
 
 | Repo Name | Description |
-|-----------|-------------|
+|-----------|-------------| 
 | [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre) | Consider this as the *Top level* repo populated mostly with python code |
 | [GUI](https://github.com/intel-hpdd/GUI) | The Graphical User Interface for the Single Page Application, IML. Primarily nodejs with angular and inferno |
 | [manager-for-lustre-dependencies](https://github.com/intel-hpdd/manager-for-lustre-dependencies) | Dependencies needed for IML not available elsewhere. |
@@ -36,7 +36,7 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 * [Tastypie](https://django-tastypie.readthedocs.io/en/latest/) webservice API framework for Django used as the REST-api
 * [django-south](https://south.readthedocs.io/en/latest/), a tool to provide consistent, easy-to-use and database-agnostic migrations for Django applications.
 * [Kombu](https://pypi.python.org/pypi/kombu) messaging library for python
-* [Supervisor](http://supervisord.org/, a system for controlling process state under linux
+* [Supervisor](http://supervisord.org/), a system for controlling process state under linux
 * **Robinhood** 
 
 ## IML Services

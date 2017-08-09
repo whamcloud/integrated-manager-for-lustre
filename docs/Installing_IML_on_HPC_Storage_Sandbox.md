@@ -3,7 +3,7 @@
 # Installing IML on HPC Storage Sandbox
 
 ## Prerequisites:
-Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
+Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/intel-hpdd/vagrantfiles) on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
 
 ## Notes:
 - You will be logging into your vagrant box as the vagrant user, which has the ability to run with root privilege. To elevate privileges to the root account, use the sudo command. The vagrant user does not require a password to run sudo. Should there ever be a need to login as root directly, the root password is also "vagrant". 

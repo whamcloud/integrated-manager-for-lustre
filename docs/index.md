@@ -2,11 +2,13 @@
 
 1. [Introduction](Introduction.md)
 
-1. [IML Architecture](IML_Distributed_Architecture.md)
+1. [IML Distributed Architecture](IML_Distributed_Architecture.md)
 
-1. [Contributor Workflow](Contributor_Workflow.md)
+1. [IML Contributor Workflow](IML_Contributor_Workflow.md)
 
-1. [Contributing To IML Quick Guide](Contributing_To_IML_Quick_Guide.md)
+1. [Contribute To the **Frontend** Quick Guide](Contribute_To_Frontend_Quick_Guide.md)
+
+1. [Contribute To the **Backend** Quick Guide](Contribute_To_Backend_Quick_Guide.md)
 
 1. [Create a Cluster of Virtual Machines with Vagrant](https://github.com/intel-hpdd/Vagrantfiles/blob/master/README.md)
 
@@ -16,7 +18,7 @@
 
 1.  [Things to Learn](Things_to_Learn.md)
 
-1.  [Git Reference](Git_Info.md)
+1.  [Git Reference](Git_Reference.md)
 
 1. [IML lustre target sequence diagrams](IML_Lustre_Target_Sequence_Diagrams.md)
 
