@@ -52,7 +52,7 @@ gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
 .
 wq
 EOF
-if [[ \$HOSTNAME = *vm*[29] ]]; then
+if [[ \$HOSTNAME = *vm*[29] || \$HOSTNAME = *vm*[29].* ]]; then
     build_type=client
     yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-\$build_type-epel-7.repo
 else
