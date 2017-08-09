@@ -363,13 +363,13 @@ def setup(request, key):
     # the minimum repos needed on a storage server now
     repos = """[lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49506/archive/artifacts/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/49506/archive/artifacts/
 enabled=1
 gpgcheck=0
 

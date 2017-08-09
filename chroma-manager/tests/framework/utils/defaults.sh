@@ -100,7 +100,7 @@ set_defaults() {
     export COPR_OWNER="managerforlustre"
     export COPR_PROJECT="manager-for-lustre"
     # if you use this, don't forget to update chroma-manager/chroma_agent_comms/views.py
-    #LUSTRE_REVIEW_BUILD="12345"
+    LUSTRE_REVIEW_BUILD="49506"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         BASE_URL="https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
         export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
