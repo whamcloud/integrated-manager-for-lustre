@@ -71,7 +71,11 @@ def scan_packages():
             # Returning nothing means the package was not found at all and so we have no data to deliver back.
             if stdout:
                 for line in [l.strip() for l in stdout.strip().split("\n")]:
+                    if line.startswith("Last metadata expiration check"):
+                        continue
                     epoch, name, version, release, arch = line.split()
+                    if arch == "src":
+                        continue
                     packages[name]['available'].append(VersionInfo(
                         epoch=epoch,
                         version=version,
