@@ -1,4 +1,14 @@
+include ./include/Makefile.version
+
 BUILDER_IS_EL = $(shell rpm --eval '%{?rhel:true}%{!?rhel:false}')
+ARCHIVE_FILENAME := $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz
+ARCHIVE_PATH := chroma-bundles/$(ARCHIVE_FILENAME)
+ifeq ($(origin BUILD_NUM), undefined)
+BUILD_URL := https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download/v4.0.0.0P2
+else
+BUILD_URL := http://jenkins.lotus.hpdd.lab.intel.com/job/manager-for-lustre/$(BUILD_NUM)/arch=x86_64,distro=el7/artifact/chroma-bundles
+endif
+
 
 # Top-level Makefile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
@@ -43,6 +53,9 @@ deps: repo
 tags:
 	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
 	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
+
+fetch_build:
+	curl -Lk -o $(ARCHIVE_PATH) $(BUILD_URL)/$(ARCHIVE_FILENAME)
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
 chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
