@@ -118,10 +118,10 @@ class TestLustreScanPackages(CommandCaptureTestCase):
         lustre.rpm_lib = mock.Mock()
 
         # supply sorted list to preserve command parameter sequence
-        self.add_command(('yum', 'clean', 'all', '--disablerepo=*', '--enablerepo=' + ','.join(repo_list)))
+        self.add_command(('dnf', 'clean', 'all', '--disablerepo=*' + ' '.join(['--enablerepo=%s' %r for r in repo_list])))
 
         for repo in repo_list:
-            self.add_command(('repoquery', '--disablerepo=*', '--enablerepo=%s' % repo, '-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))
+            self.add_command(('dnf', 'repoquery', '--available', '--disablerepo=*', '--enablerepo=%s' % repo, '--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))
 
         scanned_packages = lustre.scan_packages()
 
