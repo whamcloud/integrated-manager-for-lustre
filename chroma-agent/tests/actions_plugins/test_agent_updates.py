@@ -90,8 +90,8 @@ sslclientcert = {2}
             })
 
     def test_install_packages(self):
-        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
-                          CommandCaptureCommand(('repoquery', '--requires', '--enablerepo=myrepo', 'foo', 'bar'),
+        self.add_commands(CommandCaptureCommand(('dnf', 'clean', 'all', '--enablerepo=*')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--requires', '--enablerepo=myrepo', 'foo', 'bar'),
                                                 stdout="""/usr/bin/python
 python >= 2.4
 python(abi) = 2.6
@@ -100,12 +100,12 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'bar', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
+                          CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'bar', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--queryformat=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--upgrades', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
 jasper-libs.x86_64                                                                             1.900.1-16.el6_6.3                                                                             myrepo
 """),
-                          CommandCaptureCommand(('yum', 'update', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
+                          CommandCaptureCommand(('dnf', 'update', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
         def isfile(arg):
@@ -117,8 +117,8 @@ jasper-libs.x86_64                                                              
         self.assertRanAllCommandsInOrder()
 
     def test_install_packages_hyd_4050_grubby(self):
-        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
-                          CommandCaptureCommand(('repoquery', '--requires', '--enablerepo=myrepo', 'foo'), stdout="""/usr/bin/python
+        self.add_commands(CommandCaptureCommand(('dnf', 'clean', 'all', '--enablerepo=*')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--requires', '--enablerepo=myrepo', 'foo'), stdout="""/usr/bin/python
 python >= 2.4
 python(abi) = 2.6
 yum >= 3.2.29
@@ -126,9 +126,9 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--queryformat=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--upgrades', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
 
         def isfile(arg):
@@ -140,8 +140,8 @@ lustre-backend-fs
         self.assertRanAllCommandsInOrder()
 
     def test_install_packages_4050_initramfs(self):
-        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
-                          CommandCaptureCommand(('repoquery', '--requires', '--enablerepo=myrepo', 'foo'), stdout="""/usr/bin/python
+        self.add_commands(CommandCaptureCommand(('dnf', 'clean', 'all', '--enablerepo=*')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--requires', '--enablerepo=myrepo', 'foo'), stdout="""/usr/bin/python
 python >= 2.4
 python(abi) = 2.6
 yum >= 3.2.29
@@ -149,9 +149,9 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
-                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('dnf', 'repoquery', '--queryformat=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--upgrades', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
         def isfile(arg):
@@ -166,13 +166,13 @@ lustre-backend-fs
         config.update('settings', 'profile', {'managed': False})
 
         # Go from managed = False to managed = True
-        self.add_command(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'))
+        self.add_command(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'))
         self.assertEqual(agent_updates.update_profile({'managed': True}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
         # Go from managed = True to managed = False
         self.reset_command_capture()
-        self.add_command(('yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
+        self.add_command(('dnf', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
         self.assertEqual(agent_updates.update_profile({'managed': False}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
@@ -183,12 +183,12 @@ lustre-backend-fs
 
     def test_set_profile_fail(self):
         # Three times because yum will try three times.
-        self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'clean', 'metadata')))
+        self.add_commands(CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('dnf', 'clean', 'metadata')),
+                          CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('dnf', 'clean', 'metadata')),
+                          CommandCaptureCommand(('dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('dnf', 'clean', 'metadata')))
 
         config.update('settings', 'profile', {'managed': False})
 
