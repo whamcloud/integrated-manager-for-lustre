@@ -17,6 +17,8 @@
     * Edit the **Vagrantfile** to allow for a shared mount. Immediately after the block that states *Create an admin server for the cluster*, add the following line:
 
     **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
+    
+    This will mount the current local directory to **/vagrant** on the virtual machine.
 
  * Ensure the ability to log in to the **adm** node as the root user:
     * vagrant up adm
@@ -50,7 +52,7 @@ git branch
 ```
 Use VS Code and open ~/vagrant-projects/vhpc/GUI
 ```
-### Example, make a small change
+### As an Example, make a small change to the **Configuration** dropdown menu.
 In VS Code, locate and edit the following file: **app-states.js**
 ```
 GUI 
@@ -83,13 +85,15 @@ Build the code and Pass all required tests listed in **pacakage.json**
 yarn watch
 ```
 
+The watch command will leave the code in a state that will "watch" for further edits. If desired, the "watch" may be stopped by hitting ctrl-c
+
 ### In a seperate terminal, log into the **adm** node
-* vagrant ssh
+* vagrant ssh adm
 
 Log in as root
 * su -
 
-Go to the cloned **GUI** repo where the change was made
+Go to the cloned **GUI** repo on the /vagrant mount point where the code edits were made.
 * cd /vagrant/GUI
 
 Type the command:
@@ -102,11 +106,14 @@ info You can now run `yarn link "@iml/gui"` in the projects where you want to us
 Done in 0.60s.
 
 ```
+The "yarn link" provides the ability to replace the 'installed' GUI that came with the installed IML with 'this' GUI with code edits.
 
 ### Stop the IML running services
 * chroma-config stop
 
 ### Replace the **gui** that is running on the **adm** node with the newly cloned **gui**
+
+The gui modules currently reside at /usr/share/chroma-manager/ui-modules on the running system.
 
 * cd /usr/share/chroma-manager/ui-modules
 * yarn link "@iml/gui"
@@ -117,17 +124,27 @@ Done in 0.60s.
 ## In a browser, go to the IML location
 * [https://ct7-adm.lfs.local:8443](https://ct7-adm.lfs.local:8443)
 
-## Verify that the small change worked
+## Verify that the small change worked.
+
+It is possible that the browser cache may require refreshing for the change to take place.
+
 * Click on 
     * Configuration 
     * Verify that the pull down menu has the item: "My Servers"
+    * The image below also shows a change for "My Power Control"
 
 ![iml_flow](md_Graphics/config_my_servers.png)
 
-## Congratulations!, you just made a change to the IML Frontend code.
-
-
 ---
+# Congratulations! You just made a change to the IML Frontend code.
+---
+
+## The process outlined above is the basic technique for modifying the Frontend IML code.
+
+## A note about starting and stopping chroma-config
+* The amount of time to complete 
+alias super='supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf'
+
 
 
 
