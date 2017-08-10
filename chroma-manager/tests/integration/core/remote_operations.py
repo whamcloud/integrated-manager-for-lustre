@@ -1146,16 +1146,15 @@ class RealRemoteOperations(RemoteOperations):
                 self._ssh_address(
                     server, 
                     '''
-                    systemctl stop chroma-agent;
-                    i=0;
+                    systemctl stop chroma-agent
+                    i=0
                     
                     while systemctl status chroma-agent; [ $? -eq 0 ] && [ "$i" -lt {timeout} ]; do
-                        ((i++));
-                        sleep 1;
-                    done;
+                        ((i++))
+                        sleep 1
+                    done
                     
-                    if [ $i -eq {timeout} ] 
-                    then 
+                    if [ "$i" -eq {timeout} ]; then 
                         exit 1
                     fi
                     '''.format(timeout=TEST_TIMEOUT)
