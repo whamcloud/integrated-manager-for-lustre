@@ -143,7 +143,18 @@ It is possible that the browser cache may require refreshing for the change to t
 
 ## A note about starting and stopping chroma-config
 * The amount of time to complete 
-alias super='supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf'
+    * chroma-config start
+    * chroma-config stop
+
+* can be time consuming, however, the commands are still an effective way to ensure that all processes start and stop.
+
+* A faster method to restart just the "view_server" process can be accomplished as follows:
+
+    * **supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf restart view_server**
+
+* To check the IML services status
+
+   * **supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf status**
 
 
 
