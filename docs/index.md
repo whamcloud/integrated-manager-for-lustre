@@ -6,9 +6,9 @@
 
 1. [IML Contributor Workflow](IML_Contributor_Workflow.md)
 
-1. [Contribute To the **Frontend** Quick Guide](Contribute_To_Frontend_Quick_Guide.md)
+1. [How to Contribute to the **Frontend** - Quick Guide](Contribute_To_Frontend_Quick_Guide.md)
 
-1. [Contribute To the **Backend** Quick Guide](Contribute_To_Backend_Quick_Guide.md)
+1. [How to Contribute To the **Backend** - Quick Guide](Contribute_To_Backend_Quick_Guide.md)
 
 1. [Create a Cluster of Virtual Machines with Vagrant](https://github.com/intel-hpdd/Vagrantfiles/blob/master/README.md)
 
@@ -17,6 +17,8 @@
 1. [Install IML Preview1 on a Vagrant Virtual Cluster](Install_IML_Preview1_on_a_Cluster.md)
 
 1.  [Things to Learn](Things_to_Learn.md)
+
+1.  [Windows - Run IML Tests with Cygwin and Vagrant](Run_Iml_Tests_Cygwin.md)
 
 1.  [Git Reference](Git_Reference.md)
 
