@@ -80,6 +80,33 @@ class fence_virsh(FenceAgent):
         Thread(target=delay_on).start()
 
 
+class fence_vbox(FenceAgent):
+    def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file="%s/.ssh/id_rsa" % expanduser("~")):
+        if identity_file and isfile(identity_file):
+            auth = ['-k', identity_file]
+        elif password:
+            auth = ['-p', password]
+        else:
+            raise RuntimeError("Neither password nor identity_file were supplied")
+
+        super(fence_vbox, self).__init__(plug,
+                                          [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth)
+
+    def on(self):
+        """Override super.on to wait 15 seconds then process as usual.
+
+        Real servers start slower then virtual ones do.  This simulates the production
+        environment more closely.  This was introduced to prevent HYD-2889 from occurring
+        in the testing.
+        """
+
+        def delay_on():
+            sleep(15)
+            super(fence_vbox, self).on()
+
+        Thread(target=delay_on).start()
+
+
 class fence_ipmilan(FenceAgent):
     def __init__(self, agent, login, password, ipaddr, lanplus=False):
         if lanplus:
