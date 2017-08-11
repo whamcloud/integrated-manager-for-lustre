@@ -2,9 +2,17 @@
 
 # Introduction
 
-### **IML** stands for Intel Manager for Lustre
-### **IML** is responsible for the installation, configuration, monitoring, and overall management of [Lustre](http://lustre.org/).
+### **IML** stands for Intel Manager for Lustre.
+### **IML** is responsible for the installation, configuration, monitoring, and overall management of [Lustre®](http://lustre.org/). 
 
+The Lustre® file system is an open-source, parallel file system, generally used for large-scale cluster computing. 
+
+### Below is a screen shot of **IML**
+
+![iml_flow](md_Graphics/iml_screen_shot.png)
+
+
+## Source Code
 Before accessing our source code repository for the first time, new contributors should have a good understanding of the tools and processes in place.
 * Become very familiar with [git](Git_Info.md)
 * Become familiar with the [IML codebase](https://github.com/intel-hpdd)

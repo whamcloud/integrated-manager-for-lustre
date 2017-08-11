@@ -12,13 +12,17 @@
     * Prettier - ESLint
     * Flow Language Support
     * Jest
+    
+    ![vscode_plugins](md_Graphics/vs_code_plugins.png)
 * To modify and test any Frontend changes to IML, it will be necessary to install a working version of IML.
     * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
     * Edit the **Vagrantfile** to allow for a shared mount. Immediately after the block that states *Create an admin server for the cluster*, add the following line:
 
-    **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
+        **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
     
-    This will mount the current local directory to **/vagrant** on the virtual machine.
+![shared_mount](md_Graphics/vagrant_shared_mount.png)
+
+This will mount the current local directory to **/vagrant** on the virtual machine.
 
  * Ensure the ability to log in to the **adm** node as the root user:
     * vagrant up adm
@@ -151,6 +155,7 @@ It is possible that the browser cache may require refreshing for the change to t
 * A faster method to restart just the "view_server" process can be accomplished as follows:
 
     * **supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf restart view_server**
+
 
 * To check the IML services status
 
