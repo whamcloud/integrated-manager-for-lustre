@@ -177,28 +177,16 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
 install %{SOURCE4} $RPM_BUILD_ROOT/usr/share/man/man1
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
-# Nuke source code (HYD-1849), but preserve key .py files needed for operation
-preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core/management/commands/*.py"
-
-# Stash .py files for -devel package
-find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py" \
-    | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
-
-# only include compiled modules in the main package
-for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.pyc"); do
+# only include modules in the main package
+for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
     install_file=${manager_file/$RPM_BUILD_ROOT\///}
-    echo "${install_file%.py*}.py[c,o]" >> manager.files
+    echo "${install_file%.py*}.py*" >> manager.files
 done
 
-# ... except for these files which are required for operation
-for pattern in $preserve_patterns; do
-    echo "%{manager_root}/$pattern" >> manager.files
-done
-
-# only include compiled modules in the cli package
-for cli_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/chroma_cli/ -name "*.pyc"); do
+# only include modules in the cli package
+for cli_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/chroma_cli/ -name "*.py"); do
     install_file=${cli_file/$RPM_BUILD_ROOT\///}
-    echo "${install_file%.py*}.py[c,o]" >> cli.files
+    echo "${install_file%.py*}.py*" >> cli.files
 done
 
 # This is fugly, but it's cleaner than moving things around to get our
@@ -218,7 +206,7 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post
-%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.pyc \
+%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
 # Create chroma-config MAN Page
@@ -296,6 +284,7 @@ echo "run \"chroma-config setup\""
 service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf %{manager_root}/static
+-find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 
 if [ $1 -lt 1 ]; then
     #reset worker processes
@@ -342,7 +331,7 @@ fi
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
-%attr(0755,root,root)%{manager_root}/manage.pyc
+%attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/*.conf
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.py
@@ -369,13 +358,10 @@ fi
 
 %files integration-tests
 %defattr(-,root,root)
-%{manager_root}/tests/__init__.pyc
+%{manager_root}/tests/__init__.py
 %{manager_root}/tests/utils/*
 %{manager_root}/tests/sample_data/*
 %{manager_root}/tests/plugins/*
 %{manager_root}/tests/integration/*
 %{manager_root}/tests/integration/core/clear_ha_el?.sh
 %attr(0755,root,root)%{manager_root}/tests/integration/run_tests
-
-%files -f devel.files devel
-%defattr(-,root,root)
