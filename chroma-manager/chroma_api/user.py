@@ -14,7 +14,6 @@ from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_core.models import UserProfile
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.validation_utils import validate
 
