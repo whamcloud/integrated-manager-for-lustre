@@ -386,7 +386,7 @@ gpgcheck=0
 
 [e2fsprogs]
 name=Lustre e2fsprogs
-baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
+baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
