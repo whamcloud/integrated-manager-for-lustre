@@ -49,7 +49,7 @@ chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile
-	vagrant destroy
+	vagrant destroy -f
 	sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config
 	sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys
 	export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
