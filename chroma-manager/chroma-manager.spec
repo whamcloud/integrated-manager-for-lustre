@@ -52,7 +52,9 @@ Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
-Requires: supervisor-status
+Requires: iml-supervisor-status
+Requires: iml-gui
+Requires: iml-srcmap-reverse
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd

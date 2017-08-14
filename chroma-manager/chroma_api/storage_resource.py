@@ -120,7 +120,7 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
             return bases
 
-        return [k.__name__ for k in find_bases(bundle.obj.resource_class.get_class())]
+        return [k.__name__ for k in find_bases(bundle.obj.resource_class.get_class())].sort()
 
     def obj_get_list(self, bundle, **kwargs):
         """Override this to do sorting in a way that depends on kwargs (we need
