@@ -123,7 +123,12 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 
 # Install and setup integration tests on integration test runner
 if ! $JENKINS; then
-    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+    package_name="chroma-manager-integration-tests-*.x86_64.rpm"
+    locations="chroma-manager/dist\nchroma-manager/"
+    for location in $locations; do
+        [[ -z "$CMIT" ]] && CMIT=$(ls $location/$package_name)
+    done
+    [[ -z "$CMIT" ]] && echo "Could not find $package_name in locations: $locations"
 fi
 scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
