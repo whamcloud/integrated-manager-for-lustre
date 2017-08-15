@@ -361,21 +361,32 @@ def setup(request, key):
         return token_error
 
     # the minimum repos needed on a storage server now
-    repos = """[lustre]
+    repos = """[ngompa-dnf-el7]
+name=Copr repo for dnf-el7 owned by ngompa
+baseurl=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+
+[lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49506/archive/artifacts/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
+baseurl=https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/49506/archive/artifacts/
 enabled=1
 gpgcheck=0
 
 [e2fsprogs]
 name=Lustre e2fsprogs
-baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
+baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
@@ -386,6 +397,16 @@ type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
 gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
+[brianjmurrell-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 
