@@ -73,21 +73,17 @@ chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile
 	set -e;                                                              \
-	if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then                        \
-	    echo "LIBVIRT detected as provider";                             \
-	    vagrant destroy;                                                 \
-	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
-	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
-	    export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
-	    for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
-	        virsh net-destroy $$net || true;                             \
-	        virsh net-undefine $$net || true;                            \
-	    done                                                             \
-	else                                                                 \
-	    echo "LIBVIRT not detected as provider";                         \
-	    vagrant destroy;                                                 \
-	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
-	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
+	[[ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]] && LIBVIRT="1";               \
+	vagrant destroy -f;                                                  \
+	sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;          \
+	sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;             \
+	if [ ! -z "$$LIBVIRT" ]; then                                        \
+		echo "LIBVIRT detected as provider";                             \
+		export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
+		for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
+			virsh net-destroy $$net || true;                             \
+			virsh net-undefine $$net || true;                            \
+		done                                                             \
 	fi
 
 create_cluster:
