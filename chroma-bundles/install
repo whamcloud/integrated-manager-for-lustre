@@ -118,7 +118,7 @@ def _check_no_epel():
 
     #  Most often this check will be enough.
     with open(os.devnull, 'wb') as DEVNULL:
-        if (subprocess.call(['yum', 'info', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) != 0):
+        if (subprocess.call(['yum', 'list', 'installed', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) != 0):
             log.error("Could not find repository: EPEL. Please enable EPEL and then re-run the installer.")
             sys.exit(-1)
 
