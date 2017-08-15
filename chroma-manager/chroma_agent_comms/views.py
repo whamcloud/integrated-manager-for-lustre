@@ -400,6 +400,16 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-
 repo_gpgcheck=0
 enabled=1
 
+[brianjmurrell-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
 [epel]
 name=Extra Packages for Enterprise Linux 7 - $basearch
 #baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
