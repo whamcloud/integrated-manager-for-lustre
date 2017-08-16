@@ -61,7 +61,7 @@
 | mv | rename a file | git mv file1.c  file2.c |
 |Connect to a remote repository| If you haven't connected your local repository to a remote server, add the server to be able to push to it:|git remote add origin <server>|
 | Log | List all the commits to this repo | git log |
-| | List one line logs | git log --oneline |
+| | List files commited to a branch | git log --oneline |
 | | List the files that were changed in each commit | git log --stat |
 | | | git log —names-only |
 | | |git —name-status |
