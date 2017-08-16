@@ -13,7 +13,7 @@ from tastypie.exceptions import Unauthorized
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import CustomModelResource, DateSerializer
 from chroma_core.models import RegistrationToken
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 import settings
 

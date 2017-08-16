@@ -9,7 +9,7 @@ import datetime
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
 from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
 from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 log = logging.getLogger(__name__)
 
 

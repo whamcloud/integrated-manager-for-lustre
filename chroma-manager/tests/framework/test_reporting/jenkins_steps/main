@@ -1,25 +1,20 @@
 #!/bin/bash -ex
 
-# Get the chroma-externals repo as pip is going to need it
-scripts/update_chroma-externals.py
+# remove any previous chroma-externals content
+rm -rf chroma-externals .git/modules/chroma-externals
 
 # nose has to be installed separately otherwise we get:
 # Download error on https://pypi.python.org/simple/nose/: [Errno 8] _ssl.c:490: EOF occurred in violation of protocol -- Some packages may not be found!
-pip install --no-index --find-links=file://$(pwd)/chroma-externals nose
-pip install --no-index --find-links=file://$(pwd)/chroma-externals jenkinsapi==0.2.28
+pip install nose
+pip install jenkinsapi==0.2.28
 
 VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
 REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
 
 cd $WORKSPACE
-# Do not change +x below or risk exposing the jenkins-pull password in the console logs!
-set +x
 shopt -s expand_aliases
-alias test_aggregation="python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py '${JENKINS_URL}' '${JENKINS_USER:-jenkins-pull}' '$JENKINS_PULL' '${BUILD_JOB_NAME}' '${BUILD_JOB_BUILD_NUMBER}' '$VALID_TEST_JOBS' '$REQUIRED_TEST_JOBS'"
-sanitized_alias=$(echo $(type test_aggregation) | sed -e "s/$JENKINS_PULL/**********/g" -e "s/^test_aggregation is aliased to \`//" -e "s/'$//")
-echo "+ $sanitized_alias"
+alias test_aggregation="python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py '${JENKINS_URL}' '${BUILD_JOB_NAME}' '${BUILD_JOB_BUILD_NUMBER}' '$VALID_TEST_JOBS' '$REQUIRED_TEST_JOBS'"
 test_results=$(test_aggregation 2>&1) || true
-set -x
 
 cat test_aggregation.log || true
 echo "Test aggregation script results: $test_results"
