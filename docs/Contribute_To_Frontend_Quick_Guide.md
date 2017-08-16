@@ -12,7 +12,7 @@
     * Prettier - ESLint
     * Flow Language Support
     * Jest
-    
+
     ![vscode_plugins](md_Graphics/vs_code_plugins.png)
 * To modify and test any Frontend changes to IML, it will be necessary to install a working version of IML.
     * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
@@ -160,7 +160,3 @@ It is possible that the browser cache may require refreshing for the change to t
 * To check the IML services status
 
    * **supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf status**
-
-
-
-

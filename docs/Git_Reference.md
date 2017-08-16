@@ -55,7 +55,8 @@
 | Status |	List the files you've changed and those you still need to add or commit:	|git status|
 | | Short status | git status -s |
 | diff | What changes were made | git diff  file.c |
-| | git diff  --staged |
+| | | git diff  --staged |
+| | For a list of files to be pushed | git diff --stat --cached [remote/branch] |
 | rm | Remove a file | git rm file.c |
 | mv | rename a file | git mv file1.c  file2.c |
 |Connect to a remote repository| If you haven't connected your local repository to a remote server, add the server to be able to push to it:|git remote add origin <server>|
@@ -92,7 +93,13 @@
 | | Instead, to drop all your local changes and commits, fetch the latest history from the server and point your local master branch at it, do this:	| git fetch origin |
 | | | git reset --hard origin/master |
 | To sync with the origin | List the current origin | git remote -v |
-| fetch and rebase (Instead of fetch and merge) | | git pull  --rebase |
+| To modify the comment |  Of your last commit, before a push | git commit —amend |
+| To sync with the origin | List the Current origin  |  git remote -v |
+| |  Switch to the master branch |git checkout master |
+| | Fetch and Rebase | git pull  --rebase |
+| | Switch back to your branch |  git checkout my-new-branch |
+| | Put your changes on top of everyone elses | git rebase master |
+| | Push the branch to the origin | git push origin my-new-branch |
 | Search |  Search the working directory for foo():	| git grep "foo()" |
 | Help | |git help  <verb> |
 | | | git help config| 
@@ -105,5 +112,4 @@
 | | Unapply a stash | git stash show -p stash@{0} |
 | | | git apply -R |
 | | Create a branch from a stash | git stash branch testchanges |
-| | 
 | | | |
