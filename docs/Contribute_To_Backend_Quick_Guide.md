@@ -226,3 +226,21 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * Click on the **Branches** tab.
 * Find the branch named **my-fix**
 * On the right hand side, click the button for **New pull request**
+
+* Fill out a comment with the description of the change
+* Choose Reviewers, Labels, Assignees, etc.
+* Click **Create pull request**
+
+## Copy the URL and request a code review via email
+
+### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
+
+### If comments are left in the PR page, then the developer is responsible for addressing each comment.
+* If code changes are required, edit the code, save and commit as described above.
+* Test any code changes.
+* Rebase the branch onto the master as necessary.
+* Re-push any changes to the same branch that was initially pushed.
+```
+git push origin my-new-branch
+```
+

@@ -80,7 +80,15 @@ To look like this line:
 Save the file: **app-states.js**
 
 ## Install dependencies and build the code
-Install the external library dependencies
+
+### Install yarn
+Before you start using Yarn, you'll first need to install it on your system. 
+* How to [Install yarn](https://yarnpkg.com/lang/en/docs/install/)
+
+
+If yarn is installed properly, Install the external library dependencies
+
+Type the command:
 ```
 yarn install
 ```
@@ -100,7 +108,6 @@ Log in as root
 Go to the cloned **GUI** repo on the /vagrant mount point where the code edits were made.
 * cd /vagrant/GUI
 
-Type the command:
 * **yarn link**
 
 ```
@@ -187,9 +194,9 @@ This will cause the **eslint**, **flow** and **unit** tests to run.
 Add the following comment:
 
 ```
-This is a test fix for the backend
+This is a test fix for the frontend
 
- - Changed a server description
+ - Changed the Configuration dropdown label for Servers
 ```
 
 * Save the commit 
@@ -215,3 +222,20 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * Click on the **Branches** tab.
 * Find the branch named **my-fix**
 * On the right hand side, click the button for **New pull request**
+
+* Fill out a comment with the description of the change
+* Choose Reviewers, Labels, Assignees, etc.
+* Click **Create pull request**
+
+## Copy the URL and request a code review via email
+
+### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
+
+### If comments are left in the PR page, then the developer is responsible for addressing each comment.
+* If code changes are required, edit the code, save and commit as described above.
+* Test any code changes.
+* Rebase the branch onto the master as necessary.
+* Re-push any changes to the same branch that was initially pushed.
+```
+git push origin my-new-branch
+```
