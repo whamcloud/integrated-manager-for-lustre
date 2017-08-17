@@ -1,0 +1,12 @@
+[Unit]
+Description=IML Agent Daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/chroma-agent-daemon --pid-file=/var/run/chroma-agent.pid
+PIDFile=/var/run/chroma-agent.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

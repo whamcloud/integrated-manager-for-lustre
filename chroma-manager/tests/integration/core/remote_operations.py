@@ -1162,7 +1162,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, 'service chroma-agent start')
+            self._ssh_address(server, 'systemctl start chroma-agent')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -1230,7 +1230,7 @@ class RealRemoteOperations(RemoteOperations):
                     # Stop the agent
                     self._ssh_address(
                         address,
-                        'service chroma-agent stop'
+                        'systemctl stop chroma-agent'
                     )
                     self._ssh_address(
                         address,
