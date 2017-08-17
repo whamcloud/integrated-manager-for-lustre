@@ -118,6 +118,8 @@ def _check_no_epel():
 
     #  Most often this check will be enough.
     with open(os.devnull, 'wb') as DEVNULL:
+        # Debug, this is failing in SSI, verify that it passes when installed
+        subprocess.call(['yum', 'install', '-y', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL)
         if (subprocess.call(['yum', 'list', 'installed', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) != 0):
             log.error("Could not find repository: EPEL. Please enable EPEL and then re-run the installer.")
             sys.exit(-1)
