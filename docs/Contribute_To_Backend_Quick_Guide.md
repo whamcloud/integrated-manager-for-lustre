@@ -139,15 +139,16 @@ It is possible that the browser cache may require refreshing for the change to t
 * Click on 
     * Configuration > Servers
     * Select the **Actions** pull-down for one of the Servers in the table.
-    * Select the option "Reboot"
+    > Note: This will cause the selected server to reboot.
 
-
+    * Select the option "Reboot" 
+    
 ![server_actions](md_Graphics/server_actions.png)
 
 * The "Commands" form will pop up.
 * Look for your modified message: "Initiate a **Hello World** reboot on host..."
 
-![server_reboot_1](md_Graphics/server_reboot_1.png)
+![server_reboot_1](md_Graphics/server_reboot_2.png)
 
 
 ---
@@ -172,7 +173,7 @@ It is possible that the browser cache may require refreshing for the change to t
 
    * **supervisorctl -c /usr/share/chroma-manager/production_supervisord.conf status**
 
-## Push the code change to github
+# Pushing the code change to github
 
 ### On your local machine, i.e., not the vagrant VM:
 
@@ -182,9 +183,12 @@ Ensure you are on the proper branch
 * git branch
 
 Otherwise, change to the **my-fix** branch
-* git checkout my-branch
+* git checkout my-fix
+
+Add and Commit the change.
 
 * git status
+
 * git add chroma-manager/chroma_core/models/host.py
 
 * git commit -s 
@@ -202,6 +206,9 @@ This is a test fix for the backend
 * Save the commit 
 
 ## Sync with the github origin
+Prior to pushing the code change it may be necessary to synchronize your cloned repo with the master repo that may have changed while you were working.
+
+To synchronize your cloned master with the origin master and to rebase your changed on top of the changes of everyone else, do the following:
 
 |Git task|Git command|
 |--------|--------------|
@@ -210,3 +217,12 @@ This is a test fix for the backend
 | Fetch and Rebase | git pull  --rebase |
 | Switch back to your branch |  git checkout my-fix |
 | Put your changes on top of everyone elses | git rebase master |
+
+## Push to github
+* git push origin my-fix
+
+## Create a Pull Request
+* In a Browser, go here: [https://github.com/intel-hpdd/intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre)
+* Click on the **Branches** tab.
+* Find the branch named **my-fix**
+* On the right hand side, click the button for **New pull request**

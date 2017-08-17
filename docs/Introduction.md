@@ -14,9 +14,10 @@ The Lustre® file system is an open-source, parallel file system, generally used
 
 ## Source Code
 Before accessing our source code repository for the first time, new contributors should have a good understanding of the tools and processes in place.
-* Become very familiar with [git](Git_Info.md)
+* Become very familiar with [git](Git_Reference.md)
 * Become familiar with the [IML codebase](https://github.com/intel-hpdd)
-* Learn the IML [contributor workflow](Contributor_Workflow.md)
+* Learn the [IML contributor workflow](IML_Contributor_Workflow.md)
+* Understand How to Contribute to the [Frontend](Contribute_To_Frontend_Quick_Guide.md) and/or [Backend](Contribute_To_Backend_Quick_Guide.md) Code.
 * Be ready to learn new things
 
 ## Frontend Code and Backend Code
