@@ -33,11 +33,3 @@
 1.  [Things to Learn](Things_to_Learn.md)
 
 1.  [Git Reference](Git_Reference.md)
-
-
-
-
-
-
-Creating a Monitored Only Lustre zfs Filesystem on Vagrant HPC Storage Sandbox
-
