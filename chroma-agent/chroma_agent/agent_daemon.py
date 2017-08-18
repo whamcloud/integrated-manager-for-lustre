@@ -135,7 +135,7 @@ def main():
                 os.remove(args.pid_file + ".lock")
 
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
-        context = DaemonContext(pidfile=PIDLockFile(args.pid_file), daemon_context=True)
+        context = DaemonContext(pidfile=PIDLockFile(args.pid_file), detach_process=True)
         context.open()
 
         daemon_log_setup()
