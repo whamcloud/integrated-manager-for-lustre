@@ -57,8 +57,8 @@ if [[ \$HOSTNAME = *vm*[29] ]]; then
     yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-\$build_type-epel-7.repo
 else
     build_type=server
-    yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_\${build_type}_.repo
+    yum-config-manager --add-repo https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/49697/archive/artifacts/
+    sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_x86_64_axis-build_type_\${build_type}_axis-distro_el7_axis-ib_stack_inkernel_builds_49697_archive_artifacts_.repo 
 fi
 # can only do this if/when we stop getting the lustre client from our copr repo:
 # yum-config-manager --add-repo https://build.whamcloud.com/lustre-b2_10_last_successful_\$build_type/
