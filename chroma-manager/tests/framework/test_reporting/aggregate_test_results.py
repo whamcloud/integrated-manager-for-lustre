@@ -2,7 +2,7 @@
 # Simple script to accept the jenkins json api output of $BUILD_URL/api/json?tree=runs[fingerprint[usage[name,ranges[ranges[end]]]]]
 # and return the name and build number for each job triggered downstream of the original build in BUILD_URL.
 #
-# Usage: ./aggregate_test_results.py jenkins_url build_job_name build_job_build_number valid_test_jobs required_tests
+# Usage: ./aggregate_test_results.py jenkins_url username password build_job_name build_job_build_number valid_test_jobs required_tests
 
 from collections import defaultdict
 import errno
@@ -126,15 +126,17 @@ if __name__ == '__main__':
 
     # Store the command line arguments
     jenkins_url = sys.argv[1]
-    build_job_name = sys.argv[2]
-    build_job_build_number = int(sys.argv[3])
-    valid_test_jobs = set(sys.argv[4].split())
-    required_tests = set(sys.argv[5].split())
+    username = sys.argv[2]
+    password = sys.argv[3]
+    build_job_name = sys.argv[4]
+    build_job_build_number = int(sys.argv[5])
+    valid_test_jobs = set(sys.argv[6].split())
+    required_tests = set(sys.argv[7].split())
 
     # Fetch the downstream build info from jenkins
     requests.packages.urllib3.disable_warnings()
-    req = Requester(None, None, baseurl=jenkins_url, ssl_verify=False)
-    jenkins = api.Jenkins(jenkins_url, requester=req)
+    req = Requester(username, password, baseurl=jenkins_url, ssl_verify=False)
+    jenkins = api.Jenkins(jenkins_url, username=username, password=password, requester=req)
     assert jenkins.get_jobs_list()  # A test we are logged in
     job = jenkins.get_job(build_job_name)
     build = job.get_build(build_job_build_number)

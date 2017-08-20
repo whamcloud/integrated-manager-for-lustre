@@ -4,6 +4,14 @@ else
     export JENKINS=false
 fi
 
+if $JENKINS; then
+    # auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+    # printing it into the console in plaintext calling this script.
+    set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+    . $HOME/auth.sh
+    set -x
+fi
+
 [ -r localenv ] && . localenv
 
 spacelist_to_commalist() {
@@ -66,6 +74,12 @@ set_defaults() {
     rm -f /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
 
     if $JENKINS; then
+        # Variables that we expect to be set upstream, no "default"
+        export JENKINS_USER=${JENKINS_USER:-jenkins-pull}
+        set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+        export JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+        set -x
+
         JOB_NAME=${JOB_NAME%%/*}
         export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
         export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
