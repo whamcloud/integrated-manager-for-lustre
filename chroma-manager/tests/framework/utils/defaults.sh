@@ -2,7 +2,6 @@ if [ -n "$JENKINS_URL" ]; then
     export JENKINS=true
 else
     export JENKINS=false
-    export MAKE_TARGET="$1"
 fi
 
 [ -r localenv ] && . localenv
@@ -90,7 +89,6 @@ set_defaults() {
     else
         export WORKSPACE=workspace
         mkdir -p $WORKSPACE
-        export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
     fi
     set_distro_vars "$JENKINS_DISTRO"

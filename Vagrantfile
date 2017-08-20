@@ -120,30 +120,6 @@ __EOF
 	f.puts <<-__EOF
 Host host
   User #{Etc.getlogin}
-
-Host vm2
-  StrictHostKeyChecking no
-
-Host vm3
-  StrictHostKeyChecking no
-
-Host vm4
-  StrictHostKeyChecking no
-
-Host vm5
-  StrictHostKeyChecking no
-
-Host vm6
-  StrictHostKeyChecking no
-
-Host vm7
-  StrictHostKeyChecking no
-
-Host vm8
-  StrictHostKeyChecking no
-
-Host vm9
-  StrictHostKeyChecking no
 __EOF
         }
 	config.vm.provision "file", source: "ssh_config", destination: "/tmp/ssh_config"

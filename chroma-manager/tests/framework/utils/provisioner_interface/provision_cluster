@@ -47,7 +47,7 @@ if $JENKINS; then
         exit 1
     fi
 else
-    cp provisioner_output-vagrant-${MAKE_TARGET%_tests}.json provisioner_output.json
+    cp provisioner_output-vagrant.json provisioner_output.json
 fi
 
 # Pass the provisioner output back through an interpreter back to our test json format
