@@ -9,7 +9,7 @@ from chroma_core.models import Bundle, ServerProfile
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
-from iml_common.lib.date_time import IMLDateTime
+from tests.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register('test_helper')
 

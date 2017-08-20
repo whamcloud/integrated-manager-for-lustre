@@ -9,10 +9,10 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.lib.pacemaker import PacemakerConfig
-from iml_common.blockdevices.blockdevice import BlockDevice
-from iml_common.lib import util
-from iml_common.lib.agent_rpc import agent_error
-from iml_common.lib.agent_rpc import agent_result_ok
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.chroma_common.lib import util
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_function
 from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_function
 from chroma_agent import config

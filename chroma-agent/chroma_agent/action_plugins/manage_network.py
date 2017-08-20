@@ -3,8 +3,8 @@
 # license that can be found in the LICENSE file.
 
 
-from iml_common.lib.firewall_control import FirewallControl
-from iml_common.lib.agent_rpc import agent_ok_or_error
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
 
 def open_firewall(port, address, proto, description, persist):

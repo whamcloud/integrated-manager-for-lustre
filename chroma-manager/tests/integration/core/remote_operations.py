@@ -12,8 +12,8 @@ import subprocess
 
 from testconfig import config
 
-from iml_common.lib.util import ExceptionThrowingThread
-from iml_common.lib.shell import Shell
+from tests.chroma_common.lib.util import ExceptionThrowingThread
+from tests.chroma_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT

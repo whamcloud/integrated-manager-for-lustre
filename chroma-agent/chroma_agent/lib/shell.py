@@ -8,8 +8,8 @@ from StringIO import StringIO
 from copy import deepcopy
 import threading
 
-from iml_common.lib.shell import BaseShell
-from iml_common.lib.shell import set_shell
+from chroma_agent.chroma_common.lib.shell import BaseShell
+from chroma_agent.chroma_common.lib.shell import set_shell
 
 console_log = logging.getLogger('console')
 
@@ -121,5 +121,5 @@ class AgentShell(BaseShell):
 
         return None
 
-# We want iml_common routines to use our AgentShell.
+# We want chroma_common routines to use our AgentShell.
 set_shell(AgentShell)

@@ -96,7 +96,7 @@ class ActionTestCase(unittest.TestCase):
 
         # Intercept subprocess invocations
         if self.MOCK_SUBPROCESSES:
-            mock.patch('iml_common.lib.shell.BaseShell._run', self.mock_run).start()
+            mock.patch('chroma_agent.chroma_common.lib.shell.BaseShell._run', self.mock_run).start()
 
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)

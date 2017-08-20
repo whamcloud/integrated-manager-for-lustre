@@ -5,8 +5,8 @@ import json
 
 
 from chroma_agent.device_plugins.corosync import CorosyncPlugin
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-from iml_common.lib.date_time import IMLDateTime
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 log = logging.getLogger(__name__)
 

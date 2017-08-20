@@ -1,4 +1,4 @@
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 
 

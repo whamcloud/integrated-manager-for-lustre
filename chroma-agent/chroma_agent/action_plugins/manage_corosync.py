@@ -12,11 +12,11 @@ from collections import namedtuple
 import errno
 import re
 
-from iml_common.lib.service_control import ServiceControl
-from iml_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
 
 from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
-from iml_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_ok_or_error
 
 corosync_service = ServiceControl.create('corosync')
 firewall_control = FirewallControl.create()

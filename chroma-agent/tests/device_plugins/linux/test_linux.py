@@ -8,7 +8,7 @@ from django.utils import unittest
 from chroma_agent.device_plugins.linux import DmsetupTable
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 import chroma_agent.lib.normalize_device_path as ndp
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class MockDmsetupTable(DmsetupTable):

@@ -15,7 +15,7 @@ from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.models import CorosyncNoPeersAlert
 from chroma_core.models import StonithNotEnabledAlert
-from iml_common.lib.date_time import IMLDateTime
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 log = log_register(__name__)
 

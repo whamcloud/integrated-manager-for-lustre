@@ -17,7 +17,7 @@ from chroma_core.models.jobs import Job
 from chroma_core.lib.job import Step
 from chroma_help.help import help_text
 from chroma_core.lib.job import job_log
-from iml_common.lib.name_value_list import NameValueList
+from chroma_core.chroma_common.lib.name_value_list import NameValueList
 
 import settings
 

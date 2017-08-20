@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils.timezone import now as tznow
 
-from iml_common.lib.util import platform_info
+from chroma_core.chroma_common.lib.util import platform_info
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost

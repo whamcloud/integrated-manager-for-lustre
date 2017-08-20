@@ -3,7 +3,7 @@
 import logging
 
 from testconfig import config
-from iml_common.lib import util
+from tests.chroma_common.lib import util
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core import constants
 

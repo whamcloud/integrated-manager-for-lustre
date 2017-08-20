@@ -6,7 +6,7 @@
 import chroma_agent.device_plugins.audit
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-from iml_common.lib.exception_sandbox import exceptionSandBox
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.log import console_log
 
 

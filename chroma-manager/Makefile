@@ -208,12 +208,7 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	echo "jenkins_fold:end:Make Manager RPMS"
 
-install_requirements: requirements.txt
-	echo "jenkins_fold:start:Install Python requirements"
-	pip install --upgrade pip;                              \
-	pip install --upgrade setuptools;                       \
-	pip install -Ur requirements.txt
-	echo "jenkins_fold:end:Install Python requirements"
+requirements: requirements.txt
 
 requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile requirements.dev
 	echo "jenkins_fold:start:Make requirements.txt"
@@ -233,7 +228,10 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 	fi
 	echo "jenkins_fold:end:Make requirements.txt"
 
-download: install_requirements
+download: requirements.txt
+	echo "jenkins_fold:start:Install Python requirements"
+	pip install -r requirements.txt
+	echo "jenkins_fold:end:Install Python requirements"
 
 docs: requirements.txt version
 	echo "jenkins_fold:start:Make Docs"
@@ -241,9 +239,7 @@ docs: requirements.txt version
 	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
 		virtualenv myenv;                                       \
 		. myenv/bin/activate;                                   \
-		pip install --upgrade pip;                              \
-		pip install --upgrade setuptools;                       \
-		pip install -Ur requirements.txt;                       \
+		pip install -r requirements.txt;                        \
 	fi;                                                             \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"

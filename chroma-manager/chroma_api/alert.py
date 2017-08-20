@@ -23,7 +23,7 @@ from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from chroma_api.chroma_model_resource import ChromaModelResource
-from iml_common.lib import util
+from chroma_api.chroma_common.lib import util
 from long_polling_api import LongPollingAPI
 
 

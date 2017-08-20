@@ -1,6 +1,6 @@
 
 from chroma_agent.action_plugins.manage_conf_params import set_conf_param
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestConfParams(CommandCaptureTestCase):

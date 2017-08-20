@@ -17,11 +17,10 @@ import requests
 from cluster_sim.fake_power_control import FakePowerControl
 from cluster_sim.simulator import ClusterSimulator
 from cluster_sim.log import log
+from cluster_sim.chroma_common.lib.date_time import IMLDateTime
 
 from chroma_agent.agent_daemon import daemon_log
 from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
-
-from iml_common.lib.date_time import IMLDateTime
 
 
 SIMULATOR_PORT = 8743

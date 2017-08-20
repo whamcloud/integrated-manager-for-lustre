@@ -9,7 +9,7 @@ import datetime
 from django.db import models
 
 from chroma_core.models.server_profile import ServerProfile
-from iml_common.lib.date_time import IMLDateTime
+from chroma_core.chroma_common.lib.date_time import IMLDateTime
 
 
 SECRET_LENGTH = 16  # Number of bytes in secret, double to get number of alphanumeric characters

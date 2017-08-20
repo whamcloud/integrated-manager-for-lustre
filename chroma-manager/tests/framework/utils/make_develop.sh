@@ -3,8 +3,8 @@ ssh chromatest@$CHROMA_MANAGER "set -ex
 virtualenv chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
-make requirements.txt
-echo \"jenkins_fold:start:pip install requirements.txt\"
+make requirements
+echo "jenkins_fold:start:pip install requirements.txt"
 if ${INSTALL_PYCURL:-false}; then
     # install pycurl (as required by fencing.py) on el7
     if [[ \$(rpm --eval %rhel) == 7 ]]; then
@@ -13,8 +13,8 @@ if ${INSTALL_PYCURL:-false}; then
         pip install --compile pycurl==7.43.0
     fi
 fi
-make install_requirements
-echo \"jenkins_fold:end:pip install requirements.txt\"
+pip install -r requirements.txt
+echo "jenkins_fold:end:pip install requirements.txt"
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc

@@ -10,67 +10,8 @@
 import json
 import re
 import sys
-import tempfile
-import subprocess
-import time
-import collections
 
-RunResult = collections.namedtuple("RunResult", ['rc', 'stdout', 'stderr', 'timeout'])
-
-
-def shell_run(arg_list, timeout=0xfffffff):
-    """ Basic routine to run a shell command. Effectively no autotimeout for commands. """
-
-    assert type(arg_list) in [list, str, unicode], 'arg list must be list or str :%s' % type(arg_list)
-
-    # Allow simple commands to just be presented as a string. However do not start formatting the string this
-    # will be rejected in a code review. If it has args present them as a list.
-    if type(arg_list) in [str, unicode]:
-        arg_list = arg_list.split()
-
-    # Popen has a limit of 2^16 for the output if you use subprocess.PIPE (as we did recently) so use real files so
-    # the output side is effectively limitless
-    stdout_fd = tempfile.TemporaryFile()
-    stderr_fd = tempfile.TemporaryFile()
-
-    try:
-        p = subprocess.Popen(arg_list,
-                             stdout=stdout_fd,
-                             stderr=stderr_fd,
-                             close_fds=True)
-
-        # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
-        # to poll the thread_state.teardown event as well as the completion of the subprocess.
-        # This is done to allow cancellation of subprocesses
-        rc = None
-        max_wait = 1.0
-        wait = 1.0E-3
-        timeout += time.time()
-        while rc is None:
-            rc = p.poll()
-            if rc is None:
-                time.sleep(1)
-
-                if time.time() > timeout:
-                    p.kill()
-                    stdout_fd.seek(0)
-                    stderr_fd.seek(0)
-                    return RunResult(254,
-                                     stdout_fd.read().decode('ascii', 'ignore'),
-                                     stderr_fd.read().decode('ascii', 'ignore'),
-                                     True)
-                elif wait < max_wait:
-                    wait *= 2.0
-            else:
-                stdout_fd.seek(0)
-                stderr_fd.seek(0)
-                return RunResult(rc,
-                                 stdout_fd.read().decode('ascii', 'ignore'),
-                                 stderr_fd.read().decode('ascii', 'ignore'),
-                                 False)
-    finally:
-        stdout_fd.close()
-        stderr_fd.close()
+from chroma_common.lib.shell import Shell
 
 
 class ChromaLogCollector(object):
@@ -87,7 +28,7 @@ class ChromaLogCollector(object):
         Collect the logs from the target
         :return: empty list on success or error messages that can be used for diagnosing what went wrong.
         """
-        if shell_run(['rm', '-rf', "%s/*.log" % destination_path]).rc:
+        if Shell.run(['rm', '-rf', "%s/*.log" % destination_path]).rc:
             return "Fail to clear out destination path for logs collection: %s" % destination_path
 
         errors = []
@@ -109,7 +50,7 @@ class ChromaLogCollector(object):
         """
         action = "Fetching %s from %s to %s/%s" % (source_log_path, server, self.destination_path, destination_log_filename)
         print action
-        if shell_run(['scp', "%s:%s" % (server, source_log_path), "%s/%s" % (
+        if Shell.run(['scp', "%s:%s" % (server, source_log_path), "%s/%s" % (
                 self.destination_path, destination_log_filename)]).rc:
             error = "Failed %s" % action
 
@@ -124,7 +65,7 @@ class ChromaLogCollector(object):
         Collect the log directory from the target
         :return: None on success or error message that can be used for diagnosing what went wrong.
         """
-        logs = shell_run(['ssh', server, "ls %s | xargs -n1 basename" % dir])
+        logs = Shell.run(['ssh', server, "ls %s | xargs -n1 basename" % dir])
 
         if logs.rc:
             return "Failed fecthing log dir %s from %s" % (server, dir)
@@ -142,11 +83,11 @@ class ChromaLogCollector(object):
         """
 
         # Check that chroma-diagnostics is installed. May not be if installation failed, etc.
-        if shell_run(['ssh', server, 'which chroma-diagnostics']).rc:
+        if Shell.run(['ssh', server, 'which chroma-diagnostics']).rc:
             return["chroma-diagnostics not installed on %s. skipping." % server]
 
         # Generate the diagnostics from the server
-        result = shell_run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
+        result = Shell.run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
 
         if result.timeout:
             return["Chroma Diagnostics timed-out"]
@@ -166,17 +107,17 @@ class ChromaLogCollector(object):
         errors.append(self.fetch_log(server, "chroma-diagnostics.log", '%s-chroma-diagnostics.log' % server))
 
         if diagnostics.endswith('tar.lzma'):
-            if shell_run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
+            if Shell.run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
                 errors.append("Error tar --lzma the chroma diagnostics file")
         elif diagnostics.endswith('tar.gz'):
-            if shell_run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
+            if Shell.run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
                 errors.append("Error tar -xvzf the chroma diagnostics file")
         else:
             errors = "Didn't recognize chroma-diagnostics file format"
 
-        if shell_run(['rm', '-f', "%s/%s" % (self.destination_path, diagnostics)]).rc:
+        if Shell.run(['rm', '-f', "%s/%s" % (self.destination_path, diagnostics)]).rc:
             errors.append("Unable to remove the diagnostics %s/%s" % (self.destination_path, diagnostics))
 
         return errors
@@ -186,8 +127,8 @@ if __name__ == '__main__':
     destination_path = sys.argv[1]
     cluster_cfg_path = sys.argv[2]
 
-    shell_run(['mkdir', '-p', destination_path])
-    shell_run(['rm', '-f', "%s.tgz" % destination_path])
+    Shell.run(['mkdir', '-p', destination_path])
+    Shell.run(['rm', '-f', "%s.tgz" % destination_path])
     cluster_cfg_json = open(cluster_cfg_path)
     cluster_cfg = json.loads(cluster_cfg_json.read())
 

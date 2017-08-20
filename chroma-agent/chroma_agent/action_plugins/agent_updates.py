@@ -15,7 +15,7 @@ from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent.lib.yum_utils import yum_util, yum_check_update
-from iml_common.lib.agent_rpc import agent_result, agent_error, agent_result_ok
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_error, agent_result_ok
 
 REPO_PATH = '/etc/yum.repos.d'
 

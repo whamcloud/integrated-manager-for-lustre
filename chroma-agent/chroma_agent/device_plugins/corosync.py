@@ -9,10 +9,10 @@ import errno
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
-from iml_common.lib.exception_sandbox import exceptionSandBox
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.lib.corosync import corosync_running
 from chroma_agent.lib.pacemaker import pacemaker_running
-from iml_common.lib.date_time import IMLDateTime
+from chroma_agent.chroma_common.lib.date_time import IMLDateTime
 
 try:
     # Python 2.7

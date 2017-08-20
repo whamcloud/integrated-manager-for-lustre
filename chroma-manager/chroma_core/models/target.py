@@ -21,9 +21,9 @@ from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.models import StonithNotEnabledAlert
 from chroma_help.help import help_text
-from iml_common.blockdevices.blockdevice import BlockDevice
-from iml_common.filesystems.filesystem import FileSystem
-from iml_common.lib import util
+from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_core.chroma_common.filesystems.filesystem import FileSystem
+from chroma_core.chroma_common.lib import util
 
 import settings
 
