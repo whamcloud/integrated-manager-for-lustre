@@ -1143,22 +1143,7 @@ class RealRemoteOperations(RemoteOperations):
     def stop_agents(self, server_list):
         for server in server_list:
             if self.has_chroma_agent(server):
-                self._ssh_address(
-                    server, 
-                    '''
-                    systemctl stop chroma-agent
-                    i=0
-                    
-                    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
-                        ((i++))
-                        sleep 1
-                    done
-                    
-                    if [ "$i" -eq {timeout} ]; then 
-                        exit 1
-                    fi
-                    '''.format(timeout=TEST_TIMEOUT)
-                )
+                self._ssh_address(server, 'service chroma-agent stop')
 
     def start_agents(self, server_list):
         for server in server_list:
