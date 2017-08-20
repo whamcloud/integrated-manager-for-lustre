@@ -15,8 +15,8 @@ from chroma_agent import config
 from chroma_agent.lib import node_admin
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-from iml_common.lib.firewall_control import FirewallControl
-from iml_common.lib.service_control import ServiceControl
+from chroma_agent.chroma_common.lib.firewall_control import FirewallControl
+from chroma_agent.chroma_common.lib.service_control import ServiceControl
 from chroma_agent.lib import networking
 from chroma_agent.lib.talker_thread import TalkerThread
 

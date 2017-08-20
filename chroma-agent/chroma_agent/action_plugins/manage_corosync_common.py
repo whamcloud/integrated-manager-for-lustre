@@ -10,7 +10,7 @@ Corosync verification
 from collections import namedtuple
 
 from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1, RingDetectionError, CorosyncRingInterface
-from iml_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result
 
 
 InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])

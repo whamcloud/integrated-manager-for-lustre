@@ -4,12 +4,12 @@ from tempfile import NamedTemporaryFile
 
 from mock import patch
 
+from chroma_agent.chroma_common.lib.shell import Shell
 from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
 from chroma_agent import config
-from iml_common.lib.shell import Shell
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-from iml_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 
 
 class TestManageUpdates(CommandCaptureTestCase):
@@ -77,6 +77,7 @@ sslclientcert = {2}
                       "kernel-2.6.32-358.2.1.el6.x86_64\n"
                       "kernel-2.6.32-358.18.1.el6_lustre.x86_64\n"}
             return Shell.RunResult(0, values[tuple(arg_list)], "", False)
+
 
         with patch('chroma_agent.lib.shell.AgentShell.run', side_effect=run):
             result = agent_updates.kernel_status()

@@ -1,6 +1,6 @@
 
 from chroma_agent.action_plugins.manage_fail_node import fail_node
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestConfParams(CommandCaptureTestCase):

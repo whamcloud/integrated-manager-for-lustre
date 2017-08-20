@@ -46,15 +46,14 @@ Requires: Django >= 1.4, Django < 1.5
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.16
 Requires: django-picklefield
+Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
-Requires: iml-supervisor-status
-Requires: iml-gui
-Requires: iml-srcmap-reverse
+Requires: supervisor-status
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
@@ -115,7 +114,6 @@ This is the Intel Manager for Lustre Monitoring and Administration Interface
 %package libs
 Summary: Common libraries for Chroma Server
 Group: System/Libraries
-Requires: python2-iml-common
 %description libs
 This package contains libraries for Chroma CLI and Chroma Server.
 
@@ -130,7 +128,7 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
@@ -374,6 +372,7 @@ fi
 %{manager_root}/tests/sample_data/*
 %{manager_root}/tests/plugins/*
 %{manager_root}/tests/integration/*
+%{manager_root}/tests/chroma_common/*
 %{manager_root}/tests/integration/core/clear_ha_el?.sh
 %attr(0755,root,root)%{manager_root}/tests/integration/run_tests
 

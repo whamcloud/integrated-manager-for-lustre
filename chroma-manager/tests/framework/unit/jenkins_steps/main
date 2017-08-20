@@ -24,11 +24,10 @@ rm -rf chroma-externals .git/modules/chroma-externals
 
 # Pip install requirements
 cd $CHROMA_DIR/chroma-manager
-make install_requirements
-
-# disable threading for manager unit tests, evaluating database transactions will not
-# work as expected if multiple threads are operating on the same database instance
-export IML_DISABLE_THREADS=1
+make requirements
+echo "jenkins_fold:start:pip install -f requirements.txt"
+pip install -r requirements.txt
+echo "jenkins_fold:end:pip install -f requirements.txt"
 
 if $MEASURE_COVERAGE; then
   python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml --with-coverage tests/unit/ <<EOC
@@ -38,8 +37,6 @@ EOC
 
   coverage run --source=. --omit=tests/* -m behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
   mv .coverage $WORKSPACE/.coverage.chroma_manager_behave_unit_tests
-
-  unset IML_DISABLE_THREADS
 
   cd ../chroma-agent
   nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml --with-coverage
@@ -54,8 +51,6 @@ yes
 EOC
 
   behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
-
-  unset IML_DISABLE_THREADS
 
   cd ../chroma-agent
   nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml

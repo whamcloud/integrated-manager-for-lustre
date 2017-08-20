@@ -2,7 +2,7 @@ import os
 from StringIO import StringIO
 from mock import patch, mock_open
 
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestClientMountManagement(CommandCaptureTestCase):

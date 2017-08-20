@@ -6,7 +6,7 @@
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
-from iml_common.lib.util import platform_info
+from chroma_agent.chroma_common.lib.util import platform_info
 from chroma_agent.lib.shell import AgentShell
 
 

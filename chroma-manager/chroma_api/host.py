@@ -31,7 +31,7 @@ from chroma_api.utils import custom_response, StatefulModelResource, MetricResou
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
-from iml_common.lib.evaluator import safe_eval
+from chroma_common.lib.evaluator import safe_eval
 from chroma_api.utils import filter_fields_to_type
 from chroma_api.chroma_model_resource import ChromaModelResource
 

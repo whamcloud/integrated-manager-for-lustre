@@ -93,8 +93,6 @@ CHECKS = [
         'ignore_files': [
             '.*manage.py',
             '.*setup.py',
-            '.*update_scan.py',
-            '.*/scripts/.*',
             '.*/BUILD/.*',
             '.*/chroma-dependencies/.*',
         ],

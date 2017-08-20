@@ -2,7 +2,14 @@ if [ -n "$JENKINS_URL" ]; then
     export JENKINS=true
 else
     export JENKINS=false
-    export MAKE_TARGET="$1"
+fi
+
+if $JENKINS; then
+    # auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+    # printing it into the console in plaintext calling this script.
+    set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+    . $HOME/auth.sh
+    set -x
 fi
 
 [ -r localenv ] && . localenv
@@ -67,6 +74,12 @@ set_defaults() {
     rm -f /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
 
     if $JENKINS; then
+        # Variables that we expect to be set upstream, no "default"
+        export JENKINS_USER=${JENKINS_USER:-jenkins-pull}
+        set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+        export JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+        set -x
+
         JOB_NAME=${JOB_NAME%%/*}
         export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
         export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
@@ -90,7 +103,6 @@ set_defaults() {
     else
         export WORKSPACE=workspace
         mkdir -p $WORKSPACE
-        export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
     fi
     set_distro_vars "$JENKINS_DISTRO"

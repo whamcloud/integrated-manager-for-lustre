@@ -11,7 +11,7 @@ from os.path import isfile, expanduser
 # TODO: Refactor out this hard-coded stuff in favor of using templates
 # supplied by the manager.
 from chroma_agent.lib.shell import AgentShell
-from iml_common.lib.util import platform_info
+from chroma_agent.chroma_common.lib.util import platform_info
 
 
 class FenceAgent(object):

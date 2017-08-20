@@ -5,7 +5,7 @@ from django.utils.unittest import skipIf
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import (
     ChromaIntegrationTestCase)
-from iml_common.lib.name_value_list import NameValueList
+from tests.chroma_common.lib.name_value_list import NameValueList
 
 log = logging.getLogger(__name__)
 

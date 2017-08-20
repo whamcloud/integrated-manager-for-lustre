@@ -6,17 +6,15 @@
 
 set_defaults false
 check_for_autopass
-if ! $JENKINS; then
-    CHROMA_DIR="$PWD"
-fi
+
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
-if $JENKINS; then
-    cd $WORKSPACE
-    # Copy a fingerprinted file so we can link together the projects in jenkins.
-
-    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
-fi
+cd $WORKSPACE
+# Copy a fingerprinted file so we can link together the projects in jenkins.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+echo "+ curl -f -k -O -u $JENKINS_USER:********* \"$JOB_URL/$ARCHIVE_NAME\""
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
+set -x
 
 got_aborted=false
 # Gather logs from nodes and release the cluster at exit
@@ -33,6 +31,15 @@ $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision
 
 # see if this cures the 401 errors from jenkins
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    set +x
+    sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
+    set -x
+fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
 
 $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
 
@@ -78,20 +85,12 @@ for dne in true false; do
             if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup; then
                 let setup_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} setup failed"
-                if [ "$NOSE_ARGS" = "-x" ]; then
-                    exit 1
-                else
-                    continue
-                fi
+                continue
             fi
             if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests; then
                 let test_run_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} run failed"
-                if [ "$NOSE_ARGS" = "-x" ]; then
-                    exit 1
-                else
-                    continue
-                fi
+                continue
             fi
             echo "Automated ${device_type} run complete."
         done

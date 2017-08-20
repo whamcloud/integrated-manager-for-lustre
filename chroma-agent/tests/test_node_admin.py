@@ -1,7 +1,7 @@
 import mock
 from chroma_agent.lib import node_admin
-from iml_common.lib.util import PlatformInfo
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib.util import PlatformInfo
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestNodeAdmin(CommandCaptureTestCase):
@@ -23,7 +23,7 @@ class TestNodeAdmin(CommandCaptureTestCase):
                                                 '7.21552',
                                                 2.7,
                                                 7,
-                                                '3.10.0-327.36.3.el7.x86_64')
+                                                '2.6.32-504.12.2.el6.x86_64')
 
     def tearDown(self):
         super(TestNodeAdmin, self).tearDown()
