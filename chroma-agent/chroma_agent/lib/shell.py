@@ -74,7 +74,7 @@ class AgentShell(BaseShell):
             raise AgentShell.SubprocessAborted()
 
     @classmethod
-    def run(cls, arg_list):
+    def run(cls, arg_list, shell=False):
         """
         Run a subprocess, and return a named tuple of rc, stdout, stderr.
         Record subprocesses run and their results in log.
@@ -83,7 +83,7 @@ class AgentShell(BaseShell):
         using this function.
         """
 
-        result = super(AgentShell, cls).run(arg_list, console_log, cls.monitor_func)
+        result = super(AgentShell, cls).run(arg_list, console_log, cls.monitor_func, shell=shell)
 
         cls.thread_state.save_result(arg_list, result)
 
@@ -97,10 +97,10 @@ class AgentShell(BaseShell):
         return result.rc, result.stdout, result.stderr
 
     @classmethod
-    def try_run(cls, arg_list):
+    def try_run(cls, arg_list, shell=False):
         """ Run a subprocess, and raise an exception if it returns nonzero.  Return stdout string. """
 
-        result = AgentShell.run(arg_list)
+        result = AgentShell.run(arg_list, shell=shell)
 
         if result.rc != 0:
             raise AgentShell.CommandExecutionError(result, arg_list)

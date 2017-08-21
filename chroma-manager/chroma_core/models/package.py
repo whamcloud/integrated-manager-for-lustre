@@ -56,6 +56,7 @@ def update(host, package_report):
 
     :return: True if updates are available, else False
     """
+    log.debug("update(%s, %s)" % (host, package_report))
     updates = False
 
     installed_ids = []
@@ -82,31 +83,34 @@ def update(host, package_report):
         return [VersionInfo(*package) for package in package_data]
 
     repo_names = set(host.server_profile.bundles.values_list('bundle_name', flat=True))
-    for repo_name in repo_names.intersection(package_report):
-        for package_name, package_data in package_report[repo_name].items():
-            for version_info in _version_info_list(package_data['installed']):
-                package, created = Package.objects.get_or_create(name=package_name)
-                package_version, created = PackageVersion.objects.get_or_create(
-                    package=package, epoch=version_info.epoch, version=version_info.version,
-                    release=version_info.release, arch=version_info.arch)
-                installed_package, created = PackageInstallation.objects.get_or_create(
-                    package_version=package_version,
-                    host=host)
-                installed_ids.append(installed_package.id)
+    try:
+        for repo_name in repo_names.intersection(package_report):
+            for package_name, package_data in package_report[repo_name].items():
+                for version_info in _version_info_list(package_data['installed']):
+                    package, created = Package.objects.get_or_create(name=package_name)
+                    package_version, created = PackageVersion.objects.get_or_create(
+                        package=package, epoch=version_info.epoch, version=version_info.version,
+                        release=version_info.release, arch=version_info.arch)
+                    installed_package, created = PackageInstallation.objects.get_or_create(
+                        package_version=package_version,
+                        host=host)
+                    installed_ids.append(installed_package.id)
 
-            for version_info in _version_info_list(package_data['available']):
-                package, created = Package.objects.get_or_create(name=package_name)
-                package_version, created = PackageVersion.objects.get_or_create(
-                    package=package, epoch=version_info.epoch, version=version_info.version,
-                    release=version_info.release, arch=version_info.arch)
-                available_package, created = PackageAvailability.objects.get_or_create(
-                    package_version=package_version,
-                    host=host)
-                available_ids.append(available_package.id)
+                for version_info in _version_info_list(package_data['available']):
+                    package, created = Package.objects.get_or_create(name=package_name)
+                    package_version, created = PackageVersion.objects.get_or_create(
+                        package=package, epoch=version_info.epoch, version=version_info.version,
+                        release=version_info.release, arch=version_info.arch)
+                    available_package, created = PackageAvailability.objects.get_or_create(
+                        package_version=package_version,
+                        host=host)
+                    available_ids.append(available_package.id)
 
-            # Are there any installed packages from this bundle with updates available?
-            updates = updates or _updates_available(_version_info_list(
-                package_data['installed']), _version_info_list(package_data['available']))
+                # Are there any installed packages from this bundle with updates available?
+                updates = updates or _updates_available(_version_info_list(
+                    package_data['installed']), _version_info_list(package_data['available']))
+    except TypeError:
+        raise RuntimeError("NoneType.  package_report:%s" % package_report)
 
     # Remove any old package records
     PackageInstallation.objects.exclude(id__in=installed_ids).filter(host=host).delete()
