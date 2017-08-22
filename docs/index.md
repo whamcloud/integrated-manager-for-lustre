@@ -16,6 +16,8 @@
 
 1. [Install IML Preview1 on a Vagrant Virtual Cluster](Install_IML_Preview1_on_a_Cluster.md)
 
+1. [Install IML Preview2 on a Vagrant Virtual Cluster](Install_IML_Preview2_on_a_Cluster.md)
+
 1. [Windows - Run IML Tests with Cygwin and Vagrant](Run_Iml_Tests_Cygwin.md)
 
 1.  [Create a Sample Storage plugin](https://github.com/intel-hpdd/sample-storage-plugin
