@@ -120,7 +120,8 @@ install_production: reset_cluster
 # To run a specific test:
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 # set NOSE_ARGS="-x" to stop on the first failure
-ssi_tests: reset_cluster
+# ssi_tests: reset_cluster
+ssi_tests:
 	chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
 efs_tests: reset_cluster
