@@ -41,7 +41,10 @@ done
 if [[ \$HOSTNAME = *vm*2 ]]; then
     yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
     sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"
-fi" | dshbak -c
+fi
+
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/brianjmurrell/manager-for-lustre/repo/epel-7/brianjmurrell-manager-for-lustre-epel-7.repo
+rpm --import https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
