@@ -43,6 +43,7 @@ if ! yum repolist | grep addon-epel; then
     yum -y install epel-release
 fi
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/brianjmurrell/manager-for-lustre/repo/epel-7/brianjmurrell-manager-for-lustre-epel-7.repo
 
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
 ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
@@ -68,6 +69,7 @@ yum-config-manager --add-repo https://build.whamcloud.com/job/e2fsprogs-master/a
 sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_e2fsprogs-master_arch\=x86_64\,distro\=el7_lastSuccessfulBuild_artifact__topdir_RPMS_.repo
 
 yum -y install distribution-gpg-keys-copr
+rpm --import https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/manager-for-lustre/pubkey.gpg
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*manager-for-lustre*; then
     rpm --import https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
 fi" | dshbak -c
