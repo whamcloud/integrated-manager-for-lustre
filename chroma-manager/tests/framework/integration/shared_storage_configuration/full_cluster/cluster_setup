@@ -43,24 +43,11 @@ set -ex
 # 'duck-like' replacement for fence -agents since cman depends on
 # fence-agents
 yum -y install expect cman
-
-# DEBUG: cleanup
-yum -y remove epel-release chroma-manager* || true
-pid=$(pgrep -o -x nginx)
-echo $pid
-echo $pid
-kill $pid || true
-yum clean all
-yum clean --enablerepo=base metadata
-yum -y install epel-release
-rm -f /var/log/chroma/install.log
-
 # Install from the installation package
 cd /tmp
 rm -rf ${ARCHIVE_NAME%.tar.gz}
 tar xzvf $ARCHIVE_NAME
 cd ${ARCHIVE_NAME%.tar.gz}
-echo 'Installing Manager'
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     cat /var/log/chroma/install.log
@@ -136,16 +123,7 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 
 # Install and setup integration tests on integration test runner
 if ! $JENKINS; then
-<<<<<<< Updated upstream
     CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
-=======
-    package_name="chroma-manager-integration-tests-*.x86_64.rpm"
-    locations="chroma-manager/dist\nchroma-manager/"
-    for location in $locations; do
-        [[ -z "$CMIT" ]] && CMIT=$(ls $location/$package_name) || true
-    done
-    [[ -z "$CMIT" ]] && echo "Could not find $package_name in locations: $locations"
->>>>>>> Stashed changes
 fi
 scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
