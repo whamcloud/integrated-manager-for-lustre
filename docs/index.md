@@ -2,6 +2,8 @@
 ---
 1. [Introduction](Introduction.md)
 
+1. [IML Screen Shots](IML_Screen_Shots.md)
+
 1. [IML Distributed Architecture](IML_Distributed_Architecture.md)
 
 1. [IML Contributor Workflow](IML_Contributor_Workflow.md)
