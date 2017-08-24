@@ -13,9 +13,11 @@
     * Django Template
     
     ![plugin_python](md_Graphics/plugin_python.png)
+
     ![plugin_django](md_Graphics/plugin_django.png)
 * To modify and test any Backend changes to IML, it will be necessary to install a working version of IML.
     * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
+
     * Edit the **Vagrantfile** to allow for a shared mount. Immediately after the block that states *Create an admin server for the cluster*, add the following line:
 
         **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
@@ -38,7 +40,8 @@ For the desciption that follows, it will be assumed that the Vagrant file and vi
 ~/vagrant-projects/vhpc 
 ```
 ## Contributing to the IML Backend
-### Clone the desired Backend repository, for example, the main backend repository:  [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre)
+### Clone the desired Backend repository, for example, the main backend repository: 
+ [intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre)
 ```
 cd ~/vagrant-projects/vhpc
 git clone git@github.com:intel-hpdd/intel-manager-for-lustre.git
@@ -57,7 +60,9 @@ git branch
 Use VS Code and open ~/vagrant-projects/vhpc/intel-manager-for-lustre
 ```
 ## As an Example, make a small python code change.
-The code that will be changed will modify the description displayed when rebooting a server.
+The code that will be changed will modify the description displayed when rebooting a server. See the form below and observe the line that states: 
+
+**Initiate a reboot on host ct7-oss2.lfs.local**
 
 ![server_reboot_1](md_Graphics/server_reboot_1.png)
 
