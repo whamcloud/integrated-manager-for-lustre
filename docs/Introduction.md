@@ -7,10 +7,13 @@
 
 The Lustre® file system is an open-source, parallel file system, generally used for large-scale cluster computing. 
 
-### Below is a screen shot of **IML**
+### Below are some screen shots of **IML**
 
-![iml_flow](md_Graphics/iml_screen_shot.png)
+![iml_login.png](md_Graphics/iml_login.png)
 
+![iml_spa.png](md_Graphics/iml_spa.png)
+
+* More [IML Screenshots](IML_Screen_Shots.md)
 
 ## Source Code
 Before accessing our source code repository for the first time, new contributors should have a good understanding of the tools and processes in place.
