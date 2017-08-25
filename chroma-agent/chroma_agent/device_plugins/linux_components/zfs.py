@@ -46,6 +46,8 @@ class ZfsDevices(object):
                     if zfs_device.available:
                         out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", zpool_name])
                         self._add_zfs_pool(out, block_devices)
+                    else:
+                        daemon_log.error("zpool '%s' could not be imported during device scan" % zpool_name)
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
@@ -115,7 +117,7 @@ class ZfsDevices(object):
             drive_mms = block_devices.paths_to_major_minors(self._get_all_zpool_devices(pool))
 
             if drive_mms is None:
-                daemon_log.warn("Could not find major minors for zpool '%s'" % pool)
+                daemon_log.warning("Could not find major minors for zpool '%s'" % pool)
                 return
 
             # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
