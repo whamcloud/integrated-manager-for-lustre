@@ -96,10 +96,10 @@ class ZfsDevices(object):
             match = re.match("(\s*)state: (\S*)", line)
             if match is not None:
                 if zpool_name:
-                    if match.group(2) in self.acceptable_health:
-                        zpool_names.append(zpool_name)
-                    else:
-                        daemon_log.warning("Not scanning zpool %s because it is %s." % (zpool_name, match.group(2)))
+                    # if match.group(2) in self.acceptable_health:
+                    zpool_names.append(zpool_name)
+                    # else:
+                    #    daemon_log.warning("Not scanning zpool %s because it is %s." % (zpool_name, match.group(2)))
                 else:
                     daemon_log.warning("Found a zpool import state but had no zpool name")
 
