@@ -1252,11 +1252,18 @@ class UpdateManagedTargetMount(Step):
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
 
-            mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(target.name)),
-                                                   logger=job_log,
-                                                   timeout = 60 * 60,
-                                                   expected_exception_classes=[VolumeNode.DoesNotExist])
+            try:
+                mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
+                                                                                      path=filesystem.mount_path(target.name)),
+                                                       logger=job_log,
+                                                       timeout = 60 * 60,
+                                                       expected_exception_classes=[VolumeNode.DoesNotExist])
+            except:
+                job_log.error("Failed to find volumenode (host: %s, mount path: %s, target: %s)" % (host,
+                                                                                                    filesystem.mount_path(target.name),
+                                                                                                    target.name))
+                job_log.debug("Existing volumenodes: %s" % VolumeNode.objects.all())
+                raise
 
             mtm.volume_node.primary = primary
             mtm.volume_node.save()
