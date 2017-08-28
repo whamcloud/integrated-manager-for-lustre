@@ -94,6 +94,7 @@ export const StorageComponent = asViewer(
 The coreesponding test:
 
 **storage-component-test.js**
+
 ```
 it('should render no plugins', () => {
     storage$.write({
