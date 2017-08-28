@@ -53,7 +53,7 @@ Below are some code excerpts:
 **storage-component.js**
 ```
 export const StorageComponent = asViewer(
-  'storage',
+  "storage",
   ({
     storage: {
       resourceClasses,
@@ -95,8 +95,9 @@ The coreesponding test:
 
 **storage-component-test.js**
 
+
 ```
-it('should render no plugins', () => {
+it("should render no plugins", () => {
     storage$.write({
       config: {
         sortDesc: false,
