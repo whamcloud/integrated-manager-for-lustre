@@ -12,6 +12,8 @@
 
 1. [How to Contribute To the **Backend** - Quick Guide](Contribute_To_Backend_Quick_Guide.md)
 
+1. [How to Create **Frontend** Unit Tests](Create_Frontend_Unit_Tests.md)
+
 1. [Create a Cluster of Virtual Machines with Vagrant](https://github.com/intel-hpdd/Vagrantfiles/blob/master/README.md)
 
 1. [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md)

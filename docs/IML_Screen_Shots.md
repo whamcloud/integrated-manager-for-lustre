@@ -2,13 +2,12 @@
 
 # IML Screen Shots
 
-## IML Login 
+Here are many example Screen Shots of the Intel Manager for Lustre.
+
+The examples below are intended to represent an overall sense of the IML look and feel. 
+
+## IML Login Screen
 ![iml_login.png](md_Graphics/iml_login.png)
-
----
-
-## IML Dash Board
-![iml_dashboard.png](md_Graphics/iml_dashboard.png)
 
 ---
 
@@ -32,6 +31,16 @@
 
 ---
 
+## Configuration > Power Control > Add PDU
+![iml_new_pdu.png](md_Graphics/iml_new_pdu.png)
+
+---
+
+## IML Dash Board
+![iml_dashboard.png](md_Graphics/iml_dashboard.png)
+
+---
+
 ## Dash Board
 ![iml_mds_oss.png](md_Graphics/iml_mds_oss.png)
 
@@ -49,10 +58,5 @@
 
 ## Dash Board
 ![iml_read_write.png](md_Graphics/iml_read_write.png)
-
----
-
-## Configuration > Power Control > Add PDU
-![iml_new_pdu.png](md_Graphics/iml_new_pdu.png)
 
 ---

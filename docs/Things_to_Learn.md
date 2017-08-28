@@ -16,6 +16,7 @@ cross-env | [https://www.npmjs.com/package/cross-env](https://www.npmjs.com/pack
 **flow** | [https://flowtype.org/](https://flowtype.org/)
 **fabel** | [http://fable.io/](http://fable.io/)
 **F#** | [http://fsharp.org/learn.html](http://fsharp.org/learn.html)
+**Frontend Tech** | [https://www.youtube.com/watch?v=sBzRwzY7G-k](https://www.youtube.com/watch?v=sBzRwzY7G-k)
 **highlandjs** | [http://highlandjs.org/](http://highlandjs.org/)
 **Inferno / React** | [https://infernojs.org/](https://infernojs.org/)
 **Inferno / React**    | [https://facebook.github.io/react/docs/thinking-in-react.html](https://facebook.github.io/react/docs/thinking-in-react.html)
