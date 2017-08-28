@@ -6,7 +6,7 @@
 import abc
 from collections import namedtuple
 from operator import attrgetter
-from tests.chroma_common.lib import util
+from iml_common.lib import util
 import re
 
 
@@ -187,7 +187,7 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            from chroma_common.lib.shell import Shell
+            from iml_common.lib.shell import Shell
             raise RuntimeError('''process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
 systemctl status firewalld:
 %s

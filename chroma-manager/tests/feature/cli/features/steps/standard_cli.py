@@ -91,5 +91,5 @@ def step(context, message):
         ok_(message not in "".join(context.stdout.readlines()))
     except AssertionError:
         context.stdout.seek(0)
-        print context.stdout.readlines()
+        print(context.stdout.readlines())
         raise

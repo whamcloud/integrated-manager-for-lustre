@@ -35,9 +35,9 @@ from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
-from chroma_core.chroma_common.lib.ntp import NTPConfig
-from chroma_core.chroma_common.lib.firewall_control import FirewallControl
-from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL7
+from iml_common.lib.ntp import NTPConfig
+from iml_common.lib.firewall_control import FirewallControl
+from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
 
 log = logging.getLogger('installation')
 try:

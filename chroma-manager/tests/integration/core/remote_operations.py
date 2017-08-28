@@ -12,8 +12,8 @@ import subprocess
 
 from testconfig import config
 
-from tests.chroma_common.lib.util import ExceptionThrowingThread
-from tests.chroma_common.lib.shell import Shell
+from iml_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
@@ -1143,7 +1143,22 @@ class RealRemoteOperations(RemoteOperations):
     def stop_agents(self, server_list):
         for server in server_list:
             if self.has_chroma_agent(server):
-                self._ssh_address(server, 'service chroma-agent stop')
+                self._ssh_address(
+                    server, 
+                    '''
+                    systemctl stop chroma-agent
+                    i=0
+                    
+                    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
+                        ((i++))
+                        sleep 1
+                    done
+                    
+                    if [ "$i" -eq {timeout} ]; then 
+                        exit 1
+                    fi
+                    '''.format(timeout=TEST_TIMEOUT)
+                )
 
     def start_agents(self, server_list):
         for server in server_list:

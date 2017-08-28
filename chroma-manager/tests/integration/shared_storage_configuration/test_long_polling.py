@@ -3,7 +3,9 @@ import logging
 
 from tests.integration.core.long_polling_testing import LongPollingThread
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.chroma_common.lib.util import ExceptionThrowingThread
+
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from iml_common.lib.util import ExceptionThrowingThread
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -190,7 +192,7 @@ class TestLongPollingLocks(LongPollingTestCase):
         self.long_polling_end_point.join()
 
         # Ensure update command completes before we exit the test
-        self.wait_for_command(self.chroma_manager, response.json['id'])
+        self.wait_for_command(self.chroma_manager, response.json['id'], timeout=LONG_TEST_TIMEOUT)
 
         # The locks should be the only change, and hence the thing that triggered the update
         original_host = self.long_polling_end_point.responses[0].json['objects'][0]

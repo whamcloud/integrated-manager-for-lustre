@@ -7,7 +7,7 @@ from chroma_agent.device_plugins.audit.node import NodeAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit
 
 from tests.test_utils import PatchedContextTestCase
-from tests.command_capture_testcase import CommandCaptureTestCase
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestAuditScanner(PatchedContextTestCase):

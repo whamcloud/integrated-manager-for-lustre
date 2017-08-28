@@ -9,7 +9,7 @@ from django.utils import unittest
 from chroma_agent.agent_client import HttpWriter, Message, HttpReader, SessionTable, HttpError
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import PRIO_LOW, DevicePluginMessage, PRIO_NORMAL, PRIO_HIGH
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 class TestHttpWriter(unittest.TestCase):

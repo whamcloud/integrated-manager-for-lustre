@@ -21,8 +21,8 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.agent_rpc import agent_result, agent_result_ok
+from iml_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at

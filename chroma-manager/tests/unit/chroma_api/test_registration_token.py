@@ -6,7 +6,7 @@ from django.contrib.auth.models import User, Group
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.tastypie_test import TestApiClient
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 class TestRegistrationTokenResource(ChromaApiTestCase):
