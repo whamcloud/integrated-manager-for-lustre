@@ -7,7 +7,9 @@
 IML currently uses **[jest](https://facebook.github.io/jest/)** as its test runner. Here is a simple exmple of some javascript code with a corresponding test case:
 
 add.js
-```function add(a, b) {
+
+```
+function add(a, b) {
   return a + b;
 }
 
@@ -15,6 +17,7 @@ module.exports = add;
 ```
 
 add-test.js
+
 ```
 const add = require('./add');
 describe('add', () => {
