@@ -95,8 +95,8 @@ The coreesponding test:
 
 **storage-component-test.js**
 
-
 ```
+
 it("should render no plugins", () => {
     storage$.write({
       config: {
@@ -129,3 +129,5 @@ it("should render no plugins", () => {
       )
     ).toMatchSnapshot();
   });
+
+```
