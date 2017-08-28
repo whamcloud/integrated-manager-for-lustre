@@ -15,6 +15,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Intel(R) Corporation
 Requires: python-argparse
+Requires: python-subprocess32
 Requires: xz-lzma-compat
 
 %description
