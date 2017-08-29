@@ -1243,33 +1243,52 @@ class UpdateManagedTargetMount(Step):
         original_volume = target.volume
         device_type = original_volume.storage_resource.to_resource_class().device_type()
 
-        for mtm in target.managedtargetmount_set.all():
-            host = mtm.host
-            current_volume_node = mtm.volume_node
+        try:
+            primary_mtm = target.managedtargetmount_set.get(volume_node__primary=True)
+        except MultipleObjectsReturned as e:
+            job_log.error("Multiple MTM primary objects returned, only expecting one")
+            raise
+        else:
+            current_volume_node = primary_mtm.volume_node
             assert original_volume == current_volume_node.volume
-            primary = current_volume_node.primary
 
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
 
             try:
-                mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                      path=filesystem.mount_path(target.name)),
-                                                       logger=job_log,
-                                                       timeout = 60 * 60,
-                                                       expected_exception_classes=[VolumeNode.DoesNotExist])
+                primary_mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=primary_mtm.host,
+                                                                                              path=filesystem.mount_path(target.name)),
+                                                               logger=job_log,
+                                                               timeout = 60 * 60,
+                                                               expected_exception_classes=[VolumeNode.DoesNotExist])
             except:
-                job_log.error("Failed to find volumenode (host: %s, mount path: %s, target: %s)" % (host,
-                                                                                                    filesystem.mount_path(target.name),
-                                                                                                    target.name))
+                job_log.error("Failed to find primary volumenode (host: %s, mount path: %s, target: %s)" % (host,
+                                                                                                            filesystem.mount_path(target.name),
+                                                                                                            target.name))
                 job_log.debug("Existing volumenodes: %s" % VolumeNode.objects.all())
                 raise
 
-            mtm.volume_node.primary = primary
-            mtm.volume_node.save()
-            mtm.save()
+            primary_mtm.volume_node.primary = True
+            primary_mtm.volume_node.save()
+            primary_mtm.save()
 
-            target.volume = mtm.volume_node.volume
+            target.volume = primary_mtm.volume_node.volume
+
+            # we cant mount/import secondary host while it is imported on the first,
+            # therefore update secondary MTM with the newly created volume node
+            try:
+                secondary_mtm = target.managedtargetmount_set.get(volume_node__primary=False)
+            except MultipleObjectsReturned as e:
+                job_log.error("Multiple MTM secondary objects returned, only expecting one")
+                raise
+            else:
+                # assume path to volume is the same on both hosts, we don't have a storage resource discovered
+                # for the new volume node, probably have to create that first??
+                secondary_mtm.volume_node = VolumeNode.objects.get_or_create(host=secondary_mtm.host,
+                                                                             volume=primary_mtm.volume_node.volume,
+                                                                             path=primary_mtm.volume_node.path)
+                secondary_mtm.volume_node.save()
+                secondary_mtm.save()
 
         target.save()
 
