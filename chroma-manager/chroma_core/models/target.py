@@ -8,6 +8,7 @@ import re
 import logging
 import uuid
 from collections import namedtuple
+from django.core.exceptions import MultipleObjectsReturned
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
@@ -1245,7 +1246,7 @@ class UpdateManagedTargetMount(Step):
 
         try:
             primary_mtm = target.managedtargetmount_set.get(volume_node__primary=True)
-        except MultipleObjectsReturned as e:
+        except MultipleObjectsReturned:
             job_log.error("Multiple MTM primary objects returned, only expecting one")
             raise
         else:
@@ -1262,7 +1263,7 @@ class UpdateManagedTargetMount(Step):
                                                                timeout = 60 * 60,
                                                                expected_exception_classes=[VolumeNode.DoesNotExist])
             except:
-                job_log.error("Failed to find primary volumenode (host: %s, mount path: %s, target: %s)" % (host,
+                job_log.error("Failed to find primary volumenode (host: %s, mount path: %s, target: %s)" % (primary_mtm.host,
                                                                                                             filesystem.mount_path(target.name),
                                                                                                             target.name))
                 job_log.debug("Existing volumenodes: %s" % VolumeNode.objects.all())
@@ -1278,7 +1279,7 @@ class UpdateManagedTargetMount(Step):
             # therefore update secondary MTM with the newly created volume node
             try:
                 secondary_mtm = target.managedtargetmount_set.get(volume_node__primary=False)
-            except MultipleObjectsReturned as e:
+            except MultipleObjectsReturned:
                 job_log.error("Multiple MTM secondary objects returned, only expecting one")
                 raise
             else:
@@ -1286,7 +1287,7 @@ class UpdateManagedTargetMount(Step):
                 # for the new volume node, probably have to create that first??
                 secondary_mtm.volume_node = VolumeNode.objects.get_or_create(host=secondary_mtm.host,
                                                                              volume=primary_mtm.volume_node.volume,
-                                                                             path=primary_mtm.volume_node.path)
+                                                                             path=primary_mtm.volume_node.path)[0]
                 secondary_mtm.volume_node.save()
                 secondary_mtm.save()
 
