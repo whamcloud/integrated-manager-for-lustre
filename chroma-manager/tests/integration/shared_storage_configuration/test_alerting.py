@@ -151,7 +151,10 @@ class TestAlerting(ChromaIntegrationTestCase):
                 self.assertEqual(alert_event['begin'], alert_event['end'])
 
             # Remove everything
-            self.graceful_teardown(self.chroma_manager)
+            self._fetch_help(lambda: self.graceful_teardown(self.chroma_manager),
+                             ['tom.nabarro@intel.com'],
+                             'failure in graceful teardown with unexpected volumes',
+                             timeout=999999)
 
             # Check that all the alerts are gone too
             self.wait_alerts([], active=True)
