@@ -15,7 +15,7 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APP
 # Clean out any yum info, if this is a manual system not automated the underlying repos might have changed.
 yum clean all
 
-$PROXY yum install -y omping
+$PROXY yum install -y omping strace
 if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
