@@ -4,7 +4,7 @@ import time
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 logger = logging.getLogger('test')

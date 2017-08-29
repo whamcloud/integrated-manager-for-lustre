@@ -11,7 +11,7 @@ from chroma_core.models import StepResult
 from chroma_core.models import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import synthetic_host
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 def _remove_host_resources(host_id):

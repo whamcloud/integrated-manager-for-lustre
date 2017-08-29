@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.resources import ModelResource
 from tastypie import fields
 
@@ -39,6 +40,24 @@ class ChromaModelResource(ModelResource):
 
         return data
 
+    def obj_update(self, bundle, **kwargs):
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        return ModelResource.obj_update(self, bundle, **kwargs)
+    
+    def obj_create(self, bundle, **kwargs):
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        return ModelResource.obj_create(self, bundle, **kwargs)
+
 # Add enumeration type to the fields
 base_apifield___init__ = fields.ApiField.__init__
 
@@ -51,9 +70,10 @@ def apifield___init__(self,
                       readonly=False,
                       unique=False,
                       help_text=None,
+                      use_in='all',
                       enumerations=None):
 
-    base_apifield___init__(self, attribute, default, null, blank, readonly, unique, help_text)
+    base_apifield___init__(self, attribute, default, null, blank, readonly, unique, help_text, use_in)
 
     self.enumerations = enumerations
 

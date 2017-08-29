@@ -9,7 +9,7 @@ import traceback
 import collections
 
 from chroma_agent.log import daemon_log
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error
+from iml_common.lib.agent_rpc import agent_error
 
 EXCLUDED_PLUGINS = []
 

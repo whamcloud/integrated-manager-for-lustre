@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils.timezone import now as tznow
 
-from chroma_core.chroma_common.lib.util import platform_info
+from iml_common.lib.util import platform_info
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
@@ -50,7 +50,6 @@ class DeletablePowerControlModel(models.Model):
             return socket.gethostbyname(address)
         except socket.gaierror, e:
             raise ValidationError("Unable to resolve %s: %s" % (address, e))
-
 
 class PowerControlType(DeletablePowerControlModel):
     agent = models.CharField(null = False, blank = False, max_length = 255,

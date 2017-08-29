@@ -6,7 +6,7 @@ from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
 from tests.unit.chroma_core.helpers import freshen
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -194,15 +194,7 @@ class TestFSAdminsCanDismiss(NotificationTestCase):
 
 
 class TestFSUsersCannotDismiss(NotificationTestCase):
-    """Make sure filesystem_users cannot Dismiss or Dismiss all alerts
-
-    This test characterizes a bug in django-tastypie v0.9.11.
-    See HYD-2339 for details.
-
-    When we decided to update tastypie, we can disable
-    the fix for this, and run this test to too verify is unnecessary.
-    See HYD-2354
-    """
+    """Make sure filesystem_users cannot Dismiss or Dismiss all alerts"""
 
     def __init__(self, methodName=None):
         super(TestFSUsersCannotDismiss, self).__init__(

@@ -118,8 +118,8 @@ class SystemStatusResource(Resource):
         list_allowed_methods = ['get']
         detail_allowed_methods = []
 
-    def get_resource_uri(self, bundle):
-        return self.get_resource_list_uri()
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
 
     def dehydrate_rabbitmq(self, bundle):
         return bundle.obj.get_rabbitmq()

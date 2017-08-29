@@ -23,7 +23,7 @@ from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.http_agent.crypto import Crypto
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 log = log_register('agent_views')
 import logging
@@ -363,7 +363,8 @@ def setup(request, key):
     repos = ""
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
-        repos += """[%s]
+        if bundle.bundle_name != "external":
+            repos += """[%s]
 name=%s
 baseurl={0}/%s/$releasever/
 enabled=0

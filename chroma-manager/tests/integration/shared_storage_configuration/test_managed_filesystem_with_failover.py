@@ -1,5 +1,6 @@
 
 
+from django.utils.unittest import skip
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
@@ -97,6 +98,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
                 volumes_expected_hosts_in_normal_state
             )
 
+    @skip('Disabled until LU-9725 is fixed')
     def test_create_filesystem_with_failover_oss(self):
 
         filesystem_id, volumes_expected_hosts_in_normal_state = self._test_create_filesystem_with_failover()

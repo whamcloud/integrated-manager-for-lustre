@@ -12,11 +12,13 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cl
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER) "exec 2>&1; set -xe
-if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
-    cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+if $MEASURE_COVERAGE; then
+    if [ -f /etc/yum.repos.d/autotest.repo ]; then
+        cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
 timeout=180
 EOF
+    fi
     $PROXY yum install -y python-setuptools python2-coverage
 fi
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
@@ -27,10 +29,16 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # Install pdsh on storage nodes
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "yum -y install pdsh" | dshbak -c
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+yum -y install pdsh" | dshbak -c
 
 # Install and setup manager
-scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+if $JENKINS; then
+    ARCHIVE_PATH=.
+else
+    ARCHIVE_PATH=chroma-bundles
+fi
+scp $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect pdsh
@@ -42,8 +50,10 @@ cd ${ARCHIVE_NAME%.tar.gz}
 # Execute the create_installer script and distribute the install procedure to the storage nodes
 ./create_installer zfs
 ./create_installer ldiskfs
-pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH
-pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-ldiskfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH
+if ! pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz lustre-ldiskfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH; then
+    echo "Failed to copy installer files"
+    exit 1
+fi
 
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
@@ -89,31 +99,39 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 retries=50
 timeout=180
 
-[jenkins-repo-lustre]
-name=jenkins-repo-lustre
-baseurl=${JENKINS_URL/\/\////$JENKINS_USER:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
-enabled=1
-priority=1
-gpgcheck=0
-sslverify=0
-retries=50
-timeout=180
 EOF
-    $PROXY yum install -y python-setuptools
-    $PROXY yum install -y python2-coverage
-    if [[ \$(lsb_release -sr) = 6.* ]]; then
-        $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel-firmware
-        if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
-            rpm -Uvh --oldpackage kernel-firmware-*.rpm
-        fi
-        rm kernel-firmware-*.rpm
-    fi
-    $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel
-    if ! rpm -q \$(rpm -qp kernel-*.rpm); then
-        rpm -ivh --oldpackage kernel*.rpm
-    fi
-    yum -y install lustre-modules lustre lustre-osd-ldiskfs
 fi
+
+$PROXY yum -y install python-setuptools python2-coverage
+pushd /tmp/
+tar xzvf lustre-ldiskfs-el7-installer.tar.gz
+tries=0
+failed=true
+while \$failed && [ \$tries -lt 10 ]; do
+    if ! bash -x lustre-ldiskfs/install; then
+        yum --enablerepo=lustre clean metadata
+        let tries+=1
+    else
+        failed=false
+    fi
+done
+if \$failed; then
+    exit 1
+fi
+popd
+
+# Make sure the firewall is not in the way
+if firewall-cmd --state; then
+    firewall-cmd --add-port=988/tcp
+    firewall-cmd --permanent --add-port=988/tcp
+else
+    firewall_status=\${PIPESTATUS[0]}
+    if [ \$firewall_status != 252 ]; then
+        echo \"Unknown firewall state: \$firewall_status\"
+        exit 1
+    fi
+fi
+
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
@@ -149,15 +167,25 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 # Install and setup integration tests
-scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+if ! $JENKINS; then
+    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+fi
+scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests
+if $JENKINS; then
+    $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+    CMIT=chroma-manager-integration-tests
+else
+    CMIT=/root/${CMIT##*/}
+fi
+if ! $PROXY yum -y install \$CMIT; then
+    $PROXY yum clean all
+    $PROXY yum -y install \$CMIT
+fi
 
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured

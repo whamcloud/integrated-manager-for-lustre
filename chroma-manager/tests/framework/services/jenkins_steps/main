@@ -10,8 +10,8 @@ check_for_autopass
 
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/services/services_cluster_config.json"}
 
-# Get the chroma-externals repo as pip is going to need it
-scripts/update_chroma-externals.py
+# remove any previous chroma-externals content
+rm -rf chroma-externals .git/modules/chroma-externals
 
 cd $CHROMA_DIR/chroma-manager
 
@@ -27,7 +27,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 pdsh -R ssh -l root -S -w $CHROMA_MANAGER $TEST_RUNNER "exec 2>&1; set -xe
 cd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e \"s/distro=${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION}/distro=$JENKINS_DISTRO/\" -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+  sed -i -e \"s/distro=${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION}/distro=$JENKINS_DISTRO/\" \$f
 done" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

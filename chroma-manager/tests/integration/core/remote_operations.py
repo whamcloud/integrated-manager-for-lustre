@@ -12,8 +12,8 @@ import subprocess
 
 from testconfig import config
 
-from tests.chroma_common.lib.util import ExceptionThrowingThread
-from tests.chroma_common.lib.shell import Shell
+from iml_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
@@ -290,6 +290,14 @@ class SimulatorRemoteOperations(RemoteOperations):
             'lustre': (0, '2.9.0', '1', 'x86_64')
         })
 
+    def scan_packages(self):
+        """
+        Trigger update packages (with empty dict) on simulator (runs on all fake servers).
+        Necessary because sim doesn't do a package scan on every (fake) plug-in update,
+        whereas the real agent does.
+        """
+        self._simulator.update_packages({})
+
     def get_package_version(self, fqdn, package):
         return self._simulator.servers[fqdn].get_package_version(package)
 
@@ -351,8 +359,10 @@ class RealRemoteOperations(RemoteOperations):
                        (r.rc, r.stdout, r.stderr)
 
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+            ping_result2_report = ""
             ip_addr_result = Shell.run(['ip', 'addr', 'ls'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+
             try:
                 gw = [l for l in ip_route_ls_result.stdout.split('\n')
                       if l.startswith("default ")][0].split()[2]
@@ -363,11 +373,13 @@ class RealRemoteOperations(RemoteOperations):
                 ping_gw_report = "\nUnable to ping gatewy.  " \
                                  "No gateway could be found in:\n" % \
                                  ip_route_ls_result.stdout
+
             if ping_result1.rc != 0:
                 time.sleep(30)
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
+                
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
                   "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
@@ -462,7 +474,7 @@ class RealRemoteOperations(RemoteOperations):
 
         # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
-            self._test_case.assertEqual(rc, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
+            self._test_case.assertEqual(rc, expected_return_code, "rc (%s) != expected_return_code (%s), stdout: '%s', stderr: '%s'" % (rc, expected_return_code, stdout, stderr))
 
         return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
@@ -1131,7 +1143,22 @@ class RealRemoteOperations(RemoteOperations):
     def stop_agents(self, server_list):
         for server in server_list:
             if self.has_chroma_agent(server):
-                self._ssh_address(server, 'service chroma-agent stop')
+                self._ssh_address(
+                    server, 
+                    '''
+                    systemctl stop chroma-agent
+                    i=0
+                    
+                    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
+                        ((i++))
+                        sleep 1
+                    done
+                    
+                    if [ "$i" -eq {timeout} ]; then 
+                        exit 1
+                    fi
+                    '''.format(timeout=TEST_TIMEOUT)
+                )
 
     def start_agents(self, server_list):
         for server in server_list:
@@ -1239,6 +1266,9 @@ class RealRemoteOperations(RemoteOperations):
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
+
+    def scan_packages(self, fqdn):
+        raise NotImplementedError()
 
     def get_package_version(self, fqdn, package):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")

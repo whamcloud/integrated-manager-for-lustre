@@ -15,7 +15,7 @@ from django.utils.unittest import TestCase
 import settings
 
 from chroma_core.lib.util import site_dir
-from tests.chroma_common.lib import util
+from iml_common.lib import util
 
 log = logging.getLogger(__name__)
 

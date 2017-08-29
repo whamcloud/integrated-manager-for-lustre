@@ -20,7 +20,8 @@ from cluster_sim.log import log
 
 from chroma_agent.agent_daemon import daemon_log
 from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
-from tests.chroma_common.lib.date_time import IMLDateTime
+
+from iml_common.lib.date_time import IMLDateTime
 
 
 SIMULATOR_PORT = 8743

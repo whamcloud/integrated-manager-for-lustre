@@ -46,7 +46,7 @@ from chroma_core.models.utils import MeasuredEntity
 from chroma_core.models.utils import DeletableMetaclass
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
-from chroma_core.chroma_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
 
 import settings
@@ -748,7 +748,7 @@ class InstallHostPackagesJob(StateChangeJob):
             steps.append((LearnDevicesStep, {'host': self.managed_host}))
 
         steps.extend([
-            (InstallPackagesStep, {'bundles': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
+            (InstallPackagesStep, {'bundles': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name') if b['bundle_name'] != "external"],
                                    'host': self.managed_host,
                                    'packages': list(self.managed_host.server_profile.packages)}),
             (RebootIfNeededStep, {'host': self.managed_host,
@@ -1481,7 +1481,8 @@ class UpdateJob(Job):
         base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), 'repo')
 
         for bundle in Bundle.objects.all():
-            repo_file_contents += """[%s]
+            if bundle.bundle_name != "external":
+                repo_file_contents += """[%s]
 name=%s
 baseurl=%s/%s/$releasever
 enabled=0
@@ -1501,7 +1502,7 @@ proxy=_none_
                                      'filename': REPO_FILENAME,
                                      'file_contents': repo_file_contents}),
                 (UpdatePackagesStep, {'host': self.host,
-                                      'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
+                                      'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name') if b['bundle_name'] != "external"],
                                       'packages': list(self.host.server_profile.packages)}),
                 (RebootIfNeededStep, {'host': self.host,
                                       'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})]
@@ -1524,8 +1525,6 @@ proxy=_none_
         return locks
 
     def on_success(self):
-        from chroma_core.models.host import UpdatesAvailableAlert
-
         UpdatesAvailableAlert.notify(self.host, False)
 
     class Meta:
