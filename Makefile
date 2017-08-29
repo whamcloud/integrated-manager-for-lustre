@@ -60,11 +60,13 @@ tags:
 
 fetch_build:
 	curl -Lk -o $(ARCHIVE_PATH) $(BUILD_URL)/$(ARCHIVE_FILENAME)
-	if [ ! -z "$(DEPS_URL)" ]; then                                          \
-		set -e;                                                              \
+	# fetch integration tests package (not included in iml release archive)
+	if [ ! -z "$(DEPS_URL)" ]; then                                               \
+		set -e;                                                                   \
 		FILENAME=$$(curl -k --list-only $(DEPS_URL)/repo/ | grep chroma-manager-integration | sed -e 's/.*\(chroma-manager-integration-[^/]*\)\/.*/\1/'); \
-		echo $$FILENAME;                                                     \
-		curl -Lk -o chroma-manager/$$FILENAME $(DEPS_URL)/repo/$$FILENAME;   \
+		echo $$FILENAME;                                                          \
+		mkdir -p chroma-manager/dist;                                             \
+		curl -Lk -o chroma-manager/dist/$$FILENAME $(DEPS_URL)/repo/$$FILENAME;   \
 	fi
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
