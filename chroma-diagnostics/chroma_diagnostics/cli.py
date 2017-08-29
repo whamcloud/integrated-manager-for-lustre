@@ -6,7 +6,7 @@
 from collections import defaultdict
 import socket
 import logging
-import subprocess
+import subprocess32 as subprocess
 from datetime import datetime, timedelta
 import time
 import argparse
@@ -42,15 +42,15 @@ logrotate_logs = {
                   ]}
 
 
-def run_command(cmd, out, err):
+def run_command(cmd, out, err, timeout=300):
 
     try:
-        p = subprocess.Popen(cmd, stdout = out, stderr = err)
+        p = subprocess.Popen(cmd, stdout=out, stderr=err)
     except OSError:
         #  The cmd in this case could not run, skipping
         return None
     else:
-        p.wait()
+        p.wait(timeout=timeout)
         try:
             out.flush()
         except AttributeError:
@@ -64,8 +64,8 @@ def run_command(cmd, out, err):
         return p
 
 
-def run_command_output_piped(cmd):
-    return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
+def run_command_output_piped(cmd, timeout=300):
+    return run_command(cmd, subprocess.PIPE, subprocess.PIPE, timeout)
 
 
 def save_command_output(fn, cmd, output_directory):
