@@ -54,7 +54,7 @@ destroy_cluster: Vagrantfile
 	set -e;                                                              \
 	if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then                        \
 	    echo "LIBVIRT detected as provider";                             \
-	    vagrant destroy;                                                 \
+	    vagrant destroy -f;                                              \
 	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
 	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
 	    export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
@@ -64,7 +64,7 @@ destroy_cluster: Vagrantfile
 	    done                                                             \
 	else                                                                 \
 	    echo "LIBVIRT not detected as provider";                         \
-	    vagrant destroy;                                                 \
+	    vagrant destroy -f;                                              \
 	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
 	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
 	fi
