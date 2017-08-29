@@ -8,7 +8,8 @@
 To install yarn: **npm i -g yarn**
 
 ## npm and yarn frequently used commands:
-|npm|	| yarn|
+
+| npm | 	| yarn |
 |--------|-------|--------------|
 | npm install  |  | yarn  |
 | npm install taco  --save |  | yarn add taco |
