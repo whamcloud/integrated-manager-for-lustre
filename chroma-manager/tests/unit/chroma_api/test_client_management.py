@@ -5,7 +5,7 @@ from tests.unit.chroma_api.test_misc import remove_host_resources_patch
 from tests.unit.chroma_core.helpers import synthetic_host
 from chroma_core.models.host import ForceRemoveHostJob, RemoveHostJob
 from chroma_core.models.client_mount import LustreClientMount
-from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
+from iml_common.lib.agent_rpc import agent_result_ok
 
 
 class LustreClientMountTests(ChromaApiTestCase):
@@ -27,7 +27,7 @@ class LustreClientMountTests(ChromaApiTestCase):
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         str(mount.id))
+                         mount.id)
 
         job = RemoveHostJob(host = self.host)
 
@@ -49,7 +49,7 @@ class LustreClientMountTests(ChromaApiTestCase):
 
         # Make sure it was created and that we can see it via API
         self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         str(mount.id))
+                         mount.id)
 
         job = ForceRemoveHostJob(host = self.host)
 

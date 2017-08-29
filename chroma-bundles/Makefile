@@ -34,14 +34,10 @@ lesskey.out: lesskey.in
 	lesskey -o $@ $<
 
 EULA.txt: ../chroma-manager/chroma_help/help.py
-	python include/get_eula.py | html2text -o $@
+	python include/get_eula.py | html2text > $@
 
 rpms:
 	@echo "I don't know how to make RPMS!"
 
 docs download:
 	@echo "Nothing to do here"
-
-create_installer: create_installer.in $(TOP)/../chroma-dependencies/include/Makefile.zfs_version-$(DISTRO)
-	sed -e "s/@ZFS_VERSION@/$(ZFS_RELEASE)/" < $< > $@
-	chmod 755 $@

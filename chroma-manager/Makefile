@@ -1,20 +1,5 @@
 include ../include/Makefile.version
 
-NPM := $(shell if which npm &>/dev/null && npm -v; then true; else echo npm; fi)
-
-NPM_VERSION ?= 3.10.6
-
-define set_env_for_npm
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/; \
-mkdir -p ~/.npm-global;                                                                              \
-mkdir -p ~/.npm-global-cache;                                                                        \
-export NPM_CONFIG_PYTHON=/usr/bin/python;                                                            \
-export NPM_CONFIG_CACHE=~/.npm-global-cache;                                                         \
-export NPM_CONFIG_CACHE_MIN=360000;                                                                  \
-export NPM_CONFIG_PREFIX=~/.npm-global;                                                              \
-export PATH=~/.npm-global/bin:$$PATH
-endef
-
 ARCH := $(shell echo $$(uname -m))
 
 # Fixup proxies if needed
@@ -79,43 +64,15 @@ develop: version ui-modules
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-$(HOME)/.node-gyp:
-	@echo "copying nodejs headers"; \
-	mkdir -p $HOME/.node-gyp && \
-	cp -r ../chroma-externals/node-gyp-headers/ $(HOME)/.node-gyp/
-
-npm: $(HOME)/.node-gyp
-ifneq ($(NPM), $(NPM_VERSION))
-	curl https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/npm/-/npm-$(NPM_VERSION).tgz > /tmp/npm-$(NPM_VERSION).tgz
-	tar -xzf /tmp/npm-$(NPM_VERSION).tgz -C /tmp/
-	set -e;                                                               \
-	$(set_env_for_npm) &&                                                 \
-	/tmp/package/bin/npm-cli.js install -g /tmp/npm-$(NPM_VERSION).tgz -d
-endif
-
-ui-modules: npm
+ui-modules:
+	echo "jenkins_fold:start:Setting up ui-modules"
 	@echo "Setting up ui-modules"; \
 	set -e;                        \
-	$(set_env_for_npm) &&          \
 	export NODE_ENV=production &&  \
 	cd ui-modules &&               \
 	npm i -d &&                    \
 	npm prune
-
-ui-modules-dev: npm
-	@echo "Setting up ui-modules for dev"; \
-	cd ui-modules && \
-	npm i && \
-	cd node_modules/@iml/gui && \
-	npm i --only=dev && \
-	cd ../../intel-realtime && \
-	npm i --only=dev && \
-	cd ../@iml/view-server && \
-	npm i --only=dev;
-
-
-gui: ui-modules
-	@echo "Building GUI for deployment";
+	echo "jenkins_fold:end:Setting up ui-modules"
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -192,7 +149,7 @@ agent_tests:
 			| tee ../chroma-agent/unit.log; \
 	exit $${PIPESTATUS[0]}
 
-unit_tests:
+unit_tests unit-tests:
 	@echo "Running standard unit tests..."
 	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
@@ -214,7 +171,8 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version gui
+tarball: version ui-modules
+	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
@@ -228,8 +186,10 @@ tarball: version gui
 	rm -f sdist.out
 	rm -f .chroma-manager.py
 	rm -f .production_supervisord.conf
+	echo "jenkins_fold:end:Make Manager Tarball"
 
 rpms: cleandist tarball
+	echo "jenkins_fold:start:Make Manager RPMS"
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
@@ -246,10 +206,17 @@ rpms: cleandist tarball
 		 -bb _topdir/SPECS/chroma-manager.spec
 	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist} | sed -e 's/\(\.el[0-9][0-9]*\)\.centos/\1/').$(ARCH).rpm dist/
 	rm -rf _topdir
+	echo "jenkins_fold:end:Make Manager RPMS"
 
-requirements: requirements.txt
+install_requirements: requirements.txt
+	echo "jenkins_fold:start:Install Python requirements"
+	pip install --upgrade pip;                              \
+	pip install --upgrade setuptools;                       \
+	pip install -Ur requirements.txt
+	echo "jenkins_fold:end:Install Python requirements"
 
-requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile
+requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile requirements.dev
+	echo "jenkins_fold:start:Make requirements.txt"
 	rm -f requirements.tmp
 	$(MAKE) -C ../chroma-dependencies requirements
 	{ echo "# DO NOT UPDATE THIS FILE MANUALLY.";                                         \
@@ -264,19 +231,21 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 		echo "why is this not quiet like it should be?";  \
 		sed -i -e '/^make\[[0-9]\]: /d' $@;               \
 	fi
+	echo "jenkins_fold:end:Make requirements.txt"
 
-download: requirements.txt
-	pip-python install --download ../chroma-externals -r requirements.txt
+download: install_requirements
 
 docs: requirements.txt version
-	set -e ; \
-	if [ -z $(VIRTUAL_ENV) ] ; then \
-		virtualenv myenv; \
-		. myenv/bin/activate; \
-		CACHE=$$(pwd)/../chroma-externals; \
-		echo "# Using pip cache at $$CACHE"; \
-		python tests/utils/pip_install_requirements.py $$CACHE; \
-	fi; \
+	echo "jenkins_fold:start:Make Docs"
+	set -e;                                                         \
+	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
+		virtualenv myenv;                                       \
+		. myenv/bin/activate;                                   \
+		pip install --upgrade pip;                              \
+		pip install --upgrade setuptools;                       \
+		pip install -Ur requirements.txt;                       \
+	fi;                                                             \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
+	echo "jenkins_fold:end:Make Docs"
 
-.PHONY: docs download gui ui-modules npm
+.PHONY: docs download ui-modules

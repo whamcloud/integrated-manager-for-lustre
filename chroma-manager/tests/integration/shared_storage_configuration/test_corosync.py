@@ -5,7 +5,7 @@ from django.utils.unittest import skip
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.chroma_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.util import ExceptionThrowingThread
 
 log = logging.getLogger(__name__)
 

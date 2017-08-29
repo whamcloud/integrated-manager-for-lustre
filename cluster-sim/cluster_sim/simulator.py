@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2017 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import glob
@@ -242,16 +225,19 @@ class ClusterSimulator(Persisted):
         # Packages which the FakeServers will report as available
         self.state['packages'] = {
             'server': {
+                'lustre-ldiskfs-zfs': (0, '1', '1', 'x86_64'),
                 'lustre': (0, '2.1.4', '1', 'x86_64'),
-                'lustre-modules': (0, '2.1.4', '1', 'x86_64'),
-                'lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
-                'lustre-osd-zfs': (0, '2.1.4', '1', 'x86_64'),
-                'kernel-devel-3.10.0-514.10.2.el7_lustre': (0, '2.6.32', '1', 'x86_64'),
+                'lustre-dkms': (0, '2.1.4', '1', 'x86_64'),
+                'kmod-lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
+                'lustre-osd-zfs-mount': (0, '2.1.4', '1', 'x86_64'),
+                'kernel-[0-9]*_lustre': (0, '2.6.32', '1', 'x86_64'),
+                'kernel-devel-[0-9]*_lustre': (0, '2.6.32', '1', 'x86_64'),
+                'zfs-dkms': (0, '0.6.5.3', '1', 'x86_64'),
                 'zfs': (0, '0.6.5.3', '1', 'x86_64')
             },
             'worker': {
                 'lustre-client': (0, '2.5.0', '1', 'x86_64'),
-                'lustre-client-modules': (0, '2.5.0', '1', 'x86_64')
+                'kmod-lustre-client': (0, '2.5.0', '1', 'x86_64')
             }
         }
         for packages in self.state['packages'].values():
@@ -284,6 +270,13 @@ class ClusterSimulator(Persisted):
     def clear_clusters(self):
         for cluster in self.clusters.values():
             cluster.clear_resources()
+
+        for server in self.servers.values():
+            # FIXME: we should completely clear state but apparently we're reliant on some of the keys between tests!
+            # server.reset_state()
+            server.stop_corosync()
+            server.stop_pacemaker()
+            server.save()
 
     def remove_server(self, fqdn):
         log.info("remove_server %s" % fqdn)

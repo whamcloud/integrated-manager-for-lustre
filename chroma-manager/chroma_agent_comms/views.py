@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import Queue
@@ -40,7 +23,7 @@ from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.http_agent.crypto import Crypto
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 log = log_register('agent_views')
 import logging
@@ -380,7 +363,8 @@ def setup(request, key):
     repos = ""
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
-        repos += """[%s]
+        if bundle.bundle_name != "external":
+            repos += """[%s]
 name=%s
 baseurl={0}/%s/$releasever/
 enabled=0

@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import sys
@@ -36,7 +19,9 @@ from django.utils import timezone
 from tastypie.resources import ModelDeclarativeMetaclass, Resource, ResourceOptions
 from tastypie import fields
 from tastypie import http
+from tastypie.serializers import Serializer
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
+from tastypie.exceptions import ImmediateHttpResponse
 
 from chroma_core.models.command import Command
 from chroma_core.models.target import ManagedMgs
@@ -46,7 +31,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
@@ -284,8 +269,15 @@ class StatefulModelResource(CustomModelResource):
         return to_be_serialized
 
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
-    def obj_update(self, bundle, request, **kwargs):
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+    def obj_update(self, bundle, **kwargs):
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        request = bundle.request
+        bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
 
         stateful_object = bundle.obj
 
@@ -316,17 +308,17 @@ class StatefulModelResource(CustomModelResource):
         else:
             return bundle
 
-    def obj_delete(self, request = None, **kwargs):
-        obj = self.obj_get(request, **kwargs)
+    def obj_delete(self, bundle, **kwargs):
+        obj = self.obj_get(bundle, **kwargs)
         try:
             if obj.immutable_state and 'forgotten' in obj.states:
                 command = Command.set_state([(obj, 'forgotten')])
             else:
                 command = Command.set_state([(obj, 'removed')])
         except SchedulingError, e:
-            raise custom_response(self, request, http.HttpBadRequest,
+            raise custom_response(self, bundle.request, http.HttpBadRequest,
                     {'__all__': e.message})
-        raise custom_response(self, request, http.HttpAccepted,
+        raise custom_response(self, bundle.request, http.HttpAccepted,
                 {'command': dehydrate_command(command)})
 
 
@@ -340,8 +332,15 @@ class ConfParamResource(StatefulModelResource):
             return None
 
     # PUT handler for accepting {'conf_params': {}}
-    def obj_update(self, bundle, request, **kwargs):
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+    def obj_update(self, bundle, **kwargs):
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        request = bundle.request
+        bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
         if hasattr(bundle.obj, 'content_type'):
             obj = bundle.obj.downcast()
         else:
@@ -351,7 +350,7 @@ class ConfParamResource(StatefulModelResource):
         # cause one of those two things to be ignored.
 
         if not 'conf_params' in bundle.data or isinstance(obj, ManagedMgs):
-            super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
+            super(ConfParamResource, self).obj_update(bundle, **kwargs)
 
         try:
             conf_params = bundle.data['conf_params']
@@ -382,13 +381,13 @@ class ConfParamResource(StatefulModelResource):
                          self.Meta.resource_name: self.alter_detail_data_to_serialize(request,
                             self.full_dehydrate(bundle)).data})
             else:
-                return super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
+                return super(ConfParamResource, self).obj_update(bundle, **kwargs)
 
         return bundle
 
 
 class MetricResource:
-    def override_urls(self):
+    def prepend_urls(self):
         from django.conf.urls.defaults import url
         return [
             url(r"^(?P<resource_name>%s)/metric/$" % self._meta.resource_name, self.wrap_view('metric_dispatch'), name="metric_dispatch"),
@@ -481,7 +480,9 @@ class MetricResource:
         return dict([metrics_obj.fetch_last(metrics)])
 
     def get_metric_detail(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
-        obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
+        bundle = self.build_bundle(request=request)
+        obj = self.cached_obj_get(
+            bundle, **self.remove_api_resource_names(kwargs))
         metrics = metrics or MetricStore(obj).names
         if isinstance(obj, StorageResourceRecord):
             # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
@@ -525,7 +526,8 @@ class MetricResource:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
         try:
-            objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
+            base_bundle = self.build_bundle(request=request)
+            objs = self.obj_get_list(bundle=base_bundle, **self.remove_api_resource_names(kwargs))
         except Http404 as exc:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
         metrics = metrics or set(itertools.chain.from_iterable(MetricStore(obj).names for obj in objs))
@@ -650,3 +652,14 @@ class BulkResourceOperation(object):
                                   result)
 
     BulkActionResult = namedtuple('BulkActionResult', ['object', 'error', 'traceback'])
+
+class DateSerializer(Serializer):
+    """
+    Serializer to format datetimes in ISO 8601 but with timezone
+    offset.
+    """
+    def format_datetime(self, data):
+        if timezone.is_naive(data):
+            return super(DateSerializer, self).format_datetime(data)
+
+        return data.isoformat()

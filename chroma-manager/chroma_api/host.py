@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 import re
 from collections import defaultdict
@@ -26,6 +9,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.services import log_register
 from tastypie.validation import Validation
 from tastypie.utils import dict_strip_unicode_keys
+from chroma_api.validation_utils import validate
 
 import json
 
@@ -47,7 +31,7 @@ from chroma_api.utils import custom_response, StatefulModelResource, MetricResou
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
-from chroma_common.lib.evaluator import safe_eval
+from iml_common.lib.evaluator import safe_eval
 from chroma_api.utils import filter_fields_to_type
 from chroma_api.chroma_model_resource import ChromaModelResource
 
@@ -155,7 +139,9 @@ class ClientMountResource(ChromaModelResource):
         return self.alter_detail_data_to_serialize(None, self.full_dehydrate(
                self.build_bundle(obj = client_mount))).data
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
         host = self.fields['host'].hydrate(bundle).obj
         filesystem = self.fields['filesystem'].hydrate(bundle).obj
         mountpoint = bundle.data['mountpoint']
@@ -263,16 +249,18 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
 
         bundle = self.build_bundle(data=dict_strip_unicode_keys(deserialized), request=request)
 
-        self.obj_update(bundle, request, **kwargs)
+        self.obj_update(bundle, **kwargs)
 
-    def obj_update(self, bundle, request, **kwargs):
+    @validate
+    def obj_update(self, bundle, **kwargs):
 
         def _update_action(self, data, request, **kwargs):
             # For simplicity lets fake the kwargs if we can, this is for when we are working from objects
             if 'address' in data:
                 host = ManagedHost.objects.get(address = data['address'])
             elif 'pk' in kwargs:
-                host = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+                host = self.cached_obj_get(self.build_bundle(
+                    data=data, request=request), **self.remove_api_resource_names(kwargs))
             else:
                 return self.BulkActionResult(None, "Unable to decipher target host", None)
 
@@ -284,7 +272,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
             else:
                 if 'pk' in kwargs:
                     try:
-                        super(HostResource, self).obj_update(self.build_bundle(data=data, request=request), request, **kwargs)
+                        super(HostResource, self).obj_update(self.build_bundle(data=data, request=request), **kwargs)
                         return self.BulkActionResult(None, "State data not present for host %s" % host, None)
                     except ImmediateHttpResponse as ihr:
                         if int(ihr.response.status_code / 100) == 2:
@@ -294,9 +282,11 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
                 else:
                     return self.BulkActionResult(None, "Bulk setting of state not yet supported", None)
 
-        self._bulk_operation(_update_action, 'command_and_host', bundle, request, **kwargs)
+        self._bulk_operation(_update_action, 'command_and_host',
+                             bundle, bundle.request, **kwargs)
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
         # FIXME HYD-1657: we get errors back just fine when something goes wrong
         # during registration, but the UI tries to format backtraces into
         # a 'validation errors' dialog which is pretty ugly.
@@ -306,11 +296,13 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
         def _update_action(self, data, request, **kwargs):
             return self._create_host(None, data, request)
 
-        self._bulk_operation(_update_action, 'command_and_host', bundle, request, **kwargs)
+        self._bulk_operation(_update_action, 'command_and_host',
+                             bundle, bundle.request, **kwargs)
 
     def _create_host(self, address, data, request):
         # Resolve a server profile URI to a record
-        profile = ServerProfileResource().get_via_uri(data['server_profile'])
+        profile = ServerProfileResource().get_via_uri(
+            data['server_profile'], request)
 
         host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name, **_host_params(data, address))
 
@@ -396,11 +388,13 @@ class HostTestResource(Resource, BulkResourceOperation):
         object_class = dict
         validation = HostTestValidation()
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
         def _test_host_contact(self, data, request, **kwargs):
             return self.BulkActionResult(dehydrate_command(JobSchedulerClient.test_host_contact(**_host_params(data))), None, None)
 
-        self._bulk_operation(_test_host_contact, 'command', bundle, request, **kwargs)
+        self._bulk_operation(_test_host_contact, 'command',
+                             bundle, bundle.request, **kwargs)
 
 
 class HostProfileResource(Resource, BulkResourceOperation):
@@ -415,7 +409,12 @@ class HostProfileResource(Resource, BulkResourceOperation):
         authorization = DjangoAuthorization()
         object_class = dict
 
-    def get_resource_uri(self, bundle_or_obj):
+    def get_resource_uri(self, bundle_or_obj=None):
+        url_name = 'api_dispatch_list'
+
+        if bundle_or_obj is not None:
+            url_name = 'api_dispatch_detail'
+
         kwargs = {
             'resource_name': self._meta.resource_name,
             'api_name': self._meta.api_name
@@ -423,12 +422,12 @@ class HostProfileResource(Resource, BulkResourceOperation):
 
         if isinstance(bundle_or_obj, Bundle):
             kwargs['pk'] = bundle_or_obj.obj.id
-        else:
+        elif bundle_or_obj is not None:
             kwargs['pk'] = bundle_or_obj.id
 
-        return self._build_reverse_url("api_dispatch_detail", kwargs=kwargs)
+        return self._build_reverse_url(url_name, kwargs=kwargs)
 
-    def full_dehydrate(self, bundle):
+    def full_dehydrate(self, bundle, for_list=False):
         return bundle.obj
 
     HostProfiles = namedtuple("HostProfiles", ["profiles", "valid"])
@@ -487,32 +486,36 @@ class HostProfileResource(Resource, BulkResourceOperation):
                 'profiles': host_profiles.profiles,
                 'resource_uri': self.get_resource_uri(host)}
 
-    def obj_get(self, request, pk=None):
+    def obj_get(self, bundle, pk=None):
         host = get_object_or_404(ManagedHost, pk=pk)
 
-        return self._host_profiles_object(host, request)
+        return self._host_profiles_object(host, bundle.request)
 
-    def obj_get_list(self, request):
-        ids = request.GET.getlist('id__in')
+    def obj_get_list(self, bundle):
+        ids = bundle.request.GET.getlist('id__in')
         filters = {'id__in': ids} if ids else {}
 
         result = []
 
         for host in ManagedHost.objects.filter(**filters):
-            result.append({'host_profiles': self._host_profiles_object(host, request),
+            result.append({'host_profiles': self._host_profiles_object(host, bundle.request),
                            "error": None,
                            "traceback": None})
 
         return result
 
-    def obj_create(self, bundle, request, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
         def _create_action(self, data, request, **kwargs):
             return self.BulkActionResult(self._set_profile(data['host'], data['profile']), None, None)
 
-        self._bulk_operation(_create_action, 'commands', bundle, request, **kwargs)
-
-    def obj_update(self, bundle, request, **kwargs):
+        self._bulk_operation(_create_action, 'commands',
+                             bundle, bundle.request, **kwargs)
+    
+    @validate                             
+    def obj_update(self, bundle, **kwargs):
         def _update_action(self, data, request, **kwargs):
             return self.BulkActionResult(self._set_profile(kwargs['pk'], data['profile']), None, None)
 
-        self._bulk_operation(_update_action, 'commands', bundle, request, **kwargs)
+        self._bulk_operation(_update_action, 'commands',
+                             bundle, bundle.request, **kwargs)

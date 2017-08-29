@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2017 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import logging
@@ -26,7 +9,7 @@ import datetime
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
 from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
 from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 log = logging.getLogger(__name__)
 
 
@@ -185,7 +168,8 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
     def get_test_message(self,
                          utc_iso_date_str='2013-01-11T19:04:07+00:00',
                          node_status_list=None):
-        '''Simulate a message from the Corosync agent plugin
+        """
+        Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
 
@@ -197,30 +181,33 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         TODO: This method is also in tests/unit/services/test_corosync.py.
         Some effort shoudl be considered to consolidate this, so that both
         tests can use the same source.
-        '''
+        """
 
-        #  First whack up some fake node data based on input infos
-        nodes = {}
-        if node_status_list is not None:
-            for hs in node_status_list:
-                node = hs[0]
-                status = hs[1] and 'true' or 'false'
-                node_dict = {node: {
-                    'name': node, 'standby': 'false',
-                    'standby_onfail': 'false',
-                    'expected_up': 'true',
-                    'is_dc': 'true', 'shutdown': 'false',
-                    'online': status, 'pending': 'false',
-                    'type': 'member', 'id': node,
-                    'resources_running': '0', 'unclean': 'false'}}
-                nodes.update(node_dict)
+        # If corosync / pacemaker is not yet running then crm_info should be empty
+        crm_info = {}
+        if not ((self._server.state['corosync'].state == 'stopped') or
+                (self._server.state['pacemaker'].state == 'stopped')):
+            nodes = {}
+            if node_status_list is not None:
+                for hs in node_status_list:
+                    node = hs[0]
+                    status = hs[1] and 'true' or 'false'
+                    node_dict = {node: {
+                        'name': node, 'standby': 'false',
+                        'standby_onfail': 'false',
+                        'expected_up': 'true',
+                        'is_dc': 'true', 'shutdown': 'false',
+                        'online': status, 'pending': 'false',
+                        'type': 'member', 'id': node,
+                        'resources_running': '0', 'unclean': 'false'}}
+                    nodes.update(node_dict)
+
+            crm_info = {'nodes': nodes,
+                        'options': {'stonith_enabled': True},
+                        'datetime': utc_iso_date_str}
 
         #  Second create the message with the nodes and other envelope data.
-        message = {'crm_info': {'nodes': nodes,
-                                'options': {
-                                    'stonith_enabled': True
-                                },
-                                'datetime': utc_iso_date_str},
+        message = {'crm_info': crm_info,
                    'state': {'corosync': self._server.state['corosync'].state,
                              'pacemaker': self._server.state['pacemaker'].state}}
 

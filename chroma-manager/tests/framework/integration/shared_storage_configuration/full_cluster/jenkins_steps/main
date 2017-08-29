@@ -7,13 +7,15 @@
 set_defaults false
 check_for_autopass
 
+if ! $JENKINS; then
+    CHROMA_DIR="$PWD"
+fi
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
-cd $WORKSPACE
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-echo "+ curl -f -k -O -u $JENKINS_USER:********** \"$JOB_URL/$ARCHIVE_NAME\""
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/$ARCHIVE_NAME"
-set -x
+if $JENKINS; then
+    cd $WORKSPACE
+    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
+fi
 
 got_aborted=false
 # Gather logs from nodes and release the cluster at exit
@@ -29,19 +31,6 @@ $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision
 
 # see if this cures the 401 errors from jenkins
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
-pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
-if [ -f /etc/yum.repos.d/autotest.repo ]; then
-    set +x
-    sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
-    set -x
-fi
-cd /etc/yum.repos.d/
-for f in *.repo; do
-  sed -i -e 's/distro=el6\.[0-9]/distro=el6.4/' \$f
-done" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
 
 echo "Beginning automated test run..."
 export MEASURE_COVERAGE=$MEASURE_COVERAGE

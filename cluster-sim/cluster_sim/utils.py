@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from copy import deepcopy
@@ -25,7 +8,7 @@ import json
 import random
 import errno
 import os
-from chroma_common.lib import util
+from iml_common.lib import util
 
 # It is my intention to create a factory class that will actually allow these to be created with a definition
 # like the namedtuple. But this is a first step towards that, and if I fixup the factory class then the consumers of
@@ -49,7 +32,7 @@ class DictStruct(dict):
     Maybe we can even add some post hook to json.loads (to make this happen automagically). I've chosen __dict_struct_type__
     so that we don't get a name clash with something.
 
-    At present I'm not putting this in chroma_common, because I'm not convinced it is good enough yet as an idea, but
+    At present I'm not putting this in iml_common, because I'm not convinced it is good enough yet as an idea, but
     maybe moving forwards with a little more work and generalization we can do that.
     '''
 
@@ -88,14 +71,11 @@ class Persisted(object):
     filename = None
     default_state = {}
 
-    def _load_default(self):
-        self.state = deepcopy(self.default_state)
-
     def __init__(self, path):
         self.path = path
 
         if not self.path:
-            self._load_default()
+            self.reset_state()
         else:
             try:
                 self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
@@ -103,11 +83,11 @@ class Persisted(object):
                 # Now fixup and DictStruct's in the data
                 DictStruct.convert_dict(self.state)
             except IOError:
-                self._load_default()
+                self.reset_state()
 
     def save(self):
         if self.path:
-            json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent = 4)
+            json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent=4)
 
     def delete(self):
         if not self.path:
@@ -120,3 +100,6 @@ class Persisted(object):
                 pass
             else:
                 raise
+
+    def reset_state(self):
+        self.state = deepcopy(self.default_state)

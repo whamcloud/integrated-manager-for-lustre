@@ -5,7 +5,7 @@ from tests.unit.chroma_api.test_misc import remove_host_resources_patch
 from tests.unit.chroma_core.helpers import synthetic_host, log
 from chroma_core.models.power_control import PowerControlDevice
 from chroma_core.models.host import RemoveHostJob
-from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
+from iml_common.lib.agent_rpc import agent_result_ok
 
 
 class PowerControlResourceTestCase(ChromaApiTestCase):
@@ -154,7 +154,7 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
         new_values['address'] = '127.0.0.2'
         new_values['port'] = '4242'
 
-        # Tastypie 0.9.11 doesn't like nested PUTs with full resources
+        # Tastypie 0.9.16 doesn't like nested PUTs with full resources
         pdu['device_type'] = pdu['device_type']['resource_uri']
         pdu['outlets'] = [o['resource_uri'] for o in pdu['outlets']]
 
@@ -182,6 +182,7 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
         with self.assertRaisesRegexp(AssertionError, "Unable to resolve"):
             kwargs = {'device_type': self.pdu_type['resource_uri'],
                       'address': 'localtoast'}
+
             self._create_power_device(**kwargs)
 
     def test_dupe_sockaddr_raises_useful_error(self):
@@ -293,7 +294,7 @@ class IpmiResourceTests(PowerControlResourceTestCase):
         outlet = pdu['outlets'][0]
         outlet['host'] = self.host['resource_uri']
         r = self.api_client.put(outlet['resource_uri'], data = outlet)
-        self.assertHttpAccepted(r)
+        self.assertHttpOK(r)
 
         with self.assertRaises(AssertionError):
             self._create_power_outlet(host = self.host['resource_uri'],

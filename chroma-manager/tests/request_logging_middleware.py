@@ -4,7 +4,7 @@ import os
 from django.conf import settings
 
 from chroma_core.services.log import custom_log_register
-from chroma_core.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 REQUEST_LOG_PATH = os.path.join(settings.LOG_PATH, 'requests.log')
 logger = custom_log_register(__name__, REQUEST_LOG_PATH, False)

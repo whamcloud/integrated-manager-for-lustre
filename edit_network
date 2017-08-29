@@ -1,0 +1,8 @@
+#!/bin/bash
+
+exec ed -s $1 <<EOF
+/<mac address=/a
+  <domain name='vms.local' localOnly='yes'/>
+.
+wq
+EOF

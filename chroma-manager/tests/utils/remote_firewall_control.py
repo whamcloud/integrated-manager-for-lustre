@@ -1,29 +1,12 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import abc
 from collections import namedtuple
 from operator import attrgetter
-from tests.chroma_common.lib import util
+from iml_common.lib import util
 import re
 
 
@@ -204,7 +187,19 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            raise RuntimeError('process_rules(): remote shell command failed unexpectedly, is firewall-cmd running?')
+            from iml_common.lib.shell import Shell
+            raise RuntimeError('''process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
+systemctl status firewalld:
+%s
+
+systemctl status polkit:
+%s
+
+journalctl -n 100:
+%s''' % (result.rc, result.stdout, result.stderr,
+         Shell.run(['systemctl', 'status', 'firewalld']).stdout,
+         Shell.run(['systemctl', 'status', 'polkit']).stdout,
+         Shell.run(['journalctl', '-n', '100']).stdout))
 
         if result.stdout.strip() == '':
             return None

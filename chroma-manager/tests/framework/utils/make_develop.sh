@@ -3,16 +3,18 @@ ssh chromatest@$CHROMA_MANAGER "set -ex
 virtualenv chroma_test_env
 source chroma_test_env/bin/activate
 cd chroma_test_env/$REL_CHROMA_DIR/chroma-manager
-make requirements
+make requirements.txt
+echo \"jenkins_fold:start:pip install requirements.txt\"
 if ${INSTALL_PYCURL:-false}; then
     # install pycurl (as required by fencing.py) on el7
     if [[ \$(rpm --eval %rhel) == 7 ]]; then
         export PYCURL_SSL_LIBRARY=nss
         pip install --upgrade pip
-        pip install --compile \$(pwd)/../chroma-externals/pycurl-7.43.0.tar.gz
+        pip install --compile pycurl==7.43.0
     fi
 fi
-python tests/utils/pip_install_requirements.py \$(pwd)/../chroma-externals
+make install_requirements
+echo \"jenkins_fold:end:pip install requirements.txt\"
 
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/$REL_CHROMA_DIR/chroma-manager/.coveragerc
@@ -38,9 +40,5 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-mkdir -p ~/.npm-global
 export NPM_CONFIG_PYTHON=/usr/bin/python
-export NPM_CONFIG_REGISTRY=https://ubit-artifactory-or.intel.com/artifactory/api/npm/iml-npm-repos/
-export NPM_CONFIG_PREFIX=~/.npm-global
-export PATH=\$PATH:~/.npm-global/bin
 make develop"

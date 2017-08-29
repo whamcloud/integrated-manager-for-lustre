@@ -387,6 +387,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                      'volume': filesystem['osts'][1]['volume']},
         }
 
+        # Define where we expect targets for volumes to be started on based on how we set volume mounts.
+        volumes_expected_hosts = {
+            self.standard_filesystem_layout['mgt']['volume']['id']: hosts[0],
+            self.standard_filesystem_layout['mdt']['volume']['id']: hosts[1],
+            self.standard_filesystem_layout['ost1']['volume']['id']: hosts[2],
+            self.standard_filesystem_layout['ost2']['volume']['id']: hosts[3]
+        }
+
+        # Verify targets are started on the correct hosts
+        self.check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts, True)
+
         return filesystem_id
 
     def create_filesystem(self, hosts, filesystem, verify_successful = True):
@@ -547,16 +558,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         )
         self.assertTrue(response.successful, response.text)
 
-    def verify_volume_mounts(self, volume, expected_primary_host_id, expected_secondary_host_id):
-        """
-        Verify that a given volume has the expected values for its primary and secondary hosts.
-        """
-        for node in volume['volume_nodes']:
-            if node['primary']:
-                self.assertEqual(node['host_id'], int(expected_primary_host_id))
-            elif node['use']:
-                self.assertEqual(node['host_id'], int(expected_secondary_host_id))
-
     def create_power_control_type(self, body):
         response = self.chroma_manager.post("/api/power_control_type/",
                                             body = body)
@@ -704,3 +705,48 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         mounted_targets = [t for t in targets if t['state'] == state]
 
         return len(mounted_targets) == len(targets)
+
+    def check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true):
+        """
+        Private function providing shared logic for public facing target active host checks.
+        """
+        response = self.chroma_manager.get(
+            '/api/target/',
+            params = {
+                'filesystem_id': filesystem_id,
+            }
+        )
+        self.assertTrue(response.successful, response.text)
+        targets = response.json['objects']
+
+        response = self.chroma_manager.get(
+            '/api/host/',
+            params = {
+            }
+        )
+        self.assertTrue(response.successful, response.text)
+        hosts = response.json['objects']
+
+        for target in targets:
+            expected_host = volumes_to_expected_hosts[target['volume']['id']]
+            active_host = target['active_host']
+            if active_host is not None:
+                active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
+            logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
+
+            # Check manager's view
+            if assert_true:
+                self.assertEqual(expected_host['resource_uri'], target['active_host'])
+            else:
+                if not expected_host['resource_uri'] == target['active_host']:
+                    return False
+
+            # Check corosync's view
+            is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
+            logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
+            if assert_true:
+                self.assertEqual(is_running, True)
+            elif not is_running:
+                return False
+
+        return True

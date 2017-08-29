@@ -155,7 +155,7 @@ class Migration(SchemaMigration):
                     AlertState.objects.filter(id=alert_id).update(variant=json.dumps(variant),
                                                                   record_type=alert_name)
 
-            db.rename_table(table_name, 'unused_%s' % table_name)
+            db.delete_table(table_name)
 
         migrate_alert('CorosyncNoPeersAlert', [], True)
         migrate_alert('CorosyncStoppedAlert', [], True)

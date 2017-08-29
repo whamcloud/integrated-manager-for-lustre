@@ -1,31 +1,21 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import settings
 
-from tastypie.authentication import Authentication
-from tastypie.authorization import Authorization, DjangoAuthorization
+from tastypie.http import HttpUnauthorized
+
+from tastypie.authentication import Authentication, ApiKeyAuthentication
+from tastypie.authorization import Authorization
 from django.utils.crypto import constant_time_compare
 
+
+def has_api_key(request):
+    result = ApiKeyAuthentication().is_authenticated(request)
+
+    return not isinstance(result, HttpUnauthorized)
 
 class CsrfAuthentication(Authentication):
     """Tastypie authentication class for rejecting POSTs
@@ -44,12 +34,12 @@ class CsrfAuthentication(Authentication):
     In principle you can argue that any CSRF attacks on JSON APIs are
     the browser's (read: end user's) fault, not ours.  In the wild, that
     is a very unhelpful attitude.
-
-    TODO: it is annoying for non-browser clients to have to jump through the
-    CSRF hoops.  We should check if someone is authenticating by key instead
-    of username/password, and if so avoid applying the CSRF check.
     """
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if has_api_key(request):
+            return True
+
         if request.method != "POST":
             return True
 
@@ -65,7 +55,11 @@ class CsrfAuthentication(Authentication):
 class AnonymousAuthentication(CsrfAuthentication):
     """Tastypie authentication class which only allows in
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
-    def is_authenticated(self, request, object = None):
+    def is_authenticated(self, request, object=None):
+        # Return early if there is a valid API key
+        if has_api_key(request):
+            return True
+
         # If any authentication in the class hierarchy refuses, we refuse
         if not super(AnonymousAuthentication, self).is_authenticated(request, object):
             return False
@@ -88,52 +82,3 @@ class PermissionAuthorization(Authorization):
 
     def is_authorized(self, request, object = None):
         return request.user.has_perm(self.perm_name)
-
-
-class PATCHSupportDjangoAuth(DjangoAuthorization):
-    """Fixing v0.9.11 tasypie's django auth not handling PATCH
-
-    This is an implementation of this fix:
-    https://github.com/toastdriven/django-tastypie/pull/345/files
-
-    When we rev tastypie to >0.9.11, we should try to run without this code.
-    There is test covering this to check.  See
-    chroma-manager/tests/unit/chroma_api/test_dismissed.py
-
-    The procedure to remove this code is simply to change PATCHSupportDjangoAuth
-    to DjangoAuthorization in the 3 resources that define it.  And run the tests.
-    See HYD-2354
-    """
-
-    def is_authorized(self, request, object=None):
-        # GET is always allowed
-        if request.method == 'GET':
-            return True
-
-        klass = self.resource_meta.object_class
-
-        # cannot check permissions if we don't know the model
-        if not klass or not getattr(klass, '_meta', None):
-            return True
-
-        permission_codes = {
-            'POST': '%s.add_%s',
-            'PUT': '%s.change_%s',
-            'PATCH': '%s.change_%s',
-            'DELETE': '%s.delete_%s',
-            }
-
-        # cannot map request method to permission code name
-        if request.method not in permission_codes:
-            return True
-
-        permission_code = permission_codes[request.method] % (
-            klass._meta.app_label,
-            klass._meta.module_name)
-
-        # user must be logged in to check permissions
-        # authentication backend must set request.user
-        if not hasattr(request, 'user'):
-            return False
-
-        return request.user.has_perm(permission_code)

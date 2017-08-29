@@ -72,7 +72,6 @@ CHECKS = [
             '.*/chroma-manager/docs/.*/conf.py$',
             '.*/features/steps/.*\.py',
             '.*/BUILD/.*',
-            '.*/chroma-externals/.*'
             ],
         'print_filename': False,
     },
@@ -84,28 +83,20 @@ CHECKS = [
             '.*migrations.*',
             '.*manage.py',
             '.*/BUILD/.*',
-            '.*/chroma-externals/.*',
         ],
         'print_filename': False
     },
     {
-        'output': 'Checking boilerplate...',
-        'command': 'scripts/boilerplate.py test %s',
-        'match_files': [
-            '.*\.py$'
-        ],
+        'output': 'Checking for python executable files...',
+        'command': '[[ -x %s ]] && echo "This file should not be executable!"',
+        'match_files': ['.*\.py$'],
         'ignore_files': [
-            '.*/chroma-manager/r3d/prettytable.py',
-            '.*scm_version.py$',
-            '.*/chroma-manager/docs/conf.py',
-            '.*/chroma-manager/userdocs/conf.py',
-            '.*/chroma-manager/docs/lib/tastydoc.py',
-            '.*/chroma-manager/polymorphic/.*',
-            '.*/chroma-manager/.*migrations.*',
-            '.*/tests/.*.py',
-            '.*/manage.py',
+            '.*manage.py',
+            '.*setup.py',
+            '.*update_scan.py',
+            '.*/scripts/.*',
             '.*/BUILD/.*',
-            '.*/chroma-externals/.*',
+            '.*/chroma-dependencies/.*',
         ],
         'print_filename': True
     }
@@ -169,10 +160,6 @@ def main(all_files, exclude = []):
             if match:
                 files.append(os.path.join(git_root, match.group('name')))
 
-                if match.group('name') == 'chroma-externals':
-                    print "WARNING:\n"\
-                          "WARNING: This patch modifies the chroma-externals reference are you sure this is intended\n"\
-                          "WARNING:"
     result = 0
 
     for project_dir in DJANGO_PROJECTS:
@@ -191,16 +178,6 @@ def main(all_files, exclude = []):
         result = check_files(files, check) or result
 
     sys.exit(result)
-
-# python 2.4 doesn't have any()
-try:
-    any
-except NameError:
-    def any(iterable):
-        for element in iterable:
-            if element:
-                return True
-        return False
 
 
 if __name__ == '__main__':

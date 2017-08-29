@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from collections import defaultdict
@@ -33,6 +16,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from tastypie import fields
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 from chroma_api.utils import MetricResource
+from chroma_api.validation_utils import validate
 
 from tastypie.exceptions import NotFound, ImmediateHttpResponse
 from tastypie import http
@@ -40,6 +24,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from chroma_api.storage_resource_class import filter_class_ids
 from chroma_api.chroma_model_resource import ChromaModelResource
+
 
 from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonRpcInterface
 
@@ -135,15 +120,15 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
             return bases
 
-        return [k.__name__ for k in find_bases(bundle.obj.resource_class.get_class())]
+        return [k.__name__ for k in find_bases(bundle.obj.resource_class.get_class())].sort()
 
-    def obj_get_list(self, request = None, **kwargs):
+    def obj_get_list(self, bundle, **kwargs):
         """Override this to do sorting in a way that depends on kwargs (we need
         to know what kind of object is being listed in order to resolve the
         ordering attribute to a model, and apply_sorting's arguments don't
         give you kwargs)"""
-        objs = super(StorageResourceResource, self).obj_get_list(request, **kwargs)
-        objs = self._sort_by_attr(objs, request.GET, **kwargs)
+        objs = super(StorageResourceResource, self).obj_get_list(bundle, **kwargs)
+        objs = self._sort_by_attr(objs, bundle.request.GET, **kwargs)
         return objs
 
     def get_list(self, request, **kwargs):
@@ -287,16 +272,17 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
         always_return_data = True
         validation = StorageResourceValidation()
 
-    def obj_delete(self, request = None, **kwargs):
+    def obj_delete(self, bundle, **kwargs):
         try:
-            obj = self.obj_get(request, **kwargs)
+            obj = self.obj_get(bundle, **kwargs)
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 
         ScanDaemonRpcInterface().remove_resource(obj.id)
         raise ImmediateHttpResponse(http.HttpAccepted())
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
         # Note: not importing this at module scope so that this module can
         # be imported without loading plugins (useful at installation)
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -319,8 +305,9 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
         return bundle
 
-    def obj_update(self, bundle, request = None, **kwargs):
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+    @validate
+    def obj_update(self, bundle, **kwargs):
+        bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
 
         if 'alias' in bundle.data:
             # FIXME: sanitize input for alias (it gets echoed back as markup)
@@ -351,8 +338,8 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
         return bundle
 
-    def override_urls(self):
+    def prepend_urls(self):
         from django.conf.urls import url
-        return super(StorageResourceResource, self).override_urls() + [
+        return super(StorageResourceResource, self).prepend_urls() + [
             url(r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
         ]

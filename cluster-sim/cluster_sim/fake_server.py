@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import tempfile
@@ -38,17 +21,17 @@ from cluster_sim import utils
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
-from chroma_agent.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.agent_rpc import agent_result, agent_result_ok
+from iml_common.lib.date_time import IMLDateTime
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
 # least this long.
-MIN_SHUTDOWN_DURATION = 10
+MIN_SHUTDOWN_DURATION = 5  # 10
 # Simulated duration, in seconds, from the time a server is started until
 # it's running. When simulating a startup, it will always take at least
 # this long.
-MIN_STARTUP_DURATION = 20
+MIN_STARTUP_DURATION = 5  # 20
 
 
 class PacemakerState(utils.DictStruct):
@@ -91,6 +74,7 @@ class FakeServer(utils.Persisted):
         'lnet_up': False,
         'stats': None,
         'packages': {},
+        'client_mounts': {},
         'corosync': CorosyncState('stopped', 3000),
         'pacemaker': PacemakerState('stopped')
     }
@@ -227,7 +211,7 @@ class FakeServer(utils.Persisted):
                 'installed': installed
             }
 
-        return {'e2fsprogs': packages}
+        return {'external': packages}
 
     def install_packages(self, repos, packages):
         for package in packages:

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+# this environment variable is the whole reason for this script
+# this needs to be set and there is no way to have it set from fence_virsh
+export LIBVIRT_DEFAULT_URI=qemu:///system
+
+echo "got command: $SSH_ORIGINAL_COMMAND" >> /tmp/vagrant-virsh.log
+
+if [[ "$SSH_ORIGINAL_COMMAND" = *EXPECT* ]]; then
+    echo -n "[EXPECT]# "
+    read COMMAND
+    # TODO: a bit more security here to isolate this script to only desired
+    # virsh commands would be good
+    if [[ $COMMAND = virsh\ * ]]; then
+        if [ -e /tmp/vagrant-virsh.log ]; then
+            echo "executing command: $COMMAND" >> /tmp/vagrant-virsh.log
+        fi
+        ${COMMAND/ vm/ intel-manager-for-lustre_vm}
+        echo -n "[EXPECT]# "
+    else
+        echo "Disallowed command: $SSH_ORIGINAL_COMMAND"
+        exit 1
+    fi
+else
+    # TODO: a bit more security here to isolate this script to only desired
+    # virsh commands would be good
+    eval ${SSH_ORIGINAL_COMMAND// vm/ intel-manager-for-lustre_vm}
+fi

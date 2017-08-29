@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from django.conf import settings
@@ -28,6 +11,7 @@ import httpagentparser
 from tastypie.resources import Resource
 from tastypie.authorization import Authorization
 
+from chroma_api.validation_utils import validate
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.services.log import custom_log_register
 
@@ -51,7 +35,7 @@ class ClientErrorResource(Resource):
         always_return_data = False
         object_class = dict  # Not used, but required
 
-    def get_resource_uri(self, bundle):
+    def get_resource_uri(self, bundle=None):
         return None  # not used, but required
 
     def _init_log(self):
@@ -67,7 +51,8 @@ class ClientErrorResource(Resource):
         log_path = os.path.join(settings.LOG_PATH, log_filename)
         self.logger = custom_log_register(__name__, log_path)
 
-    def obj_create(self, bundle, request=None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
 
         # Creating the log in here limits the log to being created only by the user that
         # ultimately wants to write to it.  Moving initialization of this log to __init__

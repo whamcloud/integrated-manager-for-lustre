@@ -7,8 +7,9 @@ from mock import patch
 from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
 from chroma_agent import config
-from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
-from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
+from iml_common.lib.shell import Shell
+from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from iml_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 
 
 class TestManageUpdates(CommandCaptureTestCase):
@@ -67,32 +68,24 @@ sslclientcert = {2}
         self.assertEqual(agent_updates.unconfigure_repo(self.tmpRepo.name), agent_result_ok)
 
     def test_kernel_status(self):
-        def try_run(args):
-            if args == ["rpm", "-qR", "lustre-modules"]:
-                return """/bin/sh
-/bin/sh
-/bin/sh
-kernel = 2.6.32-358.18.1.el6
-rpmlib(CompressedFileNames) <= 3.0.4-1
-rpmlib(FileDigests) <= 4.6.0-1
-rpmlib(PayloadFilesHavePrefix) <= 4.0-1
-rpmlib(PayloadIsXz) <= 5.2-1
-"""
-            elif args == ["uname", "-r"]:
-                return "2.6.32-358.2.1.el6.x86_64\n"
-            elif args == ["rpm", "-q", "kernel"]:
-                return """kernel-2.6.32-358.2.1.el6.x86_64
-kernel-2.6.32-358.18.1.el6.x86_64
-"""
+        def run(arg_list):
+            values = {("rpm", "-q", "--whatprovides", "kmod-lustre"):
+                      "kmod-lustre-1.2.3-1.el6.x86_64\n",
+                      ("uname", "-r"):
+                      "2.6.32-358.2.1.el6.x86_64\n",
+                      ("rpm", "-q", "kernel"):
+                      "kernel-2.6.32-358.2.1.el6.x86_64\n"
+                      "kernel-2.6.32-358.18.1.el6_lustre.x86_64\n"}
+            return Shell.RunResult(0, values[tuple(arg_list)], "", False)
 
-        with patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=try_run):
+        with patch('chroma_agent.lib.shell.AgentShell.run', side_effect=run):
             result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
-                'required': 'kernel-2.6.32-358.18.1.el6.x86_64',
+                'required': 'kernel-2.6.32-358.18.1.el6_lustre.x86_64',
                 'running': 'kernel-2.6.32-358.2.1.el6.x86_64',
                 'available': [
                     "kernel-2.6.32-358.2.1.el6.x86_64",
-                    "kernel-2.6.32-358.18.1.el6.x86_64"
+                    "kernel-2.6.32-358.18.1.el6_lustre.x86_64"
                 ]
             })
 
@@ -107,11 +100,12 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'bar', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
+                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'bar', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
 jasper-libs.x86_64                                                                             1.900.1-16.el6_6.3                                                                             myrepo
 """),
-                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
+                          CommandCaptureCommand(('yum', 'update', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
         def isfile(arg):
@@ -132,8 +126,9 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
 
         def isfile(arg):
@@ -154,8 +149,9 @@ yum >= 3.2.29
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
         """),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
-                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=myrepo', 'foo', 'kernel-2.6.32-279.14.1.el6_lustre')),
+                          CommandCaptureCommand(('repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.%{arch} %{repoid}',
+                                                 '--pkgnarrow=updates', '--disablerepo=*', '--enablerepo=myrepo')),
                           CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
         def isfile(arg):
@@ -170,7 +166,7 @@ lustre-backend-fs
         config.update('settings', 'profile', {'managed': False})
 
         # Go from managed = False to managed = True
-        self.add_command(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
+        self.add_command(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'))
         self.assertEqual(agent_updates.update_profile({'managed': True}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
@@ -187,9 +183,12 @@ lustre-backend-fs
 
     def test_set_profile_fail(self):
         # Three times because yum will try three times.
-        self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
-                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"))
+        self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--exclude', 'kernel-debug', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
+                          CommandCaptureCommand(('yum', 'clean', 'metadata')))
 
         config.update('settings', 'profile', {'managed': False})
 

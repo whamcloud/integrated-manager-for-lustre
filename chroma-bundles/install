@@ -15,6 +15,7 @@ import select
 import base64
 from urlparse import urlparse, urlunparse
 import yum
+import ssl
 import urllib2
 import time
 import xmlrpclib
@@ -71,7 +72,7 @@ def _check_platform():
     SUPPORTED_DISTROS = ['redhat', 'centos']
     # Keep the version locked down for now -- if we can go with a minimum
     # version that'd be better, but we can't assume (c.f. pacemaker).
-    SUPPORTED_VERSIONS = ['7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1611' ]
+    SUPPORTED_VERSIONS = ['7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1611', '7.4', '7.4.1707' ]
     # This will work assuming we have version parity across all supported
     # distributions.
     SUPPORTED_PLATFORMS = ["%s-%s-%s" % p for p in itertools.product(SUPPORTED_DISTROS, SUPPORTED_VERSIONS, SUPPORTED_ARCHES)]
@@ -308,6 +309,17 @@ def _new_bundles(upgrade):
 
         bundles[meta['name'] + "-" + meta['distro']] = meta
 
+    # mock up a fake "external" bundle
+    meta = {
+        "name": "external",
+        "distro": "el7",
+        "version": "0.0.0",
+        "description": "fake bundle as a placeholder for externally available packages",
+        "filename": "",
+        "distro_version": "7"
+    }
+    bundles[meta['name'] + "-" + meta['distro']] = meta
+
     return bundles
 
 
@@ -481,33 +493,39 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             need_compat = _backup_repo(old_bundles, bundle, meta)
 
         if bundle in new_bundles:
-            # Extract the new bundle
             _mkdir_p(install_location)
-            _unpack_repo(meta['filename'], install_location)
-            # While CentOS uses just the numerical version, RHEL appends the
-            # installation type, so allow aliases and create a symlink pointing the
-            # alias at our repo
-            for alias in REPO_ALIASES:
-                link_path = os.path.join(BUNDLE_ROOT, meta['name'], alias.format(meta['distro_version']))
-                try:
-                    os.symlink(meta['distro_version'], link_path)
-                except OSError as e:
-                    if e.errno == errno.EEXIST:
-                        if os.path.islink(link_path):
-                            pass
+            if meta['filename'] == "":
+                # write fake bundle metadata to the metadata file
+                with open(os.path.join(install_location, "meta",),
+                          'w') as outfile:
+                    json.dump(meta, outfile)
+            else:
+                # Extract the new bundle
+                _unpack_repo(meta['filename'], install_location)
+                # While CentOS uses just the numerical version, RHEL appends the
+                # installation type, so allow aliases and create a symlink pointing the
+                # alias at our repo
+                for alias in REPO_ALIASES:
+                    link_path = os.path.join(BUNDLE_ROOT, meta['name'], alias.format(meta['distro_version']))
+                    try:
+                        os.symlink(meta['distro_version'], link_path)
+                    except OSError as e:
+                        if e.errno == errno.EEXIST:
+                            if os.path.islink(link_path):
+                                pass
+                            else:
+                                raise SystemExit("%s exists but is not a symlink as is expected" % link_path)
                         else:
-                            raise SystemExit("%s exists but is not a symlink as is expected" % link_path)
-                    else:
-                        raise
-            if need_compat:
-                # We need to be repo compatible with older releases that won't
-                # know to find RPMs in a $releasever subdir
-                compat_location = os.path.join(BUNDLE_ROOT, meta['name'])
-                log.debug("Creating backwards compatible repo in %s" % compat_location)
-                # Sadly there is no python function to link the contents of a tree
-                # to a new location -- we could write one.  But is it worth it for
-                # this one case?
-                _run(['cp', '-rl', install_location + "/.", compat_location])
+                            raise
+                if need_compat:
+                    # We need to be repo compatible with older releases that won't
+                    # know to find RPMs in a $releasever subdir
+                    compat_location = os.path.join(BUNDLE_ROOT, meta['name'])
+                    log.debug("Creating backwards compatible repo in %s" % compat_location)
+                    # Sadly there is no python function to link the contents of a tree
+                    # to a new location -- we could write one.  But is it worth it for
+                    # this one case?
+                    _run(['cp', '-rl', install_location + "/.", compat_location])
             _run(['chroma-config', 'bundle', 'register', install_location])
         else:
             # Remove any old bundles we don't have anymore
@@ -539,18 +557,6 @@ def _check_repos():
 
         def send_host(self, connection, host):
             connection.putheader('Host', self.realhost)
-
-    class SSLHandler(urllib2.HTTPSHandler):
-        def __init__(self, k, c):
-            urllib2.HTTPSHandler.__init__(self)
-            self.k = k
-            self.c = c
-
-        def https_open(self, r):
-            return self.do_open(self.getConnection, r)
-
-        def getConnection(self, h, timeout=None):
-            return httplib.HTTPSConnection(h, key_file=self.k, cert_file=self.c)
 
     log.info("Testing YUM")
 
@@ -604,10 +610,18 @@ def _check_repos():
                     ).replace('\n', '')
                     url.add_header("Authorization", "Basic %s" % base64string)
 
+                if repo.sslcacert:
+                    cafile = repo.sslcacert
+                else:
+                    cafile = None
+                context = ssl.create_default_context(cafile=cafile)
+
                 if repo.sslclientkey and repo.sslclientcert:
+                    context.load_cert_chain(repo.sslclientcert,
+                                            repo.sslclientkey)
                     urllib2.install_opener(
                         urllib2.build_opener(
-                            SSLHandler(repo.sslclientkey, repo.sslclientcert)))
+                            urllib2.HTTPSHandler(context=context)))
 
                 try:
                     urllib2.urlopen(url, timeout=5)

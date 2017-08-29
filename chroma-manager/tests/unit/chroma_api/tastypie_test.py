@@ -151,7 +151,7 @@ class ResourceTestCase(IMLUnitTestCase):
         """
         Ensures the response is returning either a HTTP 202 or a HTTP 204.
         """
-        return self.assertTrue(resp.status_code in [202, 204], resp.content)
+        return self.assertTrue(resp.status_code in [202, 204], "Expected 202 or 204 status code, got %s" % resp.status_code)
 
     def assertHttpNoContent(self, resp):
         """

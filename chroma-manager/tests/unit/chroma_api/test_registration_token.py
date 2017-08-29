@@ -6,7 +6,7 @@ from django.contrib.auth.models import User, Group
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.tastypie_test import TestApiClient
-from tests.chroma_common.lib.date_time import IMLDateTime
+from iml_common.lib.date_time import IMLDateTime
 
 
 class TestRegistrationTokenResource(ChromaApiTestCase):
@@ -157,7 +157,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
             if row_count:
                 self.assertHttpOK(response)
             else:
-                self.assertHttpNotFound(response)
+                self.assertHttpUnauthorized(response)
 
     def test_patch(self):
         """Test that normal users cannot patch"""
@@ -178,4 +178,4 @@ class TestTokenAuthorization(ChromaApiTestCase):
             if allowed:
                 self.assertHttpAccepted(patch_response)
             else:
-                self.assertHttpNotFound(patch_response)
+                self.assertHttpUnauthorized(patch_response)

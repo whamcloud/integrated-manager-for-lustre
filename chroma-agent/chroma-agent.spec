@@ -24,10 +24,12 @@ Requires: python-argparse
 Requires: python-daemon
 Requires: python-setuptools
 Requires: python-requests >= 2.6.0
-Requires: python-tablib yum-utils
+Requires: python2-tablib
+Requires: yum-utils
 Requires: initscripts
 Requires: nodejs >= 1:6.9.4-2
 Requires: chroma-diagnostics >= %{version}
+Requires: python2-iml-common
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif

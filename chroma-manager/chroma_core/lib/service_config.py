@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import hashlib
@@ -46,13 +29,15 @@ from django.core.management import ManagementUtility
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
+from tastypie.models import ApiKey
+
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
-from chroma_core.chroma_common.lib.ntp import NTPConfig
-from chroma_core.chroma_common.lib.firewall_control import FirewallControl
-from chroma_core.chroma_common.lib.service_control import ServiceControl, ServiceControlEL7
+from iml_common.lib.ntp import NTPConfig
+from iml_common.lib.firewall_control import FirewallControl
+from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
 
 log = logging.getLogger('installation')
 try:
@@ -588,6 +573,17 @@ class ServiceConfig(CommandLine):
         else:
             log.info("User accounts already created")
 
+        API_USERNAME = "api"
+
+        try:
+            User.objects.get(username=API_USERNAME)
+            log.info("API user already created")
+        except User.DoesNotExist:
+            api_user = User.objects.create_superuser(API_USERNAME, "", User.objects.make_random_password())
+            api_user.groups.add(Group.objects.get(name='superusers'))
+            ApiKey.objects.get_or_create(user=api_user)
+            log.info("API user created")
+
         return error
 
     def setup(self, username, password, ntp_server, check_db_space):
@@ -745,7 +741,7 @@ def register_profile(profile_file):
     log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
 
     # Validate: check all referenced bundles exist
-    validate_bundles = set(data['bundles'] + data['packages'].keys())
+    validate_bundles = set(data['bundles'])
     missing_bundles = []
     for bundle_name in validate_bundles:
         if not Bundle.objects.filter(bundle_name=bundle_name).exists():

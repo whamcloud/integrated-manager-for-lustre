@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from collections import defaultdict
@@ -38,10 +21,9 @@ from tastypie import http
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from chroma_api.chroma_model_resource import ChromaModelResource
-from chroma_api.chroma_common.lib import util
+from iml_common.lib import util
 from long_polling_api import LongPollingAPI
 
 
@@ -66,7 +48,8 @@ class AlertSubscriptionValidation(Validation):
 
 
 class AlertSubscriptionAuthorization(DjangoAuthorization):
-    def apply_limits(self, request, object_list):
+    def read_list(self, object_list, bundle):
+        request = bundle.request
         if request.method is None:
             # Internal request, it's all good.
             return object_list
@@ -115,8 +98,13 @@ class AlertTypeResource(Resource):
 
         return _fixup_alert_name(bundle.obj)
 
-    def get_resource_uri(self, bundle_or_obj):
+    def get_resource_uri(self, bundle_or_obj=None):
         from tastypie.bundle import Bundle
+
+        url_name = 'api_dispatch_list'
+
+        if bundle_or_obj is not None:
+            url_name = 'api_dispatch_detail'
 
         kwargs = {
             'resource_name': self._meta.resource_name,
@@ -125,20 +113,20 @@ class AlertTypeResource(Resource):
 
         if isinstance(bundle_or_obj, Bundle):
             kwargs['pk'] = bundle_or_obj.obj.id
-        else:
+        elif bundle_or_obj is not None:
             kwargs['pk'] = bundle_or_obj.id
 
-        return self._build_reverse_url("api_dispatch_detail", kwargs=kwargs)
+        return self._build_reverse_url(url_name, kwargs=kwargs)
 
     def get_object_list(self, request):
         return [ContentType.objects.get_for_model(cls)
                 for cls in AlertStateBase.subclasses()
                 if cls is not AlertState]
 
-    def obj_get_list(self, request=None, **kwargs):
-        return self.get_object_list(request)
+    def obj_get_list(self, bundle, **kwargs):
+        return self.get_object_list(bundle.request)
 
-    def obj_get(self, request=None, **kwargs):
+    def obj_get(self, bundle, **kwargs):
         return ContentType.objects.get(pk=kwargs['pk'])
 
     class Meta:
@@ -188,7 +176,7 @@ class AlertResource(LongPollingAPI, SeverityResource):
     def dispatch(self, request_type, request, **kwargs):
         return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
-    def override_urls(self):
+    def prepend_urls(self):
         return [
             url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_alert_dismiss_all'),
         ]
@@ -262,7 +250,7 @@ class AlertResource(LongPollingAPI, SeverityResource):
                      'record_type': SeverityResource.ALL_FILTER_ENUMERATION}
 
         ordering = ['begin', 'end', 'active']
-        authorization = PATCHSupportDjangoAuth()
+        authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'patch', 'put']

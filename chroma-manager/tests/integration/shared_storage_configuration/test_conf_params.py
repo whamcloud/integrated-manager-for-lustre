@@ -99,7 +99,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         mgt_volume = volumes[0]
         mdt_volumes = [volumes[1]]
         ost_volumes = [volumes[2]]
-        filesystem_id = self.create_filesystem(self.hosts,
+        filesystem_id = str(self.create_filesystem(self.hosts,
                                                {'name': 'testfs',
                                                 'mgt': {'volume_id': mgt_volume['id']},
                                                 'mdts': [{
@@ -110,7 +110,7 @@ class TestConfParams(ChromaIntegrationTestCase):
                                                     'volume_id': v['id'],
                                                     'conf_params': {}
                                                 } for v in ost_volumes],
-                                                'conf_params': {}})
+                                                'conf_params': {}}))
 
         # Mount the filesystem
         response = self.chroma_manager.get(

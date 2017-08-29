@@ -1,11 +1,5 @@
 #!/bin/bash -ex
 
-if [[ $slave = rhel$(rpm --eval %rhel)\&\&* ]]; then
-    RHEL=true
-else
-    RHEL=false
-fi
-
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
@@ -48,23 +42,14 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if [ -z "$JENKINS_PULL" ]; then
-    JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
-fi
 # first fetch and install chroma 3.1.1.0
 BUILD_JOB=ieel
 BUILD_NUM=37
-set +x
-echo "++ curl -s -k -u \"${JENKINS_USER}:**********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo\"
-++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')"
-IEEL_FROM_ARCHIVE=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-set -x
+IEEL_FROM_ARCHIVE=$(curl -s -k "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
-set +x
-echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE\""
-curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-set -x
+
+curl -k -O "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
 
 # Install and setup old manager
 scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
@@ -109,10 +94,6 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
 fi" | dshbak -c
 
 # Install a client
-source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
-if [ ${IEEL_FROM_VER//./} -lt 3000 ]; then
-    OLD_CLIENT=true
-fi
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 echo "Create and exercise a filesystem..."
@@ -139,13 +120,22 @@ if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commali
     exit 1
 fi
 
+# re-enable needed repos needed for the upgraded version
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
+yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
+yum-config-manager --enable managerforlustre-manager-for-lustre
+yum-config-manager --enable mirror.centos.org_centos_7_extras_x86_64_" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
 # Install and setup manager
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
-# Unpack the previous install into /tmp/$UPGRADE_INSTALL_DIR
+# Unpack the current install into /tmp/$UPGRADE_INSTALL_DIR
 cd /tmp
 mkdir $UPGRADE_INSTALL_DIR
 mv $ARCHIVE_NAME $UPGRADE_INSTALL_DIR/$ARCHIVE_NAME
@@ -181,14 +171,14 @@ done
 
 echo \"Now with EPEL disabled\"
 
+yum-config-manager --disable *[eE][pP][eE][lL]*
+yum clean all
+yum makecache
+
 if expect ../upgrade.exp; then
     echo \"Installation unexpectedly succeeded with EPEL disabled\"
     exit 1
 fi
-
-yum-config-manager --disable *[eE][pP][eE][lL]*
-yum clean all
-yum makecache
 
 echo \"Re-enabling EPEL to continue\"
 

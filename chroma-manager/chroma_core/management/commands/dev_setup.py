@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from optparse import make_option
@@ -54,7 +37,7 @@ class Command(BaseCommand):
         profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed_RH7.profile")
 
         if options['no_bundles']:
-            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood', 'zfs']:
+            for bundle in ['iml-agent', 'external']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive
@@ -104,7 +87,7 @@ have 3 options:
 Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
 that work.
-    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
+    """ % {'bundle_url': "http://jenkins.lotus.hpdd.lab.intel.com/job/manager-for-lustre/arch=x86_64,distro=el7/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
         for profile_path in glob.glob(os.path.join(os.path.dirname(profile_path), '*.profile')):

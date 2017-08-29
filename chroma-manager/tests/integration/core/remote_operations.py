@@ -8,11 +8,12 @@ import paramiko
 import re
 import os
 import json
+import subprocess
 
 from testconfig import config
 
-from tests.chroma_common.lib.util import ExceptionThrowingThread
-from tests.chroma_common.lib.shell import Shell
+from iml_common.lib.util import ExceptionThrowingThread
+from iml_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
@@ -289,6 +290,14 @@ class SimulatorRemoteOperations(RemoteOperations):
             'lustre': (0, '2.9.0', '1', 'x86_64')
         })
 
+    def scan_packages(self):
+        """
+        Trigger update packages (with empty dict) on simulator (runs on all fake servers).
+        Necessary because sim doesn't do a package scan on every (fake) plug-in update,
+        whereas the real agent does.
+        """
+        self._simulator.update_packages({})
+
     def get_package_version(self, fqdn, package):
         return self._simulator.servers[fqdn].get_package_version(package)
 
@@ -334,7 +343,8 @@ class RealRemoteOperations(RemoteOperations):
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
-    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
+    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None,
+                     as_root = True):
         """
         Executes a command on a remote server over ssh.
 
@@ -342,6 +352,62 @@ class RealRemoteOperations(RemoteOperations):
         stderr, and exit status. It will verify that the exit status of the
         command matches expected_return_code unless expected_return_code=None.
         """
+
+        def host_test(address, issue_num):
+            def print_result(r):
+                return "rc: %s\n\nstdout:\n%s\n\nstderr:\n%s" % \
+                       (r.rc, r.stdout, r.stderr)
+
+            ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+            ping_result2_report = ""
+            ip_addr_result = Shell.run(['ip', 'addr', 'ls'])
+            ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
+
+            try:
+                gw = [l for l in ip_route_ls_result.stdout.split('\n')
+                      if l.startswith("default ")][0].split()[2]
+                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
+                ping_gw_report = "\nping gateway (%s): %s" % \
+                    (gw, print_result(ping_gw_result))
+            except:
+                ping_gw_report = "\nUnable to ping gatewy.  " \
+                                 "No gateway could be found in:\n" % \
+                                 ip_route_ls_result.stdout
+
+            if ping_result1.rc != 0:
+                time.sleep(30)
+                ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+                ping_result2_report = "\n30s later ping: %s" % \
+                    print_result(ping_result2)
+                
+            msg = "Error connecting to %s: %s.\n" \
+                  "Please add the following to " \
+                  "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
+                  "Performing some diagnostics...\n" \
+                  "ping: %s\n" \
+                  "ifconfig -a: %s\n" \
+                  "ip route ls: %s" \
+                  "%s" \
+                  "%s" % \
+                  (address, e,
+                   issue_num,
+                   print_result(ping_result1),
+                   print_result(ip_addr_result),
+                   print_result(ip_route_ls_result),
+                   ping_gw_report,
+                   ping_result2_report)
+
+            logger.error(msg)
+
+            DEVNULL = open(os.devnull, 'wb')
+            p = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE,
+                                 stdout=DEVNULL, stderr=DEVNULL)
+            p.communicate(input=b'To: brian.murrell@intel.com\n'
+                          'Subject: GH#%s\n\n' % issue_num +
+                          msg)
+            p.wait()
+            DEVNULL.close()
+
         logger.debug("remote_command[%s]: %s" % (address, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -359,7 +425,7 @@ class RealRemoteOperations(RemoteOperations):
 
             if 'user' in host_config:
                 args['username'] = host_config['user']
-                if args['username'] != 'root':
+                if args['username'] != 'root' and as_root:
                     command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
 
             if 'identityfile' in host_config:
@@ -372,14 +438,24 @@ class RealRemoteOperations(RemoteOperations):
         logger.info("SSH address = %s, args = %s" % (address, args))
 
         # Create ssh connection
-        ssh.connect(address, **args)
+        try:
+            ssh.connect(address, **args)
+        except paramiko.ssh_exception.SSHException, e:
+            host_test(address, "29")
+            return Shell.RunResult(1, "", "", timeout=False)
+
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
         channel.settimeout(timeout)
 
         # Actually execute the command
-        channel.exec_command(command)
+        try:
+            channel.exec_command(command)
+        except paramiko.transport.Socket, e:
+            host_test(address, "72")
+            return Shell.RunResult(1, "", "", timeout=False)
+
         if buffer:
             stdin = channel.makefile('wb')
             stdin.write(buffer)
@@ -398,7 +474,7 @@ class RealRemoteOperations(RemoteOperations):
 
         # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
-            self._test_case.assertEqual(rc, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
+            self._test_case.assertEqual(rc, expected_return_code, "rc (%s) != expected_return_code (%s), stdout: '%s', stderr: '%s'" % (rc, expected_return_code, stdout, stderr))
 
         return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
@@ -469,7 +545,7 @@ class RealRemoteOperations(RemoteOperations):
         return result.stdout
 
     def rename_file(self, address, current_path, new_path):
-        #Warning! This will force move by overwriting destination file
+        # Warning! This will force move by overwriting destination file
         self._ssh_address(address, 'mv -f %s %s' % (current_path, new_path))
 
     def create_file(self, address, file_content, file_path):
@@ -806,7 +882,8 @@ class RealRemoteOperations(RemoteOperations):
         server_config = self._fqdn_to_server_config(fqdn)
         self._ssh_address(
             server_config['host'],
-            server_config['destroy_command']
+            server_config['destroy_command'],
+            as_root=self._host_of_server(server_config).get('virsh_as_root', True)
         )
 
         i = 0
@@ -830,7 +907,8 @@ class RealRemoteOperations(RemoteOperations):
 
         result = self._ssh_address(
             boot_server['host'],
-            boot_server['start_command']
+            boot_server['start_command'],
+            as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
         )
         node_status = result.stdout
         if re.search('started', node_status):
@@ -874,7 +952,8 @@ class RealRemoteOperations(RemoteOperations):
                     logger.info("attempting to restart %s" % boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
-                        boot_server['status_command']
+                        boot_server['status_command'],
+                        as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
                     )
                     node_status = result.stdout
                     if re.search('running', node_status):
@@ -891,10 +970,9 @@ class RealRemoteOperations(RemoteOperations):
                                            "hostname",
                                            expected_return_code=None).rc == 0
 
-            self._test_case._fetch_help(lambda: self._test_case.assertTrue(False,
-                                                                           "Timed out waiting for host %s to come back online.\n"
-                                                                           "Host is actually alive %s" % (hostname, host_alive)),
-                                        ['chris.gearing@intel.com'])
+            self._test_case.assertTrue(False,
+                                       "Timed out waiting for host %s to come back online.\n"
+                                       "Host is actually alive %s" % (hostname, host_alive))
 
         if monitor_server:
             result = self._ssh_address(
@@ -1059,14 +1137,28 @@ class RealRemoteOperations(RemoteOperations):
     def has_chroma_agent(self, server):
         result = self._ssh_address(server,
                                    'which chroma-agent',
-                                   expected_return_code = None
-                                  )
+                                   expected_return_code = None)
         return result.rc == 0
 
     def stop_agents(self, server_list):
         for server in server_list:
             if self.has_chroma_agent(server):
-                self._ssh_address(server, 'service chroma-agent stop')
+                self._ssh_address(
+                    server, 
+                    '''
+                    systemctl stop chroma-agent
+                    i=0
+                    
+                    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
+                        ((i++))
+                        sleep 1
+                    done
+                    
+                    if [ "$i" -eq {timeout} ]; then 
+                        exit 1
+                    fi
+                    '''.format(timeout=TEST_TIMEOUT)
+                )
 
     def start_agents(self, server_list):
         for server in server_list:
@@ -1103,7 +1195,9 @@ class RealRemoteOperations(RemoteOperations):
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(address, clear_ha_script.read())
+                        self._ssh_address(address, "ring1_iface=%s\n%s" %
+                                          (server['corosync_config']['ring1_iface'],
+                                           clear_ha_script.read()))
 
                     self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
                     self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
@@ -1172,6 +1266,9 @@ class RealRemoteOperations(RemoteOperations):
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
+
+    def scan_packages(self, fqdn):
+        raise NotImplementedError()
 
     def get_package_version(self, fqdn, package):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")

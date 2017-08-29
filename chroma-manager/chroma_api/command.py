@@ -1,23 +1,6 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 import json
@@ -28,9 +11,9 @@ from tastypie.validation import Validation
 from tastypie.utils import trailing_slash
 from tastypie.api import url
 from tastypie import fields, http
+from tastypie.authorization import DjangoAuthorization
 
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -39,6 +22,7 @@ from chroma_core.models import Command
 from chroma_core.models import SchedulingError
 from chroma_core.models import StepResult
 from long_polling_api import LongPollingAPI
+from chroma_api.validation_utils import validate
 
 
 class CommandValidation(Validation):
@@ -108,12 +92,12 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
                      'errored': ['exact'],
                      'created_at': ['gte', 'lte', 'gt', 'lt'],
                      'cancelled': ['exact']}
-        authorization = PATCHSupportDjangoAuth()
+        authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()
         always_return_data = True
 
-    def override_urls(self):
+    def prepend_urls(self):
         return [
             url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_command_dismiss_all'),
         ]
@@ -126,7 +110,10 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
 
         return http.HttpNoContent()
 
-    def obj_create(self, bundle, request = None, **kwargs):
+    @validate
+    def obj_create(self, bundle, **kwargs):
+        request = bundle.request
+
         for job in bundle.data['jobs']:
             # FIXME: HYD-1367: This is a hack to work around the inability of
             # the Job class to handle m2m references properly, serializing hosts
@@ -134,7 +121,8 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
             if 'hosts' in job['args']:
                 job_ids = []
                 for uri in job['args']['hosts']:
-                    job_ids.append(HostResource().get_via_uri(uri).id)
+                    job_ids.append(HostResource().get_via_uri(
+                        uri, bundle.request).id)
                 del job['args']['hosts']
                 job['args']['host_ids'] = json.dumps(job_ids)
 

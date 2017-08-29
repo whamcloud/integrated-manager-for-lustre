@@ -15,7 +15,7 @@ from testconfig import config
 from tests.utils.http_requests import HttpRequests
 from tests.utils.http_requests import AuthorizedHttpRequests
 
-from tests.chroma_common.lib import util
+from iml_common.lib import util
 
 from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
 
@@ -140,9 +140,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.wait_until_true(self.api_contactable)
                 self.remote_operations.unmount_clients()
                 self.api_force_clear()
-                self._fetch_help(lambda: self.remote_operations.clear_ha(self.TEST_SERVERS),
-                                 ['chris.gearing@intel.com'],
-                                 'soft clear ha failure')
+                self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
             if config.get('managed'):
@@ -195,9 +193,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                                   "==== stopping test %s =====" % self)
 
                 if len(down_nodes) and (self.down_node_expected is False):
-                    self._fetch_help(lambda: 1 / 0,
-                                     ['chris.gearing@intel.com'],
-                                     "After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
 
@@ -285,20 +280,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             job_steps = [self.get_json_by_uri(s) for s in job['steps']]
             if disposition == "FAILED":
                 if job['errored']:
-                    print "Job %s Errored:" % job['id']
+                    print "Job %s Errored (%s):" % (job['id'], job['description'])
                     print job
                     print ''
                     for step in job_steps:
                         if step['state'] == 'failed':
-                            print "Step %s (%s) failed:" % (step['id'], step['description'])
-                            print step['console']
-                            print step['backtrace']
+                            print "Step %s failed:" % step['id']
+                            for k, v in step.iteritems():
+                                print "%s: %s" % (k, v)
                             print ''
-
-                            if 'Unable to update any nodes' in step['console']:
-                                self._fetch_help(lambda: 1 / 0,
-                                                 ['chris.gearing@intel.com'],
-                                                 'Unable to update any nodes: %s' % step['description'])
             elif disposition == "TIMED OUT":
                 if job['state'] != "complete":
                     print "Job %s incomplete:" % job['id']
@@ -627,7 +617,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.reset_chroma_manager_db()
         self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
         if config.get('managed'):
-            self.remote_operations.clear_ha(config['lustre_servers'])
+            self.remote_operations.clear_ha(self.TEST_SERVERS)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):
@@ -695,7 +685,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
             result = self.remote_command(
                 chroma_manager['address'],
-                "ls /tmp/ee-*/",
+                "ls /tmp/iml-*/",
                 expected_return_code = None
             )
             installer_contents = result.stdout
@@ -709,7 +699,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             logger.debug("Found these profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/ee-*/$profile_pat; done &> config_profile.log" % profiles,
+                "for profile_pat in %s; do chroma-config profile register /tmp/iml-*/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
@@ -886,7 +876,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     @classmethod
     def linux_devices_exist(cls):
-        return any(lustre_device['backend_filesystem'] == 'linux' for lustre_device in config['lustre_devices'])
+        return any(lustre_device['backend_filesystem'] == 'ldiskfs' for lustre_device in config['lustre_devices'])
 
     @classmethod
     def zfs_devices_exist(cls):
@@ -1016,7 +1006,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # Erase all volumes if the config does not indicate that there is already
         # a pre-existing file system (in the case of the monitoring only tests).
         for lustre_device in config['lustre_devices']:
-            if lustre_device['backend_filesystem'] == 'linux':
+            if lustre_device['backend_filesystem'] == 'ldiskfs':
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
                 self.execute_simultaneous_commands(linux_device.destroy_commands,

@@ -79,7 +79,7 @@ class ActionTestCase(unittest.TestCase):
         self.mock_send_message_call_count += 1
         self.mock_send_message_lock.release()
 
-    def mock_run(self, args, logger, result_store, timeout):
+    def mock_run(self, args, logger, result_store, timeout, shell=False):
         return self.MOCK_SUBPROCESSES[tuple(args)]()
 
     def setUp(self):
@@ -96,7 +96,7 @@ class ActionTestCase(unittest.TestCase):
 
         # Intercept subprocess invocations
         if self.MOCK_SUBPROCESSES:
-            mock.patch('chroma_agent.chroma_common.lib.shell.BaseShell._run', self.mock_run).start()
+            mock.patch('iml_common.lib.shell.BaseShell._run', self.mock_run).start()
 
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)

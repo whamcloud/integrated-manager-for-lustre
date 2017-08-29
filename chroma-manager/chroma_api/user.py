@@ -1,38 +1,22 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2016 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
-from tastypie.bundle import Bundle
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 
-from chroma_api.authentication import AnonymousAuthentication
+from tastypie.bundle import Bundle
 from tastypie.authorization import DjangoAuthorization
 from tastypie import fields
-
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
+
+from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import UserProfile
 from chroma_api.chroma_model_resource import ChromaModelResource
+from chroma_api.validation_utils import validate
 
 
 class ChromaUserChangeForm(UserChangeForm):
@@ -51,7 +35,8 @@ class ChromaUserChangeForm(UserChangeForm):
 
 
 class UserAuthorization(DjangoAuthorization):
-    def apply_limits(self, request, object_list):
+    def read_list(self, object_list, bundle):
+        request = bundle.request
         if request.method is None:
             # IFF the request method is None, then this must be an
             # internal request being done by Resource.get_via_uri()
@@ -71,7 +56,7 @@ class UserValidation(Validation):
     """A custom Validation class, calling into django.contrib.auth's Form
     classes (can't use FormValidation because we have different forms
     for PUT than for POST)"""
-    def is_valid(self, bundle, request = None):
+    def is_valid(self, bundle, request=None):
         data = bundle.data or {}
         if request.method == "PUT":
             errors = {}
@@ -146,6 +131,21 @@ class UserResource(ChromaModelResource):
                                                            " Returns one of %s." %
                                                            ", ".join(str(x) for x in UserProfile.STATES))
 
+    def alter_deserialized_detail_data(self, request, data):
+        def handle_groups(group):
+            if isinstance(group, dict):
+                return group['resource_uri']
+            elif isinstance(group, basestring):
+                return group
+            else:
+                raise NotImplementedError(group.__class__)
+
+        if 'groups' in data:
+            data['groups'] = map(handle_groups, data['groups'])
+
+        return data
+
+
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
 
@@ -157,7 +157,7 @@ class UserResource(ChromaModelResource):
                     if isinstance(group, dict):
                         group_ids.append(int(group['id']))
                     elif isinstance(group, basestring):
-                        group_ids.append(int(GroupResource().get_via_uri(group).id))
+                        group_ids.append(int(GroupResource().get_via_uri(group, bundle.request).id))
                     elif isinstance(group, Bundle):
                         group_ids.append(int(group.obj.id))
                     else:
@@ -194,8 +194,8 @@ class UserResource(ChromaModelResource):
     def hydrate_new_password2(self, bundle):
         return self._hydrate_password(bundle, 'new_password2')
 
-    def obj_create(self, bundle, request = None, **kwargs):
-        bundle = super(UserResource, self).obj_create(bundle, request, **kwargs)
+    def obj_create(self, bundle, **kwargs):
+        bundle = super(UserResource, self).obj_create(bundle, **kwargs)
         from django.contrib.auth.models import Group
         superuser_group = Group.objects.get(name = 'superusers')
         for g in bundle.obj.groups.all():
@@ -204,9 +204,9 @@ class UserResource(ChromaModelResource):
                 bundle.obj.save()
 
         return bundle
-
-    def obj_update(self, bundle, request=None, **kwargs):
-        bundle = super(UserResource, self).obj_update(bundle, request, **kwargs)
+    
+    def obj_update(self, bundle, **kwargs):
+        bundle = super(UserResource, self).obj_update(bundle, **kwargs)
 
         user_profile_changed = False
         gui_config = bundle.data.get('gui_config')

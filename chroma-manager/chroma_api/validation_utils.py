@@ -1,34 +1,35 @@
-#
-# INTEL CONFIDENTIAL
-#
-# Copyright 2013-2015 Intel Corporation All Rights Reserved.
-#
-# The source code contained or described herein and all documents related
-# to the source code ("Material") are owned by Intel Corporation or its
-# suppliers or licensors. Title to the Material remains with Intel Corporation
-# or its suppliers and licensors. The Material contains trade secrets and
-# proprietary and confidential information of Intel or its suppliers and
-# licensors. The Material is protected by worldwide copyright and trade secret
-# laws and treaty provisions. No part of the Material may be used, copied,
-# reproduced, modified, published, uploaded, posted, transmitted, distributed,
-# or disclosed in any way without Intel's prior express written permission.
-#
-# No license under any patent, copyright, trade secret or other intellectual
-# property right is granted to or conferred upon you by disclosure or delivery
-# of the Materials, either expressly, by implication, inducement, estoppel or
-# otherwise. Any license under such intellectual property rights must be
-# express and approved by Intel in writing.
+# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
 
 
+from functools import wraps
 from collections import defaultdict
 from collections import namedtuple
 from tastypie.validation import Validation
-from tastypie.exceptions import NotFound
+from tastypie.exceptions import NotFound, ImmediateHttpResponse
 
 from chroma_core.services import log_register
 
 log = log_register(__name__)
 
+
+def validate(fn):
+    @wraps(fn)
+    def _validate(self, bundle, **kwargs):
+        # This looks like a no-op
+        # But tastypie relies heavily on mutation.
+        # This actually upates the bundle in place
+        # and adds an errors property if validation
+        # fails
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+
+        return fn(self, bundle, **kwargs)
+    return _validate
 
 class ChromaValidation(Validation):
     '''
@@ -69,11 +70,12 @@ class ChromaValidation(Validation):
 
         return error_found
 
-    def validate_resources(self, resource_uris, errors):
+    def validate_resources(self, resource_uris, errors, request=None):
         '''
         Simply validates the uri string passed in are valid and return the correct type.
         :param resource_uris: List of uri's to validate
         :param errors: Array to append errors to.
+        :param request: The request.
         :return: True if errors found else False
         '''
 
@@ -84,7 +86,7 @@ class ChromaValidation(Validation):
         for resource_uri in resource_uris:
             if resource_uri.uri:                    # uri can be none meaning the resource is not expected.
                 try:
-                    resource_uri.expected_type().get_via_uri(resource_uri.uri)
+                    resource_uri.expected_type().get_via_uri(resource_uri.uri, request)
                 except (NotFound, resource_uri.expected_type.Meta.object_class.DoesNotExist):
                     error_found = True
                     errors[resource_uri.uri].append("Resource %s was not found" % resource_uri.uri)
