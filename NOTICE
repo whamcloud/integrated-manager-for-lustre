@@ -11,9 +11,3 @@ liberal license.
 
 The code in chroma-manager/polymorphic/ is included under the New BSD
 license from http://code.google.com/p/django-polymorphic-models/
-
-
-Due to use of Highcharts.js a (a commercial libary) this initial version is not completely open source.
-Highsoft software products are not free for commercial and Governmental use.
-
-Future versions will remove highcharts and this restriction.
