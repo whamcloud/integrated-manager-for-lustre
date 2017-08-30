@@ -85,28 +85,6 @@ def _check_platform():
 
     log.debug("Platform check ... Supported")
 
-
-def _display_eula():
-    try:
-        p = subprocess.Popen(["less", "-F", "-X", "-e", "-k",
-                               "lesskey.out", "EULA.txt"])
-        p.wait()
-    except KeyboardInterrupt:
-        print "\n\nYou must read all of the EULA and agree to the terms in order to install the software"
-        # less can leave the terminal in a weird state
-        subprocess.call(["stty", "sane"])
-        sys.exit(0)
-
-    answer = ""
-    while answer not in ["yes", "no"]:
-       answer = raw_input("Do you agree to the license terms?  (yes/no) ")
-       log.debug("EULA response: %s" % answer)
-
-    if answer.lower() != "yes":
-        log.error("EULA declined -- exiting without installation")
-        sys.exit(0)
-
-
 def _check_no_epel():
     """Check that the EPEL repository is available
 
@@ -663,8 +641,6 @@ def main():
 
     if args.repo_check:
         _check_repos()
-
-    _display_eula()
 
     version, release = _get_version()
 
