@@ -74,7 +74,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         """
         # Pick one victim volume ahead of running tests
         device_index = next(device['path_index'] for device in config['lustre_devices'] if
-                            device['backend_filesystem'] == 'linux')
+                            device['backend_filesystem'] == 'ldiskfs')
         host_config = config['lustre_servers'][0]
         device_path = host_config['device_paths'][device_index]
 
