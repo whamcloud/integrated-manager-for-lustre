@@ -6,7 +6,6 @@
   "license": "MIT",
   "dependencies": {
     "@iml/old-gui": "2.1.0",
-    "intel-help-docs": "1.2.0",
     "@iml/realtime": "5.1.2",
     "@iml/view-server": "6.4.0",
     "@iml/socket-worker": "3.2.0"
