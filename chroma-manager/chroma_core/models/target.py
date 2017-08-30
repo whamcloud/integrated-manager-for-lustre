@@ -1227,71 +1227,58 @@ class MkfsStep(Step):
 
 
 class UpdateManagedTargetMount(Step):
-    """
-    This step will update the volume_nodes within the
-    manage target mounts to reflect changes during MkfsStep
-    """
+    """ This step will update the volume_node within the manage target mounts to reflect changes during MkfsStep """
     database = True
+
+    @staticmethod
+    def _primary_text(kwargs):
+        return 'primary' if kwargs['primary'] is True else 'secondary'
 
     @classmethod
     def describe(cls, kwargs):
-        return "Update managed target mounts for target %s" % kwargs['target']
+        return "Update %s managed target mount for target %s" % (cls._primary_text(kwargs), kwargs['target'])
 
     def run(self, kwargs):
         target = kwargs['target']
-        job_log.info("Updating mtm volume_nodes for target %s" % target)
+        is_primary = kwargs['primary']
+        job_log.info("Updating %s mtm volume_node for target %s" % (self._primary_text(kwargs), target))
 
         original_volume = target.volume
         device_type = original_volume.storage_resource.to_resource_class().device_type()
 
         try:
-            primary_mtm = target.managedtargetmount_set.get(volume_node__primary=True)
+            mtm = target.managedtargetmount_set.get(volume_node__primary=is_primary)
         except MultipleObjectsReturned:
-            job_log.error("Multiple MTM primary objects returned, only expecting one")
+            job_log.error("Multiple %s MTM objects returned, only expecting one" % self._primary_text(kwargs))
             raise
         else:
-            current_volume_node = primary_mtm.volume_node
-            assert original_volume == current_volume_node.volume
+            current_volume_node = mtm.volume_node
+            if is_primary:
+                assert original_volume == current_volume_node.volume
 
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
 
             try:
-                primary_mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=primary_mtm.host,
-                                                                                              path=filesystem.mount_path(target.name)),
-                                                               logger=job_log,
-                                                               timeout = 60 * 60,
-                                                               expected_exception_classes=[VolumeNode.DoesNotExist])
+                mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=mtm.host,
+                                                                                      path=filesystem.mount_path(target.name)),
+                                                       logger=job_log,
+                                                       timeout = 60 * 60,
+                                                       expected_exception_classes=[VolumeNode.DoesNotExist])
             except:
-                job_log.error("Failed to find primary volumenode (host: %s, mount path: %s, target: %s)" % (primary_mtm.host,
-                                                                                                            filesystem.mount_path(target.name),
-                                                                                                            target.name))
+                job_log.error("Failed to find %s volumenode (host: %s, mount path: %s, target: %s)" % (self._primary_text(kwargs),
+                                                                                                       mtm.host,
+                                                                                                       filesystem.mount_path(target.name),
+                                                                                                       target.name))
                 job_log.debug("Existing volumenodes: %s" % VolumeNode.objects.all())
                 raise
 
-            primary_mtm.volume_node.primary = True
-            primary_mtm.volume_node.save()
-            primary_mtm.save()
+            mtm.volume_node.primary = is_primary
+            mtm.volume_node.save()
+            mtm.save()
 
-            target.volume = primary_mtm.volume_node.volume
-
-            # we cant mount/import secondary host while it is imported on the first,
-            # therefore update secondary MTM with the newly created volume node
-            try:
-                secondary_mtm = target.managedtargetmount_set.get(volume_node__primary=False)
-            except MultipleObjectsReturned:
-                job_log.error("Multiple MTM secondary objects returned, only expecting one")
-                raise
-            else:
-                # assume path to volume is the same on both hosts, we don't have a storage resource discovered
-                # for the new volume node, probably have to create that first??
-                secondary_mtm.volume_node = VolumeNode.objects.get_or_create(host=secondary_mtm.host,
-                                                                             volume=primary_mtm.volume_node.volume,
-                                                                             path=primary_mtm.volume_node.path)[0]
-                secondary_mtm.volume_node.save()
-                secondary_mtm.save()
-
-        target.save()
+            target.volume = mtm.volume_node.volume
+            target.save()
 
 
 class FormatTargetJob(StateChangeJob):
@@ -1340,7 +1327,8 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        primary_mount = self.target.managedtargetmount_set.get(primary = True)
+        primary_mount = self.target.managedtargetmount_set.get(primary=True)
+        secondary_mount = self.target.managedtargetmount_set.get(primary=False)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1383,7 +1371,17 @@ class FormatTargetJob(StateChangeJob):
                                   'device_type': device_type,
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target})])
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': True}),
+                      # Mount on secondary host to enable secondary VolumeNode to be registered in resource manager
+                      (MountOrImportStep,
+                       MountOrImportStep.create_parameters(self.target,
+                                                           secondary_mount.host,
+                                                           False)),
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False}),
+                      (MountOrImportStep,
+                       MountOrImportStep.create_parameters(self.target,
+                                                           primary_mount.host,
+                                                           False))])
 
         return steps
 
