@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.db import IntegrityError
 
 from chroma_core.models.sparse_model import SparseModel
-from chroma_core.models import utils as conversion_util
+from chroma_core.models.utils import STR_TO_SEVERITY
 from chroma_core.lib.job import job_log
 
 
@@ -59,7 +59,7 @@ class AlertStateBase(SparseModel):
                                    help_text = ("String indicating the "
                                                 "severity of the alert, "
                                                 "one of %s") %
-                                        conversion_util.STR_TO_SEVERITY.keys())
+                                        STR_TO_SEVERITY.keys())
 
     # This is only used by one event ClientConnectEvent but it is critical and so needs to be searchable etc
     # for that reason it can't use the variant
