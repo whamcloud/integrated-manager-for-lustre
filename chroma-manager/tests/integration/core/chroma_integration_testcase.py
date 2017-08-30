@@ -111,7 +111,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         :param host: Host to get profiles for.
         :return: HostProfiles named tuple.
         """
-        self.wait_for_assert(lambda: self.assertTrue(self.get_host_validations(host).valid))
+        self._fetch_help(lambda: self.wait_for_assert(lambda: self.assertTrue(self.get_host_validations(host).valid)),
+                         ['brian.murrell@intel.com'],
+                         "Investigate #212",
+                         timeout=99999)
 
         return self.get_host_validations(host)
 
