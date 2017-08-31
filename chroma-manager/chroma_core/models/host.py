@@ -601,7 +601,7 @@ class DeployStep(Step):
                                  kwargs,
                                  help_text["deploy_failed_to_register_host"] % (host.fqdn, rc, stdout, stderr))
 
-        # No wait for the agent to actually connect back to the manager.
+        # Now wait for the agent to actually connect back to the manager.
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
         if not AgentRpc.await_session(host.fqdn, self.DEPLOY_STARTUP_TIMEOUT):
             raise AgentException(host.fqdn,
