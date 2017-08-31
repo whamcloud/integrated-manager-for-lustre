@@ -27,6 +27,7 @@ Requires: python-requests >= 2.6.0
 Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
+Requires: nodejs
 Requires: chroma-diagnostics >= %{version}
 Requires: python2-iml-common
 %if 0%{?rhel} > 5
