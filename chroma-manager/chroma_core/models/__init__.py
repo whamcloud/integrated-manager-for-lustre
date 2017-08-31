@@ -18,7 +18,6 @@ from corosync_common import *
 from corosync import *
 from corosync2 import *
 from pacemaker import *
-from rsyslog import *
 from server_profile import *
 from host import *
 from host_jobs import *
