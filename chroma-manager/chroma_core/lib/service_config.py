@@ -725,7 +725,6 @@ def register_profile(profile_file):
         "initial_state": "monitored",
         "packages": {},
         "validation": [],
-        "rsyslog": False,
         "ntp": False,
         "corosync": False,
         "corosync2": False,

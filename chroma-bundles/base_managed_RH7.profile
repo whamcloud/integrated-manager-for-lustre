@@ -4,7 +4,6 @@
   "worker": false,
   "name": "base_managed_rh7",
   "initial_state": "managed",
-  "rsyslog": true,
   "ntp": true,
   "corosync": false,
   "corosync2": true,
