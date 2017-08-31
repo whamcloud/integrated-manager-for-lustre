@@ -13,7 +13,6 @@ class TestAnonymousAccessControl(ChromaIntegrationTestCase):
     def _check_access(self, chroma_manager, expect_success):
         # Some end points just can't be fetched so we have to ignore them.
         end_points_to_ignore = ['/api/help/',
-                                '/api/client_error/',
                                 '/api/test_host/',
                                 '/api/system_status/',
                                 '/api/session/']
