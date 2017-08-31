@@ -33,6 +33,8 @@ Requires: python2-iml-common
 Requires: util-linux-ng
 %endif
 Requires(post): selinux-policy
+Requires: dnf
+Requires: dnf-command(repoquery)
 
 %description
 This is the Intel Manager for Lustre monitoring and adminstration agent

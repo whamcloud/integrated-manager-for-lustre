@@ -95,25 +95,7 @@ class TestHostConnectionStep(Step):
 
     def _test_yum_sanity(self, agent_ssh, auth_args, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
-        pass_epel_check = True
         can_update = False
-
-        try:
-            # Check for the presence of EPEL
-            check_for_epel = """
-python -c "from yum import YumBase
-yb = YumBase()
-exit (not len([p.name for p in yb.pkgSack.returnNewestByNameArch() if p.name == 'epel-release']))"
-"""
-
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_for_epel)
-            if rc == 1:
-                job_log.error("Failed configuration check on '%s': EPEL repository not detected in yum configuration" % address)
-                pass_epel_check = False
-
-        except AgentException:
-            job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
 
         try:
             # Check to see if yum can or ever has gotten OS repo metadata
@@ -132,7 +114,7 @@ exit(missing_electric_fence)"
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False, False
 
-        return pass_epel_check, can_update
+        return can_update
 
     def _test_openssl(self, agent_ssh, auth_args, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
@@ -207,7 +189,6 @@ exit(missing_electric_fence)"
                                 {'fqdn_matches': False},
                                 {'reverse_resolve': False},
                                 {'reverse_ping': False},
-                                {'yum_valid_repos': False},
                                 {'yum_can_update': False},
                                 {'openssl': False}])
 
@@ -215,7 +196,7 @@ exit(missing_electric_fence)"
             try:
                 status['reverse_resolve'], status['reverse_ping'] = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
                 status['hostname_valid'], status['fqdn_resolves'], status['fqdn_matches'] = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
-                status['yum_valid_repos'], status['yum_can_update'] = self._test_yum_sanity(agent_ssh, auth_args, address)
+                status['yum_can_update'] = self._test_yum_sanity(agent_ssh, auth_args, address)
                 status['openssl'] = self._test_openssl(agent_ssh, auth_args, address)
             except (AuthenticationException, SSHException):
                 #  No auth methods available, or wrong credentials

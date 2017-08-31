@@ -55,6 +55,7 @@ Requires: nodejs >= 1:6.9.4-2
 Requires: iml-supervisor-status
 Requires: iml-gui
 Requires: iml-srcmap-reverse
+Requires: iml-online-help
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
