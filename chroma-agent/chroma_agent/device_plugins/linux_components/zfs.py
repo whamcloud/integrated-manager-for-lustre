@@ -6,6 +6,7 @@
 import os
 import re
 import glob
+import functools
 
 from chroma_agent.lib.shell import AgentShell
 import chroma_agent.lib.normalize_device_path as ndp
@@ -18,9 +19,96 @@ from iml_common.lib.exception_sandbox import exceptionSandBox
 from iml_common.lib import util
 
 
+filter_empty = functools.partial(filter, None)
+strip_lines = functools.partial(map, lambda x: x.strip())
+
+
+def clean_list (xs):
+    return filter_empty(strip_lines(xs))
+
+
+def match_entry(x, name, exclude):
+    # identify config devices in any line listed in config not containing vdev keyword
+    return not any(substring in x for substring in (exclude + (name,)))
+
+
+def _parse_line(xs):
+    # keywords in vdev config display for zpool that represent structure not an actual device
+    excluded = ('mirror', 'raidz', 'spare', 'cache', 'logs', 'NAME')
+
+    # pair up keys with values found on the subsequent line
+    zpool = dict(zip(xs[::2], xs[1::2]))
+
+    zpool[u'devices'] = filter(lambda x: match_entry(x, zpool['pool'], excluded),
+                               clean_list(zpool['config'].split('\n')))
+
+    def kv_split(words):
+        return {words[0]: (words[1] if len(words) > 1 else None)}
+
+    zpool[u'devices'] = reduce(lambda d, x: d.update(kv_split(x.split())) or d,
+                               zpool['devices'],
+                               {})
+
+    del(zpool['config'])
+    return zpool
+
+
+def get_zpools(imported=True):
+    """
+    Parse shell output from 'zpool import' or 'zpool status' commands and return zpool details in list of dicts.
+
+    Command issued depends on both input arguments and is either of the form:
+
+    # [root@lotus-33vm17 ~]# zpool import
+    #    pool: lustre
+    #      id: 5856902799170956568
+    #   state: ONLINE
+    #  action: The pool can be imported using its name or numeric identifier.
+    #  config:
+    #
+    #  lustre  ONLINE
+    #    sda  ONLINE
+    #    sdb  ONLINE
+    #
+    #  ... (repeats for all discovered zpools)
+
+    or:
+
+    # [root@lotus-32vm5 ~]# zpool status
+    #   pool: pool1
+    #  state: ONLINE
+    #   scan: none requested
+    # config:
+    #
+    #         NAME   STATE     READ WRITE CKSUM
+    #         pool1  ONLINE       0     0     0
+    #           sdb  ONLINE       0     0     0
+    #
+    # errors: No known data errors
+    #
+    #  ... (repeats for all discovered zpools)
+
+    :imported: if True return details of imported zpools 'zpool status -L', otherwise return details of zpools
+      available for import 'zpool import'
+    :return: list of dicts with details of either imported or importable zpools
+    """
+
+    cmd_args = ('zpool',) + ('status',) if (imported is True) else ('import',)
+    out = AgentShell.try_run(cmd_args)
+
+    if 'pool: ' not in out:
+        return {}
+
+    pools = clean_list(re.split('pool:\s+', out))
+    pools = map(lambda x: 'pool: ' + x, pools)
+    pools = map(lambda x: clean_list(re.split('(\w+):[^/]', x)), pools)
+
+    return map(_parse_line, pools)
+
+
 class ZfsDevices(object):
     """Reads zfs pools"""
-    acceptable_health = ['ONLINE', 'DEGRADED']
+    acceptable_health = ['ONLINE', 'DEGRADED', 'UNAVAIL']
 
     def __init__(self):
         self._zpools = {}
@@ -36,123 +124,86 @@ class ZfsDevices(object):
 
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
-        zpool_names = set()
+        zpools = []
         try:
-            zpool_names.update(self._search_for_active())
-            zpool_names.update(self._search_for_inactive())
+            zpools.extend(get_zpools())
+            existing_pool_names = [pool['name'] for pool in zpools]
+            zpools.extend(filter(lambda x: x['name'] not in existing_pool_names, get_zpools(imported=False)))
 
-            for zpool_name in zpool_names:
-                with ZfsDevice(zpool_name, True) as zfs_device:
-                    if zfs_device.available:
-                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", zpool_name])
-                        self._add_zfs_pool(out, block_devices)
-                    else:
-                        daemon_log.error("zpool '%s' could not be imported during device scan" % zpool_name)
+            for pool in zpools:
+                if pool['state'] == 'UNAVAIL':
+                    # attempting to read from store, this should always return zpool info
+                    # either with or without datasets, error otherwise
+                    # data = read_from_store(uid)
+                    # ... populate self._pools/datasets/zvols
+                    # self._update_pool_or_datasets(block_devices, data['pool'], data['datasets'], data['zvols'])
+                    raise NotImplementedError('read_from_store() missing!')
+
+                elif pool['state'] in self.acceptable_health:
+                    with ZfsDevice(pool['pool'], True) as zfs_device:
+                        if zfs_device.available:
+                            out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                            self._add_zfs_pool(out, block_devices)
+                        else:
+                            raise RuntimeError("zpool '%s' could not be imported during device scan" % pool['pool'])
+                else:
+                    daemon_log.error("zpool '%s' could not be processed during device scan (state: %s)" % (pool['pool'],
+                                                                                                           pool['state']))
+
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
             self._zvols = {}
 
-    def _search_for_active(self):
-        """ Return list of active/imported zpool names """
-        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name"])
-
-        return [line.strip() for line in filter(None, out.split('\n'))]
-
-    def _search_for_inactive(self):
-        """
-        Return list of importable zpool names by parsing the 'zpool import' command output
-
-        # [root@lotus-33vm17 ~]# zpool import
-        #    pool: lustre
-        #      id: 5856902799170956568
-        #   state: ONLINE
-        #  action: The pool can be imported using its name or numeric identifier.
-        #  config:
-        #
-        # 	lustre                             ONLINE
-        # 	  scsi-0QEMU_QEMU_HARDDISK_disk15  ONLINE
-        # 	  scsi-0QEMU_QEMU_HARDDISK_disk14  ONLINE
-        #
-        #  ... (repeats for all discovered zpools)
-        """
-        try:
-            out = AgentShell.try_run(["zpool", "import"])
-        except AgentShell.CommandExecutionError as e:
-            # zpool import errors with error code 1 if nothing available to import
-            if e.result.rc == 1:
-                out = ""
-            else:
-                raise e
-
-        zpool_names = []
-        zpool_name = None
-
-        for line in filter(None, out.split("\n")):
-            match = re.match("(\s*)pool: (\S*)", line)
-            if match is not None:
-                zpool_name = match.group(2)
-
-            match = re.match("(\s*)state: (\S*)", line)
-            if match is not None:
-                if zpool_name:
-                    # if match.group(2) in self.acceptable_health:
-                    zpool_names.append(zpool_name)
-                    # else:
-                    #    daemon_log.warning("Not scanning zpool %s because it is %s." % (zpool_name, match.group(2)))
-                else:
-                    daemon_log.warning("Found a zpool import state but had no zpool name")
-
-                # After each 'state' line is encountered, move onto the next zpool name
-                zpool_name = None
-
-        return zpool_names
-
     def _add_zfs_pool(self, line, block_devices):
-        pool, size_str, uuid, health = line.split()
+        name, size_str, uuid = line.split()
 
-        if health in self.acceptable_health:
-            size = util.human_to_bytes(size_str)
+        size = util.human_to_bytes(size_str)
 
-            drive_mms = block_devices.paths_to_major_minors(self._get_all_zpool_devices(pool))
+        drive_mms = block_devices.paths_to_major_minors(self._get_all_zpool_devices(name))
 
-            if drive_mms is None:
-                daemon_log.warning("Could not find major minors for zpool '%s'" % pool)
-                return
+        if drive_mms is None:
+            daemon_log.warning("Could not find major minors for zpool '%s'" % name)
+            return
 
-            # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-            block_device = "zfspool:%s" % pool
+        datasets = self._get_zpool_datasets(name, uuid, drive_mms, block_devices)
+        zvols = self._get_zpool_zvols(name, drive_mms, uuid, block_devices)
 
-            datasets = self._get_zpool_datasets(pool, uuid, drive_mms, block_devices)
-            zvols = self._get_zpool_zvols(pool, drive_mms, uuid, block_devices)
+        pool_md = {"name": name,
+                   "path": name,
+                   # fabricate a major:minor. Do we ever use them as numbers?
+                   "block_device": "zfspool:%s" % name,
+                   "uuid": uuid,
+                   "size": size,
+                   "drives": drive_mms}
 
-            if (datasets == {}) and (zvols == {}):
-                block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
-                                                                  'path': pool,
-                                                                  'serial_80': None,
-                                                                  'serial_83': None,
-                                                                  'size': size,
-                                                                  'filesystem_type': None,
-                                                                  'parent': None}
+        # write to store _pool/datasets/Zvols
+        #    write_to_store(uid, {uuid: {pool: pool_md, datasets: datasets, zvols: zvols)
 
-                # Do this to cache the device, type see blockdevice and filesystem for info.
-                BlockDevice('zfs', pool)
-                FileSystem('zfs', pool)
+        self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 
-                self._zpools[uuid] = {
-                    "name": pool,
-                    "path": pool,
-                    "block_device": block_device,
-                    "uuid": uuid,
-                    "size": size,
-                    "drives": drive_mms,
-                }
+    def _update_pool_or_datasets(self, block_devices, pool, datasets, zvols):
+        if (datasets == {}) and (zvols == {}):
+            name = pool['name']
+            block_devices.block_device_nodes[pool['block_device']] = {'major_minor': pool['block_device'],
+                                                                      'path': name,
+                                                                      'serial_80': None,
+                                                                      'serial_83': None,
+                                                                      'size': pool['size'],
+                                                                      'filesystem_type': None,
+                                                                      'parent': None}
 
-            if datasets != {}:
-                self._datasets.update(datasets)
+            # Do this to cache the device, type see blockdevice and filesystem for info.
+            BlockDevice('zfs', name)
+            FileSystem('zfs', name)
 
-            if zvols != {}:
-                self._zvols.update(zvols)
+            self._zpools[pool['uuid']] = name
+
+        if datasets != {}:
+            self._datasets.update(datasets)
+
+        if zvols != {}:
+            self._zvols.update(zvols)
 
     @property
     @exceptionSandBox(daemon_log, {})
