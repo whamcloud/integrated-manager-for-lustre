@@ -270,6 +270,7 @@ class BlockDevices(object):
 
         return block_device_nodes, node_block_devices
 
+
     @classmethod
     def quick_scan(cls):
         """ Return a very quick list of block devices from a number of sources so we can quickly see changes. """
