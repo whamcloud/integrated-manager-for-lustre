@@ -1,8 +1,14 @@
 # Install the Lustre client
 ssh root@$CLIENT_1 "exec 2>&1; set -xe
 
+# set up required repos
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+
+# DNF is smarter than YUM
+yum -y install dnf
+
 # avoid getting the kernel-debug RPM
-yum -y install --exclude kernel-debug lustre-client
+dnf -y install --exclude kernel-debug lustre-client
 
 # see if we need to reboot into a new kernel
 
