@@ -56,7 +56,7 @@ deps: repo
 
 tags:
 	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
-	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
+	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma_test_env --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
 
 fetch_build:
 	curl -Lk -o $(ARCHIVE_PATH) $(BUILD_URL)/$(ARCHIVE_FILENAME)
@@ -165,7 +165,7 @@ efs_tests: reset_cluster
 	chroma-manager/tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 requirements:
-	make -C chroma-manager requirements
+	make -C chroma-manager requirements.txt
 
 chroma_test_env: requirements chroma_test_env/bin/activate
 
