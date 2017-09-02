@@ -876,7 +876,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     @classmethod
     def linux_devices_exist(cls):
-        return any(lustre_device['backend_filesystem'] == 'linux' for lustre_device in config['lustre_devices'])
+        return any(lustre_device['backend_filesystem'] == 'ldiskfs' for lustre_device in config['lustre_devices'])
 
     @classmethod
     def zfs_devices_exist(cls):
@@ -1006,7 +1006,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # Erase all volumes if the config does not indicate that there is already
         # a pre-existing file system (in the case of the monitoring only tests).
         for lustre_device in config['lustre_devices']:
-            if lustre_device['backend_filesystem'] == 'linux':
+            if lustre_device['backend_filesystem'] == 'ldiskfs':
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
                 self.execute_simultaneous_commands(linux_device.destroy_commands,

@@ -25,31 +25,31 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     valid_rc_values = [0]                               # Some errors values other than 0 are valid.
     tries = 2
     if fromrepo:
-        repo_arg = ['--disablerepo=*', '--enablerepo=%s' % ','.join(fromrepo)]
+        repo_arg = ['--disablerepo=*'] + ['--enablerepo=%s' % r for r in fromrepo]
     elif enablerepo:
-        repo_arg = ['--enablerepo=%s' % ','.join(enablerepo)]
+        repo_arg = ['--enablerepo=%s' % r for r in enablerepo]
     if narrow_updates and action == 'query':
-        repo_arg.extend(['--pkgnarrow=updates', '-a'])
+        repo_arg.extend(['--upgrades'])
 
     if action == 'clean':
-        cmd = ['yum', 'clean', 'all'] + (repo_arg if repo_arg else ["--enablerepo=*"])
+        cmd = ['dnf', 'clean', 'all'] + (repo_arg if repo_arg else ["--enablerepo=*"])
     elif action == 'install':
-        cmd = ['yum', 'install', '-y', '--exclude', 'kernel-debug'] + \
+        cmd = ['dnf', 'install', '--allowerasing', '-y', '--exclude', 'kernel-debug'] + \
                repo_arg + list(packages)
     elif action == 'remove':
-        cmd = ['yum', 'remove', '-y'] + repo_arg + list(packages)
+        cmd = ['dnf', 'remove', '-y'] + repo_arg + list(packages)
     elif action == 'update':
-        cmd = ['yum', 'update', '-y', '--exclude', 'kernel-debug'] + \
+        cmd = ['dnf', 'update','--allowerasing',  '-y', '--exclude', 'kernel-debug'] + \
                repo_arg + list(packages)
     elif action == 'requires':
-        cmd = ['repoquery', '--requires'] + repo_arg + list(packages)
+        cmd = ['dnf', 'repoquery', '--requires'] + repo_arg + list(packages)
     elif action == 'query':
-        cmd = ['repoquery'] + repo_arg + list(packages)
+        cmd = ['dnf', 'repoquery', '--available'] + repo_arg + list(packages)
     elif action == 'repoquery':
-        cmd = ['repoquery'] + repo_arg + ['-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
+        cmd = ['dnf', 'repoquery', '--available'] + repo_arg + ['--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
     elif action == 'check-update':
-        cmd = ['repoquery', '-q', '-a', '--qf=%{name} %{version}-%{release}.'
-               '%{arch} %{repoid}', '--pkgnarrow=updates'] + repo_arg + \
+        cmd = ['dnf', 'repoquery', '--queryformat=%{name} %{version}-%{release}.'
+               '%{arch} %{repoid}', '--upgrades'] + repo_arg + \
             list(packages)
     else:
         raise RuntimeError('Unknown yum util action %s' % action)
@@ -67,7 +67,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
             # if we were trying to install, clean the metadata before
             # trying again
             if action == 'install':
-                AgentShell.run(['yum', 'clean', 'metadata'])
+                AgentShell.run(['dnf', 'clean', 'metadata'])
             daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
             if hyd_3885 == 0:
                 daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
