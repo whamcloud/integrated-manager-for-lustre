@@ -58,7 +58,7 @@ for dne in true false; do
             export TEST_SPECIFIC_CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}_dne_is_${dne}.json
 
             sed -e "s/\(\"device_type\": *\)\"linux\"/\1\"${device_type}\"/g" $CLUSTER_CONFIG > $TEST_SPECIFIC_CLUSTER_CONFIG
-            sed -i -e "s/\(\"backend_filesystem\": *\)\"linux\"/\1\"${device_type}\"/g" $TEST_SPECIFIC_CLUSTER_CONFIG
+            sed -i -e "s/\(\"backend_filesystem\": *\)\"ldiskfs\"/\1\"${device_type}\"/g" $TEST_SPECIFIC_CLUSTER_CONFIG
             sed -i -e "s/\(\"test_ha\"\: *\)true/\1${test_ha}/g" $TEST_SPECIFIC_CLUSTER_CONFIG
 
             # One Kind entry is defined as "kind": "OSTorMDT" set it to be an OST for !dne or an MDT for dne

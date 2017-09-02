@@ -32,7 +32,6 @@ from ha_cluster import *
 from power_control import *
 from bundle import *
 from package import *
-from user_profile import *
 from copytool import *
 from client_mount import *
 from lnet_configuration import *

@@ -7,7 +7,6 @@ class TestAllEndPoints(TestInstallationAndUpgrade):
 
         # Some end points just can't be fetched so we have to ignore them.
         end_point_exceptions = ['/api/help/',
-                                '/api/client_error/',
                                 '/api/test_host/']
 
         end_points = self.get_json_by_uri("/api/", args={'limit': 0})

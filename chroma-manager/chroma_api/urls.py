@@ -57,7 +57,6 @@ import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
 import chroma_api.package
-import chroma_api.client_error
 import chroma_api.copytool
 import chroma_api.nid
 import chroma_api.lnet_configuration
@@ -92,7 +91,6 @@ api.register(chroma_api.power_control.PowerControlTypeResource())
 api.register(chroma_api.power_control.PowerControlDeviceResource())
 api.register(chroma_api.power_control.PowerControlDeviceOutletResource())
 api.register(chroma_api.package.PackageResource())
-api.register(chroma_api.client_error.ClientErrorResource())
 api.register(chroma_api.copytool.CopytoolResource())
 api.register(chroma_api.copytool.CopytoolOperationResource())
 api.register(chroma_api.network_interface.NetworkInterfaceResource())

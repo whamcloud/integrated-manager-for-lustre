@@ -11,31 +11,6 @@ expect {
         send "\r"
         exp_continue
     }
-    "EULA.txt" {
-        send_user "got first paging prompt, sending space\n"
-        send " "
-    } timeout {
-        send_user "waiting for prompt timed out, bailing\n"
-        exit 1
-    }
-}
-expect {
-    "\n:" {
-        send_user "got subsequent paging prompt, sending space\n"
-        send " "
-        exp_continue
-    }
-    "(END)" {
-        send_user "at end, sending space\n"
-        send " "
-        exp_continue
-    }
-    "(yes/no) " {
-        send "yes\n"
-    } timeout {
-        send_user "waiting for prompt timed out, bailing\n"
-        exit 1
-    }
 }
 expect "software installation completed successfully"
 catch wait reason
