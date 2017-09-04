@@ -57,7 +57,7 @@ class LinuxDevicePlugin(DevicePlugin):
         # emcpowers = EMCPower(block_devices).all()
 
         # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
-        local_fs = LocalFilesystems(block_devices).all()
+        # local_fs = LocalFilesystems(block_devices).all()
 
         # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
@@ -69,7 +69,7 @@ class LinuxDevicePlugin(DevicePlugin):
                 "zfsvols": zfs_devices.zvols,
                 "mpath": None, #dmsetup.mpaths,
                 "devs": block_devices.block_device_nodes,
-                "local_fs": local_fs,
+                "local_fs": None, #local_fs,
                 'emcpower': None, #emcpowers,
                 'mds': None} #mds}
 
