@@ -1,4 +1,4 @@
-from mock import patch, Mock
+from mock import patch, Mock, MagicMock, call
 
 from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
@@ -7,31 +7,37 @@ from tests.data import zfs_example_data
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
+zfs_results = {'datasets': {'ABCDEF123456789': {'uuid': 'ABCDEF123456789',
+                                                'name': 'zfsPool3/mgt',
+                                                'block_device': 'zfsset:1',
+                                                'drives': [],
+                                                'path': 'zfsPool3/mgt',
+                                                'size': 1099511627776},
+                            'AAAAAAAAAAAAAAA': {'uuid': 'AAAAAAAAAAAAAAA',
+                                                'name': 'zfsPool3/mgs',
+                                                'block_device': 'zfsset:1',
+                                                'drives': [],
+                                                'path': 'zfsPool3/mgs',
+                                                'size': 1099511627776}},
+               'zpools': {'2234567890ABCDE': {'block_device': 'zfspool:zfsPool1',
+                                              'drives': [],
+                                              'name': 'zfsPool1',
+                                              'path': 'zfsPool1',
+                                              'size': 1099511627776,
+                                              'uuid': '2234567890ABCDE'}},
+               'zvols': {}}
+
+
+def read_from_store_side_effect(id):
+    return {zfs_results['zpools'].keys()[0]: {'pool': zfs_results['zpools'].values()[0],
+                                              'datasets': zfs_results['datasets'],
+                                              'zvols': zfs_results['zvols']}}.get(id)
+
 
 class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
 
     def setUp(self):
         super(TestZfs, self).setUp()
-
-        self.zfs_results = {'datasets': {'ABCDEF123456789': {'uuid': 'ABCDEF123456789',
-                                                             'name': 'zfsPool3/mgt',
-                                                             'block_device': 'zfsset:1',
-                                                             'drives': [],
-                                                             'path': 'zfsPool3/mgt',
-                                                             'size': 1099511627776},
-                                         'AAAAAAAAAAAAAAA': {'uuid': 'AAAAAAAAAAAAAAA',
-                                                             'name': 'zfsPool3/mgs',
-                                                             'block_device': 'zfsset:1',
-                                                             'drives': [],
-                                                             'path': 'zfsPool3/mgs',
-                                                             'size': 1099511627776}},
-                            'zpools': {'2234567890ABCDE': {'block_device': 'zfspool:zfsPool1',
-                                                           'drives': [],
-                                                           'name': 'zfsPool1',
-                                                           'path': 'zfsPool1',
-                                                           'size': 1099511627776,
-                                                           'uuid': '2234567890ABCDE'}},
-                            'zvols': {}}
 
     def mock_debug(self, value):
         print value
@@ -45,13 +51,22 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     def mock_find_device_and_children(self, path):
         return [path]
 
+    mock_read_from_store = MagicMock(side_effect=read_from_store_side_effect)
+
+    mock_write_to_store = MagicMock()
+
     @patch('glob.glob', mock_empty_list)
-    @patch('logging.Logger.debug', mock_debug)
+    @patch('logging.Logger.debug', Mock()) #mock_debug)
     @patch('chroma_agent.utils.BlkId', dict)
     @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs', mock_empty_dict)
     @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice.lock_pool', Mock())
     @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice.unlock_pool', Mock())
+    @patch('chroma_agent.device_plugins.linux_components.zfs.read_from_store', mock_read_from_store)
+    @patch('chroma_agent.device_plugins.linux_components.zfs.write_to_store', mock_write_to_store)
     def _setup_zfs_devices(self):
+        self.mock_read_from_store.reset_mock()
+        self.mock_write_to_store.reset_mock()
+
         blockdevices = BlockDevices()
 
         zfs_devices = ZfsDevices()
@@ -111,8 +126,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""))
 
         self.assertRanAllCommandsInOrder()
         self.assertEqual(zfs_devices.zpools, {})
-        self.assertEqual(zfs_devices.datasets, self.zfs_results['datasets'])
-        self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
+        self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
+        self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
     def test_exported_zfs_datasets_zvols(self):
         """
@@ -165,24 +180,116 @@ zfsPool3
         zfs_devices = self._setup_zfs_devices()
 
         self.assertRanAllCommandsInOrder()
-        self.assertEqual(zfs_devices.zpools, self.zfs_results['zpools'])
-        self.assertEqual(zfs_devices.datasets, self.zfs_results['datasets'])
-        self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
+        self.assertEqual(zfs_devices.zpools, zfs_results['zpools'])
+        self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
+        self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
     def test_exported_unavailable_zpool_fail(self):
         """
-        WHEN inactive zpool is imported which is unavailable,
+        WHEN inactive zpool is unavailable,
         AND try to read zpool info from store fails,
-        THEN exception is thrown. """
+        THEN exception is thrown.
+        """
         self.add_commands(CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool))
 
-#        with self.assertRaises(Exception):
-        self._setup_zfs_devices()
+        zfs_devices = self._setup_zfs_devices()
 
         self.assertRanAllCommandsInOrder()
+        self.mock_read_from_store.assert_called_once_with('14729155358256179095')
+        self.assertEqual(zfs_devices.zpools, {})
+        self.assertEqual(zfs_devices.datasets, {})
+        self.assertEqual(zfs_devices.zvols, {})
+
+    def test_exported_unavailable_zpool_success(self):
+        """
+        WHEN inactive zpool is unavailable,
+        AND try to read zpool info from store succeeds,
+        THEN expected  are reported.
+        """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stderr='no pools available\n'),
+                          CommandCaptureCommand(("zpool", "import"),
+                                                stdout=zfs_example_data.single_raidz2_unavail_pool_B))
+
+        zfs_devices = self._setup_zfs_devices()
+
+        self.assertRanAllCommandsInOrder()
+        self.mock_read_from_store.assert_called_once_with('2234567890ABCDE')
+        self.assertEqual(zfs_devices.zpools, {})
+        self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
+        self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
+
+    def test_saving_to_store(self):
+        """
+        WHEN inactive ONLINE zpool is imported,
+        THEN correct zpool info is supplied in call to write to store.
+        """
+#        AND then pool is exported,
+#        THEN the same zpool is unavailable,
+#        AND try to read zpool info from store succeeds,
+#        THEN expected  are reported.
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stderr='no pools available\n'),
+                          CommandCaptureCommand(("zpool", "import"),
+                                                stdout=zfs_example_data.multiple_exported_online_offline_pools),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o",
+                                                 "cachefile=none", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid", 'zfsPool1'),
+                                                stdout="zfsPool1        1T    2234567890ABCDE\n"),
+                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool1"), stdout="""\
+zfsPool1
+        /dev/disk/by-id/scsi-SCSI_DISK_3-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool1"), stdout="""\
+zfsPool1
+        scsi-SCSI_DISK_3   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""\
+    zfsPool1        1T    2234567890ABCDE
+    zfsPool3        1T    222222222222222
+    zfsPool3/mgt    1T    ABCDEF123456789
+    zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
+                          CommandCaptureCommand(("zpool", "export", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o",
+                                                 "cachefile=none", "zfsPool3")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid", 'zfsPool3'),
+                                                stdout="zfsPool3        1T    222222222222222\n"),
+                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool3"), stdout="""\
+zfsPool3
+        /dev/disk/by-id/scsi-SCSI_DISK_1-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool3"), stdout="""\
+zfsPool3
+        scsi-SCSI_DISK_1   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""\
+    zfsPool1        1T    2234567890ABCDE
+    zfsPool3        1T    222222222222222
+    zfsPool3/mgt    1T    ABCDEF123456789
+    zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
+                          CommandCaptureCommand(("zpool", "export", "zfsPool3")))
+
+        zfs_devices = self._setup_zfs_devices()
+
+        # store should have been populated with data from two ONLINE zpools, one with datasets and one without
+        self.mock_write_to_store.assert_has_calls([call('2234567890ABCDE',
+                                                        {'pool': zfs_results['zpools'].values()[0],
+                                                         'datasets': {},
+                                                         'zvols': {}}),
+                                                   call('222222222222222',
+                                                        {'pool': {'block_device': 'zfspool:zfsPool3',
+                                                                  'drives': [],
+                                                                  'name': 'zfsPool3',
+                                                                  'path': 'zfsPool3',
+                                                                  'size': 1099511627776,
+                                                                  'uuid': '222222222222222'},
+                                                         'datasets': zfs_results['datasets'],
+                                                         'zvols': zfs_results['zvols']})])
+
+        self.assertEqual(zfs_devices.zpools, zfs_results['zpools'])
+        self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
+        self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
     def test_resolve_devices(self):
         """ Check when zpool contains multiple disks the listed partitions are resolved to the correct devices """
