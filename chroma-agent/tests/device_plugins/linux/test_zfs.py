@@ -2,6 +2,8 @@ from mock import patch, Mock
 
 from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
+from chroma_agent.device_plugins.linux_components.zfs import get_zpools
+from tests.data import zfs_example_data
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
@@ -12,21 +14,23 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         super(TestZfs, self).setUp()
 
         self.zfs_results = {'datasets': {'ABCDEF123456789': {'uuid': 'ABCDEF123456789',
-                                                             'name': 'zfsPool1/mgt',
+                                                             'name': 'zfsPool3/mgt',
                                                              'block_device': 'zfsset:1',
                                                              'drives': [],
-                                                             'path': 'zfsPool1/mgt',
+                                                             'path': 'zfsPool3/mgt',
                                                              'size': 1099511627776},
                                          'AAAAAAAAAAAAAAA': {'uuid': 'AAAAAAAAAAAAAAA',
-                                                             'name': 'zfsPool1/mgs',
+                                                             'name': 'zfsPool3/mgs',
                                                              'block_device': 'zfsset:1',
                                                              'drives': [],
-                                                             'path': 'zfsPool1/mgs',
+                                                             'path': 'zfsPool3/mgs',
                                                              'size': 1099511627776}},
-                            'zpools': {'1234567890ABCDE': {'name': 'zfsPool1',
-                                                           'block_device': 'zfspool:zfsPool1',
-                                                           'path': 'zfsPool1', 'size': 1099511627776,
-                                                           'drives': [], 'uuid': '1234567890ABCDE'}},
+                            'zpools': {'2234567890ABCDE': {'block_device': 'zfspool:zfsPool1',
+                                                           'drives': [],
+                                                           'name': 'zfsPool1',
+                                                           'path': 'zfsPool1',
+                                                           'size': 1099511627776,
+                                                           'uuid': '2234567890ABCDE'}},
                             'zvols': {}}
 
     def mock_debug(self, value):
@@ -60,32 +64,48 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         """ test the process of using full partition paths and device basenames to resolve device paths """
         return ZfsDevices()._get_all_zpool_devices(pool_name)
 
-    def test_already_imported_zfs(self):
+    def test_get_active_zpool(self):
+        """ WHEN active/imported zpools are output from 'zpool status' command THEN parser returns relevant pools """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stdout=zfs_example_data.multiple_imported_pools_status))
+
+        zpools = get_zpools()
+
+        self.assertRanAllCommandsInOrder()
+        self.assertListEqual(['zfsPool3', 'zfsPool2'], [p['pool'] for p in zpools])
+
+    def test_get_inactive_zpool(self):
+        """ WHEN inactive/exported zpools are output from 'zpool import' command THEN parser returns relevant pools """
+        self.add_commands(CommandCaptureCommand(("zpool", "import"),
+                                                stdout=zfs_example_data.multiple_exported_online_pools))
+
+        zpools = get_zpools(active=False)
+
+        self.assertRanAllCommandsInOrder()
+        self.assertListEqual(['zfsPool1', 'zfsPool2', 'zfsPool3'], [p['pool'] for p in zpools])
+
+    def test_already_imported_zpool(self):
         """
-        Check when zpool is already imported which has datasets, and no more pools to import,
-        only the datasets (not zpool) are reported
+        WHEN zpool is already imported which has datasets,
+        AND there are no more pools to import,
+        THEN only the datasets (not zpool) are reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
-zfsPool2\n"""),
-                          CommandCaptureCommand(("zpool", "import"), rc=1),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
-zfsPool2\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", 'zfsPool2'),
-                                                stdout="""zfsPool2        1G    111111111111111    OFFLINE\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"), stdout="""zfsPool1
-zfsPool2\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", 'zfsPool1'),
-                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", 'zfsPool1'),
-                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", 'zfsPool1'),
-                                                stdout="""zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
-                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""
-zfsPool1        1T    1234567890ABCDE
-zfsPool1/mgt    1T    ABCDEF123456789
-zfsPool1/mgs    1T    AAAAAAAAAAAAAAA
-zfsPool2        1G    111111111111111
-zfsPool2/mgt    1G    222222222222222\n"""))
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stdout=zfs_example_data.multiple_imported_pools_status),
+                          CommandCaptureCommand(("zpool", "import"),
+                                                stdout="no pools available to import\n"),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name"),
+                                                stdout="zfsPool3\nzfsPool2\n"),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid", 'zfsPool3'),
+                                                stdout="zfsPool3        1T    1234567890ABCDE\n"),
+                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", 'zfsPool3'),
+                                                stdout="zfsPool3        1T    1234567890ABCDE    ONLINE\n"),
+                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", 'zfsPool3'),
+                                                stdout="zfsPool3        1T    1234567890ABCDE    ONLINE\n"),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"),
+                                                stdout="""zfsPool3        1T    1234567890ABCDE
+zfsPool3/mgt    1T    ABCDEF123456789
+zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""))
 
         zfs_devices = self._setup_zfs_devices()
 
@@ -95,113 +115,74 @@ zfsPool2/mgt    1G    222222222222222\n"""))
         self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
 
     def test_exported_zfs_datasets_zvols(self):
-        """ Check when zpool is imported which has datasets, only the datasets (not zpool) are reported """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
-     id: 1234567890ABCDE
-  state: ONLINE
- action: The pool can be imported using its name or numeric identifier.
- config:
-
-    zfsPool1  ONLINE
-      scsi-SCSI_DISK_1  ONLINE
-
-      pool: zfsPool2
-     id: 111111111111111
-  state: OFFLINE
- action: The pool can be imported using its name or numeric identifier.
- config:
-
-    zfsPool2  ONLINE
-      scsi-SCSI_DISK_2  ONLINE
-
-      pool: zfsPool3
-     id: 222222222222222
-  state: ONLINE
- action: The pool will fail when it is imported. Because of the error below.
- config:
-
-    zfsPool3  ONLINE
-      scsi-SCSI_DISK_3  ONLINE"""),
+        """
+        WHEN one inactive zpool is imported which has datasets,
+        AND one inactive zpool is offline,
+        AND one inactive zpool is imported but doesn't have datasets,
+        THEN the datasets (not zpool) are reported,
+        AND the offline zpool is not reported,
+        AND the zpool without datasets is reported.
+        """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stderr='no pools available\n'),
+                          CommandCaptureCommand(("zpool", "import"),
+                                                stdout=zfs_example_data.multiple_exported_online_offline_pools),
                           CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool3"),
-                                                rc=1, stderr="cannot import 'zfsPool3': no such pool available"),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool1")),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
-                                                stdout="""
-    zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o",
+                                                "cachefile=none", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid", 'zfsPool1'),
+                                                stdout="zfsPool1        1T    2234567890ABCDE\n"),
                           CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool1"), stdout="""\
 zfsPool1
-        /dev/disk/by-id/scsi-SCSI_DISK_1-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
+        /dev/disk/by-id/scsi-SCSI_DISK_3-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
                           CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool1"), stdout="""\
 zfsPool1
+        scsi-SCSI_DISK_3   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""\
+    zfsPool1        1T    2234567890ABCDE
+    zfsPool3        1T    1234567890ABCDE
+    zfsPool3/mgt    1T    ABCDEF123456789
+    zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
+                          CommandCaptureCommand(("zpool", "export", "zfsPool1")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
+                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o",
+                                                 "cachefile=none", "zfsPool3")),
+                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid", 'zfsPool3'),
+                                                stdout="zfsPool3        1T    1234567890ABCDE\n"),
+                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool3"), stdout="""\
+zfsPool3
+        /dev/disk/by-id/scsi-SCSI_DISK_1-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
+                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool3"), stdout="""\
+zfsPool3
         scsi-SCSI_DISK_1   9.94G   228K    9.94G   -       0%      0%\n"""),
                           CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""\
-    zfsPool1        1T    1234567890ABCDE
-    zfsPool1/mgt    1T    ABCDEF123456789
-    zfsPool1/mgs    1T    AAAAAAAAAAAAAAA\n"""),
-                          CommandCaptureCommand(("zpool", "export", "zfsPool1")))
-
-        zfs_devices = self._setup_zfs_devices()
-
-        self.assertRanAllCommandsInOrder()
-        self.assertEqual(zfs_devices.zpools, {})
-        self.assertEqual(zfs_devices.datasets, self.zfs_results['datasets'])
-        self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
-
-    def test_exported_zfs_no_datasets_zvols(self):
-        """ Check when zpool is imported which has no datasets or zvols, only the zpool is reported """
-        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
-     id: 1234567890ABCDE
-  state: ONLINE
- action: The pool can be imported using its name or numeric identifier.
- config:
-
-    zfsPool1  ONLINE
-      scsi-SCSI_DISK_1  ONLINE
-
-      pool: zfsPool2
-     id: 111111111111111
-  state: OFFLINE
- action: The pool can be imported using its name or numeric identifier.
- config:
-
-    zfsPool2  ONLINE
-      scsi-SCSI_DISK_2  ONLINE
-
-      pool: zfsPool3
-     id: 222222222222222
-  state: ONLINE
- action: The pool will fail when it is imported. Because of the error below.
- config:
-
-    zfsPool3  ONLINE
-      scsi-SCSI_DISK_3  ONLINE"""),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool3"),
-                                                rc=1, stderr="cannot import 'zfsPool3': no such pool available"),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
-                          CommandCaptureCommand(("zpool", "import", "-f", "-N", "-o", "readonly=on", "-o", "cachefile=none", "zfsPool1")),
-                          CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
-                                                stdout="""
-    zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-PHv", "-o", "name", "zfsPool1"), stdout="""\
-zfsPool1
-        /dev/disk/by-id/scsi-SCSI_DISK_1-part1   9.94G   228K    9.94G   -       0%      0%\n"""),
-                          CommandCaptureCommand(("zpool", "list", "-Hv", "-o", "name", "zfsPool1"), stdout="""\
-zfsPool1
-        scsi-SCSI_DISK_1   9.94G   228K    9.94G   -       0%      0%\n"""),
-                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout=""),
-                          CommandCaptureCommand(("zpool", "export", "zfsPool1")))
+    zfsPool1        1T    2234567890ABCDE
+    zfsPool3        1T    1234567890ABCDE
+    zfsPool3/mgt    1T    ABCDEF123456789
+    zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
+                          CommandCaptureCommand(("zpool", "export", "zfsPool3")))
 
         zfs_devices = self._setup_zfs_devices()
 
         self.assertRanAllCommandsInOrder()
         self.assertEqual(zfs_devices.zpools, self.zfs_results['zpools'])
-        self.assertEqual(zfs_devices.datasets, {})
-        self.assertEqual(zfs_devices.zvols, {})
+        self.assertEqual(zfs_devices.datasets, self.zfs_results['datasets'])
+        self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
+
+    def test_exported_unavailable_zpool_fail(self):
+        """
+        WHEN inactive zpool is imported which is unavailable,
+        AND try to read zpool info from store fails,
+        THEN exception is thrown. """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stderr='no pools available\n'),
+                          CommandCaptureCommand(("zpool", "import"),
+                                                stdout=zfs_example_data.single_raidz2_unavail_pool))
+
+#        with self.assertRaises(Exception):
+        self._setup_zfs_devices()
+
+        self.assertRanAllCommandsInOrder()
 
     def test_resolve_devices(self):
         """ Check when zpool contains multiple disks the listed partitions are resolved to the correct devices """

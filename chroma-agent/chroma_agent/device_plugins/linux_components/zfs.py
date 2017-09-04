@@ -53,7 +53,7 @@ def _parse_line(xs):
     return zpool
 
 
-def get_zpools(imported=True):
+def get_zpools(active=True):
     """
     Parse shell output from 'zpool import' or 'zpool status' commands and return zpool details in list of dicts.
 
@@ -88,12 +88,12 @@ def get_zpools(imported=True):
     #
     #  ... (repeats for all discovered zpools)
 
-    :imported: if True return details of imported zpools 'zpool status -L', otherwise return details of zpools
+    :active: if True return details of imported zpools 'zpool status', otherwise return details of zpools
       available for import 'zpool import'
     :return: list of dicts with details of either imported or importable zpools
     """
 
-    cmd_args = ('zpool',) + ('status',) if (imported is True) else ('import',)
+    cmd_args = ['zpool', 'status' if (active is True) else 'import']
     out = AgentShell.try_run(cmd_args)
 
     if 'pool: ' not in out:
@@ -108,7 +108,7 @@ def get_zpools(imported=True):
 
 class ZfsDevices(object):
     """Reads zfs pools"""
-    acceptable_health = ['ONLINE', 'DEGRADED', 'UNAVAIL']
+    acceptable_health = ['ONLINE', 'DEGRADED']
 
     def __init__(self):
         self._zpools = {}
@@ -127,8 +127,8 @@ class ZfsDevices(object):
         zpools = []
         try:
             zpools.extend(get_zpools())
-            existing_pool_names = [pool['name'] for pool in zpools]
-            zpools.extend(filter(lambda x: x['name'] not in existing_pool_names, get_zpools(imported=False)))
+            existing_pool_names = [pool['pool'] for pool in zpools]
+            zpools.extend(filter(lambda x: x['pool'] not in existing_pool_names, get_zpools(active=False)))
 
             for pool in zpools:
                 if pool['state'] == 'UNAVAIL':
@@ -146,6 +146,7 @@ class ZfsDevices(object):
                             self._add_zfs_pool(out, block_devices)
                         else:
                             raise RuntimeError("zpool '%s' could not be imported during device scan" % pool['pool'])
+
                 else:
                     daemon_log.error("zpool '%s' could not be processed during device scan (state: %s)" % (pool['pool'],
                                                                                                            pool['state']))
@@ -197,7 +198,7 @@ class ZfsDevices(object):
             BlockDevice('zfs', name)
             FileSystem('zfs', name)
 
-            self._zpools[pool['uuid']] = name
+            self._zpools[pool['uuid']] = pool
 
         if datasets != {}:
             self._datasets.update(datasets)
