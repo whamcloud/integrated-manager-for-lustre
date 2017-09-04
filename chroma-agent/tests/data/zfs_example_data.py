@@ -66,7 +66,7 @@ multiple_online_pools = """   pool: pool1
 """
 
 multiple_exported_online_offline_pools = """pool: zfsPool1
-     id: 1234567890ABCDE
+     id: 2234567890ABCDE
   state: ONLINE
  action: The pool can be imported using its name or numeric identifier.
  config:
@@ -162,6 +162,29 @@ errors: No known data errors
 
 single_raidz2_unavail_pool = """   pool: zost04
      id: 14729155358256179095
+  state: UNAVAIL
+ status: The pool was last accessed by another system.
+ action: The pool cannot be imported due to damaged devices or data.
+   see: http://zfsonlinux.org/msg/ZFS-8000-EY
+ config:
+
+        zost04         UNAVAIL  insufficient replicas
+          raidz2-0     UNAVAIL  insufficient replicas
+            S2P1E0101  UNAVAIL
+            S2P1E0102  UNAVAIL
+            S2P1E0103  UNAVAIL
+            S2P1E0104  UNAVAIL
+            S2P1E0105  UNAVAIL
+            S2P1E0106  UNAVAIL
+            S4P1E0101  ONLINE
+            S4P1E0102  ONLINE
+            S4P1E0103  ONLINE
+            mpathc     ONLINE
+            S4P1E0105  ONLINE
+"""
+
+single_raidz2_unavail_pool_B = """   pool: zost04
+     id: 2234567890ABCDE
   state: UNAVAIL
  status: The pool was last accessed by another system.
  action: The pool cannot be imported due to damaged devices or data.

@@ -24,8 +24,18 @@ strip_lines = functools.partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename='store.json'):
+    old = {}
+    
+    try:
+        with open(filename, 'r') as f:
+            old = json.loads(f.read())[key]
+    except OSError:
+        pass
+
+    # preserve other keys, only overwrite the key specified
+    new = old[key] = value
     with open(filename, 'w') as f:
-        f.write(json.dumps({key: value}))
+        f.write(json.dumps(new))
 
 
 def read_from_store(key, filename='store.json'):
@@ -82,7 +92,7 @@ def get_zpools(active=True):
     #
     #  ... (repeats for all discovered zpools)
 
-    or:
+ veConcerns   or:
 
     # [root@lotus-32vm5 ~]# zpool status
     #   pool: pool1
@@ -144,10 +154,13 @@ class ZfsDevices(object):
                 if pool['state'] == 'UNAVAIL':
                     # attempting to read from store, this should always return zpool info
                     # either with or without datasets, error otherwise
-                    # data = read_from_store(uid)
-                    # ... populate self._pools/datasets/zvols
-                    # self._update_pool_or_datasets(block_devices, data['pool'], data['datasets'], data['zvols'])
-                    raise NotImplementedError('read_from_store() missing!')
+                    data = read_from_store(pool['id'])
+
+                    if not data:
+                        raise RuntimeError('read_from_store() missing data for zpool %s!' % pool['pool'])
+
+                    # populate self._pools/datasets/zvols info from saved data read from store
+                    self._update_pool_or_datasets(block_devices, data['pool'], data['datasets'], data['zvols'])
 
                 elif pool['state'] in self.acceptable_health:
                     with ZfsDevice(pool['pool'], True) as zfs_device:
@@ -188,8 +201,8 @@ class ZfsDevices(object):
                    "size": size,
                    "drives": drive_mms}
 
-        # write to store _pool/datasets/Zvols
-        #    write_to_store(uid, {uuid: {pool: pool_md, datasets: datasets, zvols: zvols)
+        # write new data to store (_pool/datasets/Zvols)
+        write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
 
         self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 
