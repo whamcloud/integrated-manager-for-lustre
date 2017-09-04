@@ -1,7 +1,7 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import json
 
 import os
 import re
@@ -21,6 +21,16 @@ from iml_common.lib import util
 
 filter_empty = functools.partial(filter, None)
 strip_lines = functools.partial(map, lambda x: x.strip())
+
+
+def write_to_store(key, value, filename='store.json'):
+    with open(filename, 'w') as f:
+        f.write(json.dumps({key: value}))
+
+
+def read_from_store(key, filename='store.json'):
+    with open(filename, 'r') as f:
+        return json.loads(f.read())[key]
 
 
 def clean_list (xs):
