@@ -1377,7 +1377,11 @@ class FormatTargetJob(StateChangeJob):
                        MountOrImportStep.create_parameters(self.target,
                                                            secondary_mount.host,
                                                            False)),
-                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False})])
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False}),
+                      (MountOrImportStep,
+                       MountOrImportStep.create_parameters(self.target,
+                                                           primary_mount.host,
+                                                           False))])
 
         return steps
 

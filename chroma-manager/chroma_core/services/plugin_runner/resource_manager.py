@@ -731,7 +731,7 @@ class ResourceManager(object):
     def _try_removing_volume(self, volume):
         nodes = VolumeNode.objects.filter(volume=volume)
 
-        if nodes.count() == 0 or all(node.storage_resource is None for node in nodes):
+        if nodes.count() == 0:
             log.info("Removing Volume %s" % volume.id)
             volume.storage_resource = None
             volume.save()
@@ -742,10 +742,6 @@ class ResourceManager(object):
             return False
 
     def _remove_volume_node(self, volume_node, try_remove_volume):
-        if ('zfs_pool' in volume_node.volume.label) and (volume_node.volume.not_deleted is True):
-        # if volume_node.volume.filesystem_type == 'zfs':
-            log.info('DEBUGDEBUG: not removing zfs VolumeNode')
-            return
         log.info("Removing VolumeNode %s" % volume_node.id)
         volume_node.storage_resource = None
         volume_node.save()
