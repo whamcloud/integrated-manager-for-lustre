@@ -2,6 +2,8 @@
 
 # IML Distributed Architecture
 
+![architecture](md_Graphics/architecture.jpg)
+
 ### The current setup
 
 IML is composed of a series of modules and services. Many modules are hosted as [separate repositories](https://github.com/intel-hpdd), and many are hosted in a [single repo](https://github.com/intel-hpdd/intel-manager-for-lustre).

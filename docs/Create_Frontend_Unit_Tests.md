@@ -1,5 +1,7 @@
 [**Table of Contents**](index.md)
 
+![unit test](md_Graphics/unit_test.png)
+
 # Create **Frontend** Unit Tests
 
 ## Unit tests are required to accompany every code feature that is delivered with IML.

@@ -1,5 +1,7 @@
 [**Table of Contents**](index.md)
 
+![workflow](md_Graphics/workflow.png)
+
 # IML Contributor Workflow
 ## Overview
 ![iml_flow](md_Graphics/iml_flow.png)
