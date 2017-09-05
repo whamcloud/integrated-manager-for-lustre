@@ -28,7 +28,7 @@ def write_to_store(key, value, filename='store.json'):
 
     try:
         with open(filename, 'r') as f:
-            data = json.loads(f.read())[key]
+            data = json.loads(f.read())
     except (OSError, IOError):
         pass
 
