@@ -43,7 +43,7 @@ def read_from_store(key, filename='store.json'):
         return json.loads(f.read())[key]
 
 
-def clean_list (xs):
+def clean_list(xs):
     return filter_empty(strip_lines(xs))
 
 
@@ -92,7 +92,7 @@ def get_zpools(active=True):
     #
     #  ... (repeats for all discovered zpools)
 
- veConcerns   or:
+    or:
 
     # [root@lotus-32vm5 ~]# zpool status
     #   pool: pool1

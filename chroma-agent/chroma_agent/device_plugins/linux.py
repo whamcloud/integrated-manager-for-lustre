@@ -44,34 +44,34 @@ class LinuxDevicePlugin(DevicePlugin):
         block_devices = BlockDevices()
 
         # Devicemapper: LVM and Multipath
-        # dmsetup = DmsetupTable(block_devices)
+        dmsetup = DmsetupTable(block_devices)
 
         # Software RAID
-        # mds = MdRaid(block_devices).all()
+        mds = MdRaid(block_devices).all()
 
         # _zpools
         zfs_devices = ZfsDevices()
         zfs_devices.full_scan(block_devices)
 
         # EMCPower Devices
-        # emcpowers = EMCPower(block_devices).all()
+        emcpowers = EMCPower(block_devices).all()
 
         # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
-        # local_fs = LocalFilesystems(block_devices).all()
+        local_fs = LocalFilesystems(block_devices).all()
 
         # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
 
-        return {"vgs": None, #dmsetup.vgs,
-                "lvs": None, #dmsetup.lvs,
+        return {"vgs": dmsetup.vgs,
+                "lvs": dmsetup.lvs,
                 "zfspools": zfs_devices.zpools,
                 "zfsdatasets": zfs_devices.datasets,
                 "zfsvols": zfs_devices.zvols,
-                "mpath": None, #dmsetup.mpaths,
+                "mpath": dmsetup.mpaths,
                 "devs": block_devices.block_device_nodes,
-                "local_fs": None, #local_fs,
-                'emcpower': None, #emcpowers,
-                'mds': None} #mds}
+                "local_fs": local_fs,
+                'emcpower': emcpowers,
+                'mds': mds}
 
     def _scan_devices(self, scan_always):
         full_scan_result = None
