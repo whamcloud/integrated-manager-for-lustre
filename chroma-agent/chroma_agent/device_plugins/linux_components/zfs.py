@@ -25,11 +25,11 @@ strip_lines = functools.partial(map, lambda x: x.strip())
 
 def write_to_store(key, value, filename='store.json'):
     old = {}
-    
+
     try:
         with open(filename, 'r') as f:
             old = json.loads(f.read())[key]
-    except OSError:
+    except (OSError, IOError):
         pass
 
     # preserve other keys, only overwrite the key specified
