@@ -1,5 +1,7 @@
 ## Table of Contents
 ---
+![gears](md_Graphics/gears.jpg)
+
 1. [Introduction](Introduction.md)
 
 1. [IML Screen Shots](IML_Screen_Shots.md)
