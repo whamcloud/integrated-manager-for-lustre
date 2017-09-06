@@ -2,6 +2,8 @@
 
 # Creating a Monitored Only Lustre zfs Filesystem on Vagrant HPC Storage Sandbox
 
+![zfs](md_Graphics/zfs.png)
+
 ## Prerequisites:
 Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
 
