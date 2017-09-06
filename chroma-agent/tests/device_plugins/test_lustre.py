@@ -118,7 +118,7 @@ class TestLustreScanPackages(CommandCaptureTestCase):
         lustre.rpm_lib = mock.Mock()
 
         # supply sorted list to preserve command parameter sequence
-        self.add_command(('dnf', 'clean', 'all', '--disablerepo=*') + tuple(['--enablerepo=%s' %r for r in repo_list]))
+        self.add_command(('dnf', 'clean', 'all', '--disablerepo=*') + tuple(['--enablerepo=%s' % r for r in repo_list]))
 
         for repo in repo_list:
             self.add_command(('dnf', 'repoquery', '--available', '--disablerepo=*', '--enablerepo=%s' % repo, '--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))
