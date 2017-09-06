@@ -41,9 +41,7 @@ done
 if [[ \$HOSTNAME = *vm*2 ]]; then
     yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
     sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"
-fi
-
-$LOCAL_CLUSTER_SETUP" | dshbak -c
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
