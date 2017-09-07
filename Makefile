@@ -61,9 +61,9 @@ tags:
 fetch_build:
 	curl -Lk -o $(ARCHIVE_PATH) $(BUILD_URL)/$(ARCHIVE_FILENAME)
 	# fetch integration tests package (not included in iml release archive)
-	set -e;                                                                       \
-	if [ ! -z "$(DEPS_URL)" ]; then                                               \
-		FILENAME=$$(curl -k --list-only $(DEPS_URL)/repo/ | grep chroma-manager-integration | sed -e 's/.*\(chroma-manager-integration-[^/]*\)\/.*/\1/'); \
+	set -e;                                                                           \
+	if [ -n "$(DEPS_URL)" ]; then                                                     \
+		FILENAME=$$(curl -k --list-only $(DEPS_URL)/repo/ | sed -ne '/chroma-manager-integration/s/.*\(chroma-manager-integration-[^/]*\)\/.*/\1/p'); \
 		echo $$FILENAME;                                                          \
 		mkdir -p chroma-manager/dist;                                             \
 		curl -Lk -o chroma-manager/dist/$$FILENAME $(DEPS_URL)/repo/$$FILENAME;   \
