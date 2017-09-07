@@ -285,7 +285,6 @@ echo "run \"chroma-config setup\""
 service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf %{manager_root}/static
--find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 
 if [ $1 -lt 1 ]; then
     #reset worker processes
