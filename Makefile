@@ -61,8 +61,8 @@ tags:
 fetch_build:
 	curl -Lk -o $(ARCHIVE_PATH) $(BUILD_URL)/$(ARCHIVE_FILENAME)
 	# fetch integration tests package (not included in iml release archive)
+	set -e;                                                                       \
 	if [ ! -z "$(DEPS_URL)" ]; then                                               \
-		set -e;                                                                   \
 		FILENAME=$$(curl -k --list-only $(DEPS_URL)/repo/ | grep chroma-manager-integration | sed -e 's/.*\(chroma-manager-integration-[^/]*\)\/.*/\1/'); \
 		echo $$FILENAME;                                                          \
 		mkdir -p chroma-manager/dist;                                             \
@@ -79,7 +79,7 @@ destroy_cluster: Vagrantfile
 	vagrant destroy -f;                                                  \
 	sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;          \
 	sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;             \
-	if [ ! -z "$$LIBVIRT" ]; then                                        \
+	if [ -n "$$LIBVIRT" ]; then                                          \
 		echo "LIBVIRT detected as provider";                             \
 		export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
 		for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
@@ -99,10 +99,9 @@ create_cluster:
 	    if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then     \
 	        (echo -n "command=\"$$PWD/vagrant-virsh\" ";  \
 	         cat id_rsa.pub) >> ~/.ssh/authorized_keys;   \
-	    else                                              \
-	         cat id_rsa.pub >> ~/.ssh/authorized_keys;    \
 	    fi                                                \
 	fi
+	set -e;                                                                       \
 	if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then                                 \
 	    echo "LIBVIRT detected as provider";                                      \
 	    export LIBVIRT_DEFAULT_URI=qemu:///system;                                \
