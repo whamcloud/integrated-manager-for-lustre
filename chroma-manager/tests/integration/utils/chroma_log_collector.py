@@ -146,7 +146,8 @@ class ChromaLogCollector(object):
             return["iml-diagnostics not installed on %s. skipping." % server]
 
         # Generate the diagnostics from the server
-        result = shell_run(['ssh', server, 'iml-diagnostics', '--all-logs'])
+        result = shell_run(
+            ['ssh', server, 'iml-diagnostics', '--all-logs'], timeout=300)
 
         if result.timeout:
             return["IML Diagnostics timed-out"]
