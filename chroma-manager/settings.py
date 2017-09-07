@@ -300,8 +300,6 @@ AGENT_RESTART_TIMEOUT = 30
 
 SSH_CONFIG = None
 
-AUTH_PROFILE_MODULE = "chroma_core.UserProfile"
-
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:

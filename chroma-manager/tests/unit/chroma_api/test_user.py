@@ -76,39 +76,6 @@ class TestUserResource(ChromaApiTestCase):
         self.assertEqual(me['email'], "joebob@joebob.rocks")
         self.assertEqual(me['full_name'], "Joebob Josephson")
 
-    def test_superuser_accepted_eula(self):
-        superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertFalse(superuser['accepted_eula'])
-
-        superuser['accepted_eula'] = True
-
-        response = self.api_client.put("/api/user/%s/" % superuser["id"], data=superuser)
-        self.assertHttpOK(response)
-
-        superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertTrue(superuser['accepted_eula'])
-
-    def test_non_superuser_can_see_accept_eula(self):
-        credentials = {
-            "username": "non_superuser",
-            "password": "foo"
-        }
-
-        non_superuser = User.objects.create_user(**credentials)
-        non_superuser.groups.add(Group.objects.get(name='filesystem_users'))
-
-        self.api_client.client.login(**credentials)
-
-        me = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertFalse(me["accepted_eula"])
-
-        superuser = User.objects.create_superuser("superuser", "", "bar")
-        superuser.userprofile.accepted_eula = True
-        superuser.userprofile.save()
-
-        me = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertTrue(me["accepted_eula"])
-
     def test_is_superuser_is_readonly(self):
         superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertTrue(superuser["is_superuser"])
@@ -119,32 +86,3 @@ class TestUserResource(ChromaApiTestCase):
 
         superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertTrue(superuser['is_superuser'])
-
-    def test_accept_eula_is_readonly_for_non_superuser(self):
-        data = {
-            "email": "test@test.com",
-            "first_name": "",
-            "groups": ["/api/group/3/"],
-            "last_name": "",
-            "password1": "a",
-            "password2": "a",
-            "username": "test",
-            "accepted_eula": True
-        }
-
-        resp = self.api_client.post("/api/user/", data=data)
-        self.assertHttpCreated(resp)
-
-        self.api_client.client.login(username=data["username"], password=data["password1"])
-
-        me = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertFalse(me["accepted_eula"])
-        self.assertFalse(me["is_superuser"])
-
-        me["accepted_eula"] = True
-
-        resp = self.api_client.put("/api/user/%s/" % me["id"], data=me)
-        self.assertHttpOK(resp)
-
-        me = self.deserialize(self.api_client.get("/api/session/"))['user']
-        self.assertFalse(me["accepted_eula"])

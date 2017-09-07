@@ -87,4 +87,4 @@ if [ -n "$XML_REPORT" ]; then
 else
     XUNIT_ARGS=""
 fi
-nosetests --stop --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $NOSE_ARGS $TESTS
+nosetests --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $NOSE_ARGS $TESTS
