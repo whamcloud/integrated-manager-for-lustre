@@ -412,6 +412,18 @@ class RealRemoteOperations(RemoteOperations):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+        # the set -e just sets up a fail-safe execution environment where
+        # any shell commands in command that fail and are not error checked
+        # cause the shell to fail, alerting the caller that one of their
+        # commands failed unexpectedly
+        command = "set -e; %s" % command
+
+        # exec 0<&- being prefixed to the shell command string below closes
+        # the shell's stdin as we don't expect any uses of remote_command()
+        # to read from stdin
+        if not buffer:
+            command = "exec 0<&-; %s" % command
+
         args = {'username': 'root'}
         # If given an ssh_config file, require that it defines
         # a private key and username for accessing this host
@@ -1144,17 +1156,17 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             if self.has_chroma_agent(server):
                 self._ssh_address(
-                    server, 
+                    server,
                     '''
                     systemctl stop chroma-agent
                     i=0
-                    
+
                     while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
                         ((i++))
                         sleep 1
                     done
-                    
-                    if [ "$i" -eq {timeout} ]; then 
+
+                    if [ "$i" -eq {timeout} ]; then
                         exit 1
                     fi
                     '''.format(timeout=TEST_TIMEOUT)
