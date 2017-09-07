@@ -14,6 +14,11 @@ class TestConfParams(ChromaIntegrationTestCase):
         # check for it right away and blow up if it's not as we expect.
         self.assertEqual([h['address'] for h in self.hosts], host_addresses)
 
+        self.cleanup_zfs_pools(config['lustre_servers'][:4],
+                               self.CZP_EXPORTPOOLS,
+                               None,
+                               True)
+
         volumes = self.wait_for_shared_volumes(4, 2)
 
         mgt_volume = volumes[0]
