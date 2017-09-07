@@ -3,6 +3,9 @@ map $ssl_client_s_dn $ssl_client_s_dn_cn {
     ~/CN=(?<CN>[^/]+) $CN;
 }
 
+error_log syslog:server=unix:/dev/log;
+access_log syslog:server=unix:/dev/log;
+
 server {
     listen {{HTTP_FRONTEND_PORT}};
     return 301 https://$http_host$request_uri;

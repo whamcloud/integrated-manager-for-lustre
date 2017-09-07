@@ -98,7 +98,7 @@ class ChromaLogCollector(object):
 
         for server in self.chroma_managers + self.lustre_servers:
             errors.append(self.fetch_log(server, '/var/log/yum.log', "%s-yum.log" % server))
-            errors.extend(self.fetch_chroma_diagnostics(server))
+            errors.extend(self.fetch_iml_diagnostics(server))
 
         return [error for error in errors if error]
 
@@ -135,46 +135,45 @@ class ChromaLogCollector(object):
 
         return None
 
-    def fetch_chroma_diagnostics(self, server):
+    def fetch_iml_diagnostics(self, server):
         """
-        Collect the chroma diagnostics from the target
+        Collect the iml diagnostics from the target
         :return: empty list on success or list of error messages that can be used for diagnosing what went wrong.
         """
 
-        # Check that chroma-diagnostics is installed. May not be if installation failed, etc.
-        if shell_run(['ssh', server, 'which chroma-diagnostics']).rc:
-            return["chroma-diagnostics not installed on %s. skipping." % server]
+        # Check that iml-diagnostics is installed. May not be if installation failed, etc.
+        if shell_run(['ssh', server, 'which iml-diagnostics']).rc:
+            return["iml-diagnostics not installed on %s. skipping." % server]
 
         # Generate the diagnostics from the server
-        result = shell_run(['ssh', server, 'chroma-diagnostics', '-v', '-v', '-v'])
+        result = shell_run(['ssh', server, 'iml-diagnostics', '--all-logs'])
 
         if result.timeout:
-            return["Chroma Diagnostics timed-out"]
+            return["IML Diagnostics timed-out"]
 
-        # Find the diagnostics filename from the chroma-diagnostics output
+        # Find the diagnostics filename from the iml-diagnostics output
         cd_out = result.stderr.decode('utf8')
-        match = re.compile('/var/log/(diagnostics_.*\.tar\..*)').search(cd_out)
+        match = re.compile('/var/tmp/(sosreport-.*\.tar\..*)').search(cd_out)
         if not match:
-            return ["Did not find diagnostics filepath in chroma-diagnostics output:\nstderr:\n%s\nstdout:\n%s" %
+            return ["Did not find diagnostics filepath in iml-diagnostics output:\nstderr:\n%s\nstdout:\n%s" %
                     (cd_out, result.stdout.decode('utf8'))]
         diagnostics = match.group(1).strip()
 
         errors = []
 
         # Copy and expand the diagnostics locally, so they will be able to be read in browser in Jenkins.
-        errors.append(self.fetch_log(server, "/var/log/%s" % diagnostics, ''))
-        errors.append(self.fetch_log(server, "chroma-diagnostics.log", '%s-chroma-diagnostics.log' % server))
+        errors.append(self.fetch_log(server, "/var/tmp/%s" % diagnostics, ''))
 
-        if diagnostics.endswith('tar.lzma'):
-            if shell_run(['tar', '--lzma', '-xvf', "%s/%s" % (self.destination_path, diagnostics),
+        if diagnostics.endswith('tar.xz'):
+            if shell_run(['tar', '-xvJf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
-                errors.append("Error tar --lzma the chroma diagnostics file")
+                errors.append("Error tar --xvJf the iml diagnostics file")
         elif diagnostics.endswith('tar.gz'):
             if shell_run(['tar', '-xvzf', "%s/%s" % (self.destination_path, diagnostics),
                                '-C', self.destination_path]).rc:
-                errors.append("Error tar -xvzf the chroma diagnostics file")
+                errors.append("Error tar -xvzf the iml diagnostics file")
         else:
-            errors = "Didn't recognize chroma-diagnostics file format"
+            errors = "Didn't recognize iml-diagnostics file format"
 
         if shell_run(['rm', '-f', "%s/%s" % (self.destination_path, diagnostics)]).rc:
             errors.append("Unable to remove the diagnostics %s/%s" % (self.destination_path, diagnostics))
