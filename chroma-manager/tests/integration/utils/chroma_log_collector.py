@@ -147,7 +147,7 @@ class ChromaLogCollector(object):
 
         # Generate the diagnostics from the server
         result = shell_run(
-            ['ssh', server, 'iml-diagnostics', '--all-logs'], timeout=300)
+            ['ssh', server, 'iml-diagnostics', '--all-logs'], timeout=600)
 
         if result.timeout:
             return["IML Diagnostics timed-out"]
