@@ -412,6 +412,18 @@ class RealRemoteOperations(RemoteOperations):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+        # the set -e just sets up a fail-safe execution environment where
+        # any shell commands in command that fail and are not error checked
+        # cause the shell to fail, alerting the caller that one of their
+        # commands failed unexpectedly
+        command = "set -e; %s" % command
+
+        # exec 0<&- being prefixed to the shell command string below closes
+        # the shell's stdin as we don't expect any uses of remote_command()
+        # to read from stdin
+        if not buffer:
+            command = "exec 0<&-; %s" % command
+
         args = {'username': 'root'}
         # If given an ssh_config file, require that it defines
         # a private key and username for accessing this host
