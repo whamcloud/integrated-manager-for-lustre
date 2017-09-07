@@ -98,6 +98,11 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
 
+        self.cleanup_zfs_pools(config['lustre_servers'][:4],
+                               self.CZP_EXPORTPOOLS,
+                               None,
+                               True)
+
         volumes = self.get_usable_volumes()
         self.assertGreaterEqual(len(volumes), 4)
 
