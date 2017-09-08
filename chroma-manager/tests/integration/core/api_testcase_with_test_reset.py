@@ -988,7 +988,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         for zfs_device in imported_zpools:
             self.execute_commands(zfs_device.release_commands,
                                   first_test_server['fqdn'],
-                                  'export zfs device %s' % zfs_device)
+                                  'export zfs device %s' % zfs_device,
+                                  expected_return_code=None)
 
     def cleanup_linux_devices(self, test_servers):
         """
