@@ -42,14 +42,14 @@ deps: repo
 
 tags:
 	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
-	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
+	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma_test_env --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
 chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile
-	vagrant destroy
+	vagrant destroy -f
 	sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config
 	sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys
 	export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
@@ -128,7 +128,7 @@ efs_tests: reset_cluster
 	chroma-manager/tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 requirements:
-	make -C chroma-manager requirements
+	make -C chroma-manager requirements.txt
 
 chroma_test_env: requirements chroma_test_env/bin/activate
 

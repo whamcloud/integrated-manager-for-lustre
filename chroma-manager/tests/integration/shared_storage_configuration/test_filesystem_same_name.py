@@ -79,12 +79,10 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Filter out the paths by removing anything with a leading /.
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
-        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:4])
         self.cleanup_zfs_pools(self.TEST_SERVERS[:4],
                                self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)
-        self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:4])
 
         # Our other FS should be untouched
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects']), 1)
