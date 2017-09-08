@@ -76,18 +76,18 @@ class LinuxDevicePlugin(DevicePlugin):
     def _scan_devices(self, scan_always):
         full_scan_result = None
 
-        if scan_always or (self._quick_scan() != self._last_quick_scan_result):
-            self._last_quick_scan_result = self._quick_scan()
-            full_scan_result = self._full_scan()
-            self._last_full_scan_result = full_scan_result
-        elif self._safety_send < DevicePlugin.FAILSAFEDUPDATE:
-            self._safety_send += 1
-        else:
-            # The purpose of this is to cause the ResourceManager to re-evaluate the device-graph for this
-            # host which may lead to different results if the devices reported from other hosts has changed
-            # This should not really be required but is a harmless work around while we get the manager code
-            # in order
-            full_scan_result = self._last_full_scan_result
+        # if scan_always or (self._quick_scan() != self._last_quick_scan_result):
+        self._last_quick_scan_result = self._quick_scan()
+        full_scan_result = self._full_scan()
+        self._last_full_scan_result = full_scan_result
+#        elif self._safety_send < DevicePlugin.FAILSAFEDUPDATE:
+#            self._safety_send += 1
+#        else:
+#            # The purpose of this is to cause the ResourceManager to re-evaluate the device-graph for this
+#            # host which may lead to different results if the devices reported from other hosts has changed
+#            # This should not really be required but is a harmless work around while we get the manager code
+#            # in order
+#            full_scan_result = self._last_full_scan_result
 
         if full_scan_result is not None:
             self._safety_send = 0
