@@ -91,7 +91,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             try:
                 from cluster_sim.simulator import ClusterSimulator
             except ImportError:
-                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of it?\n%s" % sys.exc_info())
+                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of it?\n%s" % str(sys.exc_info()))
 
             # The simulator's state directory will be left behind when a test fails,
             # so make sure it has a unique-per-run name
