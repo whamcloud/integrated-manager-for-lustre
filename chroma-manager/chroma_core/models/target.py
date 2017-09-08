@@ -1120,7 +1120,11 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()}),
+                (MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target,
+                                                     None,
+                                                     False))]
 
 
 class PreFormatCheck(Step):
@@ -1370,16 +1374,12 @@ class FormatTargetJob(StateChangeJob):
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
                       (UpdateManagedTargetMount, {'target': self.target, 'primary': True}),
-                      # Mount on secondary host to enable secondary VolumeNode to be registered in resource manager
+                      # Unmount from primary host to enable secondary VolumeNode to be registered in resource manager
                       (MountOrImportStep,
                        MountOrImportStep.create_parameters(self.target,
-                                                           secondary_mount.host,
+                                                           None,
                                                            False)),
-                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False}),
-                      (MountOrImportStep,
-                       MountOrImportStep.create_parameters(self.target,
-                                                           primary_mount.host,
-                                                           False))])
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False}))
 
         return steps
 
