@@ -1332,7 +1332,6 @@ class FormatTargetJob(StateChangeJob):
 
     def get_steps(self):
         primary_mount = self.target.managedtargetmount_set.get(primary=True)
-        secondary_mount = self.target.managedtargetmount_set.get(primary=False)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1381,7 +1380,7 @@ class FormatTargetJob(StateChangeJob):
                        MountOrImportStep.create_parameters(self.target,
                                                            None,
                                                            False)),
-                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False}))
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False})])
 
         return steps
 
