@@ -103,7 +103,7 @@ Target_stop() {
 }
 
 Target_status() {
-    dbg "Target_status()"
+    # dbg "Target_status()"
     # call the agent to see if it's running
     if chroma-agent target_running --uuid $TARGET >/dev/null 2>&1; then
         rc=$OCF_SUCCESS

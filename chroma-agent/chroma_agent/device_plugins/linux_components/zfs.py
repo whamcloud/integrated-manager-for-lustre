@@ -18,29 +18,35 @@ from iml_common.filesystems.filesystem import FileSystem
 from iml_common.lib.exception_sandbox import exceptionSandBox
 from iml_common.lib import util
 
+STORE_FILENAME = '/tmp/store.json'
 
 filter_empty = functools.partial(filter, None)
 strip_lines = functools.partial(map, lambda x: x.strip())
 
 
-def write_to_store(key, value, filename='store.json'):
+def write_to_store(key, value, filename=STORE_FILENAME):
     data = {}
 
     try:
         with open(filename, 'r') as f:
             data = json.loads(f.read())
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) as e:
+        daemon_log.info('write_to_store(): reading from %s failed (%s)' % (filename, e))
 
+    daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
     data[key] = value
     with open(filename, 'w') as f:
         f.write(json.dumps(data))
 
 
-def read_from_store(key, filename='store.json'):
-    with open(filename, 'r') as f:
-        return json.loads(f.read())[key]
+def read_from_store(key, filename=STORE_FILENAME):
+    daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
+    try:
+        with open(filename, 'r') as f:
+            return json.loads(f.read())[key]
+    except (OSError, IOError):
+        return None
 
 
 def clean_list(xs):
@@ -151,28 +157,27 @@ class ZfsDevices(object):
             zpools.extend(filter(lambda x: x['pool'] not in existing_pool_names, get_zpools(active=False)))
 
             for pool in zpools:
-                if pool['state'] == 'UNAVAIL':
-                    # attempting to read from store, this should always return zpool info
-                    # either with or without datasets, error otherwise
-                    data = read_from_store(pool['id'])
+                with ZfsDevice(pool['pool'], True) as zfs_device:
+                    if zfs_device.available:
+                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                        self._add_zfs_pool(out, block_devices)
+                    else:
+                        # zpool state is probably 'UNAVAIL' as it is imported elsewhere,
+                        # attempt to read from store, this should return previously seen zpool state
+                        # either with or without datasets
+                        data = read_from_store(pool['id'])
 
-                    if not data:
-                        raise RuntimeError('read_from_store() missing data for zpool %s!' % pool['pool'])
+                        if not data:
+                            daemon_log.error("zpool '%s' not available and no relevant entry found in store during "
+                                             "device scan " % pool['pool'])
+                            continue
+                            # raise RuntimeError('read_from_store() missing data for zpool %s!' % pool['pool'])
 
-                    # populate self._pools/datasets/zvols info from saved data read from store
-                    self._update_pool_or_datasets(block_devices, data['pool'], data['datasets'], data['zvols'])
-
-                elif pool['state'] in self.acceptable_health:
-                    with ZfsDevice(pool['pool'], True) as zfs_device:
-                        if zfs_device.available:
-                            out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
-                            self._add_zfs_pool(out, block_devices)
-                        else:
-                            raise RuntimeError("zpool '%s' could not be imported during device scan" % pool['pool'])
-
-                else:
-                    daemon_log.error("zpool '%s' could not be processed during device scan (state: %s)" % (pool['pool'],
-                                                                                                           pool['state']))
+                        # populate self._pools/datasets/zvols info from saved data read from store
+                        self._update_pool_or_datasets(block_devices,
+                                                      data['pool'],
+                                                      data['datasets'],
+                                                      data['zvols'])
 
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}
