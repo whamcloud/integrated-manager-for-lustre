@@ -153,7 +153,7 @@ class ChromaLogCollector(object):
             return["IML Diagnostics timed-out"]
 
         # Find the diagnostics filename from the iml-diagnostics output
-        cd_out = result.stderr.decode('utf8')
+        cd_out = result.stdout.decode('utf8')
         match = re.compile('/var/tmp/(sosreport-.*\.tar\..*)').search(cd_out)
         if not match:
             return ["Did not find diagnostics filepath in iml-diagnostics output:\nstderr:\n%s\nstdout:\n%s" %
