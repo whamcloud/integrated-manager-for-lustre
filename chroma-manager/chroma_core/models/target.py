@@ -998,16 +998,22 @@ class RegisterTargetJob(StateChangeJob):
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
-            steps = [(RegisterTargetStep, {
-                'primary_host': primary_mount.host,
-                'target': self.target,
-                'device_path': path,
-                'mount_point': primary_mount.mount_point,
-                'backfstype': backfstype
-            })]
+            steps = [(MountOrImportStep,
+                      MountOrImportStep.create_parameters(self.target,
+                                                          primary_mount.host,
+                                                          False)),
+                     (RegisterTargetStep, {'primary_host': primary_mount.host,
+                                           'target': self.target,
+                                           'device_path': path,
+                                           'mount_point': primary_mount.mount_point,
+                                           'backfstype': backfstype}),
+                     (MountOrImportStep,
+                      MountOrImportStep.create_parameters(self.target,
+                                                          None,
+                                                          False))]
         else:
             raise NotImplementedError(target_class)
 
