@@ -82,10 +82,10 @@ class fence_virsh(FenceAgent):
 
 class fence_vbox(FenceAgent):
     def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file="%s/.ssh/id_rsa" % expanduser("~")):
-        if identity_file and isfile(identity_file):
-            auth = ['-k', identity_file]
-        elif password:
+        if password:
             auth = ['-p', password]
+        elif identity_file and isfile(identity_file):
+            auth = ['-k', identity_file]
         else:
             raise RuntimeError("Neither password nor identity_file were supplied")
 
@@ -95,7 +95,7 @@ class fence_vbox(FenceAgent):
     def on(self):
         """Override super.on to wait 15 seconds then process as usual.
 
-        Real servers start slower then virtual ones do.  This simulates the production
+        Real servers start slower than virtual ones do.  This simulates the production
         environment more closely.  This was introduced to prevent HYD-2889 from occurring
         in the testing.
         """

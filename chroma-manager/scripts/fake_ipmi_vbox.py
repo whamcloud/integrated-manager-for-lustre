@@ -28,17 +28,17 @@ except ImportError:
 
 if __name__ == "__main__":
     try:
-        ipmi = PowerControlType.objects.get(make = "IPMI", model = "1.5 (LAN)")
+        ipmi = PowerControlType.objects.get(make="IPMI", model="1.5 (LAN)")
     except PowerControlType.DoesNotExist:
         fatal("Could not find the IPMI power type! Is the DB set up?")
 
     ipmi.agent = "fence_vbox"
     ipmi.default_port = 22
-    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s"
-    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s"
-    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s"
-    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor"
-    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s"
+    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o on -n %(identifier)s"
+    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password) -o reboot -n %(identifier)s"
+    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o off -n %(identifier)s"
+    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o monitor"
+    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o status -n %(identifier)s"
     ipmi.save()
 
     vm_host = raw_input("Enter the IP Address of your VM Host: ")
@@ -48,7 +48,13 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
-    PowerControlDevice.objects.get_or_create(device_type = ipmi, address = vm_host, port = 22)
+    user_name = raw_input("Enter the user of your VM Host: ")
+
+    pw = raw_input("Enter the password of your VM Host: ")
+
+    PowerControlDevice.objects.get_or_create(
+        device_type=ipmi, address=vm_host, port=22,
+        username=user_name, password=pw)
     try:
         transaction.commit()
     except transaction.TransactionManagementError:
