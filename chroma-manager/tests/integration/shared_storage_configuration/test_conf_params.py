@@ -17,7 +17,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.cleanup_zfs_pools(config['lustre_servers'][:4],
                                self.CZP_EXPORTPOOLS,
                                None,
-                               True)
+                               False)
 
         volumes = self.wait_for_shared_volumes(4, 2)
 
@@ -101,7 +101,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.cleanup_zfs_pools(config['lustre_servers'][:4],
                                self.CZP_EXPORTPOOLS,
                                None,
-                               True)
+                               False)
 
         volumes = self.wait_usable_volumes(4)
 
