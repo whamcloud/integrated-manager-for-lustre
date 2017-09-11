@@ -3,6 +3,8 @@ BUILDER_IS_EL = $(shell rpm --eval '%{?rhel:true}%{!?rhel:false}')
 # Top-level Makefile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
+VAGRANT_VM3_LIBVIRT_DIR = .vagrant/machines/vm3/libvirt
+
 .PHONY: all rpms docs subdirs $(SUBDIRS) tags
 
 all: TARGET=all
@@ -49,14 +51,23 @@ chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile
-	vagrant destroy -f
-	sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config
-	sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys
-	export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
-	for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
-	    virsh net-destroy $$net || true;                             \
-	    virsh net-undefine $$net || true;                            \
-	done
+	set -e;                                                              \
+	if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then                        \
+	    echo "LIBVIRT detected as provider";                             \
+	    vagrant destroy -f;                                              \
+	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
+	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
+	    export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
+	    for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
+	        virsh net-destroy $$net || true;                             \
+	        virsh net-undefine $$net || true;                            \
+	    done                                                             \
+	else                                                                 \
+	    echo "LIBVIRT not detected as provider";                         \
+	    vagrant destroy -f;                                              \
+	    sed -ie '/# VAGRANT START/,/# VAGRANT END/d' ~/.ssh/config;      \
+	    sed -ie '/IML Vagrant cluster/d' ~/.ssh/authorized_keys;         \
+	fi
 
 create_cluster:
 	vagrant up
@@ -65,52 +76,59 @@ create_cluster:
 	# for virsh commands in .ssh/authorized_keys
 	set -e;                                               \
 	if ! grep -qf id_rsa.pub ~/.ssh/authorized_keys; then \
-	    (echo -n "command=\"$$PWD/vagrant-virsh\" ";      \
-	     cat id_rsa.pub) >> ~/.ssh/authorized_keys;       \
+	    echo "working directory: $$PWD";                  \
+	    if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then     \
+	        (echo -n "command=\"$$PWD/vagrant-virsh\" ";  \
+	         cat id_rsa.pub) >> ~/.ssh/authorized_keys;   \
+	    else                                              \
+	         cat id_rsa.pub >> ~/.ssh/authorized_keys;    \
+	    fi                                                \
 	fi
-	set -e;                                                                   \
-	export LIBVIRT_DEFAULT_URI=qemu:///system;                                \
-	if ! virsh list --all | grep -q intel-manager-for-lustre_vm; then         \
-	    exit 0;                                                               \
-	fi;                                                                       \
-	EDITOR=./edit_network virsh net-edit vagrant-libvirt;                     \
-	virsh net-destroy vagrant-libvirt;                                        \
-	virsh net-start vagrant-libvirt;                                          \
-	stopped_nodes="";                                                         \
-	for node in {2..9}; do                                                    \
-	    stopped_nodes+="$$node";                                              \
-	    virsh shutdown intel-manager-for-lustre_vm$$node;                     \
-	done;                                                                     \
-	for node in {5..8}; do                                                    \
-	    if !  virsh dumpxml intel-manager-for-lustre_vm$$node |               \
-	      grep "<controller type='scsi' index='0' model='virtio-scsi'>"; then \
-	        EDITOR=./edit_scsi virsh edit intel-manager-for-lustre_vm$$node;  \
-	        echo "Modified $$vm to use virtio-scsi";                          \
-	    else                                                                  \
-	        echo "Interesting.  $$vm already has virtio-scsi support in it";  \
-	    fi;                                                                   \
-	done;                                                                     \
-	started_nodes="";                                                         \
-	while [ -n "$$stopped_nodes" ]; do                                        \
-	    for node in {2..9}; do                                                \
-	        if [[ $$stopped_nodes = *$$node* ]] &&                            \
-	          ! virsh list | grep -q intel-manager-for-lustre_vm$$node; then  \
-	            virsh start intel-manager-for-lustre_vm$$node;                \
-	            stopped_nodes=$${stopped_nodes/$$node/};                      \
-	            started_nodes+="$$node";                                      \
-	        fi;                                                               \
-	    done;                                                                 \
-	    sleep 1;                                                              \
-	done;                                                                     \
-	while [ -n "$$started_nodes" ]; do                                        \
-	    for node in {2..9}; do                                                \
-	        if [[ $$started_nodes = *$$node* ]] &&                            \
-	          ssh vm$$node hostname; then                                     \
-	            started_nodes=$${started_nodes/$$node/};                      \
-	        fi;                                                               \
-	    done;                                                                 \
-	    sleep 1;                                                              \
-	done
+	if [ -e $(VAGRANT_VM3_LIBVIRT_DIR)/id ]; then                                 \
+	    echo "LIBVIRT detected as provider";                                      \
+	    export LIBVIRT_DEFAULT_URI=qemu:///system;                                \
+	    if ! virsh list --all | grep -q intel-manager-for-lustre_vm; then         \
+	        exit 0;                                                               \
+	    fi;                                                                       \
+	    EDITOR=./edit_network virsh net-edit vagrant-libvirt;                     \
+	    virsh net-destroy vagrant-libvirt;                                        \
+	    virsh net-start vagrant-libvirt;                                          \
+	    stopped_nodes="";                                                         \
+	    for node in {2..9}; do                                                    \
+	        stopped_nodes+="$$node";                                              \
+	        virsh shutdown intel-manager-for-lustre_vm$$node;                     \
+	    done;                                                                     \
+	    for node in {5..8}; do                                                    \
+	        if !  virsh dumpxml intel-manager-for-lustre_vm$$node |               \
+	          grep "<controller type='scsi' index='0' model='virtio-scsi'>"; then \
+	            EDITOR=./edit_scsi virsh edit intel-manager-for-lustre_vm$$node;  \
+	            echo "Modified $$vm to use virtio-scsi";                          \
+	        else                                                                  \
+	            echo "Interesting.  $$vm already has virtio-scsi support in it";  \
+	        fi;                                                                   \
+	    done;                                                                     \
+	    started_nodes="";                                                         \
+	    while [ -n "$$stopped_nodes" ]; do                                        \
+	        for node in {2..9}; do                                                \
+	            if [[ $$stopped_nodes = *$$node* ]] &&                            \
+	              ! virsh list | grep -q intel-manager-for-lustre_vm$$node; then  \
+	                virsh start intel-manager-for-lustre_vm$$node;                \
+	                stopped_nodes=$${stopped_nodes/$$node/};                      \
+	                started_nodes+="$$node";                                      \
+	            fi;                                                               \
+	        done;                                                                 \
+	        sleep 1;                                                              \
+	    done;                                                                     \
+	    while [ -n "$$started_nodes" ]; do                                        \
+	        for node in {2..9}; do                                                \
+	            if [[ $$started_nodes = *$$node* ]] &&                            \
+	              ssh vm$$node hostname; then                                     \
+	                started_nodes=$${started_nodes/$$node/};                      \
+	            fi;                                                               \
+	        done;                                                                 \
+	        sleep 1;                                                              \
+	    done                                                                      \
+	fi
 
 reset_cluster: destroy_cluster create_cluster
 
