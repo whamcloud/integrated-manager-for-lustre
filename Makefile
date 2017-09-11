@@ -5,7 +5,7 @@ ARCHIVE_FILENAME := $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz
 ARCHIVE_DIR := chroma-bundles
 ARCHIVE_PATH := $(ARCHIVE_DIR)/$(ARCHIVE_FILENAME)
 ifeq ($(origin BUILD_NUM), undefined)
-BUILD_URL := https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download/v4.0.0.0P2
+BUILD_URL := https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download/v4.0.0.0P3
 else
 BUILD_URL := http://jenkins.lotus.hpdd.lab.intel.com/job/manager-for-lustre/$(BUILD_NUM)/arch=x86_64,distro=el7/artifact/chroma-bundles
 DEPS_URL := $(subst bundles,dependencies,$(BUILD_URL))
