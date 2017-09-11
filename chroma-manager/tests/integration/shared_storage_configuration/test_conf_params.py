@@ -103,8 +103,7 @@ class TestConfParams(ChromaIntegrationTestCase):
                                None,
                                True)
 
-        volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(volumes), 4)
+        volumes = self.wait_usable_volumes(4)
 
         mgt_volume = volumes[0]
         mdt_volumes = [volumes[1]]
