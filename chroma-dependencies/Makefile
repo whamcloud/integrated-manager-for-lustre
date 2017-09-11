@@ -61,6 +61,7 @@ requirements::
 	echo "gunicorn==18.0";                                    \
 	echo "pytz==2014.4";                                      \
 	echo "tzlocal";                                           \
+	echo "systemd-python";                                    \
 	echo "https://dl.dropboxusercontent.com/s/qqjud11bvh8vo68/coverage-3.5.2pl2.tar.gz"; \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
 	    $(TOP)/../chroma-manager/requirements.tmp
