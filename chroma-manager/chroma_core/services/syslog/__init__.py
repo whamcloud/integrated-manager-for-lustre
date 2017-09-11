@@ -17,11 +17,11 @@ from iml_common.lib.date_time import IMLDateTime
 import settings
 
 
-log = log_register('systemd-journal')
+log = log_register('systemd_journal')
 
 
 class Service(ChromaService):
-    PLUGIN_NAME = 'systemd-journal'
+    PLUGIN_NAME = 'systemd_journal'
 
     def __init__(self):
         super(Service, self).__init__()
