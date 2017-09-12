@@ -1008,8 +1008,8 @@ class RealRemoteOperations(RemoteOperations):
         :return: Exception on failure.
         """
         try:
-            self._ssh_address(server['address'],
-                              'umount -t lustre -a')
+            result = self._ssh_address(server['address'],
+                              'set -ex; umount -t lustre -a; grep " lustre " /proc/mounts && false')
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
@@ -1022,10 +1022,15 @@ class RealRemoteOperations(RemoteOperations):
                               ''')
             # going to need to reboot this node to get any use out of it
             self.reset_server(server['fqdn'])
-            raise RuntimeError("Failed to umount Lustre on %s.  "
+            raise RuntimeError("Timed out unmounting Lustre target(s) on %s.  "
                                "Debug data has been collected.  "
                                "Make sure to add it to an existing ticket or "
                                "create a new one." % server['nodename'])
+        if result.rc != 0:
+            logger.info("Unmounting Lustre on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc), result.stdout, result.stderr)
+            raise RuntimeError("Failed to unmount lustre on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
+                               (server, result.rc, result.stdout, result.stderr))
 
     def is_worker(self, server):
         workers = [w['address'] for w in
