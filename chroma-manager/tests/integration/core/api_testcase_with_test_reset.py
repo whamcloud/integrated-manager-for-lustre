@@ -997,7 +997,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 if lustre_device['backend_filesystem'] == 'zfs':
                     zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
 
-                    self.execute_commands(zfs_device.release_device_commands,
+                    self.execute_commands(zfs_device.release_commands,
                                           server['fqdn'],
                                           'export zfs device %s' % zfs_device,
                                           expected_return_code=None)
