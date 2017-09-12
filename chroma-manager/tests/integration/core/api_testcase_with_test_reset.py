@@ -140,6 +140,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.wait_until_true(self.api_contactable)
                 self.remote_operations.unmount_clients()
                 self.api_force_clear()
+                self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
                 self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 

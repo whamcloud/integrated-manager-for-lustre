@@ -14,11 +14,6 @@ class TestConfParams(ChromaIntegrationTestCase):
         # check for it right away and blow up if it's not as we expect.
         self.assertEqual([h['address'] for h in self.hosts], host_addresses)
 
-        self.cleanup_zfs_pools(config['lustre_servers'][:4],
-                               self.CZP_EXPORTPOOLS,
-                               None,
-                               False)
-
         volumes = self._fetch_help(lambda: self.wait_for_shared_volumes(4, 2),
                                    ['tom.nabarro@intel.com'],
                                    'not enough volumes recognised',
@@ -100,11 +95,6 @@ class TestConfParams(ChromaIntegrationTestCase):
         host_addresses = [config['lustre_servers'][0]['address']]
         self.hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
-
-        self.cleanup_zfs_pools(config['lustre_servers'][:4],
-                               self.CZP_EXPORTPOOLS,
-                               None,
-                               False)
 
         volumes = self._fetch_help(lambda: self.wait_usable_volumes(4),
                                    ['tom.nabarro@intel.com'],
