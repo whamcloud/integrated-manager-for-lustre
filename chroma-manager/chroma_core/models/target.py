@@ -8,7 +8,6 @@ import re
 import logging
 import uuid
 from collections import namedtuple
-from django.core.exceptions import MultipleObjectsReturned
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
@@ -1258,8 +1257,13 @@ class UpdateManagedTargetMount(Step):
 
         try:
             mtm = target.managedtargetmount_set.get(volume_node__primary=is_primary)
-        except MultipleObjectsReturned:
+        except ManagedTargetMount.MultipleObjectsReturned:
             job_log.error("Multiple %s MTM objects returned, only expecting one" % self._primary_text(kwargs))
+            raise
+        except ManagedTargetMount.DoesNotExist:
+            if is_primary is False:
+                job_log.info("No secondary mount found for target %s" % target.name)
+                return
             raise
         else:
             current_volume_node = mtm.volume_node
