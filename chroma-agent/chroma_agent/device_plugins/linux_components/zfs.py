@@ -153,8 +153,8 @@ class ZfsDevices(object):
         zpools = []
         try:
             zpools.extend(get_zpools())
-            existing_pool_names = [pool['pool'] for pool in zpools]
-            zpools.extend(filter(lambda x: x['pool'] not in existing_pool_names, get_zpools(active=False)))
+            active_pool_names = [pool['pool'] for pool in zpools]
+            zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
 
             for pool in zpools:
                 with ZfsDevice(pool['pool'], True) as zfs_device:
@@ -178,6 +178,11 @@ class ZfsDevices(object):
                                                       data['pool'],
                                                       data['datasets'],
                                                       data['zvols'])
+            # verify still have active_pool_names imported
+            new_active_pool_names = [pool['pool'] for pool in get_zpools()]
+            if set(active_pool_names) != set(new_active_pool_names):
+                daemon_log.warning("Different set of imported zpools before and after full_scan. "
+                                   "Before: %s, After: %s" % (active_pool_names, new_active_pool_names))
 
         except OSError:                 # OSError occurs when ZFS is not installed.
             self._zpools = {}

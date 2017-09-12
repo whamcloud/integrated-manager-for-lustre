@@ -492,7 +492,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     def get_imported_zpools(self):
         from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
         out = {}
-        for server in config['lustre_servers'][:4]:
+        for server in self.config_servers:
             out.update({server['fqdn']: self.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
                                                               server['fqdn'],
                                                               'listing zfs devices')[0].split()})
