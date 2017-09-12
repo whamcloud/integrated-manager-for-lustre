@@ -488,6 +488,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return self.get_shared_volumes(required_hosts)
 
+    def get_imported_zpools(self):
+        from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
+        out = {}
+        for server in config['lustre_servers']:
+            out.update({server['fqdn']: self.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
+                                                              server['fqdn'],
+                                                              'listing zfs devices')[0].split()})
+        return out
+
     def get_usable_volumes(self):
         response = self.chroma_manager.get(
             '/api/volume/',
@@ -495,6 +504,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         )
         self.assertEqual(response.successful, True, response.text)
         volumes = response.json['objects']
+        logger.info("Imported zpools: %s" % self.get_imported_zpools())
         return self.filter_for_permitted_volumes(volumes)
 
     def wait_usable_volumes(self, required_volume_count):
