@@ -307,11 +307,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         self._add_hosts(addresses_to_add, auth_type)
 
-        self.cleanup_zfs_pools(config['lustre_servers'][:4],
-                               self.CZP_EXPORTPOOLS,
-                               None,
-                               False)
-
         return self.get_hosts(addresses)
 
     def get_hosts(self, addresses=None):
