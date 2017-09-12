@@ -987,11 +987,21 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                           first_test_server['fqdn'],
                                           'create zfs device %s' % zfs_device)
 
-        for zfs_device in imported_zpools:
-            self.execute_commands(zfs_device.release_commands,
-                                  first_test_server['fqdn'],
-                                  'export zfs device %s' % zfs_device,
-                                  expected_return_code=None)
+        if action & self.CZP_EXPORTPOOLS:
+            for zfs_device in imported_zpools:
+                self.execute_commands(zfs_device.release_commands,
+                                      first_test_server['fqdn'],
+                                      'export zfs device %s' % zfs_device)
+
+        for server in test_servers:
+            for lustre_device in config['lustre_devices']:
+                if lustre_device['backend_filesystem'] == 'zfs':
+                    zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
+
+                    self.execute_commands(zfs_device.release_device_commands,
+                                          server['fqdn'],
+                                          'export zfs device %s' % zfs_device,
+                                          expected_return_code=None)
 
     def cleanup_linux_devices(self, test_servers):
         """
