@@ -28,7 +28,7 @@ su chromatest
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
 exit
-cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
+cat .ssh/id_rsa.pub >> ~chromatest/.ssh/authorized_keys
 scp .ssh/* chromatest@$CHROMA_MANAGER:.ssh/
 
 # Configure rabbitmq
