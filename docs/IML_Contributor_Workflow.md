@@ -16,7 +16,7 @@ git clone git@github.com:intel-hpdd/GUI.git
 ### List the current branches
 ```
 cd gui
-git branch front
+git branch
 git branch --all
 ```
 
@@ -75,16 +75,16 @@ git push origin my-new-branch
 
 Browse to [https://github.com/intel-hpdd]()
 
-* Select to the desired repository where the new branch was pushed
-* Click on the **branches** tab
-* Find the branch in the list and click **New pull request**
-* Fill out a comment with the description of the change
+* Select to the desired repository where the new branch was pushed.
+* Click on the **branches** tab.
+* Find the branch in the list and click **New pull request**.
+* Fill out a comment with the description of the change.
 * Choose Reviewers, Labels, Assignees, etc.
-* Click **Create pull request**
+* Click **Create pull request**.
 
 ## Copy the URL and request a code review via email
 
-### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
+### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch.
 
 ### If comments are left in the PR page, then the developer is responsible for addressing each comment.
 * If code changes are required, edit the code, save and commit as described above.
@@ -109,7 +109,7 @@ Intel provides a Jenkins build server that performs automated tests and generate
 
 ## 6. Fedora Copr Automated Build System
 A number of software dependencies for IML reside in the github repository: 
-[manager-for-lustre-dependecies](https://github.com/intel-hpdd/manager-for-lustre-dependencies)
+[manager-for-lustre-dependecies](https://github.com/intel-hpdd/manager-for-lustre-dependencies).
 
 The dependencies are reflected in our [copr](https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/) project.
 
@@ -119,7 +119,7 @@ In order to install IML and lustre onto a lustre cluster, the following are nece
 
 1. A Lustre Cluster
     * "Bare-metal" set of servers.
-    * Virtual machine environment such as vagrant, KVM or docker
+    * Virtual machine environment such as vagrant, KVM or docker.
 
 1. Network access to the Fedora Copr RPMs.
 1. Ability to copy the proper IML tarball to the administrator node of the cluster.

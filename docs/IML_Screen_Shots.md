@@ -3,7 +3,7 @@
 # IML Screen Shots
 
 
-## The examples below are intended to represent an overall sense of the IML look and feel. 
+### The examples below are intended to represent an overall sense of the IML look and feel. 
 
 ## IML Login Screen
 ![iml_login.png](md_Graphics/iml_login.png)

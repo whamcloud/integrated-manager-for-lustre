@@ -71,6 +71,7 @@ yum remove rabbitmq-server
 ### **Note:**  The IML install creates a repo dir based on a tgz distrubtion and a repo file in /etc/yum.repos.d/ however, both repo dir and repo file are completely removed after installation so they should not need to be deleted now.
 
 
+---
 
 # **Step 2**: Uninstall the IML Agent
 

@@ -10,16 +10,16 @@
 * [Git Bootcamp and Cheat Sheet](https://docs.python.org/devguide/gitbootcamp.html)
 
 ### General Information
-* Snapshots, not Differences
+* Snapshots, not Differences.
 
-* Nearly every operation is local
+* Nearly every operation is local.
 
-* Integrity - SHA-1 Hash (40 Characters)
+* Integrity - SHA-1 Hash (40 Characters).
 
 * 3 States that files can reside in:
-    * Committed - Safely stored in the local database
-    * Modified - Changed, not commited
-    * Staged - Marked to go into the next commit
+    * Committed - Safely stored in the local database.
+    * Modified - Changed, not commited.
+    * Staged - Marked to go into the next commit.
 
 * fetch imports commits from a remote repo into your local repo.
 * Commits are stored as remote branches instead of normal local branches.

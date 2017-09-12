@@ -4,7 +4,7 @@
 
 ![things to learn](md_Graphics/learn_sm.jpg)
 
-## As a contributor to IML, the following topics and resources are important:
+### As a contributor to IML, the following topics and resources are important:
 
 Topic | Link
 ------|-------

@@ -112,6 +112,7 @@ cd /vagrant/intel-manager-for-lustre
 cd chroma-manager/chroma_core/models
 ```
 Type the command:
+* **python -m py_compile host.py**
 * **python -O -m py_compile host.py**
 
 This will create the files: **host.pyc** and **host.pyo**
