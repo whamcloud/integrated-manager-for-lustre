@@ -1,6 +1,6 @@
 [**Table of Contents**](index.md)
 
-![unit test](md_Graphics/unit_test.png)
+![unit test](md_Graphics/testing_sm.jpg)
 
 # Create **Frontend** Unit Tests
 

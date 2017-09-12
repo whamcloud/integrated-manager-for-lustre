@@ -1,6 +1,6 @@
 ## Table of Contents
 ---
-![gears](md_Graphics/gears.jpg)
+![gears](md_Graphics/gears_sm.jpg)
 
 1. [Introduction](Introduction.md)
 

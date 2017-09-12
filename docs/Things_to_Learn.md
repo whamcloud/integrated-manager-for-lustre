@@ -2,7 +2,7 @@
 
 # Things to Learn
 
-![things to learn](md_Graphics/success.jpg)
+![things to learn](md_Graphics/learn_sm.jpg)
 
 ## As a contributor to IML, the following topics and resources are important:
 

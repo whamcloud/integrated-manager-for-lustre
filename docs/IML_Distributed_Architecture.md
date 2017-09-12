@@ -2,7 +2,7 @@
 
 # IML Distributed Architecture
 
-![architecture](md_Graphics/architecture.jpg)
+![architecture](md_Graphics/architecture_sm.jpg)
 
 ### The current setup
 

@@ -2,7 +2,7 @@
 
 # Git Info
 
-![git info](md_Graphics/git_info.jpg)
+![git info](md_Graphics/git_sm.jpg)
 
 ## Getting Started
 * [Git Basics](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics)

@@ -2,7 +2,7 @@
 
 # Contributing to the IML Frontend Quick Guide
 
-![frontend](md_Graphics/frontend.jpg)
+![frontend](md_Graphics/frontend_sm.jpg)
 
 ## General 
 * [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)

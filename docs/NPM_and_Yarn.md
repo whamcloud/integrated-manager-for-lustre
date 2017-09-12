@@ -2,7 +2,7 @@
 
 # NPM and Yarn
 
-![npm yarn](md_Graphics/npm_yarn.png)
+![npm yarn](md_Graphics/npm_yarn_sm.jpg)
 
 ### **NPM** stands for Node Package Manager.
 ### **Yarn** is a new JavaScript package manager built by Facebook, Google, Exponent and Tilde.

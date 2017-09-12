@@ -2,7 +2,7 @@
 
 # Introduction
 
-![beginning](md_Graphics/the_beginning.jpg)
+![beginning](md_Graphics/start_sm.jpg)
 
 ### **IML** stands for Intel Manager for Lustre.
 ### **IML** is responsible for the installation, configuration, monitoring, and overall management of [Lustre®](http://lustre.org/). 

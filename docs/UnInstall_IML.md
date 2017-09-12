@@ -2,7 +2,7 @@
 
 # Uninstalling IML
 
-![clustre](md_Graphics/uninstall.jpg)
+![clustre](md_Graphics/uninstall_sm.jpg)
 
 # **Step 1**: Uninstall the IML Manager
 
@@ -40,10 +40,8 @@ rm -rf /usr/lib/python2.6/site-packages/chroma*
 
 ### Clean up extra yum directories
 ```
-rm -rf /var/lib/yum/repos/x86_64/6/chroma
-rm -rf /var/lib/yum/repos/x86_64/6/chroma-manager
-rm -rf /var/cache/yum/x86_64/6/chroma
-rm -rf /var/cache/yum/x86_64/6/chroma-manager
+rm -rf /var/cache/yum/x86_64/7/chroma
+rm -rf /var/cache/yum/x86_64/7/chroma-manager
 ```
 
 ### Optionally, Remove logs

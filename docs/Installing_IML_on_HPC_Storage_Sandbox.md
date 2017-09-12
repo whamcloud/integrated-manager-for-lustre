@@ -2,7 +2,7 @@
 
 # Installing IML on HPC Storage Sandbox
 
-![clustre](md_Graphics/clustre.jpg)
+![clustre](md_Graphics/installing_sm.jpg)
 
 ## Prerequisites:
 Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.

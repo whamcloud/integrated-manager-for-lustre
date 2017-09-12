@@ -1,6 +1,6 @@
 [**Table of Contents**](index.md)
 
-![workflow](md_Graphics/workflow.png)
+![workflow](md_Graphics/workflow_sm.jpg)
 
 # IML Contributor Workflow
 ## Overview
@@ -16,7 +16,7 @@ git clone git@github.com:intel-hpdd/GUI.git
 ### List the current branches
 ```
 cd gui
-git branch 
+git branch front
 git branch --all
 ```
 

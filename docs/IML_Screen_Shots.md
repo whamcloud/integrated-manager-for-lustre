@@ -2,7 +2,6 @@
 
 # IML Screen Shots
 
-![screen shots](md_Graphics/screen_shots.jpg)
 
 ## The examples below are intended to represent an overall sense of the IML look and feel. 
 

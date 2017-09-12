@@ -1,6 +1,6 @@
 [**Table of Contents**](index.md)
 
-![backend](md_Graphics/backend.jpg)
+![backend](md_Graphics/backend_sm.jpg)
 
 # Contributing to the IML Backend Quick Guide
 
