@@ -19,7 +19,10 @@ class TestConfParams(ChromaIntegrationTestCase):
                                None,
                                False)
 
-        volumes = self.wait_for_shared_volumes(4, 2)
+        volumes = self._fetch_help(lambda: self.wait_for_shared_volumes(4, 2),
+                                   ['tom.nabarro@intel.com'],
+                                   'not enough volumes recognised',
+                                   timeout=999999)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
@@ -103,7 +106,10 @@ class TestConfParams(ChromaIntegrationTestCase):
                                None,
                                False)
 
-        volumes = self.wait_usable_volumes(4)
+        volumes = self._fetch_help(lambda: self.wait_usable_volumes(4),
+                                   ['tom.nabarro@intel.com'],
+                                   'not enough volumes recognised',
+                                   timeout=999999)
 
         mgt_volume = volumes[0]
         mdt_volumes = [volumes[1]]
