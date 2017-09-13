@@ -157,27 +157,26 @@ class ZfsDevices(object):
             zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
 
             for pool in zpools:
-                with ZfsDevice(pool['pool'], True) as zfs_device:
-                    if zfs_device.available:
+                if pool['state'] == 'UNAVAIL':
+                    # zpool probably imported elsewhere, attempt to read from store, this should return previously seen
+                    # zpool state either with or without datasets
+                    data = read_from_store(pool['id'])
+
+                    if not data:
+                        daemon_log.error("zpool '%s' not available and no relevant entry found in store during "
+                                         "device scan " % pool['pool'])
+                        continue
+
+                    # populate self._pools/datasets/zvols info from saved data read from store
+                    self._update_pool_or_datasets(block_devices,
+                                                  data['pool'],
+                                                  data['datasets'],
+                                                  data['zvols'])
+                else:
+                    with ZfsDevice(pool['pool'], True):
                         out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
                         self._add_zfs_pool(out, block_devices)
-                    else:
-                        # zpool state is probably 'UNAVAIL' as it is imported elsewhere,
-                        # attempt to read from store, this should return previously seen zpool state
-                        # either with or without datasets
-                        data = read_from_store(pool['id'])
 
-                        if not data:
-                            daemon_log.error("zpool '%s' not available and no relevant entry found in store during "
-                                             "device scan " % pool['pool'])
-                            continue
-                            # raise RuntimeError('read_from_store() missing data for zpool %s!' % pool['pool'])
-
-                        # populate self._pools/datasets/zvols info from saved data read from store
-                        self._update_pool_or_datasets(block_devices,
-                                                      data['pool'],
-                                                      data['datasets'],
-                                                      data['zvols'])
             # verify still have active_pool_names imported
             new_active_pool_names = [pool['pool'] for pool in get_zpools()]
             if set(active_pool_names) != set(new_active_pool_names):
