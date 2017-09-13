@@ -34,11 +34,11 @@ if __name__ == "__main__":
 
     ipmi.agent = "fence_vbox"
     ipmi.default_port = 22
-    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o on -n %(identifier)s"
-    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password) -o reboot -n %(identifier)s"
-    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o off -n %(identifier)s"
-    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o monitor"
-    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password) -o status -n %(identifier)s"
+    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o on -n %(identifier)s"
+    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o reboot -n %(identifier)s"
+    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s"
+    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor"
+    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s"
     ipmi.save()
 
     vm_host = raw_input("Enter the IP Address of your VM Host: ")
