@@ -324,7 +324,7 @@ def _old_bundles():
         bundles[bundle_name] = meta
 
     return bundles
-    
+
 def _create_support_repos():
 
     repodir = "/etc/yum.repos.d"
