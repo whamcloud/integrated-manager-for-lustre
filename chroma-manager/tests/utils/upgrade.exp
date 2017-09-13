@@ -5,13 +5,6 @@ set pass [lindex $argv 2]
 set ntp [lindex $argv 3]
 spawn ./install
 set timeout 900
-expect {
-    "(press RETURN)" {
-        send_user "terminal must not be fully functional, sending CR\n"
-        send "\r"
-        exp_continue
-    }
-}
 expect "software installation completed successfully"
 catch wait reason
 set rc [lindex $reason 3]
