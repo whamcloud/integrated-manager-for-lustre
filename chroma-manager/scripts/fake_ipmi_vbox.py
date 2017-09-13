@@ -8,6 +8,7 @@
 import os
 import sys
 import socket
+import getpass
 sys.path.insert(0, os.getcwd())
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
@@ -48,9 +49,13 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
-    user_name = raw_input("Enter the user of your VM Host: ")
+    user_name = raw_input("Enter the VM Host SSH user: ")
 
-    pw = raw_input("Enter the password of your VM Host: ")
+    pw = getpass.getpass(prompt="Enter the VM Host SSH password: ")
+    pw2 = getpass.getpass(prompt="Re-enter the VM Host SSH password: ")
+
+    if pw != pw2:
+        fatal("Passwords do not match")
 
     PowerControlDevice.objects.get_or_create(
         device_type=ipmi, address=vm_host, port=22,
