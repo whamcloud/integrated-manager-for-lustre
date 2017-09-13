@@ -1009,7 +1009,7 @@ class RealRemoteOperations(RemoteOperations):
         """
         try:
             result = self._ssh_address(server['address'],
-                              'set -ex; grep " lustre " /proc/mounts; echo; umount -t lustre -a; if grep " lustre " /proc/mounts; then dmesg; exit 1; fi; exit 0')
+                              'set -x; grep " lustre " /proc/mounts; echo; umount -t lustre -a || exit 1; if grep " lustre " /proc/mounts; then dmesg; exit 2; fi; exit 0')
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
