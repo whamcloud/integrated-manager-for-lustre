@@ -37,8 +37,7 @@ class PluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if (os.path.isfile("%s/__init__.pyc" % dir)
-                or os.path.isfile("%s/__init__.py" % dir)):
+            if (os.path.isfile("%s/__init__.py" % dir)):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -236,8 +235,7 @@ class ActionPluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if (os.path.isfile("%s/__init__.pyc" % dir)
-                or os.path.isfile("%s/__init__.py" % dir)):
+            if (os.path.isfile("%s/__init__.py" % dir)):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -251,7 +249,7 @@ class ActionPluginManager(object):
         names = set()
 
         assert os.path.isdir(cls.path)
-        for modfile in sorted(glob.glob("%s/*.py*" % cls.path)):
+        for modfile in sorted(glob.glob("%s/*.py" % cls.path)):
             dir, filename = os.path.split(modfile)
             module = filename.split(".py")[0]
             if not module in EXCLUDED_PLUGINS:
