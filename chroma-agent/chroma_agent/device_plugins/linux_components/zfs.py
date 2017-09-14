@@ -25,13 +25,8 @@ strip_lines = functools.partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename=STORE_FILENAME):
-    data = {}
-
-    try:
-        with open(filename, 'r') as f:
-            data = json.loads(f.read())
-    except (OSError, IOError) as e:
-        daemon_log.info('write_to_store(): reading from %s failed (%s)' % (filename, e))
+    with open(filename, 'r') as f:
+        data = json.loads(f.read())
 
     daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
@@ -42,11 +37,8 @@ def write_to_store(key, value, filename=STORE_FILENAME):
 
 def read_from_store(key, filename=STORE_FILENAME):
     daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
-    try:
-        with open(filename, 'r') as f:
-            return json.loads(f.read())[key]
-    except (OSError, IOError):
-        return None
+    with open(filename, 'r') as f:
+        return json.loads(f.read())[key]
 
 
 def clean_list(xs):
@@ -160,11 +152,10 @@ class ZfsDevices(object):
                 if pool['state'] == 'UNAVAIL':
                     # zpool probably imported elsewhere, attempt to read from store, this should return previously seen
                     # zpool state either with or without datasets
-                    data = read_from_store(pool['id'])
-
-                    if not data:
-                        daemon_log.error("zpool '%s' not available and no relevant entry found in store during "
-                                         "device scan " % pool['pool'])
+                    try:
+                        data = read_from_store(pool['id'])
+                    except (IOError, KeyError) as e:
+                        daemon_log("Error when reading from store: %s (pool: %s)" % (e, pool['pool']))
                         continue
 
                     # populate self._pools/datasets/zvols info from saved data read from store
@@ -211,7 +202,10 @@ class ZfsDevices(object):
                    "drives": drive_mms}
 
         # write new data to store (_pool/datasets/Zvols)
-        write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
+        try:
+            write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
+        except (IOError, KeyError) as e:
+            daemon_log("Error when writing to store: %s (pool: %s)" % (e, name))
 
         self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 
