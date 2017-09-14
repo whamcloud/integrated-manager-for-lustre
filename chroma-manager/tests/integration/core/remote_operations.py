@@ -1009,7 +1009,9 @@ class RealRemoteOperations(RemoteOperations):
         """
         try:
             result = self._ssh_address(server['address'],
-                              'set -x; grep " lustre " /proc/mounts; echo; umount -t lustre -a || exit 1; if grep " lustre " /proc/mounts; then dmesg; exit 2; fi; exit 0')
+                              'set -x; logger "Unmounting lustre targets as part of clean up"; date; grep " lustre " /proc/mounts; echo; umount -t lustre -a || exit 1; if grep " lustre " /proc/mounts; then exit 2; fi; exit 0')
+            logger.info("Unmounting Lustre on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
@@ -1028,7 +1030,7 @@ class RealRemoteOperations(RemoteOperations):
                                "create a new one." % server['nodename'])
         if result.rc != 0:
             logger.info("Unmounting Lustre on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
-                        (server['nodename'], result.rc), result.stdout, result.stderr)
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
             raise RuntimeError("Failed to unmount lustre on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
                                (server, result.rc, result.stdout, result.stderr))
 
