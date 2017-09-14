@@ -155,7 +155,7 @@ class ZfsDevices(object):
                     try:
                         data = read_from_store(pool['id'])
                     except (IOError, KeyError) as e:
-                        daemon_log("Error when reading from store: %s (pool: %s)" % (e, pool['pool']))
+                        daemon_log.warning("Error when reading from store: %s (pool: %s)" % (e, pool['pool']))
                         continue
 
                     # populate self._pools/datasets/zvols info from saved data read from store
@@ -205,7 +205,7 @@ class ZfsDevices(object):
         try:
             write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
         except (IOError, KeyError) as e:
-            daemon_log("Error when writing to store: %s (pool: %s)" % (e, name))
+            daemon_log.warning("Error when writing to store: %s (pool: %s)" % (e, name))
 
         self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 

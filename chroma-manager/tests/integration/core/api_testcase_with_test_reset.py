@@ -944,12 +944,19 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
                     if action & self.CZP_REMOVEZPOOLS:
+                        self.execute_simultaneous_commands(['zfs destroy -r %s' % zfs_device],
+                                                           [server['fqdn'] for server in test_servers],
+                                                           'recursive destroy zpool %s' % zfs_device,
+                                                           expected_return_code=None)
+
                         ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
                         self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
                                                            [first_test_server['fqdn']],
                                                            'clearing disk because zfs import failed %s' % ldiskfs_device,
                                                            expected_return_code=0)
+
+                        [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
                     else:
                         raise
 
