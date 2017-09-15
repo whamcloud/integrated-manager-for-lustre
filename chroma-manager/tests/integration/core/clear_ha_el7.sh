@@ -13,7 +13,7 @@ mmp_status() {
                                     sed -ne '/^update_interval: /s///p' \
                                          -e '/^node_name: /s///p' \
                                          -e '/^time:/s/.*: \([0-9][0-9]*\).*/\1/p' |
-                                    tr '\n' ' ')
+                                    tr '\n' ' ') || true
     if [ -z "$interval" -o -z "$mmp_time" -o -z "$host" ]; then
         if $verbose; then
             echo "Could not read MMP block from $1"
