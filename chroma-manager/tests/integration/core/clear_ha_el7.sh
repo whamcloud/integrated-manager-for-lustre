@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exec 2>&1
+
 set -e
 set -x
 
@@ -16,7 +18,8 @@ mmp_status() {
         if $verbose; then
             echo "Could not read MMP block from $1"
         fi
-        return 4
+        # no MMP block so it's not an in-use ldiskfs device
+        return 0
     fi
 
     now=$(date +%s)
@@ -49,10 +52,11 @@ systemctl disable pcsd pacemaker corosync
 
 date
 
+echo "---------- /proc/mounts ----------"
 cat /proc/mounts
 
 for d in a b c d e; do
-    mmp_status -v /dev/sd$d || true
+    mmp_status true /dev/sd$d || true
 done
 sleep 60
 if grep " lustre " /proc/mounts; then
@@ -60,10 +64,11 @@ if grep " lustre " /proc/mounts; then
     cat /proc/mounts
     sleep 60
 fi
+echo "---------- /proc/mounts ----------"
 cat /proc/mounts
 # if any devices report !0 now, they are still active and they should not be!
 for d in a b c d e; do
-    mmp_status -v /dev/sd$d
+    mmp_status true /dev/sd$d
 done
 
 # figure it out for ourselves if we can
