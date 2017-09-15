@@ -42,7 +42,7 @@ mmp_status() {
 }
 
 date
-pcs status
+pcs status || true
 
 systemctl stop pcsd pacemaker corosync
 systemctl disable pcsd pacemaker corosync

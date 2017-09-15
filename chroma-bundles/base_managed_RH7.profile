@@ -19,8 +19,9 @@
       "chroma-agent-management"
     ],
     "external": [
-      "kernel-devel-[0-9]*_lustre",
-      "lustre-ldiskfs-zfs"
+      "kmod-lustre-osd-ldiskfs",
+      "kmod-lustre",
+      "lustre"
     ]
   },
   "validation": [
