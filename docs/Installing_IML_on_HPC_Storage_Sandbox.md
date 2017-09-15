@@ -5,7 +5,7 @@
 ![clustre](md_Graphics/installing_sm.jpg)
 
 ## Prerequisites:
-Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
+Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/intel-hpdd/vagrantfiles) on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
 
 ## Notes:
 - You will be logging into your vagrant box as the vagrant user, which has the ability to run with root privilege. To elevate privileges to the root account, use the sudo command. The vagrant user does not require a password to run sudo. Should there ever be a need to login as root directly, the root password is also "vagrant". 
@@ -20,9 +20,12 @@ Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a vi
     ```
 
 ## Installing IML:
-1. Verify the following vagrant plugins are installed:
+1. Verify that the following vagrant plugins are installed:
     ```
     vagrant plugin install vagrant-shell-commander
+    vagrant plugin install vagrant-share
+    vagrant plugin install vagrant-vbguest
+    vagrant plugin install vagrant-proxyconf    <--- Optional
     ```
 2. Obtain the [preview 3 build](https://github.com/intel-hpdd/intel-manager-for-lustre/releases/tag/v4.0.0.0P3).
 3. Exit from the vagrant box and scp the build to the /tmp directory in your admin node. For example, if your admin node is running on port 2200 (you can verify this with `vagrant ssh-config`) and the build is in your Downloads folder:
@@ -36,7 +39,7 @@ Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a vi
     Host adm
     Host mds1
     ...
-    [user@mini iml]$ scp -F sshcfg ~/Media/iml-4.0.0.0.tar.gz adm:/tmp/.
+    [user@mini iml]$ scp -F sshcfg ~/Downloads/iml-4.0.0.0.tar.gz adm:/tmp/.
     iml-4.0.0.0.tar.gz                                                 100%  130MB  69.5MB/s   00:01    
     ```
     This allows you to use the Host name referenced in the ssh config to identify individual nodes in the Vagrant environment, and means you do not have to track the port numbers or use a password. In the above example, the file is copied on to the `adm` VM.
@@ -44,23 +47,23 @@ Please refer to https://github.com/intel-hpdd/vagrantfiles on how to create a vi
 4. ssh into the admin box and install the build:
     ```
     vagrant ssh
-    [vagrant@ct7-adm ~]$ sudo su - # (or "sudo -s")
-    [vagrant@ct7-adm ~]# cd /tmp
-    [vagrant@ct7-adm ~]# tar xvf <buildname>.tar.gz
-    [vagrant@ct7-adm ~]# cd <build folder>
-    [vagrant@ct7-adm ~]# ./install --no-dbspace-check
+    [vagrant@adm ~]$ sudo su - # (or "sudo -s")
+    [vagrant@adm ~]# cd /tmp
+    [vagrant@adm ~]# tar xvf <buildname>.tar.gz
+    [vagrant@adm ~]# cd <build folder>
+    [vagrant@adm ~]# ./install --no-dbspace-check
     ```
 5. Update the /etc/hosts file on your computer to include the following line:
     ```
-    127.0.0.1 ct7-adm.lfs.local
+    127.0.0.1 adm.lfs.local
     ```
 6. Finally, test that a connection can be made to IML by going to the following link in your browser:
-https://ct7-adm.lfs.local:8443
+https://adm.lfs.local:8443
 
 ## Adding Servers
-You should now be able to see IML when navigating to https://ct7-adm.lfs.local:8443. Click on the login link at the top right and log in as the admin. Next, go to the server configuration page and add the following servers:
+You should now be able to see IML when navigating to https://adm.lfs.local:8443. Click on the login link at the top right and log in as the admin. Next, go to the server configuration page and add the following servers:
 ```
-ct7-mds[1,2].lfs.local,ct7-oss[1,2].lfs.local
+mds[1,2].lfs.local,oss[1,2].lfs.local
 ```
 This will take some time (around 20 to 30 minutes) but all four servers should add successfully.
 
@@ -81,16 +84,6 @@ After the selections have been made, click the button to create the filesystem. 
 In your vagrant folder, run the following script to prepare both client c1 and c2:
 ```
 vagrant sh -c '\
-sudo yum -y install epel-release && \
-sudo yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo && \
-sudo yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/ && \
-sudo ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
-/enabled/a
-gpgcheck=1
-gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
-.
-wq
-EOF && \
 sudo yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-client-epel-7.repo && \
 sudo yum-config-manager --add-repo https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/ && \
 sudo sed -i -e "1d" -e "2s/^.*$/[e2fsprogs]/" -e "/baseurl/s/,/%2C/g" -e "/enabled/a gpgcheck=0" /etc/yum.repos.d/downloads.hpdd.intel.com_public_e2fsprogs_latest_el7_.repo && \
@@ -124,6 +117,7 @@ lctl list_nids
 sudo mount -t lustre 10.73.20.11@tcp:10.73.20.12@tcp:/fs /mnt/fs
 ```
 6. Use the filesystem. You can test the mount by creating a large file and then checking the results (for testing, it is simplest to use the root account):
+
 ```
 dd if=/dev/urandom of=/mnt/fs/testfile1.txt bs=1G count=1; cp /mnt/fs/testfile1.txt /mnt/fs/testfile2.txt;
 lfs df -h

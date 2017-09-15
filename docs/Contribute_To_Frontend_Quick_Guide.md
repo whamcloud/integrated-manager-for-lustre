@@ -8,6 +8,8 @@
 * [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 
 ## Prerequisites
+### The installation of an IDE/Editor to develop IML code is not mandatory, however, the following recommendations are highly recommended:
+
 * Install an IDE/Editor such as [VS Code](https://code.visualstudio.com/), [Atom](https://atom.io/) or [Sublime](https://www.sublimetext.com/).
 * For this guide, the [VS Code IDE/Editor](https://code.visualstudio.com/Download) has been installed along with the following plugins:
     * ESLint
@@ -16,22 +18,13 @@
     * Jest
 
     ![vscode_plugins](md_Graphics/vs_code_plugins.png)
-* To modify and test any Frontend changes to IML, it will be necessary to install a working version of IML.
-    * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
-    * Edit the **Vagrantfile** to allow for a shared mount. Immediately after the block that states *Create an admin server for the cluster*, add the following line:
-
-        **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
     
-![shared_mount](md_Graphics/vagrant_shared_mount.png)
+* To modify and test any Frontend changes to IML, it will be necessary to install a working version of IML.
 
-This will mount the current local directory to **/vagrant** on the virtual machine.
+    * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
 
- * Ensure the ability to log in to the **adm** node as the root user:
-    * vagrant up adm
-    * vagrant ssh
-    * su -
-    * ls -al /vagrant
-    * The Vagrantfile should be in the directory listing 
+    * Create a Shared Mount from the guest machine to the vagrant virtual machine.
+        * Follow these [Instructions](Create_Vagrant_Mount.md)
 
 ## On the Local machine, i.e., not the vagrant virtual machine.
 
@@ -94,7 +87,7 @@ Type the command:
 ```
 yarn install
 ```
-Build the code and Pass all required tests listed in **pacakage.json**
+Build the code and Pass all required tests listed in **package.json**
 ```
 yarn watch
 ```
@@ -105,7 +98,7 @@ The watch command will leave the code in a state that will "watch" for further e
 * vagrant ssh adm
 
 Log in as root
-* su -
+* su -i
 
 Go to the cloned **GUI** repo on the /vagrant mount point where the code edits were made.
 * cd /vagrant/GUI
@@ -191,7 +184,7 @@ Add and Commit the change.
 
 * git commit -s 
 
-This will cause the **eslint**, **flow** and **unit** tests to run.
+This will cause the **pre-commit** hooks to run.
 
 Add the following comment:
 
@@ -229,9 +222,10 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * Choose Reviewers, Labels, Assignees, etc.
 * Click **Create pull request**
 
-## Copy the URL and request a code review via email
+## Copy the URL and request a code review
+* Either assign reviewers directly in the pull request (**PR**), or, add a comment to request a code review in the PR.
 
-### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
+### If the code review is approved by at least two developers, the gatekeeper will merge the pull request onto the master branch
 
 ### If comments are left in the PR page, then the developer is responsible for addressing each comment.
 * If code changes are required, edit the code, save and commit as described above.

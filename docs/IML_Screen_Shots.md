@@ -35,27 +35,27 @@
 
 ---
 
-## IML Dash Board
+## IML Dashboard
 ![iml_dashboard.png](md_Graphics/iml_dashboard.png)
 
 ---
 
-## Dash Board
+## Dashboard
 ![iml_mds_oss.png](md_Graphics/iml_mds_oss.png)
 
 ---
 
-## Dash Board
+## Dashboard
 ![iml_meta_ops1.png](md_Graphics/iml_meta_ops1.png)
 
 ---
 
-## Dash Board
+## Dashboard
 ![iml_meta_ops2.png](md_Graphics/iml_meta_ops2.png)
 
 ---
 
-## Dash Board
+## Dashboard
 ![iml_read_write.png](md_Graphics/iml_read_write.png)
 
 ---

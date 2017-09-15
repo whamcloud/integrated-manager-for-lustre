@@ -2,11 +2,11 @@
 
 ![unit test](md_Graphics/testing_sm.jpg)
 
-# Create **Frontend** Unit Tests
+# Create Unit Tests
 
 ## Unit tests are required to accompany every code feature that is delivered with IML.
 
-IML currently uses **[jest](https://facebook.github.io/jest/)** as its test runner. Here is a simple exmple of some javascript code with a corresponding test case:
+IML JS / Fable F# modules currently use **[jest](https://facebook.github.io/jest/)** as its test runner. Here is a simple exmple of some javascript code with a corresponding test case:
 
 add.js
 

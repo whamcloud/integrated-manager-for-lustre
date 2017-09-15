@@ -57,7 +57,7 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 * **Robinhood** 
 
 ## IML Services
-### IML uses the following linux services:
+### IML uses the following services:
 
 | Service Name | Description |
 |-----------|-------------| 

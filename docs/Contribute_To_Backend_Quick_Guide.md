@@ -8,6 +8,8 @@
 * [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 
 ## Prerequisites
+### The installation of an IDE/Editor to develop IML code is not mandatory, however, the following recommendations are highly recommended:
+
 * Install an IDE/Editor such as [PyCharm](http://www.jetbrains.com/pycharm/), [VS Code](https://code.visualstudio.com/), [Atom](https://atom.io/) or [Sublime](https://www.sublimetext.com/).
 * For this guide, the [VS Code IDE/Editor](https://code.visualstudio.com/Download) has been installed along with the following plugins:
     * Python
@@ -20,20 +22,10 @@
 * To modify and test any Backend changes to IML, it will be necessary to install a working version of IML.
     * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
 
-    * Edit the **Vagrantfile** to allow for a shared mount. Immediately after the block that states *Create an admin server for the cluster*, add the following line:
+    * Be sure to follow the steps for **Adding Servers**.
 
-        **config.vm.synced_folder ".", "/vagrant", type: "virtualbox"**
-    
-![shared_mount](md_Graphics/vagrant_shared_mount.png)
-
-This will mount the current local directory to **/vagrant** on the virtual machine.
-
- * Ensure the ability to log in to the **adm** node as the root user:
-    * vagrant up adm
-    * vagrant ssh
-    * su -
-    * ls -al /vagrant
-    * The Vagrantfile should be in the directory listing 
+    * Create a Shared Mount from the guest machine to the vagrant virtual machine.
+        * Follow these [Instructions](Create_Vagrant_Mount.md)
 
 ## On the Local machine, i.e., not the vagrant virtual machine.
 
@@ -64,7 +56,7 @@ Use VS Code and open ~/vagrant-projects/vhpc/intel-manager-for-lustre
 ## As an Example, make a small python code change.
 The code that will be changed will modify the description displayed when rebooting a server. See the form below and observe the line that states: 
 
-**Initiate a reboot on host ct7-oss2.lfs.local**
+**Initiate a reboot on host oss2.lfs.local**
 
 ![server_reboot_1](md_Graphics/server_reboot_1.png)
 
@@ -107,15 +99,6 @@ Go to the cloned **intel-manager-for-lustre** repo on the /vagrant mount point w
 ```
 cd /vagrant/intel-manager-for-lustre
 ```
-### Generate the files: **host.pyc** and **host.pyo** from the **host.py** file 
-```
-cd chroma-manager/chroma_core/models
-```
-Type the command:
-* **python -m py_compile host.py**
-* **python -O -m py_compile host.py**
-
-This will create the files: **host.pyc** and **host.pyo**
 
 ### Preserve the original files that came with the initial IML install.
 
@@ -129,18 +112,18 @@ mv host.pyo host.pyo-orig
 
 ### Create symbolic links to point to the changes.
 ```
-ln -s /vagrant/intel-manager-for-lustre/chroma-manager/chroma_core/models/host.pyc host.pyc 
-
-ln -s /vagrant/intel-manager-for-lustre/chroma-manager/chroma_core/models/host.pyo host.pyo
+ln -s /vagrant/intel-manager-for-lustre/chroma-manager/chroma_core/models/host.py host.py 
 ```
 
 ### Start the IML services
 * chroma-config start
 
 ## In a browser, go to the IML location
-* [https://ct7-adm.lfs.local:8443](https://ct7-adm.lfs.local:8443)
+* [https://adm.lfs.local:8443](https://adm.lfs.local:8443)
 
 ## Verify that the small change worked.
+
+Be sure to follow the instructions for adding servers in: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
 
 It is possible that the browser cache may require refreshing for the change to take place.
 
@@ -201,7 +184,7 @@ Add and Commit the change.
 
 * git commit -s 
 
-This will cause tests to run
+The git -s will cause the pre-commit tests to run
 
 Add the following comment:
 
@@ -239,16 +222,16 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * Choose Reviewers, Labels, Assignees, etc.
 * Click **Create pull request**
 
-## Copy the URL and request a code review via email
+## Copy the URL and request a code review
+* Either assign reviewers directly in the pull request (**PR**), or, add a comment to request a code review in the PR.
 
-### If the code review is approved by at least two developers, the gatekeeper will merge the pull request (**PR**) onto the master branch
+### If the code review is approved by at least two developers, the gatekeeper will merge the pull request onto the master branch
 
 ### If comments are left in the PR page, then the developer is responsible for addressing each comment.
 * If code changes are required, edit the code, save and commit as described above.
 * Test any code changes.
-* Rebase the branch onto the master as necessary.
 * Re-push any changes to the same branch that was initially pushed.
 ```
-git push origin my-new-branch
+git push origin my-fix
 ```
 

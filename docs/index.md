@@ -20,10 +20,6 @@
 
 1. [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md)
 
-1. [Install IML Preview1 on a Vagrant Virtual Cluster](Install_IML_Preview1_on_a_Cluster.md)
-
-1. [Install IML Preview2 on a Vagrant Virtual Cluster](Install_IML_Preview2_on_a_Cluster.md)
-
 1. [How to Uninstall IML](UnInstall_IML.md)
 
 1. [Windows - Run IML Tests with Cygwin and Vagrant](Run_Iml_Tests_Cygwin.md)

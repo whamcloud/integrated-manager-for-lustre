@@ -21,10 +21,8 @@ rm -rf /var/lib/chroma/*
 rm -rf /usr/share/chroma-manager/
 ```
 
-### Optionally, remove HTTPD
+### Optionally, remove nginx
 ```
-yum remove httpd
-For IEEL 3.0, 
 yum remove nginx
 ```
 

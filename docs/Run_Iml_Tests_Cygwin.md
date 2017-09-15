@@ -72,18 +72,26 @@ _export PATH=$PATH:/home/`username`/bin_
 
 ## Work around "stdout is not a tty" error when using vagrant cli
 downgrade from vagrant 1.9.7->1.9.6
-https://github.com/mitchellh/vagrant/issues/8780
-https://github.com/mitchellh/vagrant/issues/8833
-https://github.com/mitchellh/vagrant/issues/8764
+
+[https://github.com/mitchellh/vagrant/issues/8780](https://github.com/mitchellh/vagrant/issues/8780)
+
+[https://github.com/mitchellh/vagrant/issues/8833](https://github.com/mitchellh/vagrant/issues/8833)
+
+[https://github.com/mitchellh/vagrant/issues/8764](https://github.com/mitchellh/vagrant/issues/8764)
+
 various commands failing within Makefile due to inability to parse output of vagrant cli calls
 this is a bug and workaround is to use version 1.9.6 rather than the most recent 1.9.7
 
 ## Work around missing getaddrinfo in Cygwin
-https://cygwin.com/ml/cygwin/2006-02/msg00531.html
-http://pdplab.it.uom.gr/teaching/gcc_manuals/gnulib.html
+
+[https://cygwin.com/ml/cygwin/2006-02/msg00531.html](https://cygwin.com/ml/cygwin/2006-02/msg00531.html)
+
+[http://pdplab.it.uom.gr/teaching/gcc_manuals/gnulib.html](http://pdplab.it.uom.gr/teaching/gcc_manuals/gnulib.html)
+
 Getaddrinfo seems not to be the root issue and ssh to vms was failing because of '*' setting inside ~/.ssh/config which was overriding the vagrant settings. Ensure configurations do not conflict!
 
 # References
-* https://stackoverflow.com/questions/4810996/how-to-resolve-configure-guessing-build-type-failure
-* http://web.cecs.pdx.edu/~pkwong/ECE103_files/Resources/Compiler/C_GNU/GCC_Installation/How_to_Install_Cygwin+GCC.htm
-* https://sourceforge.net/p/pdsh/mailman/message/290492/
+* [https://stackoverflow.com/questions/4810996/how-to-resolve-configure-guessing-build-type-failure](https://stackoverflow.com/questions/4810996/how-to-resolve-configure-guessing-build-type-failure)
+* [http://web.cecs.pdx.edu/~pkwong/ECE103_files/Resources/Compiler/C_GNU/GCC_Installation/How_to_Install_Cygwin+GCC.htm](ttp://web.cecs.pdx.edu/~pkwong/ECE103_files/Resources/Compiler/C_GNU/GCC_Installation/How_to_Install_Cygwin+GCC.htm)
+
+* [https://sourceforge.net/p/pdsh/mailman/message/290492/](https://sourceforge.net/p/pdsh/mailman/message/290492/)
