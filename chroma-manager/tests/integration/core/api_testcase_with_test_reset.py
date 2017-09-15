@@ -957,6 +957,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                            expected_return_code=0)
 
                         [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
+                        [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
+
                     else:
                         raise
 
