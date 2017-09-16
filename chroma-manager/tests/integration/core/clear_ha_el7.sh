@@ -31,7 +31,7 @@ mmp_status() {
     else
         active=true
     fi
-    if $active then
+    if $active; then
         if [ $host = $HOSTNAME ]; then
             host="this host"
             rc=1
@@ -51,7 +51,9 @@ mmp_status() {
         fi
         rc=0
     fi
+
     return $rc
+
 }
 
 date
