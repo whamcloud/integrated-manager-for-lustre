@@ -7,7 +7,8 @@ set -x
 
 mmp_status() {
     local verbose="$1"
-    local disk="$2"
+    local only_this_host="$2"
+    local disk="$3"
 
     read interval mmp_time host < <(debugfs -c -R dump_mmp $disk 2>/dev/null |
                                     sed -ne '/^update_interval: /s///p' \
@@ -16,7 +17,7 @@ mmp_status() {
                                     tr '\n' ' ') || true
     if [ -z "$interval" -o -z "$mmp_time" -o -z "$host" ]; then
         if $verbose; then
-            echo "Could not read MMP block from $1"
+            echo "Could not read MMP block from $disk"
         fi
         # no MMP block so it's not an in-use ldiskfs device
         return 0
@@ -26,20 +27,29 @@ mmp_status() {
     diff=$((now - mmp_time))
     #echo $diff $mmp_time $now $host $interval
     if [ $diff -gt $interval ]; then
-        if $verbose; then
-            echo "not in use"
-        fi
-        rc=0
+        active=false
     else
+        active=true
+    fi
+    if $active then
         if [ $host = $HOSTNAME ]; then
             host="this host"
             rc=1
         else
-            rc=2
+            if $only_this_host; then
+                rc=0
+            else
+                rc=2
+            fi
         fi
         if $verbose; then
             echo "$disk in use on $host, last updated $diff seconds ago"
         fi
+    else
+        if $verbose; then
+            echo "not in use"
+        fi
+        rc=0
     fi
     return $rc
 }
@@ -56,7 +66,7 @@ echo "---------- /proc/mounts ----------"
 cat /proc/mounts
 
 for d in a b c d e; do
-    mmp_status true /dev/sd$d || true
+    mmp_status true false /dev/sd$d || true
 done
 sleep 60
 if grep " lustre " /proc/mounts; then
@@ -68,7 +78,7 @@ echo "---------- /proc/mounts ----------"
 cat /proc/mounts
 # if any devices report !0 now, they are still active and they should not be!
 for d in a b c d e; do
-    mmp_status true /dev/sd$d
+    mmp_status true true /dev/sd$d
 done
 
 # figure it out for ourselves if we can
