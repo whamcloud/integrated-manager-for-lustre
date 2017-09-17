@@ -10,12 +10,12 @@ mmp_status() {
     local only_this_host="$2"
     local disk="$3"
 
-    read interval mmp_time host < <(debugfs -c -R dump_mmp $disk 2>/dev/null |
+    read -r interval mmp_time host < <(debugfs -c -R dump_mmp "$disk" 2>/dev/null |
                                     sed -ne '/^update_interval: /s///p' \
                                          -e '/^node_name: /s///p' \
                                          -e '/^time:/s/.*: \([0-9][0-9]*\).*/\1/p' |
                                     tr '\n' ' ') || true
-    if [ -z "$interval" -o -z "$mmp_time" -o -z "$host" ]; then
+    if [ -z "$interval" ] || [ -z "$mmp_time" ] || [ -z "$host" ]; then
         if $verbose; then
             echo "Could not read MMP block from $disk"
         fi
@@ -26,15 +26,20 @@ mmp_status() {
     now=$(date +%s)
     diff=$((now - mmp_time))
     #echo $diff $mmp_time $now $host $interval
-    if [ $diff -gt $interval ]; then
+    if [ "$diff" -gt "$interval" ]; then
         active=false
     else
         active=true
     fi
     if $active; then
-        if [ $host = $HOSTNAME ]; then
+        if [ "$host" = "$HOSTNAME" ]; then
             host="this host"
             rc=1
+            if $verbose; then
+                debugfs -c -R dump_mmp "$disk"
+                echo "---------- /proc/mounts ----------"
+                cat /proc/mounts
+            fi
         else
             if $only_this_host; then
                 rc=0
@@ -56,8 +61,14 @@ mmp_status() {
 
 }
 
+echo "$HOSTNAME"
+
 date
+
 pcs status || true
+
+echo "---------- /proc/mounts ----------"
+cat /proc/mounts
 
 systemctl stop pcsd pacemaker corosync
 systemctl disable pcsd pacemaker corosync
@@ -86,12 +97,12 @@ done
 # figure it out for ourselves if we can
 # otherwise the caller needs to have set it
 if [ -f /etc/corosync/corosync.conf ]; then
-    ring1_iface=$(ip route get $(sed -ne '/ringnumber: 1/{s///;n;s/.*: //p}' /etc/corosync/corosync.conf) | sed -ne 's/.* dev \(.*\)  *src.*/\1/p')
+    ring1_iface=$(ip route get "$(sed -ne '/ringnumber: 1/{s///;n;s/.*: //p}' /etc/corosync/corosync.conf)" | sed -ne 's/.* dev \(.*\)  *src.*/\1/p')
 fi
 
-ifconfig $ring1_iface 0.0.0.0 down
+ifconfig "$ring1_iface" 0.0.0.0 down
 
-rm -f /etc/sysconfig/network-scripts/ifcfg-$ring1_iface
+rm -f /etc/sysconfig/network-scripts/ifcfg-"$ring1_iface"
 rm -f /etc/corosync/corosync.conf
 rm -f /var/lib/pacemaker/cib/*
 rm -f /var/lib/corosync/*
