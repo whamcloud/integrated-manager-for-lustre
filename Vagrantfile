@@ -225,8 +225,7 @@ __EOF
 						"--port", "#{pnum}",
 						"--type", "hdd",
 						"--medium", "#{vdisk_root}/target#{osd}.vdi",
-						"--mtype", "shareable",
-						"--comment","%starget%04d" % [host_prefix.upcase, osd]
+						"--mtype", "shareable"
 						]
 				end
 			end

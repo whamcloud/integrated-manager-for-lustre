@@ -81,7 +81,6 @@ def load_default_profile():
                                default=True,
                                corosync=True,
                                corosync2=False,
-                               rsyslog=True,
                                ntp=True,
                                initial_state="managed")
     default_sp.bundles.add('lustre')

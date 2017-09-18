@@ -28,7 +28,9 @@ setup(
     # file creation/cleanup in the Makefile) to deal with the fact
     # that setuptools wants to strip the first character off the filename.
     package_data = {
-        '': [".chroma-manager.py", ".production_supervisord.conf", ".chroma-manager.conf.template", ".mime.types"],
+        '': [".chroma-manager.py", ".production_supervisord.conf",
+             ".storage_server.repo",
+             ".chroma-manager.conf.template", ".mime.types"],
         'chroma_core': ["fixtures/default_power_types.json"],
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests",
