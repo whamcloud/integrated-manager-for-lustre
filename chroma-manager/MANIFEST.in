@@ -14,6 +14,7 @@ include tests/sample_data/*
 include tests/integration/run_tests
 include tests/integration/*/*.json
 include tests/integration/core/clear_ha_el?.sh
+include storage_server.repo
 graft ui-modules/node_modules
 graft licenses
 graft polymorphic
