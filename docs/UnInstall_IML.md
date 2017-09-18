@@ -33,7 +33,7 @@ mv -f /etc/ntp.conf.pre-chroma /etc/ntp.conf
 
 ### Clean up these RPM included files/dirs
 ```
-rm -rf /usr/lib/python2.6/site-packages/chroma*
+rm -rf /usr/lib/python2.7/site-packages/chroma*
 ```
 
 ### Clean up extra yum directories
@@ -112,7 +112,14 @@ cibadmin -f -E
 
 ### Kill pacemaker and corosync
 ```
-killall -9 pacemaker\; killall -9 corosync
+systemctl pacemaker stop
+systemctl corosync stop
+
+--OR--  
+
+killall -9 pacemaker\; killall -9 corosync   <-- Only if necessary
+
+
 ```
 
 ### Reset firewall setting
@@ -138,11 +145,6 @@ rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*
 ```
 ifconfig $SERVER_RING1 0.0.0.0 down
 rm -f /etc/sysconfig/network-scripts/ifcfg-$SERVER_RING1
-```
-
-### unconfigure rsyslog
-```
-Remove lines between # added by chroma-agent\n comments inclusive from /etc/rsyslog.conf See HYD-3090.
 ```
 
 ### unconfigure lnet

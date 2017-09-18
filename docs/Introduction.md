@@ -64,16 +64,18 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 | supervisor | A client/server system that allows its users to monitor and control a number of processes on UNIX-like operating systems. |
 | corosync | A group communication system with additional features for implementing high availability within applications. |               
 | gunicorn | 'Green Unicorn' is a Python WSGI HTTP Server for UNIX.  | 
-| http_agent | | 
-| job_scheduler  | |
-| lustre_audit | |
-| plugin_runner | |
-| power_control  | |
-| realtime  | |
-| stats | |
-| syslog | |
-| view_server | |
-|  | |
+| http_agent | Communicates with the agent daemon on storage servers.| 
+| | | |
+## Other Services:
+ * job_scheduler
+ * lustre_audit 
+ * plugin_runner
+ * power_control
+ * realtime
+ * stats
+ * syslog
+ * view_server
+ 
   
 
 

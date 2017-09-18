@@ -25,7 +25,7 @@ Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/
     vagrant plugin install vagrant-shell-commander
     vagrant plugin install vagrant-share
     vagrant plugin install vagrant-vbguest
-    vagrant plugin install vagrant-proxyconf    <--- Optional
+    vagrant plugin install vagrant-proxyconf    <--- Optional, for example, this may be needed if behind corporate firewall.
     ```
 2. Obtain the [preview 3 build](https://github.com/intel-hpdd/intel-manager-for-lustre/releases/tag/v4.0.0.0P3).
 3. Exit from the vagrant box and scp the build to the /tmp directory in your admin node. For example, if your admin node is running on port 2200 (you can verify this with `vagrant ssh-config`) and the build is in your Downloads folder:
@@ -80,58 +80,4 @@ To create a filesystem, simply navigate to `Configure->File Systems` and click t
 
 After the selections have been made, click the button to create the filesystem. If you have any issues creating the filesystem there is a good chance that the interface for 10.73.20.x is not assigned to Lustre Network 0. If this happens, stop the filesystem and update the interfaces accordingly. 
 
-## Setting up Clients
-In your vagrant folder, run the following script to prepare both client c1 and c2:
-```
-vagrant sh -c '\
-sudo yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/lustre-client/repo/epel-7/managerforlustre-lustre-client-epel-7.repo && \
-sudo yum-config-manager --add-repo https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/ && \
-sudo sed -i -e "1d" -e "2s/^.*$/[e2fsprogs]/" -e "/baseurl/s/,/%2C/g" -e "/enabled/a gpgcheck=0" /etc/yum.repos.d/downloads.hpdd.intel.com_public_e2fsprogs_latest_el7_.repo && \
-sudo yum clean metadata && \
-sudo yum -y install lustre-client && \
-sudo reboot' c1 c2
-```
-Both clients are now running the lustre-client software and are ready to be mounted. To mount a client, do the following:
-1. ssh into the client
-```
-vagrant ssh c1
-```
-2. Create a mount directory (it's a good idea to use the same name as the filesystem you created).
-```
-sudo mkdir -p /mnt/fs
-```
-3.  Note the NID for the MGS. You can get this by looking at the lustre network interface in the GUI on the server detail page for mds1 or you can run the following command:
-```
-vagrant ssh mds1
-lctl list_nids
-# 10.73.20.11@tcp # Notice this is the lustre network interface
-```
-4. Note the NID for the MDS. You can get this by looking at the lustre network interface in the GUI on the server detail page for mds2 or you can run the following command:
-```
-vagrant ssh mds2
-lctl list_nids
-10.73.20.12@tcp # Notice this is the lustre network interface
-```
-5. Mount the lustre filesystem:
-```
-sudo mount -t lustre 10.73.20.11@tcp:10.73.20.12@tcp:/fs /mnt/fs
-```
-6. Use the filesystem. You can test the mount by creating a large file and then checking the results (for testing, it is simplest to use the root account):
-
-```
-dd if=/dev/urandom of=/mnt/fs/testfile1.txt bs=1G count=1; cp /mnt/fs/testfile1.txt /mnt/fs/testfile2.txt;
-lfs df -h
-----------------------------------------------------------------------------
-UUID                       bytes        Used   Available Use% Mounted on
-fs-MDT0000_UUID             1.7G       25.8M        1.5G   2% /mnt/fs[MDT:0]
-fs-OST0000_UUID             2.9G       33.1M        2.6G   1% /mnt/fs[OST:0]
-OST0001             : inactive device
-fs-OST0002_UUID             2.9G       33.1M        2.6G   1% /mnt/fs[OST:2]
-OST0003             : inactive device
-fs-OST0004_UUID             2.9G       33.1M        2.6G   1% /mnt/fs[OST:4]
-OST0005             : inactive device
-fs-OST0006_UUID             2.9G       33.1M        2.6G   1% /mnt/fs[OST:6]
-OST0007             : inactive device
-
-filesystem summary:        11.6G      132.6M       10.4G   1% /mnt/fs
-```
+## [Setting up Clients](IML_Setting_up_Clients.md)

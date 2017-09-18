@@ -21,7 +21,7 @@ The larger repos may depend on smaller repos for reusable code. In this way, the
 
 These modules can be thought of as a [tree](http://npm.anvaka.com/#/view/2d/%2540iml%252Frealtime). The leaves and lower nodes consist of useful functionality that is consumed by the root of the tree. 
 
-In addition to publishing in a language specific package registry, the root nodes are usually published using a tool called [COPR](https://pagure.io/copr/copr). This allows OS level aggregation and installation.
+In addition to publishing in a language specific package registry, the root nodes are usually published using a tool called [Copr](https://pagure.io/copr/copr). This allows OS level aggregation and installation.
 
 #### Root Repos publish workflow
 
