@@ -517,11 +517,11 @@ class LogIngestRate(Benchmark):
 
             time.sleep(10)
 
-            syslog_queue = self._get_queue('agent_syslog_rx')
-            if syslog_queue['messages'] > max(syslog_queue['message_stats_ack_details_rate'] * 4, server_count):
+            systemd_journal_queue = self._get_queue('agent_systemd_journal_rx')
+            if systemd_journal_queue['messages'] > max(systemd_journal_queue['message_stats_ack_details_rate'] * 4, server_count):
                 tap_out += 1
                 if tap_out > 0:
-                    saturated_samples.append(syslog_queue['message_stats_publish_details_rate'])
+                    saturated_samples.append(systemd_journal_queue['message_stats_publish_details_rate'])
                 if tap_out >= 3:
                     log.warning("Stayed backed up for %s iterations, breaking" % tap_out)
                     break
@@ -537,14 +537,14 @@ class LogIngestRate(Benchmark):
         log.debug("Waiting for queue to drain")
         rate_samples = []
         while True:
-            syslog_queue = self._get_queue('agent_syslog_rx')
-            log.debug(syslog_queue['messages'], syslog_queue['message_stats_ack_details_rate'])
+            systemd_journal_queue = self._get_queue('agent_systemd_journal_rx')
+            log.debug(systemd_journal_queue['messages'], systemd_journal_queue['message_stats_ack_details_rate'])
 
-            if syslog_queue['messages'] == 0:
+            if systemd_journal_queue['messages'] == 0:
                 log.info("Finish draining")
                 break
             else:
-                rate_samples.append(syslog_queue['message_stats_ack_details_rate'])
+                rate_samples.append(systemd_journal_queue['message_stats_ack_details_rate'])
 
             time.sleep(5)
 
@@ -554,10 +554,10 @@ class LogIngestRate(Benchmark):
 
         log.info("%s +/- %s" % (avg, std_err))
         # Convert message rate to log line rate
-        from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
+        from chroma_agent.device_plugins.systemd_journal import MAX_LOG_LINES_PER_MESSAGE
         log.info("%s +/- %s" % (avg * MAX_LOG_LINES_PER_MESSAGE, std_err * MAX_LOG_LINES_PER_MESSAGE))
 
-        # FIXME: try running this with syslog DB writing disabled, such that rabbitmq is the bottleneck, and you
+        # FIXME: try running this with systemd_journal DB writing disabled, such that rabbitmq is the bottleneck, and you
         # can get messages to back up on the agent side, using up unbounded memory: the rabbitmq part never backs up
         # so the benchmark never stops!
 

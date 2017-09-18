@@ -144,9 +144,6 @@ help_text = {
     'configure_ntp': 'Configured the NTP Client on the host',
     'unconfigure_ntp': 'Unconfigured the NTP Client on the host',
 
-    'configure_rsyslog': 'Configured rsyslog on the host',
-    'unconfigure_rsyslog': 'Unconfigured rsyslog  on the host',
-
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',
     'remove_mdt': 'Remove the MDT from the file system. This MDT will no longer be seen in the manager GUI. <strong>Caution</strong>: When an MDT is removed, file metadata stored on the MDT will no longer be accessible.<b> To preserve data, manually create a copy of the data elsewhere before removing the MDT.</b>',
