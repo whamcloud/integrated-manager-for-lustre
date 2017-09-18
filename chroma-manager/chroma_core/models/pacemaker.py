@@ -426,7 +426,7 @@ class ConfigureHostFencingStep(Step):
             }
             # IPMI fencing config doesn't need most of these attributes.
             if (outlet.device.is_ipmi
-                and outlet.device.device_type.agent != 'fence_virsh'):
+                and outlet.device.device_type.agent not in ['fence_virsh', 'fence_vbox']):
                 fence_kwargs['ipaddr'] = outlet.identifier
                 fence_kwargs['lanplus'] = '2.0' in outlet.device.device_type.model  # lanplus
             else:
