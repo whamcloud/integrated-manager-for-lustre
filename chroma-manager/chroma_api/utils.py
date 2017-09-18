@@ -653,6 +653,7 @@ class BulkResourceOperation(object):
 
     BulkActionResult = namedtuple('BulkActionResult', ['object', 'error', 'traceback'])
 
+
 class DateSerializer(Serializer):
     """
     Serializer to format datetimes in ISO 8601 but with timezone

@@ -511,8 +511,8 @@ class HostProfileResource(Resource, BulkResourceOperation):
 
         self._bulk_operation(_create_action, 'commands',
                              bundle, bundle.request, **kwargs)
-    
-    @validate                             
+
+    @validate
     def obj_update(self, bundle, **kwargs):
         def _update_action(self, data, request, **kwargs):
             return self.BulkActionResult(self._set_profile(kwargs['pk'], data['profile']), None, None)
