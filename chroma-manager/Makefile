@@ -178,6 +178,7 @@ tarball: version ui-modules
 	# workaround setuptools
 	touch .chroma-manager.py
 	touch .production_supervisord.conf
+	touch .storage_server.repo
 	if ! python setup.py sdist > sdist.out; then       \
 	    echo "python setup.py sdist failed.  stdout:"; \
 	    cat sdist.out;                                 \

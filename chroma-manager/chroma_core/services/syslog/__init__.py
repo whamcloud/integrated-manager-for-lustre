@@ -17,11 +17,11 @@ from iml_common.lib.date_time import IMLDateTime
 import settings
 
 
-log = log_register('syslog')
+log = log_register('systemd_journal')
 
 
 class Service(ChromaService):
-    PLUGIN_NAME = 'syslog'
+    PLUGIN_NAME = 'systemd_journal'
 
     def __init__(self):
         super(Service, self).__init__()
@@ -84,7 +84,7 @@ class Service(ChromaService):
 
                         self._parser.parse(fqdn, msg)
                     except Exception, e:
-                        self.log.error("Error %s ingesting syslog entry: %s" % (e, msg))
+                        self.log.error("Error %s ingesting systemd-journal entry: %s" % (e, msg))
 
     def run(self):
         super(Service, self).run()
