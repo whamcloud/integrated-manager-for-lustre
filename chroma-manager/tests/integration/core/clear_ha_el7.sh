@@ -107,6 +107,8 @@ get_lustre_mounts true
 for d in a b c d e; do
     if ! mmp_status true true /dev/sd$d; then
         mmp_status_rc=${PIPESTATUS[0]}
+        pgrep -l kmmpd
+        dmesg
         lctl dk > /var/tmp/lustre_debug_umount-"$(date +%s)".log
         cat <<EOF | mail -s "umount failure" brian.murrell@intel.com
 got a node with a umount problem on $HOSTNAME
