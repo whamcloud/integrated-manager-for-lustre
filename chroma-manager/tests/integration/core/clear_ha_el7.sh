@@ -36,9 +36,9 @@ mmp_status() {
             host="this host"
             rc=1
             if $verbose; then
+                date
                 debugfs -c -R dump_mmp "$disk"
-                echo "---------- /proc/mounts ----------"
-                cat /proc/mounts
+                get_lustre_mounts true
             fi
         else
             if $only_this_host; then
@@ -61,22 +61,37 @@ mmp_status() {
 
 }
 
+get_proc_mounts() {
+    local exclude="${1:###########}"
+
+    egrep -v "$exclude" /proc/mounts
+
+}
+
+get_lustre_mounts() {
+    header="${1:false}"
+
+    if $header; then
+        echo "---------- /proc/mounts ----------"
+    fi
+    get_proc_mounts " ((config|rpc_pipe|security|debug|hugetlb|root|sys|auto|tmp)fs|pstore|mqueue|nfsd|ext[2-4]|proc|dev(tmpfs|pts)|cgroup) "
+
+}
+
 echo "$HOSTNAME"
 
 date
 
 pcs status || true
 
-echo "---------- /proc/mounts ----------"
-cat /proc/mounts
+get_lustre_mounts true
 
 systemctl stop pcsd pacemaker corosync
 systemctl disable pcsd pacemaker corosync
 
 date
 
-echo "---------- /proc/mounts ----------"
-cat /proc/mounts
+get_lustre_mounts true
 
 for d in a b c d e; do
     mmp_status true false /dev/sd$d || true
@@ -84,14 +99,42 @@ done
 sleep 60
 if grep " lustre " /proc/mounts; then
     umount -t lustre -a
-    cat /proc/mounts
+    get_lustre_mounts
     sleep 60
 fi
-echo "---------- /proc/mounts ----------"
-cat /proc/mounts
+get_lustre_mounts true
 # if any devices report !0 now, they are still active and they should not be!
 for d in a b c d e; do
-    mmp_status true true /dev/sd$d
+    if ! mmp_status true true /dev/sd$d; then
+        mmp_status_rc=${PIPESTATUS[0]}
+        lctl dk > /var/tmp/lustre_debug_umount-"$(date +%s)".log
+        cat <<EOF | mail -s "umount failure" brian.murrell@intel.com
+got a node with a umount problem on $HOSTNAME
+
+$(rpm -qa | grep chroma)
+EOF
+        cat <<EOF > /tmp/waiting_help
+mmp_status returned $mmp_status_rc for /dev/sd$d.  Wating for help on LU-9925.
+
+When done, you can put continue status into /tmp/waiting_help_rc.  Use 0 to
+continue as if nothing went wrong, or any other value to exit the script
+with that value.
+
+If you want to just let the script continue with the mmp_status() return code
+don't create the /tmp/waiting_help_rc file."
+EOF
+        while [ -e /tmp/waiting_help ]; do
+            sleep 1
+        done
+        continue_rc="$mmp_status_rc"
+        if [ -f /tmp/waiting_help_rc ]; then
+            read -r continue_rc < /tmp/waiting_help_rc
+            rm -f /tmp/waiting_help_rc
+        fi
+        if [ "$continue_rc" -ne 0 ]; then
+            exit "$continue_rc"
+        fi
+    fi
 done
 
 # figure it out for ourselves if we can
