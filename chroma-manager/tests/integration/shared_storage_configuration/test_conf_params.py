@@ -14,10 +14,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         # check for it right away and blow up if it's not as we expect.
         self.assertEqual([h['address'] for h in self.hosts], host_addresses)
 
-        volumes = self._fetch_help(lambda: self.wait_for_shared_volumes(4, 2),
-                                   ['tom.nabarro@intel.com'],
-                                   'not enough volumes recognised',
-                                   timeout=999999)
+        volumes = self.wait_for_shared_volumes(4, 2)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
@@ -96,10 +93,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
 
-        volumes = self._fetch_help(lambda: self.wait_usable_volumes(4),
-                                   ['tom.nabarro@intel.com'],
-                                   'not enough volumes recognised',
-                                   timeout=999999)
+        volumes = self.wait_usable_volumes(4)
 
         mgt_volume = volumes[0]
         mdt_volumes = [volumes[1]]
