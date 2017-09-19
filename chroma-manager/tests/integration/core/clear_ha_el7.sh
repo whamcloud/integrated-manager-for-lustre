@@ -62,7 +62,7 @@ mmp_status() {
 }
 
 get_proc_mounts() {
-    local exclude="${1:###########}"
+    local exclude="${1:-###########}"
 
     egrep -v "$exclude" /proc/mounts
 
