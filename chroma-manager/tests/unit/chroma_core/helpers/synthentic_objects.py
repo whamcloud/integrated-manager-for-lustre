@@ -2,7 +2,6 @@ import mock
 
 from chroma_core.models import Volume, VolumeNode, ManagedHost, LNetConfiguration
 from chroma_core.models import NetworkInterface, Nid, ServerProfile
-from chroma_core.models import RSyslogConfiguration
 from chroma_core.models import NTPConfiguration
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import PacemakerConfiguration
@@ -93,7 +92,6 @@ def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn
     lnet_configuration = synthetic_lnet_configuration(host, nids)
 
     if server_profile.managed:
-        synthetic_rsyslog_configuration(host)
         synthetic_ntp_configuration(host)
         synthetic_corosync_configuration(host)
         synthetic_pacemaker_configuration(host)
@@ -220,11 +218,6 @@ def _create_simple_synthetic_object(class_, **kwargs):
     ObjectCache.add(class_, synthetic_object)
 
     return synthetic_object
-
-
-def synthetic_rsyslog_configuration(host):
-    assert host.rsyslog_configuration == None
-    return _create_simple_synthetic_object(RSyslogConfiguration, host=host)
 
 
 def synthetic_ntp_configuration(host):
