@@ -27,6 +27,7 @@ Jasmine | [https://semaphoreci.com/community/tutorials/getting-started-with-node
 **Jest** | [https://facebook.github.io/jest/](https://facebook.github.io/jest/)
 pre-commit | [https://www.npmjs.com/package/pre-commit](https://www.npmjs.com/package/pre-commit)
 prettier | [https://github.com/prettier/prettier](https://github.com/prettier/prettier)
+**python** | [https://www.python.org/about/gettingstarted/](https://www.python.org/about/gettingstarted/)
 systemjs | [https://github.com/systemjs/systemjs](https://github.com/systemjs/systemjs)
 promises | [https://promisesaplus.com/](https://promisesaplus.com/)
 **redux / flux** | [http://redux.js.org/](http://redux.js.org/)

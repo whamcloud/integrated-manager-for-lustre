@@ -21,7 +21,7 @@
     
 * To modify and test any Frontend changes to IML, it will be necessary to install a working version of IML.
 
-    * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_HPC_Storage_Sandbox.md).
+    * Create a **Vagrant** virtual cluster outined here: [Install IML on a Vagrant Virtual Cluster](Installing_IML_on_Vagrant.md).
 
     * Create a Shared Mount from the guest machine to the vagrant virtual machine.
         * Follow these [Instructions](Create_Vagrant_Mount.md)
@@ -95,37 +95,28 @@ yarn watch
 The watch command will leave the code in a state that will "watch" for further edits. If desired, the "watch" may be stopped by hitting ctrl-c
 
 ### In a seperate terminal, log into the **adm** node
-* vagrant ssh adm
+* `vagrant ssh adm`
 
 Log in as root
-* su -i
-
-Go to the cloned **GUI** repo on the /vagrant mount point where the code edits were made.
-* cd /vagrant/GUI
-
-* **yarn link**
-
-```
-yarn link v0.27.5
-success Registered "@iml/gui".
-info You can now run `yarn link "@iml/gui"` in the projects where you want to use this module and it will be used instead.
-Done in 0.60s.
-
-```
-The "yarn link" provides the ability to replace the 'installed' GUI that came with the installed IML with 'this' GUI with code edits.
+* `su -`
 
 ### Stop the IML running services
-* chroma-config stop
+* `chroma-config stop`
 
-### Replace the **gui** that is running on the **adm** node with the newly cloned **gui**
+### Create a symbolic link to the **gui** that is running on the **adm** node with the newly cloned **gui**.
 
-The gui modules currently reside at /usr/share/chroma-manager/ui-modules on the running system.
+The gui files currently reside at /usr/lib/iml-manager/iml-gui on the running system.
 
-* cd /usr/share/chroma-manager/ui-modules
-* yarn link "@iml/gui"
+* `cd /usr/lib/iml-manager`
+
+Preserve the original iml-gui files.
+* `mv iml-gui iml-gui-orig`
+
+Create the symbolic link.
+* `ln -s /vagrant/GUI/dist iml-gui`
 
 ### Start the IML services
-* chroma-config start
+* `chroma-config start`
 
 ## In a browser, go to the IML location
 * [https://adm.lfs.local:8443](https:/adm.lfs.local:8443)
@@ -168,21 +159,21 @@ It is possible that the browser cache may require refreshing for the change to t
 
 ### On your local machine, i.e., not the vagrant VM:
 
-* cd ~/vagrant-projects/vhpc/GUI
+* `cd ~/vagrant-projects/vhpc/GUI`
 
 Ensure you are on the proper branch
-* git branch
+* `git branch`
 
 Otherwise, change to the **my-fix** branch
-* git checkout my-fix
+* `git checkout my-fix`
 
 Add and Commit the change.
 
-* git status
+* `git status`
 
-* git add source/iml/app/app-states.js
+* `git add source/iml/app/app-states.js`
 
-* git commit -s 
+* `git commit -s `
 
 This will cause the **pre-commit** hooks to run.
 

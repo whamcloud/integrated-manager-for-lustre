@@ -1,11 +1,21 @@
 [**Table of Contents**](index.md)
 
-# Installing IML on HPC Storage Sandbox
+# Installing IML on Vagrant
 
 ![clustre](md_Graphics/installing_sm.jpg)
 
 ## Prerequisites:
 Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/intel-hpdd/vagrantfiles) on how to create a virtual HPC storage cluster with vagrant before attempting to install IML.
+
+* If the above instructions are already understood and VirtualBox and Vagrant are currently installed:
+    * Move to the desired working directory.
+    * `git clone git@github.com:intel-hpdd/Vagrantfiles.git`
+    * `cp Vagrantfiles/hpc-storage-sandbox-el7/* .`
+
+* If running on a system with low memory, e.g., 8GB of RAM, edit the file: `Vagrantfile` and change the following:
+    * Change: `vbx.memory = 1024` to `vbx.memory = 800`
+    * Change: `v.memory = 2048` to `v.memory = 1536`
+    
 
 ## Notes:
 - You will be logging into your vagrant box as the vagrant user, which has the ability to run with root privilege. To elevate privileges to the root account, use the sudo command. The vagrant user does not require a password to run sudo. Should there ever be a need to login as root directly, the root password is also "vagrant". 
@@ -22,6 +32,8 @@ Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/
 ## Installing IML:
 1. Verify that the following vagrant plugins are installed:
     ```
+    vagrant plugin list
+
     vagrant plugin install vagrant-shell-commander
     vagrant plugin install vagrant-share
     vagrant plugin install vagrant-vbguest
@@ -49,7 +61,7 @@ Please refer to [https://github.com/intel-hpdd/vagrantfiles](https://github.com/
     vagrant ssh
     [vagrant@adm ~]$ sudo su - # (or "sudo -s")
     [vagrant@adm ~]# cd /tmp
-    [vagrant@adm ~]# tar xvf <buildname>.tar.gz
+    [vagrant@adm ~]# tar xvzf <buildname>.tar.gz
     [vagrant@adm ~]# cd <build folder>
     [vagrant@adm ~]# ./install --no-dbspace-check
     ```

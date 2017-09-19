@@ -114,9 +114,9 @@ The dependencies are reflected in our [copr](https://copr.fedorainfracloud.org/c
 
 
 ## 7. Lustre Nodes
-In order to install IML and lustre onto a lustre cluster, either of the following are necessary:
+In order to install IML and lustre onto a lustre cluster, the following are necessary:
 
-1. A Lustre Cluster
+1. A Lustre Cluster - Either of the following:
     * "Bare-metal" set of servers.
     * Virtual machine environment such as vagrant, KVM or docker.
 
