@@ -310,7 +310,7 @@ class ZfsDevices(object):
 
                 if name.startswith("%s/" % pool_name):
                     # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-                    major_minor = "zfsset:%s" % (len(self.datasets) + 1)
+                    major_minor = "zfsset:%s" % uuid
                     block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
                                                                      'path': name,
                                                                      'serial_80': None,
