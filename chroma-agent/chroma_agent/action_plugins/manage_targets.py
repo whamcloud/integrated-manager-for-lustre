@@ -463,6 +463,7 @@ def import_target(device_type, path, validate_importable=False):
     error = blockdevice.import_()
     if error:
         console_log.error("Error importing pool: '%s'" % error)
+        return import_target(device_type, path, validate_importable)
 
     if (error is None) and (validate_importable is True):
         error = blockdevice.export()
