@@ -25,8 +25,13 @@ strip_lines = functools.partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename=STORE_FILENAME):
-    with open(filename, 'r') as f:
-        data = json.loads(f.read())
+    data = {}
+
+    try:
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+    except IOError:
+        pass
 
     daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
@@ -164,9 +169,13 @@ class ZfsDevices(object):
                                                   data['datasets'],
                                                   data['zvols'])
                 else:
-                    with ZfsDevice(pool['pool'], True):
-                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
-                        self._add_zfs_pool(out, block_devices)
+                    with ZfsDevice(pool['pool'], True) as zfs_device:
+                        if zfs_device.available:
+                            out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                            self._add_zfs_pool(out, block_devices)
+                        else:
+                            daemon_log.error("Error when trying to scan zpool %s")
+                            continue
 
             # verify still have active_pool_names imported
             new_active_pool_names = [pool['pool'] for pool in get_zpools()]
