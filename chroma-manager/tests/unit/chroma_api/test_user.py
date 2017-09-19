@@ -76,6 +76,7 @@ class TestUserResource(ChromaApiTestCase):
         self.assertEqual(me['email'], "joebob@joebob.rocks")
         self.assertEqual(me['full_name'], "Joebob Josephson")
 
+
     def test_is_superuser_is_readonly(self):
         superuser = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertTrue(superuser["is_superuser"])
