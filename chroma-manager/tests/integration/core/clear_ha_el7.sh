@@ -64,7 +64,7 @@ mmp_status() {
 get_proc_mounts() {
     local exclude="${1:-###########}"
 
-    egrep -v "$exclude" /proc/mounts
+    egrep -v "$exclude" /proc/mounts || true
 
 }
 
@@ -74,7 +74,7 @@ get_lustre_mounts() {
     if $header; then
         echo "---------- /proc/mounts ----------"
     fi
-    get_proc_mounts " ((config|rpc_pipe|security|debug|hugetlb|root|sys|auto|tmp)fs|pstore|mqueue|nfsd|ext[2-4]|proc|dev(tmpfs|pts)|cgroup) "
+    get_proc_mounts " ((config|rpc_pipe|security|debug|hugetlb|root|sys|auto|tmp)fs|pstore|mqueue|nfs[d4]|ext[234]|proc|dev(tmpfs|pts)|cgroup) "
 
 }
 
