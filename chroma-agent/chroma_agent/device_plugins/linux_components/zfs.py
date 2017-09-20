@@ -234,7 +234,7 @@ class ZfsDevices(object):
 
         if datasets != {}:
             for info in datasets.itervalues():
-                major_minor = info['major_minor']
+                major_minor = info['block_device']
                 name = info['name']
                 block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
                                                                  'path': name,
