@@ -141,7 +141,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.wait_until_true(self.api_contactable)
                 self.remote_operations.unmount_clients()
                 self.api_force_clear()
-                self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
+                self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS)
                 self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
@@ -204,12 +204,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     @property
     def config_servers(self):
-        return [s for s in config['lustre_servers']
+        return [s for s in self.TEST_SERVERS
                 if 'worker' not in s.get('profile', "")]
 
     @property
     def config_workers(self):
-        return [w for w in config['lustre_servers']
+        return [w for w in self.TEST_SERVERS
                 if 'worker' in w.get('profile', "")]
 
     @property
@@ -617,7 +617,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if config.get('managed'):
             self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
+        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS)
         if config.get('managed'):
             self.remote_operations.clear_ha(self.TEST_SERVERS)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
