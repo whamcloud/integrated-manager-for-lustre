@@ -211,7 +211,6 @@ class MockAgentRpc(object):
             return json.dumps({'host_id': host.id,
                                'command_id': 0})
         elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
-                     'configure_rsyslog', 'unconfigure_rsyslog',
                      'configure_target_store', 'unconfigure_target_store',
                      'deregister_server', 'restart_agent',
                      'shutdown_server', 'host_corosync_config', 'check_block_device',

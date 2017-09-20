@@ -159,6 +159,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %{__python} setup.py -q build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.py build/lib
+cp -a storage_server.repo build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
 cp -a mime.types build/lib
@@ -341,6 +342,7 @@ fi
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
+%config(noreplace) %{manager_root}/storage_server.repo
 # Stuff below goes into the -cli/-lib packages
 %exclude %{manager_root}/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/

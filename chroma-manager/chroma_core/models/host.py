@@ -31,7 +31,6 @@ from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import NTPConfiguration
-from chroma_core.models import RSyslogConfiguration
 from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
@@ -301,8 +300,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             configuration = getattr(self, '_%s_configuration' % configuration_name)
         except (PacemakerConfiguration.DoesNotExist,
                 CorosyncConfiguration.DoesNotExist,
-                NTPConfiguration.DoesNotExist,
-                RSyslogConfiguration.DoesNotExist):
+                NTPConfiguration.DoesNotExist):
             return None
 
         if configuration.state == 'removed':
@@ -321,10 +319,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     @property
     def ntp_configuration(self):
         return self._get_configuration('ntp')
-
-    @property
-    def rsyslog_configuration(self):
-        return self._get_configuration('rsyslog')
 
 
 class Volume(models.Model):
@@ -795,10 +789,6 @@ class BaseSetupHostJob(NullStateChangeJob):
             ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
             ObjectCache.add(NTPConfiguration, ntp_configuration)
 
-        if self.target_object.rsyslog_configuration is None and self.target_object.server_profile.rsyslog:
-            rsyslog_configuration, _ = RSyslogConfiguration.objects.get_or_create(host=self.target_object)
-            ObjectCache.add(RSyslogConfiguration, rsyslog_configuration)
-
         deps = []
 
         if self.target_object.lnet_configuration:
@@ -812,9 +802,6 @@ class BaseSetupHostJob(NullStateChangeJob):
 
         if self.target_object.ntp_configuration:
             deps.append(DependOn(self.target_object.ntp_configuration, 'configured'))
-
-        if self.target_object.rsyslog_configuration:
-            deps.append(DependOn(self.target_object.rsyslog_configuration, 'configured'))
 
         return DependAll(deps)
 
@@ -1119,7 +1106,7 @@ class DeleteHostStep(Step):
             mount.mark_deleted()
 
         # Remove configuration objects. This needs done *before* removing outlets.
-        for configuration in [host.pacemaker_configuration, host.corosync_configuration, host.ntp_configuration, host.rsyslog_configuration]:
+        for configuration in [host.pacemaker_configuration, host.corosync_configuration, host.ntp_configuration]:
             if configuration:
                 configuration.set_state('removed')
                 configuration.mark_deleted()
@@ -1170,9 +1157,6 @@ class CommonRemoveHostJob(StateChangeJob):
 
         if self.host.ntp_configuration:
             deps.append(DependOn(self.host.ntp_configuration, 'unconfigured'))
-
-        if self.host.rsyslog_configuration:
-            deps.append(DependOn(self.host.rsyslog_configuration, 'unconfigured'))
 
         return DependAll(deps)
 

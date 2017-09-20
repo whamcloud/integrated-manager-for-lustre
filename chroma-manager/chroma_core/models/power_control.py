@@ -322,7 +322,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
                 raise ValidationError("Mixing of IPMI and PDU power control is not supported.")
 
         if (self.device.is_ipmi
-            and self.device.device_type.agent != "fence_virsh"):
+            and self.device.device_type.agent not in ['fence_virsh', 'fence_vbox']):
             # Special-case for IPMI "outlets". The identifier is the BMC
             # address.
             self.identifier = self.validate_inet_address(self.identifier)
