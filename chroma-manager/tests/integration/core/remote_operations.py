@@ -1214,9 +1214,17 @@ class RealRemoteOperations(RemoteOperations):
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(address, "ring1_iface=%s\n%s" %
-                                          (server['corosync_config']['ring1_iface'],
-                                           clear_ha_script.read()))
+                        result = self._ssh_address(address, "ring1_iface=%s\n%s" %
+                                                   (server['corosync_config']['ring1_iface'],
+                                                    clear_ha_script.read()))
+                        logger.info("clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
+
+                        if result.rc != 0:
+                            logger.info("clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                                        (server['nodename'], result.rc, result.stdout, result.stderr))
+                            raise RuntimeError("Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
+                                               (server, result.rc, result.stdout, result.stderr))
 
                     self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
                     self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
