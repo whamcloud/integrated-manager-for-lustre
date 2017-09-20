@@ -51,12 +51,12 @@ def clean_list(xs):
 
 
 def match_entry(x, name, exclude):
-    # identify config devices in any line listed in config not containing vdev keyword
+    """ identify config devices in any line listed in config not containing vdev keyword """
     return not any(substring in x for substring in (exclude + (name,)))
 
 
 def _parse_line(xs):
-    # keywords in vdev config display for zpool that represent structure not an actual device
+    """ keywords in vdev config display for zpool that represent structure not an actual device """
     excluded = ('mirror', 'raidz', 'spare', 'cache', 'logs', 'NAME')
 
     # pair up keys with values found on the subsequent line
@@ -72,7 +72,7 @@ def _parse_line(xs):
                                zpool['devices'],
                                {})
 
-    del(zpool['config'])
+    del (zpool['config'])
     return zpool
 
 
@@ -129,6 +129,127 @@ def get_zpools(active=True):
     return map(_parse_line, pools)
 
 
+def _get_zpool_datasets(pool_name, drives):
+    """ Retrieve datasets belonging to a zpool """
+    out = AgentShell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
+
+    zpool_datasets = {}
+
+    if out.strip() != "no datasets available":
+        for line in filter(None, out.split('\n')):
+            name, size_str, uuid = line.split()
+            size = util.human_to_bytes(size_str)
+
+            if name.startswith("%s/" % pool_name):
+                # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
+                major_minor = "zfsset:%s" % uuid
+
+                zpool_datasets[uuid] = {
+                    "name": name,
+                    "path": name,
+                    "block_device": major_minor,
+                    "uuid": uuid,
+                    "size": size,
+                    "drives": drives
+                }
+
+                daemon_log.debug("zfs mount '%s'" % name)
+
+    return zpool_datasets
+
+
+def _get_zpool_zvols(pool_name, drives, block_devices):
+    """
+    Each zfs pool may have zvol entries in it. This will parse those zvols and create
+    device entries for them
+    """
+    zpool_vols = {}
+
+    for zvol_path in glob.glob("/dev/%s/*" % pool_name):
+        major_minor = block_devices.path_to_major_minor(zvol_path)
+
+        if major_minor is None:
+            continue
+
+        uuid = zvol_path
+
+        zpool_vols[uuid] = {
+            "name": zvol_path,
+            "path": zvol_path,
+            "block_device": major_minor,
+            "uuid": uuid,
+            "size": block_devices.block_device_nodes[major_minor]["size"],
+            "drives": drives
+        }
+
+        # Do this to cache the device, type see blockdevice and filesystem for info.
+        BlockDevice('zfs', zvol_path)
+        FileSystem('zfs', zvol_path)
+
+    return zpool_vols
+
+
+def find_device_and_children(device_path):
+    devices = []
+
+    try:
+        # Then find all the partitions for that disk and add them, they are all a child of this
+        # zfs pool, so
+        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
+        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
+        for device in ndp.find_normalized_start(ndp.normalized_device_path(device_path)):
+            daemon_log.debug("zfs device '%s'" % device)
+            devices.append(device)
+    except KeyError:
+        pass
+
+    return devices
+
+
+def _list_zpool_devices(name, full_paths):
+    """
+    We are parsing either full vdev paths (including partitions):
+    [root@node1 ~]# zpool list -PHv -o name lustre1
+    lustre1
+      /dev/disk/by-path/pci-0000:00:05.0-scsi-0:0:0:2-part1 9.94G 228K 9.94G - 0% 0%
+
+    Or base devices:
+    [root@node1 ~]# zpool list -PH -o name lustre1
+    lustre1
+      pci-0000:00:05.0-scsi-0:0:0:2 9.94G 228K 9.94G - 0% 0%
+
+    :param name: zpool name to interrogate
+    :param full_paths: True to retrieve full vdev paths (partitions), False for base device names
+    :return: list of device paths or names sorted in descending order of string length
+    """
+    cmd_flags = '-%sHv' % ('P' if full_paths is True else '')
+    out = AgentShell.try_run(['zpool', 'list', cmd_flags, '-o', 'name', name])
+
+    # ignore the first (zpool name) and last (newline character)s line of command output
+    return sorted([line.split()[0] for line in out.split('\n')[1:-1]], key=len, reverse=True)
+
+
+def _get_all_zpool_devices(name):
+    """
+    Retrieve devices and children from base block devices used to create zpool
+
+    Identify and remove partition suffix, we are only interested in the device
+
+    :param name: zpool name
+    :return: list of all devices related to the given zpool
+    """
+    fullpaths = _list_zpool_devices(name, True)
+
+    devices = []
+    for basename in _list_zpool_devices(name, False):
+        fullpath = next(fullpath for fullpath in fullpaths if os.path.basename(fullpath).startswith(basename))
+        device_path = os.path.join(os.path.dirname(fullpath), basename)
+        devices.extend(find_device_and_children(device_path))
+        fullpaths.remove(fullpath)
+
+    return devices
+
+
 class ZfsDevices(object):
     """Reads zfs pools"""
     acceptable_health = ['ONLINE', 'DEGRADED']
@@ -159,8 +280,8 @@ class ZfsDevices(object):
                         out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
                         self._add_zfs_pool(out, block_devices)
                     else:
-                        # zpool probably imported elsewhere, attempt to read from store, this should return previously seen
-                        # zpool state either with or without datasets
+                        # zpool probably imported elsewhere, attempt to read from store, this should return
+                        # previously seen zpool state either with or without datasets
                         try:
                             data = read_from_store(pool['id'])
                         except (IOError, KeyError) as e:
@@ -180,7 +301,7 @@ class ZfsDevices(object):
                 daemon_log.warning("Different set of imported zpools before and after full_scan. "
                                    "Before: %s, After: %s" % (active_pool_names, new_active_pool_names))
 
-        except OSError:                 # OSError occurs when ZFS is not installed.
+        except OSError:  # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
             self._zvols = {}
@@ -190,14 +311,14 @@ class ZfsDevices(object):
 
         size = util.human_to_bytes(size_str)
 
-        drive_mms = block_devices.paths_to_major_minors(self._get_all_zpool_devices(name))
+        drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name))
 
         if drive_mms is None:
             daemon_log.warning("Could not find major minors for zpool '%s'" % name)
             return
 
-        datasets = self._get_zpool_datasets(name, uuid, drive_mms, block_devices)
-        zvols = self._get_zpool_zvols(name, drive_mms, uuid, block_devices)
+        datasets = _get_zpool_datasets(name, drive_mms)
+        zvols = _get_zpool_zvols(name, drive_mms, block_devices)
 
         pool_md = {"name": name,
                    "path": name,
@@ -267,116 +388,3 @@ class ZfsDevices(object):
     @exceptionSandBox(daemon_log, {})
     def zvols(self):
         return self._zvols
-
-    def _get_all_zpool_devices(self, name):
-        """
-        Retrieve devices and children from base block devices used to create zpool
-
-        Identify and remove partition suffix, we are only interested in the device
-
-        :param name: zpool name
-        :return: list of all devices related to the given zpool
-        """
-        fullpaths = self._list_zpool_devices(name, True)
-
-        devices = []
-        for basename in self._list_zpool_devices(name, False):
-            fullpath = next(fullpath for fullpath in fullpaths if os.path.basename(fullpath).startswith(basename))
-            device_path = os.path.join(os.path.dirname(fullpath), basename)
-            devices.extend(self.find_device_and_children(device_path))
-            fullpaths.remove(fullpath)
-
-        return devices
-
-    def _list_zpool_devices(self, name, full_paths):
-        """
-        We are parsing either full vdev paths (including partitions):
-        [root@node1 ~]# zpool list -PHv -o name lustre1
-        lustre1
-          /dev/disk/by-path/pci-0000:00:05.0-scsi-0:0:0:2-part1 9.94G 228K 9.94G - 0% 0%
-
-        Or base devices:
-        [root@node1 ~]# zpool list -PH -o name lustre1
-        lustre1
-          pci-0000:00:05.0-scsi-0:0:0:2 9.94G 228K 9.94G - 0% 0%
-
-        :param name: zpool name to interrogate
-        :param full_paths: True to retrieve full vdev paths (partitions), False for base device names
-        :return: list of device paths or names sorted in descending order of string length
-        """
-        cmd_flags = '-%sHv' % ('P' if full_paths is True else '')
-        out = AgentShell.try_run(['zpool', 'list', cmd_flags, '-o', 'name', name])
-
-        # ignore the first (zpool name) and last (newline character)s line of command output
-        return sorted([line.split()[0] for line in out.split('\n')[1:-1]], key=len, reverse=True)
-
-    def _get_zpool_datasets(self, pool_name, zpool_uuid, drives, block_devices):
-        out = AgentShell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
-
-        zpool_datasets = {}
-
-        if out.strip() != "no datasets available":
-            for line in filter(None, out.split('\n')):
-                name, size_str, uuid = line.split()
-                size = util.human_to_bytes(size_str)
-
-                if name.startswith("%s/" % pool_name):
-                    # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-                    major_minor = "zfsset:%s" % uuid
-
-                    zpool_datasets[uuid] = {
-                        "name": name,
-                        "path": name,
-                        "block_device": major_minor,
-                        "uuid": uuid,
-                        "size": size,
-                        "drives": drives
-                    }
-
-                    daemon_log.debug("zfs mount '%s'" % name)
-
-        return zpool_datasets
-
-    # Each zfs pool may have zvol entries in it. This will parse those zvols and create
-    # device entries for them
-    def _get_zpool_zvols(self, pool_name, zpool_uuid, drives, block_devices):
-        zpool_vols = {}
-
-        for zvol_path in glob.glob("/dev/%s/*" % pool_name):
-            major_minor = block_devices.path_to_major_minor(zvol_path)
-
-            if major_minor is None:
-                continue
-
-            uuid = zvol_path
-
-            zpool_vols[uuid] = {
-                "name": zvol_path,
-                "path": zvol_path,
-                "block_device": major_minor,
-                "uuid": uuid,
-                "size": block_devices.block_device_nodes[major_minor]["size"],
-                "drives": drives
-            }
-
-            # Do this to cache the device, type see blockdevice and filesystem for info.
-            BlockDevice('zfs', zvol_path)
-            FileSystem('zfs', zvol_path)
-
-        return zpool_vols
-
-    def find_device_and_children(self, device_path):
-        devices = []
-
-        try:
-            # Then find all the partitions for that disk and add them, they are all a child of this
-            # zfs pool, so
-            # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
-            # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
-            for device in ndp.find_normalized_start(ndp.normalized_device_path(device_path)):
-                daemon_log.debug("zfs device '%s'" % device)
-                devices.append(device)
-        except KeyError:
-            pass
-
-        return devices
