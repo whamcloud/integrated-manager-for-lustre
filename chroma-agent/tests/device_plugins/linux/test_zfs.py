@@ -2,7 +2,7 @@ from mock import patch, Mock, MagicMock, call
 
 from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-from chroma_agent.device_plugins.linux_components.zfs import get_zpools
+from chroma_agent.device_plugins.linux_components.zfs import get_zpools, _get_all_zpool_devices
 from tests.data import zfs_example_data
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
@@ -56,7 +56,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     mock_write_to_store = MagicMock()
 
     @patch('glob.glob', mock_empty_list)
-    @patch('logging.Logger.debug', Mock()) #mock_debug)
+    @patch('logging.Logger.debug', Mock())  # mock_debug)
     @patch('chroma_agent.utils.BlkId', dict)
     @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs', mock_empty_dict)
     @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice.lock_pool', Mock())
@@ -77,7 +77,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     @patch('chroma_agent.device_plugins.linux.ZfsDevices.find_device_and_children', mock_find_device_and_children)
     def _get_zfs_devices(self, pool_name):
         """ test the process of using full partition paths and device basenames to resolve device paths """
-        return ZfsDevices()._get_all_zpool_devices(pool_name)
+        return _get_all_zpool_devices(pool_name)
 
     def test_get_active_zpool(self):
         """ WHEN active/imported zpools are output from 'zpool status' command THEN parser returns relevant pools """
