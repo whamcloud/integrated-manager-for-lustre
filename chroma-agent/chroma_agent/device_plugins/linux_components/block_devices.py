@@ -93,6 +93,7 @@ def as_device(x):
         'device_type': x.get('DEVTYPE'),
         'device_path': x.get('DEVPATH'),
         'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
+        'is_ro': x.get('IML_IS_RO'),
         'parent': None
     }
 
@@ -102,7 +103,7 @@ def get_parent_path(p):
 
 
 def find_device_by_device_path(p, xs):
-    return next(iter([d for d in xs if d['device_path'] == p]), None)
+    return next((d for d in xs if d['device_path'] == p), None)
 
 
 def mutate_parent_prop(xs):
@@ -119,29 +120,10 @@ def mutate_parent_prop(xs):
 
 def filter_device(x):
     # Exclude zero-sized devices
-    if x['size'] == 0:
+    if x['size'] == 0 or x['is_ro']:
         return False
 
-    # Exclude ramdisks, floppy drives, obvious cdroms
-    if re.search("^ram\d+$", x['device_path']) or\
-       re.search("^fd\d+$", x['device_path']) or\
-       re.search("^sr\d+$", x['device_path']):
-        return False
-
-    # Exclude read-only devices and removed media or devices
-    try:
-        # Never use 'w' in the built-in open() or it'll create
-        # a 0 length file where a
-        # device was removed!
-        fd = os.open("/dev/%s" % x['device_path'], os.O_WRONLY)
-    except OSError, e:
-        # EROFS: Device is read-only
-        # ENOENT: No such file or directory
-        # NO_MEDIA_ERRNO: No medium found
-        if e.errno in [errno.EROFS, errno.ENOENT, errno.NO_MEDIA_ERRNO]:
-            return False
-    else:
-        os.close(fd)
+    return True
 
 
 def add_to_ndp(xs, ys):
@@ -175,6 +157,7 @@ class BlockDevices(object):
         info = scanner_cmd("info")
 
         xs = [as_device(x) for x in info.itervalues()]
+        xs = filter(filter_device, xs)
         mutate_parent_prop(xs)
 
         self.node_block_devices = reduce(lambda d, x: dict(
