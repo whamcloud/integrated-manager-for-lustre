@@ -18,15 +18,18 @@ def normalized_device_path(device_path):
 
     normalized_path = os.path.realpath(device_path)
 
-    # This checks we have a completely normalized path, perhaps the stack means our current
-    # normal path can actually be normalized further. So if the root to normalization takes multiple
+    # This checks we have a completely normalized path, perhaps the
+    # stack means our current normal path can actually be normalized further.
+    # So if the root to normalization takes multiple
     # steps this will deal with it
     # So if /dev/sdx normalizes to /dev/mmapper/special-device
     # but /dev/mmapper/special-device normalizes to /dev/md/mdraid1
     # /dev/sdx will normalize to /dev/md/mdraid1
 
-    # As an additional measure to detect circular references such as A->B->C->A in
-    # this case we don't know which is the normalized value so just drop out once
+    # As an additional measure to detect circular references
+    # such as A->B->C->A in
+    # this case we don't know which is the
+    # normalized value so just drop out once
     # it repeats.
     visited = set()
 
@@ -40,7 +43,8 @@ def normalized_device_path(device_path):
 def find_normalized_start(device_fullpath):
     '''
     :param device_path: The device_path being search for
-    :return: Given /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 returns
+    :return: Given /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+             returns
              /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
              /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
              /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part9
@@ -49,7 +53,8 @@ def find_normalized_start(device_fullpath):
 
     _prime_normalized_paths()
 
-    values = [value for value in _normalize_device_table.values() if value.startswith(device_fullpath)]
+    values = [value for value in _normalize_device_table.values()
+              if value.startswith(device_fullpath)]
 
     return values
 
@@ -73,22 +78,19 @@ def _prime_normalized_paths():
 
 def add_normalized_device(path, normalized_path):
     '''
-    Add an entry to the normalized path list, adding to often does no harm and adding something that
-    is not completely canonical does no harm either, because the search routine is recursive so if
+    Add an entry to the normalized path list, adding too often does no harm
+    and adding something that is not completely canonical does no harm either,
+    because the search routine is recursive so if
     A=>B and B=>C then A,B and C will all evaluate to the canonical value of C.
 
-    This routine does not add circular references, it is better to detect them in here than in the caller
+    This function does not add circular references, it is better to detect
+    them in here than in the caller
 
     :param path: device path
     :param normalized_path: canonical path
     :return: No return value
     '''
 
-    if (path != normalized_path):                           # Normalizing to itself makes no sense
+    # Normalizing to itself makes no sense
+    if path != normalized_path:
         _normalize_device_table[path] = normalized_path
-
-
-def add_normalized_list(raw_list, normalized_list):
-    for key, path in raw_list.items():
-        if key in normalized_list:
-            add_normalized_device(path, normalized_list[key])
