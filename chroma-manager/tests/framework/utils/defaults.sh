@@ -109,8 +109,8 @@ set_defaults() {
         export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.hpdd.intel.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_server_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
         export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.hpdd.intel.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_client_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
     else
-        export LUSTRE_SERVER_URL="https://build.hpdd.intel.com/lustre-b2_10_last_successful_server/"
-        export LUSTRE_CLIENT_URL="https://build.hpdd.intel.com/lustre-b2_10_last_successful_client/"
+        export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/lastSuccessful/archive/artifacts/"
+        export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/lastSuccessful/archive/artifacts/"
         # these should be determined from the above
         export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.hpdd.intel.com_lustre-b2_10_last_successful_server_.repo"
         export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.hpdd.intel.com_lustre-b2_10_last_successful_client_.repo"
