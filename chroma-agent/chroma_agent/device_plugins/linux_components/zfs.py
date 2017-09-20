@@ -363,7 +363,7 @@ class ZfsDevices(object):
                                                                  'serial_83': None,
                                                                  'size': info['size'],
                                                                  'filesystem_type': 'zfs',
-                                                                 'parent': pool['block_device']}
+                                                                 'parent': None}
 
                 # Do this to cache the device, type see blockdevice and filesystem for info.
                 BlockDevice('zfs', name)
