@@ -1,15 +1,17 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
+from __future__ import print_function
+
 import json
 
 import os
 import re
 import glob
-import functools
+from toolz import partial, compose
 
-from chroma_agent.lib.shell import AgentShell
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
 from iml_common.blockdevices.blockdevice import BlockDevice
@@ -20,8 +22,8 @@ from iml_common.lib import util
 
 STORE_FILENAME = '/tmp/store.json'
 
-filter_empty = functools.partial(filter, None)
-strip_lines = functools.partial(map, lambda x: x.strip())
+filter_empty = partial(filter, None)
+strip_lines = partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename=STORE_FILENAME):
@@ -122,11 +124,11 @@ def get_zpools(active=True):
     if 'pool: ' not in out:
         return {}
 
-    pools = clean_list(re.split('pool:\s+', out))
-    pools = map(lambda x: 'pool: ' + x, pools)
-    pools = map(lambda x: clean_list(re.split('(\w+):[^/]', x)), pools)
+    transform_pools = compose(_parse_line,
+                              lambda x: clean_list(re.split('(\w+):[^/]', x)),
+                              lambda x: 'pool: ' + x)
 
-    return map(_parse_line, pools)
+    return map(transform_pools, clean_list(re.split('pool:\s+', out)))
 
 
 def _get_zpool_datasets(pool_name, drives):
