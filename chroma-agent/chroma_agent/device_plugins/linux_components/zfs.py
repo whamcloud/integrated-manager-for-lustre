@@ -154,28 +154,25 @@ class ZfsDevices(object):
             zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
 
             for pool in zpools:
-                if pool['state'] == 'UNAVAIL':
-                    # zpool probably imported elsewhere, attempt to read from store, this should return previously seen
-                    # zpool state either with or without datasets
-                    try:
-                        data = read_from_store(pool['id'])
-                    except (IOError, KeyError) as e:
-                        daemon_log.warning("Error when reading from store: %s (pool: %s)" % (e, pool['pool']))
-                        continue
-
-                    # populate self._pools/datasets/zvols info from saved data read from store
-                    self._update_pool_or_datasets(block_devices,
-                                                  data['pool'],
-                                                  data['datasets'],
-                                                  data['zvols'])
-                else:
-                    with ZfsDevice(pool['pool'], True) as zfs_device:
-                        if zfs_device.available:
-                            out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
-                            self._add_zfs_pool(out, block_devices)
-                        else:
-                            daemon_log.error("Error when trying to scan zpool %s")
+                with ZfsDevice(pool['pool'], True) as zfs_device:
+                    if zfs_device.available:
+                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                        self._add_zfs_pool(out, block_devices)
+                    else:
+                        # zpool probably imported elsewhere, attempt to read from store, this should return previously seen
+                        # zpool state either with or without datasets
+                        try:
+                            data = read_from_store(pool['id'])
+                        except (IOError, KeyError) as e:
+                            daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
+                                             "pool: %s)" % (e, pool['pool']))
                             continue
+                        else:
+                            # populate self._pools/datasets/zvols info from saved data read from store
+                            self._update_pool_or_datasets(block_devices,
+                                                          data['pool'],
+                                                          data['datasets'],
+                                                          data['zvols'])
 
             # verify still have active_pool_names imported
             new_active_pool_names = [pool['pool'] for pool in get_zpools()]
@@ -236,6 +233,21 @@ class ZfsDevices(object):
             self._zpools[pool['uuid']] = pool
 
         if datasets != {}:
+            for info in datasets.itervalues():
+                major_minor = info['major_minor']
+                name = info['name']
+                block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
+                                                                 'path': name,
+                                                                 'serial_80': None,
+                                                                 'serial_83': None,
+                                                                 'size': info['size'],
+                                                                 'filesystem_type': 'zfs',
+                                                                 'parent': None}
+
+                # Do this to cache the device, type see blockdevice and filesystem for info.
+                BlockDevice('zfs', name)
+                FileSystem('zfs', name)
+
             self._datasets.update(datasets)
 
         if zvols != {}:
@@ -295,7 +307,7 @@ class ZfsDevices(object):
         cmd_flags = '-%sHv' % ('P' if full_paths is True else '')
         out = AgentShell.try_run(['zpool', 'list', cmd_flags, '-o', 'name', name])
 
-        # ignore the first (zpool name) and last (newline character) line of command output
+        # ignore the first (zpool name) and last (newline character)s line of command output
         return sorted([line.split()[0] for line in out.split('\n')[1:-1]], key=len, reverse=True)
 
     def _get_zpool_datasets(self, pool_name, zpool_uuid, drives, block_devices):
@@ -311,17 +323,6 @@ class ZfsDevices(object):
                 if name.startswith("%s/" % pool_name):
                     # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
                     major_minor = "zfsset:%s" % uuid
-                    block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
-                                                                     'path': name,
-                                                                     'serial_80': None,
-                                                                     'serial_83': None,
-                                                                     'size': size,
-                                                                     'filesystem_type': 'zfs',
-                                                                     'parent': None}
-
-                    # Do this to cache the device, type see blockdevice and filesystem for info.
-                    BlockDevice('zfs', name)
-                    FileSystem('zfs', name)
 
                     zpool_datasets[uuid] = {
                         "name": name,
