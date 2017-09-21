@@ -2,7 +2,7 @@ daemon off;
 
 worker_processes  auto;
 
-error_log  {{log}}/error.log warn; 
+error_log  {{log}}/error.log warn;
 pid        {{var}}/nginx.pid;
 
 events {
@@ -23,7 +23,7 @@ http {
                       '$status $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';
 
-    access_log  {{log}}/access.log  main; 
+    access_log  {{log}}/access.log  main;
 
     sendfile        on;
 
