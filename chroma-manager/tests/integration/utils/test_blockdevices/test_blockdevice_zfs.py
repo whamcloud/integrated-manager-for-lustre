@@ -23,16 +23,11 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    # Create a zpool on the device. If fail is then try with dev name, export then import with 'by-id'
-    # This is to avoid bug: https://github.com/zfsonlinux/zfs/issues/3708
     # Use this opportunity to disable zfs.target to stop auto import as well.
     @property
     def prepare_device_commands(self):
-        create_cmd = "zpool create -f %s -o cachefile=none -o multihost=on" % self.device_path
-        dev_name = "`ls -la %s | awk '{print substr ($11, 7, 10)}'`" % self._device_path
         return ["systemctl disable zfs.target",
-                "if ! %s %s; then %s %s && zpool export %s && zpool import -d /dev/disk/by-id %s; fi"
-                % (create_cmd, self._device_path, create_cmd, dev_name, self.device_path, self.device_path)]
+                "zpool create -f %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
