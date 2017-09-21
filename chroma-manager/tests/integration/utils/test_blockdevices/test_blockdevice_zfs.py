@@ -28,7 +28,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     # Use this opportunity to disable zfs.target to stop auto import as well.
     @property
     def prepare_device_commands(self):
-        create_cmd = "zpool create -f %s -o cachefile=none" % self.device_path
+        create_cmd = "zpool create -f %s -o cachefile=none -o multihost=on" % self.device_path
         dev_name = "`ls -la %s | awk '{print substr ($11, 7, 10)}'`" % self._device_path
         return ["systemctl disable zfs.target",
                 "if ! %s %s; then %s %s && zpool export %s && zpool import -d /dev/disk/by-id %s; fi"
