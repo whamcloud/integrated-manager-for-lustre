@@ -28,7 +28,7 @@ package: subdirs $(PROFILES) lesskey.out create_installer
 		--show-transformed-names \
 		-C ../ \
 		--exclude README-INTERNAL \
-	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
+	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/chroma_support.repo $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
 
 lesskey.out: lesskey.in
 	lesskey -o $@ $<

@@ -28,7 +28,9 @@ Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
 Requires: chroma-diagnostics >= %{version}
-Requires: python2-iml-common
+Requires: python2-iml-common1.0
+Requires: systemd-python
+Requires: python-tzlocal
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
@@ -45,7 +47,6 @@ Group: System/Utility
 Conflicts: sysklogd
 
 Requires: %{name} = %{version}-%{release}
-Requires: rsyslog
 Requires: pcs
 Requires: libxml2-python
 Requires: python-netaddr
@@ -134,9 +135,6 @@ elif [ $1 -eq 2 ]; then
     # upgrade; convert any older agent config
     chroma-agent convert_agent_config
 fi
-
-%post management
-chkconfig rsyslog on
 
 # when a kernel is installed, make sure that our kernel is reset back to
 # being the preferred boot kernel

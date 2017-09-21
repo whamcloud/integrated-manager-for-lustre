@@ -34,9 +34,6 @@ class ServerProfile(models.Model):
     )
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
-    rsyslog = models.BooleanField(
-        help_text = "Boolean, True if the host will manage rsyslog"
-    )
     ntp = models.BooleanField(
         help_text = "Boolean, True if the host will manage ntp"
     )
