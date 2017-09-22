@@ -17,18 +17,13 @@ chroma-config stop
 chkconfig --del chroma-supervisor
 yum clean all --enablerepo=*
 yum remove chroma* fence-agents*
-rm -rf /var/lib/chroma/*
+rm -rf  /usr/lib/iml-*
 rm -rf /usr/share/chroma-manager/
 ```
 
 ### Optionally, remove nginx
 ```
 yum remove nginx
-```
-
-### Reset NTP
-```
-mv -f /etc/ntp.conf.pre-chroma /etc/ntp.conf
 ```
 
 ### Clean up these RPM included files/dirs
@@ -38,7 +33,6 @@ rm -rf /usr/lib/python2.7/site-packages/chroma*
 
 ### Clean up extra yum directories
 ```
-rm -rf /var/cache/yum/x86_64/7/chroma
 rm -rf /var/cache/yum/x86_64/7/chroma-manager
 ```
 
@@ -128,6 +122,15 @@ killall -9 pacemaker\; killall -9 corosync   <-- Only if necessary
 grep 'mcastport' /etc/corosync/corosync.conf
 
 rm -f /etc/corosync/corosync.conf
+
+Remove firewalld
+
+systemctl status firewalld
+systemctl disable firewalld
+
+firewall-cmd --state
+
+-- OR --
 
 /sbin/iptables -D INPUT -m state --state new -p udp --dport MCAST-PORT -j ACCEPT
 REMOVE "-A INPUT -m state --state NEW -m udp -p udp --dport MCAST-PORT -j ACCEPT" from /etc/sysconfig/iptables

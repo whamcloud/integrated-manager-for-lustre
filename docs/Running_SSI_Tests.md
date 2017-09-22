@@ -1,14 +1,27 @@
 [**Table of Contents**](index.md)
 
-# Running IML tests on HPC cluster with Windows, Cygwin and Vagrant
+# Running SSI Tests
+---
 
-# Description
+# MacOS
+---
+
+
+# Linux
+---
+
+# Windows
+---
+
+## Running IML tests on HPC cluster with Windows, Cygwin and Vagrant
+
+## Description
 
 Using Cygwin (*nix like interface on Windows), Vagrant and Virtualbox installed on Windows, run the IML source Makefile 'ssi_tests' target.
 
 This will, in turn, first destroy any existing HPC cluster created by the makefile, then run the base Vagrantfile _intel-manager-for-lustre/Vagrantfile_ (with command _vagrant up_) to bring up a functional HPC cluster, before proceeding to run the tests.
 
-# Windows environment
+## Windows environment
 
 Specifications of my setup are as follows:
 * Windows 8.1 Enterprise
@@ -90,7 +103,7 @@ this is a bug and workaround is to use version 1.9.6 rather than the most recent
 
 Getaddrinfo seems not to be the root issue and ssh to vms was failing because of '*' setting inside ~/.ssh/config which was overriding the vagrant settings. Ensure configurations do not conflict!
 
-# References
+## References
 * [https://stackoverflow.com/questions/4810996/how-to-resolve-configure-guessing-build-type-failure](https://stackoverflow.com/questions/4810996/how-to-resolve-configure-guessing-build-type-failure)
 * [http://web.cecs.pdx.edu/~pkwong/ECE103_files/Resources/Compiler/C_GNU/GCC_Installation/How_to_Install_Cygwin+GCC.htm](ttp://web.cecs.pdx.edu/~pkwong/ECE103_files/Resources/Compiler/C_GNU/GCC_Installation/How_to_Install_Cygwin+GCC.htm)
 

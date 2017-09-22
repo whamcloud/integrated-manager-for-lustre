@@ -44,6 +44,9 @@ sudo mount -t lustre mds1@tcp:mds2@tcp:/fs /mnt/fs
 ```
 dd if=/dev/urandom of=/mnt/fs/testfile1.txt bs=1G count=1; cp /mnt/fs/testfile1.txt /mnt/fs/testfile2.txt;
 lfs df -h
+```
+
+```
 ----------------------------------------------------------------------------
 UUID                       bytes        Used   Available Use% Mounted on
 fs-MDT0000_UUID             1.7G       25.8M        1.5G   2% /mnt/fs[MDT:0]
@@ -57,4 +60,11 @@ fs-OST0006_UUID             2.9G       33.1M        2.6G   1% /mnt/fs[OST:6]
 OST0007             : inactive device
 
 filesystem summary:        11.6G      132.6M       10.4G   1% /mnt/fs
+```
+
+Can also use:
+
+```
+dd if=/dev/zero of=/mnt/fs/testfile1.txt bs=1M count=1024; cp /mnt/fs/testfile1.txt /mnt/fs/testfile2.txt;
+lfs df -h
 ```
