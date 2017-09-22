@@ -16,6 +16,7 @@ def fatal(msg):
     sys.stderr.write("%s\n" % msg)
     sys.exit(1)
 
+
 try:
     from chroma_core.models import PowerControlType, PowerControlDevice
 except ImportError:
@@ -28,7 +29,7 @@ except ImportError:
 
 if __name__ == "__main__":
     try:
-        ipmi = PowerControlType.objects.get(make = "IPMI", model = "1.5 (LAN)")
+        ipmi = PowerControlType.objects.get(make="IPMI", model="1.5 (LAN)")
     except PowerControlType.DoesNotExist:
         fatal("Could not find the IPMI power type! Is the DB set up?")
 
@@ -48,7 +49,8 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
-    PowerControlDevice.objects.get_or_create(device_type = ipmi, address = vm_host, port = 22)
+    PowerControlDevice.objects.get_or_create(
+        device_type=ipmi, address=vm_host, port=22)
     try:
         transaction.commit()
     except transaction.TransactionManagementError:
@@ -57,7 +59,6 @@ if __name__ == "__main__":
     print """
 ********* IMPORTANT: THIS IS AN UNSUPPORTED CONFIGURATION **********
 ************ NOT INTENDED FOR PRODUCTION DEPLOYMENTS!!! *************
-********* DO NOT DISTRIBUTE THIS SCRIPT OUTSIDE OF INTEL! ***********
 
 The IPMI power control type will now drive a KVM host to emulate power control
 and STONITH, provided the following conditions are met:
