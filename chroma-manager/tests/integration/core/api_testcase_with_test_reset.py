@@ -953,17 +953,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     if action & self.CZP_REMOVEZPOOLS:
                         self.execute_simultaneous_commands(zfs_device.clear_device_commands,
                                                            [server['fqdn'] for server in test_servers],
-                                                           'recursive destroy zpool %s' % zfs_device)
+                                                           'recursive destroy zpool %s' % zfs_device,
+                                                           expected_return_code=None)
 
-                        # ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
-                        #
-                        # self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
-                        #                                    [first_test_server['fqdn']],
-                        #                                    'clearing disk because zfs import failed %s' % ldiskfs_device,
-                        #                                    expected_return_code=0)
-                        #
-                        # [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
-                        # [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
+                        ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+
+                        self.execute_simultaneous_commands(ldiskfs_device.wipe_signatures_commands,
+                                                           [first_test_server['fqdn']],
+                                                           'clearing disk because zfs import failed %s' % ldiskfs_device)
                     else:
                         raise
 
@@ -994,6 +991,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if action & self.CZP_CREATEZPOOLS:
             for lustre_device in config['lustre_devices']:
                 if lustre_device['backend_filesystem'] == 'zfs':
+                    ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+
+                    self.execute_simultaneous_commands(ldiskfs_device.wipe_signatures_commands,
+                                                       [first_test_server['fqdn']],
+                                                       'clearing disk before creating new pool %s' % ldiskfs_device)
+
                     zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
 
                     self.execute_commands(zfs_device.prepare_device_commands,
