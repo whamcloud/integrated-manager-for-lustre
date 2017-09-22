@@ -21,6 +21,10 @@ class TestBlockDeviceLinux(TestBlockDevice):
         return self._device_path
 
     @property
+    def wipe_signatures_commands(self):
+        return ['wipefs -a %s' % self.device_path]
+
+    @property
     def destroy_commands(self):
         # Needless to say, we're not bothering to scrub the whole device, just enough
         # that it doesn't look formatted any more.
