@@ -65,7 +65,8 @@ The [IML codebase](https://github.com/intel-hpdd) consists of many repositories 
 | corosync | A group communication system with additional features for implementing high availability within applications. |               
 | gunicorn | 'Green Unicorn' is a Python WSGI HTTP Server for UNIX.  | 
 | http_agent | Communicates with the agent daemon on storage servers.| 
-| | | |
+| | |
+
 ## Other Services:
  * job_scheduler
  * lustre_audit 
