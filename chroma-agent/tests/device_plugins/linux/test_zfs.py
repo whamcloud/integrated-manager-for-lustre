@@ -91,8 +91,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     @patch('logging.Logger.debug', Mock())  # mock_debug)
     @patch('chroma_agent.utils.BlkId', dict)
     @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs', mock_empty_dict)
-    @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.paths_to_major_minors',
-           mock_empty_list)
+    @patch('chroma_agent.device_plugins.linux_components.block_devices.scanner_cmd', mock_empty_dict)
     @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice')
     @patch('chroma_agent.device_plugins.linux_components.zfs.read_from_store', mock_read_from_store)
     @patch('chroma_agent.device_plugins.linux_components.zfs.write_to_store', mock_write_to_store)
