@@ -39,8 +39,8 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
-                                                                              TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
+        return ["if zpool list %s; then zpool destroy -f %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
+                                                                                 TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
 
     @property
     def install_packages_commands(self):
@@ -55,12 +55,14 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def release_commands(self):
-        return ["zpool export %s" % self.device_path]
+        # For test we want to force export, which is not a risk-free operation but between tests we want to reset
+        return ["zpool export -f %s" % self.device_path]
 
     @property
     def capture_commands(self):
+        # For test we want to force import, which is not a risk-free operation but between tests we want to reset
         return ["partprobe | true",                     # partprobe always exits 1 so smother then return
-                "zpool import %s" % self.device_path]
+                "zpool import -f %s" % self.device_path]
 
     @classmethod
     def list_devices_commands(cls):
@@ -75,7 +77,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
         if '/' in self.device_path:
             return ['zfs destroy %s' % self.device_path]
         else:
-            return ['zpool destroy %s' % self.device_path]
+            return ['zpool destroy -f %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
