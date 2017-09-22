@@ -906,6 +906,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
 
+        # debug : we want to always do this on all hosts that have access to the underlying disks
+        test_servers = self.config_servers
+        assert len(test_servers) == 4
+
+        # Ensure agents stopped to avoid interference with pool imports/exports
+        self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
+
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
         try:
@@ -924,9 +931,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         for lustre_device in config['lustre_devices']:
             if ((lustre_device['backend_filesystem'] == 'zfs') and
-                    ((zpool_datasets is None) or
-                     dataset_match(zpool_datasets,
-                                   first_test_server['device_paths'][lustre_device['path_index']]))):
+                    ((zpool_datasets is None) or dataset_match(zpool_datasets,
+                                                               first_test_server['device_paths'][lustre_device['path_index']]))):
 
                 zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
 
@@ -945,21 +951,19 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
                     if action & self.CZP_REMOVEZPOOLS:
-                        self.execute_simultaneous_commands(['zfs destroy -r %s' % zfs_device],
+                        self.execute_simultaneous_commands(zfs_device.clear_device_commands,
                                                            [server['fqdn'] for server in test_servers],
-                                                           'recursive destroy zpool %s' % zfs_device,
-                                                           expected_return_code=None)
+                                                           'recursive destroy zpool %s' % zfs_device)
 
-                        ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
-
-                        self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
-                                                           [first_test_server['fqdn']],
-                                                           'clearing disk because zfs import failed %s' % ldiskfs_device,
-                                                           expected_return_code=0)
-
-                        [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
-                        [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
-
+                        # ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+                        #
+                        # self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
+                        #                                    [first_test_server['fqdn']],
+                        #                                    'clearing disk because zfs import failed %s' % ldiskfs_device,
+                        #                                    expected_return_code=0)
+                        #
+                        # [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
+                        # [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
                     else:
                         raise
 
