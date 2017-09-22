@@ -224,15 +224,6 @@ class ChromaLogCollector(object):
         except OSError:
             pass
 
-        if shell_run([
-                'chmod', '-R'
-                '777',
-                "%s/%s" % (self.destination_path, diagnostics_dir)
-        ]).rc:
-            errors.append(
-                "Unable to change perms on expanded diagnostics at %s/%s" %
-                (self.destination_path, diagnostics_dir))
-
         if shell_run(
             ['rm', '-f',
              "%s/%s" % (self.destination_path, diagnostics)]).rc:
