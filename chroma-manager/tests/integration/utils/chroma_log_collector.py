@@ -220,8 +220,8 @@ class ChromaLogCollector(object):
                 "%s/%s" % (self.destination_path, diagnostics_dir)
         ]).rc:
             errors.append(
-                "Unable to change perms on expanded diagnostics at %s" %
-                self.destination_path)
+                "Unable to change perms on expanded diagnostics at %s/%s" %
+                (self.destination_path, diagnostics_dir))
 
         if shell_run(
             ['rm', '-f',
