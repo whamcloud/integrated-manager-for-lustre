@@ -1,6 +1,6 @@
 [**Table of Contents**](index.md)
 
-# Contributing to the IML Frontend Quick Guide
+# Contributing to the IML Frontend
 
 ![frontend](md_Graphics/frontend_sm.jpg)
 

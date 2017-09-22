@@ -17,7 +17,10 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * git push origin my-fix
 
 ## Create a Pull Request
-* In a Browser, go here: [https://github.com/intel-hpdd/GUI](https://github.com/intel-hpdd/GUI)
+* In a Browser, go to the correct repo: 
+    * Frontend: [https://github.com/intel-hpdd/GUI](https://github.com/intel-hpdd/GUI)
+    * Backend: [https://github.com/intel-hpdd/intel-manager-for-lustre](https://github.com/intel-hpdd/intel-manager-for-lustre)
+
 * Click on the **Branches** tab.
 * Find the branch named **my-fix**
 * On the right hand side, click the button for **New pull request**
@@ -37,5 +40,5 @@ To synchronize your cloned master with the origin master and to rebase your chan
 * Rebase the branch onto the master as necessary.
 * Re-push any changes to the same branch that was initially pushed.
 ```
-git push origin my-new-branch
+git push origin my-fix
 ```

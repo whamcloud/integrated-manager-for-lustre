@@ -2,7 +2,7 @@
 
 ![backend](md_Graphics/backend_sm.jpg)
 
-# Contributing to the IML Backend Quick Guide
+# Contributing to the IML Backend
 
 ## General 
 * [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
