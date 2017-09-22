@@ -14,6 +14,7 @@ import tempfile
 import subprocess
 import time
 import collections
+import os
 
 RunResult = collections.namedtuple("RunResult",
                                    ['rc', 'stdout', 'stderr', 'timeout'])
@@ -213,6 +214,15 @@ class ChromaLogCollector(object):
 
         diagnostics_dir = re.compile('(sosreport-.*)\.tar\..*').search(
             diagnostics).group(1)
+
+        try:
+            os.chmod(
+                "%s/%s/sys/module/md_mod/parameters/new_array"
+                % (self.destination_path, diagnostics_dir),
+                0777
+            )
+        except OSError:
+            pass
 
         if shell_run([
                 'chmod', '-R'
