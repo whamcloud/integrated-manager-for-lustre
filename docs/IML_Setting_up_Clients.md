@@ -10,28 +10,47 @@ sudo yum -y install lustre-client && \
 ' c1 c2
 ```
 
+ed <<EOF /etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_client.repo
+/enabled/a
+gpgcheck=0
+gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+.
+wq
+EOF
+
+
+
 Both clients are now running the lustre-client software and are ready to be mounted. To mount a client, do the following:
 1. ssh into the client
+
 ```
 vagrant ssh c1
 ```
+
 2. Create a mount directory (it's a good idea to use the same name as the filesystem you created).
+
 ```
 sudo mkdir -p /mnt/fs
 ```
+
 3.  Note the NID for the MGS. You can get this by looking at the lustre network interface in the GUI on the server detail page for mds1 or you can run the following command:
+
 ```
 vagrant ssh mds1
 lctl list_nids
 10.73.20.11@tcp   <--  Notice this is the lustre network interface
 ```
+
 4. Note the NID for the MDS. You can get this by looking at the lustre network interface in the GUI on the server detail page for mds2 or you can run the following command:
+
 ```
 vagrant ssh mds2
 lctl list_nids
 10.73.20.12@tcp   <--  Notice this is the lustre network interface
 ```
+
 5. Mount the lustre filesystem:
+
 ```
 sudo mount -t lustre 10.73.20.11@tcp:10.73.20.12@tcp:/fs /mnt/fs
 
@@ -39,12 +58,14 @@ sudo mount -t lustre 10.73.20.11@tcp:10.73.20.12@tcp:/fs /mnt/fs
 
 sudo mount -t lustre mds1@tcp:mds2@tcp:/fs /mnt/fs
 ```
+
 6. Use the filesystem. You can test the mount by creating a large file and then checking the results (for testing, it is simplest to use the root account):
 
 ```
 dd if=/dev/urandom of=/mnt/fs/testfile1.txt bs=1G count=1; cp /mnt/fs/testfile1.txt /mnt/fs/testfile2.txt;
 lfs df -h
 ```
+
 
 ```
 ----------------------------------------------------------------------------

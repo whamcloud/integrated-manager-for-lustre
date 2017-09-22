@@ -22,7 +22,7 @@
 
 1. [How to Uninstall IML](IML_UnInstall_IML.md)
 
-1. [Windows - Run IML Tests with Cygwin and Vagrant](Run_Iml_Tests_Cygwin.md)
+1. [Running SSI Tests](Running_SSI_Tests.md)
 
 1.  [Create a Sample Storage plugin](https://github.com/intel-hpdd/sample-storage-plugin
 )
