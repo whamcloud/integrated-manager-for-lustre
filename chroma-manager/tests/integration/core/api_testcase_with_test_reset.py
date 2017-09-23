@@ -955,9 +955,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                            'recursive destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
-                        self.execute_simultaneous_commands(zfs_device.wipe_signatures_commands,
+                        ldiskfs_device = TestBlockDevice('linux',
+                                                         first_test_server['device_paths'][lustre_device['path_index']])
+
+                        self.execute_simultaneous_commands(ldiskfs_device.wipe_signatures_commands,
                                                            [server['fqdn'] for server in test_servers],
-                                                           'wipe all fs disk signatures on %s' % zfs_device,
+                                                           'wipe all fs disk signatures on %s' % ldiskfs_device,
                                                            expected_return_code=None)
                     else:
                         raise
