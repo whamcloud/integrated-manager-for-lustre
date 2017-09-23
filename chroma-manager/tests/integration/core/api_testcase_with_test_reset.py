@@ -950,11 +950,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error.
                     if action & self.CZP_REMOVEZPOOLS:
-                        self.execute_simultaneous_commands(zfs_device.clear_device_commands,
+                        self.execute_simultaneous_commands(zfs_device.destroy_commands,
                                                            [server['fqdn'] for server in test_servers],
                                                            'recursive destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
+                        # FIXME what happens if the pool will not export from first_test_server, wipe_signatures will
+                        #  fail. do any to cycle through all hosts to remove the signatures as a failsafe?
                         self.execute_commands(zfs_device.wipe_signatures_commands,
                                               first_test_server['fqdn'],
                                               'wiping disk signatures because zfs import failed %s' % zfs_device)
