@@ -955,13 +955,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                            'recursive destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
-                        ldiskfs_device = TestBlockDevice('linux',
-                                                         first_test_server['device_paths'][lustre_device['path_index']])
-
-                        self.execute_simultaneous_commands(ldiskfs_device.wipe_signatures_commands,
+                        self.execute_simultaneous_commands(zfs_device.clear_label_commands,
                                                            [server['fqdn'] for server in test_servers],
-                                                           'wipe all fs disk signatures on %s' % ldiskfs_device,
+                                                           'clear zpool labels on %s' % zfs_device,
                                                            expected_return_code=None)
+
+                        [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
+                        [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
                     else:
                         raise
 

@@ -77,7 +77,11 @@ class TestBlockDeviceZfs(TestBlockDevice):
         if '/' in self.device_path:
             return ['zfs destroy %s' % self.device_path]
         else:
-            return ['zpool %s -f %s' % (i, self.device_path) for i in ['destroy', 'labelclear']]
+            return ['zpool destroy -f %s' % self.device_path]
+
+    @property
+    def clear_label_commands(self):
+        return ['zpool labelclear -f %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
