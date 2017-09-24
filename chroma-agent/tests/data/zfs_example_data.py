@@ -184,7 +184,7 @@ single_raidz2_unavail_pool = """   pool: zost04
 """
 
 single_raidz2_unavail_pool_B = """   pool: zost04
-     id: 2234567890ABCDE
+     id: 222222222222222
   state: UNAVAIL
  status: The pool was last accessed by another system.
  action: The pool cannot be imported due to damaged devices or data.
@@ -217,13 +217,13 @@ config:
 
 errors: No known data errors
 
-  pool: zfsPool2
+  pool: zfsPool1
  state: OFFLINE
   scan: none requested
 config:
 
         NAME        STATE     READ WRITE CKSUM
-        zfsPool2    OFFLINE       0     0     0
+        zfsPool1    OFFLINE       0     0     0
           sdd       OFFLINE       0     0     0
 
 errors: No known data errors
