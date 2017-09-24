@@ -941,10 +941,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                    expected_return_code=None)
 
                 try:
-                    self.execute_commands(zfs_device.capture_commands,
-                                          first_test_server['fqdn'],
-                                          'import zfs device %s' % zfs_device,
-                                          expected_return_code=0 if devices_must_exist else None)
+                    self._fetch_help(lambda: self.execute_commands(zfs_device.capture_commands,
+                                                                   first_test_server['fqdn'],
+                                                                   'import zfs device %s' % zfs_device,
+                                                                   expected_return_code=0 if devices_must_exist else None),
+                                     ['tom.nabarro@intel.com'],
+                                     'pool un-importable',
+                                     timout=9999)
                     imported_zpools.append(zfs_device)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
