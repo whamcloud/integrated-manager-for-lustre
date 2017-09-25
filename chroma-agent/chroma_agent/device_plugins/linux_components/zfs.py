@@ -281,7 +281,7 @@ class ZfsDevices(object):
                     if zfs_device.available:
                         out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
                         self._add_zfs_pool(out, block_devices)
-                    else:
+                    elif pool['state'] == 'UNAVAIL':
                         # zpool probably imported elsewhere, attempt to read from store, this should return
                         # previously seen zpool state either with or without datasets
                         try:
@@ -296,13 +296,8 @@ class ZfsDevices(object):
                                                           data['pool'],
                                                           data['datasets'],
                                                           data['zvols'])
-
-            # verify still have active_pool_names imported
-            new_active_pool_names = [pool['pool'] for pool in get_zpools()]
-            if set(active_pool_names) != set(new_active_pool_names):
-                daemon_log.warning("Different set of imported zpools before and after full_scan. "
-                                   "Before: %s, After: %s" % (active_pool_names, new_active_pool_names))
-
+                    else:
+                        daemon_log.error("ZfsPool could not be accessed, reported info: %s" % pool)
         except OSError:  # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
