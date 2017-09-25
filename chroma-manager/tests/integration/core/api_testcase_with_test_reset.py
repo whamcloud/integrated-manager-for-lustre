@@ -912,6 +912,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # Ensure agents stopped to avoid interference with pool imports/exports
         self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
 
+        # Attempt to unmount all lustre targets otherwise we won't be able to export parent pool
+        [self.remote_operations.unmount_lustre_targets(server) for server in test_servers]
+
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
         try:
