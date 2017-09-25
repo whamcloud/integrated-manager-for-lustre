@@ -428,7 +428,7 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)):
+    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
