@@ -61,7 +61,7 @@ def read_from_store_side_effect(id):
     # store will return pools and datasets and zvois for a given pool id
     return {zpool_zfsPool3_result['uuid']: {'pool': zpool_zfsPool3_result,
                                             'datasets': zfs_results['datasets'],
-                                            'zvols': zfs_results['zvols']}}.get(id)
+                                            'zvols': zfs_results['zvols']}}[id]
 
 
 class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
@@ -78,7 +78,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     def mock_empty_dict(*arg):
         return {}
 
-    def mock_find_device_and_children(self, path):
+    def mock_find_device_and_children(path):
         return [path]
 
     mock_read_from_store = MagicMock(side_effect=read_from_store_side_effect)
@@ -111,7 +111,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
 
         return zfs_devices, block_devices
 
-    @patch('chroma_agent.device_plugins.linux.ZfsDevices.find_device_and_children', mock_find_device_and_children)
+    @patch('chroma_agent.device_plugins.linux_components.zfs.find_device_and_children', mock_find_device_and_children)
     def _get_zfs_devices(self, pool_name):
         """ test the process of using full partition paths and device basenames to resolve device paths """
         return _get_all_zpool_devices(pool_name)
@@ -173,8 +173,6 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
         # verify blockdevices device_nodes also have been updated
-        # expected_devs = toolz.dicttoolz.merge(zfs_results.values()).values()
-        # expected_devs = {x['block_device']: x for x in expected_devs}
         self.assertDictEqual(block_devices.block_device_nodes, dev_results)
 
     def test_exported_zpools(self):
@@ -237,7 +235,6 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool))
 
-        self.mock_read_from_store.side_effect = KeyError
         zfs_devices, block_devices = self._setup_zfs_devices(available_side_effect=[False])
 
         self.assertRanAllCommandsInOrder()
@@ -275,10 +272,6 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         WHEN inactive ONLINE zpool is imported,
         THEN correct zpool info is supplied in call to write to store.
         """
-#        AND then pool is exported,
-#        THEN the same zpool is unavailable,
-#        AND try to read zpool info from store succeeds,
-#        THEN expected  are reported.
         self.add_commands(CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
