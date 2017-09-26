@@ -196,6 +196,9 @@ if $USE_FENCE_XVM; then
     echo \"not secure\" > /etc/cluster/fence_xvm.key
 fi
 
+# ensure hostid exists as a prerequisite of ZFS MMP
+genhostid
+
 # Removed and installed a kernel, so need a reboot
 sync
 sync
