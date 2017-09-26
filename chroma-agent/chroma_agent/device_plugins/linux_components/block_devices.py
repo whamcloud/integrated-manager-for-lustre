@@ -228,20 +228,22 @@ class BlockDevices(object):
         # matching MM to path back in a list.
 
         xs = list(
-            flat_map(lambda x: (x.path, x.major_minor),
+            flat_map(lambda x: (x.paths, x.major_minor),
                      self.block_device_nodes))
 
         for x in xs:
-            path = x[0]
+            paths = x[0]
             mm = x[1]
 
-            if path.startswith(folder):
-                result[mm] = path
+            for path in paths:
+                if path.startswith(folder):
+                    result[mm] = path
+                    break
 
         return result
 
 
-    @classmethod
+    @classmethod    
     def quick_scan(cls):
         """
             Return a very quick list of block devices from
