@@ -19,7 +19,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         settings.LUSTRE_MKFS_OPTIONS_MDT = '-E block_size=1024'
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mdt.managedtarget_ptr, 'formatted')
 
-        cmd, args = MockAgentRpc.skip_calls(['device_plugin'])
+        cmd, args = MockAgentRpc.skip_calls(['device_plugin', 'export_target'])
         self.assertEqual(cmd, 'format_target')
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
 
@@ -32,7 +32,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         settings.LUSTRE_MKFS_OPTIONS_OST = '-E block_size=2048'
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.ost.managedtarget_ptr, 'formatted')
 
-        cmd, args = MockAgentRpc.skip_calls(['device_plugin'])
+        cmd, args = MockAgentRpc.skip_calls(['device_plugin', 'export_target'])
         self.assertEqual(cmd, 'format_target')
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
 
@@ -128,12 +128,12 @@ class TestTargetTransitions(JobTestCaseWithHost):
         self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
 
         # Check that it passed the reformat flag
-        self.assertEqual(MockAgentRpc.skip_calls(['device_plugin']), ('format_target', {'device': path,
-                                                                                        'target_types': 'mgs',
-                                                                                        'backfstype': 'ldiskfs',
-                                                                                        'device_type': 'linux',
-                                                                                        'target_name': 'MGS',
-                                                                                        'reformat': True}))
+        self.assertEqual(MockAgentRpc.skip_calls(['device_plugin', 'export_target']), ('format_target', {'device': path,
+                                                                                                         'target_types': 'mgs',
+                                                                                                         'backfstype': 'ldiskfs',
+                                                                                                         'device_type': 'linux',
+                                                                                                         'target_name': 'MGS',
+                                                                                                         'reformat': True}))
 
 
 class TestSharedTarget(JobTestCaseWithHost):
