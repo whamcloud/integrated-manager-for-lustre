@@ -82,7 +82,3 @@ class TestBlockDevice(object):
     @property
     def destroy_commands(self):
         return []
-
-    @property
-    def wipe_signatures_commands(self):
-        return ['wipefs -a %s' % self.device_path]
