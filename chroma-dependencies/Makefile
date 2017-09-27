@@ -62,6 +62,7 @@ requirements::
 	echo "pytz==2014.4";                                      \
 	echo "tzlocal";                                           \
 	echo "systemd-python";                                    \
+	echo "iml-common>=1.0,<1.1";                              \
 	echo "https://dl.dropboxusercontent.com/s/qqjud11bvh8vo68/coverage-3.5.2pl2.tar.gz"; \
 	echo "iml-common>=1.1,<1.2";                              \
 	echo "toolz";                                             \
