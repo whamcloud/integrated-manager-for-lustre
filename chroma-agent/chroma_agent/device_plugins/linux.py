@@ -36,10 +36,6 @@ class LinuxDevicePlugin(DevicePlugin):
         if config.get('settings', 'profile')['worker']:
             return {}
 
-        # Before we do anything do a partprobe, this will ensure that everything gets an up to date view of the
-        # device partitions. partprobe might throw errors so ignore return value
-        AgentShell.run(["partprobe"])
-
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 

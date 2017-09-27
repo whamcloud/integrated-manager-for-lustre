@@ -64,8 +64,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def capture_commands(self):
-        return ["partprobe | true",                     # partprobe always exits 1 so smother then return
-                "zpool import -f %s" % self.device_path]
+        return ["zpool import -f %s" % self.device_path]
 
     @classmethod
     def list_devices_commands(cls):

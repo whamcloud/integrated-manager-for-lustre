@@ -70,12 +70,17 @@ def scanner_cmd(cmd):
     return json.loads(out)
 
 
+def getter(prop, default_value, x):
+    y = x.get(prop, default_value)
+    return y if y is not None else default_value
+
+
 def get_major_minor(x):
     return "%s:%s" % (x.get('MAJOR'), x.get('MINOR'))
 
 
 def as_device(x):
-    paths = sort_paths(x.get('PATHS', []))
+    paths = sort_paths(getter('PATHS', [], x))
     path = next(iter(paths), None)
 
     return {
@@ -84,7 +89,7 @@ def as_device(x):
         'paths': paths,
         'serial_80': x.get('IML_SCSI_80'),
         'serial_83': x.get('IML_SCSI_83'),
-        'size': int(x['IML_SIZE']) * 512,
+        'size': int(getter('IML_SIZE', 0, x)) * 512,
         'filesystem_type': x.get('ID_FS_TYPE'),
         'device_type': x.get('DEVTYPE'),
         'device_path': x.get('DEVPATH'),
@@ -228,15 +233,17 @@ class BlockDevices(object):
         # matching MM to path back in a list.
 
         xs = list(
-            flat_map(lambda x: (x.path, x.major_minor),
+            flat_map(lambda x: (x.paths, x.major_minor),
                      self.block_device_nodes))
 
         for x in xs:
-            path = x[0]
+            paths = x[0]
             mm = x[1]
 
-            if path.startswith(folder):
-                result[mm] = path
+            for path in paths:
+                if path.startswith(folder):
+                    result[mm] = path
+                    break
 
         return result
 
