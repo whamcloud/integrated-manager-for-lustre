@@ -176,12 +176,6 @@ class CreateLustreFilesystem(UtilityTestCase):
         for ost in self.osts:
             self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--reformat', '--ost'])
 
-        for server in config['lustre_servers']:
-            self.remote_command(
-                server['address'],
-                'partprobe || true; sync; sync'
-            )
-
         self._save_modified_config()
 
     def get_targets_by_kind(self, kind):
