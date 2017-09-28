@@ -169,6 +169,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def tearDown(self):
+        # TODO: move all of the (rest of the) "post-test cleanup" that is
+        # done in setUp to here
+        if config.get('managed'):
+            self.remote_operations.unmount_clients()
+            # stop any running filesystems
+            for filesystem in self.get_list("/api/filesystem/"):
+                self.stop_filesystem(filesystem['id'])
+
         if self.simulator:
             self.simulator.stop()
             self.simulator.join()
@@ -195,14 +203,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 if len(down_nodes) and (self.down_node_expected is False):
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
-
-        # TODO: move all of the (rest of the) "post-test cleanup" that is
-        # done in setUp to here
-        if config.get('managed'):
-            self.remote_operations.unmount_clients()
-            # stop any running filesystems
-            for filesystem in self.get_list("/api/filesystem/"):
-                self.stop_filesystem(filesystem['id'])
 
         self.assertTrue(self.supervisor_controlled_processes_running())
         self.assertEqual(self.initial_supervisor_controlled_process_start_times,
