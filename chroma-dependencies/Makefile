@@ -63,7 +63,7 @@ requirements::
 	echo "tzlocal";                                           \
 	echo "systemd-python";                                    \
 	echo "iml-common>=1.0,<1.1";                              \
-	echo "coverage==3.5.2"; \
+	echo "coverage==3.5.2";                                   \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
 	    $(TOP)/../chroma-manager/requirements.tmp
 
