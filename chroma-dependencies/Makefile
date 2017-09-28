@@ -62,9 +62,9 @@ requirements::
 	echo "pytz==2014.4";                                      \
 	echo "tzlocal";                                           \
 	echo "systemd-python";                                    \
-	echo "https://dl.dropboxusercontent.com/s/qqjud11bvh8vo68/coverage-3.5.2pl2.tar.gz"; \
 	echo "iml-common>=1.1,<1.2";                              \
 	echo "toolz";                                             \
+	echo "coverage==3.5.2"; \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
 	    $(TOP)/../chroma-manager/requirements.tmp
 
