@@ -167,7 +167,7 @@ html_theme_path = ["../"]
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None
 
-rst_epilog = """
+rst_epilog = u"""
 .. include:: <isonum.txt>
 .. |iml| replace:: Intel® Manager for Lustre* software
 """
