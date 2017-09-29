@@ -118,7 +118,10 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
                         self.get_list("/api/job/", args = {'state': "complete"})
                         if j['class_name'] == "ConfigureHostFencingJob"])
 
-        self.wait_until_true(self.all_outlets_known)
+        self._fetch_help(lambda: self.wait_until_true(self.all_outlets_known),
+                         ['tom.nabarro@intel.com'],
+                         'power outlets not all found',
+                         9999)
 
         start_count = _fencing_job_count()
 
