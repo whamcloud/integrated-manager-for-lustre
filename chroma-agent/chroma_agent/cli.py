@@ -86,7 +86,7 @@ def _register_function(parser, name, fn):
 def main():
     configure_logging()
 
-    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
+    parser = argparse.ArgumentParser(description="Intel® Manager for Lustre* software Agent")
     subparsers = parser.add_subparsers()
 
     for command, fn in ActionPluginManager().commands.items():

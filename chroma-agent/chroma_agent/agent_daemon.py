@@ -96,7 +96,7 @@ def kill_orphans_of(parent_pid, timeout = 5):
 
 def main():
     """Daemonize and handle unexpected exceptions"""
-    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
+    parser = argparse.ArgumentParser(description="Intel® Manager for Lustre* software Agent")
     parser.add_argument("--foreground", action="store_true")
     parser.add_argument("--publish-zconf", action="store_true")
     parser.add_argument("--pid-file", default = "/var/run/chroma-agent.pid")

@@ -267,7 +267,7 @@ def main():
     log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
-             u"sent to Intel Manager for Lustre Support for analysis.")
+             u"sent to Intel® Manager for Lustre* software Support for analysis.")
 
 
 if __name__ == "__main__":

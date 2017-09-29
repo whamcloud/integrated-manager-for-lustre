@@ -19,7 +19,7 @@ setup(
     author_email = "hpdd-info@intel.com",
     url = 'http://lustre.intel.com/',
     license = 'Proprietary',
-    description = 'The Intel Manager for Lustre Monitoring and Administration Interface',
+    description = 'The Intel® Manager for Lustre* software Monitoring and Administration Interface',
     long_description = open('README.txt').read(),
     packages = find_packages(exclude=excludes) + [''],
     # include_package_data would be far more convenient, but the top-level
