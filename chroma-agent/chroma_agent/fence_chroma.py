@@ -49,8 +49,10 @@ Arguments read from standard input take the form of:
                             formatter_class=RawDescriptionHelpFormatter,
                             epilog=epilog)
 
-    parser.add_argument("-o", "--option", "--action", dest="action", choices=VALID_ACTIONS)
-    parser.add_argument("-n", "--plug", "--nodename", "--port", dest="port", help="Name of node on which to perform action")
+    parser.add_argument("-o", "--option", "--action",
+                        dest="action", choices=VALID_ACTIONS)
+    parser.add_argument("-n", "--plug", "--nodename", "--port",
+                        dest="port", help="Name of node on which to perform action")
     ns = parser.parse_args(args)
 
     if not ns.action and not ns.port:
@@ -58,8 +60,8 @@ Arguments read from standard input take the form of:
 
     if ns.action == "metadata":
         print """<?xml version="1.0" ?>
-<resource-agent name="fence_chroma" shortdesc="Fence agent for Intel Manager for Lustre Storage Servers">
-<longdesc>fence_chroma is an I/O Fencing agent which can be used with Intel Manager for Lustre Storage Servers.</longdesc>
+<resource-agent name="fence_chroma" shortdesc="Fence agent for Intel® Manager for Lustre* software Storage Servers">
+<longdesc>fence_chroma is an I/O Fencing agent which can be used with Intel® Manager for Lustre* software Storage Servers.</longdesc>
 <vendor-url>http://www.intel.com</vendor-url>
 <parameters>
     <parameter name="port">

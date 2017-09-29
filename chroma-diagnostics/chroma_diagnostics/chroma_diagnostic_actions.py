@@ -18,10 +18,12 @@ PACKAGES = ['chroma-agent',
 # with the extention "-<date>.gz"
 
 
-CDAction = namedtuple('CDAction', ['log_filename', 'cmd', 'cmd_desc', 'error_message', 'in_sos'])
+CDAction = namedtuple(
+    'CDAction', ['log_filename', 'cmd', 'cmd_desc', 'error_message', 'in_sos'])
 
 detected_devices_action = CDAction('detected_devices',
-                                   ['chroma-agent', 'device_plugin', '--plugin=linux'],
+                                   ['chroma-agent', 'device_plugin',
+                                       '--plugin=linux'],
                                    "Detected devices",
                                    "Failed to detect Linux system devices",
                                    False)
@@ -64,14 +66,14 @@ pacemaker_crm_action = CDAction('pacemaker-crm-mon-1',
 
 chroma_config_action = CDAction('chroma-config-validate',
                                 ['chroma-config', 'validate'],
-                                "Validated Intel Manager for Lustre installation",
-                                "Failed to run Intel Manager for Lustre installation validation",
+                                "Validated Intel® Manager for Lustre* software installation",
+                                "Failed to run Intel® Manager for Lustre* software installation validation",
                                 False)
 
 finger_print_action = CDAction('finger-print',
                                ['rpm', '-V', ] + PACKAGES,
-                               "Finger printed Intel Manager for Lustre installation",
-                               "Failed to finger print Intel Manager for Lustre installation",
+                               "Finger printed Intel® Manager for Lustre* software installation",
+                               "Failed to finger print Intel® Manager for Lustre* software installation",
                                False)
 
 ps_action = CDAction('ps',
@@ -105,7 +107,8 @@ blk_action = CDAction('blk',
                       False)
 
 network_scan_action = CDAction('network_scan',
-                               ['chroma-agent', 'device_plugin', '--plugin=linux_network'],
+                               ['chroma-agent', 'device_plugin',
+                                   '--plugin=linux_network'],
                                "Network scan information",
                                "Failed to list network information",
                                False)

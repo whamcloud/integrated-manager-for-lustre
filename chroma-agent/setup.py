@@ -10,18 +10,18 @@ from chroma_agent import package_version
 excludes = ["*tests*"]
 
 setup(
-    name = 'chroma-agent',
-    version = package_version(),
-    author = "Intel Corporation",
-    author_email = "hpdd-info@intel.com",
-    url = 'http://lustre.intel.com/',
-    packages = find_packages(exclude=excludes),
-    include_package_data = True,
+    name='chroma-agent',
+    version=package_version(),
+    author="Intel Corporation",
+    author_email="hpdd-info@intel.com",
+    url='http://lustre.intel.com/',
+    packages=find_packages(exclude=excludes),
+    include_package_data=True,
     data_files=[('/usr/lib/ocf/resource.d/chroma', ['Target'])],
-    license = 'Proprietary',
-    description = 'The Intel Manager for Lustre Monitoring and Administration Interface Agent',
-    long_description = open('README.txt').read(),
-    entry_points = {
+    license='Proprietary',
+    description='The Intel® Manager for Lustre* software Monitoring and Administration Interface Agent',
+    long_description=open('README.txt').read(),
+    entry_points={
         'console_scripts': [
             'chroma-agent = chroma_agent.cli:main',
             'chroma-agent-daemon = chroma_agent.agent_daemon:main',

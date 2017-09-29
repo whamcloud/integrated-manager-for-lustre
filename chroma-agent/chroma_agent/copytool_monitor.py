@@ -63,9 +63,9 @@ class CopytoolEventRelay(ExceptionCatchingThread):
     def send(self):
         events = []
 
-        envelope = dict(fqdn = self.client.fqdn,
-                        copytool = self.copytool.id,
-                        events = events)
+        envelope = dict(fqdn=self.client.fqdn,
+                        copytool=self.copytool.id,
+                        events=events)
 
         envelope_size = len(json.dumps(envelope))
         while True:
@@ -85,9 +85,11 @@ class CopytoolEventRelay(ExceptionCatchingThread):
 
             try:
                 date = IMLDateTime.parse(event['event_time'])
-                event['event_time'] = date.astimezone(tz=FixedOffset(0)).strftime("%Y-%m-%d %H:%M:%S+00:00")
+                event['event_time'] = date.astimezone(
+                    tz=FixedOffset(0)).strftime("%Y-%m-%d %H:%M:%S+00:00")
             except ValueError as e:
-                copytool_log.error("Invalid event date in event '%s': %s" % (event, e))
+                copytool_log.error(
+                    "Invalid event date in event '%s': %s" % (event, e))
                 break
 
             # During restore operations, we don't know the data_fid until
@@ -97,7 +99,8 @@ class CopytoolEventRelay(ExceptionCatchingThread):
             # operation.
             if 'RUNNING' in event['event_type']:
                 if event['source_fid'] in self.active_operations:
-                    self.active_operations[event['data_fid']] = self.active_operations.pop(event['source_fid'])
+                    self.active_operations[event['data_fid']] = self.active_operations.pop(
+                        event['source_fid'])
 
             if self.active_operations.get(event.get('data_fid', None), None):
                 event['active_operation'] = self.active_operations[event['data_fid']]
@@ -117,9 +120,9 @@ class CopytoolEventRelay(ExceptionCatchingThread):
 
             if events and event_size > MAX_BYTES_PER_POST - envelope_size:
                 copytool_log.info("Requeueing oversized message "
-                        "(%d + %d > %d, %d messages)" % (
-                        event_size, envelope_size, MAX_BYTES_PER_POST,
-                        len(events)))
+                                  "(%d + %d > %d, %d messages)" % (
+                                      event_size, envelope_size, MAX_BYTES_PER_POST,
+                                      len(events)))
                 self.retry_queue.put(event)
                 break
 
@@ -154,12 +157,13 @@ class CopytoolEventRelay(ExceptionCatchingThread):
             if self.poll_interval > MAX_SESSION_BACKOFF.seconds:
                 self.poll_interval = MAX_SESSION_BACKOFF.seconds
 
-        copytool_log.info("Retry interval increased to %d seconds" % self.poll_interval)
+        copytool_log.info(
+            "Retry interval increased to %d seconds" % self.poll_interval)
 
     def _run(self):
         while not self.stopping.is_set():
             self.send()
-            self.stopping.wait(timeout = self.poll_interval)
+            self.stopping.wait(timeout=self.poll_interval)
 
         # One last attempt to drain the queue on the way out
         self.send()
@@ -256,7 +260,7 @@ class Copytool(object):
         return os.path.join(fifo_dir, "%s-events" % self)
 
     def as_dict(self):
-        return dict(id = self.id, index=self.index, bin_path=self.bin_path,
+        return dict(id=self.id, index=self.index, bin_path=self.bin_path,
                     archive_number=self.archive_number,
                     filesystem=self.filesystem,
                     mountpoint=self.mountpoint,
@@ -273,16 +277,19 @@ class GetCopytoolAction(Action):
 
 
 def main():
-    parser = ArgumentParser(description="Intel Manager for Lustre Copytool Monitor")
+    parser = ArgumentParser(
+        description="Intel® Manager for Lustre* software Copytool Monitor")
     parser.add_argument("copytool_id", action=GetCopytoolAction)
     args = parser.parse_args()
 
     copytool_log_setup()
 
     try:
-        manager_url = config.get('settings', 'server')['url'] + "copytool_event/"
+        manager_url = config.get('settings', 'server')[
+            'url'] + "copytool_event/"
     except KeyError:
-        copytool_log.error("No configuration found (must be configured before starting a copytool monitor)")
+        copytool_log.error(
+            "No configuration found (must be configured before starting a copytool monitor)")
         sys.exit(1)
 
     client = CryptoClient(manager_url, Crypto(config.path))
@@ -299,7 +306,7 @@ def main():
     try:
         monitor.start()
         while not monitor.stopping.is_set():
-            monitor.stopping.wait(timeout = 10)
+            monitor.stopping.wait(timeout=10)
 
         monitor.join()
     except Exception as e:
