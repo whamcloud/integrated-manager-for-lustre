@@ -2,7 +2,6 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
 import os
 import glob
 import re
@@ -10,7 +9,7 @@ import re
 MAPPERPATH = os.path.join('/dev', 'mapper')
 DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
-_normalize_device_table = {}
+_NORMALIZE_DEVICE_TABLE = {}
 
 
 def normalized_device_path(device_path):
@@ -23,8 +22,8 @@ def normalized_device_path(device_path):
     # So if the root to normalization takes multiple
     # steps this will deal with it
     # So if /dev/sdx normalizes to /dev/mmapper/special-device
-    # but /dev/mmapper/special-device normalizes to /dev/md/mdraid1
-    # /dev/sdx will normalize to /dev/md/mdraid1
+    # and /dev/mmapper/special-device normalizes to /dev/md/mdraid1,
+    # then /dev/sdx will normalize to /dev/md/mdraid1
 
     # As an additional measure to detect circular references
     # such as A->B->C->A in
@@ -33,9 +32,10 @@ def normalized_device_path(device_path):
     # it repeats.
     visited = set()
 
-    while (normalized_path not in visited) and (normalized_path in _normalize_device_table):
+    while (normalized_path not in visited) and (
+            normalized_path in _NORMALIZE_DEVICE_TABLE):
         visited.add(normalized_path)
-        normalized_path = _normalize_device_table[normalized_path]
+        normalized_path = _NORMALIZE_DEVICE_TABLE[normalized_path]
 
     return normalized_path
 
@@ -53,14 +53,16 @@ def find_normalized_start(device_fullpath):
 
     _prime_normalized_paths()
 
-    values = [value for value in _normalize_device_table.values()
-              if value.startswith(device_fullpath)]
+    values = [
+        value for value in _NORMALIZE_DEVICE_TABLE.values()
+        if value.startswith(device_fullpath)
+    ]
 
     return values
 
 
 def _prime_normalized_paths():
-    if _normalize_device_table == {}:
+    if _NORMALIZE_DEVICE_TABLE == {}:
         lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
 
         for path in lookup_paths:
@@ -93,4 +95,4 @@ def add_normalized_device(path, normalized_path):
 
     # Normalizing to itself makes no sense
     if path != normalized_path:
-        _normalize_device_table[path] = normalized_path
+        _NORMALIZE_DEVICE_TABLE[path] = normalized_path

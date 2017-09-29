@@ -125,6 +125,13 @@ def filter_device(x):
     return True
 
 
+def fetch_device_list():
+    info = scanner_cmd("info")
+
+    return pipe(info.itervalues(),
+                cmap(as_device), cfilter(filter_device), list)
+
+
 def add_to_ndp(xs, ys):
     for x in xs:
         for y in ys:
@@ -154,10 +161,7 @@ class BlockDevices(object):
          self.node_block_devices) = self._parse_sys_block()
 
     def _parse_sys_block(self):
-        info = scanner_cmd("info")
-
-        xs = pipe(info.itervalues(),
-                  cmap(as_device), cfilter(filter_device), list)
+        xs = fetch_device_list()
 
         mutate_parent_prop(xs)
 
@@ -239,5 +243,4 @@ class BlockDevices(object):
             Return a very quick list of block devices from
             a number of sources so we can quickly see changes.
         """
-        return pipe(
-            scanner_cmd("info").itervalues(), cmapcat(getter("paths")), sorted)
+        return pipe(fetch_device_list(), cmapcat(getter("paths")), sorted)
