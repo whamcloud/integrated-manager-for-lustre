@@ -7,7 +7,9 @@ import re
 import errno
 import socket
 import json
-from itertools import chain, imap
+from toolz.functoolz import pipe
+from toolz.itertoolz import getter
+from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
 
 import chroma_agent.lib.normalize_device_path as ndp
 
@@ -23,10 +25,6 @@ PRECEDENCE = [
     MAPPER_PATH, DISK_BY_ID_PATH, DISK_BY_PATH_PATH,
     re.compile('.+')
 ]
-
-
-def flat_map(fn, xs):
-    return chain.from_iterable(imap(fn, xs))
 
 
 def get_idx(x):
@@ -70,7 +68,7 @@ def scanner_cmd(cmd):
     return json.loads(out)
 
 
-def getter(prop, default_value, x):
+def get_default(prop, default_value, x):
     y = x.get(prop, default_value)
     return y if y is not None else default_value
 
@@ -80,7 +78,7 @@ def get_major_minor(x):
 
 
 def as_device(x):
-    paths = sort_paths(getter('PATHS', [], x))
+    paths = sort_paths(get_default('PATHS', [], x))
     path = next(iter(paths), None)
 
     return {
@@ -89,7 +87,7 @@ def as_device(x):
         'paths': paths,
         'serial_80': x.get('IML_SCSI_80'),
         'serial_83': x.get('IML_SCSI_83'),
-        'size': int(getter('IML_SIZE', 0, x)) * 512,
+        'size': int(get_default('IML_SIZE', 0, x)) * 512,
         'filesystem_type': x.get('ID_FS_TYPE'),
         'device_type': x.get('DEVTYPE'),
         'device_path': x.get('DEVPATH'),
@@ -150,9 +148,6 @@ def build_ndp_from_device(x):
 class BlockDevices(object):
     MAPPERPATH = os.path.join('/dev', 'mapper')
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
-    DISKBYPATHPATH = os.path.join('/dev', 'disk', 'by-path')
-    SYSBLOCKPATH = os.path.join('/sys', 'block')
-    MDRAIDPATH = os.path.join('/dev', 'md')
 
     def __init__(self):
         (self.block_device_nodes,
@@ -161,8 +156,9 @@ class BlockDevices(object):
     def _parse_sys_block(self):
         info = scanner_cmd("info")
 
-        xs = [as_device(x) for x in info.itervalues()]
-        xs = filter(filter_device, xs)
+        xs = pipe(info.itervalues(),
+                  cmap(as_device), cfilter(filter_device), list)
+
         mutate_parent_prop(xs)
 
         node_block_devices = reduce(
@@ -186,15 +182,9 @@ class BlockDevices(object):
         :return: list of dev_major_minors, or an empty
             list if any device_path is not found.
         """
-        device_mms = []
-        for device_path in device_paths:
-            device_mm = self.path_to_major_minor(device_path)
 
-            if device_mm is None:
-                continue
-
-            device_mms.append(device_mm)
-        return device_mms
+        return pipe(device_paths,
+                    cmap(self.path_to_major_minor), cfilter(None), list)
 
     def path_to_major_minor(self, device_path):
         """ Return device major minor for a given device path """
@@ -228,24 +218,20 @@ class BlockDevices(object):
 
     def find_block_devs(self, folder):
         # Map of major_minor to path
-        result = {}
         # Should be able to look at the paths prop for all devs, and put
         # matching MM to path back in a list.
 
-        xs = list(
-            flat_map(lambda x: (x.paths, x.major_minor),
-                     self.block_device_nodes))
+        def build_paths(x):
+            out = []
 
-        for x in xs:
-            paths = x[0]
-            mm = x[1]
-
-            for path in paths:
+            for path in x.paths:
                 if path.startswith(folder):
-                    result[mm] = path
-                    break
+                    out.append((x.mm, path))
 
-        return result
+            return out
+
+        return pipe(self.block_device_nodes.itervalues(),
+                    cmapcat(build_paths), dict)
 
     @classmethod
     def quick_scan(cls):
@@ -253,12 +239,5 @@ class BlockDevices(object):
             Return a very quick list of block devices from
             a number of sources so we can quickly see changes.
         """
-        blocks = []
-
-        for path in [
-                cls.SYSBLOCKPATH, cls.MAPPERPATH, cls.DISKBYIDPATH,
-                cls.DISKBYPATHPATH
-        ]:
-            blocks.extend(os.listdir(path))
-
-        return blocks
+        return pipe(
+            scanner_cmd("info").itervalues(), cmapcat(getter("paths")), sorted)
