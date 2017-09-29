@@ -20,12 +20,14 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
 handler = logging.FileHandler("chroma-diagnostics.log")
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 log.addHandler(handler)
 
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 # Always exclude these tables from DB output
-EXCLUDED_TABLES = ['chroma_core_logmessage', 'chroma_core_series', 'chroma_core_sample_*']
+EXCLUDED_TABLES = ['chroma_core_logmessage',
+                   'chroma_core_series', 'chroma_core_sample_*']
 
 # Dictionary of parent path to array of logfiles
 # that are rolled by logrotated such that when rotated
@@ -127,7 +129,8 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
                 if root_file_name in log_names_to_collect:
                     abs_path = os.path.join(path, file_name)
                     if verbose > 2:
-                        log.info(run_command_output_piped(['ls', '-l', abs_path]).stdout.read())
+                        log.info(run_command_output_piped(
+                            ['ls', '-l', abs_path]).stdout.read())
                     last_modified = os.path.getmtime(abs_path)
                     if last_modified >= cutoff_date_seconds:
                         collected_files[root_file_name].append((abs_path,
@@ -162,10 +165,12 @@ def export_postgres_chroma_db(parent_directory):
     output_path = os.path.join(parent_directory, '%s.sql.gz' % output_fn)
 
     #  Dump and compress to a file ...
-    cmd_export = ['pg_dump', '-U', 'chroma', '-F', 'p', '-Z', '9', '-w', '-f', output_path]
+    cmd_export = ['pg_dump', '-U', 'chroma', '-F',
+                  'p', '-Z', '9', '-w', '-f', output_path]
 
     #  ... while excluding tables
-    cmd_export += sum([['-T', table_name] for table_name in EXCLUDED_TABLES], [])
+    cmd_export += sum([['-T', table_name]
+                       for table_name in EXCLUDED_TABLES], [])
 
     # ... the IML database
     cmd_export += ['chroma']
@@ -195,7 +200,8 @@ def main():
             "Sample output:  %sdiagnostics_<date>_<fqdn>.tar.lzma"
             % default_output_directory)
 
-    parser = argparse.ArgumentParser(description=desc, formatter_class=RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=desc, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--alt-dir', '-a', action='store', dest='directory', type=basestring, required=False,
                         help="Specify output location for diagnostics.")
 
@@ -237,7 +243,8 @@ def main():
         elif args.verbose > 0:
             log.info(cd_action.error_message)
 
-    log_count = copy_logrotate_logs(output_directory, args.days_back, args.verbose)
+    log_count = copy_logrotate_logs(
+        output_directory, args.days_back, args.verbose)
     if log_count > 0:
         log.info("Copied %s log files." % log_count)
     elif args.verbose > 0:
@@ -246,7 +253,8 @@ def main():
     if export_postgres_chroma_db(output_directory):
         log.info("Exported manager system database")
     elif args.verbose > 0:
-        log.info("Failed to export the manager system database, or none exists.  None exists on target servers.")
+        log.info(
+            "Failed to export the manager system database, or none exists.  None exists on target servers.")
 
     if run_sos:
         if run_command_output_piped(['sosreport', '--batch', '--tmp-dir', output_directory]):
@@ -264,10 +272,11 @@ def main():
         ['tar', '--lzma', '-cf', archive_path, '-C', default_output_directory, output_fn, '--remove-files'])
 
     log.info("\nDiagnostic collection is completed.")
-    log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
+    log.info("Size:  %s" % run_command_output_piped(
+        ['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
-             u"sent to Intel Manager for Lustre Support for analysis.")
+             u"sent to Intel® Manager for Lustre* software Support for analysis.")
 
 
 if __name__ == "__main__":

@@ -59,14 +59,14 @@ def _register_function(parser, name, fn):
     if 'agent_daemon_context' in argspec[0]:
         return
 
-    p = parser.add_parser(name, help = fn.__doc__)
+    p = parser.add_parser(name, help=fn.__doc__)
 
     def wrap(args):
         args = vars(args)
         del args['func']
         return fn(**args)
 
-    p.set_defaults(func = wrap)
+    p.set_defaults(func=wrap)
 
     if argspec.defaults is not None:
         positional_arg_count = len(argspec.args) - len(argspec.defaults)
@@ -75,18 +75,20 @@ def _register_function(parser, name, fn):
 
     for i, arg in enumerate(argspec.args):
         if i < positional_arg_count:
-            p.add_argument('--%s' % arg, required = True)
+            p.add_argument('--%s' % arg, required=True)
         else:
             if isinstance(argspec.defaults[i - positional_arg_count], bool):
-                p.add_argument('--%s' % arg, required = False, action = 'store_true')
+                p.add_argument('--%s' % arg, required=False,
+                               action='store_true')
             else:
-                p.add_argument('--%s' % arg, required = False)
+                p.add_argument('--%s' % arg, required=False)
 
 
 def main():
     configure_logging()
 
-    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
+    parser = argparse.ArgumentParser(
+        description="Intel® Manager for Lustre* software Agent")
     subparsers = parser.add_subparsers()
 
     for command, fn in ActionPluginManager().commands.items():
@@ -99,17 +101,20 @@ def main():
         try:
             print result['raw_result']
         except (TypeError, KeyError):
-            sys.stderr.write(json.dumps(AgentShell.thread_state.get_subprocesses(), indent = 2))
+            sys.stderr.write(json.dumps(
+                AgentShell.thread_state.get_subprocesses(), indent=2))
             sys.stderr.write("\n\n")
-            print json.dumps({'success': True, 'result': result}, indent = 2)
+            print json.dumps({'success': True, 'result': result}, indent=2)
     except SystemExit:
         raise
     except Exception:
         exc_info = sys.exc_info()
-        backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+        backtrace = '\n'.join(traceback.format_exception(
+            *(exc_info or sys.exc_info())))
         sys.stderr.write("%s\n" % backtrace)
 
-        sys.stderr.write(json.dumps(AgentShell.thread_state.get_subprocesses(), indent = 2))
+        sys.stderr.write(json.dumps(
+            AgentShell.thread_state.get_subprocesses(), indent=2))
         sys.stderr.write("\n\n")
         print json.dumps({'success': False,
                           'backtrace': backtrace}, indent=2)

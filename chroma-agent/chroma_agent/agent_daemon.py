@@ -49,7 +49,7 @@ class ServerProperties(object):
                 return datetime.datetime.fromtimestamp(int(val))
 
 
-def kill_orphans_of(parent_pid, timeout = 5):
+def kill_orphans_of(parent_pid, timeout=5):
     """
     If a previous instance of the service left its PID file behind (unclean stop) then
     we will see if there are any subprocesses hanging around, and kill them.  This is done
@@ -72,7 +72,8 @@ def kill_orphans_of(parent_pid, timeout = 5):
                 raise
         else:
             if int(pgid) == int(parent_pid) and ppid == 1:
-                sys.stderr.write("Killing orphan process %s from previous instance %s\n" % (pid, parent_pid))
+                sys.stderr.write(
+                    "Killing orphan process %s from previous instance %s\n" % (pid, parent_pid))
                 victims.append(pid)
                 os.kill(pid, signal.SIGKILL)
 
@@ -87,7 +88,8 @@ def kill_orphans_of(parent_pid, timeout = 5):
             n += 1
 
             if n > timeout:
-                raise RuntimeError("Failed to kill orphan processes %s after %s seconds" % (victims, timeout))
+                raise RuntimeError(
+                    "Failed to kill orphan processes %s after %s seconds" % (victims, timeout))
 
             time.sleep(1)
         else:
@@ -96,10 +98,11 @@ def kill_orphans_of(parent_pid, timeout = 5):
 
 def main():
     """Daemonize and handle unexpected exceptions"""
-    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
+    parser = argparse.ArgumentParser(
+        description="Intel® Manager for Lustre* software Agent")
     parser.add_argument("--foreground", action="store_true")
     parser.add_argument("--publish-zconf", action="store_true")
-    parser.add_argument("--pid-file", default = "/var/run/chroma-agent.pid")
+    parser.add_argument("--pid-file", default="/var/run/chroma-agent.pid")
     args = parser.parse_args()
 
     # FIXME: at startup, if there is a PID file hanging around, find any
@@ -135,7 +138,7 @@ def main():
                 os.remove(args.pid_file + ".lock")
 
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
-        context = DaemonContext(pidfile = PIDLockFile(args.pid_file))
+        context = DaemonContext(pidfile=PIDLockFile(args.pid_file))
         context.open()
 
         daemon_log_setup()
@@ -197,7 +200,7 @@ def main():
         agent_client.start()
         # Waking-wait to pick up signals
         while not agent_client.stopped.is_set():
-            agent_client.stopped.wait(timeout = 10)
+            agent_client.stopped.wait(timeout=10)
 
         agent_client.join()
     except Exception, e:
