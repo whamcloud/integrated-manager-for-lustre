@@ -10,7 +10,7 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/simulator.jso
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/test_power_control.py"}
+TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 
 trap "set +e
 cd $CHROMA_DIR/../..
