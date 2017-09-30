@@ -351,7 +351,6 @@ class CommandPlan(object):
             log.debug("NOOP transition %s -> %s" % (transition.old_state, transition.new_state))
             return None
 
-        route = transition.stateful_object.get_route(transition.old_state, transition.new_state)
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
         route = transition.stateful_object.get_route(transition.old_state, transition.new_state)
