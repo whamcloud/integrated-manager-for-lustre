@@ -905,9 +905,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
 
-        # debug : we want to always do this on all hosts that have access to the underlying disks
-        test_servers = config['lustre_servers'][:4]
-
         # Ensure agents stopped to avoid interference with pool imports/exports
         self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
 
