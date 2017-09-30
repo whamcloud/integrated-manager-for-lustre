@@ -616,9 +616,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if config.get('managed'):
             self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
+        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS)
         if config.get('managed'):
-            self.remote_operations.clear_ha(self.TEST_SERVERS)
+            self.remote_operations.clear_ha(self.config_servers)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):
@@ -904,9 +904,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         """
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
-
-        # debug : we want to always do this on all hosts that have access to the underlying disks
-        test_servers = config['lustre_servers'][:4]
 
         # Ensure agents stopped to avoid interference with pool imports/exports
         self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
