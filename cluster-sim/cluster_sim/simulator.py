@@ -229,7 +229,6 @@ class ClusterSimulator(Persisted):
                 'lustre': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-dkms': (0, '2.1.4', '1', 'x86_64'),
                 'kmod-lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),
-                'kmod-lustre': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-osd-zfs-mount': (0, '2.1.4', '1', 'x86_64'),
                 'kernel-[0-9]*_lustre': (0, '2.6.32', '1', 'x86_64'),
                 'kernel-devel-lustre': (0, '2.6.32', '1', 'x86_64'),
