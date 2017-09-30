@@ -139,7 +139,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             elif config.get('soft_reset', True):
                 # Reset the manager via the API
                 self.wait_until_true(self.api_contactable)
-                self.remote_operations.unmount_clients()
                 self.api_force_clear()
                 self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
@@ -196,6 +195,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 if len(down_nodes) and (self.down_node_expected is False):
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+
+        # TODO: move all of the (rest of the) "post-test cleanup" that is
+        # done in setUp to here
+        if config.get('managed'):
+            self.remote_operations.unmount_clients()
+            # stop any running filesystems
+            for filesystem in self.get_list("/api/filesystem/"):
+                self.stop_filesystem(filesystem['id'])
 
         self.assertTrue(self.supervisor_controlled_processes_running())
         self.assertEqual(self.initial_supervisor_controlled_process_start_times,
@@ -334,7 +341,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if verify_successful and (command['errored'] or command['cancelled']):
             self._print_command(command, "FAILED", msg)
 
-            self.assertFalse(command['errored'] or command['cancelled'], command)
+            self._fetch_help(lambda: self.assertFalse(command['errored'] or command['cancelled'], command),
+                             ["brian.murrell@intel.com"], "Hit LU-9925?", timeout=86400)
 
         return command
 
@@ -613,8 +621,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
         """
-        if config.get('managed'):
-            self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
         self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
         if config.get('managed'):
