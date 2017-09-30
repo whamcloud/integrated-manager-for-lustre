@@ -102,17 +102,18 @@ set_defaults() {
     # if you use this, don't forget to update chroma-manager/chroma_agent_comms/views.py
     #LUSTRE_REVIEW_BUILD="12345"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
-        BASE_URL="https://build.whamcloud.com/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
         export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
         # these should be determined from the above
         export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_server_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
         export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_client_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
     else
-        export LUSTRE_SERVER_URL="https://build.whamcloud.com/lustre-b2_10_last_successful_server/"
-        export LUSTRE_CLIENT_URL="https://build.whamcloud.com/lustre-b2_10_last_successful_client/"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-b2_10/configurations/axis-arch/\\\$basearch/axis-build_type"
+        export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/26/archive/artifacts/"
+        export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/26/archive/artifacts/"
         # these should be determined from the above
-        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_server_.repo"
-        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-b2_10_last_successful_client_.repo"
+        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_jobs-pub_lustre-b2_10_configurations_axis-arch_\\\$basearch_axis-build_type_server_axis-distro_el7_axis-ib_stack_inkernel_builds_26_archive_artifacts_.repo"
+        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_jobs-pub_lustre-b2_10_configurations_axis-arch_\\\$basearch_axis-build_type_client_axis-distro_el7_axis-ib_stack_inkernel_builds_26_archive_artifacts_.repo"
     fi
 } # end of set_defaults()
