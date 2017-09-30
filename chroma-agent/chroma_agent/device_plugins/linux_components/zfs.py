@@ -27,13 +27,7 @@ strip_lines = partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename=STORE_FILENAME):
-    data = {}
-
-    try:
-        with open(filename, 'r') as f:
-            data = json.loads(f.read())
-    except IOError:
-        pass
+    data = read_store(filename)
 
     daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
@@ -42,14 +36,21 @@ def write_to_store(key, value, filename=STORE_FILENAME):
         f.write(json.dumps(data))
 
 
+def read_store(filename):
+    try:
+        with open(filename, 'r') as f:
+            return json.loads(f.read())
+    except IOError as e:
+        daemon_log.debug('zfs store file %s could not be read (%s)' % e)
+        return {}
+
+
 def read_from_store(key, filename=STORE_FILENAME):
-    daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
-    with open(filename, 'r') as f:
-        return json.loads(f.read())[key]
+    daemon_log.debug('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
+    return read_store(filename)[key]
 
 
-def clean_list(xs):
-    return filter_empty(strip_lines(xs))
+clean_list = compose(filter_empty, strip_lines)
 
 
 def match_entry(x, name, exclude):
