@@ -170,6 +170,16 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def tearDown(self):
+        # TODO: move all of the (rest of the) "post-test cleanup" that is
+        # done in setUp to here
+        if config.get('managed'):
+            self.remote_operations.unmount_clients()
+            # stop any running filesystems
+            for filesystem in [f for f in self.get_list("/api/filesystem/")
+                               if f['state'] == "available"]:
+                logger.debug("stopping filesystem %s" % filesystem)
+                self.stop_filesystem(filesystem['id'])
+
         if self.simulator:
             self.simulator.stop()
             self.simulator.join()
@@ -1051,3 +1061,19 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         :return:
         """
         return 'IML_QUICK_TEST_SETUP' in os.environ
+
+    def stop_filesystem(self, filesystem_id):
+        response = self.chroma_manager.put(
+            '/api/filesystem/%s/' % filesystem_id,
+            body = {'state': 'stopped'}
+        )
+        self.assertTrue(response.successful, response.text)
+        self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+
+    def start_filesystem(self, filesystem_id):
+        response = self.chroma_manager.put(
+            '/api/filesystem/%s/' % filesystem_id,
+            body = {'state': 'available'}
+        )
+        self.assertTrue(response.successful, response.text)
+        self.wait_for_command(self.chroma_manager, response.json['command']['id'])
