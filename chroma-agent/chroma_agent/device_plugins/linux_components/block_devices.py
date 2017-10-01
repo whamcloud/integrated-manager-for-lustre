@@ -7,6 +7,7 @@ import re
 import errno
 import socket
 import json
+from chroma_agent.lib.shell import AgentShell
 from toolz.functoolz import pipe
 from toolz.itertoolz import getter
 from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
@@ -126,6 +127,7 @@ def filter_device(x):
 
 
 def fetch_device_list():
+    AgentShell.run(["udevadm", "settle"])
     info = scanner_cmd("info")
 
     return pipe(info.itervalues(),

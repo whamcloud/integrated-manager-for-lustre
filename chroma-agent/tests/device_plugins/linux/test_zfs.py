@@ -140,7 +140,8 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         AND there are no other pools to import,
         THEN only the datasets (not zpool) are reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stdout=zfs_example_data.multiple_imported_pools_status),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout="no pools available to import\n"),
@@ -182,7 +183,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND the offline zpool is not reported,
         AND the zpool without datasets is reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.multiple_exported_online_offline_pools),
@@ -228,7 +230,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND try to read zpool info from store fails,
         THEN no zpool is reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool))
@@ -249,7 +252,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND try to read zpool info from store succeeds,
         THEN expected  are reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool_B))
@@ -270,7 +274,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         WHEN inactive ONLINE zpool is imported,
         THEN correct zpool info is supplied in call to write to store.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.multiple_exported_online_offline_pools),
