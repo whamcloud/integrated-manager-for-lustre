@@ -139,7 +139,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             elif config.get('soft_reset', True):
                 # Reset the manager via the API
                 self.wait_until_true(self.api_contactable)
-                self.remote_operations.unmount_clients()
                 self.api_force_clear()
                 self.remote_operations.clear_ha(self.TEST_SERVERS)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
@@ -170,6 +169,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def tearDown(self):
+        # TODO: move all of the (rest of the) "post-test cleanup" that is
+        # done in setUp to here
+        if config.get('managed'):
+            self.remote_operations.unmount_clients()
+            # stop any running filesystems
+            for filesystem in [f for f in
+                               self.get_list("/api/filesystem/")
+                               if f['state'] == "available"]:
+                logger.debug("stopping filesystem %s" % filesystem)
+                self.stop_filesystem(filesystem['id'])
+
         if self.simulator:
             self.simulator.stop()
             self.simulator.join()
@@ -613,8 +623,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
         """
-        if config.get('managed'):
-            self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
         self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
         if config.get('managed'):
@@ -952,9 +960,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
                     if action & self.CZP_REMOVEZPOOLS:
-                        self.execute_simultaneous_commands(zfs_device.destroy_commands,
+                        self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
                                                            [server['fqdn'] for server in test_servers],
-                                                           'recursive destroy zpool %s' % zfs_device,
+                                                           'force destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
                         self.execute_simultaneous_commands(zfs_device.clear_label_commands,
