@@ -215,14 +215,11 @@ class ChromaLogCollector(object):
         diagnostics_dir = re.compile('(sosreport-.*)\.tar\..*').search(
             diagnostics).group(1)
 
-        try:
-            os.chmod(
-                "%s/%s/sys/module/md_mod/parameters/new_array"
-                % (self.destination_path, diagnostics_dir),
-                0777
-            )
-        except OSError:
-            pass
+        rc, stdout, stderr = shell_run(['ls', '-lR', "%s/%s" % (self.destination_path, diagnostics_dir)])
+        print "ls sos dir"
+        print rc
+        print stdout
+        print stderr
 
         if shell_run(
             ['rm', '-f',

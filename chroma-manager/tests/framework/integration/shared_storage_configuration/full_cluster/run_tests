@@ -13,7 +13,7 @@ CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+TESTS=${TESTS:-"tests/integration/shared_storage_configuration/test_ssh_auth.py"}
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
 trap "set +e; collect_reports" EXIT
