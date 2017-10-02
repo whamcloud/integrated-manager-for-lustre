@@ -29,9 +29,9 @@ Requires: yum-utils
 Requires: initscripts
 Requires: chroma-diagnostics >= %{version}
 Requires: python2-iml-common1.2
-Obsolete: python2-iml-common
-Obsolete: python2-iml-common1.0
-Obsolete: python2-iml-common1.1
+Obsoletes: python2-iml-common
+Obsoletes: python2-iml-common1.0
+Obsoletes: python2-iml-common1.1
 Requires: systemd-python
 Requires: python-tzlocal
 Requires: python2-toolz
