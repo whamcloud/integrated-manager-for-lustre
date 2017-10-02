@@ -38,6 +38,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                     'major_minor': 'zfspool:zfsPool1',
                                     'parent': None,
                                     'path': 'zfsPool1',
+                                    'paths': ['zfsPool1'],
                                     'serial_80': None,
                                     'serial_83': None,
                                     'size': 1099511627776},
@@ -45,6 +46,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                           'major_minor': 'zfsset:AAAAAAAAAAAAAAA',
                                           'parent': None,
                                           'path': 'zfsPool3/mgs',
+                                          'paths': ['zfsPool3/mgs'],
                                           'serial_80': None,
                                           'serial_83': None,
                                           'size': 1099511627776},
@@ -52,6 +54,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                           'major_minor': 'zfsset:ABCDEF123456789',
                                           'parent': None,
                                           'path': 'zfsPool3/mgt',
+                                          'paths': ['zfsPool3/mgt'],
                                           'serial_80': None,
                                           'serial_83': None,
                                           'size': 1099511627776}}
@@ -171,6 +174,7 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
         self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
+        self.maxDiff = 5000
         # verify blockdevices device_nodes also have been updated
         self.assertDictEqual(block_devices.block_device_nodes, dev_results)
 
