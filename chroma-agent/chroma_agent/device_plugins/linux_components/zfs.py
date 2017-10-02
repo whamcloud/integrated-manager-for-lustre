@@ -8,48 +8,47 @@ import json
 import os
 import re
 import glob
-from toolz import partial, compose
+from toolz import compose
+from toolz.curried import map, filter
 
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
 from iml_common.blockdevices.blockdevice import BlockDevice
-from iml_common.blockdevices.blockdevice_zfs import ZfsDevice
+from iml_common.blockdevices.blockdevice_zfs import ZfsDevice, ZFS_OBJECT_STORE_PATH
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.lib.exception_sandbox import exceptionSandBox
-from iml_common.lib import util
+from iml_common.lib.util import human_to_bytes
 
-STORE_FILENAME = '/tmp/store.json'
-
-filter_empty = partial(filter, None)
-strip_lines = partial(map, lambda x: x.strip())
+# compose using curried funcs
+clean_list = compose(filter(None), map(lambda x: x.strip))
 
 
-def write_to_store(key, value, filename=STORE_FILENAME):
-    data = {}
+def write_to_store(key, value, filepath):
+    """
+    :param key: key to update value for store
+    :param value: value to assign to given key
+    :param filepath: filepath of store
+    :return: None
+    """
+    data = read_store(filepath)
 
-    try:
-        with open(filename, 'r') as f:
-            data = json.loads(f.read())
-    except IOError:
-        pass
-
-    daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
     data[key] = value
-    with open(filename, 'w') as f:
+    with open(filepath, 'w') as f:
         f.write(json.dumps(data))
 
 
-def read_from_store(key, filename=STORE_FILENAME):
-    daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
-    with open(filename, 'r') as f:
-        return json.loads(f.read())[key]
+def read_store(filepath):
+    """ Store file should always exist because it's created on agent initialisation """
+    with open(filepath, 'r') as f:
+        return json.loads(f.read())
 
 
-def clean_list(xs):
-    return filter_empty(strip_lines(xs))
+def read_from_store(key, filepath):
+    """ Read specific key data from store """
+    return read_store(filepath)[key]
 
 
 def match_entry(x, name, exclude):
@@ -140,7 +139,7 @@ def _get_zpool_datasets(pool_name, drives):
     if out.strip() != "no datasets available":
         for line in filter(None, out.split('\n')):
             name, size_str, uuid = line.split()
-            size = util.human_to_bytes(size_str)
+            size = human_to_bytes(size_str)
 
             if name.startswith("%s/" % pool_name):
                 # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
@@ -183,10 +182,6 @@ def _get_zpool_zvols(pool_name, drives, block_devices):
             "size": block_devices.block_device_nodes[major_minor]["size"],
             "drives": drives
         }
-
-        # Do this to cache the device, type see blockdevice and filesystem for info.
-        BlockDevice('zfs', zvol_path)
-        FileSystem('zfs', zvol_path)
 
     return zpool_vols
 
@@ -285,10 +280,10 @@ class ZfsDevices(object):
                         # zpool probably imported elsewhere, attempt to read from store, this should return
                         # previously seen zpool state either with or without datasets
                         try:
-                            data = read_from_store(pool['id'])
-                        except (IOError, KeyError) as e:
-                            daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
-                                             "pool: %s)" % (e, pool['pool']))
+                            data = read_from_store(pool['id'], ZFS_OBJECT_STORE_PATH)
+                        except KeyError as e:
+                            daemon_log.warning("ZfsPool unavailable and could not be retrieved from store: %s ("
+                                               "pool: %s)" % (e, pool['pool']))
                             continue
                         else:
                             # populate self._pools/datasets/zvols info from saved data read from store
@@ -306,7 +301,7 @@ class ZfsDevices(object):
     def _add_zfs_pool(self, line, block_devices):
         name, size_str, uuid = line.split()
 
-        size = util.human_to_bytes(size_str)
+        size = human_to_bytes(size_str)
 
         drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name))
 
@@ -326,10 +321,8 @@ class ZfsDevices(object):
                    "drives": drive_mms}
 
         # write new data to store (_pool/datasets/Zvols)
-        try:
-            write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
-        except (IOError, KeyError) as e:
-            daemon_log.warning("Error when writing to store: %s (pool: %s)" % (e, name))
+        daemon_log.debug('write_to_store(): writing data to %s. key: %s' % (ZFS_OBJECT_STORE_PATH, uuid))
+        write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols}, ZFS_OBJECT_STORE_PATH)
 
         self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 
@@ -369,6 +362,13 @@ class ZfsDevices(object):
             self._datasets.update(datasets)
 
         if zvols != {}:
+            for info in zvols.itervalues():
+                name = info['name']
+
+                # Do this to cache the device, type see blockdevice and filesystem for info.
+                BlockDevice('zfs', name)
+                FileSystem('zfs', name)
+
             self._zvols.update(zvols)
 
     @property
