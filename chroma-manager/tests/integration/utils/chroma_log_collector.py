@@ -215,7 +215,18 @@ class ChromaLogCollector(object):
         diagnostics_dir = re.compile('(sosreport-.*)\.tar\..*').search(
             diagnostics).group(1)
 
-        rc, stdout, stderr, _ = shell_run(['ls', '-lR', "%s/%s" % (self.destination_path, diagnostics_dir)])
+        if shell_run([
+                'chmod', '-R'
+                '777',
+                "%s/%s" % (self.destination_path, diagnostics_dir)
+        ]).rc:
+            errors.append(
+                "Unable to change perms on expanded diagnostics at %s/%s" %
+                (self.destination_path, diagnostics_dir))
+
+        rc, stdout, stderr, _ = shell_run(
+            ['ls', '-lR',
+             "%s/%s" % (self.destination_path, diagnostics_dir)])
         print "ls sos dir"
         print rc
         print stdout
