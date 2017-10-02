@@ -215,7 +215,7 @@ class ChromaLogCollector(object):
         diagnostics_dir = re.compile('(sosreport-.*)\.tar\..*').search(
             diagnostics).group(1)
 
-        rc, stdout, stderr = shell_run(['ls', '-lR', "%s/%s" % (self.destination_path, diagnostics_dir)])
+        rc, stdout, stderr, _ = shell_run(['ls', '-lR', "%s/%s" % (self.destination_path, diagnostics_dir)])
         print "ls sos dir"
         print rc
         print stdout
