@@ -211,7 +211,7 @@ class BlockDevices(object):
 
             if drive_mms:
                 devices[device['uuid']] = {
-                    'path': device["path"],
+                    'path': device['path'],
                     'block_device': device['mm'],
                     'drives': drive_mms
                 }
@@ -230,9 +230,9 @@ class BlockDevices(object):
         def build_paths(x):
             out = []
 
-            for path in x.paths:
+            for path in x['paths']:
                 if path.startswith(folder):
-                    out.append((x.mm, path))
+                    out.append((x['major_minor'], path))
 
             return out
 
