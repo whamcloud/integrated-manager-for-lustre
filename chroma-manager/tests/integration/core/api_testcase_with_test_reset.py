@@ -952,9 +952,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
                     # dd the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
                     if action & self.CZP_REMOVEZPOOLS:
-                        self.execute_simultaneous_commands(zfs_device.destroy_commands,
+                        self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
                                                            [server['fqdn'] for server in test_servers],
-                                                           'recursive destroy zpool %s' % zfs_device,
+                                                           'force destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
                         self.execute_simultaneous_commands(zfs_device.clear_label_commands,
