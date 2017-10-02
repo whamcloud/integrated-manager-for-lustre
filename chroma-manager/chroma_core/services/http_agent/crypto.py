@@ -5,10 +5,11 @@
 
 import urlparse
 import os
+import re
+import tempfile
 
 from chroma_core.lib.util import CommandLine
 from chroma_core.services import log_register
-import re
 
 import settings
 
@@ -68,9 +69,40 @@ class Crypto(CommandLine):
             # certificate (using SERVER_HTTP_URL re
             hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
 
+            fd, tmp_path = tempfile.mkstemp()
+            f = os.fdopen(fd, 'w')
+            f.write("""
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+x509_extensions = v3_req
+prompt = no
+
+[ req_distinguished_name ]
+CN = %s
+
+[ v3_req ]
+# Extensions to add to a certificate request
+subjectKeyIdentifier = hash
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature,keyEncipherment
+subjectAltName = DNS:%s
+""" % (hostname, hostname))
+            f.close()
+
             self.log.info("Generating manager certificate file")
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
+            _, csr, _ = self.try_shell([
+                "openssl", "req", "-new", "-sha256",
+                "-key", self.server_key,
+                '-config', tmp_path])
+            self.try_shell([
+                "openssl", "x509", "-req",
+                "-sha256", "-days", self.CERTIFICATE_DAYS,
+                "-extfile", tmp_path,
+                "-extensions", "v3_req",
+                "-CA", self.authority_cert, "-CAcreateserial",
+                "-CAkey", self.authority_key,
+                "-out", self.MANAGER_CERT_FILE], stdin_text=csr)
 
             self.log.info("Generated %s" % self.MANAGER_CERT_FILE)
         return self.MANAGER_CERT_FILE
