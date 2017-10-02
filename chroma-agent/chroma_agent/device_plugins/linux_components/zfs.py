@@ -338,6 +338,7 @@ class ZfsDevices(object):
             name = pool['name']
             block_devices.block_device_nodes[pool['block_device']] = {'major_minor': pool['block_device'],
                                                                       'path': name,
+                                                                      'paths': [name],
                                                                       'serial_80': None,
                                                                       'serial_83': None,
                                                                       'size': pool['size'],
@@ -356,6 +357,7 @@ class ZfsDevices(object):
                 name = info['name']
                 block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
                                                                  'path': name,
+                                                                 'paths': [name],
                                                                  'serial_80': None,
                                                                  'serial_83': None,
                                                                  'size': info['size'],
