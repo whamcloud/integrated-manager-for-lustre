@@ -31,6 +31,7 @@ Requires: iml_sos_plugin
 Requires: python2-iml-common1.0
 Requires: systemd-python
 Requires: python-tzlocal
+Requires: iml-device-scanner
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
