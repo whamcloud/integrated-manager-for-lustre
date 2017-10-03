@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
@@ -19,7 +20,7 @@ setup(
     include_package_data = True,
     data_files=[('/usr/lib/ocf/resource.d/chroma', ['Target'])],
     license = 'Proprietary',
-    description = 'The Intel Manager for Lustre Monitoring and Administration Interface Agent',
+    description = 'The Intel® Manager for Lustre* software Monitoring and Administration Interface Agent',
     long_description = open('README.txt').read(),
     entry_points = {
         'console_scripts': [
