@@ -228,13 +228,8 @@ class BlockDevices(object):
         # matching MM to path back in a list.
 
         def build_paths(x):
-            out = []
-
-            for path in x['paths']:
-                if path.startswith(folder):
-                    out.append((x['major_minor'], path))
-
-            return out
+            return [(x['major_minor'], path) for path in x['paths']
+                    if path.startswith(folder)]
 
         return pipe(self.block_device_nodes.itervalues(),
                     cmapcat(build_paths), dict)
