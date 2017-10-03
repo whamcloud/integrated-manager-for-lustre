@@ -11,13 +11,13 @@ enabled_metadata=1
 
 [lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/jobs-pub/lustre-b2_10/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7/axis-ib_stack/inkernel/builds/26/archive/artifacts/
+baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.1/el7/server/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/jobs-pub/lustre-b2_10/configurations/axis-arch/x86_64/axis-build_type/client/axis-distro/el7/axis-ib_stack/inkernel/builds/26/archive/artifacts/
+baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.1/el7/client/
 enabled=1
 gpgcheck=0
 
