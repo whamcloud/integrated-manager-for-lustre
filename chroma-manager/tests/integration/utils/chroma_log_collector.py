@@ -223,14 +223,6 @@ class ChromaLogCollector(object):
                 "Unable to change perms on expanded diagnostics at %s/%s" %
                 (self.destination_path, diagnostics_dir))
 
-        rc, stdout, stderr, _ = shell_run(
-            ['ls', '-lR',
-             "%s/%s" % (self.destination_path, diagnostics_dir)])
-        print "ls sos dir"
-        print rc
-        print stdout
-        print stderr
-
         if shell_run(
             ['rm', '-f',
              "%s/%s" % (self.destination_path, diagnostics)]).rc:
