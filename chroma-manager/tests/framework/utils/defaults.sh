@@ -113,7 +113,7 @@ set_defaults() {
         export LUSTRE_SERVER_URL="$BASE_URL/server/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/"
         # these should be determined from the above
-        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_server.repo"
-        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_client.repo"
+        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_server_.repo"
+        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_client_.repo"
     fi
 } # end of set_defaults()
