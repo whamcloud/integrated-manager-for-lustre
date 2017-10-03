@@ -47,7 +47,7 @@ Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.16
 Requires: django-picklefield
 Requires: chroma-manager-cli = %{version}-%{release}
-Requires: chroma-diagnostics >= %{version}-%{release}
+Requires: iml_sos_plugin
 Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base

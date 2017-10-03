@@ -27,8 +27,9 @@ Requires: python-requests >= 2.6.0
 Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
-Requires: chroma-diagnostics >= %{version}
 Requires: python2-iml-common1.1
+Requires: iml_sos_plugin
+Requires: python2-iml-common1.0
 Requires: systemd-python
 Requires: python-tzlocal
 Requires: python2-toolz
