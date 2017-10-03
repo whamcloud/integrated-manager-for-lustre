@@ -53,7 +53,7 @@ class SystemdJournalListener(threading.Thread):
         while self.should_run:
             if j.wait(1) == systemd.journal.APPEND:
                 for entry in j:
-                     _queue.put(parse_journal(entry))
+                    _queue.put(parse_journal(entry))
 
     def stop(self):
         console_log.debug("SystemdJournalListener.stop")
