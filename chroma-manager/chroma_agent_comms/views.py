@@ -385,7 +385,7 @@ proxy=_none_
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = 'chroma-agent chroma-diagnostics'
+    repo_packages = 'chroma-agent'
     server_profile = ServerProfile.objects.get(name = request.REQUEST['profile_name'])
 
     try:

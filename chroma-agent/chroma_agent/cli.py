@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -86,7 +87,7 @@ def _register_function(parser, name, fn):
 def main():
     configure_logging()
 
-    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
+    parser = argparse.ArgumentParser(description="Intel® Manager for Lustre* software Agent")
     subparsers = parser.add_subparsers()
 
     for command, fn in ActionPluginManager().commands.items():

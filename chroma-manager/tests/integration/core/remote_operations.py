@@ -156,7 +156,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def get_corosync_port(self, fqdn):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return Shell.RunResult(rc=0, stdout="", stderr="", timeout=False)
 
     def backup_cib(*args, **kwargs):
@@ -540,9 +540,9 @@ class RealRemoteOperations(RemoteOperations):
         # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
         self._ssh_address(fqdn, 'chroma-config restart')
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return self._ssh_fqdn(server['fqdn'],
-                              "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
+                              "iml-diagnostics" + " --all_logs" if verbose else "",
                               timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
