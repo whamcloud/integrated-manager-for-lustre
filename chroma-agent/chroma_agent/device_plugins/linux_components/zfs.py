@@ -14,8 +14,8 @@ import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
-from iml_common.blockdevices.blockdevice import BlockDevice, ZFS_OBJECT_STORE_PATH
-from iml_common.blockdevices.blockdevice_zfs import ZfsDevice
+from iml_common.blockdevices.blockdevice import BlockDevice
+from iml_common.blockdevices.blockdevice_zfs import ZfsDevice, ZFS_OBJECT_STORE_PATH
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.lib.exception_sandbox import exceptionSandBox
 from iml_common.lib import util
