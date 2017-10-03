@@ -14,7 +14,6 @@ import tempfile
 import subprocess
 import time
 import collections
-import os
 
 RunResult = collections.namedtuple("RunResult",
                                    ['rc', 'stdout', 'stderr', 'timeout'])
