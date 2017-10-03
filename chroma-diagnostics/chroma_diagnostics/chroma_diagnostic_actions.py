@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -64,14 +65,14 @@ pacemaker_crm_action = CDAction('pacemaker-crm-mon-1',
 
 chroma_config_action = CDAction('chroma-config-validate',
                                 ['chroma-config', 'validate'],
-                                "Validated Intel Manager for Lustre installation",
-                                "Failed to run Intel Manager for Lustre installation validation",
+                                "Validated Intel® Manager for Lustre* software installation",
+                                "Failed to run Intel® Manager for Lustre* software installation validation",
                                 False)
 
 finger_print_action = CDAction('finger-print',
                                ['rpm', '-V', ] + PACKAGES,
-                               "Finger printed Intel Manager for Lustre installation",
-                               "Failed to finger print Intel Manager for Lustre installation",
+                               "Finger printed Intel® Manager for Lustre* software installation",
+                               "Failed to finger print Intel® Manager for Lustre* software installation",
                                False)
 
 ps_action = CDAction('ps',

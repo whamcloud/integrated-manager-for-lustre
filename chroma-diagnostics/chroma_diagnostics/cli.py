@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -267,7 +268,7 @@ def main():
     log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
-             u"sent to Intel Manager for Lustre Support for analysis.")
+             u"sent to Intel® Manager for Lustre* software Support for analysis.")
 
 
 if __name__ == "__main__":

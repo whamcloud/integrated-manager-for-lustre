@@ -12,7 +12,7 @@ setup(
     version = package_version(),
     packages = find_packages(),
     include_package_data = True,
-    author = "Intel(R) Corporation",
+    author = "Intel Corporation",
     license = 'Proprietary',
     description = 'Collect diagnostic information on the manager or storage nodes',
     long_description = open('README.txt').read(),
