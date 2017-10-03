@@ -174,7 +174,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if config.get('managed'):
             self.remote_operations.unmount_clients()
             # stop any running filesystems
-            for filesystem in self.get_list("/api/filesystem/"):
+            for filesystem in [f for f in
+                               self.get_list("/api/filesystem/")
+                               if f['state'] == "available"]:
+                logger.debug("stopping filesystem %s" % filesystem)
                 self.stop_filesystem(filesystem['id'])
 
         if self.simulator:
