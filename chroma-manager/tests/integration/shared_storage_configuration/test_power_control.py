@@ -112,7 +112,6 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
         self.wait_until_true(lambda: host_can_be_fenced(self.server))
 
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
-    @unittest.skipIf(True, "Skip temporarily in order to land #244")
     def test_toggled_outlet_does_not_trigger_fencing_update(self):
         def _fencing_job_count():
             return len([j for j in
