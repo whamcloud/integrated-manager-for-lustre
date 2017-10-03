@@ -216,8 +216,7 @@ class ChromaLogCollector(object):
             diagnostics).group(1)
 
         if shell_run([
-                'chmod', '-R'
-                '777',
+                'chmod', '-R', '777',
                 "%s/%s" % (self.destination_path, diagnostics_dir)
         ]).rc:
             errors.append(
