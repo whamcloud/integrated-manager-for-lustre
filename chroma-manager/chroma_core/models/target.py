@@ -844,7 +844,6 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False,
                                                  'validate_importable': True})
 
                 result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
@@ -857,7 +856,6 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False,
                                                  'validate_importable': False})
 
     @classmethod
@@ -997,16 +995,22 @@ class RegisterTargetJob(StateChangeJob):
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
-            steps = [(RegisterTargetStep, {
-                'primary_host': primary_mount.host,
-                'target': self.target,
-                'device_path': path,
-                'mount_point': primary_mount.mount_point,
-                'backfstype': backfstype
-            })]
+            steps = [(MountOrImportStep,
+                      MountOrImportStep.create_parameters(self.target,
+                                                          primary_mount.host,
+                                                          False)),
+                     (RegisterTargetStep, {'primary_host': primary_mount.host,
+                                           'target': self.target,
+                                           'device_path': path,
+                                           'mount_point': primary_mount.mount_point,
+                                           'backfstype': backfstype}),
+                     (MountOrImportStep,
+                      MountOrImportStep.create_parameters(self.target,
+                                                          None,
+                                                          False))]
         else:
             raise NotImplementedError(target_class)
 
@@ -1121,7 +1125,11 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()}),
+                (MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target,
+                                                     None,
+                                                     False))]
 
 
 class PreFormatCheck(Step):
@@ -1226,45 +1234,63 @@ class MkfsStep(Step):
 
 
 class UpdateManagedTargetMount(Step):
-    """
-    This step will update the volume_nodes within the
-    manage target mounts to reflect changes during MkfsStep
-    """
+    """ This step will update the volume_node within the manage target mounts to reflect changes during MkfsStep """
     database = True
+
+    @staticmethod
+    def _primary_text(kwargs):
+        return 'primary' if kwargs['primary'] is True else 'secondary'
 
     @classmethod
     def describe(cls, kwargs):
-        return "Update managed target mounts for target %s" % kwargs['target']
+        return "Update %s managed target mount for target %s" % (cls._primary_text(kwargs), kwargs['target'])
 
     def run(self, kwargs):
         target = kwargs['target']
-        job_log.info("Updating mtm volume_nodes for target %s" % target)
+        is_primary = kwargs['primary']
+        job_log.info("Updating %s mtm volume_node for target %s" % (self._primary_text(kwargs), target))
 
         original_volume = target.volume
         device_type = original_volume.storage_resource.to_resource_class().device_type()
 
-        for mtm in target.managedtargetmount_set.all():
-            host = mtm.host
+        try:
+            mtm = target.managedtargetmount_set.get(volume_node__primary=is_primary)
+        except ManagedTargetMount.MultipleObjectsReturned:
+            job_log.error("Multiple %s MTM objects returned, only expecting one" % self._primary_text(kwargs))
+            raise
+        except ManagedTargetMount.DoesNotExist:
+            if is_primary is False:
+                job_log.info("No secondary mount found for target %s" % target.name)
+                return
+            raise
+        else:
             current_volume_node = mtm.volume_node
-            assert original_volume == current_volume_node.volume
-            primary = current_volume_node.primary
+            if is_primary:
+                assert original_volume == current_volume_node.volume
 
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
 
-            mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(target.name)),
-                                                   logger=job_log,
-                                                   timeout = 60 * 60,
-                                                   expected_exception_classes=[VolumeNode.DoesNotExist])
+            try:
+                mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=mtm.host,
+                                                                                      path=filesystem.mount_path(target.name)),
+                                                       logger=job_log,
+                                                       timeout = 60 * 60,
+                                                       expected_exception_classes=[VolumeNode.DoesNotExist])
+            except:
+                job_log.error("Failed to find %s volumenode (host: %s, mount path: %s, target: %s)" % (self._primary_text(kwargs),
+                                                                                                       mtm.host,
+                                                                                                       filesystem.mount_path(target.name),
+                                                                                                       target.name))
+                job_log.debug("Existing volumenodes: %s" % VolumeNode.objects.all())
+                raise
 
-            mtm.volume_node.primary = primary
+            mtm.volume_node.primary = is_primary
             mtm.volume_node.save()
             mtm.save()
 
             target.volume = mtm.volume_node.volume
-
-        target.save()
+            target.save()
 
 
 class FormatTargetJob(StateChangeJob):
@@ -1313,7 +1339,7 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        primary_mount = self.target.managedtargetmount_set.get(primary = True)
+        primary_mount = self.target.managedtargetmount_set.get(primary=True)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1356,7 +1382,13 @@ class FormatTargetJob(StateChangeJob):
                                   'device_type': device_type,
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target})])
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': True}),
+                      # Unmount from primary host to enable secondary VolumeNode to be registered in resource manager
+                      (MountOrImportStep,
+                       MountOrImportStep.create_parameters(self.target,
+                                                           None,
+                                                           False)),
+                      (UpdateManagedTargetMount, {'target': self.target, 'primary': False})])
 
         return steps
 

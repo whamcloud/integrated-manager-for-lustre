@@ -27,4 +27,4 @@ class TestBlockDeviceLinux(TestBlockDevice):
         return ['dd if=/dev/zero of=%s bs=4k count=1; sync' % self.device_path]
 
     def __str__(self):
-        return 'zpool(%s)' % self.device_path
+        return '%s' % self.device_path

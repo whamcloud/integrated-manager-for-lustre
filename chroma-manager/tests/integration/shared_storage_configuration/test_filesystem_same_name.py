@@ -1,5 +1,5 @@
 
-from testconfig import config
+import time
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
@@ -10,7 +10,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         Test that creating a filesystem with the same name as a
         previously removed filesystem on the same MGS.
         """
-        self.assertGreaterEqual(len(config['lustre_servers'][0]['device_paths']), 5)
+        self.assertGreaterEqual(len(self.TEST_SERVERS[0]['device_paths']), 5)
 
         reused_name = 'testfs'
         other_name = 'foofs'
@@ -79,10 +79,15 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Filter out the paths by removing anything with a leading /.
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
+        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:4])
         self.cleanup_zfs_pools(self.TEST_SERVERS[:4],
                                self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
                                datasets,
                                True)
+        self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:4])
+
+        # Wait for agent responses to be detected by manager
+        time.sleep(10)
 
         # Our other FS should be untouched
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects']), 1)

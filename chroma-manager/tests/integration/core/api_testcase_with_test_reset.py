@@ -905,6 +905,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
 
+        # debug : we want to always do this on all hosts that have access to the underlying disks
+        test_servers = config['lustre_servers'][:4]
+
+        # Ensure agents stopped to avoid interference with pool imports/exports
+        self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
+
+        # Attempt to unmount all lustre targets otherwise we won't be able to export parent pool
+        [self.remote_operations.unmount_lustre_targets(server) for server in test_servers]
+
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
         try:
@@ -923,9 +932,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         for lustre_device in config['lustre_devices']:
             if ((lustre_device['backend_filesystem'] == 'zfs') and
-                    ((zpool_datasets is None) or
-                     dataset_match(zpool_datasets,
-                                   first_test_server['device_paths'][lustre_device['path_index']]))):
+                    ((zpool_datasets is None) or dataset_match(zpool_datasets,
+                                                               first_test_server['device_paths'][lustre_device['path_index']]))):
 
                 zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
 
@@ -942,14 +950,20 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     imported_zpools.append(zfs_device)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
-                    # dd the disk to get rid of the thing, otherwise raise the error.
+                    # dd the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
                     if action & self.CZP_REMOVEZPOOLS:
-                        ldiskfs_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+                        self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
+                                                           [server['fqdn'] for server in test_servers],
+                                                           'force destroy zpool %s' % zfs_device,
+                                                           expected_return_code=None)
 
-                        self.execute_simultaneous_commands(ldiskfs_device.destroy_commands,
-                                                           [first_test_server['fqdn']],
-                                                           'clearing disk because zfs import failed %s' % ldiskfs_device,
-                                                           expected_return_code=0)
+                        self.execute_simultaneous_commands(zfs_device.clear_label_commands,
+                                                           [server['fqdn'] for server in test_servers],
+                                                           'clear zpool labels on %s' % zfs_device,
+                                                           expected_return_code=None)
+
+                        [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
+                        [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
                     else:
                         raise
 
@@ -991,6 +1005,16 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.execute_commands(zfs_device.release_commands,
                                       first_test_server['fqdn'],
                                       'export zfs device %s' % zfs_device)
+
+        for server in test_servers:
+            for lustre_device in config['lustre_devices']:
+                if lustre_device['backend_filesystem'] == 'zfs':
+                    zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
+
+                    self.execute_commands(zfs_device.release_commands,
+                                          server['fqdn'],
+                                          'export zfs device %s' % zfs_device,
+                                          expected_return_code=None)
 
     def cleanup_linux_devices(self, test_servers):
         """

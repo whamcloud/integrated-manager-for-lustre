@@ -428,7 +428,7 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)):
+    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -448,23 +448,22 @@ def unmount_target(uuid):
         exit(-1)
 
 
-def import_target(device_type, path, pacemaker_ha_operation, validate_importable=False):
+def import_target(device_type, path, validate_importable=False):
     """
     Passed a device type and a path import the device if such an operation make sense. For example a jbod scsi
     disk does not have the concept of import whilst zfs does.
     :param device_type: the type of device to import
     :param path: path of device to import
-    :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
-               often have not have been cleanly exported because the previous mounted node failed in operation.
     :param validate_importable: The intention is to make sure the device can be imported but not actually import it.
                in this in incarnation the device is import and the exported checking for errors.
     :return: None or an Error message
     """
     blockdevice = BlockDevice(device_type, path)
 
-    error = blockdevice.import_(pacemaker_ha_operation)
+    error = blockdevice.import_()
     if error:
         console_log.error("Error importing pool: '%s'" % error)
+        return import_target(device_type, path, validate_importable)
 
     if (error is None) and (validate_importable is True):
         error = blockdevice.export()
