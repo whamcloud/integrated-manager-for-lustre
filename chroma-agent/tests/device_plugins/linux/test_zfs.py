@@ -38,6 +38,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                     'major_minor': 'zfspool:zfsPool1',
                                     'parent': None,
                                     'path': 'zfsPool1',
+                                    'paths': ['zfsPool1'],
                                     'serial_80': None,
                                     'serial_83': None,
                                     'size': 1099511627776},
@@ -45,6 +46,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                           'major_minor': 'zfsset:AAAAAAAAAAAAAAA',
                                           'parent': None,
                                           'path': 'zfsPool3/mgs',
+                                          'paths': ['zfsPool3/mgs'],
                                           'serial_80': None,
                                           'serial_83': None,
                                           'size': 1099511627776},
@@ -52,6 +54,7 @@ dev_results = {'zfspool:zfsPool1': {'filesystem_type': None,
                                           'major_minor': 'zfsset:ABCDEF123456789',
                                           'parent': None,
                                           'path': 'zfsPool3/mgt',
+                                          'paths': ['zfsPool3/mgt'],
                                           'serial_80': None,
                                           'serial_83': None,
                                           'size': 1099511627776}}
@@ -90,9 +93,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     @patch('glob.glob', mock_empty_list)
     @patch('logging.Logger.debug', Mock())  # mock_debug)
     @patch('chroma_agent.utils.BlkId', dict)
-    @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.find_block_devs', mock_empty_dict)
-    @patch('chroma_agent.device_plugins.linux_components.block_devices.BlockDevices.paths_to_major_minors',
-           mock_empty_list)
+    @patch('chroma_agent.device_plugins.linux_components.block_devices.scanner_cmd', mock_empty_dict)
     @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice')
     @patch('chroma_agent.device_plugins.linux_components.zfs.read_from_store', mock_read_from_store)
     @patch('chroma_agent.device_plugins.linux_components.zfs.write_to_store', mock_write_to_store)
@@ -142,7 +143,8 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         AND there are no other pools to import,
         THEN only the datasets (not zpool) are reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stdout=zfs_example_data.multiple_imported_pools_status),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout="no pools available to import\n"),
@@ -172,6 +174,7 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         self.assertEqual(zfs_devices.datasets, zfs_results['datasets'])
         self.assertEqual(zfs_devices.zvols, zfs_results['zvols'])
 
+        self.maxDiff = 5000
         # verify blockdevices device_nodes also have been updated
         self.assertDictEqual(block_devices.block_device_nodes, dev_results)
 
@@ -184,7 +187,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND the offline zpool is not reported,
         AND the zpool without datasets is reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.multiple_exported_online_offline_pools),
@@ -230,7 +234,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND try to read zpool info from store fails,
         THEN no zpool is reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool))
@@ -251,7 +256,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         AND try to read zpool info from store succeeds,
         THEN expected  are reported.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.single_raidz2_unavail_pool_B))
@@ -272,7 +278,8 @@ zfsPool3/mgs    1T    AAAAAAAAAAAAAAA\n"""),
         WHEN inactive ONLINE zpool is imported,
         THEN correct zpool info is supplied in call to write to store.
         """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+        self.add_commands(CommandCaptureCommand(("udevadm", "settle")),
+                          CommandCaptureCommand(("zpool", "status"),
                                                 stderr='no pools available\n'),
                           CommandCaptureCommand(("zpool", "import"),
                                                 stdout=zfs_example_data.multiple_exported_online_offline_pools),
