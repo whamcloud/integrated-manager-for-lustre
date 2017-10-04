@@ -542,7 +542,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def run_iml_diagnostics(self, server, verbose):
         return self._ssh_fqdn(server['fqdn'],
-                              "iml-diagnostics" + " --all_logs" if verbose else "",
+                              "iml-diagnostics" + " --all-logs" if verbose else "",
                               timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
