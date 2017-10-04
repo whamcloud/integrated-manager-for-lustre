@@ -69,10 +69,31 @@ sslclientcert = {2}
 
     def test_kernel_status(self):
         def run(arg_list):
-            values = {("rpm", "-q", "--whatprovides", "kmod-lustre"):
-                      "kmod-lustre-1.2.3-1.el6.x86_64\n",
-                      ("uname", "-r"):
+            values = {("uname", "-r"):
                       "2.6.32-358.2.1.el6.x86_64\n",
+                      ("rpm", "-q", "--whatprovides", "kmod-lustre"):
+                      "kmod-lustre-1.2.3-1.el6.x86_64\n",
+                      ("rpm", "-q", "--requires", "kmod-lustre"):
+                      "/usr/sbin/depmod\n"
+                      "kernel < 3.10.0-694\n"
+                      "kernel >= 3.10.0-693\n"
+                      "/bin/sh\n"
+                      "kernel(PDE_DATA) = 0x44f0d59d\n"
+                      "kernel(__fentry__) = 0xbdfb6dbb\n"
+                      "kernel(__init_waitqueue_head) = 0xf432dd3d\n"
+                      "kernel(__mutex_init) = 0x9a025cd5\n",
+                      ("repoquery", "-q", "--qf",
+                      "%{name}-%{version}-%{release}.%{arch}",
+                      "--whatprovides",
+                      "kernel(PDE_DATA) = 0x44f0d59d"):
+                      "kernel-3.10.0-693.2.2.el7.x86_64\n"
+                      "kernel-3.10.0-693.1.1.el7.x86_64\n"
+                      "kernel-3.10.0-693.el7.x86_64\n"
+                      "kernel-3.10.0-693.2.1.el7.x86_64\n",
+                      ("rpm", "-q", "kernel-3.10.0-693.1.1.el7.x86_64"):
+                      "package kernel-0:3.10.0-693.1.1.el7.x86_64 is not installed\n",
+                      ("rpm", "-q", "kernel-3.10.0-693.2.2.el7.x86_64"):
+                      "kernel-3.10.0-693.2.2.el7.x86_64\n",
                       ("rpm", "-q", "kernel"):
                       "kernel-2.6.32-358.2.1.el6.x86_64\n"
                       "kernel-2.6.32-358.18.1.el6_lustre.x86_64\n"}
@@ -81,7 +102,7 @@ sslclientcert = {2}
         with patch('chroma_agent.lib.shell.AgentShell.run', side_effect=run):
             result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
-                'required': 'kernel-2.6.32-358.18.1.el6_lustre.x86_64',
+                'required': 'kernel-3.10.0-693.2.2.el7.x86_64',
                 'running': 'kernel-2.6.32-358.2.1.el6.x86_64',
                 'available': [
                     "kernel-2.6.32-358.2.1.el6.x86_64",

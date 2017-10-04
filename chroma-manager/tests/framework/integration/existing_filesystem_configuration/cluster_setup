@@ -59,8 +59,7 @@ sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a 
 yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*$COPR_PROJECT*; then
     rpm --import https://copr-be.cloud.fedoraproject.org/results/$COPR_OWNER/$COPR_PROJECT/pubkey.gpg
-fi
-$LOCAL_CLUSTER_SETUP" | dshbak -c
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -130,6 +129,8 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "ex
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
 fi
+
+yum -y install http://download.zfsonlinux.org/epel/zfs-release.el7_4.noarch.rpm
 
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo

@@ -18,7 +18,6 @@
       "chroma-agent-management"
     ],
     "external": [
-      "kernel-devel-lustre",
       "lustre-ldiskfs-zfs"
     ]
   },
