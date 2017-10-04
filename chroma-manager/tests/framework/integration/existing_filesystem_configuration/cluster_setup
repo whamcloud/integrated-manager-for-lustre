@@ -53,14 +53,13 @@ else
     sed -i -e '1d' -e \"2s/^.*$/[lustre-server]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_SERVER_REPO_FILE"
 fi
 
-yum-config-manager --add-repo https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
-sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/downloads.whamcloud.com_public_e2fsprogs_latest_el7_.repo
+yum-config-manager --add-repo https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
+sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/downloads.hpdd.intel.com_public_e2fsprogs_latest_el7_.repo
 
 yum -y install distribution-gpg-keys-copr
 if ! ls /usr/share/distribution-gpg-keys/copr/copr-*$COPR_PROJECT*; then
     rpm --import https://copr-be.cloud.fedoraproject.org/results/$COPR_OWNER/$COPR_PROJECT/pubkey.gpg
-fi
-$LOCAL_CLUSTER_SETUP" | dshbak -c
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -143,6 +142,8 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "ex
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
 fi
+
+yum -y install http://download.zfsonlinux.org/epel/zfs-release.el7_4.noarch.rpm
 
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo

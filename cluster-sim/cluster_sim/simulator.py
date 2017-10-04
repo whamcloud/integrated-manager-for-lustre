@@ -226,6 +226,7 @@ class ClusterSimulator(Persisted):
         self.state['packages'] = {
             'server': {
                 'lustre-ldiskfs-zfs': (0, '1', '1', 'x86_64'),
+                'lustre-ldiskfs-patchless-zfs': (0, '1', '1', 'x86_64'),
                 'lustre': (0, '2.1.4', '1', 'x86_64'),
                 'lustre-dkms': (0, '2.1.4', '1', 'x86_64'),
                 'kmod-lustre-osd-ldiskfs': (0, '2.1.4', '1', 'x86_64'),

@@ -114,7 +114,7 @@ set_defaults() {
         export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
     else
         BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.2/el7"
-        export LUSTRE_SERVER_URL="$BASE_URL/server/"
+        export LUSTRE_SERVER_URL="$BASE_URL/patchless-ldiskfs-server/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/"
     fi
     LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_SERVER_URL" | sed -e 's/^.*:\/\///' -e 's/\/\/*/_/g').repo"
