@@ -13,9 +13,9 @@ ldiskfs_installer() {
 
 set -e
 
-yum -y install --exclude kmod-lustre-osd-zfs lustre
+yum -y install dnf
+dnf -y install --exclude zfs-dkms lustre
 
-echo "You need to reboot to activate the Lustre kernel"
 EOF
 
 }
@@ -27,7 +27,8 @@ zfs_installer() {
 
 set -e
 
-yum -y install lustre-dkms lustre zfs kernel-devel-[0-9]\*_lustre
+yum -y install dnf
+dnf -y install lustre-ldiskfs-patchless-zfs
 EOF
 
 }
