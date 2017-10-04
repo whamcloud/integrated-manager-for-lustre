@@ -15,18 +15,16 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
 from iml_common.blockdevices.blockdevice import BlockDevice
-from iml_common.blockdevices.blockdevice_zfs import ZfsDevice
+from iml_common.blockdevices.blockdevice_zfs import ZfsDevice, ZFS_OBJECT_STORE_PATH
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.lib.exception_sandbox import exceptionSandBox
 from iml_common.lib import util
-
-STORE_FILENAME = '/tmp/store.json'
 
 filter_empty = partial(filter, None)
 strip_lines = partial(map, lambda x: x.strip())
 
 
-def write_to_store(key, value, filename=STORE_FILENAME):
+def write_to_store(key, value, filename=ZFS_OBJECT_STORE_PATH):
     data = {}
 
     try:
@@ -42,7 +40,7 @@ def write_to_store(key, value, filename=STORE_FILENAME):
         f.write(json.dumps(data))
 
 
-def read_from_store(key, filename=STORE_FILENAME):
+def read_from_store(key, filename=ZFS_OBJECT_STORE_PATH):
     daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
     with open(filename, 'r') as f:
         return json.loads(f.read())[key]
