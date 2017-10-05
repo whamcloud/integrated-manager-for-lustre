@@ -428,7 +428,7 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
+    if agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)):
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -465,7 +465,6 @@ def import_target(device_type, path, pacemaker_ha_operation, validate_importable
     error = blockdevice.import_(pacemaker_ha_operation)
     if error:
         console_log.error("Error importing pool: '%s'" % error)
-        return import_target(device_type, path, validate_importable)
 
     if (error is None) and (validate_importable is True):
         error = blockdevice.export()

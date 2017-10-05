@@ -25,21 +25,26 @@ strip_lines = partial(map, lambda x: x.strip())
 
 
 def write_to_store(key, value, filename=ZFS_OBJECT_STORE_PATH):
-    data = {}
+    x = '{}'
 
     try:
         with open(filename, 'r') as f:
-            data = json.loads(f.read())
-    except:
+            y = f.read()
+
+            if len(y) > 1:
+                x = y
+    except IOError:
         # not readable carry on
         daemon_log.info('write_to_store(): failed reading zfs data from %s.' % filename)
         pass
 
-    daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
+    dataDict = json.loads(x)
+
+    daemon_log.info('write_to_store(): writing zfs dataDict to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
-    data[key] = value
+    dataDict[key] = value
     with open(filename, 'w') as f:
-        f.write(json.dumps(data))
+        f.write(json.dumps(dataDict))
 
 
 def read_from_store(key, filename=ZFS_OBJECT_STORE_PATH):
