@@ -27,12 +27,18 @@ Requires: python-requests >= 2.6.0
 Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
-Requires: chroma-diagnostics >= %{version}
-Requires: python2-iml-common
+Requires: iml_sos_plugin
+Requires: python2-iml-common1.1
+Requires: systemd-python
+Requires: python-tzlocal
+Requires: python2-toolz
+Requires: iml-device-scanner
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
 Requires(post): selinux-policy
+Requires: dnf
+Requires: dnf-command(repoquery)
 
 %description
 This is the Intel Manager for Lustre monitoring and adminstration agent
@@ -43,7 +49,6 @@ Group: System/Utility
 Conflicts: sysklogd
 
 Requires: %{name} = %{version}-%{release}
-Requires: rsyslog
 Requires: pcs
 Requires: libxml2-python
 Requires: python-netaddr
@@ -95,12 +100,9 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 
-# Nuke source code (HYD-1849)
-find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
-
 touch management.files
 cat <<EndOfList>>management.files
-%{python_sitelib}/chroma_agent/action_plugins/manage_*.py[c,o]
+%{python_sitelib}/chroma_agent/action_plugins/manage_*.py*
 %{python_sitelib}/chroma_agent/templates/
 /usr/lib/ocf/resource.d/chroma/Target
 %{_sbindir}/fence_chroma
@@ -108,14 +110,14 @@ cat <<EndOfList>>management.files
 EndOfList
 
 touch base.files
-for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.pyc'); do
+for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.py'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
   for mgmt_pat in $(<management.files); do
     if [[ $install_file == $mgmt_pat ]]; then
       continue 2
     fi
   done
-  echo "${install_file%.py*}.py[c,o]" >> base.files
+  echo "${install_file%.py*}.py*" >> base.files
 done
 
 %clean
@@ -136,9 +138,6 @@ elif [ $1 -eq 2 ]; then
     chroma-agent convert_agent_config
 fi
 
-%post management
-chkconfig rsyslog on
-
 # when a kernel is installed, make sure that our kernel is reset back to
 # being the preferred boot kernel
 %triggerin management -- kernel
@@ -154,7 +153,4 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 %attr(0644,root,root)/etc/logrotate.d/chroma-agent
 
 %files -f management.files management
-%defattr(-,root,root)
-
-%files -f devel.files devel
 %defattr(-,root,root)

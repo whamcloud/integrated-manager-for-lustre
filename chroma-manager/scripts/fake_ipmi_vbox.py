@@ -8,6 +8,7 @@
 import os
 import sys
 import socket
+import getpass
 sys.path.insert(0, os.getcwd())
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
@@ -15,7 +16,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 def fatal(msg):
     sys.stderr.write("%s\n" % msg)
     sys.exit(1)
-
 
 try:
     from chroma_core.models import PowerControlType, PowerControlDevice
@@ -33,13 +33,13 @@ if __name__ == "__main__":
     except PowerControlType.DoesNotExist:
         fatal("Could not find the IPMI power type! Is the DB set up?")
 
-    ipmi.agent = "fence_virsh"
+    ipmi.agent = "fence_vbox"
     ipmi.default_port = 22
-    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s"
-    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s"
-    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s"
-    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor"
-    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s"
+    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o on -n %(identifier)s"
+    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o reboot -n %(identifier)s"
+    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s"
+    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor"
+    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s"
     ipmi.save()
 
     vm_host = raw_input("Enter the IP Address of your VM Host: ")
@@ -49,8 +49,17 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
+    user_name = raw_input("Enter the VM Host SSH user: ")
+
+    pw = getpass.getpass(prompt="Enter the VM Host SSH password: ")
+    pw2 = getpass.getpass(prompt="Re-enter the VM Host SSH password: ")
+
+    if pw != pw2:
+        fatal("Passwords do not match")
+
     PowerControlDevice.objects.get_or_create(
-        device_type=ipmi, address=vm_host, port=22)
+        device_type=ipmi, address=vm_host, port=22,
+        username=user_name, password=pw)
     try:
         transaction.commit()
     except transaction.TransactionManagementError:
@@ -60,10 +69,6 @@ if __name__ == "__main__":
 ********* IMPORTANT: THIS IS AN UNSUPPORTED CONFIGURATION **********
 ************ NOT INTENDED FOR PRODUCTION DEPLOYMENTS!!! *************
 
-The IPMI power control type will now drive a KVM host to emulate power control
-and STONITH, provided the following conditions are met:
-
-    * The IML manager can ssh as root to the KVM host, WITHOUT A PASSWORD
-    * Lustre servers can ssh as root to the KVM host, WITHOUT A PASSWORD
-    * When adding a BMC, the hostname entered matches the vm name as shown in `virsh list` on the KVM host
+The IPMI power control type will now drive a vbox host to emulate power control
+and STONITH.
 """

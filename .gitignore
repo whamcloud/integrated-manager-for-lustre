@@ -18,7 +18,6 @@ tags
 chroma-bundles/*/repo
 chroma-bundles/*/*.tar.gz
 chroma-bundles/iml-*.tar.gz
-chroma-bundles/EULA.txt
 chroma-bundles/lesskey.out
 chroma-bundles/ieel-*.tar.gz
 chroma-manager/myenv/

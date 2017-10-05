@@ -125,7 +125,6 @@ class TestHostResource(ChromaApiTestCase):
                                 ntp=False,
                                 corosync=False,
                                 corosync2=False,
-                                rsyslog=False,
                                 initial_state="monitored")
         test_sp.save()
         test_sp.bundles.add(Bundle.objects.get(bundle_name='agent'))
@@ -226,7 +225,6 @@ class TestHostResource(ChromaApiTestCase):
                                 worker=False,
                                 corosync=False,
                                 corosync2=False,
-                                rsyslog=False,
                                 ntp=False,
                                 user_selectable=False,
                                 initial_state="monitored")

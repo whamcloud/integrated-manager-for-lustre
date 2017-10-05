@@ -156,7 +156,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def get_corosync_port(self, fqdn):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return Shell.RunResult(rc=0, stdout="", stderr="", timeout=False)
 
     def backup_cib(*args, **kwargs):
@@ -412,6 +412,18 @@ class RealRemoteOperations(RemoteOperations):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+        # the set -e just sets up a fail-safe execution environment where
+        # any shell commands in command that fail and are not error checked
+        # cause the shell to fail, alerting the caller that one of their
+        # commands failed unexpectedly
+        command = "set -e; %s" % command
+
+        # exec 0<&- being prefixed to the shell command string below closes
+        # the shell's stdin as we don't expect any uses of remote_command()
+        # to read from stdin
+        if not buffer:
+            command = "exec 0<&-; %s" % command
+
         args = {'username': 'root'}
         # If given an ssh_config file, require that it defines
         # a private key and username for accessing this host
@@ -528,9 +540,9 @@ class RealRemoteOperations(RemoteOperations):
         # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
         self._ssh_address(fqdn, 'chroma-config restart')
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return self._ssh_fqdn(server['fqdn'],
-                              "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
+                              "iml-diagnostics" + " --all-logs" if verbose else "",
                               timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
@@ -1144,17 +1156,17 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             if self.has_chroma_agent(server):
                 self._ssh_address(
-                    server, 
+                    server,
                     '''
                     systemctl stop chroma-agent
                     i=0
-                    
+
                     while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
                         ((i++))
                         sleep 1
                     done
-                    
-                    if [ "$i" -eq {timeout} ]; then 
+
+                    if [ "$i" -eq {timeout} ]; then
                         exit 1
                     fi
                     '''.format(timeout=TEST_TIMEOUT)

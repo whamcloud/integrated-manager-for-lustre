@@ -18,7 +18,7 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel
 
 # Create a user so we can run chroma as non-root
 if ! id chromatest; then
@@ -28,7 +28,7 @@ su chromatest
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
 exit
-cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
+cat .ssh/id_rsa.pub >> ~chromatest/.ssh/authorized_keys
 scp .ssh/* chromatest@$CHROMA_MANAGER:.ssh/
 
 # Configure rabbitmq

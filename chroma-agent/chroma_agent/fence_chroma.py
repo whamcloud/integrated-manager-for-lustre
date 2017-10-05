@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
@@ -58,8 +59,8 @@ Arguments read from standard input take the form of:
 
     if ns.action == "metadata":
         print """<?xml version="1.0" ?>
-<resource-agent name="fence_chroma" shortdesc="Fence agent for Intel Manager for Lustre Storage Servers">
-<longdesc>fence_chroma is an I/O Fencing agent which can be used with Intel Manager for Lustre Storage Servers.</longdesc>
+<resource-agent name="fence_chroma" shortdesc="Fence agent for Intel® Manager for Lustre* software Storage Servers">
+<longdesc>fence_chroma is an I/O Fencing agent which can be used with Intel® Manager for Lustre* software Storage Servers.</longdesc>
 <vendor-url>http://www.intel.com</vendor-url>
 <parameters>
     <parameter name="port">

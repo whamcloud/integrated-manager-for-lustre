@@ -290,7 +290,7 @@ DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settin
 SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
 
 # Supported power control agents
-SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh']
+SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh', 'fence_vbox']
 
 # How long to wait for a storage server to reboot after installing a new kernel
 INSTALLATION_REBOOT_TIMEOUT = 300
@@ -299,8 +299,6 @@ INSTALLATION_REBOOT_TIMEOUT = 300
 AGENT_RESTART_TIMEOUT = 30
 
 SSH_CONFIG = None
-
-AUTH_PROFILE_MODULE = "chroma_core.UserProfile"
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
