@@ -30,7 +30,9 @@ def write_to_store(key, value, filename=ZFS_OBJECT_STORE_PATH):
     try:
         with open(filename, 'r') as f:
             data = json.loads(f.read())
-    except IOError:
+    except:
+        # not readable carry on
+        daemon_log.info('write_to_store(): failed reading zfs data from %s.' % filename)
         pass
 
     daemon_log.info('write_to_store(): writing zfs data to %s. key: %s' % (filename, key))
