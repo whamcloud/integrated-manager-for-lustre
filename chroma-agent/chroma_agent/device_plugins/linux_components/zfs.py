@@ -40,7 +40,7 @@ def write_to_store(key, value, filename=ZFS_OBJECT_STORE_PATH):
 
     dataDict = json.loads(x)
 
-    daemon_log.info('write_to_store(): writing zfs dataDict to %s. key: %s' % (filename, key))
+    daemon_log.debug('write_to_store(): writing zfs dataDict to %s. key: %s' % (filename, key))
     # preserve other keys, only overwrite the key specified
     dataDict[key] = value
     with open(filename, 'w') as f:
