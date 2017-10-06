@@ -24,33 +24,44 @@ filter_empty = partial(filter, None)
 strip_lines = partial(map, lambda x: x.strip())
 
 
-def write_to_store(key, value, filename=ZFS_OBJECT_STORE_PATH):
+def write_to_store(key, value):
+    """
+    :param key: key to update value for store
+    :param value: value to assign to given key
+    :param filepath: filepath of store
+    :return: None
+    """
+    daemon_log.debug('write_to_store(): writing zfs data to %s. key: %s' % (ZFS_OBJECT_STORE_PATH, key))
+
+    dataDict = read_store()
+
+    # preserve other keys, only update the key specified
+    dataDict[key] = value
+
+    dataString = json.dumps(dataDict)
+
+    with open(ZFS_OBJECT_STORE_PATH, 'w') as f:
+        f.write(dataString)
+
+
+def read_from_store(key):
+    """ Read specific key from store """
+    daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (ZFS_OBJECT_STORE_PATH, key))
+
+    return read_store()[key]
+
+
+def read_store():
+    """ Store file should always exist because it's created on agent initialisation """
     x = '{}'
 
-    try:
-        with open(filename, 'r') as f:
-            y = f.read()
+    with open(ZFS_OBJECT_STORE_PATH, 'r') as f:
+        y = f.read()
 
-            if len(y) > 1:
-                x = y
-    except IOError:
-        # not readable carry on
-        daemon_log.info('write_to_store(): failed reading zfs data from %s.' % filename)
-        pass
+        if len(y) > len(x):
+            x = y
 
-    dataDict = json.loads(x)
-
-    daemon_log.debug('write_to_store(): writing zfs dataDict to %s. key: %s' % (filename, key))
-    # preserve other keys, only overwrite the key specified
-    dataDict[key] = value
-    with open(filename, 'w') as f:
-        f.write(json.dumps(dataDict))
-
-
-def read_from_store(key, filename=ZFS_OBJECT_STORE_PATH):
-    daemon_log.info('read_from_store(): reading zfs data from %s with key: %s' % (filename, key))
-    with open(filename, 'r') as f:
-        return json.loads(f.read())[key]
+    return json.loads(x)
 
 
 def clean_list(xs):
@@ -291,7 +302,7 @@ class ZfsDevices(object):
                         # previously seen zpool state either with or without datasets
                         try:
                             data = read_from_store(pool['id'])
-                        except (IOError, KeyError) as e:
+                        except KeyError as e:
                             daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
                                              "pool: %s)" % (e, pool['pool']))
                             continue
@@ -331,10 +342,7 @@ class ZfsDevices(object):
                    "drives": drive_mms}
 
         # write new data to store (_pool/datasets/Zvols)
-        try:
-            write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
-        except (IOError, KeyError) as e:
-            daemon_log.warning("Error when writing to store: %s (pool: %s)" % (e, name))
+        write_to_store(uuid, {'pool': pool_md, 'datasets': datasets, 'zvols': zvols})
 
         self._update_pool_or_datasets(block_devices, pool_md, datasets, zvols)
 
