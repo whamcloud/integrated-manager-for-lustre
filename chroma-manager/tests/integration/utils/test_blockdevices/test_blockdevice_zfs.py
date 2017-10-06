@@ -27,7 +27,8 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return ["systemctl disable zfs.target",
-                "zpool create -f %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+                "parted self._device_path mklabel gpt",
+                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
@@ -55,13 +56,17 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def release_commands(self):
-        # For test we want to force export, which is not a risk-free operation but between tests we want to reset
+        # For test we want to export, which is not a risk-free operation
+        # but between tests we want to reset
         return ["zpool export %s" % self.device_path]
 
     @property
     def capture_commands(self):
-        # For test we want to force import, which is not a risk-free operation but between tests we want to reset
-        return ["partprobe | true",                     # partprobe always exits 1 so smother then return
+        # For test we want to import, which is not a risk-free operation
+        # but between tests we want to reset
+        # partprobe always exits 1 so smother then return
+        return ["partprobe | true",
+                "udevadm settle",
                 "zpool import %s" % self.device_path]
 
     @classmethod
@@ -76,12 +81,20 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def destroy_commands(self):
         if '/' in self.device_path:
             return ['zfs destroy %s' % self.device_path]
-        else:
-            return ['zpool destroy %s' % self.device_path]
+
+        return ['zpool destroy %s' % self.device_path]
 
     @property
     def clear_label_commands(self):
-        return ['zpool labelclear -f %s' % self.device_path]
+        cmds = ['zpool labelclear -f %s' % self.device_path]
+
+        if not self.device_path_is_zpool_name:
+            cmds += [
+                'parted %s rm 1' % self._device_path,
+                'parted %s rm 9' % self._device_path
+            ]
+
+        return cmds
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
