@@ -70,7 +70,7 @@ fetch_build:
 	fi
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
-chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
+chroma-dependencies: chroma-agent chroma-manager
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile

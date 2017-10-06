@@ -7,7 +7,7 @@ import logging
 import datetime
 
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
-from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
+from chroma_agent.device_plugins.systemd_journal import MAX_LOG_LINES_PER_MESSAGE
 from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
 from iml_common.lib.date_time import IMLDateTime
 log = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
                          'nids': nids}}
 
 
-class BaseFakeSyslogPlugin(DevicePlugin):
+class BaseFakeSystemdJournalPlugin(DevicePlugin):
     _server = None
 
     def start_session(self):
@@ -89,7 +89,7 @@ class BaseFakeSyslogPlugin(DevicePlugin):
                     'source': 'cluster_sim',
                     'severity': 1,
                     'facility': 1,
-                    'message': 'Lustre: Cluster simulator syslog session start %s %s' % (self._server.fqdn, datetime.datetime.now()),
+                    'message': 'Lustre: Cluster simulator systemd_journal session start %s %s' % (self._server.fqdn, datetime.datetime.now()),
                     'datetime': IMLDateTime.utcnow().isoformat() + 'Z'
                 }
             ]
@@ -263,7 +263,7 @@ class FakeDevicePlugins():
         class FakeLustrePlugin(BaseFakeLustrePlugin):
             _server = self._server
 
-        class FakeSyslogPlugin(BaseFakeSyslogPlugin):
+        class FakeSystemdJournalPlugin(BaseFakeSystemdJournalPlugin):
             _server = self._server
 
         class FakeCorosyncPlugin(BaseFakeCorosyncPlugin):
@@ -274,7 +274,7 @@ class FakeDevicePlugins():
             'linux_network': FakeLinuxNetworkPlugin,
             'lustre': FakeLustrePlugin,
             'action_runner': ActionRunnerPlugin,
-            'syslog': FakeSyslogPlugin,
+            'systemd_journal': FakeSystemdJournalPlugin,
             'corosync': FakeCorosyncPlugin,
             'simulator_controller': ClusterSimulator
         }

@@ -47,7 +47,7 @@ Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.16
 Requires: django-picklefield
 Requires: chroma-manager-cli = %{version}-%{release}
-Requires: chroma-diagnostics >= %{version}-%{release}
+Requires: iml_sos_plugin
 Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
@@ -116,7 +116,7 @@ This is the Intel Manager for Lustre Monitoring and Administration Interface
 %package libs
 Summary: Common libraries for Chroma Server
 Group: System/Libraries
-Requires: python2-iml-common
+Requires: python2-iml-common1.1
 %description libs
 This package contains libraries for Chroma CLI and Chroma Server.
 
@@ -131,7 +131,7 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common1.1
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
@@ -159,6 +159,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %{__python} setup.py -q build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.py build/lib
+cp -a storage_server.repo build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
 cp -a mime.types build/lib
@@ -341,6 +342,7 @@ fi
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
+%config(noreplace) %{manager_root}/storage_server.repo
 # Stuff below goes into the -cli/-lib packages
 %exclude %{manager_root}/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
