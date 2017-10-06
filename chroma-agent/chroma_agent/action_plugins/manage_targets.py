@@ -439,6 +439,7 @@ def mount_target(uuid, pacemaker_ha_operation):
             break
         elif (not pacemaker_ha_operation) or (info['device_type'] != 'zfs'):
             exit(-1)
+        time.sleep(1)
 
     if succeeded is False:
         exit(-1)
