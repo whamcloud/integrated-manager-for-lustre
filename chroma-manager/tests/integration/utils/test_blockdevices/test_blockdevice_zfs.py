@@ -27,7 +27,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return ["systemctl disable zfs.target",
-                "parted self._device_path mklabel gpt",
+                "parted %s mklabel gpt" % self._device_path,
                 "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
