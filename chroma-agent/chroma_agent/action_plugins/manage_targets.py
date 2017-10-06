@@ -21,6 +21,7 @@ from iml_common.lib.agent_rpc import agent_result
 from iml_common.lib.agent_rpc import agent_result_ok
 from iml_common.lib.agent_rpc import agent_ok_or_error
 from iml_common.lib.agent_rpc import agent_result_is_error
+from iml_common.lib.agent_rpc import agent_result_is_ok
 from chroma_agent.lib.pacemaker import cibadmin
 from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
 from iml_common.lib.util import platform_info
