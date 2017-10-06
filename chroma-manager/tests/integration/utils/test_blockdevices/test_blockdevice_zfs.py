@@ -27,8 +27,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return ["systemctl disable zfs.target",
-                "parted %s mklabel gpt" % self._device_path,
-                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+                "zpool create -f %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
@@ -86,15 +85,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def clear_label_commands(self):
-        cmds = ['zpool labelclear -f %s' % self.device_path]
-
-        if not self.device_path_is_zpool_name:
-            cmds += [
-                'parted %s rm 1' % self._device_path,
-                'parted %s rm 9' % self._device_path
-            ]
-
-        return cmds
+        return ['zpool labelclear -f %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
