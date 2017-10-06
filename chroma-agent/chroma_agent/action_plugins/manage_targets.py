@@ -429,16 +429,17 @@ def mount_target(uuid, pacemaker_ha_operation):
     info = _get_target_config(uuid)
 
     import_retries = 100
-    errored = True
+    succeeded = False
 
     for i in xrange(import_retries):
-        errored = agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation))
-        if errored is False:
-            return
+        result = import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)
+        succeeded = agent_result_is_ok(result)
+        if succeeded:
+            break
         elif (not pacemaker_ha_operation) or (info['device_type'] != 'zfs'):
             exit(-1)
 
-    if errored is True:
+    if succeeded is False:
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
