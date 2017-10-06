@@ -429,10 +429,12 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    import_retries = 100
+    import_retries = 60
     succeeded = False
 
     for i in xrange(import_retries):
+        # This loop is needed due pools not being immediately importable during
+        # STONITH operations. Track: https://github.com/zfsonlinux/zfs/issues/6727
         result = import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)
         succeeded = agent_result_is_ok(result)
         if succeeded:
