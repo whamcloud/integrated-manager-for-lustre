@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -166,7 +167,7 @@ html_theme_path = ["../"]
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None
 
-rst_epilog = """
+rst_epilog = u"""
 .. include:: <isonum.txt>
-.. |iml| replace:: Intel Manager for Lustre
+.. |iml| replace:: Intel® Manager for Lustre* software
 """
