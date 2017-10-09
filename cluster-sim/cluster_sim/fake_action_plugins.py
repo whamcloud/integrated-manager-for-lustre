@@ -51,8 +51,7 @@ class FakeActionPlugins():
             elif cmd in ['configure_ntp',
                          'unconfigure_ntp',
                          'unconfigure_corosync',
-                         'unconfigure_corosync2',
-                         'initialise_block_device_drivers']:
+                         'unconfigure_corosync2']:
                 return agent_result_ok
             elif cmd == 'deregister_server':
                 sim = self._simulator
