@@ -806,15 +806,6 @@ class BaseSetupHostJob(NullStateChangeJob):
         return DependAll(deps)
 
 
-class InitialiseBlockDeviceDriversStep(Step):
-    """ Perform driver initialisation routine for each block device type on a given host """
-
-    def run(self, kwargs):
-        host = kwargs['host']
-
-        self.invoke_agent_expect_result(host, 'initialise_block_device_drivers', {})
-
-
 class SetupHostJob(BaseSetupHostJob):
     """For historical reasons this is called the original name of SetupHostJob rather than the more
     obvious SetupManagedHostJob.
@@ -832,9 +823,6 @@ class SetupHostJob(BaseSetupHostJob):
 
     def get_deps(self):
         return self._common_deps('lnet_up', None, None)
-
-    def get_steps(self):
-        return [(InitialiseBlockDeviceDriversStep, {'host': self.target_object})]
 
     @classmethod
     def can_run(cls, host):
