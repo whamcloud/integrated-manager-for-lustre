@@ -45,7 +45,7 @@ tags:
 	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir --exclude=chroma-\*/myenv\* --exclude=chroma_test_env --exclude=chroma-manager/chroma_test_env --exclude=chroma-dependencies --exclude=chroma_unit_test_env --exclude=chroma-manager/ui-modules .
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
-chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
+chroma-dependencies: chroma-agent chroma-manager
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile

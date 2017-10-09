@@ -8,7 +8,7 @@ systemctl disable pcsd pacemaker corosync
 # figure it out for ourselves if we can
 # otherwise the caller needs to have set it
 if [ -f /etc/corosync/corosync.conf ]; then
-    ring1_iface=$(ip route get "$(sed -ne '/ringnumber: 1/{s///;n;s/.*: //p}' /etc/corosync/corosync.conf)" | sed -ne 's/.* dev \(.*\)  *src.*/\1/p')
+    ring1_iface=$(ip route get "$(sed -ne '/ringnumber: 1/{s///;n;s/.*: //p}' /etc/corosync/corosync.conf)" | sed -ne 's/.* dev \([^ ]*\)  *src.*/\1/p')
 fi
 
 ifconfig "$ring1_iface" 0.0.0.0 down
