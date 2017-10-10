@@ -962,12 +962,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     if action & self.CZP_REMOVEZPOOLS:
                         self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
                                                            [server['fqdn'] for server in test_servers],
-                                                           'force destroy zpool %s' % zfs_device,
-                                                           expected_return_code=None)
-
-                        self.execute_simultaneous_commands(zfs_device.clear_label_commands,
-                                                           [server['fqdn'] for server in test_servers],
-                                                           'clear zpool labels on %s' % zfs_device,
+                                                           'force clear zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
                         [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
