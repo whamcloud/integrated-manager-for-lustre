@@ -958,7 +958,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     imported_zpools.append(zfs_device)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
-                    # dd the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
+                    # clear the disk to get rid of zfs signatures. This is a best effort approach.
                     if action & self.CZP_REMOVEZPOOLS:
                         self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
                                                            [server['fqdn'] for server in test_servers],

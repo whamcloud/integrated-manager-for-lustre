@@ -103,7 +103,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
         for server in config['lustre_servers']:
-            self.dd_devices(server['nodename'])
+            self.wipe_devices(server['nodename'])
 
             self.remote_command(server['address'],
                                 'reboot',
@@ -211,12 +211,14 @@ class CreateLustreFilesystem(UtilityTestCase):
             server_name,
             "sed -i '/lustre/d' /etc/fstab")
 
-    def dd_devices(self, server_name):
+    def wipe_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
-            self.remote_command(
-                server_name,
-                "dd if=/dev/zero of=%s bs=512 count=1" % device)
+            block_device = TestBlockDevice('linux', device)
+
+            self.execute_commands(block_device.destroy_commands,
+                                  server_name,
+                                  'wipe device %s' % device)
 
     def rename_device(self, device_old_path, device_new_path):
         for lustre_server in config['lustre_servers']:
