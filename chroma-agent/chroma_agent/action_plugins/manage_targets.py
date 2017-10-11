@@ -477,7 +477,11 @@ def import_target(device_type, path, pacemaker_ha_operation, validate_importable
     """
     blockdevice = BlockDevice(device_type, path)
 
-    error = blockdevice.import_(pacemaker_ha_operation)
+    error = blockdevice.import_(False)
+    if error:
+        if '-f' in error and pacemaker_ha_operation:
+            error = blockdevice.import_(True)
+
     if error:
         console_log.error("Error importing pool: '%s'" % error)
 
