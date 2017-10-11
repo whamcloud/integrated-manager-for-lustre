@@ -268,6 +268,20 @@ def _get_all_zpool_devices(name):
     return devices
 
 
+def _populate_zpools():
+    """
+    Retrieve list of discovered ZfsPools, deal with race where pool is imported or exported
+    between get_zpools() calls by filtering duplicates
+
+    :return: set of ZfsPools which are either importable (inactive) or imported (active)
+    """
+    zpools = get_zpools()
+    active_pool_names = [pool['pool'] for pool in zpools]
+    zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
+
+    return zpools
+
+
 class ZfsDevices(object):
     """Reads zfs pools"""
     acceptable_health = ['ONLINE', 'DEGRADED']
@@ -284,36 +298,45 @@ class ZfsDevices(object):
         except (IOError, OSError):
             return []
 
+    def _process_zpool(self, pool, block_devices):
+        """
+        Either read pool info from store if unavailable or inspect by importing
+
+        :param pool: dict of pool info
+        :return: None
+        """
+        if pool['state'] == 'UNAVAIL':
+            # zpool probably imported elsewhere, attempt to read from store, this should return
+            # previously seen zpool state either with or without datasets
+            try:
+                data = read_from_store(pool['id'])
+            except KeyError as e:
+                daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
+                                 "pool: %s)" % (e, pool['pool']))
+            else:
+                # populate self._pools/datasets/zvols info from saved data read from store
+                self._update_pool_or_datasets(block_devices,
+                                              data['pool'],
+                                              data['datasets'],
+                                              data['zvols'])
+        else:
+            with ZfsDevice(pool['pool'], True) as zfs_device:
+                if zfs_device.available:
+                    out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                    self._add_zfs_pool(out, block_devices)
+                else:
+                    # get current state of pool
+                    updated_pool = next(zpool for zpool in _populate_zpools() if zpool['pool'] == pool['pool'])
+                    if updated_pool != pool:
+                        # pool details have changed, re-process pool
+                        self._process_zpool(updated_pool, block_devices)
+                    else:
+                        daemon_log.error("ZfsPool could not be accessed, reported info: %s" % updated_pool)
+
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
-        zpools = []
         try:
-            zpools.extend(get_zpools())
-            active_pool_names = [pool['pool'] for pool in zpools]
-            zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
-
-            for pool in zpools:
-                with ZfsDevice(pool['pool'], True) as zfs_device:
-                    if zfs_device.available:
-                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
-                        self._add_zfs_pool(out, block_devices)
-                    elif pool['state'] == 'UNAVAIL':
-                        # zpool probably imported elsewhere, attempt to read from store, this should return
-                        # previously seen zpool state either with or without datasets
-                        try:
-                            data = read_from_store(pool['id'])
-                        except KeyError as e:
-                            daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
-                                             "pool: %s)" % (e, pool['pool']))
-                            continue
-                        else:
-                            # populate self._pools/datasets/zvols info from saved data read from store
-                            self._update_pool_or_datasets(block_devices,
-                                                          data['pool'],
-                                                          data['datasets'],
-                                                          data['zvols'])
-                    else:
-                        daemon_log.error("ZfsPool could not be accessed, reported info: %s" % pool)
+            [self._process_zpool(pool, block_devices) for pool in _populate_zpools()]
         except OSError:  # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
