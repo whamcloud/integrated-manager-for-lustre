@@ -55,13 +55,17 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def release_commands(self):
-        # For test we want to force export, which is not a risk-free operation but between tests we want to reset
+        # For test we want to export, which is not a risk-free operation
+        # but between tests we want to reset
         return ["zpool export %s" % self.device_path]
 
     @property
     def capture_commands(self):
-        # For test we want to force import, which is not a risk-free operation but between tests we want to reset
-        return ["partprobe | true",                     # partprobe always exits 1 so smother then return
+        # For test we want to import, which is not a risk-free operation
+        # but between tests we want to reset
+        # partprobe always exits 1 so smother then return
+        return ["partprobe | true",
+                "udevadm settle",
                 "zpool import %s" % self.device_path]
 
     @classmethod
@@ -76,8 +80,8 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def destroy_commands(self):
         if '/' in self.device_path:
             return ['zfs destroy %s' % self.device_path]
-        else:
-            return ['zpool destroy %s' % self.device_path]
+
+        return ['zpool destroy %s' % self.device_path]
 
     @property
     def clear_label_commands(self):

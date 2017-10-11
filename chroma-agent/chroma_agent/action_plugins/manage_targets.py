@@ -21,6 +21,7 @@ from iml_common.lib.agent_rpc import agent_result
 from iml_common.lib.agent_rpc import agent_result_ok
 from iml_common.lib.agent_rpc import agent_ok_or_error
 from iml_common.lib.agent_rpc import agent_result_is_error
+from iml_common.lib.agent_rpc import agent_result_is_ok
 from chroma_agent.lib.pacemaker import cibadmin
 from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
 from iml_common.lib.util import platform_info
@@ -428,7 +429,21 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'])):
+    import_retries = 60
+    succeeded = False
+
+    for i in xrange(import_retries):
+        # This loop is needed due pools not being immediately importable during
+        # STONITH operations. Track: https://github.com/zfsonlinux/zfs/issues/6727
+        result = import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)
+        succeeded = agent_result_is_ok(result)
+        if succeeded:
+            break
+        elif (not pacemaker_ha_operation) or (info['device_type'] != 'zfs'):
+            exit(-1)
+        time.sleep(1)
+
+    if succeeded is False:
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -448,22 +463,23 @@ def unmount_target(uuid):
         exit(-1)
 
 
-def import_target(device_type, path, validate_importable=False):
+def import_target(device_type, path, pacemaker_ha_operation, validate_importable=False):
     """
     Passed a device type and a path import the device if such an operation make sense. For example a jbod scsi
     disk does not have the concept of import whilst zfs does.
     :param device_type: the type of device to import
     :param path: path of device to import
+    :param pacemaker_ha_operation: This import is at the request of pacemaker. In HA operations the device may
+               often have not have been cleanly exported because the previous mounted node failed in operation.
     :param validate_importable: The intention is to make sure the device can be imported but not actually import it.
                in this in incarnation the device is import and the exported checking for errors.
     :return: None or an Error message
     """
     blockdevice = BlockDevice(device_type, path)
 
-    error = blockdevice.import_()
+    error = blockdevice.import_(pacemaker_ha_operation)
     if error:
         console_log.error("Error importing pool: '%s'" % error)
-        return import_target(device_type, path, validate_importable)
 
     if (error is None) and (validate_importable is True):
         error = blockdevice.export()

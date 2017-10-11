@@ -431,16 +431,19 @@ class TestCheckImportExport(CommandCaptureTestCase, AgentUnitTestCase):
         self.addCleanup(mock.patch.stopall)
 
     def test_import_device_ldiskfs(self):
-        self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb'))
-        self.assertRanAllCommandsInOrder()
+        for with_pacemaker in [True, False]:
+            self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb', with_pacemaker))
+            self.assertRanAllCommandsInOrder()
 
     def test_export_device_ldiskfs(self):
         self.assertAgentOK(manage_targets.export_target('linux', '/dev/sdb'))
         self.assertRanAllCommandsInOrder()
 
     def test_import_device_zfs(self):
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset))
-        self.mock_import_.assert_called_once_with()
+        for with_pacemaker in [True, False]:
+            self.mock_import_.reset_mock()
+            self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, with_pacemaker))
+            self.mock_import_.assert_called_once_with(with_pacemaker)
 
     def test_export_device_zfs(self):
         self.assertAgentOK(manage_targets.export_target('zfs', self.zpool_dataset))

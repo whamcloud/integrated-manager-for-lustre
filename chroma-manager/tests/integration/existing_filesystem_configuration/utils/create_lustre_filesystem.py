@@ -179,7 +179,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
-                'partprobe || true; sync; sync'
+                'partprobe || true; udevadm settle; sync; sync'
             )
 
         self._save_modified_config()
