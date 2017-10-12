@@ -127,6 +127,16 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
         self.assertListEqual(['zfsPool3', 'zfsPool1'], [p['pool'] for p in zpools])
 
+    def test_get_no_active_zpools(self):
+        """ WHEN no active/imported zpools are output from 'zpool status' command THEN parser returns empty list """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stdout="no pools available\n"))
+
+        zpools = get_zpools()
+
+        self.assertRanAllCommandsInOrder()
+        self.assertListEqual([], zpools)
+
     def test_get_inactive_zpool(self):
         """ WHEN inactive/exported zpools are output from 'zpool import' command THEN parser returns relevant pools """
         self.add_commands(CommandCaptureCommand(("zpool", "import"),
