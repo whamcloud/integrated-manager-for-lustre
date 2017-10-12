@@ -1,18 +1,19 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
+from collections import defaultdict
 
 import os
 import re
 import errno
 import socket
 import json
+from iml_common.blockdevices.blockdevice import BlockDevice
+from iml_common.lib.util import human_to_bytes
 from chroma_agent.lib.shell import AgentShell
-from toolz.functoolz import pipe
+from toolz.functoolz import pipe, curry
 from toolz.itertoolz import getter
 from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
-
-import chroma_agent.lib.normalize_device_path as ndp
 
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
@@ -94,7 +95,13 @@ def as_device(x):
         'device_path': x.get('DEVPATH'),
         'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
         'is_ro': x.get('IML_IS_RO'),
-        'parent': None
+        'parent': None,
+        'dm_multipath': x.get('DM_MULTIPATH_DEVICE_PATH'),
+        'dm_lv': x.get('DM_LV_NAME'),
+        'dm_vg': x.get('DM_VG_NAME'),
+        'dm_uuid': x.get('DM_UUID'),
+        'dm_slave_mms': get_default('IML_DM_SLAVE_MMS', [], x),
+        'dm_vg_size': x.get('IML_DM_VG_SIZE')
     }
 
 
@@ -134,24 +141,140 @@ def fetch_device_list():
                 cmap(as_device), cfilter(filter_device), list)
 
 
-def add_to_ndp(xs, ys):
-    for x in xs:
-        for y in reversed(ys):
-            ndp.add_normalized_device(x, y)
+def parse_lvm_uuids(dm_uuid):
+    """
+    :param dm_uuid: device mapper uuid string (combined vg and lv with lvm prefix) from device_scanner
+    :return: tuple of vg and lv UUIDs
+    """
+    lvm_pfix = 'LVM-'
+    uuid_len = 32
+
+    assert (dm_uuid.startswith(lvm_pfix) and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
+
+    return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
 
-def build_ndp_from_device(x):
-    paths = x['paths']
+def lvm_populate(device):
+    """ Create vg and lv entries for devices with dm attributes """
+    vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
+        map(device.get,
+            ('dm_vg', 'dm_vg_size', 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
 
-    dev_paths = filter(DEV_PATH.match, paths)
-    disk_by_id_paths = filter(DISK_BY_ID_PATH.match, paths)
-    disk_by_path_paths = filter(DISK_BY_PATH_PATH.match, paths)
-    mapper_paths = filter(MAPPER_PATH.match, paths)
+    vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
 
-    add_to_ndp(dev_paths, disk_by_path_paths)
-    add_to_ndp(dev_paths, disk_by_id_paths)
-    add_to_ndp(disk_by_path_paths, mapper_paths)
-    add_to_ndp(disk_by_id_paths, mapper_paths)
+    vg = {'name': vg_name,
+          'uuid': vg_uuid,
+          'size': human_to_bytes(vg_size),
+          'pvs_major_minor': []}
+
+    [vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+     if mm not in vg['pvs_major_minor']]
+
+    # Do this to cache the device, type see blockdevice and filesystem for info.
+    BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
+
+    lv = {'name': lv_name,
+          'uuid': lv_uuid,
+          'size': lv_size,
+          'block_device': lv_mm}
+
+    return vg, lv
+
+
+@curry
+def link_dm_slaves(block_device_nodes, ndt, x):
+    """ link dm slave devices back to the mapper devices using mm to look up path """
+    for slave_mm in x.get('dm_slave_mms', []):
+        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, block_device_nodes[slave_mm]['paths']),
+                                   filter(MAPPER_PATH.match, x.get('paths')))
+
+
+def parse_dm_devs(xs, block_device_nodes, ndt):
+    vgs = {}
+    lvs = defaultdict(dict)
+
+    results = [lvm_populate(x) for x in xs if x.get('dm_lv') is not None]
+
+    for vg, lv in results:
+        vgs[vg['name']] = vg
+        lvs[vg['name']][lv['name']] = lv
+
+    c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
+    map(c_link_dm_slaves, filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
+
+    return ndt, vgs, lvs
+
+
+class NormalizedDeviceTable(object):
+    table = {}
+
+    def __init__(self, xs):
+        map(self.build_normalized_table_from_device, xs)
+
+    def build_normalized_table_from_device(self, x):
+        paths = x['paths']
+
+        dev_paths = filter(DEV_PATH.match, paths)
+        disk_by_id_paths = filter(DISK_BY_ID_PATH.match, paths)
+        disk_by_path_paths = filter(DISK_BY_PATH_PATH.match, paths)
+        mapper_paths = filter(MAPPER_PATH.match, paths)
+
+        self.add_normalized_devices(dev_paths, disk_by_path_paths)
+        self.add_normalized_devices(dev_paths, disk_by_id_paths)
+        self.add_normalized_devices(disk_by_path_paths, mapper_paths)
+        self.add_normalized_devices(disk_by_id_paths, mapper_paths)
+
+    def add_normalized_devices(self, xs, ys):
+        for x in xs:
+            for y in ys:
+                self.add_normalized_device(x, y)
+
+    def add_normalized_device(self, from_path, to_path):
+        if from_path != to_path:
+            self.table[from_path] = to_path
+
+    def find_normalized_start(self, device_fullpath):
+        '''
+        :param device_path: The device_path being search for
+        :return: Given /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+                returns
+                /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+                /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
+                /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part9
+                etc.
+        '''
+
+        return [
+            value for value in self.table.values()
+            if value.startswith(device_fullpath)
+            ]
+
+    def normalized_device_path(self, device_path):
+        normalized_path = os.path.realpath(device_path)
+
+        # This checks we have a completely normalized path, perhaps the
+        # stack means our current normal path can actually be
+        # normalized further.
+        # So if the root to normalization takes multiple
+        # steps this will deal with it
+        # So if /dev/sdx normalizes to /dev/mmapper/special-device
+        # and /dev/mmapper/special-device normalizes to /dev/md/mdraid1,
+        # then /dev/sdx will normalize to /dev/md/mdraid1
+        # /dev/sdx -> /dev/mmapper/special-device -> dev/md/mdraid1
+
+        # As an additional measure to detect circular references
+        # such as A->B->C->A in
+        # this case we don't know which is the
+        # normalized value so just drop out once
+        # it repeats.
+        visited = set()
+
+        while (normalized_path not in visited) and (
+                    normalized_path in self.table):
+            visited.add(normalized_path)
+            normalized_path = self.table[normalized_path]
+
+        return normalized_path
 
 
 class BlockDevices(object):
@@ -159,8 +282,8 @@ class BlockDevices(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
     def __init__(self):
-        (self.block_device_nodes,
-         self.node_block_devices) = self._parse_sys_block()
+        (self.block_device_nodes, self.node_block_devices,
+         self.normalized_device_table, self.vgs, self.lvs) = self._parse_sys_block()
 
     def _parse_sys_block(self):
         xs = fetch_device_list()
@@ -173,9 +296,13 @@ class BlockDevices(object):
         block_device_nodes = reduce(
             lambda d, x: dict(d, **{x['major_minor']: x}), xs, {})
 
-        map(build_ndp_from_device, xs)
+        ndt = NormalizedDeviceTable(xs)
 
-        return (block_device_nodes, node_block_devices)
+        (ndt, vgs, lvs) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
+                                        block_device_nodes,
+                                        ndt)
+
+        return block_device_nodes, node_block_devices, ndt, vgs, lvs
 
     def paths_to_major_minors(self, device_paths):
         """
@@ -195,7 +322,7 @@ class BlockDevices(object):
     def path_to_major_minor(self, device_path):
         """ Return device major minor for a given device path """
         return self.node_block_devices.get(
-            ndp.normalized_device_path(device_path))
+            self.normalized_device_table.normalized_device_path(device_path))
 
     def composite_device_list(self, source_devices):
         """
@@ -218,7 +345,8 @@ class BlockDevices(object):
 
                 # Finally add these devices to the canonical path list.
                 for device_path in device['device_paths']:
-                    ndp.add_normalized_device(device_path, device['path'])
+                    self.normalized_device_table.add_normalized_device(
+                        device_path, device['path'])
 
         return devices
 
@@ -236,8 +364,4 @@ class BlockDevices(object):
 
     @classmethod
     def quick_scan(cls):
-        """
-            Return a very quick list of block devices from
-            a number of sources so we can quickly see changes.
-        """
         return pipe(fetch_device_list(), cmapcat(getter("paths")), sorted)
