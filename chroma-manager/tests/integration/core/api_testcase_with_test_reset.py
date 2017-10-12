@@ -23,7 +23,6 @@ from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
-from tests.integration.utils.test_blockdevices.test_blockdevice_zfs import TestBlockDeviceZfs
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -830,11 +829,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
-                zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])		
+                zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])
 
                 self.execute_commands(zfs_device.prepare_device_commands,
-                                        server0['fqdn'],
-                                        'create zfs device %s' % zfs_device)
+                                      server0['fqdn'],
+                                      'create zfs device %s' % zfs_device)
 
                 self.execute_commands(zfs_device.release_commands,
                                       server0['fqdn'],
@@ -859,7 +858,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # Ensure agents stopped to avoid interference with pool imports/exports
         self.remote_operations.stop_agents(fqdns)
 
-        # Attempt to unmount all lustre targets otherwise 
+        # Attempt to unmount all lustre targets otherwise
         # we won't be able to export parent pool
         [
             self.remote_operations.unmount_lustre_targets(x)

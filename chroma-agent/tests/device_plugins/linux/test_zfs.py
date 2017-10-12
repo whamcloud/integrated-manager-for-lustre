@@ -81,7 +81,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     def mock_empty_dict(*arg):
         return {}
 
-    def mock_find_device_and_children(path):
+    def mock_find_device_and_children(path, ndt):
         return [path]
 
     mock_read_from_store = MagicMock(side_effect=read_from_store_side_effect)
@@ -115,7 +115,7 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
     @patch('chroma_agent.device_plugins.linux_components.zfs.find_device_and_children', mock_find_device_and_children)
     def _get_zfs_devices(self, pool_name):
         """ test the process of using full partition paths and device basenames to resolve device paths """
-        return _get_all_zpool_devices(pool_name)
+        return _get_all_zpool_devices(pool_name, None)
 
     def test_get_active_zpool(self):
         """ WHEN active/imported zpools are output from 'zpool status' command THEN parser returns relevant pools """
