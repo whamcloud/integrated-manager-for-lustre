@@ -97,6 +97,7 @@ def _parse_line(xs):
 def get_zpools(active=True):
     """
     Parse shell output from 'zpool import' or 'zpool status' commands and return zpool details in list of dicts.
+    Always return list and split output on keyword followed by colon but ignore urls.
 
     Command issued depends on both input arguments and is either of the form:
 
@@ -133,12 +134,11 @@ def get_zpools(active=True):
       available for import 'zpool import'
     :return: list of dicts with details of either imported or importable zpools
     """
-
     cmd_args = ['zpool', 'status' if (active is True) else 'import']
     out = AgentShell.try_run(cmd_args)
 
     if 'pool: ' not in out:
-        return {}
+        return []
 
     transform_pools = compose(_parse_line,
                               lambda x: clean_list(re.split('(\w+):[^/]', x)),
