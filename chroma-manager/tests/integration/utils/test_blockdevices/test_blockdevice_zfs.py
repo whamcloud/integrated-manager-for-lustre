@@ -85,7 +85,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def clear_label_commands(self):
-        return ['zpool labelclear -f %s' % self.device_path]
+        return ['zpool labelclear %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
