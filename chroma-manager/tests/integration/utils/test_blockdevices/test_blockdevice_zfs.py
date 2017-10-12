@@ -27,7 +27,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return ["systemctl disable zfs.target",
-                "zpool create -f %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
@@ -39,7 +39,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy -f %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
+        return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
                                                                                  TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
 
     @property
