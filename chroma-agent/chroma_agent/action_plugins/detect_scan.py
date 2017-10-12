@@ -6,7 +6,7 @@
 from datetime import datetime
 
 from chroma_agent.lib.shell import AgentShell
-import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from iml_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
 from chroma_agent import config
@@ -15,8 +15,10 @@ from chroma_agent.utils import Mounts
 
 class LocalTargets(object):
     '''
-    Allows local targets to be examined. Not the targets are only examined once with the results cached. Detecting change
-    therefore requires a new instance to be created and queried.
+    Allows local targets to be examined.
+    Note the targets are only examined once with the results cached.
+    Detecting change therefore requires a new instance
+    to be created and queried.
     '''
 
     def __init__(self, target_devices):
@@ -44,6 +46,8 @@ class LocalTargets(object):
                 continue
 
             targets = block_device.targets(uuid_name_to_target, device, daemon_log)
+
+            ndp = BlockDevices().normalized_device_table
 
             mounted = ndp.normalized_device_path(device['path']) in set([ndp.normalized_device_path(path) for path, _, _ in Mounts().all()])
 

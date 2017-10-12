@@ -10,7 +10,6 @@ import re
 import glob
 from toolz import partial, compose
 
-import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 
@@ -216,7 +215,7 @@ def _get_zpool_zvols(pool_name, drives, block_devices):
     return zpool_vols
 
 
-def find_device_and_children(device_path):
+def find_device_and_children(device_path, normalized_table):
     devices = []
 
     try:
@@ -224,7 +223,7 @@ def find_device_and_children(device_path):
         # zfs pool, so
         # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
         # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
-        for device in ndp.find_normalized_start(ndp.normalized_device_path(device_path)):
+        for device in normalized_table.find_normalized_start(normalized_table.normalized_device_path(device_path)):
             daemon_log.debug("zfs device '%s'" % device)
             devices.append(device)
     except KeyError:
@@ -256,7 +255,7 @@ def _list_zpool_devices(name, full_paths):
     return sorted([line.split()[0] for line in out.split('\n')[1:-1]], key=len, reverse=True)
 
 
-def _get_all_zpool_devices(name):
+def _get_all_zpool_devices(name, normalized_table):
     """
     Retrieve devices and children from base block devices used to create zpool
 
@@ -271,7 +270,7 @@ def _get_all_zpool_devices(name):
     for basename in _list_zpool_devices(name, False):
         fullpath = next(fullpath for fullpath in fullpaths if os.path.basename(fullpath).startswith(basename))
         device_path = os.path.join(os.path.dirname(fullpath), basename)
-        devices.extend(find_device_and_children(device_path))
+        devices.extend(find_device_and_children(device_path, normalized_table))
         fullpaths.remove(fullpath)
 
     return devices
@@ -355,7 +354,8 @@ class ZfsDevices(object):
 
         size = util.human_to_bytes(size_str)
 
-        drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name))
+        normalized_table = block_devices.normalized_device_table
+        drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
 
         if drive_mms is None:
             daemon_log.warning("Could not find major minors for zpool '%s'" % name)
