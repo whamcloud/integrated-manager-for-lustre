@@ -9,7 +9,6 @@ import errno
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import console_log
-import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib import util
@@ -251,7 +250,8 @@ class DmsetupTable(object):
 
                 # Add this devices to the canonical path list.
                 for device in devices:
-                    ndp.add_normalized_device(device['path'], "%s/%s" % (BlockDevices.MAPPERPATH, name))
+                    self.block_devices.normalized_device_table.add_normalized_device(
+                        device['path'], "%s/%s" % (BlockDevices.MAPPERPATH, name))
 
                 self.mpaths[name] = {"name": name,
                                      "block_device": block_device,
