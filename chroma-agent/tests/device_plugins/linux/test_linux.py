@@ -5,11 +5,11 @@ import os
 import mock
 from django.utils import unittest
 
-from chroma_agent.device_plugins.linux import DmsetupTable
-from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable
+from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 
 
+# included for legacy tests
 class MockDmsetupTable(DmsetupTable):
     def __init__(self, dmsetup_data, devices_data):
         self.lvs = devices_data['lvs']
@@ -19,7 +19,10 @@ class MockDmsetupTable(DmsetupTable):
             with mock.patch(
                     'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
                     return_value=(devices_data['block_device_nodes'],
-                                  devices_data['node_block_devices'])):
+                                  devices_data['node_block_devices'],
+                                  NormalizedDeviceTable([]),
+                                  None,
+                                  None)):
                 self.block_devices = BlockDevices()
         self._parse_dm_table(dmsetup_data)
 
@@ -31,7 +34,12 @@ class LinuxAgentTests(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '../../')
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
 
-    def assertNormalizedPaths(self, normalized_values):
+        self.existing_files = []
+
+        # Guaranteed cleanup with unittest2
+        self.addCleanup(mock.patch.stopall)
+
+    def assertNormalizedPaths(self, normalized_values, ndt):
         class mock_open:
             def __init__(self, fname):
                 pass
@@ -40,107 +48,26 @@ class LinuxAgentTests(unittest.TestCase):
                 return "root=/not/a/real/path"
 
         with mock.patch('__builtin__.open', mock_open):
-            for path, normalized_path in normalized_values.items():
-                self.assertEqual(normalized_path,
-                                 ndp.normalized_device_path(path),
+            for path, expected_path in normalized_values.items():
+                actual_path = ndt.normalized_device_path(path)
+                self.assertEqual(expected_path, actual_path,
                                  "Normalized path failure %s != %s" %
-                                 (normalized_path,
-                                  ndp.normalized_device_path(path)))
+                                 (expected_path, actual_path))
 
 
-class DummyDataTestCase(LinuxAgentTests):
+class DummyDataTests(LinuxAgentTests):
+    def setUp(self):
+        super(DummyDataTests, self).setUp()
+
+        self.load_fixture(u'device_scanner.json')
+        self.load_expected(u'agent_plugin.json')
+
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
 
-
-class TestDmSetupParse(DummyDataTestCase):
-    def _test_dmsetup(self, devices_filename, dmsetup_filename,
-                      mpaths_filename, normalized_paths_filename):
-        devices_data = json.loads(self.load(devices_filename))
-        dmsetup_data = self.load(dmsetup_filename)
-        actual_mpaths = MockDmsetupTable(dmsetup_data, devices_data).mpaths
-        expected_mpaths = json.loads(self.load(mpaths_filename))
-        expected_normalized_paths = json.loads(
-            self.load(normalized_paths_filename))
-
-        self.assertDictEqual(actual_mpaths, expected_mpaths)
-        self.assertNormalizedPaths(expected_normalized_paths)
-
-    def test_dmsetup_table(self):
-        """This is a regression test using data from a test/dev machine which includes LVs and multipath, all the data
-           is just as it is when run through on Chroma 1.0.0.0: this really is a *regression* test rather than
-           a correctness test.  The system from which this data was gathered ran CentOS 5.6"""
-        self._test_dmsetup('devices_1.json', 'dmsetup_1.json', 'mpaths_1.json',
-                           'normalized_1.json')
-
-    def test_HYD_1383(self):
-        """Minimal reproducer for HYD-1383.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
-           let it run through far enough to experience failure."""
-        self._test_dmsetup(
-            'devices_NTAP-12-min.json', 'dmsetup_NTAP-12-min.json',
-            'mpaths_NTAP-12-min.json', 'normalized_NTAP-12-min.json')
-
-    def test_HYD_1385(self):
-        """Minimal reproducer for HYD-1385.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
-           let it run through far enough to experience failure."""
-        self._test_dmsetup('devices_HYD-1385.json', 'dmsetup_HYD-1385.json',
-                           'mpaths_HYD-1385.json', 'normalized_HYD-1385.json')
-
-    def test_HYD_1390(self):
-        """Minimal reproducer for HYD-1385.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
-           let it run through far enough to experience failure."""
-        self._test_dmsetup('devices_HYD-1390.json', 'dmsetup_HYD-1390.json',
-                           'mpaths_HYD-1390.json', 'normalized_HYD-1390.json')
-
-
-class TestBlockDevices(unittest.TestCase):
-    def setUp(self):
-        super(TestBlockDevices, self).setUp()
-
-        fixture = {
-            "/devices/pci0000:00/0000:00:0d.0/ata11/host10/target10:0:0/10:0:0:0/block/sdi":
-            {
-                "ACTION":
-                "add",
-                "MAJOR":
-                "8",
-                "MINOR":
-                "128",
-                "DEVLINKS":
-                "/dev/disk/by-id/ata-VBOX_HARDDISK_VB94952694-0a23e192 /dev/disk/by-label/fs-OST0006 /dev/disk/by-path/pci-0000:00:0d.0-ata-9.0 /dev/disk/by-uuid/f21688ec-5bde-44a5-9ace-c7c4b18a20f5",
-                "PATHS": [
-                    "/dev/sdi",
-                    "/dev/disk/by-id/ata-VBOX_HARDDISK_VB94952694-0a23e192",
-                    "/dev/disk/by-label/fs-OST0006",
-                    "/dev/disk/by-path/pci-0000:00:0d.0-ata-9.0",
-                    "/dev/disk/by-uuid/f21688ec-5bde-44a5-9ace-c7c4b18a20f5"
-                ],
-                "DEVNAME":
-                "/dev/sdi",
-                "DEVPATH":
-                "/devices/pci0000:00/0000:00:0d.0/ata11/host10/target10:0:0/10:0:0:0/block/sdi",
-                "DEVTYPE":
-                "disk",
-                "ID_VENDOR":
-                None,
-                "ID_MODEL":
-                "VBOX_HARDDISK",
-                "ID_SERIAL":
-                "VBOX_HARDDISK_VB94952694-0a23e192",
-                "ID_FS_TYPE":
-                "ext4",
-                "ID_PART_ENTRY_NUMBER":
-                None,
-                "IML_SIZE":
-                "10485760",
-                "IML_SCSI_80":
-                "SATA     VBOX HARDDISK   VB94952694-0a23e192",
-                "IML_SCSI_83":
-                "1ATA     VBOX HARDDISK                           VB94952694-0a23e192",
-                "IML_IS_RO":
-                False
-            }
-        }
+    def load_fixture(self, filename):
+        str_data = self.load(filename)
+        fixture = json.loads(str_data)
 
         with mock.patch('glob.glob', return_value=[]):
             with mock.patch(
@@ -148,58 +75,55 @@ class TestBlockDevices(unittest.TestCase):
                     return_value=fixture):
                 self.block_devices = BlockDevices()
 
-        self.existing_files = []
+    def load_expected(self, filename):
+        str_data = self.load(filename)
+        self.expected = json.loads(str_data)['result']['linux']
 
-        # Guaranteed cleanup with unittest2
-        self.addCleanup(mock.patch.stopall)
+
+class TestBlockDevices(DummyDataTests):
+    def test_block_device_lvm_output(self):
+        [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['vgs', 'lvs']]
 
     def test_block_device_nodes_parsing(self):
         result = self.block_devices.block_device_nodes
 
-        self.assertEqual(result, {
-            "8:128": {
-                "size":
-                5368709120,
-                "device_path":
-                "/devices/pci0000:00/0000:00:0d.0/ata11/host10/target10:0:0/10:0:0:0/block/sdi",
-                "major_minor":
-                "8:128",
-                "partition_number":
-                None,
-                "device_type":
-                "disk",
-                "path":
-                "/dev/disk/by-id/ata-VBOX_HARDDISK_VB94952694-0a23e192",
-                "filesystem_type":
-                "ext4",
-                "paths": [
-                    "/dev/disk/by-id/ata-VBOX_HARDDISK_VB94952694-0a23e192",
-                    "/dev/disk/by-path/pci-0000:00:0d.0-ata-9.0", "/dev/sdi",
-                    "/dev/disk/by-label/fs-OST0006",
-                    "/dev/disk/by-uuid/f21688ec-5bde-44a5-9ace-c7c4b18a20f5"
-                ],
-                "parent":
-                None,
-                "serial_83":
-                "1ATA     VBOX HARDDISK                           VB94952694-0a23e192",
-                "serial_80":
-                "SATA     VBOX HARDDISK   VB94952694-0a23e192",
-                "is_ro":
-                False
-            }
-        })
+        self.assertEqual(result['8:48'], self.expected['devs']['8:48'])
+
+        # partition
+        self.assertEqual(result['8:49'], self.expected['devs']['8:49'])
+
+        # dm-0 linear lvm
+        self.assertEqual(result['253:0'], self.expected['devs']['253:0'])
+
+        # dm-2 striped lvm
+        self.assertEqual(result['253:2'], self.expected['devs']['253:2'])
 
     def test_node_block_devices_parsing(self):
         result = self.block_devices.node_block_devices
 
-        self.assertEqual(result, {
-            "/dev/disk/by-id/ata-VBOX_HARDDISK_VB94952694-0a23e192":
-            "8:128"
-        })
+        self.assertEqual(result[u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3'], u'8:48')
+
+        # partition
+        self.assertEqual(result[u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part1'], u'8:49')
+
+        # dm-0 linear lvm
+        self.assertEqual(result[u'/dev/mapper/vg_00-lv_root'], u'253:0')
+
+        # dm-2 striped lvm
+        self.assertEqual(result[u'/dev/mapper/vg_01-stripedlv'], u'253:2')
+
+    def test_normalized_device_table(self):
+        self.load_fixture(u'device_scanner_mpath.json')
+        self.load_expected(u'agent_plugin_mpath.json')
+
+        result = self.block_devices.normalized_device_table.table
+
+        self.assertEqual(result[
+                u'/dev/disk/by-id/scsi-35000c50068b5a1c7'],
+            u"/dev/mapper/35000c50068b5a1c7")
 
 
-class TestDevMajorMinor(LinuxAgentTests):
-
+class TestDevMajorMinor(DummyDataTests):
     MockDevice = collections.namedtuple('MockDevice', 'st_mode st_rdev')
 
     mock_devices = {'/dev/disk/by-id/adisk': MockDevice(25008, 6)}
@@ -224,9 +148,8 @@ class TestDevMajorMinor(LinuxAgentTests):
             }).start()
         mock.patch(
             'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
-            return_value=(None, None)).start()
+            return_value=(None, None, None)).start()
         self.addCleanup(mock.patch.stopall)
-        self.block_devices = BlockDevices()
 
     def test_paths_to_major_minors_paths_exist(self):
         self.block_devices.node_block_devices = self.node_block_devices
