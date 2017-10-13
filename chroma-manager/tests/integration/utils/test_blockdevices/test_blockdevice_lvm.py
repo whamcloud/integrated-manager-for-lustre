@@ -41,14 +41,16 @@ class TestBlockDeviceLvm(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
+        x = TestBlockDeviceLvm('lvm', device_path)
+
         lv_format = [
-            "if lvdisplay {0}; then lvremove {0}; else exit 0; fi".format(
-                TestBlockDeviceLvm('lvm', device_path).lv_name)
+            "if lvdisplay /dev/{0}/{1}; then lvremove /dev/{0}/{1}; else exit 0; fi".format(
+                x.vg_name, x.lv_name)
             for device_path in device_paths
         ]
         vg_format = [
             "if vgdisplay {0}; then vgremove {0}; else exit 0; fi".format(
-                TestBlockDeviceLvm('lvm', device_path).vg_name)
+                x.vg_name)
             for device_path in device_paths
         ]
 
