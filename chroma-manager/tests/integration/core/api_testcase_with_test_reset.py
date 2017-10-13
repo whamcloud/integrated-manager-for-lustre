@@ -10,10 +10,6 @@ import logging
 import time
 import re
 
-from toolz.functoolz import pipe
-from toolz.itertoolz import getter
-from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
-
 from testconfig import config
 
 from tests.utils.http_requests import HttpRequests
@@ -1029,31 +1025,26 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                           expected_return_code=None)
 
     def cleanup_linux_devices(self, test_servers):
-        """
-        Destroy any partitions on the block device.
-
-        Very linux specific code.
-        :return:
-        """
         if (self.simulator is not None) or (self.linux_devices_exist() is
                                             False):
             return
 
         first_test_server = test_servers[0]
 
-        devices = pipe(
-            config,
-            cmap(getter('lustre_devices')),
-            cfilter(lambda x: x['backend_filesystem'] == 'ldiskfs'),
-            cmap(
-                lambda x: TestBlockDevice('linux', first_test_server['device_paths'][x['path_index']])
-            ))
+        def get_device_path(idx):
+            first_test_server['device_paths'][idx]
 
-        wipe_commands = pipe(devices, cmapcat(lambda x: x.destroy_commands))
+        def cleanup_str(x):
+            'wipefs -a {}'.format(x)
 
-        self.execute_commands(wipe_commands, first_test_server['fqdn'],
-                              'clear block devices {}'.format(
-                                  ', '.join(map(getter('device_path'), devices))))
+        device_paths = [
+            get_device_path(x['path_index']) for x in config['lustre_devices']
+            if x['backend_filesystem'] == 'ldiskfs'
+        ]
+
+        desc = 'clear block devices {}'.format(', '.join(device_paths))
+        wipe_commands = map(cleanup_str, device_paths)
+        self.execute_commands(wipe_commands, first_test_server['fqdn'], desc)
 
         self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], [
             server['fqdn'] for server in test_servers
