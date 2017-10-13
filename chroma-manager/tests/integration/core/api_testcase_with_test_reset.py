@@ -10,6 +10,10 @@ import logging
 import time
 import re
 
+from toolz.functoolz import pipe
+from toolz.itertoolz import getter
+from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
+
 from testconfig import config
 
 from tests.utils.http_requests import HttpRequests
@@ -1031,24 +1035,29 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         Very linux specific code.
         :return:
         """
-        if (self.simulator is not None) or (self.linux_devices_exist() is False):
+        if (self.simulator is not None) or (self.linux_devices_exist() is
+                                            False):
             return
 
         first_test_server = test_servers[0]
 
-        # Erase all volumes if the config does not indicate that there is already
-        # a pre-existing file system (in the case of the monitoring only tests).
-        for lustre_device in config['lustre_devices']:
-            if lustre_device['backend_filesystem'] == 'ldiskfs':
-                linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+        devices = pipe(
+            config,
+            cmap(getter('lustre_devices')),
+            cfilter(lambda x: x['backend_filesystem'] == 'ldiskfs'),
+            cmap(
+                lambda x: TestBlockDevice('linux', first_test_server['device_paths'][x['path_index']])
+            ))
 
-                self.execute_commands(linux_device.destroy_commands,
-                                        first_test_server['fqdn'],
-                                        'clear block device %s' % linux_device)
+        wipe_commands = pipe(devices, cmapcat(lambda x: x.destroy_commands))
 
-                self.execute_simultaneous_commands(['partprobe', 'udevadm settle'],
-                                                   [server['fqdn'] for server in test_servers],
-                                                   'sync partitions')
+        self.execute_commands(wipe_commands, first_test_server['fqdn'],
+                              'clear block devices {}'.format(
+                                  ', '.join(map(getter('device_path'), devices))))
+
+        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], [
+            server['fqdn'] for server in test_servers
+        ], 'sync partitions')
 
     @property
     def quick_setup(self):
