@@ -23,7 +23,7 @@ class TestBlockDeviceLinux(TestBlockDevice):
     @property
     def destroy_commands(self):
         # Remove any filesystem signatures on the disk
-        return ['wipefs -a %s; sync' % self.device_path]
+        return ['wipefs -t zfs %s; sync' % self.device_path, 'dd if=/dev/zero of=%s bs=4k count=1; sync' % self.device_path]
 
     def __str__(self):
         return '%s' % self.device_path
