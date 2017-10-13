@@ -20,18 +20,20 @@ class TestBlockDeviceLvm(TestBlockDevice):
     # Create a lvm on the device.
     @property
     def prepare_device_commands(self):
-        return ["vgcreate %s %s; lvcreate --wipesignatures n -l 100%%FREE --name %s %s" % (self.vg_name,
-                                                                                           self._device_path,
-                                                                                           self.lv_name,
-                                                                                           self.vg_name)]
+        return [
+            "vgcreate %s %s; lvcreate --wipesignatures n -l 100%%FREE --name %s %s"
+            % (self.vg_name, self._device_path, self.lv_name, self.vg_name)
+        ]
 
     @property
     def vg_name(self):
-        return "vg_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
+        return "vg_%s" % "".join(
+            [c for c in self._device_path if re.match(r'\w', c)])
 
     @property
     def lv_name(self):
-        return "lv_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
+        return "lv_%s" % "".join(
+            [c for c in self._device_path if re.match(r'\w', c)])
 
     @property
     def device_path(self):
@@ -39,8 +41,18 @@ class TestBlockDeviceLvm(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if vgdisplay %s; then vgremove %s; else exit 0; fi" % (TestBlockDeviceLvm('lvm', device_path).vg_name,
-                                                                           TestBlockDeviceLvm('lvm', device_path).vg_name) for device_path in device_paths]
+        lv_format = [
+            "if lvdisplay {0}; then lvremove {0}; else exit 0; fi".format(
+                TestBlockDeviceLvm('lvm', device_path).lv_name)
+            for device_path in device_paths
+        ]
+        vg_format = [
+            "if vgdisplay {0}; then vgremove {0}; else exit 0; fi".format(
+                TestBlockDeviceLvm('lvm', device_path).vg_name)
+            for device_path in device_paths
+        ]
+
+        return lv_format + vg_format
 
     @property
     def install_packages_commands(self):
