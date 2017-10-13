@@ -98,13 +98,14 @@ class CreateLustreFilesystem(UtilityTestCase):
                                   server['address'],
                                   'clear command')
 
-        # Wipe the start of the devices to make sure they are clean only after
+        # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
-        for server in config['lustre_servers']:
-            self.clear_devices(server['nodename'])
 
+        next((self.clear_devices(x) for x in config['lustre_servers']), None)
+
+        for server in config['lustre_servers']:
             self.remote_command(server['address'],
                                 'reboot',
                                 expected_return_code=None)    # Sometimes reboot hangs, sometimes it doesn't

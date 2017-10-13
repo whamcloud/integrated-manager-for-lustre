@@ -39,7 +39,7 @@ class TestBlockDeviceLvm(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if vgdisplay %s; then vgremove -f %s; else exit 0; fi" % (TestBlockDeviceLvm('lvm', device_path).vg_name,
+        return ["if vgdisplay %s; then vgremove %s; else exit 0; fi" % (TestBlockDeviceLvm('lvm', device_path).vg_name,
                                                                            TestBlockDeviceLvm('lvm', device_path).vg_name) for device_path in device_paths]
 
     @property
