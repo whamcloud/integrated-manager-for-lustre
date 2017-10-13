@@ -1042,9 +1042,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if lustre_device['backend_filesystem'] == 'ldiskfs':
                 linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
 
-                self.execute_simultaneous_commands(linux_device.destroy_commands,
+                self.execute_commands(linux_device.destroy_commands,
+                                        first_test_server['fqdn'],
+                                        'clear block device %s' % linux_device)
+
+                self.execute_simultaneous_commands(['partprobe', 'udevadm settle'],
                                                    [server['fqdn'] for server in test_servers],
-                                                   'clear block device %s' % linux_device)
+                                                   'sync partitions')
 
     @property
     def quick_setup(self):
