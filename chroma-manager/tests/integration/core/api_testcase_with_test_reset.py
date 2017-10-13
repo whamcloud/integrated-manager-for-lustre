@@ -344,7 +344,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if verify_successful and (command['errored'] or command['cancelled']):
             self._print_command(command, "FAILED", msg)
 
-            self.assertFalse(command['errored'] or command['cancelled'], command)
+            self._fetch_help(lambda: self.assertFalse(command['errored'] or
+                                                      command['cancelled'], command),
+                             ['brian.murrell@intel.com', 'joe.grund@intel.com'],
+                             "Hit #333?", timeout=60*60*48)
 
         return command
 
