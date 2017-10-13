@@ -89,7 +89,8 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
-                'systemctl stop chroma-agent; umount -t lustre -a'
+                'systemctl stop chroma-agent; umount -t lustre -a',
+                expected_return_code=None
             )
 
             self.umount_devices(server['nodename'])
