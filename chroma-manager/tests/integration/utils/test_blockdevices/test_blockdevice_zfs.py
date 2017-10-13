@@ -39,8 +39,8 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy -f %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
-                                                                                 TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
+        return ["if zpool list {0}; then zpool destroy {0}; zpool labelclear -f {0}; else exit 0; fi".format(
+            TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
 
     @property
     def install_packages_commands(self):
@@ -82,10 +82,6 @@ class TestBlockDeviceZfs(TestBlockDevice):
             return ['zfs destroy %s' % self.device_path]
 
         return ['zpool destroy %s' % self.device_path]
-
-    @property
-    def clear_label_commands(self):
-        return ['zpool labelclear -f %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
