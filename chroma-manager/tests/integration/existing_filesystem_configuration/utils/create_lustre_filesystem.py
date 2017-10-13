@@ -103,18 +103,18 @@ class CreateLustreFilesystem(UtilityTestCase):
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
 
-        next((self.clear_devices(x) for x in config['lustre_servers']), None)
+        next((self.clear_devices(x['nodename']) for x in config['lustre_servers']), None)
 
         for server in config['lustre_servers']:
             self.remote_command(server['address'],
-                                'reboot',
-                                expected_return_code=None)    # Sometimes reboot hangs, sometimes it doesn't
+                                'partprobe; udevadm settle',
+                                expected_return_code=None)
 
         def host_alive(hostname):
             try:
                 return self.remote_command(hostname,
                                            'hostname',
-                                           expected_return_code = None).exit_status == 0
+                                           expected_return_code=None).exit_status == 0
             except:
                 return False
 
