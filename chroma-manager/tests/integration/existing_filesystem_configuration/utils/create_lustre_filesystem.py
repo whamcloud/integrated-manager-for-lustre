@@ -153,8 +153,7 @@ class CreateLustreFilesystem(UtilityTestCase):
                                      'mgt',
                                      self.fsname,
                                      None,
-                                     ['--reformat',
-                                      '--mdt' if self.combined_mgt_mdt else '',
+                                     ['--mdt' if self.combined_mgt_mdt else '',
                                       '--mgs'])
 
         try:
@@ -172,10 +171,10 @@ class CreateLustreFilesystem(UtilityTestCase):
                                              'mdt',
                                              self.fsname,
                                              mgs_nids,
-                                             ['--reformat', '--mdt'])
+                                             ['--mdt'])
 
         for ost in self.osts:
-            self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--reformat', '--ost'])
+            self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--ost'])
 
         for server in config['lustre_servers']:
             self.remote_command(
