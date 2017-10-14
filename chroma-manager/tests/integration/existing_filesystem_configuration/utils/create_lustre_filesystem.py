@@ -107,8 +107,8 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         for server in config['lustre_servers']:
             self.remote_command(server['address'],
-                                'partprobe; udevadm settle',
-                                expected_return_code=None)
+                                'reboot',
+                                expected_return_code=None)  # Sometimes reboot hangs, sometimes it doesn't
 
         def host_alive(hostname):
             try:
