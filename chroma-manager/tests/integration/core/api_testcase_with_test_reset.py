@@ -1032,10 +1032,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         first_test_server = test_servers[0]
 
         def get_device_path(idx):
-            first_test_server['device_paths'][idx]
+            return first_test_server['device_paths'][idx]
 
         def cleanup_str(x):
-            'wipefs -a {}'.format(x)
+            return 'wipefs -a {}'.format(x)
 
         device_paths = [
             get_device_path(x['path_index']) for x in config['lustre_devices']
