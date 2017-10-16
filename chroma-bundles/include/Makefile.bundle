@@ -3,7 +3,7 @@ ret          := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EX
 .SHELLSTATUS := $(subst rc=,,$(lastword $(ret)))
 BUNDLE_RPMS  := $(filter-out rc=%,$(ret))
 ifneq ($(.SHELLSTATUS), 0)
-  foo := $(shell for p in $(BUNDLE_RPMS); do echo "whatrequires $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatrequires $$p; echo "whatprovides $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatprovides $$p; done)
+  foo := $(shell for p in "$(BUNDLE_RPMS)"; do echo "whatrequires $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatrequires $$p; echo "whatprovides $$p:"; repoquery --repofrompath=myrepo,$(REPO) --disablerepo="*" --enablerepo=myrepo -q --whatprovides $$p; done)
   $(warning $(foo))
   $(error Missing dependencies: $(BUNDLE_RPMS))
 endif
