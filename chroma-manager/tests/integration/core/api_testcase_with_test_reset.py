@@ -917,9 +917,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         def get_zfs_device(x):
             return TestBlockDevice('zfs', server0['device_paths'][x])
 
-        zfs_devices = [
-            get_zfs_device(x['path_index']) for x in config['lustre_devices']
+        zfs_device_paths = [
+            server0['device_paths'][x['path_index']] for x in config['lustre_devices']
             if x['backend_filesystem'] == 'zfs']
+        ]
+
+        zfs_devices = [
+            TestBlockDevice('zfs', x) for x in zfs_device_paths
+        ]
 
         [
             self.execute_simultaneous_commands(
@@ -932,7 +937,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         def set_label(x):
             return 'parted {} mklabel gpt'.format(x)
 
-        self.execute_commands([set_label(x._device_path) for x in zfs_devices],
+        self.execute_commands([set_label(x) for x in zfs_device_paths],
                               server0['fqdn'], 'setting labels on disks')
 
         self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
