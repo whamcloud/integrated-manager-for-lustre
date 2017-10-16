@@ -37,7 +37,8 @@ class MessageClass:
 class LogMessage(models.Model):
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
+        #ordering = ['id']
+        ordering = ['-datetime']
 
     datetime = models.DateTimeField()
     # Note: storing FQDN rather than ManagedHost ID because:
