@@ -920,7 +920,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         zfs_device_paths = [
             server0['device_paths'][x['path_index']] for x in config['lustre_devices']
             if x['backend_filesystem'] == 'zfs']
-        ]
 
         zfs_devices = [
             TestBlockDevice('zfs', x) for x in zfs_device_paths
