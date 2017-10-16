@@ -958,11 +958,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     imported_zpools.append(zfs_device)
                 except AssertionError:
                     # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
-                    # dd the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
+                    # clear the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
                     if action & self.CZP_REMOVEZPOOLS:
                         self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
                                                            [server['fqdn'] for server in test_servers],
-                                                           'force destroy zpool %s' % zfs_device,
+                                                           'destroy zpool %s' % zfs_device,
                                                            expected_return_code=None)
 
                         self.execute_simultaneous_commands(zfs_device.clear_label_commands,
@@ -1025,26 +1025,30 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                           expected_return_code=None)
 
     def cleanup_linux_devices(self, test_servers):
-        """
-        Destroy any partitions on the block device.
-
-        Very linux specific code.
-        :return:
-        """
-        if (self.simulator is not None) or (self.linux_devices_exist() is False):
+        if (self.simulator is not None) or (self.linux_devices_exist() is
+                                            False):
             return
 
         first_test_server = test_servers[0]
 
-        # Erase all volumes if the config does not indicate that there is already
-        # a pre-existing file system (in the case of the monitoring only tests).
-        for lustre_device in config['lustre_devices']:
-            if lustre_device['backend_filesystem'] == 'ldiskfs':
-                linux_device = TestBlockDevice('linux', first_test_server['device_paths'][lustre_device['path_index']])
+        def get_device_path(idx):
+            return first_test_server['device_paths'][idx]
 
-                self.execute_simultaneous_commands(linux_device.destroy_commands,
-                                                   [server['fqdn'] for server in test_servers],
-                                                   'clear block device %s' % linux_device)
+        def cleanup_str(x):
+            return 'wipefs -a {}'.format(x)
+
+        device_paths = [
+            get_device_path(x['path_index']) for x in config['lustre_devices']
+            if x['backend_filesystem'] == 'ldiskfs'
+        ]
+
+        desc = 'clear block devices {}'.format(', '.join(device_paths))
+        wipe_commands = map(cleanup_str, device_paths)
+        self.execute_commands(wipe_commands, first_test_server['fqdn'], desc)
+
+        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], [
+            server['fqdn'] for server in test_servers
+        ], 'sync partitions')
 
     @property
     def quick_setup(self):

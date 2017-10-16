@@ -29,6 +29,17 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
         # We add the hosts to cause ZFS to be installed.
         self.add_hosts([server['address'] for server in self.config_servers])
 
+        def set_label(x):
+            return 'parted {} mklabel gpt'.format(x)
+
+        server1 = config['lustre_servers'][0]
+
+        self.execute_commands([set_label(x) for x in server1['device_paths']],
+                              server1['fqdn'], 'setting labels on disks')
+        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], [
+            x['fqdn'] for x in config['lustre_servers']
+        ], 'sync partitions')
+
         # Replace the name with the new name on each server, replace this way to ensure the order is not changed
         for server in config['lustre_servers']:
             server['zpool_device_paths'] = {}
