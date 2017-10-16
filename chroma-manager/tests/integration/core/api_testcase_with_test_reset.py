@@ -918,7 +918,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             return TestBlockDevice('zfs', server0['device_paths'][x])
 
         zfs_devices = [
-            get_zfs_disks(x['path_index']) for x in config['lustre_devices']
+            get_zfs_device(x['path_index']) for x in config['lustre_devices']
             if x['backend_filesystem'] == 'zfs']
 
         [
