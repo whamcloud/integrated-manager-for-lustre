@@ -41,19 +41,20 @@ class TestBlockDeviceLvm(TestBlockDevice):
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        lv_format = [
-            "if lvdisplay /dev/{0}/{1}; then lvchange -an /dev/{0}/{1} && lvremove /dev/{0}/{1}; else exit 0; fi".format(
+        lv_destroy = [
+            "if lvdisplay /dev/{0}/{1}; then lvchange -an /dev/{0}/{1} && lvremove /dev/{0}/{1}; else exit 0; fi".
+            format(
                 TestBlockDeviceLvm('lvm', device_path).vg_name,
                 TestBlockDeviceLvm('lvm', device_path).lv_name)
             for device_path in device_paths
         ]
-        vg_format = [
+        vg_destroy = [
             "if vgdisplay {0}; then vgremove {0}; else exit 0; fi".format(
                 TestBlockDeviceLvm('lvm', device_path).vg_name)
             for device_path in device_paths
         ]
 
-        return lv_format + vg_format
+        return lv_destroy + vg_destroy
 
     @property
     def install_packages_commands(self):
