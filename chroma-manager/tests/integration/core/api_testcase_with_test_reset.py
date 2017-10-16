@@ -157,10 +157,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.cleanup_linux_devices(self.TEST_SERVERS)
 
                 # cleanup zfs pools
-                self.cleanup_zfs_pools(self.config_servers,
-                                       self.CZP_EXPORTPOOLS | (self.CZP_RECREATEZPOOLS if config.get('new_zpools_each_test', False) else self.CZP_REMOVEDATASETS),
-                                       None,
-                                       True)
+                self.cleanup_zpools()
 
             # Enable agent debugging
             self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
@@ -891,138 +888,64 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def zfs_devices_exist(cls):
         return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
 
-    # Not all combinations are possible, remove zpools without remove datasets makes no sense for example.
-    CZP_REMOVEDATASETS = 0x1
-    CZP_REMOVEZPOOLS = 0x2
-    CZP_REMOVEDATASETSANDZPOOLS = (CZP_REMOVEDATASETS | CZP_REMOVEZPOOLS)
-    CZP_CREATEZPOOLS = 0x4
-    CZP_RECREATEZPOOLS = (CZP_REMOVEDATASETS | CZP_REMOVEZPOOLS | CZP_CREATEZPOOLS)
-    CZP_EXPORTPOOLS = 0x8
-
-    def cleanup_zfs_pools(self, test_servers, action, zpool_datasets, devices_must_exist):
-        """
-        Make sure any zpools are imported onto server[0], and then remove any datasets on the pools. Finally
-        zpools are imported are exported leaving them not present on any node.
-
-        Very ZFS specific code.
-        :param test_servers: Servers that have have access to the zpools
-        :param action: Action defined by the CZP constants.
-        :param zpool_datasets: List of datasets to remove, None means remove all datasets.
-        :param devices_must_exist: Error is devices do not exist when moving.
-        """
+    def cleanup_zpools(self):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
 
-        # debug : we want to always do this on all hosts that have access to the underlying disks
-        test_servers = config['lustre_servers'][:4]
+        xs = config['lustre_servers'][:4]
+        fqdns = [x['fqdn'] for x in xs]
 
         # Ensure agents stopped to avoid interference with pool imports/exports
-        self.remote_operations.stop_agents([server['fqdn'] for server in test_servers])
+        self.remote_operations.stop_agents(fqdns)
 
-        # Attempt to unmount all lustre targets otherwise we won't be able to export parent pool
-        [self.remote_operations.unmount_lustre_targets(server) for server in test_servers]
+        # Attempt to unmount all lustre targets otherwise 
+        # we won't be able to export parent pool
+        [
+            self.remote_operations.unmount_lustre_targets(x)
+            for x in xs
+        ]
 
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
-        try:
-            self.execute_simultaneous_commands(TestBlockDeviceZfs.zfs_install_commands(),
-                                               [server['fqdn'] for server in test_servers],
-                                               'checking for zfs presence',
-                                               expected_return_code=None)
-        except AssertionError:
-            return
+        self.execute_simultaneous_commands(
+            ['modprobe zfs'], fqdns,
+            'checking for zfs presence',
+            expected_return_code=None)
 
-        first_test_server = test_servers[0]
-        imported_zpools = []
+        server0 = xs[0]
 
-        def dataset_match(datasets, device_path):
-            return next((dataset for dataset in datasets if dataset.startswith(device_path)), None) is not None
+        def get_zfs_device(x):
+            return TestBlockDevice('zfs', server0['device_paths'][x])
 
-        for lustre_device in config['lustre_devices']:
-            if ((lustre_device['backend_filesystem'] == 'zfs') and
-                    ((zpool_datasets is None) or dataset_match(zpool_datasets,
-                                                               first_test_server['device_paths'][lustre_device['path_index']]))):
+        zfs_devices = [
+            get_zfs_disks(x['path_index']) for x in config['lustre_devices']
+            if x['backend_filesystem'] == 'zfs']
 
-                zfs_device = TestBlockDevice('zfs', first_test_server['device_paths'][lustre_device['path_index']])
+        [
+            self.execute_simultaneous_commands(
+                x.clear_device_commands([x.device_path]),
+                fqdns,
+                'destroy zpool %s' % x,
+                expected_return_code=None) for x in zfs_devices
+        ]
 
-                self.execute_simultaneous_commands(zfs_device.release_commands,
-                                                   [server['fqdn'] for server in test_servers],
-                                                   'export zfs device %s' % zfs_device,
-                                                   expected_return_code=None)
+        def set_label(x):
+            return 'parted {} mklabel gpt'.format(x)
 
-                try:
-                    self.execute_commands(zfs_device.capture_commands,
-                                          first_test_server['fqdn'],
-                                          'import zfs device %s' % zfs_device,
-                                          expected_return_code=0 if devices_must_exist else None)
-                    imported_zpools.append(zfs_device)
-                except AssertionError:
-                    # We could not import so if we are going to CZP_REMOVEZPOOLS then we might as well now try and
-                    # clear the disk to get rid of the thing, otherwise raise the error. This is a best effort approach.
-                    if action & self.CZP_REMOVEZPOOLS:
-                        self.execute_simultaneous_commands(zfs_device.clear_device_commands([zfs_device.device_path]),
-                                                           [server['fqdn'] for server in test_servers],
-                                                           'destroy zpool %s' % zfs_device,
-                                                           expected_return_code=None)
+        self.execute_commands([set_label(x._device_path) for x in zfs_devices],
+                              server0['fqdn'], 'setting labels on disks')
 
-                        self.execute_simultaneous_commands(zfs_device.clear_label_commands,
-                                                           [server['fqdn'] for server in test_servers],
-                                                           'clear zpool labels on %s' % zfs_device,
-                                                           expected_return_code=None)
+        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
 
-                        [self.remote_operations.reset_server(server['fqdn']) for server in test_servers]
-                        [self.remote_operations.await_server_boot(server['fqdn']) for server in test_servers]
-                    else:
-                        raise
-
-        if zpool_datasets is None:
-            zpool_datasets = self.execute_commands(TestBlockDeviceZfs.list_devices_commands(),
-                                                   first_test_server['fqdn'],
-                                                   'listing zfs devices')[0].split()
-
-        zpools_datasets = [zpool_dataset for zpool_dataset in zpool_datasets if zpool_dataset != '']
-
-        if action & self.CZP_REMOVEDATASETS:
-            # Sorting longest first means
-            # zpool/dataset1/dataset2
-            #  is deleted before
-            # zpool/dataset1
-            zpools_datasets.sort(key=lambda value: -len(value))
-
-            # Have to remove datasets before zpools
-            for remove_dataset in [True, False] if (action & self.CZP_REMOVEZPOOLS) else [True]:
-                for zpool_dataset in zpools_datasets:
-                    if remove_dataset == ('/' in zpool_dataset):
-                        zfs_device = TestBlockDevice('zfs', zpool_dataset)
-
-                        self.execute_commands(zfs_device.destroy_commands,
-                                              first_test_server['fqdn'],
-                                              'destroy zfs device %s' % zfs_device)
-
-        if action & self.CZP_CREATEZPOOLS:
-            for lustre_device in config['lustre_devices']:
-                if lustre_device['backend_filesystem'] == 'zfs':
-                    zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
-
-                    self.execute_commands(zfs_device.prepare_device_commands,
-                                          first_test_server['fqdn'],
-                                          'create zfs device %s' % zfs_device)
-
-        if action & self.CZP_EXPORTPOOLS:
-            for zfs_device in imported_zpools:
-                self.execute_commands(zfs_device.release_commands,
-                                      first_test_server['fqdn'],
-                                      'export zfs device %s' % zfs_device)
-
-        for server in test_servers:
-            for lustre_device in config['lustre_devices']:
-                if lustre_device['backend_filesystem'] == 'zfs':
-                    zfs_device = TestBlockDevice('zfs', first_test_server['zpool_device_paths'][lustre_device['path_index']])
-
-                    self.execute_commands(zfs_device.release_commands,
-                                          server['fqdn'],
-                                          'export zfs device %s' % zfs_device,
-                                          expected_return_code=None)
+        [
+            self.remote_operations.reset_server(
+                x) for x in fqdns
+        ]
+        
+        [
+            self.remote_operations.await_server_boot(
+                x) for x in fqdns
+        ]
 
     def cleanup_linux_devices(self, test_servers):
         if (self.simulator is not None) or (self.linux_devices_exist() is

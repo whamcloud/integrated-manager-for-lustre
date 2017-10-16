@@ -80,10 +80,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
 
         self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:4])
-        self.cleanup_zfs_pools(self.TEST_SERVERS[:4],
-                               self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
-                               datasets,
-                               True)
+        self.cleanup_zpools()
         self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:4])
 
         # Wait for agent responses to be detected by manager
