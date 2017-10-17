@@ -947,11 +947,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 expected_return_code=None) for x in zfs_devices
         ]
 
-        def set_label(x):
-            return 'parted {} mklabel gpt'.format(x)
+        def wipe(x):
+            return 'wipefs -a {0} && parted {0} mklabel gpt'.format(x)
 
-        self.execute_commands([set_label(x) for x in zfs_device_paths],
-                              server0['fqdn'], 'setting labels on disks')
+        self.execute_commands([wipe(x) for x in zfs_device_paths],
+                              server0['fqdn'], 'wiping disks')
 
         self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
 
