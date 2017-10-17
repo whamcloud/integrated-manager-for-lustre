@@ -914,11 +914,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         server0 = xs[0]
 
-        def get_zfs_device(x):
-            return TestBlockDevice('zfs', server0['device_paths'][x])
-
         zfs_device_paths = [
-            server0['device_paths'][x['path_index']] for x in config['lustre_devices']
+            server0['orig_device_paths'][x['path_index']] for x in config['lustre_devices']
             if x['backend_filesystem'] == 'zfs']
 
         zfs_devices = [
