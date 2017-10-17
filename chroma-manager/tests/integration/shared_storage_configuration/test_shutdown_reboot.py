@@ -12,8 +12,6 @@ logger.setLevel(logging.DEBUG)
 
 
 class TestShutdownAndReboot(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:2]
-
     def _wait_for_server_boot_time(self, fqdn, old_boot_time=None):
         running_time = 0
         while running_time < TEST_TIMEOUT:

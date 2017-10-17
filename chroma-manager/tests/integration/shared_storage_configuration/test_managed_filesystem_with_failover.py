@@ -9,7 +9,6 @@ from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixin, ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
-    TEST_SERVERS = config['lustre_servers'][0:4]
 
     def _test_create_filesystem_with_failover(self):
         filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)

@@ -7,7 +7,6 @@ from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class TestFirewall(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:4]
     GREP_NOTFOUND_RC = 1
 
     def setUp(self):

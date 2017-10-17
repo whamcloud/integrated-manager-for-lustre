@@ -6,11 +6,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
-    # Even though the tests only need 1 server, we need to add a server
-    # and its HA peer in order to ensure that the peer doesn't send
-    # outdated CIB data over. There is an assumption here that the
-    # servers listed in the configuration are ordered by HA peer groups.
-    TEST_SERVERS = config['lustre_servers'][0:2]
 
     def setUp(self):
         super(ChromaPowerControlTestCase, self).setUp()

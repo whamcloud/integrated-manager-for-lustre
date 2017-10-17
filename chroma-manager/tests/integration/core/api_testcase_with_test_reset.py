@@ -46,9 +46,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     # actually need PDUs.
     TESTS_NEED_POWER_CONTROL = False
 
-    # By default, work with all configured servers. Tests which will
-    # only ever be using a subset of servers can override this to
-    # gain a slight decrease in running time.
+    # By default, work with all configured servers.
     TEST_SERVERS = config['lustre_servers']
 
     # Storage for details of the rest api provided by the manager. Presumes that the api does not change during
@@ -156,8 +154,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 # cleanup linux devices
                 self.cleanup_linux_devices(self.TEST_SERVERS)
 
-                # cleanup zfs pools
                 self.cleanup_zpools()
+                self.create_zpools()
 
             # Enable agent debugging
             self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
@@ -888,6 +886,25 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def zfs_devices_exist(cls):
         return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
 
+    def create_zpools(self):
+        xs = config['lustre_servers']
+        server0 = xs[0]
+        fqdns = [x['fqdn'] for x in xs]
+
+        for lustre_device in config['lustre_devices']:
+            if lustre_device['backend_filesystem'] == 'zfs':
+                zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])		
+
+                self.execute_commands(zfs_device.prepare_device_commands,
+                                        server0['fqdn'],
+                                        'create zfs device %s' % zfs_device)
+
+                self.execute_commands(zfs_device.release_commands,
+                                      server0['fqdn'],
+                                      'export zfs device %s' % zfs_device)
+
+            self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
+
     def cleanup_zpools(self):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
             return
@@ -942,7 +959,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.remote_operations.reset_server(
                 x) for x in fqdns
         ]
-        
+
         [
             self.remote_operations.await_server_boot(
                 x) for x in fqdns

@@ -12,7 +12,6 @@ log = logging.getLogger(__name__)
 
 class TestCorosync(ChromaIntegrationTestCase):
     """Integration tests involving the CorosyncService and DeviceAgent"""
-    TEST_SERVERS = config['lustre_servers'][0:2]
 
     def setUp(self):
         self.server_configs = []
