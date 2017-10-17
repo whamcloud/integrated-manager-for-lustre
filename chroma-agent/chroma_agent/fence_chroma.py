@@ -73,11 +73,6 @@ Arguments read from standard input take the form of:
         <content type="string" />
         <shortdesc lang="en">Fencing action (%s)</shortdesc>
     </parameter>
-    <parameter name="port" unique="0" required="1">
-        <getopt mixed="-H, --plug=&lt;id&gt;" />
-        <content type="string" />
-        <shortdesc lang="en">Storage Server (machine name) to fence</shortdesc>
-    </parameter>
 </parameters>
 <actions>
     <action name="reboot" />
