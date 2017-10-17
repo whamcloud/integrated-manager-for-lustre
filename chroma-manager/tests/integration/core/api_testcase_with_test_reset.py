@@ -891,6 +891,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         server0 = xs[0]
         fqdns = [x['fqdn'] for x in xs]
 
+        self.execute_simultaneous_commands(
+            ['modprobe zfs'], fqdns,
+            'checking for zfs presence',
+            expected_return_code=None)
+
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
                 zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])		
