@@ -23,6 +23,7 @@ Prefix: %{_prefix}
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
+BuildRequires: ed
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse

@@ -175,18 +175,12 @@ tarball: version ui-modules
 	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
-	# workaround setuptools
-	touch .chroma-manager.py
-	touch .production_supervisord.conf
-	touch .storage_server.repo
 	if ! python setup.py sdist > sdist.out; then       \
 	    echo "python setup.py sdist failed.  stdout:"; \
 	    cat sdist.out;                                 \
 	    exit 1;                                        \
 	fi
 	rm -f sdist.out
-	rm -f .chroma-manager.py
-	rm -f .production_supervisord.conf
 	echo "jenkins_fold:end:Make Manager Tarball"
 
 rpms: cleandist tarball
