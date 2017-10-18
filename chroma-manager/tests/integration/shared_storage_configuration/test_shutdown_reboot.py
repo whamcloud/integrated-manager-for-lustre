@@ -75,7 +75,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         self.assertGreater(second_boot_time, first_boot_time)
 
     def test_jobs_advertisement(self):
-        servers = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
+        servers = self.add_hosts([s['address'] for s in self.TEST_SERVERS[0:2]])
         test_server = servers[0]
 
         test_job_classes = ['RebootHostJob', 'ShutdownHostJob']
