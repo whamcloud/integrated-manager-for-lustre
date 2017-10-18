@@ -70,9 +70,22 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         self.assertEqual(response.status_code, 202)
         self.wait_for_command(self.chroma_manager, response.json['command']['id'], timeout=LONG_TEST_TIMEOUT)
 
+        # Now remove any zfs datasets, this is a topic to be discussed, but until we remove the datasets
+        # we cannot create a new filesystem. If IML does it directly as part of remove filesystem which it could
+        # then removing the filesystem would be truly unrecoverable and people might not like that.
+        datasets = [ost['volume']['volume_nodes'][0]['path'] for ost in fs['osts']]
+        datasets.extend([mdt['volume']['volume_nodes'][0]['path'] for mdt in fs['mdts']])
+
+        # Filter out the paths by removing anything with a leading /.
+        datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
+        datasets.sort(key=lambda x: -len(x))
+
         self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:4])
-        self.cleanup_zpools()
-        self.create_zpools()
+        for zpool_dataset in datasets:
+            self.execute_simultaneous_commands(['zfs destroy %s' % zpool_dataset],
+                                               [x['fqdn'] for x in self.TEST_SERVERS[:4]],
+                                               'destroy zfs dataset %s' % zpool_dataset,
+                                               expected_return_code=None)
 
         self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:4])
 
