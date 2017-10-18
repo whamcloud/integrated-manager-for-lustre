@@ -887,7 +887,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
 
     def create_zpools(self):
-        xs = config['lustre_servers']
+        xs = config['lustre_servers'][:4]
         server0 = xs[0]
         fqdns = [x['fqdn'] for x in xs]
 
