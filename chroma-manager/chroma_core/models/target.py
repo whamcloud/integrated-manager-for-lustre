@@ -844,6 +844,7 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False,
                                                  'validate_importable': True})
 
                 result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
@@ -856,6 +857,7 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False,
                                                  'validate_importable': False})
 
     @classmethod

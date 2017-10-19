@@ -408,7 +408,7 @@ class TestCheckBlockDevice(CommandCaptureTestCase, AgentUnitTestCase):
         pass
 
 
-class TestCheckImportExport(CommandCaptureTestCase, AgentUnitTestCase):
+class TestCheckImportExport(AgentUnitTestCase):
     """
     Test that the correct blockdevice methods are called, implementation of methods tested in
     test_blockdevice_zfs therefore don't repeat command capturing here
@@ -431,16 +431,32 @@ class TestCheckImportExport(CommandCaptureTestCase, AgentUnitTestCase):
         self.addCleanup(mock.patch.stopall)
 
     def test_import_device_ldiskfs(self):
-        self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb'))
-        self.assertRanAllCommandsInOrder()
+        for with_pacemaker in [True, False]:
+            self.assertAgentOK(manage_targets.import_target('linux', '/dev/sdb', with_pacemaker))
 
     def test_export_device_ldiskfs(self):
         self.assertAgentOK(manage_targets.export_target('linux', '/dev/sdb'))
-        self.assertRanAllCommandsInOrder()
 
     def test_import_device_zfs(self):
-        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset))
-        self.mock_import_.assert_called_once_with()
+        for with_pacemaker in [True, False]:
+            self.mock_import_.reset_mock()
+            self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, with_pacemaker))
+            # Force parameter only supplied on import on retry
+            self.mock_import_.assert_called_once_with(False)
+
+    def test_import_device_zfs_with_pacemaker_force(self):
+        """ Verify force is used only on retry when message indicates """
+        self.mock_import_.side_effect = ['import using -f', None]
+
+        self.assertAgentOK(manage_targets.import_target('zfs', self.zpool_dataset, True))
+        self.mock_import_.assert_has_calls([mock.call(False), mock.call(True)])
+
+    def test_import_device_zfs_with_pacemaker_fail(self):
+        """ Verify force is used only on retry when message indicates """
+        self.mock_import_.side_effect = ['no such pool available', None]
+
+        self.assertAgentError(manage_targets.import_target('zfs', self.zpool_dataset, True), 'no such pool available')
+        self.mock_import_.assert_called_once_with(False)
 
     def test_export_device_zfs(self):
         self.assertAgentOK(manage_targets.export_target('zfs', self.zpool_dataset))
