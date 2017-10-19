@@ -1,5 +1,4 @@
 
-
 from testconfig import config
 from django.utils.unittest import skipIf
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -7,8 +6,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 @skipIf(not config.get('simulator'), "RealRemoteOperations can't fake out network failures")
 class TestCommandAlert(ChromaIntegrationTestCase):
-    TEST_SERVERS = [config['lustre_servers'][0]]
-
     def _check_alert(self, alert_item_id, uri, alert_type):
         all_alerts = self.get_list("/api/alert/", {
                                                    'alert_item_id': alert_item_id,

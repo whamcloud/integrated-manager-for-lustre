@@ -1,133 +1,151 @@
 {
-    "repos": {
-        "chroma": {
-             "build_job": "BUILD_JOB_NAME",
-             "build_number": BUILD_JOB_BUILD_NUMBER
+  "repos": {
+    "chroma": {
+      "build_job": "BUILD_JOB_NAME",
+      "build_number": BUILD_JOB_BUILD_NUMBER
+    }
+  },
+  "provision": true,
+  "failover_is_configured": true,
+  "reset": true,
+  "pacemaker_hard_reset": true,
+  "managed": true,
+  "test_runners": [
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "repos": ["chroma"]
+    }
+  ],
+  "chroma_managers": [
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "repos": ["chroma"],
+      "users": [
+        {
+          "username": "admin",
+          "super": true,
+          "password": "lustre",
+          "email": "nobody@example.com"
         }
+      ]
+    }
+  ],
+  "lustre_servers": [
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "root_password": "lustre",
+      "bridges": ["a"],
+      "repos": ["chroma"],
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
+      }
     },
-    "provision": true,
-    "failover_is_configured": true,
-    "reset": true,
-    "pacemaker_hard_reset": true,
-    "managed": true,
-    "new_zpools_each_test": true,
-    "test_runners": [
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "repos": ["chroma"]
-        }
-    ],
-    "chroma_managers": [
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "repos": ["chroma"],
-            "users": [
-                {"username": "admin", "super": true, "password": "lustre",
-                 "email": "nobody@example.com"}
-            ]
-        }
-    ],
-    "lustre_servers": [
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "root_password": "lustre",
-            "bridges": ["a"],
-            "repos": ["chroma"],
-            "corosync_config": {
-                "ring1_iface": "eth1",
-                "mcast_port": "4242"
-            }
-        },
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "root_password": "lustre",
-            "bridges": ["a"],
-            "repos": ["chroma"],
-            "corosync_config": {
-                "ring1_iface": "eth1",
-                "mcast_port": "4242"
-            }
-        },
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "root_password": "lustre",
-            "bridges": ["b"],
-            "repos": ["chroma"],
-            "corosync_config": {
-                "ring1_iface": "eth1",
-                "mcast_port": "4244"
-            }
-        },
-        {
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "root_password": "lustre",
-            "bridges": ["b"],
-            "repos": ["chroma"],
-            "corosync_config": {
-                "ring1_iface": "eth1",
-                "mcast_port": "4244"
-            }
-        },
-        {
-            "distro": "el6.4",
-            "selinux_enabled": true,
-            "firewall_enabled": true,
-            "root_password": "lustre",
-            "repos": ["chroma"],
-            "profile": "posix_copytool_worker"
-        }
-    ],
-    "lustre_clients": [
-        {
-            "address": "client1",
-            "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
-            "lustre_client_version": ""
-        }
-    ],
-    "power_control_types": [
-        {
-            "agent": "fence_virsh",
-            "make": "KVM",
-            "model": "Virtual PDU",
-            "default_username": "root",
-            "default_password": "lustre",
-            "poweron_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s",
-            "powercycle_template": "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s",
-            "poweroff_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s",
-            "monitor_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor",
-            "outlet_query_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s",
-            "outlet_list_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o list"
-        }
-    ],
-    "power_distribution_units": [
-        {
-            "type": "KVM Virtual PDU",
-            "address": "VM_HOST_IP",
-            "port": "22"
-        }
-    ],
-    "pdu_outlets": [
-    ],
-    "lustre_devices": [
-        {"path_index": 0,
-            "backend_filesystem": "zfs"},
-        {"path_index": 1,
-            "backend_filesystem": "ldiskfs"},
-        {"path_index": 2,
-            "backend_filesystem": "zfs"},
-        {"path_index": 3,
-            "backend_filesystem": "ldiskfs"},
-        {"path_index": 4,
-            "backend_filesystem": "zfs"}
-    ]
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "root_password": "lustre",
+      "bridges": ["a"],
+      "repos": ["chroma"],
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
+      }
+    },
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "root_password": "lustre",
+      "bridges": ["b"],
+      "repos": ["chroma"],
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
+      }
+    },
+    {
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "root_password": "lustre",
+      "bridges": ["b"],
+      "repos": ["chroma"],
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
+      }
+    },
+    {
+      "distro": "el6.4",
+      "selinux_enabled": true,
+      "firewall_enabled": true,
+      "root_password": "lustre",
+      "repos": ["chroma"],
+      "profile": "posix_copytool_worker"
+    }
+  ],
+  "lustre_clients": [
+    {
+      "address": "client1",
+      "distro": "TEST_DISTRO_NAMETEST_DISTRO_VERSION",
+      "lustre_client_version": ""
+    }
+  ],
+  "power_control_types": [
+    {
+      "agent": "fence_virsh",
+      "make": "KVM",
+      "model": "Virtual PDU",
+      "default_username": "root",
+      "default_password": "lustre",
+      "poweron_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s",
+      "powercycle_template":
+        "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s",
+      "poweroff_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s",
+      "monitor_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor",
+      "outlet_query_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s",
+      "outlet_list_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o list"
+    }
+  ],
+  "power_distribution_units": [
+    {
+      "type": "KVM Virtual PDU",
+      "address": "VM_HOST_IP",
+      "port": "22"
+    }
+  ],
+  "pdu_outlets": [],
+  "lustre_devices": [
+    {
+      "path_index": 0,
+      "backend_filesystem": "zfs"
+    },
+    {
+      "path_index": 1,
+      "backend_filesystem": "ldiskfs"
+    },
+    {
+      "path_index": 2,
+      "backend_filesystem": "zfs"
+    },
+    {
+      "path_index": 3,
+      "backend_filesystem": "ldiskfs"
+    },
+    {
+      "path_index": 4,
+      "backend_filesystem": "zfs"
+    }
+  ]
 }
