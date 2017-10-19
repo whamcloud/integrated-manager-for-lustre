@@ -4,7 +4,6 @@
   "worker": true,
   "name": "robinhood_server",
   "initial_state": "working",
-  "rsyslog": true,
   "ntp": true,
   "corosync": false,
   "corosync2": false,
@@ -18,7 +17,6 @@
       "chroma-agent-management"
     ],
     "external": [
-      "lustre-client-modules",
       "lustre-client",
       "robinhood-lhsm",
       "robinhood-webgui",

@@ -1,5 +1,6 @@
 import logging
 import time
+import json
 
 from collections import namedtuple
 from testconfig import config
@@ -479,7 +480,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             if has_primary and has_two and accessible_enough:
                 ha_volumes.append(v)
 
-        logger.info("Found these HA volumes: '%s'" % ha_volumes)
+        logger.info("Found these HA volumes: '%s'" % json.dumps(ha_volumes, indent=4, sort_keys=True))
 
         return ha_volumes
 

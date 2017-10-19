@@ -346,6 +346,11 @@ class CommandPlan(object):
         transition_stack[transition.stateful_object] = transition.new_state
         log.debug("Updating transition_stack[%s/%s] = %s" % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state))
 
+        # do nothing for a NOOP transition
+        if transition.old_state == transition.new_state:
+            log.debug("NOOP transition %s -> %s" % (transition.old_state, transition.new_state))
+            return None
+
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
         route = transition.stateful_object.get_route(transition.old_state, transition.new_state)

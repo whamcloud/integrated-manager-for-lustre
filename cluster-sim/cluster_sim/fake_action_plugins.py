@@ -97,9 +97,7 @@ class FakeActionPlugins():
                          'enable_pacemaker',
                          'configure_target_store',
                          'unconfigure_target_store',
-                         'configure_repo',
-                         'configure_rsyslog',
-                         'unconfigure_rsyslog']:
+                         'configure_repo']:
                 return
             elif cmd == 'kernel_status':
                 return {

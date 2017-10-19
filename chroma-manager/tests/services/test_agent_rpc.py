@@ -78,7 +78,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
                         ui_name = 'Profile created to TestAgentRpc can work',
                         managed = True,
                         worker = False,
-                        rsyslog = True,
                         ntp = True,
                         corosync = True,
                         corosync2 = False)
