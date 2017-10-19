@@ -27,20 +27,20 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return ["systemctl disable zfs.target",
-                "zpool create -f %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
         if self.device_path_is_zpool_name:
             return self._device_path
-        else:
-            basename = os.path.basename(self._device_path)
-            return "zfs_pool_%s" % "".join([c for c in basename if re.match(r'\w', c)])
+
+        basename = os.path.basename(self._device_path)
+        return "zfs_pool_%s" % "".join([c for c in basename if re.match(r'\w', c)])
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy -f %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
-                                                                                 TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
+        return ["if zpool list {0}; then zpool destroy {0} && zpool labelclear {0}; else exit 0; fi".format(
+            TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
 
     @property
     def install_packages_commands(self):
@@ -85,7 +85,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     @property
     def clear_label_commands(self):
-        return ['zpool labelclear -f %s' % self.device_path]
+        return ['zpool labelclear %s' % self.device_path]
 
     def __str__(self):
         return 'zpool(%s)' % self.device_path
