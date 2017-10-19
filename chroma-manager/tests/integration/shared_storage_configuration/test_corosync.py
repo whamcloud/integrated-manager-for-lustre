@@ -1,7 +1,7 @@
 
 import logging
 
-from django.utils.unittest import skip, skipIf
+from django.utils.unittest import skip
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -12,7 +12,6 @@ log = logging.getLogger(__name__)
 
 class TestCorosync(ChromaIntegrationTestCase):
     """Integration tests involving the CorosyncService and DeviceAgent"""
-    TEST_SERVERS = config['lustre_servers'][0:2]
 
     def setUp(self):
         self.server_configs = []
@@ -192,8 +191,6 @@ class TestCorosync(ChromaIntegrationTestCase):
         for server in self.server_configs:
             self.wait_for_assert(lambda: self.assertNoAlerts(server['resource_uri'], of_type='HostOfflineAlert'))
 
-    @skipIf(config.get('simulator', False), "Skip failure in order to land #244 ("
-                                            "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/301)")
     def test_corosync_reverse_dependencies(self):
         filesystem_id = self.create_filesystem_standard(config['lustre_servers'][0:4])
 

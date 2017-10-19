@@ -6,8 +6,6 @@ from tests.integration.core.remote_operations import SimulatorRemoteOperations, 
 
 
 class TestInstallationAndUpgrade(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:4]
-
     def setUp(self):
         # Create a nice standardized filesystem name to use.
         self.fs_name = "testfs"
