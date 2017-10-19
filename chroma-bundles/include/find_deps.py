@@ -91,6 +91,7 @@ class YumDepFinder(object):
                repo.id != "extras" and repo.id != "extras-centos7.3-x86_64" and \
                repo.id != "addon-epel7-x86_64" and repo.id != "epel" and \
                repo.id != "ngompa-dnf-el7" and \
+               repo.id != "managerforlustre-manager-for-lustre" and \
                repo.id != "copr-be.cloud.fedoraproject.org_results_managerforlustre_manager-for-lustre_epel-7-x86_64_":
                 repo.disable()
 

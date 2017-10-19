@@ -36,7 +36,7 @@ help_text = {
     'goto_dashboard': 'Go to the Dashboard',
     'detect_file_systems-tooltip': 'Detect an existing file system to be monitored at the manager GUI.',
     'inode_size': 'Size (in bytes) of the inodes used to store Lustre metadata on the MDS for each file. The default is 512 bytes. In the "Lustre Operations Manual", see 5.3.1: Setting the Number of Inodes for the MDS.',
-    'force_remove': '<b> WARNING: This command is destructive.</b> This command should only be performed when the Remove command has been unsuccessful. This command will remove this server from the Intel® Manager for Lustre configuration, but Intel Manager for Lustre software will not be removed from this server.  All targets that depend on this server will also be removed without any attempt to unconfigure them. To completely remove the Intel® Manager for Lustre software from this server (allowing it to be added to another Lustre file system) you must first contact technical support. <b>You should only perform this command if this server is permanently unavailable, or has never been successfully deployed using Intel® Manager for Lustre software.</b>',
+    'force_remove': '<b> WARNING: This command is destructive.</b> This command should only be performed when the Remove command has been unsuccessful. This command will remove this server from the Intel® Manager for Lustre* software configuration, but Intel® Manager for Lustre* software software will not be removed from this server.  All targets that depend on this server will also be removed without any attempt to unconfigure them. To completely remove the Intel® Manager for Lustre* software software from this server (allowing it to be added to another Lustre file system) you must first contact technical support. <b>You should only perform this command if this server is permanently unavailable, or has never been successfully deployed using Intel® Manager for Lustre software.</b>',
     'invoke_agent': 'Indicates that the chroma-agent service can be accessed on this server.',
     'nids': 'The Lustre network identifier(s) for the LNet network(s) to which this node belongs.',
     'ping': 'Indicates if an ICMP ping from the server running Intel® Manager for Lustre*, to the server, succeeded.',
@@ -143,9 +143,6 @@ help_text = {
 
     'configure_ntp': 'Configured the NTP Client on the host',
     'unconfigure_ntp': 'Unconfigured the NTP Client on the host',
-
-    'configure_rsyslog': 'Configured rsyslog on the host',
-    'unconfigure_rsyslog': 'Unconfigured rsyslog  on the host',
 
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',

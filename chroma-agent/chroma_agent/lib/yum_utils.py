@@ -39,7 +39,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     elif action == 'remove':
         cmd = ['dnf', 'remove', '-y'] + repo_arg + list(packages)
     elif action == 'update':
-        cmd = ['dnf', 'update','--allowerasing',  '-y', '--exclude', 'kernel-debug'] + \
+        cmd = ['dnf', 'update', '--allowerasing', '-y', '--exclude', 'kernel-debug'] + \
                repo_arg + list(packages)
     elif action == 'requires':
         cmd = ['dnf', 'repoquery', '--requires'] + repo_arg + list(packages)

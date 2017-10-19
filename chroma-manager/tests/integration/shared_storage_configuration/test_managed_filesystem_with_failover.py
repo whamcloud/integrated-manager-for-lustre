@@ -38,7 +38,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
-        return (filesystem_id, volumes_expected_hosts_in_normal_state)
+        return filesystem_id, volumes_expected_hosts_in_normal_state
 
     def test_create_filesystem_with_failover_mgs(self):
 

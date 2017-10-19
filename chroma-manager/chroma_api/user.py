@@ -15,7 +15,6 @@ from tastypie.http import HttpBadRequest
 
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.chroma_model_resource import ChromaModelResource
-from chroma_api.validation_utils import validate
 
 
 class ChromaUserChangeForm(UserChangeForm):
@@ -135,7 +134,6 @@ class UserResource(ChromaModelResource):
             data['groups'] = map(handle_groups, data['groups'])
 
         return data
-
 
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource

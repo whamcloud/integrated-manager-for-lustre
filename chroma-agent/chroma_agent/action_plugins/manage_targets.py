@@ -21,6 +21,7 @@ from iml_common.lib.agent_rpc import agent_result
 from iml_common.lib.agent_rpc import agent_result_ok
 from iml_common.lib.agent_rpc import agent_ok_or_error
 from iml_common.lib.agent_rpc import agent_result_is_error
+from iml_common.lib.agent_rpc import agent_result_is_ok
 from chroma_agent.lib.pacemaker import cibadmin
 from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
 from iml_common.lib.util import platform_info
@@ -428,7 +429,21 @@ def mount_target(uuid, pacemaker_ha_operation):
     # This is called by the Target RA from corosync
     info = _get_target_config(uuid)
 
-    if agent_result_is_error(import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)):
+    import_retries = 60
+    succeeded = False
+
+    for i in xrange(import_retries):
+        # This loop is needed due pools not being immediately importable during
+        # STONITH operations. Track: https://github.com/zfsonlinux/zfs/issues/6727
+        result = import_target(info['device_type'], info['bdev'], pacemaker_ha_operation)
+        succeeded = agent_result_is_ok(result)
+        if succeeded:
+            break
+        elif (not pacemaker_ha_operation) or (info['device_type'] != 'zfs'):
+            exit(-1)
+        time.sleep(1)
+
+    if succeeded is False:
         exit(-1)
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
@@ -462,7 +477,11 @@ def import_target(device_type, path, pacemaker_ha_operation, validate_importable
     """
     blockdevice = BlockDevice(device_type, path)
 
-    error = blockdevice.import_(pacemaker_ha_operation)
+    error = blockdevice.import_(False)
+    if error:
+        if '-f' in error and pacemaker_ha_operation:
+            error = blockdevice.import_(True)
+
     if error:
         console_log.error("Error importing pool: '%s'" % error)
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -273,7 +274,7 @@ class GetCopytoolAction(Action):
 
 
 def main():
-    parser = ArgumentParser(description="Intel Manager for Lustre Copytool Monitor")
+    parser = ArgumentParser(description="Intel® Manager for Lustre* software Copytool Monitor")
     parser.add_argument("copytool_id", action=GetCopytoolAction)
     args = parser.parse_args()
 

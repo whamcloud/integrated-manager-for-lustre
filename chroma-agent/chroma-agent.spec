@@ -27,8 +27,12 @@ Requires: python-requests >= 2.6.0
 Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
-Requires: chroma-diagnostics >= %{version}
-Requires: python2-iml-common
+Requires: iml_sos_plugin
+Requires: python2-iml-common1.3
+Requires: systemd-python
+Requires: python-tzlocal
+Requires: python2-toolz
+Requires: iml-device-scanner
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
@@ -45,7 +49,6 @@ Group: System/Utility
 Conflicts: sysklogd
 
 Requires: %{name} = %{version}-%{release}
-Requires: rsyslog
 Requires: pcs
 Requires: libxml2-python
 Requires: python-netaddr
@@ -97,12 +100,9 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 
-# Nuke source code (HYD-1849)
-find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
-
 touch management.files
 cat <<EndOfList>>management.files
-%{python_sitelib}/chroma_agent/action_plugins/manage_*.py[c,o]
+%{python_sitelib}/chroma_agent/action_plugins/manage_*.py*
 %{python_sitelib}/chroma_agent/templates/
 /usr/lib/ocf/resource.d/chroma/Target
 %{_sbindir}/fence_chroma
@@ -110,14 +110,14 @@ cat <<EndOfList>>management.files
 EndOfList
 
 touch base.files
-for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.pyc'); do
+for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.py'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
   for mgmt_pat in $(<management.files); do
     if [[ $install_file == $mgmt_pat ]]; then
       continue 2
     fi
   done
-  echo "${install_file%.py*}.py[c,o]" >> base.files
+  echo "${install_file%.py*}.py*" >> base.files
 done
 
 %clean
@@ -127,8 +127,8 @@ rm -rf %{buildroot}
 chkconfig lustre-modules on
 # disable SELinux -- it prevents both lustre and pacemaker from working
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
-# the above only disables on the next boot.  disable it currently, also
-echo 0 > /selinux/enforce
+# the above only disables on the next boot.  set to permissive currently, also
+setenforce 0
 
 if [ $1 -eq 1 ]; then
     # new install; create default agent config
@@ -138,12 +138,9 @@ elif [ $1 -eq 2 ]; then
     chroma-agent convert_agent_config
 fi
 
-%post management
-chkconfig rsyslog on
-
+%triggerin management -- kernel
 # when a kernel is installed, make sure that our kernel is reset back to
 # being the preferred boot kernel
-%triggerin management -- kernel
 MOST_RECENT_KERNEL_VERSION=$(rpm -q kernel --qf "%{INSTALLTIME} %{VERSION}-%{RELEASE}.%{ARCH}\n" | sort -nr | sed -n -e '/_lustre/{s/.* //p;q}')
 grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 
@@ -156,7 +153,4 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 %attr(0644,root,root)/etc/logrotate.d/chroma-agent
 
 %files -f management.files management
-%defattr(-,root,root)
-
-%files -f devel.files devel
 %defattr(-,root,root)
