@@ -5,8 +5,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestStartingAndStoppingTargets(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:4]
-
     def test_management_target_stops_and_starts(self):
 
         self.add_hosts([config['lustre_servers'][0]['address']])

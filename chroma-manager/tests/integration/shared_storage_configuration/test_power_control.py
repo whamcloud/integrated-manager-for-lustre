@@ -6,18 +6,19 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
-    # Even though the tests only need 1 server, we need to add a server
-    # and its HA peer in order to ensure that the peer doesn't send
-    # outdated CIB data over. There is an assumption here that the
-    # servers listed in the configuration are ordered by HA peer groups.
-    TEST_SERVERS = config['lustre_servers'][0:2]
 
     def setUp(self):
         super(ChromaPowerControlTestCase, self).setUp()
+        
+        # Even though the tests only need 1 server, we need to add a server
+        # and its HA peer in order to ensure that the peer doesn't send
+        # outdated CIB data over. There is an assumption here that the
+        # servers listed in the configuration are ordered by HA peer groups.
+        servers = config['lustre_servers'][0:2]
 
-        self.server = self.add_hosts([s['address'] for s in self.TEST_SERVERS])[0]
+        self.server = self.add_hosts([s['address'] for s in servers])[0]
 
-        self.configure_power_control([s['address'] for s in self.TEST_SERVERS])
+        self.configure_power_control([s['address'] for s in servers])
 
     def all_outlets_known(self):
         outlets = self.get_list("/api/power_control_device_outlet/",
