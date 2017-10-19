@@ -7,7 +7,6 @@ from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class TestFirewall(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:4]
     GREP_NOTFOUND_RC = 1
 
     def setUp(self):
@@ -68,9 +67,9 @@ class TestFirewall(ChromaIntegrationTestCase):
         Test that when hosts are added and a filesytem is created, that all required firewall accesses are
         installed
         """
-        self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
+        servers = self.TEST_SERVERS[0:4]
 
-        host_addresses = [s['address'] for s in self.TEST_SERVERS]
+        host_addresses = [s['address'] for s in servers]
         self.hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
 
@@ -100,7 +99,7 @@ class TestFirewall(ChromaIntegrationTestCase):
 
         mcast_ports = {}
 
-        for server in self.TEST_SERVERS:
+        for server in servers:
             self.assertNotEqual('Enforcing\n',
                                 self.remote_operations._ssh_address(server['address'], 'getenforce').stdout)
 
@@ -116,7 +115,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         # tear it down and make sure firewall rules are cleaned up
         self.graceful_teardown(self.chroma_manager)
 
-        for server in self.TEST_SERVERS:
+        for server in servers:
             mcast_port = mcast_ports[server['address']]
 
             matching_rules = self._process_ip_rules(server, [(mcast_port, 'udp')])
