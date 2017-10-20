@@ -33,7 +33,9 @@ fi
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-yum --disablerepo=\* --enablerepo=chroma makecache
+# set up required repos
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+yum -y install epel-release
 yum -y install chroma-manager-integration-tests
 
 if $USE_FENCE_XVM; then
