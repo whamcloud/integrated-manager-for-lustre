@@ -57,6 +57,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     _chroma_manager = None
     _unauthorized_chroma_manager = None
 
+    # Should any filesystems left running at the end of the test
+    # be torn down?
+    teardown_fs = True
+
     def __init__(self, methodName='runTest'):
         super(ApiTestCaseWithTestReset, self).__init__(methodName)
         self.remote_operations = None
@@ -166,7 +170,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def tearDown(self):
         # TODO: move all of the (rest of the) "post-test cleanup" that is
         # done in setUp to here
-        if config.get('managed'):
+        if config.get('managed') and self.teardown_fs:
             self.remote_operations.unmount_clients()
             # stop any running filesystems
             for filesystem in [f for f in
@@ -689,7 +693,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
             result = self.remote_command(
                 chroma_manager['address'],
-                "ls /tmp/iml-*/",
+                "ls /tmp/iml-*/ || ls /tmp/ee-*/",
                 expected_return_code = None
             )
             installer_contents = result.stdout
@@ -703,7 +707,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             logger.debug("Found these profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/iml-*/$profile_pat; done &> config_profile.log" % profiles,
+                "if [ -d /tmp/iml-*/ ]; then dir=/tmp/iml-*; else dir=/tmp/ee-*; fi; for profile_pat in %s; do chroma-config profile register $dir/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
