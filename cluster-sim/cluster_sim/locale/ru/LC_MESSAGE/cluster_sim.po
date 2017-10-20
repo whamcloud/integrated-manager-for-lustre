@@ -1,0 +1,966 @@
+# I18N:L10N:ru for cluster_sim
+# Copyright (C) 2017 inbase.io
+# jno, 2017
+#
+# Note abbreviations:
+# PDU = Power Distribution Unit = распределительный щит питания
+# SU  = Scalable [storage] Unit = дисковая корзина
+# HSM = Hierarchical Storage Management = ???
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cluster-sim-4-0.0.1\n"
+"POT-Creation-Date: 2017-10-18 11:26+MSK\n"
+"PO-Revision-Date: 2017-10-18 11:30+0300\n"
+"Last-Translator: jno\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8BIT\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: benchmark.py:55
+msgid "Error %s sampling %s"
+msgstr "Ошибка %s семплирования %s"
+
+#: benchmark.py:94
+msgid "%.40s: No data"
+msgstr "%.40s: нет данных"
+
+#: benchmark.py:128
+msgid "RabbitMQ queue lengths: (avg, min, max)"
+msgstr "Длины очередей RabbitMQ: (сред, мин, макс)"
+
+#: benchmark.py:153
+msgid "simulator\_controller plugin not enabled on manager at %s"
+msgstr "Плагин simulator\_controller не включен на менеджере у %s"
+
+#: benchmark.py:156
+msgid "Resetting"
+msgstr "Сбрасывается"
+
+#: benchmark.py:175
+msgid "Starting %s:"
+msgstr "Запускается %s:"
+
+#: benchmark.py:192
+msgid "Ran in %.0fs"
+msgstr "Отработало за %.0fс"
+
+#: benchmark.py:193
+msgid "API latencies:"
+msgstr "Задержки API:"
+
+#: benchmark.py:227
+msgid "Command failed: %s"
+msgstr "Отказ команды: %s"
+
+#: benchmark.py:234
+msgid "Timeout on %s"
+msgstr "Истекло время ожидания на %s"
+
+#: benchmark.py:261
+msgid "Benchmark clearing %s"
+msgstr "Очистка испытательного замера %s"
+
+#: benchmark.py:283 cli.py:75 queue_monitor.py:46
+msgid "Failed to open session"
+msgstr "Отказ открытия сессии"
+
+#: benchmark.py:290 cli.py:84 queue_monitor.py:53
+msgid "Failed to authenticate"
+msgstr "Отказ аутентикации"
+
+#: benchmark.py:330 benchmark.py:412
+msgid "Connection count initially: %s"
+msgstr "Начальное количество соединений: %s"
+
+#: benchmark.py:341
+msgid "Creating servers..."
+msgstr "Создаю серверы..."
+
+#: benchmark.py:348
+msgid "Registering servers..."
+msgstr "Регистрирую серверы..."
+
+#: benchmark.py:353
+msgid "Waiting for setup..."
+msgstr "Жду настройки..."
+
+#: benchmark.py:354
+msgid "Setup commands for %s servers"
+msgstr "Команды настройки для серверов %s"
+
+#: benchmark.py:358 benchmark.py:432
+msgid "Failed registering %s servers: %s"
+msgstr "Отказ регистрации серверов %s: %s"
+
+#: benchmark.py:359 benchmark.py:433 benchmark.py:437
+msgid "Connection count: %s"
+msgstr "Количество соединений: %s"
+
+#: benchmark.py:369
+msgid "Requesting filesystem creation..."
+msgstr "Запрашиваю создание ФС..."
+
+#: benchmark.py:371
+msgid "Filesystem creation POST (%d OSTs)"
+msgstr "POST на создание ФС (%d OST)"
+
+#: benchmark.py:393
+msgid "Awaiting filesystem creation..."
+msgstr "Жду создания ФС..."
+
+#: benchmark.py:397
+msgid "Success for n = %s"
+msgstr "Всё хорошо для n = %s"
+
+#: benchmark.py:436
+msgid "Success registering %s servers"
+msgstr "Удачно зарегистрированы серверы %s"
+
+#: benchmark.py:439
+msgid "Connection count after flush: %s"
+msgstr "Соединений после flush: %s"
+
+#: benchmark.py:456
+msgid "i = %s, adding %s servers"
+msgstr "i = %s, добавляю %s серверов"
+
+#: benchmark.py:472
+msgid "Queue %s is backed up (%s-%s>%s in=%.2f out=%.2f)"
+msgstr "Очередь %s резервируется (%s-%s>%s вход=%.2f выход=%.2f)"
+
+#: benchmark.py:509
+msgid "Initially DB contains %s log messages"
+msgstr "Изначально БД содержит %s сообщений протокола"
+
+#: benchmark.py:515
+msgid "log\_rate = %s"
+msgstr "log\_rate = %s"
+
+#: benchmark.py:527
+msgid "Stayed backed up for %s iterations, breaking"
+msgstr "Резервируется уже %s проходов, прерываем"
+
+#: benchmark.py:534
+msgid "Stopping log generation"
+msgstr "Останавливаю генерацию протокола"
+
+#: benchmark.py:538
+msgid "Waiting for queue to drain"
+msgstr "Жду очистки очереди"
+
+#: benchmark.py:545
+msgid "Finish draining"
+msgstr "Закончил очистку"
+
+#: benchmark.py:569
+msgid "Simulated benchmarks"
+msgstr "Измерения симуляции"
+
+#: benchmark.py:570
+msgid "Disable built-in simulator (run it separately)"
+msgstr "Отключить встроенный симулятор (запустить отдельно)"
+
+#: benchmark.py:571
+msgid "Enable DEBUG-level logs"
+msgstr "Включить протоколирование уровня DEBUG"
+
+#: benchmark.py:572 cli.py:225 queue_monitor.py:65
+msgid "Manager URL"
+msgstr "URL менеджера"
+
+#: benchmark.py:573 queue_monitor.py:66
+msgid "REST API username"
+msgstr "Имя для REST API"
+
+#: benchmark.py:574 queue_monitor.py:67
+msgid "REST API password"
+msgstr "Пароль для REST API"
+
+#: benchmark.py:575
+msgid "server count"
+msgstr "Количество серверов"
+
+#: benchmark.py:599
+msgid "Starting simulator..."
+msgstr "Запускаю симулятор..."
+
+#: benchmark.py:607
+msgid "Enabled agent logging within simulator"
+msgstr "Включено протоколирование агента в симуляторе"
+
+#: benchmark.py:618
+msgid "Starting benchmark..."
+msgstr "Запускаю измерения..."
+
+#: benchmark.py:630
+msgid "Complete."
+msgstr "Готово."
+
+#: cli.py:40
+msgid "Listening on %s"
+msgstr "Слушаю %s"
+
+#: cli.py:52
+msgid "Setting up simulator configuration for %s servers in %s/"
+msgstr "Настраиваю конфигурацию симулятора для %s серверов в %s/"
+
+#: cli.py:102
+msgid "No such profile: %s"
+msgstr "Нет такого профиля: %s"
+
+#: cli.py:126
+msgid ""
+"Must pass either --secret or --username and --password\n"
+msgstr "Надо указать либо --secret, либо --username и --password\n"
+
+#: cli.py:129
+msgid "Registering %s servers in %s/"
+msgstr "Реристрация %s серверов в %s/"
+
+#: cli.py:139
+msgid ""
+"Username and password required to create PDU entries\n"
+msgstr "Для создания элементов РЩП нужны имя и пароль\n"
+
+#: cli.py:144
+msgid "Creating PDU entries and associating PDU outlets with servers..."
+msgstr "Создаю элементы РЩП и соединяю их розетки с серверами..."
+
+#: cli.py:148
+msgid "Skipping PDU creation (no servers)"
+msgstr "Пропускаю создание РЩП (нет серверов)"
+
+#: cli.py:166
+msgid "Created power\_control\_type: %s"
+msgstr "Создал power\_control\_type: %s"
+
+#: cli.py:179
+msgid "Created power\_control\_device: %s"
+msgstr "Создал power\_control\_device: %s"
+
+#: cli.py:194
+msgid "Created association %s <=> %s:%s"
+msgstr "Создал ассоциацию %s <=> %s:%s"
+
+#: cli.py:198
+msgid "Running %s servers in %s/"
+msgstr "Выполняю %s серверов в %s/"
+
+#: cli.py:220
+msgid "Warning: Using proxy %s from https\_proxy"
+msgstr "Осторожно! Используется прокси %s из https\_proxy"
+
+#: cli.py:223
+msgid "Cluster simulator"
+msgstr "Симулятор кластера"
+
+#: cli.py:224 cli.py:334
+msgid "Simulator configuration/state directory"
+msgstr "Каталог конфигурации/состояния симулятора"
+
+#: cli.py:228
+msgid "Servers per SU"
+msgstr "Серверов на корзину"
+
+#: cli.py:229 cli.py:230
+msgid "Number of simulated storage servers"
+msgstr "Количество симулируемых серверов хранения"
+
+#: cli.py:231
+msgid "Number of simulated HSM workers"
+msgstr "Количество симулируемых рабочих потоков HSM"
+
+#: cli.py:232
+msgid "Number of LNet NIDs per storage server, defaults to 1 per server"
+msgstr "Количество NIDов LNet на сервер хранения (по умолчанию 1 на сервер)"
+
+#: cli.py:233
+msgid "Number of simulated storage devices, defaults to twice the number of servers"
+msgstr "Количество симулируемых устройств хранения (по умолчанию в два раза больше, чем серверов)"
+
+#: cli.py:234
+msgid "Number of simulated server Power Supply Units, defaults to one per server"
+msgstr "Количество симулируемых серверных БП (по умолчанию один на сервер)"
+
+#: cli.py:237
+msgid "Provide a secret for registration, or provide API credentials for the simulator to acquire a token itself"
+msgstr "Предоставьте либо \"секрет\" для регистрации, либо регистрационные данные API, чтобы симулятор сам получил нужный жетон"
+
+#: cli.py:238
+msgid "Registration token secret"
+msgstr "Секретный жетон для регистрации"
+
+#: cli.py:239
+msgid "API username"
+msgstr "Имя в API"
+
+#: cli.py:240
+msgid "API password"
+msgstr "Пароль в API"
+
+#: cli.py:241
+msgid "Create PDU entries on the manager"
+msgstr "Создать элементы РЩП на менеджере"
+
+#: cli.py:258
+msgid "Running indefinitely."
+msgstr "Исполняется неопределённо."
+
+#: cli.py:270
+msgid "Stopping..."
+msgstr "Останавливаюсь..."
+
+#: cli.py:333
+msgid "Cluster Power Control"
+msgstr "Управление питанием кластера"
+
+#: cli.py:338
+msgid "PDU name"
+msgstr "Наименование РЩП"
+
+#: cli.py:339
+msgid "PDU outlet number"
+msgstr "Номер розетки РЩП"
+
+#: cli.py:340 cli.py:345
+msgid "Action to be performed (off|on|reboot)"
+msgstr "Что надо сделать (off - выключить|on - включить|reboot - перегрузить)"
+
+#: cli.py:344
+msgid "Server FQDN"
+msgstr "Полное доменное имя сервера"
+
+#: fake\_action\_plugins.py:40
+msgid "FakeActionPlugins: %s %s"
+msgstr ""
+
+#: fake\_action\_plugins.py:137
+msgid "Unknown command %s"
+msgstr "Неизвестная команда %s"
+
+#: fake\_client.py:32
+msgid "FakeClient.mount %s %s"
+msgstr ""
+
+#: fake\_client.py:41
+msgid "FakeClient.unmount %s %s"
+msgstr ""
+
+#: fake\_client.py:63
+msgid "Multiple mounts on %s: %s"
+msgstr "Множественное монтирование на %s: %s"
+
+#: fake\_client.py:66
+msgid "Tried to read proc on client %s but nothing is mounted"
+msgstr "Хотел прочитать proc на клиенте %s, но ничего не смонтировано"
+
+#: fake\_client.py:72 fake\_client.py:73
+msgid "mgsnode %s not found (known mgts are %s)"
+msgstr "Не найден узел MGS %s (известные MGSы %s)"
+
+#: fake\_cluster.py:64
+msgid "Starting resource %s on %s"
+msgstr "Запускается ресурс %s на %s"
+
+#: fake\_cluster.py:91
+msgid "leave: %s"
+msgstr "покинуть: %s"
+
+#: fake\_cluster.py:98
+msgid "migrating %s to %s"
+msgstr "мигрирую %s на %s"
+
+#: fake\_cluster.py:101
+msgid "stopping %s"
+msgstr "останавливаю %s"
+
+#: fake\_cluster.py:117
+msgid "Starting %s on primary %s"
+msgstr "Запускаю %s на первичном %s"
+
+#: fake\_cluster.py:120
+msgid "Starting %s on secondary %s"
+msgstr "Запускаю %s на вторичном %s"
+
+#: fake\_controller.py:34
+msgid "A lun with serial '%s' already exists"
+msgstr "Какой-то LUN с серийным номером '%s' уже есть"
+
+#: fake\_device\_plugins.py:93
+msgid "Lustre: Cluster simulator systemd\_journal session start %s %s"
+msgstr "Lustre: Старт сессии systemd\_journal для симулятора кластера %s %s"
+
+#: fake\_device\_plugins.py:231
+msgid "cluster nodes:  %s"
+msgstr "узлы кластера: %s"
+
+#: fake\_device\_plugins.py:236
+msgid "Nodes and state:  %s"
+msgstr "Узлы и состояния: %s"
+
+#: fake\_devices.py:95
+msgid "Tried to format a local filesystem somewhere we already have a lustre target"
+msgstr "Пытался форматировать локальную ФС где-то, где уже есть некий том Lustre"
+
+#: fake\_hsm\_coordinator.py:94
+msgid "Took %s from unassigned: %d"
+msgstr "Взял %s из нераспределённого: %d"
+
+#: fake\_hsm\_coordinator.py:97
+msgid "Got random action: %s"
+msgstr "Получил случайное действие: %s"
+
+#: fake\_hsm\_coordinator.py:103
+msgid "Received duplicate start request %s for %s"
+msgstr "Получен дубликат запроса на запуск %s для %s"
+
+#: fake\_hsm\_coordinator.py:113
+msgid "Received finish request %s for unknown action on %s"
+msgstr "Получен запрос завершения %s для неизвестного действия на %s"
+
+#: fake\_hsm\_coordinator.py:129
+msgid "Culled %d completed requests"
+msgstr "Отбраковано %d завершённых запросов"
+
+#: fake\_hsm\_coordinator.py:145
+msgid "Coordinator thread for %s stopping"
+msgstr "Останавливается поток координатора для %s"
+
+#: fake\_hsm\_coordinator.py:152
+msgid "Coordinator thread for %s starting: %s"
+msgstr "Запускается поток координатора для %s: %s"
+
+#: fake\_hsm\_coordinator.py:215
+msgid "Cannot find unknown agent by id: %s"
+msgstr "Не могу найти неизвестного агента по идентификатору: %s"
+
+#: fake\_hsm\_coordinator.py:221
+msgid "Deregistering existing agent with id %s"
+msgstr "Отмена регистрации существующего агента с идентификатором %s"
+
+#: fake\_hsm\_coordinator.py:230
+msgid "Registered agent: %s (%s)"
+msgstr "Зарегистрирован агент: %s (%s)"
+
+#: fake\_hsm\_coordinator.py:236
+msgid "Deregistered agent: %s"
+msgstr "Отменена регистрация агента: %s"
+
+#: fake\_hsm\_coordinator.py:303
+msgid "Got start on %s from %s"
+msgstr "Запустился на %s из %s"
+
+#: fake\_hsm\_coordinator.py:307
+msgid "Got finish on %s from %s"
+msgstr "Закончил на %s из %s"
+
+#: fake\_hsm\_coordinator.py:348
+msgid "Unknown HSM Coordinator control value: %s"
+msgstr "Неизвестное управляющее значение Координатора HSM: %s"
+
+#: fake\_hsm\_coordinator.py:355
+msgid "Starting HSM Coordinator for %s"
+msgstr "Запускаю Координатора HSM для %s"
+
+#: fake\_hsm\_coordinator.py:361
+msgid "Stopping HSM Coordinator for %s"
+msgstr "Останавливаю Координатора HSM для %s"
+
+#: fake\_hsm\_copytool.py:38
+msgid "Opened %s for write"
+msgstr "Открыл %s на запись"
+
+#: fake\_hsm\_copytool.py:147
+msgid "Copytool %s started"
+msgstr "Запустился копировальщик %s"
+
+#: fake\_hsm\_copytool.py:189
+msgid "Attempt to start unregistered copytool: %s"
+msgstr "Попытка апустить незарегистрированный копировальщик: %s"
+
+#: fake\_hsm\_copytool.py:251
+msgid "Starting HSM Copytool: %s"
+msgstr "Запускаю копировальщик HSM: %s"
+
+#: fake\_hsm\_copytool.py:267
+msgid "Timed out waiting for copytool thread to start"
+msgstr "Истекло время ожидания запуска потока копировальщика"
+
+#: fake\_hsm\_copytool.py:271
+msgid "Stopping HSM Copytool: %s"
+msgstr "Останавливаю Копировальщик HSM: %s"
+
+#: fake\_power\_control.py:40
+msgid "Handling PDU request from %s:%s"
+msgstr "Обрабатываю запрос РЩП от %s:%s"
+
+#: fake\_power\_control.py:57
+msgid "Creating PDU server for %s on %s:%s"
+msgstr "Создаю сервер РЩП для %s на %s:%s"
+
+#: fake\_power\_control.py:102 fake\_power\_control.py:158
+msgid "%s: received connection from %s:%s"
+msgstr "%s: получил соединение от %s:%s"
+
+#: fake\_power\_control.py:134
+msgid "POWER: Toggled %s:%s to %s"
+msgstr "ПИТАНИЕ: Переключил %s:%s в %s"
+
+#: fake\_power\_control.py:167
+msgid "%s: client %s:%s disconnected"
+msgstr "%s: клиент %s:%s отвалился"
+
+#: fake\_power\_control.py:219
+msgid "Unhandled response in %s: '%s' (%s)"
+msgstr "Необработанный ответ в %s: '%s' (%s)"
+
+#: fake\_power\_control.py:246
+msgid "Received username: %s"
+msgstr "Получил имя: %s"
+
+#: fake\_power\_control.py:251
+msgid "Received password: %s"
+msgstr "Получил пароль: %s"
+
+#: fake\_power\_control.py:255
+msgid ""
+"\n"
+"\n"
+"\n"
+"American Power Conversion               Network Management Card AOS      v3.7.3\n"
+"(c) Copyright 2009 All Rights Reserved  Rack PDU APP                     v3.7.3\n"
+"-------------------------------------------------------------------------------\n"
+"Name      : RackPDU                                   Date : 02/13/2013\n"
+"Contact   : Unknown                                   Time : 10:49:37\n"
+"Location  : Unknown                                   User : Administrator\n"
+"Up Time   : 7 Days 15 Hours 31 Minutes                Stat : P+ N+ A+\n"
+"\n"
+"Switched Rack PDU: Communication Established\n"
+msgstr ""
+
+#: fake\_power\_control.py:266
+msgid ""
+"\n"
+"------- Control Console -------------------------------------------------------\n"
+"\n"
+"     1- Device Manager\n"
+"     2- Network\n"
+"     3- System\n"
+"     4- Logout\n"
+"\n"
+"     <ESC>- Main Menu, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Control Console -- Консоль управления ---------------------------------\n"
+"\n"
+"     1- Device Manager  -- Менеджер устройств\n"
+"     2- Network         -- Сеть\n"
+"     3- System          -- Система\n"
+"     4- Logout          -- Выход\n"
+"\n"
+"     <ESC>- Main Menu, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"          - Верх меню         - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:280
+msgid ""
+"\n"
+"------- Device Manager --------------------------------------------------------\n"
+"\n"
+"     1- Phase Management\n"
+"     2- Outlet Management\n"
+"     3- Power Supply Status\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Device Manager -- Менеджер устройств ----------------------------------\n"
+"\n"
+"     1- Phase Management    -- Управление фазой\n"
+"     2- Outlet Management   -- Управление розеткой\n"
+"     3- Power Supply Status -- Состояние БП\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"          - Назад        - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:294
+msgid ""
+"\n"
+"------- Outlet Management -----------------------------------------------------\n"
+"\n"
+"     1- Outlet Control/Configuration\n"
+"     2- Outlet Restriction\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Outlet Management -- Управление розеткой ------------------------------\n"
+"\n"
+"     1- Outlet Control/Configuration -- Управление/конфигурация розетки\n"
+"     2- Outlet Restriction           -- Ограничения розетки\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"          - Назад        - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:314
+msgid ""
+"\n"
+"------- Outlet Control/Configuration ------------------------------------------\n"
+"%s\r\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Outlet Control/Configuration -- Управление/конфигурация розетки -------\n"
+"%s\r\n"
+"\n"
+"     <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"          - Назад        - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:326
+msgid ""
+"\n"
+"------- Outlet %s -------------------------------------------------------------\n"
+"\n"
+"        Name         : Outlet %s\n"
+"        Outlet       : %s\n"
+"        State        : %s\n"
+"\n"
+"     1- Control Outlet\n"
+"     2- Configure Outlet\n"
+"\n"
+"     ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Outlet %s -- Розетка --------------------------------------------------\n"
+"\n"
+"        Name   Имя       : Outlet %s\n"
+"        Outlet Розетка   : %s\n"
+"        State  Состояние : %s\n"
+"\n"
+"     1- Control Outlet   -- Управлять розетку\n"
+"     2- Configure Outlet -- Конфигурировать розетку\n"
+"\n"
+"     ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"      - Помощь     - Назад        - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:344
+msgid ""
+"\n"
+"------- Control Outlet --------------------------------------------------------\n"
+"\n"
+"        Name         : Outlet %s\n"
+"        Outlet       : %s\n"
+"        State        : %s\n"
+"\n"
+"     1- Immediate On\n"
+"     2- Immediate Off\n"
+"     3- Immediate Reboot\n"
+"     4- Delayed On\n"
+"     5- Delayed Off\n"
+"     6- Delayed Reboot\n"
+"     7- Cancel\n"
+"\n"
+"     ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"> "
+msgstr ""
+"\n"
+"------- Control Outlet -- Управлять розеткой ----------------------------------\n"
+"\n"
+"        Name   Имя       : Outlet %s\n"
+"        Outlet Розетка   : %s\n"
+"        State  Состояние : %s\n"
+"\n"
+"     1- Immediate On     -- Немедленное включение\n"
+"     2- Immediate Off    -- Немедленное отключение\n"
+"     3- Immediate Reboot -- Немедленная перезагрузка\n"
+"     4- Delayed On       -- Отложенное включение\n"
+"     5- Delayed Off      -- Отложенное отключение\n"
+"     6- Delayed Reboot   -- Отложенная перезагрузка\n"
+"     7- Cancel           -- Отмена\n"
+"\n"
+"     ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log\n"
+"      - Помощь     - Назад        - Обновить         - Протокол\n"
+"> "
+
+#: fake\_power\_control.py:367
+msgid ""
+"\n"
+"        -----------------------------------------------------------------------\n"
+"        I'm too lazy to go through all the various permutations.\n"
+"        The key line expected by fence\_apc is the next one:\n"
+"\n"
+"        Enter 'YES' to continue or <ENTER> to cancel : "
+msgstr ""
+"\n"
+"        -----------------------------------------------------------------------\n"
+"        Я слишком ленив, чтобы продираться через всевозможные перестановки.\n"
+"        Нужная строчка, которую ждёт fence\_apc, вот эта:\n"
+"\n"
+"        Введите 'YES', чтобы продолжить или <ENTER>, чтобы отменить: "
+
+#: fake\_power\_control.py:391
+msgid ""
+"%sCommand successfully issued.\r\n"
+msgstr "Команда успешно введена."
+
+#: fake\_power\_control.py:394
+msgid ""
+"\r\n"
+"%sPress <ENTER> to continue...\r\n"
+msgstr "\r\n%sНажмите <ENTER> для продолжения...\r\n"
+
+#: fake\_power\_control.py:401
+msgid ""
+"Connection Closed - Bye\r\n"
+msgstr "Соединение закрыто - до свидания\r\n"
+
+#: fake\_power\_control.py:403
+msgid "Client %s:%s logged out"
+msgstr "Клиент %s:%s вышел"
+
+#: fake\_power\_control.py:414
+msgid "%s: Running %s -> %s on %s:%s"
+msgstr "%s: Выполняю %s -> %s на %s:%s"
+
+#: fake\_power\_control.py:553
+msgid "stopping %s in poweroff\_hook"
+msgstr "останавливаю %s в poweroff\_hook"
+
+#: fake\_power\_control.py:563
+msgid "starting %s in poweron\_hook"
+msgstr "запускаю %s в poweron\_hook"
+
+#: fake\_power\_control.py:567
+msgid "starting server for %s"
+msgstr ""
+
+#: fake\_power\_control.py:574
+msgid "Power control: starting..."
+msgstr ""
+
+#: fake\_power\_control.py:579
+msgid "Power control: stopping..."
+msgstr ""
+
+#: fake\_power\_control.py:584
+msgid "Power control: joining..."
+msgstr ""
+
+#: fake\_server.py:165
+msgid "Mounted %s on %s"
+msgstr ""
+
+#: fake\_server.py:174
+msgid "Unmounted %s"
+msgstr ""
+
+#: fake\_server.py:222
+msgid "Package '%s' not found (available: %s)!"
+msgstr ""
+
+#: fake\_server.py:233
+msgid "Injecting log message %s/%s"
+msgstr ""
+
+#: fake\_server.py:270 fake\_server.py:282
+msgid "%s: Cannot get proc information for %s, it's not started here (targets here are: %s)"
+msgstr ""
+
+#: fake\_server.py:294
+msgid "Simulator cannot resolve '%s' to target"
+msgstr ""
+
+#: fake\_server.py:339
+msgid "Simulator cannot resolve '%s' to conf param name"
+msgstr ""
+
+#: fake\_server.py:345
+msgid "targets: %s: %s %s"
+msgstr ""
+
+#: fake\_server.py:347
+msgid "cluster: %s %s %s"
+msgstr ""
+
+#: fake\_server.py:361
+msgid "No HA resource for target %s/%s"
+msgstr ""
+
+#: fake\_server.py:388
+msgid "detect\_scan: %s"
+msgstr ""
+
+#: fake\_server.py:404
+msgid "Tried to run set\_conf\_param but not target named MGS is started on %s"
+msgstr ""
+
+#: fake\_server.py:504
+msgid "%s beginning shutdown"
+msgstr ""
+
+#: fake\_server.py:518
+msgid "%s, sleeping for %d seconds on shutdown"
+msgstr ""
+
+#: fake\_server.py:524
+msgid "%s shutdown complete"
+msgstr ""
+
+#: fake\_server.py:527
+msgid "%s rebooting"
+msgstr ""
+
+#: fake\_server.py:568
+msgid "%s already running; not starting again"
+msgstr ""
+
+#: fake\_server.py:572
+msgid "%s beginning startup"
+msgstr ""
+
+#: fake\_server.py:581
+msgid "%s, waiting for shutdown (%d)"
+msgstr ""
+
+#: fake\_server.py:588
+msgid "%s exiting startup because another thread is already doing it?"
+msgstr ""
+
+#: fake\_server.py:599
+msgid "%s, sleeping for %d seconds on boot"
+msgstr ""
+
+#: fake\_server.py:608
+msgid "%s startup complete"
+msgstr ""
+
+#: i18n.py:54
+msgid "Hello world"
+msgstr "Здравствуй, мир!"
+
+#: queue\_monitor.py:64
+msgid "IML Queue Monitor"
+msgstr ""
+
+#: queue\_monitor.py:68
+msgid "Width of output columns"
+msgstr ""
+
+#: simulator.py:76
+msgid "Updating packages: %s"
+msgstr ""
+
+#: simulator.py:132
+msgid "\_create\_server: %s"
+msgstr ""
+
+#: simulator.py:149
+msgid "\_create\_worker: %s"
+msgstr ""
+
+#: simulator.py:182
+msgid "Attempt to stop unknown copytool: %s"
+msgstr ""
+
+#: simulator.py:187
+msgid "Attempt to stop unknown copytool monitor: %s"
+msgstr ""
+
+#: simulator.py:254
+msgid "server\_count not a multiple of su\_size"
+msgstr ""
+
+#: simulator.py:257
+msgid "volume\_count not a multiple of su\_count"
+msgstr ""
+
+#: simulator.py:283
+msgid "remove\_server %s"
+msgstr ""
+
+#: simulator.py:364
+msgid "register %s"
+msgstr ""
+
+#: simulator.py:372
+msgid "Not registering %s, none of its PSUs are powered"
+msgstr ""
+
+#: simulator.py:385
+msgid "Registration connection failed for %s: %s"
+msgstr ""
+
+#: simulator.py:388
+msgid "Registration request failed for %s: %s"
+msgstr ""
+
+#: simulator.py:412
+msgid "register\_many: spawning threads"
+msgstr ""
+
+#: simulator.py:420
+msgid "register\_many: joined %s/%s"
+msgstr ""
+
+#: simulator.py:431
+msgid "reboot %s"
+msgstr ""
+
+#: simulator.py:444
+msgid "stop %s"
+msgstr ""
+
+#: simulator.py:447
+msgid "not running"
+msgstr ""
+
+#: simulator.py:459
+msgid "start %s"
+msgstr ""
+
+#: simulator.py:477
+msgid "Stopping"
+msgstr ""
+
+#: simulator.py:484
+msgid "Joining..."
+msgstr ""
+
+#: simulator.py:489
+msgid "Joined"
+msgstr ""
+
+#: simulator.py:496
+msgid "No servers started; skipping post\_server\_start()"
+msgstr ""
+
+#: simulator.py:511
+msgid "Start all (%.2f dispersion)"
+msgstr ""
+
+#: simulator.py:518
+msgid "start\_all: No servers yet"
+msgstr ""
+
+#: simulator.py:523
+msgid "Set log rate for %s to %s"
+msgstr ""
+
+#: simulator.py:533
+msgid "Controller '%s' not found in %s"
+msgstr ""
+

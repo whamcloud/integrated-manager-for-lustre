@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import threading
 
@@ -36,7 +37,7 @@ class FakeActionPlugins():
         # do this to avoid the subprocess log building up indefinitely.
         AgentShell.thread_state = ResultStore()
 
-        log.debug("FakeActionPlugins: %s %s" % (cmd, kwargs))
+        log.debug(_("FakeActionPlugins: %s %s") % (cmd, kwargs))
         with self._lock:
             if cmd == 'device_plugin':
                 device_plugins = FakeDevicePlugins(self._server)
@@ -133,6 +134,6 @@ class FakeActionPlugins():
                 try:
                     fn = getattr(self._server, cmd)
                 except AttributeError:
-                    raise RuntimeError("Unknown command %s" % cmd)
+                    raise RuntimeError(_("Unknown command %s") % cmd)
                 else:
                     return fn(**kwargs)

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import logging
 import datetime
@@ -89,7 +90,8 @@ class BaseFakeSystemdJournalPlugin(DevicePlugin):
                     'source': 'cluster_sim',
                     'severity': 1,
                     'facility': 1,
-                    'message': 'Lustre: Cluster simulator systemd_journal session start %s %s' % (self._server.fqdn, datetime.datetime.now()),
+                    'message': _('Lustre: Cluster simulator systemd_journal session start %s %s')
+                                 % (self._server.fqdn, datetime.datetime.now()),
                     'datetime': IMLDateTime.utcnow().isoformat() + 'Z'
                 }
             ]
@@ -226,12 +228,12 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         #  This implementation looks at ALL the servers in the simulator,
         #  and those ones that are also join'ed in the cluster are online.
 
-        log.debug('cluster nodes:  %s' % self._server._cluster.state['nodes'])
+        log.debug(_('cluster nodes:  %s') % self._server._cluster.state['nodes'])
 
         nodes = [(node_dict['nodename'], node_dict['online']) for node_dict
                  in self._server._cluster.state['nodes'].values()]
 
-        log.debug('Nodes and state:  %s' % nodes)
+        log.debug(_('Nodes and state:  %s') % nodes)
 
         dt = IMLDateTime.utcnow().isoformat()
         message = self.get_test_message(utc_iso_date_str=dt,

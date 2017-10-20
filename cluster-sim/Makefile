@@ -10,6 +10,8 @@ else
 endif
 FENCE_APC			:= $(shell if which fence_apc 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/fence_apc; fi)
 RPM2CPIO			:= $(shell if which rpm2cpio 2>/dev/null; then true; else echo rpm2cpio; fi)
+PYGETTEXTR_PY			:= $(shell if which pygettext.py 2>/dev/null; then true; else echo pygettext.py; fi)
+MSGFMT_PY			:= $(shell if which msgfmt.py 2>/dev/null; then true; else echo msgfmt.py; fi)
 
 all: rpms
 
@@ -26,7 +28,7 @@ version:
 develop: version $(FENCE_APC)
 	python setup.py develop
 
-tarball: version
+tarball: translations version
 	echo "jenkins_fold:start:Make Simulator Tarball"
 	rm -f MANIFEST
 	python setup.py sdist
@@ -52,6 +54,10 @@ docs download:
 
 $(RPM2CPIO):
 	@echo "You need to install $@ first... (brew install $@?)"
+	exit 1
+
+$(PYGETTEXTR_PY) $(MSGFMT_PY):
+	@echo "You need to install $@ first... (yum install python-tools?)"
 	exit 1
 
 # Retrieve required fence-agent rpms, extract fencing.py and
@@ -82,3 +88,36 @@ $(FENCE_APC): $(RPM2CPIO)
 fence_agents: $(FENCE_APC)
 
 print-%: ; @$(error $* is $($*) ($(value $*)) (from $(origin $*)))
+
+# The I18N/L10N section
+#
+LOCALE_DOM	:= cluster_sim
+LOCALE_DIR	:= cluster_sim/locale
+LOCALE_LANGS	:= ru
+LOCALE_POT	:= $(LOCALE_DIR)/$(LOCALE_DOM).pot
+LC_DIRS		:= $(addsuffix /LC_MESSAGE,$(addprefix $(LOCALE_DIR)/,$(LOCALE_LANGS)))
+LC_MO	:= $(addsuffix /LC_MESSAGE/$(LOCALE_DOM).mo,$(addprefix $(LOCALE_DIR)/,$(LOCALE_LANGS)))
+
+# the .po files are *never* updated automatically: they are handmade.
+# the .pot file should be updated each time the sources change!
+
+$(LC_DIRS):
+	mkdir -pv $@
+
+$(LOCALE_DIR):	$(LC_DIRS)
+
+$(LOCALE_POT): $(PYGETTEXTR_PY) $(LOCALE_DIR)
+	$(PYGETTEXTR_PY) -v -d $(LOCALE_DOM) -o $@ cluster_sim/*.py
+	@echo "Use 'git diff $@' to see what to update."
+
+$(LC_MO): $(LC_DIRS) $(LOCALE_POT)
+	po=$$(echo $@|sed -e 's/.mo$$/.po/'); \
+	test -f $$po || cp -nv $(LOCALE_POT) $$po; \
+	$(MSGFMT_PY) -o $@ $$po
+
+pot: $(LOCALE_POT)
+
+translations: $(LOCALE_POT) $(LC_MO)
+	@ls -lR $(LOCALE_DIR)
+
+# EOF #

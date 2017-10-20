@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 from copy import deepcopy
 import random
@@ -91,7 +92,8 @@ class FakeDevices(Persisted):
                 # This isn't actually illegal (if the Lustre target is offline, we could overwrite it), but
                 # the code is simpler if we ban it for now.  If you need to do this then feel free to replace
                 # this exception with some code to handle it.
-                raise RuntimeError("Tried to format a local filesystem somewhere we already have a lustre target")
+                raise RuntimeError(_("Tried to format a local filesystem"
+                                     " somewhere we already have a lustre target"))
 
             self.state['local_filesystems'][serial] = filesystem_type
 

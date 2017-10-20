@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import threading
 from cluster_sim.log import log
@@ -60,7 +61,7 @@ class FakeCluster(Persisted):
         with self._lock:
             resource = self.state['resources'][ha_label]
             resource['started_on'] = resource['primary_node']
-            log.debug("Starting resource %s on %s" % (ha_label, resource['primary_node']))
+            log.debug(_("Starting resource %s on %s") % (ha_label, resource['primary_node']))
             self.save()
             return resource
 
@@ -87,17 +88,17 @@ class FakeCluster(Persisted):
 
     def leave(self, nodename):
         with self._lock:
-            log.debug("leave: %s" % nodename)
+            log.debug(_("leave: %s") % nodename)
             self.state['nodes'][nodename]['online'] = False
             for ha_label, resource in self.state['resources'].items():
                 if resource['started_on'] == nodename:
                     options = set([resource['primary_node'], resource['secondary_node']]) - set([nodename])
                     if options:
                         destination = options.pop()
-                        log.debug("migrating %s to %s" % (ha_label, destination))
+                        log.debug(_("migrating %s to %s") % (ha_label, destination))
                         resource['started_on'] = destination
                     else:
-                        log.debug("stopping %s" % (ha_label))
+                        log.debug(_("stopping %s") % (ha_label))
                         resource['started_on'] = None
 
             self.save()
@@ -113,10 +114,10 @@ class FakeCluster(Persisted):
             for ha_label, resource in self.state['resources'].items():
                 if resource['started_on'] is None:
                     if resource['primary_node'] == nodename:
-                        log.debug("Starting %s on primary %s" % (ha_label, nodename))
+                        log.debug(_("Starting %s on primary %s") % (ha_label, nodename))
                         resource['started_on'] = nodename
                     elif resource['secondary_node'] == nodename:
-                        log.debug("Starting %s on secondary %s" % (ha_label, nodename))
+                        log.debug(_("Starting %s on secondary %s") % (ha_label, nodename))
                         resource['started_on'] = nodename
             self.save()
 

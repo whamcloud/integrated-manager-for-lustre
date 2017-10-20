@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import glob
 import json
@@ -72,7 +73,7 @@ class ClusterSimulator(Persisted):
         self._load_servers()
 
     def update_packages(self, packages, node_type='server'):
-        log.info("Updating packages: %s" % packages)
+        log.info(_("Updating packages: %s") % packages)
         for k, v in packages.items():
             self.state['packages'][node_type][k] = v
         self.save()
@@ -128,7 +129,7 @@ class ClusterSimulator(Persisted):
             address = '10.%d.%d.%d' % (network, x, y)
             nid_tuples.append((address, name, network))
 
-        log.info("_create_server: %s" % fqdn)
+        log.info(_("_create_server: %s") % fqdn)
 
         server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nodename, nid_tuples)
         self.servers[fqdn] = server
@@ -145,7 +146,7 @@ class ClusterSimulator(Persisted):
         for network in range(0, nid_count):
             nid_tuples.append(('10.%d.%d.%d' % (network, x, y), 'tcp', network))
 
-        log.info("_create_worker: %s" % fqdn)
+        log.info(_("_create_worker: %s") % fqdn)
 
         # Use -1 as the special cluster for workers
         worker = FakeServer(self, self._get_cluster_for_server(-1),
@@ -178,12 +179,12 @@ class ClusterSimulator(Persisted):
         try:
             self.copytools[id].stop()
         except KeyError:
-            log.error("Attempt to stop unknown copytool: %s" % id)
+            log.error(_("Attempt to stop unknown copytool: %s") % id)
 
         try:
             self.copytool_monitors[id].stop()
         except KeyError:
-            log.error("Attempt to stop unknown copytool monitor: %s" % id)
+            log.error(_("Attempt to stop unknown copytool monitor: %s") % id)
 
     def start_hsm_copytools(self):
         for conf in glob.glob("%s/fake_hsm_copytool-*.json" % self.folder):
@@ -250,10 +251,10 @@ class ClusterSimulator(Persisted):
         if su_size:
             # Series of SUs, blocks of one controller with several servers
             if server_count % su_size != 0:
-                raise RuntimeError("server_count not a multiple of su_size")
+                raise RuntimeError(_("server_count not a multiple of su_size"))
             su_count = server_count / su_size
             if volume_count % su_count != 0:
-                raise RuntimeError("volume_count not a multiple of su_count")
+                raise RuntimeError(_("volume_count not a multiple of su_count"))
 
             for i in range(0, su_count):
                 self.add_su(server_count / su_count, volume_count / su_count, nid_count)
@@ -279,7 +280,7 @@ class ClusterSimulator(Persisted):
             server.save()
 
     def remove_server(self, fqdn):
-        log.info("remove_server %s" % fqdn)
+        log.info(_("remove_server %s") % fqdn)
 
         self.stop_server(fqdn, shutdown = True)
         server = self.servers[fqdn]
@@ -360,7 +361,7 @@ class ClusterSimulator(Persisted):
 
     def register(self, fqdn, secret):
         try:
-            log.debug("register %s" % fqdn)
+            log.debug(_("register %s") % fqdn)
             server = self.servers[fqdn]
 
             if server.agent_is_running:
@@ -368,7 +369,7 @@ class ClusterSimulator(Persisted):
                 server.shutdown_agent()
 
             if not server.is_worker and not self.power.server_has_power(fqdn):
-                raise RuntimeError("Not registering %s, none of its PSUs are powered" % fqdn)
+                raise RuntimeError(_("Not registering %s, none of its PSUs are powered") % fqdn)
 
             client = AgentClient(
                 url = self.url + "register/%s/" % secret,
@@ -381,10 +382,10 @@ class ClusterSimulator(Persisted):
             try:
                 registration_result = client.register()
             except ConnectionError as e:
-                log.error("Registration connection failed for %s: %s" % (fqdn, e))
+                log.error(_("Registration connection failed for %s: %s") % (fqdn, e))
                 return
             except HttpError as e:
-                log.error("Registration request failed for %s: %s" % (fqdn, e))
+                log.error(_("Registration request failed for %s: %s") % (fqdn, e))
                 return
             server.crypto.install_certificate(registration_result['certificate'])
 
@@ -408,7 +409,7 @@ class ClusterSimulator(Persisted):
                 self.result = simulator.register(self.fqdn, self.secret)
 
         threads = []
-        log.debug("register_many: spawning threads")
+        log.debug(_("register_many: spawning threads"))
         for fqdn in fqdns:
             thread = RegistrationThread(fqdn, secret)
             thread.start()
@@ -416,7 +417,7 @@ class ClusterSimulator(Persisted):
 
         for i, thread in enumerate(threads):
             thread.join()
-            log.debug("register_many: joined %s/%s" % (i + 1, len(threads)))
+            log.debug(_("register_many: joined %s/%s") % (i + 1, len(threads)))
 
         return [t.result for t in threads]
 
@@ -427,7 +428,7 @@ class ClusterSimulator(Persisted):
         self.start_server(fqdn, simulate_bootup = True)
 
     def reboot_server(self, fqdn):
-        log.debug("reboot %s" % fqdn)
+        log.debug(_("reboot %s") % fqdn)
         server = self.servers[fqdn]
         if not server.running:
             server.startup()
@@ -440,10 +441,10 @@ class ClusterSimulator(Persisted):
          HA cluster) rather than just an agent shutdown.
         :param simulate_shutdown: Whether to simulate a shutdown, delays and all
         """
-        log.debug("stop %s" % fqdn)
+        log.debug(_("stop %s") % fqdn)
         server = self.servers[fqdn]
         if not server.running:
-            log.debug("not running")
+            log.debug(_("not running"))
             return
 
         if shutdown:
@@ -455,7 +456,7 @@ class ClusterSimulator(Persisted):
         """
         :param simulate_bootup: Whether to simulate a bootup, delays and all
         """
-        log.debug("start %s" % fqdn)
+        log.debug(_("start %s") % fqdn)
         server = self.servers[fqdn]
         if server.running and not simulate_bootup:
             raise RuntimeError("Can't start %s, it is already running" % fqdn)
@@ -473,26 +474,26 @@ class ClusterSimulator(Persisted):
             client.unmount_all()
 
     def stop(self):
-        log.info("Stopping")
+        log.info(_("Stopping"))
         self.power.stop()
         for group in ['coordinators', 'copytools', 'copytool_monitors', 'servers']:
             for thread in getattr(self, group).values():
                 thread.stop()
 
     def join(self):
-        log.info("Joining...")
+        log.info(_("Joining..."))
         self.power.join()
         for group in ['coordinators', 'copytools', 'copytool_monitors', 'servers']:
             for thread in getattr(self, group).values():
                 thread.join()
-        log.info("Joined")
+        log.info(_("Joined"))
 
     def pre_server_start(self):
         self.power.start()
 
     def post_server_start(self):
         if len(self.servers) < 1:
-            log.info("No servers started; skipping post_server_start()")
+            log.info(_("No servers started; skipping post_server_start()"))
             return
 
         self.start_hsm_coordinators()
@@ -507,19 +508,19 @@ class ClusterSimulator(Persisted):
         if len(self.servers):
             delay = Session.POLL_PERIOD / float(len(self.servers))
 
-            log.debug("Start all (%.2f dispersion)" % delay)
+            log.debug(_("Start all (%.2f dispersion)") % delay)
 
             for i, fqdn in enumerate(self.servers.keys()):
                 self.start_server(fqdn)
                 if i != len(self.servers) - 1:
                     time.sleep(delay)
         else:
-            log.info("start_all: No servers yet")
+            log.info(_("start_all: No servers yet"))
 
         self.post_server_start()
 
     def set_log_rate(self, fqdn, rate):
-        log.info("Set log rate for %s to %s" % (fqdn, rate))
+        log.info(_("Set log rate for %s to %s") % (fqdn, rate))
         self.servers[fqdn].log_rate = rate
 
     def poll_fake_controller(self, controller_id):
@@ -529,7 +530,8 @@ class ClusterSimulator(Persisted):
         try:
             controller = self.controllers[int(controller_id)]
         except KeyError:
-            log.error("Controller '%s' not found in %s" % (controller_id, self.controllers.keys()))
+            log.error(_("Controller '%s' not found in %s")
+                      % (controller_id, self.controllers.keys()))
             raise
         else:
             return controller.poll()

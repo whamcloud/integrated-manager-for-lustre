@@ -3,6 +3,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import argparse
 from collections import defaultdict
@@ -51,7 +52,7 @@ class ApiLatencyMonitor(threading.Thread):
             response.text  # Ensure that we have received the response, not just been sent a header
             te = time.time()
             if not response.ok:
-                log.warning("Error %s sampling %s" % (response.status_code, self._path))
+                log.warning(_("Error %s sampling %s") % (response.status_code, self._path))
                 self.samples.append((ts, None))
             else:
                 self.samples.append((ts, te - ts))
@@ -90,7 +91,7 @@ class ApiLatencyMonitor(threading.Thread):
     def __str__(self):
         mean = self.mean
         if mean is None:
-            return "%.40s: No data"
+            return _("%.40s: No data")
         else:
             return "%.40s: %2.2f ± %2.2f" % (self._path, mean, self.stderr)
 
@@ -124,7 +125,7 @@ class QueueDepthMonitor(threading.Thread):
                 statistics[name].append(val)
         del statistics['_timestamp']
 
-        report = ["RabbitMQ queue lengths: (avg, min, max)"]
+        report = [_("RabbitMQ queue lengths: (avg, min, max)")]
         for name, values in statistics.items():
             average = sum(values) / float(len(values))
             if average:
@@ -149,10 +150,10 @@ class Benchmark(object):
         # Check that the plugin for our simulated controllers is loaded
         response = self.GET("/api/storage_resource_class?plugin_name={plugin_name}".format(plugin_name=self.PLUGIN_NAME))
         if not response.json()['objects']:
-            raise RuntimeError("simulator_controller plugin not enabled on manager at %s" % self.url)
+            raise RuntimeError(_("simulator_controller plugin not enabled on manager at %s") % self.url)
 
         # Remove any servers etc on the manager from previous runs
-        log.info("Resetting")
+        log.info(_("Resetting"))
         self.reset()
 
         # Kick off some threads to monitor things in the background
@@ -171,7 +172,7 @@ class Benchmark(object):
         self._queue_monitor.start()
 
         # Kick off the benchmark routine itself
-        log.info("Starting %s:" % self.__class__.__name__)
+        log.info(_("Starting %s:") % self.__class__.__name__)
         log.info("    %s" % self.run.__doc__)
         ts = time.time()
         try:
@@ -188,8 +189,8 @@ class Benchmark(object):
             self._queue_monitor.join()
 
             te = time.time()
-            log.info("Ran in %.0fs" % (te - ts))
-            log.info("API latencies:")
+            log.info(_("Ran in %.0fs") % (te - ts))
+            log.info(_("API latencies:"))
             for path, monitor in sorted(self._latency_monitors.items(), lambda a, b: cmp(a[0], b[0])):
                 log.info("  %s" % monitor)
 
@@ -223,14 +224,14 @@ class Benchmark(object):
                 command = response.json()
                 if command['complete']:
                     if command['errored'] or command['cancelled']:
-                        raise RuntimeError("Command failed: %s" % command)
+                        raise RuntimeError(_("Command failed: %s") % command)
                     else:
                         break
                 else:
                     time.sleep(1)
                     i += 1
                     if i > TIMEOUT:
-                        raise RuntimeError("Timeout on %s" % command['message'])
+                        raise RuntimeError(_("Timeout on %s") % command['message'])
 
     def _api_flush_controllers(self):
         for resource in self.GET("/api/storage_resource?plugin_name=simulator_controller&class_name=Couplet").json()['objects']:
@@ -257,7 +258,7 @@ class Benchmark(object):
             for host in self.GET("/api/host/", params = {'limit': GROUP_SIZE}).json()['objects']:
                 remove_job = [j for j in host['available_jobs'] if j['class_name'] == "ForceRemoveHostJob"][0]
                 response = self.POST("/api/command/", data = json.dumps({
-                    'message': "Benchmark clearing %s" % host['fqdn'],
+                    'message': _("Benchmark clearing %s") % host['fqdn'],
                     'jobs': [
                         {
                             'class_name': "ForceRemoveHostJob",
@@ -279,14 +280,14 @@ class Benchmark(object):
         session.verify = False
         response = session.get("%s/api/session/" % self.url)
         if not response.ok:
-            raise RuntimeError("Failed to open session")
+            raise RuntimeError(_("Failed to open session"))
         session.headers['X-CSRFToken'] = response.cookies['csrftoken']
         session.cookies['csrftoken'] = response.cookies['csrftoken']
         session.cookies['sessionid'] = response.cookies['sessionid']
 
         response = session.post("%s/api/session/" % self.url, data = json.dumps({'username': username, 'password': password}))
         if not response.ok:
-            raise RuntimeError("Failed to authenticate")
+            raise RuntimeError(_("Failed to authenticate"))
 
         return session
 
@@ -326,7 +327,7 @@ class FilesystemSizeLimit(Benchmark):
 
         SU_SIZE = 4
 
-        log.debug("Connection count initially: %s" % self._connection_count())
+        log.debug(_("Connection count initially: %s") % self._connection_count())
         n = self.args.servers
         VOLUMES_PER_SERVER = 4
         while True:
@@ -337,25 +338,25 @@ class FilesystemSizeLimit(Benchmark):
             command_uris = []
             fqdns = []
             serials = []
-            log.debug("Creating servers...")
+            log.debug(_("Creating servers..."))
             for i in range(0, n, SU_SIZE):
                 su_result = self.simulator.add_su(SU_SIZE, SU_SIZE * VOLUMES_PER_SERVER, 1)
                 fqdns.extend(su_result['fqdns'])
                 serials.extend(su_result['serials'])
                 self._add_controller(su_result['controller_id'])
 
-            log.debug("Registering servers...")
+            log.debug(_("Registering servers..."))
             for fqdn in fqdns:
                 registration_result = self.simulator.register(fqdn, secret)
                 command_uris.append("/api/command/%s/" % (registration_result['command_id']))
 
-            log.debug("Waiting for setup...")
-            with timed("Setup commands for %s servers" % n):
+            log.debug(_("Waiting for setup..."))
+            with timed(_("Setup commands for %s servers") % n):
                 try:
                     self._wait_for_commands(command_uris)
                 except RuntimeError, e:
-                    log.error("Failed registering %s servers: %s" % (n, e))
-                    log.error("Connection count: %s" % self._connection_count())
+                    log.error(_("Failed registering %s servers: %s") % (n, e))
+                    log.error(_("Connection count: %s") % self._connection_count())
                     break
 
             # Resolve serials to volume IDs
@@ -365,9 +366,9 @@ class FilesystemSizeLimit(Benchmark):
             for volume in response.json()['objects']:
                 serial_to_id[volume['label']] = volume['id']
 
-            log.debug("Requesting filesystem creation...")
+            log.debug(_("Requesting filesystem creation..."))
 
-            with timed("Filesystem creation POST (%d OSTs)" % ost_count):
+            with timed(_("Filesystem creation POST (%d OSTs)") % ost_count):
                 response = self.POST("/api/filesystem/",
                                                  data=json.dumps({
                                                      'name': 'testfs',
@@ -389,11 +390,11 @@ class FilesystemSizeLimit(Benchmark):
                 assert response.ok
                 command_uri = response.json()['command']['resource_uri']
 
-            log.debug("Awaiting filesystem creation...")
+            log.debug(_("Awaiting filesystem creation..."))
             assert response.status_code == 202, response.status_code
             self._wait_for_commands([command_uri])
 
-            log.info("Success for n = %s" % n)
+            log.info(_("Success for n = %s") % n)
             n += self.args.servers
 
 
@@ -408,7 +409,7 @@ class ConcurrentRegistrationLimit(Benchmark):
         """
         SU_SIZE = 4
 
-        log.debug("Connection count initially: %s" % self._connection_count())
+        log.debug(_("Connection count initially: %s") % self._connection_count())
         n = self.args.servers
         while True:
             log.info("n = %s" % n)
@@ -428,14 +429,14 @@ class ConcurrentRegistrationLimit(Benchmark):
             try:
                 self._wait_for_commands(command_uris)
             except RuntimeError, e:
-                log.error("Failed registering %s servers: %s" % (n, e))
-                log.debug("Connection count: %s" % self._connection_count())
+                log.error(_("Failed registering %s servers: %s") % (n, e))
+                log.debug(_("Connection count: %s") % self._connection_count())
                 break
             else:
-                log.info("Success registering %s servers" % n)
-                log.debug("Connection count: %s" % self._connection_count())
+                log.info(_("Success registering %s servers") % n)
+                log.debug(_("Connection count: %s") % self._connection_count())
                 self.reset()
-                log.debug("Connection count after flush: %s" % self._connection_count())
+                log.debug(_("Connection count after flush: %s") % self._connection_count())
                 n += self.args.servers
 
 
@@ -452,7 +453,7 @@ class ServerCountLimit(Benchmark):
         i = 0
         baseline = dict((queue['name'], queue['messages']) for queue in self.get_queues())
         while True:
-            log.info("i = %s, adding %s servers" % (i, add_group_size))
+            log.info(_("i = %s, adding %s servers") % (i, add_group_size))
             time.sleep(1)
             registration_command_uris = []
             i += add_group_size
@@ -468,7 +469,7 @@ class ServerCountLimit(Benchmark):
             for queue in self.get_queues():
                 if queue['messages'] - baseline.get(queue['name'], 0) > max(queue['message_stats_ack_details_rate'], i):
                     backed_up_queues.append(queue['name'])
-                    log.info("Queue %s is backed up (%s-%s>%s in=%.2f out=%.2f)" % (
+                    log.info(_("Queue %s is backed up (%s-%s>%s in=%.2f out=%.2f)") % (
                         queue['name'],
                         queue['messages'],
                         baseline.get(queue['name'], 0),
@@ -505,13 +506,13 @@ class LogIngestRate(Benchmark):
         response = self.GET("/api/log/")
         assert response.ok
         log_message_count = response.json()['meta']['total_count']
-        log.debug("Initially DB contains %s log messages" % log_message_count)
+        log.debug(_("Initially DB contains %s log messages") % log_message_count)
 
         tap_out = 0
         saturated_samples = []
         log_rate = 8
         while True:
-            log.info("log_rate = %s" % log_rate)
+            log.info(_("log_rate = %s") % log_rate)
             for fqdn in server_fqdns:
                 self.simulator.set_log_rate(fqdn, log_rate)
 
@@ -523,25 +524,25 @@ class LogIngestRate(Benchmark):
                 if tap_out > 0:
                     saturated_samples.append(systemd_journal_queue['message_stats_publish_details_rate'])
                 if tap_out >= 3:
-                    log.warning("Stayed backed up for %s iterations, breaking" % tap_out)
+                    log.warning(_("Stayed backed up for %s iterations, breaking") % tap_out)
                     break
             else:
                 tap_out = 0
                 saturated_samples = []
                 log_rate *= 2
 
-        log.debug("Stopping log generation")
+        log.debug(_("Stopping log generation"))
         for n in range(0, 8):
             self.simulator.set_log_rate('test%.3d.localdomain' % n, 0)
 
-        log.debug("Waiting for queue to drain")
+        log.debug(_("Waiting for queue to drain"))
         rate_samples = []
         while True:
             systemd_journal_queue = self._get_queue('agent_systemd_journal_rx')
             log.debug(systemd_journal_queue['messages'], systemd_journal_queue['message_stats_ack_details_rate'])
 
             if systemd_journal_queue['messages'] == 0:
-                log.info("Finish draining")
+                log.info(_("Finish draining"))
                 break
             else:
                 rate_samples.append(systemd_journal_queue['message_stats_ack_details_rate'])
@@ -565,13 +566,13 @@ class LogIngestRate(Benchmark):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Simulated benchmarks")
-    parser.add_argument('--remote_simulator', required=False, help="Disable built-in simulator (run it separately)", default=False)
-    parser.add_argument('--debug', required=False, help="Enable DEBUG-level logs", default=False)
-    parser.add_argument('--url', required=False, help="Manager URL", default="https://localhost:8000")
-    parser.add_argument('--username', required=False, help="REST API username", default='admin')
-    parser.add_argument('--password', required=False, help="REST API password", default='lustre')
-    parser.add_argument('--servers', help="server count", default=8, type=int)
+    parser = argparse.ArgumentParser(description=_("Simulated benchmarks"))
+    parser.add_argument('--remote_simulator', required=False, help=_("Disable built-in simulator (run it separately)"), default=False)
+    parser.add_argument('--debug', required=False, help=_("Enable DEBUG-level logs"), default=False)
+    parser.add_argument('--url', required=False, help=_("Manager URL"), default="https://localhost:8000")
+    parser.add_argument('--username', required=False, help=_("REST API username"), default='admin')
+    parser.add_argument('--password', required=False, help=_("REST API password"), default='lustre')
+    parser.add_argument('--servers', help=_("server count"), default=8, type=int)
     subparsers = parser.add_subparsers()
 
     log_ingest_parser = subparsers.add_parser("reset")
@@ -595,7 +596,7 @@ def main():
         log.setLevel(logging.DEBUG)
 
     if not args.remote_simulator:
-        log.info("Starting simulator...")
+        log.info(_("Starting simulator..."))
 
         # Enable logging by agent code run within simulator
         from chroma_agent.log import daemon_log
@@ -603,7 +604,7 @@ def main():
         handler = logging.FileHandler("chroma-agent.log")
         handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
         daemon_log.addHandler(handler)
-        daemon_log.info("Enabled agent logging within simulator")
+        daemon_log.info(_("Enabled agent logging within simulator"))
 
         from cluster_sim.simulator import ClusterSimulator
         simulator = ClusterSimulator(folder=None, url=args.url + "/")
@@ -614,7 +615,7 @@ def main():
         simulator = xmlrpclib.ServerProxy("http://localhost:%s" % SIMULATOR_PORT, allow_none=True)
 
     try:
-        log.info("Starting benchmark...")
+        log.info(_("Starting benchmark..."))
         args.func(args, simulator)
     except:
         # Because we do a hard exit at the end here, explicitly log terminating
@@ -626,4 +627,4 @@ def main():
         # this isn't production code).
         os._exit(-1)
 
-    log.info("Complete.")
+    log.info(_("Complete."))

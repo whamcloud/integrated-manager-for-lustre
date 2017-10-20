@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import tempfile
 import time
@@ -161,7 +162,7 @@ class FakeServer(utils.Persisted):
         with self._lock:
             self.state['client_mounts'][mountspec] = mountpoint
             self.save()
-        log.debug("Mounted %s on %s" % (mountspec, mountpoint))
+        log.debug(_("Mounted %s on %s") % (mountspec, mountpoint))
 
     def del_client_mount(self, mountspec):
         with self._lock:
@@ -170,7 +171,7 @@ class FakeServer(utils.Persisted):
                 self.save()
             except KeyError:
                 pass
-        log.debug("Unmounted %s" % mountspec)
+        log.debug(_("Unmounted %s") % mountspec)
 
     @property
     def nids(self):
@@ -218,7 +219,7 @@ class FakeServer(utils.Persisted):
             try:
                 self.state['packages'][package] = self._simulator.available_packages(self.node_type)[package]
             except KeyError:
-                raise RuntimeError("Package '%s' not found (available: %s)!" %
+                raise RuntimeError(_("Package '%s' not found (available: %s)!") %
                                    (package, self._simulator.available_packages(self.node_type)))
 
         self.save()
@@ -229,7 +230,7 @@ class FakeServer(utils.Persisted):
         return self.state['packages'][package]
 
     def inject_log_message(self, message):
-        log.debug("Injecting log message %s/%s" % (self.fqdn, message))
+        log.debug(_("Injecting log message %s/%s") % (self.fqdn, message))
         self._log_messages.append(
             {
                 'source': 'cluster_sim',
@@ -266,7 +267,8 @@ class FakeServer(utils.Persisted):
                 if target['label'] == mdt_name:
                     return target
 
-            raise RuntimeError("%s: Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
+            raise RuntimeError(_("%s: Cannot get proc information for %s,"
+                                 " it's not started here (targets here are: %s)") % (
                 self.fqdn, mdt_name,
                 [t['label'] for t in self._targets_started_here]))
 
@@ -277,7 +279,8 @@ class FakeServer(utils.Persisted):
                 if target['label'] == ost_name:
                     return target
 
-            raise RuntimeError("%s: Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
+            raise RuntimeError(_("%s: Cannot get proc information for %s,"
+                                 " it's not started here (targets here are: %s)") % (
                 self.fqdn, ost_name,
                 [t['label'] for t in self._targets_started_here]))
 
@@ -288,7 +291,7 @@ class FakeServer(utils.Persisted):
                 if target['label'] == mdt_name:
                     return target
 
-        raise NotImplementedError("Simulator cannot resolve '%s' to target" % path)
+        raise NotImplementedError(_("Simulator cannot resolve '%s' to target") % path)
 
     def _proc_path_to_conf_param(self, configs, path):
         """Resolve a /proc/foo/bar to a foo-MDT0000.bar.baz and look it up
@@ -333,15 +336,15 @@ class FakeServer(utils.Persisted):
             except KeyError:
                 return MDT_DEFAULTS[parts[5]]
 
-        raise NotImplementedError("Simulator cannot resolve '%s' to conf param name" % path)
+        raise NotImplementedError(_("Simulator cannot resolve '%s' to conf param name") % path)
 
     def detect_scan(self, target_devices):
         local_targets = []
         mgs_target = None
         for serial, target in self._devices.state['targets'].items():
-            log.info("targets: %s: %s %s" % (serial, target['label'], target['uuid']))
+            log.info(_("targets: %s: %s %s") % (serial, target['label'], target['uuid']))
         for ha_label, resource in self._cluster.state['resources'].items():
-            log.info("cluster: %s %s %s" % (ha_label, resource['uuid'], resource['device_path']))
+            log.info(_("cluster: %s %s %s") % (ha_label, resource['uuid'], resource['device_path']))
 
         for target_device in target_devices:
             path = target_device['path']
@@ -355,7 +358,7 @@ class FakeServer(utils.Persisted):
             try:
                 ha_resource = self._cluster.get_by_uuid(target['uuid'])
             except KeyError:
-                log.warning("No HA resource for target %s/%s" % (target['label'], target['uuid']))
+                log.warning(_("No HA resource for target %s/%s") % (target['label'], target['uuid']))
                 continue
             location = self._cluster.resource_locations()[ha_resource['ha_label']]
             mounted = location == self.nodename
@@ -382,7 +385,7 @@ class FakeServer(utils.Persisted):
         result = {"local_targets": local_targets,
                   "mgs_targets": mgs_targets,
                   "mgs_conf_params": {}}
-        log.debug("detect_scan: %s" % json.dumps(result, indent = 2))
+        log.debug(_("detect_scan: %s") % json.dumps(result, indent = 2))
 
         return result
 
@@ -398,7 +401,8 @@ class FakeServer(utils.Persisted):
                 mgt = target
                 break
         if mgt is None:
-            raise RuntimeError("Tried to run set_conf_param but not target named MGS is started on %s" % self.fqdn)
+            raise RuntimeError(_("Tried to run set_conf_param but not target"
+                                 " named MGS is started on %s") % self.fqdn)
 
         self._devices.mgt_set_conf_param(mgt['mgsnode'], key, value)
 
@@ -497,7 +501,7 @@ class FakeServer(utils.Persisted):
         :param reboot: Restart the server after shutdown completes.
         """
         def blocking_shutdown():
-            log.info("%s beginning shutdown" % self.fqdn)
+            log.info(_("%s beginning shutdown") % self.fqdn)
             self._enter_shutdown()
 
             shutdown_start_time = IMLDateTime.utcnow()
@@ -511,16 +515,16 @@ class FakeServer(utils.Persisted):
                     break
 
                 remaining_delay = MIN_SHUTDOWN_DURATION - shutdown_time
-                log.info("%s, sleeping for %d seconds on shutdown" % (self.fqdn, remaining_delay))
+                log.info(_("%s, sleeping for %d seconds on shutdown") % (self.fqdn, remaining_delay))
 
                 shutdown_time += remaining_delay
                 time.sleep(remaining_delay)
 
             self._exit_shutdown()
-            log.info("%s shutdown complete" % self.fqdn)
+            log.info(_("%s shutdown complete") % self.fqdn)
 
             if reboot:
-                log.info("%s rebooting" % self.fqdn)
+                log.info(_("%s rebooting") % self.fqdn)
                 self.startup(simulate_shutdown)
 
         class NonBlockingShutdown(threading.Thread):
@@ -561,11 +565,11 @@ class FakeServer(utils.Persisted):
             log.warning("%s can't start; not registered" % self.fqdn)
             return
         if self.running and not self.shutting_down:
-            log.warning("%s already running; not starting again" % self.fqdn)
+            log.warning(_("%s already running; not starting again") % self.fqdn)
             return
 
         def blocking_startup():
-            log.info("%s beginning startup" % self.fqdn)
+            log.info(_("%s beginning startup") % self.fqdn)
 
             startup_time = 0
             # Mixing shutdown/startup state here is a little weird, but
@@ -574,14 +578,14 @@ class FakeServer(utils.Persisted):
             # simulating a reboot is easier if we deal with waiting for
             # the shutdown to finish here before moving on to startup.
             while simulate_bootup and self.shutting_down:
-                log.info("%s, waiting for shutdown (%d)" % (self.fqdn, startup_time))
+                log.info(_("%s, waiting for shutdown (%d)") % (self.fqdn, startup_time))
                 startup_time += 1
                 time.sleep(1)
 
             # This may happen to the losing thread(s) during startup after
             # a multi-PDU power cycle.
             if self.starting_up:
-                log.info("%s exiting startup because another thread is already doing it?" % self.fqdn)
+                log.info(_("%s exiting startup because another thread is already doing it?") % self.fqdn)
                 return
 
             self._enter_startup()
@@ -592,7 +596,7 @@ class FakeServer(utils.Persisted):
                     break
 
                 remaining_delay = MIN_STARTUP_DURATION - startup_time
-                log.info("%s, sleeping for %d seconds on boot" % (self.fqdn, remaining_delay))
+                log.info(_("%s, sleeping for %d seconds on boot") % (self.fqdn, remaining_delay))
 
                 startup_time += remaining_delay
                 time.sleep(remaining_delay)
@@ -601,7 +605,7 @@ class FakeServer(utils.Persisted):
             self._cluster.join(self.nodename)
 
             self._exit_startup()
-            log.info("%s startup complete" % self.fqdn)
+            log.info(_("%s startup complete") % self.fqdn)
 
         class NonBlockingStartup(threading.Thread):
             def run(self):
@@ -858,7 +862,7 @@ class FakeServer(utils.Persisted):
                 started_on = uuid_started_on[target['uuid']]
             except KeyError:
                 # lustre target not known to cluster, not yet ha-configured
-                # log.debug("Lustre target %s %s not known to cluster %s" % (target['label'], target['uuid'],
+                # log.debug(_("Lustre target %s %s not known to cluster %s") % (target['label'], target['uuid'],
                 #                                                            json.dumps(self._cluster.state['resources'], indent=2)))
                 pass
             else:
