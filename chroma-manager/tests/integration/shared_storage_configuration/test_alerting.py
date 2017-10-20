@@ -5,8 +5,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestEvents(ChromaIntegrationTestCase):
-    TEST_SERVERS = [config['lustre_servers'][0]]
-
     def test_reboot_event(self):
         """Test that when a host is restarted, a single corresponding event is generated"""
 

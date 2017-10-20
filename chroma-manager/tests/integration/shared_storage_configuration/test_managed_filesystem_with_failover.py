@@ -9,7 +9,6 @@ from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixin, ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
-    TEST_SERVERS = config['lustre_servers'][0:4]
 
     def _test_create_filesystem_with_failover(self):
         filesystem_id = self.create_filesystem_standard(self.TEST_SERVERS)
@@ -38,9 +37,8 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
-        return (filesystem_id, volumes_expected_hosts_in_normal_state)
+        return filesystem_id, volumes_expected_hosts_in_normal_state
 
-    @skip('Temporarily disable so we can land #244 (https://github.com/intel-hpdd/intel-manager-for-lustre/issues/298)')
     def test_create_filesystem_with_failover_mgs(self):
 
         filesystem_id, volumes_expected_hosts_in_normal_state = self._test_create_filesystem_with_failover()
