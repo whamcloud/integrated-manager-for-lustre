@@ -6,8 +6,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestHostid(ChromaIntegrationTestCase):
-    TEST_SERVERS = [config['lustre_servers'][0]]
-
     @skipIf(config.get('simulator'), "Testing hostid generation requires real nodes (not simulated)")
     def test_create_hostid(self):
         """

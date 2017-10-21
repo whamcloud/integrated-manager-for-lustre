@@ -12,7 +12,6 @@ class TestNtpSync(ChromaIntegrationTestCase):
     TIME_OFFSET_HOURS = 8
     TIME_ERROR_LARGE_MINS = 5
     TIME_ERROR_SMALL_MINS = 1
-    TEST_SERVERS = [config['lustre_servers'][0]]
 
     def _change_agent_time(self):
         """ Modify agent time to be different from the manager time """

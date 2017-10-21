@@ -12,8 +12,6 @@ logger.setLevel(logging.DEBUG)
 
 
 class TestShutdownAndReboot(ChromaIntegrationTestCase):
-    TEST_SERVERS = config['lustre_servers'][0:2]
-
     def _wait_for_server_boot_time(self, fqdn, old_boot_time=None):
         running_time = 0
         while running_time < TEST_TIMEOUT:
@@ -77,7 +75,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         self.assertGreater(second_boot_time, first_boot_time)
 
     def test_jobs_advertisement(self):
-        servers = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
+        servers = self.add_hosts([s['address'] for s in self.TEST_SERVERS[0:2]])
         test_server = servers[0]
 
         test_job_classes = ['RebootHostJob', 'ShutdownHostJob']
