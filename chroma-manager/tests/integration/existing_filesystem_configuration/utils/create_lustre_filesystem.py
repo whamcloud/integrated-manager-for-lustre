@@ -3,6 +3,7 @@ import json
 import sys
 
 from testconfig import config
+from tests.integration.core.remote_operations import stop_agent_cmd
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
@@ -89,7 +90,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
-                'systemctl stop chroma-agent',
+                stop_agent_cmd,
                 expected_return_code=None
             )
 
