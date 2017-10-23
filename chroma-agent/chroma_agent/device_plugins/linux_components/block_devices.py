@@ -1,12 +1,14 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
+from collections import defaultdict
 
 import os
 import re
 import errno
 import socket
 import json
+from iml_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.lib.shell import AgentShell
 from toolz.functoolz import pipe
 from toolz.itertoolz import getter
@@ -79,6 +81,8 @@ def get_major_minor(x):
 def as_device(x):
     paths = sort_paths(get_default('PATHS', [], x))
     path = next(iter(paths), None)
+    uuid = x.get('DM_UUID')
+    lvm_pfix = 'LVM-'
 
     return {
         'major_minor': get_major_minor(x),
@@ -92,7 +96,11 @@ def as_device(x):
         'device_path': x.get('DEVPATH'),
         'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
         'is_ro': x.get('IML_IS_RO'),
-        'parent': None
+        'parent': None,
+        'dm_lv': x.get('DM_LV_NAME'),
+        'dm_vg': x.get('DM_VG_NAME'),
+        'dm_uuid': uuid[len(lvm_pfix):] if (uuid is not None and uuid.startswith(lvm_pfix)) else None,
+        'dm_slave_mms': get_default('DM_SLAVE_MMS', [], x)
     }
 
 
@@ -174,7 +182,7 @@ class NormalizedDeviceTable(object):
         return [
             value for value in self.table.values()
             if value.startswith(device_fullpath)
-        ]
+            ]
 
     def normalized_device_path(self, device_path):
         normalized_path = os.path.realpath(device_path)
@@ -197,7 +205,7 @@ class NormalizedDeviceTable(object):
         visited = set()
 
         while (normalized_path not in visited) and (
-                normalized_path in self.table):
+                    normalized_path in self.table):
             visited.add(normalized_path)
             normalized_path = self.table[normalized_path]
 
@@ -211,6 +219,12 @@ class BlockDevices(object):
     def __init__(self):
         (self.block_device_nodes, self.node_block_devices,
          self.normalized_device_table) = self._parse_sys_block()
+
+        # TODO: mpaths should be populated, need to retrieve udev DM_MULTIPATH_DEVICE_PATH
+        self.mpaths = {}
+        self.vgs = {}
+        self.lvs = defaultdict(dict)
+        self._parse_dm_devs()
 
     def _parse_sys_block(self):
         xs = fetch_device_list()
@@ -283,6 +297,33 @@ class BlockDevices(object):
 
         return pipe(self.block_device_nodes.itervalues(),
                     cmapcat(build_paths), dict)
+
+    def _lvm_populate(self, device):
+        """ Create vg and lv entries for devices with dm attributes """
+        vg_name, vg_uuid, vg_size, lv_name, lv_uuid, lv_size, lv_mm, lv_slave_mms = \
+            map(device.get,
+                ('dm_vg', None, None, 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
+
+        self.vgs[vg_name] = {'name': vg_name,
+                             'uuid': vg_uuid,
+                             'size': vg_size,
+                             'pvs_major_minor': []}
+
+        [self.vgs[vg_name]['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+         if mm not in self.vgs[vg_name]['pvs_major_minor']]
+
+        # Do this to cache the device, type see blockdevice and filesystem for info.
+        BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
+
+        self.lvs[vg_name][lv_name] = {'name': lv_name,
+                                      'uuid': lv_uuid,
+                                      'size': lv_size,
+                                      'block_device': lv_mm}
+
+    def _parse_dm_devs(self):
+        xs = fetch_device_list()
+
+        [self._lvm_populate(x) for x in xs if x.get('dm_lv')]
 
     @classmethod
     def quick_scan(cls):

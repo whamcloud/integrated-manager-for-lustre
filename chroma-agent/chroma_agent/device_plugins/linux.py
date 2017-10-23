@@ -8,7 +8,6 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import config
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.device_plugins.linux_components.zfs import ZfsDevices
-from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
 from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
@@ -43,9 +42,6 @@ class LinuxDevicePlugin(DevicePlugin):
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
-        # Devicemapper: LVM and Multipath
-        dmsetup = DmsetupTable(block_devices)
-
         # Software RAID
         mds = MdRaid(block_devices).all()
 
@@ -62,12 +58,12 @@ class LinuxDevicePlugin(DevicePlugin):
         # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
 
-        return {"vgs": dmsetup.vgs,
-                "lvs": dmsetup.lvs,
+        return {"vgs": block_devices.vgs,
+                "lvs": block_devices.lvs,
                 "zfspools": zfs_devices.zpools,
                 "zfsdatasets": zfs_devices.datasets,
                 "zfsvols": zfs_devices.zvols,
-                "mpath": dmsetup.mpaths,
+                "mpath": block_devices.mpaths,
                 "devs": block_devices.block_device_nodes,
                 "local_fs": local_fs,
                 'emcpower': emcpowers,
