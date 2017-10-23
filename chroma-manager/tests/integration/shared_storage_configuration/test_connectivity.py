@@ -21,7 +21,6 @@ class TestConnectivity(ChromaIntegrationTestCase):
      * A connection is not closed promptly by the manager (e.g. it's dropped with no FIN)
      * A connection is not closed promptly by the agent (e.g. it's dropped with no FIN)
     """
-    TEST_SERVERS = [config['lustre_servers'][0]]
 
     def _test_failure(self, start_failure_cb, end_failure_cb, time_to_failure):
         """

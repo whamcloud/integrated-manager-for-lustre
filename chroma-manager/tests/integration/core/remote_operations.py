@@ -156,7 +156,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def get_corosync_port(self, fqdn):
         return self._simulator.servers[fqdn].state['corosync'].mcast_port
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return Shell.RunResult(rc=0, stdout="", stderr="", timeout=False)
 
     def backup_cib(*args, **kwargs):
@@ -540,9 +540,9 @@ class RealRemoteOperations(RemoteOperations):
         # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
         self._ssh_address(fqdn, 'chroma-config restart')
 
-    def run_chroma_diagnostics(self, server, verbose):
+    def run_iml_diagnostics(self, server, verbose):
         return self._ssh_fqdn(server['fqdn'],
-                              "chroma-diagnostics %s" % ("-v -v -v" if verbose else ""),
+                              "iml-diagnostics" + " --all-logs" if verbose else "",
                               timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
@@ -1020,8 +1020,10 @@ class RealRemoteOperations(RemoteOperations):
         :return: Exception on failure.
         """
         try:
-            self._ssh_address(server['address'],
+            result = self._ssh_address(server['address'],
                               'umount -t lustre -a')
+            logger.info("Unmounting Lustre on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
@@ -1034,10 +1036,15 @@ class RealRemoteOperations(RemoteOperations):
                               ''')
             # going to need to reboot this node to get any use out of it
             self.reset_server(server['fqdn'])
-            raise RuntimeError("Failed to umount Lustre on %s.  "
+            raise RuntimeError("Timed out unmounting Lustre target(s) on %s.  "
                                "Debug data has been collected.  "
                                "Make sure to add it to an existing ticket or "
                                "create a new one." % server['nodename'])
+        if result.rc != 0:
+            logger.info("Unmounting Lustre on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
+            raise RuntimeError("Failed to unmount lustre on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
+                               (server, result.rc, result.stdout, result.stderr))
 
     def is_worker(self, server):
         workers = [w['address'] for w in
@@ -1207,9 +1214,17 @@ class RealRemoteOperations(RemoteOperations):
                                                         "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        self._ssh_address(address, "ring1_iface=%s\n%s" %
-                                          (server['corosync_config']['ring1_iface'],
-                                           clear_ha_script.read()))
+                        result = self._ssh_address(address, "ring1_iface=%s\n%s" %
+                                                   (server['corosync_config']['ring1_iface'],
+                                                    clear_ha_script.read()))
+                        logger.info("clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                        (server['nodename'], result.rc, result.stdout, result.stderr))
+
+                        if result.rc != 0:
+                            logger.info("clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
+                                        (server['nodename'], result.rc, result.stdout, result.stderr))
+                            raise RuntimeError("Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
+                                               (server, result.rc, result.stdout, result.stderr))
 
                     self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
                     self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))

@@ -3,7 +3,14 @@
 # license that can be found in the LICENSE file.
 
 
+from chroma_agent import config
+from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePluginManager
+from chroma_agent.lib.agent_startup_functions import agent_daemon_startup_function
+from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_function
+from iml_common.lib import util
+from iml_common.lib.agent_rpc import agent_error, agent_result_ok
+from iml_common.blockdevices.blockdevice import BlockDevice
 
 
 def device_plugin(plugin = None):
@@ -47,5 +54,37 @@ def trigger_plugin_update(agent_daemon_context, plugin_names):
         agent_daemon_context.plugin_sessions[plugin_name]._plugin.trigger_plugin_update = True
 
 
-ACTIONS = [device_plugin, trigger_plugin_update]
+@agent_daemon_startup_function()
+def initialise_block_device_drivers():
+    """
+    When the agent is run we want to allow block devices to do any initialization that they might need, this function
+    may also be called by the manager.
+    """
+    console_log.info("Initialising drivers for block device types")
+    for cls in util.all_subclasses(BlockDevice):
+        error = cls.initialise_driver(config.profile_managed)
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
+
+
+@agent_daemon_teardown_function()
+def terminate_block_device_drivers():
+    """
+    When the agent is stopped we want to allow block devices to do any termination that they might need, this function
+    may also be called by the manager.
+    """
+    console_log.info("Terminating drivers for block device types")
+    for cls in util.all_subclasses(BlockDevice):
+        error = cls.terminate_driver()
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
+
+
+ACTIONS = [device_plugin, trigger_plugin_update, initialise_block_device_drivers, terminate_block_device_drivers]
 CAPABILITIES = []

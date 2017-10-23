@@ -361,56 +361,8 @@ def setup(request, key):
         return token_error
 
     # the minimum repos needed on a storage server now
-    repos = """[ngompa-dnf-el7]
-name=Copr repo for dnf-el7 owned by ngompa
-baseurl=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/epel-7-$basearch/
-type=rpm-md
-skip_if_unavailable=True
-gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/pubkey.gpg
-repo_gpgcheck=0
-enabled=1
-enabled_metadata=1
+    repos = open("/usr/share/chroma-manager/storage_server.repo").read()
 
-[lustre]
-name=Lustre Server
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_server/
-enabled=1
-gpgcheck=0
-
-[lustre-client]
-name=Lustre Client
-baseurl=https://build.whamcloud.com/lustre-b2_10_last_successful_client/
-enabled=1
-gpgcheck=0
-
-[e2fsprogs]
-name=Lustre e2fsprogs
-baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
-enabled=1
-gpgcheck=0
-
-[managerforlustre-manager-for-lustre]
-name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
-type=rpm-md
-skip_if_unavailable=True
-gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
-repo_gpgcheck=0
-enabled=1
-
-[epel]
-name=Extra Packages for Enterprise Linux 7 - $basearch
-#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
-mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
-failovermethod=priority
-enabled=1
-gpgcheck=1
-#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
-gpgkey=https://muug.ca/mirror/fedora-epel/RPM-GPG-KEY-EPEL-7
-
-"""
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
         if bundle.bundle_name != "external":
@@ -433,7 +385,7 @@ proxy=_none_
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = 'chroma-agent chroma-diagnostics'
+    repo_packages = 'chroma-agent'
     server_profile = ServerProfile.objects.get(name = request.REQUEST['profile_name'])
 
     try:
