@@ -9,6 +9,7 @@ import errno
 import socket
 import json
 from iml_common.blockdevices.blockdevice import BlockDevice
+from iml_common.lib.util import human_to_bytes
 from chroma_agent.lib.shell import AgentShell
 from toolz.functoolz import pipe
 from toolz.itertoolz import getter
@@ -81,8 +82,6 @@ def get_major_minor(x):
 def as_device(x):
     paths = sort_paths(get_default('PATHS', [], x))
     path = next(iter(paths), None)
-    uuid = x.get('DM_UUID')
-    lvm_pfix = 'LVM-'
 
     return {
         'major_minor': get_major_minor(x),
@@ -97,10 +96,12 @@ def as_device(x):
         'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
         'is_ro': x.get('IML_IS_RO'),
         'parent': None,
+        'dm_multipath': x.get('DM_MULTIPATH_DEVICE_PATH'),
         'dm_lv': x.get('DM_LV_NAME'),
         'dm_vg': x.get('DM_VG_NAME'),
-        'dm_uuid': uuid[len(lvm_pfix):] if (uuid is not None and uuid.startswith(lvm_pfix)) else None,
-        'dm_slave_mms': get_default('DM_SLAVE_MMS', [], x)
+        'dm_uuid': x.get('DM_UUID'),
+        'dm_slave_mms': get_default('DM_SLAVE_MMS', [], x),
+        'dm_vg_size': x.get('DM_VG_SIZE').strip() if x.get('DM_VG_SIZE') is not None else None
     }
 
 
@@ -138,6 +139,21 @@ def fetch_device_list():
 
     return pipe(info.itervalues(),
                 cmap(as_device), cfilter(filter_device), list)
+
+
+def parse_dm_uuids(dm_uuid):
+    """
+    :param dm_uuid: device mapper uuid string (combined vg and lv with lvm prefix) from device_scanner
+    :return: tuple of vg and lv UUIDs
+    """
+    lvm_pfix = 'LVM-'
+    uuid_len = 32
+
+    if (not dm_uuid.startswith(lvm_pfix)) or (len(dm_uuid) != (len(lvm_pfix) + (uuid_len * 2))):
+        # unexpected uuid string, TODO: log this as an error
+        return None, None
+
+    return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
 
 class NormalizedDeviceTable(object):
@@ -217,14 +233,13 @@ class BlockDevices(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
     def __init__(self):
-        (self.block_device_nodes, self.node_block_devices,
-         self.normalized_device_table) = self._parse_sys_block()
-
         # TODO: mpaths should be populated, need to retrieve udev DM_MULTIPATH_DEVICE_PATH
         self.mpaths = {}
         self.vgs = {}
         self.lvs = defaultdict(dict)
-        self._parse_dm_devs()
+
+        (self.block_device_nodes, self.node_block_devices,
+         self.normalized_device_table) = self._parse_sys_block()
 
     def _parse_sys_block(self):
         xs = fetch_device_list()
@@ -237,8 +252,11 @@ class BlockDevices(object):
         block_device_nodes = reduce(
             lambda d, x: dict(d, **{x['major_minor']: x}), xs, {})
 
-        return (block_device_nodes, node_block_devices,
-                NormalizedDeviceTable(xs))
+        ndt = NormalizedDeviceTable(xs)
+
+        self._parse_dm_devs(xs)
+
+        return block_device_nodes, node_block_devices, ndt
 
     def paths_to_major_minors(self, device_paths):
         """
@@ -300,13 +318,15 @@ class BlockDevices(object):
 
     def _lvm_populate(self, device):
         """ Create vg and lv entries for devices with dm attributes """
-        vg_name, vg_uuid, vg_size, lv_name, lv_uuid, lv_size, lv_mm, lv_slave_mms = \
+        vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
             map(device.get,
-                ('dm_vg', None, None, 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
+                ('dm_vg', 'dm_vg_size', 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
+
+        vg_uuid, lv_uuid = parse_dm_uuids(dm_uuid)
 
         self.vgs[vg_name] = {'name': vg_name,
                              'uuid': vg_uuid,
-                             'size': vg_size,
+                             'size': human_to_bytes(vg_size),
                              'pvs_major_minor': []}
 
         [self.vgs[vg_name]['pvs_major_minor'].append(mm) for mm in lv_slave_mms
@@ -320,10 +340,8 @@ class BlockDevices(object):
                                       'size': lv_size,
                                       'block_device': lv_mm}
 
-    def _parse_dm_devs(self):
-        xs = fetch_device_list()
-
-        [self._lvm_populate(x) for x in xs if x.get('dm_lv')]
+    def _parse_dm_devs(self, xs):
+        [self._lvm_populate(x) for x in xs if x.get('dm_lv') is not None]
 
     @classmethod
     def quick_scan(cls):
