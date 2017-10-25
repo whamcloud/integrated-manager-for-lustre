@@ -63,6 +63,12 @@ class LinuxAgentTests(unittest.TestCase):
 
 
 class TestBlockDevices(LinuxAgentTests):
+    def test_block_device_lvm_output(self):
+        # load entire device_scanner output so parent of partition can be resolved
+        self.load_fixture(None)
+
+        [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['vgs', 'lvs']]  # , 'mpaths']]
+
     def test_block_device_nodes_parsing(self):
         result = self.block_devices.block_device_nodes
 
@@ -101,19 +107,19 @@ class TestBlockDevices(LinuxAgentTests):
         self.assertEqual(result,
                          {u'/dev/mapper/vg_00-lv_root': u'253:0'})
 
-#    def test_dm_striped_block_device_nodes_parsing(self):
-#        self.load_fixture(u'/devices/virtual/block/dm-0')
-#        result = self.block_devices.block_device_nodes
-#
-#        self.assertEqual(result, {"253:0": self.expected["devs"]["253:0"]})
-#
-#    def test_dm_striped_node_block_devices_parsing(self):
-#        self.load_fixture(u'/devices/virtual/block/dm-0')
-#        result = self.block_devices.node_block_devices
-#
-#        self.assertEqual(result,
-#                         {u'/dev/mapper/vg_00-lv_root': u'253:0'})
-#
+    def test_dm_striped_block_device_nodes_parsing(self):
+        self.load_fixture(u'/devices/virtual/block/dm-2')
+        result = self.block_devices.block_device_nodes
+
+        self.assertEqual(result, {"253:2": self.expected["devs"]["253:2"]})
+
+    def test_dm_striped_node_block_devices_parsing(self):
+        self.load_fixture(u'/devices/virtual/block/dm-2')
+        result = self.block_devices.node_block_devices
+
+        self.assertEqual(result,
+                         {u'/dev/mapper/vg_01-stripedlv': u'253:2'})
+
 #    def test_dm_mpath_block_device_nodes_parsing(self):
 #        self.load_fixture(u'/devices/virtual/block/dm-0')
 #        result = self.block_devices.block_device_nodes
