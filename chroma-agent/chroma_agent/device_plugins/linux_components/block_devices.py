@@ -100,8 +100,8 @@ def as_device(x):
         'dm_lv': x.get('DM_LV_NAME'),
         'dm_vg': x.get('DM_VG_NAME'),
         'dm_uuid': x.get('DM_UUID'),
-        'dm_slave_mms': get_default('DM_SLAVE_MMS', [], x),
-        'dm_vg_size': x.get('DM_VG_SIZE').strip() if x.get('DM_VG_SIZE') is not None else None
+        'dm_slave_mms': get_default('IML_DM_SLAVE_MMS', [], x),
+        'dm_vg_size': x.get('IML_DM_VG_SIZE')
     }
 
 

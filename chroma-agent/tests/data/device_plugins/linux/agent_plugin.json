@@ -26,7 +26,7 @@
             "/dev/disk/by-uuid/4181121058058545370"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:0/block/sda/sda1", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:0/block/sda/sda1", 
           "dm_vg": null, 
           "parent": "8:0", 
           "major_minor": "8:1", 
@@ -50,7 +50,7 @@
             "/dev/sda"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:0/block/sda", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:0/block/sda", 
           "dm_vg": null, 
           "parent": null, 
           "major_minor": "8:0", 
@@ -69,12 +69,13 @@
         "8:16": {
           "dm_lv": null, 
           "paths": [
+            "/dev/disk/by-id/lvm-pv-uuid-rchh1h-uXGR-gvmQ-hW6M-SHpY-8cjr-Ir4iAi", 
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:4", 
             "/dev/sdb"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:4/block/sdb", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:4/block/sdb", 
           "dm_vg": null, 
           "parent": null, 
           "major_minor": "8:16", 
@@ -86,8 +87,8 @@
           "serial_83": "0QEMU    QEMU HARDDISK   disk5", 
           "serial_80": "SQEMU    QEMU HARDDISK   disk5", 
           "device_type": "disk", 
-          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5", 
-          "filesystem_type": null, 
+          "path": "/dev/disk/by-id/lvm-pv-uuid-rchh1h-uXGR-gvmQ-hW6M-SHpY-8cjr-Ir4iAi", 
+          "filesystem_type": "LVM2_member", 
           "size": 10737418240
         }, 
         "253:1": {
@@ -148,6 +149,35 @@
           "filesystem_type": "ext4", 
           "size": 18845007872
         }, 
+        "253:2": {
+          "dm_lv": "stripedlv", 
+          "paths": [
+            "/dev/mapper/vg_01-stripedlv", 
+            "/dev/disk/by-id/dm-name-vg_01-stripedlv", 
+            "/dev/disk/by-id/dm-uuid-LVM-KHoa9g8GBwQJMHjQtL77pGj6b9R1YWrlEDy4qFTQ3cgVnmyhy1zB2cJx2l5yE26D", 
+            "/dev/dm-2", 
+            "/dev/vg_01/stripedlv"
+          ], 
+          "dm_multipath": null, 
+          "device_path": "/devices/virtual/block/dm-2", 
+          "dm_vg": "vg_01", 
+          "parent": null, 
+          "major_minor": "253:2", 
+          "dm_slave_mms": [
+            "8:16", 
+            "8:32"
+          ], 
+          "is_ro": false, 
+          "dm_uuid": "LVM-KHoa9g8GBwQJMHjQtL77pGj6b9R1YWrlEDy4qFTQ3cgVnmyhy1zB2cJx2l5yE26D", 
+          "partition_number": null, 
+          "dm_vg_size": "21466447872B", 
+          "serial_83": null, 
+          "serial_80": null, 
+          "device_type": "disk", 
+          "path": "/dev/mapper/vg_01-stripedlv", 
+          "filesystem_type": null, 
+          "size": 5368709120
+        }, 
         "8:9": {
           "dm_lv": null, 
           "paths": [
@@ -157,7 +187,7 @@
             "/dev/disk/by-partuuid/73b32105-b8ba-7541-a16d-2f2c1eef663e"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:0/block/sda/sda9", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:0/block/sda/sda9", 
           "dm_vg": null, 
           "parent": "8:0", 
           "major_minor": "8:9", 
@@ -182,7 +212,7 @@
             "/dev/sde"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:1/block/sde", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:1/block/sde", 
           "dm_vg": null, 
           "parent": null, 
           "major_minor": "8:64", 
@@ -275,12 +305,13 @@
         "8:32": {
           "dm_lv": null, 
           "paths": [
+            "/dev/disk/by-id/lvm-pv-uuid-4EOncI-V8DM-QhjD-l5PH-0ryE-rnIX-eJYZLI", 
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:3", 
             "/dev/sdc"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:3/block/sdc", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:3/block/sdc", 
           "dm_vg": null, 
           "parent": null, 
           "major_minor": "8:32", 
@@ -292,33 +323,34 @@
           "serial_83": "0QEMU    QEMU HARDDISK   disk4", 
           "serial_80": "SQEMU    QEMU HARDDISK   disk4", 
           "device_type": "disk", 
-          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4", 
-          "filesystem_type": null, 
+          "path": "/dev/disk/by-id/lvm-pv-uuid-4EOncI-V8DM-QhjD-l5PH-0ryE-rnIX-eJYZLI", 
+          "filesystem_type": "LVM2_member", 
           "size": 10737418240
         }, 
-        "8:48": {
+        "8:57": {
           "dm_lv": null, 
           "paths": [
-            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3", 
-            "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:2", 
-            "/dev/sdd"
+            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part9", 
+            "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:2-part9", 
+            "/dev/sdd9", 
+            "/dev/disk/by-partuuid/0b3fba84-639b-4c41-93b4-60fefb498a45"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:2/block/sdd", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd/sdd9", 
           "dm_vg": null, 
-          "parent": null, 
-          "major_minor": "8:48", 
+          "parent": "8:48", 
+          "major_minor": "8:57", 
           "dm_slave_mms": [], 
           "is_ro": false, 
           "dm_uuid": null, 
-          "partition_number": null, 
+          "partition_number": 9, 
           "dm_vg_size": null, 
           "serial_83": "0QEMU    QEMU HARDDISK   disk3", 
           "serial_80": "SQEMU    QEMU HARDDISK   disk3", 
-          "device_type": "disk", 
-          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3", 
+          "device_type": "partition", 
+          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part9", 
           "filesystem_type": null, 
-          "size": 10737418240
+          "size": 8388608
         }, 
         "8:49": {
           "dm_lv": null, 
@@ -332,7 +364,7 @@
             "/dev/disk/by-uuid/17405978854036742270"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:2/block/sdd/sdd1", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd/sdd1", 
           "dm_vg": null, 
           "parent": "8:48", 
           "major_minor": "8:49", 
@@ -348,35 +380,42 @@
           "filesystem_type": "zfs_member", 
           "size": 10726932480
         }, 
-        "8:57": {
+        "8:48": {
           "dm_lv": null, 
           "paths": [
-            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part9", 
-            "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:2-part9", 
-            "/dev/sdd9", 
-            "/dev/disk/by-partuuid/0b3fba84-639b-4c41-93b4-60fefb498a45"
+            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3", 
+            "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:2", 
+            "/dev/sdd"
           ], 
           "dm_multipath": null, 
-          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:2/block/sdd/sdd9", 
+          "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd", 
           "dm_vg": null, 
-          "parent": "8:48", 
-          "major_minor": "8:57", 
+          "parent": null, 
+          "major_minor": "8:48", 
           "dm_slave_mms": [], 
           "is_ro": false, 
           "dm_uuid": null, 
-          "partition_number": 9, 
+          "partition_number": null, 
           "dm_vg_size": null, 
           "serial_83": "0QEMU    QEMU HARDDISK   disk3", 
           "serial_80": "SQEMU    QEMU HARDDISK   disk3", 
-          "device_type": "partition", 
-          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part9", 
+          "device_type": "disk", 
+          "path": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3", 
           "filesystem_type": null, 
-          "size": 8388608
+          "size": 10737418240
         }
       }, 
       "zfsvols": {}, 
       "mpath": {}, 
       "lvs": {
+        "vg_01": {
+          "stripedlv": {
+            "block_device": "253:2", 
+            "size": 5368709120, 
+            "name": "stripedlv", 
+            "uuid": "EDy4qFTQ3cgVnmyhy1zB2cJx2l5yE26D"
+          }
+        }, 
         "vg_00": {
           "lv_root": {
             "block_device": "253:0", 
@@ -424,6 +463,15 @@
         }
       }, 
       "vgs": {
+        "vg_01": {
+          "size": 21466447872, 
+          "name": "vg_01", 
+          "pvs_major_minor": [
+            "8:16", 
+            "8:32"
+          ], 
+          "uuid": "KHoa9g8GBwQJMHjQtL77pGj6b9R1YWrl"
+        }, 
         "vg_00": {
           "size": 20946354176, 
           "name": "vg_00", 
