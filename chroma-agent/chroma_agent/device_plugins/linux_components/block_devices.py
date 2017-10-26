@@ -233,8 +233,6 @@ class BlockDevices(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
     def __init__(self):
-        # TODO: mpaths should be populated, need to retrieve udev DM_MULTIPATH_DEVICE_PATH
-        self.mpaths = {}
         self.vgs = {}
         self.lvs = defaultdict(dict)
 

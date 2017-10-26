@@ -7,6 +7,22 @@ from django.utils import unittest
 
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
+from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
+
+
+# included for legacy tests
+class MockDmsetupTable(DmsetupTable):
+    def __init__(self, dmsetup_data, devices_data):
+        self.lvs = devices_data['lvs']
+        self.vgs = devices_data['vgs']
+        self.mpaths = {}
+        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
+            with mock.patch(
+                    'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+                    return_value=(devices_data['block_device_nodes'],
+                                  devices_data['node_block_devices'])):
+                self.block_devices = BlockDevices()
+        self._parse_dm_table(dmsetup_data)
 
 
 class LinuxAgentTests(unittest.TestCase):
