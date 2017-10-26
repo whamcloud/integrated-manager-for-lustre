@@ -1,24 +1,21 @@
-import json
-
 import mock
 from chroma_agent.device_plugins.linux import LocalFilesystems
 from tests.test_utils import patch_open
-from tests.device_plugins.linux.test_linux import MockDmsetupTable, DummyDataTestCase
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
-class TestNonLocalLvmComponents(DummyDataTestCase):
-    def test_HYD_2431(self):
-        devices_data = json.loads(self.load('devices_HYD-2431.json'))
-        dmsetup_data = self.load('dmsetup_HYD-2431.json')
-
-        actual_lvs = MockDmsetupTable(dmsetup_data, devices_data).lvs
-        expected_lvs = json.loads(self.load('lvs_HYD-2431.json'))
-        self.assertDictEqual(actual_lvs, expected_lvs)
-
-        actual_vgs = MockDmsetupTable(dmsetup_data, devices_data).vgs
-        expected_vgs = json.loads(self.load('vgs_HYD-2431.json'))
-        self.assertDictEqual(actual_vgs, expected_vgs)
+#class TestNonLocalLvmComponents(DummyDataTestCase):
+#    def test_HYD_2431(self):
+#        devices_data = json.loads(self.load('devices_HYD-2431.json'))
+#        dmsetup_data = self.load('dmsetup_HYD-2431.json')
+#
+#        actual_lvs = MockDmsetupTable(dmsetup_data, devices_data).lvs
+#        expected_lvs = json.loads(self.load('lvs_HYD-2431.json'))
+#        self.assertDictEqual(actual_lvs, expected_lvs)
+#
+#        actual_vgs = MockDmsetupTable(dmsetup_data, devices_data).vgs
+#        expected_vgs = json.loads(self.load('vgs_HYD-2431.json'))
+#        self.assertDictEqual(actual_vgs, expected_vgs)
 
 
 class TestLocalFilesystem(CommandCaptureTestCase):

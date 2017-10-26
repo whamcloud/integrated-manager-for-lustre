@@ -6,7 +6,24 @@ import mock
 from django.utils import unittest
 
 import chroma_agent.lib.normalize_device_path as ndp
-from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable
+from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
+
+
+# included for legacy tests
+class MockDmsetupTable(DmsetupTable):
+    def __init__(self, dmsetup_data, devices_data):
+        self.lvs = devices_data['lvs']
+        self.vgs = devices_data['vgs']
+        self.mpaths = {}
+        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
+            with mock.patch(
+                    'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+                    return_value=(devices_data['block_device_nodes'],
+                                  devices_data['node_block_devices'],
+                                  NormalizedDeviceTable([]))):
+                self.block_devices = BlockDevices()
+        self._parse_dm_table(dmsetup_data)
 
 
 class LinuxAgentTests(unittest.TestCase):
@@ -15,9 +32,6 @@ class LinuxAgentTests(unittest.TestCase):
 
         tests = os.path.join(os.path.dirname(__file__), '../../')
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
-
-        self.load_fixture(u'/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd')
-        self.load_expected()
 
         self.existing_files = []
 
@@ -39,6 +53,14 @@ class LinuxAgentTests(unittest.TestCase):
                                  "Normalized path failure %s != %s" %
                                  (normalized_path,
                                   ndp.normalized_device_path(path)))
+
+
+class DummyDataTests(LinuxAgentTests):
+    def setUp(self):
+        super(DummyDataTests, self).setUp()
+
+        self.load_fixture(u'/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd')
+        self.load_expected()
 
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
@@ -62,7 +84,7 @@ class LinuxAgentTests(unittest.TestCase):
         self.expected = json.loads(str_data)['result']['linux']
 
 
-class TestBlockDevices(LinuxAgentTests):
+class TestBlockDevices(DummyDataTests):
     def test_block_device_lvm_output(self):
         # load entire device_scanner output so parent of partition can be resolved
         self.load_fixture(None)
@@ -134,7 +156,7 @@ class TestBlockDevices(LinuxAgentTests):
 #                         {u'/dev/mapper/vg_00-lv_root': u'253:0'})
 
 
-class TestDevMajorMinor(LinuxAgentTests):
+class TestDevMajorMinor(DummyDataTests):
     MockDevice = collections.namedtuple('MockDevice', 'st_mode st_rdev')
 
     mock_devices = {'/dev/disk/by-id/adisk': MockDevice(25008, 6)}
