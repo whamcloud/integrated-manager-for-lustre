@@ -149,10 +149,10 @@ def get_zpools(active=True):
         return []
 
     transform_pools = compose(_parse_line,
-                              lambda x: clean_list(re.split('(\w+):[^/]', x)),
-                              lambda x: 'pool: ' + x)
+                              lambda x: clean_list(re.split(r'\n\s*(\w+):\s', x)),
+                              lambda x: '\npool: ' + x)
 
-    return map(transform_pools, clean_list(re.split('pool:\s+', out)))
+    return map(transform_pools, clean_list(re.split(r'pool:\s', out)))
 
 
 def _get_zpool_datasets(pool_name, drives):

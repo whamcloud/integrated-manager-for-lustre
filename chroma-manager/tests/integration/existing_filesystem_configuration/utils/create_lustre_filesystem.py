@@ -3,6 +3,7 @@ import json
 import sys
 
 from testconfig import config
+from tests.integration.core.remote_operations import stop_agent_cmd
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
@@ -87,6 +88,12 @@ class CreateLustreFilesystem(UtilityTestCase):
 
     def _clear_current_target_devices(self):
         for server in config['lustre_servers']:
+            self.remote_command(
+                server['address'],
+                stop_agent_cmd,
+                expected_return_code=None
+            )
+
             self.remote_command(
                 server['address'],
                 'umount -t lustre -a'
