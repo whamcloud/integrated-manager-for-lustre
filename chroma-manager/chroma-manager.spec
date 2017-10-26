@@ -57,6 +57,7 @@ Requires: iml-supervisor-status
 Requires: iml-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help
+Requires: createrepo
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
