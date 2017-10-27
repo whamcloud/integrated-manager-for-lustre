@@ -125,7 +125,18 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         zpools = get_zpools()
 
         self.assertRanAllCommandsInOrder()
-        self.assertListEqual(['zfsPool3', 'zfsPool1'], [p['pool'] for p in zpools])
+        self.assertListEqual(['zfsPool3', 'zfsPool1'], [pool['pool'] for pool in zpools])
+        [self.assertListEqual(['errors', 'scan', 'devices', 'state', 'pool'], pool.keys()) for pool in zpools]
+
+    def test_get_no_active_zpools(self):
+        """ WHEN no active/imported zpools are output from 'zpool status' command THEN parser returns empty list """
+        self.add_commands(CommandCaptureCommand(("zpool", "status"),
+                                                stdout="no pools available\n"))
+
+        zpools = get_zpools()
+
+        self.assertRanAllCommandsInOrder()
+        self.assertListEqual([], zpools)
 
     def test_get_inactive_zpool(self):
         """ WHEN inactive/exported zpools are output from 'zpool import' command THEN parser returns relevant pools """
@@ -135,7 +146,8 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         zpools = get_zpools(active=False)
 
         self.assertRanAllCommandsInOrder()
-        self.assertListEqual(['zfsPool1', 'zfsPool2', 'zfsPool3'], [p['pool'] for p in zpools])
+        self.assertListEqual(['zfsPool1', 'zfsPool2', 'zfsPool3'], [pool['pool'] for pool in zpools])
+        [self.assertListEqual(['devices', 'state', 'action', 'id', 'pool'], pool.keys()) for pool in zpools]
 
     def test_already_imported_zpool(self):
         """

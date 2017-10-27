@@ -91,23 +91,23 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         self.remote_operations.stop_agents(s['address']
                                            for s in self.TEST_SERVERS[:4])
         for pool in pools:
-            self.execute_simultaneous_commands(
+            self.execute_commands(
                 ['zpool import %s' % pool],
-                fqdns,
+                fqdns[0],
                 'import pool %s' % pool,
                 expected_return_code=None)
 
         for zpool_dataset in datasets:
-            self.execute_simultaneous_commands(
+            self.execute_commands(
                 ['zfs destroy %s' % zpool_dataset],
-                fqdns,
+                fqdns[0],
                 'destroy zfs dataset %s' % zpool_dataset,
                 expected_return_code=None)
 
         for pool in pools:
-            self.execute_simultaneous_commands(
+            self.execute_commands(
                 ['zpool export %s' % pool],
-                fqdns,
+                fqdns[0],
                 'export pool %s' % pool,
                 expected_return_code=None)
 

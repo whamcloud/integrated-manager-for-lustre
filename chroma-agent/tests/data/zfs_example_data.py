@@ -208,7 +208,7 @@ single_raidz2_unavail_pool_B = """   pool: zost04
 
 multiple_imported_pools_status = """  pool: zfsPool3
  state: ONLINE
-  scan: none requested
+  scan: scrub repaired 0 in 0h0m with 0 errors on Tue Apr 11 18:07:44 2017
 config:
 
         NAME        STATE     READ WRITE CKSUM
