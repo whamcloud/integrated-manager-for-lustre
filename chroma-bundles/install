@@ -614,7 +614,7 @@ def _check_repos():
                      'You may also see this message if Red Hat Satellite repos are enabled.\n'
                      'To skip this check, please rerun with the --no-repo-check flag.')
             log.info("URLs that failed: %s" % ' '.join(urls))
-            sys.exit(-11)
+            sys.exit(-1)
 
 
 def main():
