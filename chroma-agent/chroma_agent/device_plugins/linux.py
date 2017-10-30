@@ -63,7 +63,6 @@ class LinuxDevicePlugin(DevicePlugin):
                 "zfspools": zfs_devices.zpools,
                 "zfsdatasets": zfs_devices.datasets,
                 "zfsvols": zfs_devices.zvols,
-                "mpath": block_devices.mpaths,
                 "devs": block_devices.block_device_nodes,
                 "local_fs": local_fs,
                 'emcpower': emcpowers,

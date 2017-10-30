@@ -175,6 +175,10 @@ class NormalizedDeviceTable(object):
         self.add_normalized_devices(disk_by_path_paths, mapper_paths)
         self.add_normalized_devices(disk_by_id_paths, mapper_paths)
 
+        if x['dm_multipath'] is True:
+            self.add_normalized_devices(disk_by_id_paths,
+                                        ['/dev/mapper/' + x['serial_83']])
+
     def add_normalized_devices(self, xs, ys):
         for x in xs:
             for y in ys:
