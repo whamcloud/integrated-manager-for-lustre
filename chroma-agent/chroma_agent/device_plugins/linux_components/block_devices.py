@@ -175,9 +175,13 @@ class NormalizedDeviceTable(object):
         self.add_normalized_devices(disk_by_path_paths, mapper_paths)
         self.add_normalized_devices(disk_by_id_paths, mapper_paths)
 
+        # because udev records of multipath device paths don't seem to list
+        # a mapper device in the device links with which to relate by-id wwn-*
+        # and scsi-* paths to in the NDT, we can relate links via scsi serial
         if x['dm_multipath'] is True:
-            self.add_normalized_devices(disk_by_id_paths,
-                                        ['/dev/mapper/' + x['serial_83']])
+            serial = x['serial_83']
+            [self.add_normalized_device(by_id_path, ['/dev/mapper/' + serial])
+             for by_id_path in disk_by_id_paths if serial and (serial[1:] in by_id_path)]
 
     def add_normalized_devices(self, xs, ys):
         for x in xs:
