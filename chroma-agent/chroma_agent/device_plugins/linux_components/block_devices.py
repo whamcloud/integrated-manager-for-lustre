@@ -141,7 +141,7 @@ def fetch_device_list():
                 cmap(as_device), cfilter(filter_device), list)
 
 
-def parse_dm_uuids(dm_uuid):
+def parse_lvm_uuids(dm_uuid):
     """
     :param dm_uuid: device mapper uuid string (combined vg and lv with lvm prefix) from device_scanner
     :return: tuple of vg and lv UUIDs
@@ -150,10 +150,52 @@ def parse_dm_uuids(dm_uuid):
     uuid_len = 32
 
     if (not dm_uuid.startswith(lvm_pfix)) or (len(dm_uuid) != (len(lvm_pfix) + (uuid_len * 2))):
-        # unexpected uuid string, TODO: log this as an error
+        # non-lvm uuid string
         return None, None
 
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
+
+
+def lvm_populate(device, vgs, lvs):
+    """ Create vg and lv entries for devices with dm attributes """
+    vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
+        map(device.get,
+            ('dm_vg', 'dm_vg_size', 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
+
+    vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
+
+    vgs[vg_name] = {'name': vg_name,
+                    'uuid': vg_uuid,
+                    'size': human_to_bytes(vg_size),
+                    'pvs_major_minor': []}
+
+    [vgs[vg_name]['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+     if mm not in vgs[vg_name]['pvs_major_minor']]
+
+    # Do this to cache the device, type see blockdevice and filesystem for info.
+    BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
+
+    lvs[vg_name][lv_name] = {'name': lv_name,
+                             'uuid': lv_uuid,
+                             'size': lv_size,
+                             'block_device': lv_mm}
+
+
+def parse_dm_devs(xs, block_device_nodes, ndt):
+    vgs = {}
+    lvs = defaultdict(dict)
+
+    [lvm_populate(x, vgs, lvs) for x in xs if x.get('dm_lv') is not None]
+    [link_dm_slaves(x, block_device_nodes, ndt) for x in xs if x.get('dm_slave_mms') is not None]
+
+    return ndt, vgs, lvs
+
+
+def link_dm_slaves(x, block_device_nodes, ndt):
+    """ link dm slave devices back to the mapper device using mm to look up path """
+    for slave_mm in x.get('dm_slave_mms'):
+        ndt.add_normalized_device(block_device_nodes[slave_mm]['path'],
+                                  x.get('path'))
 
 
 class NormalizedDeviceTable(object):
@@ -174,14 +216,6 @@ class NormalizedDeviceTable(object):
         self.add_normalized_devices(dev_paths, disk_by_id_paths)
         self.add_normalized_devices(disk_by_path_paths, mapper_paths)
         self.add_normalized_devices(disk_by_id_paths, mapper_paths)
-
-        # because udev records of multipath device paths don't seem to list
-        # a mapper device in the device links with which to relate by-id wwn-*
-        # and scsi-* paths to in the NDT, we can relate links via scsi serial
-        if x['dm_multipath'] is True:
-            serial = x['serial_83']
-            [self.add_normalized_device(by_id_path, ['/dev/mapper/' + serial])
-             for by_id_path in disk_by_id_paths if serial and (serial[1:] in by_id_path)]
 
     def add_normalized_devices(self, xs, ys):
         for x in xs:
@@ -241,11 +275,8 @@ class BlockDevices(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
     def __init__(self):
-        self.vgs = {}
-        self.lvs = defaultdict(dict)
-
         (self.block_device_nodes, self.node_block_devices,
-         self.normalized_device_table) = self._parse_sys_block()
+         self.normalized_device_table, self.vgs, self.lvs) = self._parse_sys_block()
 
     def _parse_sys_block(self):
         xs = fetch_device_list()
@@ -260,9 +291,9 @@ class BlockDevices(object):
 
         ndt = NormalizedDeviceTable(xs)
 
-        self._parse_dm_devs(xs)
+        (ndt, vgs, lvs) = parse_dm_devs(xs, block_device_nodes, ndt)
 
-        return block_device_nodes, node_block_devices, ndt
+        return block_device_nodes, node_block_devices, ndt, vgs, lvs
 
     def paths_to_major_minors(self, device_paths):
         """
@@ -321,33 +352,6 @@ class BlockDevices(object):
 
         return pipe(self.block_device_nodes.itervalues(),
                     cmapcat(build_paths), dict)
-
-    def _lvm_populate(self, device):
-        """ Create vg and lv entries for devices with dm attributes """
-        vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
-            map(device.get,
-                ('dm_vg', 'dm_vg_size', 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
-
-        vg_uuid, lv_uuid = parse_dm_uuids(dm_uuid)
-
-        self.vgs[vg_name] = {'name': vg_name,
-                             'uuid': vg_uuid,
-                             'size': human_to_bytes(vg_size),
-                             'pvs_major_minor': []}
-
-        [self.vgs[vg_name]['pvs_major_minor'].append(mm) for mm in lv_slave_mms
-         if mm not in self.vgs[vg_name]['pvs_major_minor']]
-
-        # Do this to cache the device, type see blockdevice and filesystem for info.
-        BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
-
-        self.lvs[vg_name][lv_name] = {'name': lv_name,
-                                      'uuid': lv_uuid,
-                                      'size': lv_size,
-                                      'block_device': lv_mm}
-
-    def _parse_dm_devs(self, xs):
-        [self._lvm_populate(x) for x in xs if x.get('dm_lv') is not None]
 
     @classmethod
     def quick_scan(cls):
