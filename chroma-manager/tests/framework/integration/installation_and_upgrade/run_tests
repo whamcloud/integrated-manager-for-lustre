@@ -158,8 +158,16 @@ if [ -f ~/storage_server.repo ]; then
 fi
 
 # Install and setup manager
-scp $STORAGE_SERVER_REPO "$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
-ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+ARCHIVE_SUFFIX=.tar.gz
+if $JENKINS; then
+    ARCHIVE_PATH=.
+    ARCHIVE_SUFFIX="-current$ARCHIVE_SUFFIX"
+else
+    ARCHIVE_PATH=chroma-bundles
+    ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz
+fi
+scp $STORAGE_SERVER_REPO "$ARCHIVE_PATH/$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
+ssh root@"$CHROMA_MANAGER" "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
@@ -171,7 +179,7 @@ mv upgrade.exp $UPGRADE_INSTALL_DIR/upgrade.exp
 
 cd $UPGRADE_INSTALL_DIR
 tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME -current.tar.gz)
+cd \"${ARCHIVE_NAME%$ARCHIVE_SUFFIX}\"
 
 # Install from the installation package
 echo \"First without access to YUM repos\"
