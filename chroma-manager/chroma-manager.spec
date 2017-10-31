@@ -164,6 +164,7 @@ cp -a chroma-manager.py build/lib
 cp -a storage_server.repo build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
+cp -a chroma-manager-browser.conf.template build/lib
 cp -a mime.types build/lib
 cp -a agent-bootstrap-script.template build/lib
 
@@ -175,6 +176,7 @@ mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
+touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager-browser.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
@@ -212,6 +214,8 @@ rm -rf $RPM_BUILD_ROOT
 %post
 %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
+%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
+    $RPM_BUILD_ROOT%{manager_root}/chroma-manager-browser.conf.template > /etc/nginx/conf.d/chroma-manager-browser.conf
 
 # Create chroma-config MAN Page
 makewhatis
@@ -330,6 +334,7 @@ fi
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 /etc/nginx/conf.d/chroma-manager.conf
+/etc/nginx/conf.d/chroma-manager-browser.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
@@ -339,6 +344,7 @@ fi
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
+%{manager_root}/chroma-manager-browser.conf.template
 %{manager_root}/mime.types
 %{manager_root}/ui-modules/node_modules/*
 %{manager_root}/chroma_help/*

@@ -12,7 +12,7 @@ server {
 }
 
 server {
-    listen {{HTTPS_FRONTEND_PORT}} ssl http2;
+    listen {{HTTPS_FRONTEND_PORT}} ssl http2 default_server;
 
     error_page 497 https://$http_host$request_uri;
 
@@ -34,10 +34,6 @@ server {
 
     gzip_comp_level 2;
 
-    location /favicon.ico {
-      alias /usr/lib/iml-manager/iml-gui/intel.ico;
-    }
-
     location /certificate/ {
         return 301 https://$http_host/certificate;
     }
@@ -49,80 +45,12 @@ server {
         add_header Content-disposition "attachment; filename=download.cer";
     }
 
-    location ~ ^/$ {
-        return 301 https://$http_host/ui;
-    }
-
-    location /help {
-        alias /usr/lib/iml-manager/iml-online-help;
-
-        gzip on;
-        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
-
-        index index.html;
-    }
-
-    location /gui/node_modules/socket-worker/dist {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/socket-worker/dist;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types application/x-javascript application/javascript text/javascript;
-    }
-
-    location /gui {
-        alias /usr/lib/iml-manager/iml-gui;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-        
-        gzip on;
-        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
-    }
-
-    location /old-gui {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/old-gui/static;
-
-        etag on;
-        expires 1y;
-        add_header Cache-Control "public";
-
-        gzip on;
-        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
-    }
-
-    location /ui {
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{VIEW_SERVER_PORT}}/ui;
-
-        add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
-
-        gzip on;
-    }
-
     location /api {
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_pass http://127.0.0.1:{{HTTP_API_PORT}}/api;
-    }
-
-    location /socket.io {
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{REALTIME_PORT}}/socket.io;
-
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
     }
 
     location /agent/register {
