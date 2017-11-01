@@ -11,7 +11,7 @@ import json
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
 from chroma_agent.lib.shell import AgentShell
-from toolz.functoolz import pipe
+from toolz.functoolz import pipe, curry
 from toolz.itertoolz import getter
 from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
 
@@ -156,7 +156,7 @@ def parse_lvm_uuids(dm_uuid):
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
 
-def lvm_populate(device, vgs, lvs):
+def lvm_populate(device):
     """ Create vg and lv entries for devices with dm attributes """
     vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
         map(device.get,
@@ -164,38 +164,47 @@ def lvm_populate(device, vgs, lvs):
 
     vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
 
-    vgs[vg_name] = {'name': vg_name,
-                    'uuid': vg_uuid,
-                    'size': human_to_bytes(vg_size),
-                    'pvs_major_minor': []}
+    vg = {'name': vg_name,
+          'uuid': vg_uuid,
+          'size': human_to_bytes(vg_size),
+          'pvs_major_minor': []}
 
-    [vgs[vg_name]['pvs_major_minor'].append(mm) for mm in lv_slave_mms
-     if mm not in vgs[vg_name]['pvs_major_minor']]
+    [vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+     if mm not in vg['pvs_major_minor']]
 
     # Do this to cache the device, type see blockdevice and filesystem for info.
     BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
 
-    lvs[vg_name][lv_name] = {'name': lv_name,
-                             'uuid': lv_uuid,
-                             'size': lv_size,
-                             'block_device': lv_mm}
+    lv = {'name': lv_name,
+          'uuid': lv_uuid,
+          'size': lv_size,
+          'block_device': lv_mm}
+
+    return vg, lv
+
+
+@curry
+def link_dm_slaves(block_device_nodes, ndt, x):
+    """ link dm slave devices back to the mapper device using mm to look up path """
+    for slave_mm in x.get('dm_slave_mms', []):
+        ndt.add_normalized_device(block_device_nodes[slave_mm]['path'],
+                                  x.get('path'))
 
 
 def parse_dm_devs(xs, block_device_nodes, ndt):
     vgs = {}
     lvs = defaultdict(dict)
 
-    [lvm_populate(x, vgs, lvs) for x in xs if x.get('dm_lv') is not None]
-    [link_dm_slaves(x, block_device_nodes, ndt) for x in xs if x.get('dm_slave_mms') is not None]
+    results = [lvm_populate(x) for x in xs if x.get('dm_lv') is not None]
+
+    for vg, lv in results:
+        vgs[vg['name']] = vg
+        lvs[vg['name']][lv['name']] = lv
+
+    c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
+    map(c_link_dm_slaves, xs)
 
     return ndt, vgs, lvs
-
-
-def link_dm_slaves(x, block_device_nodes, ndt):
-    """ link dm slave devices back to the mapper device using mm to look up path """
-    for slave_mm in x.get('dm_slave_mms'):
-        ndt.add_normalized_device(block_device_nodes[slave_mm]['path'],
-                                  x.get('path'))
 
 
 class NormalizedDeviceTable(object):
