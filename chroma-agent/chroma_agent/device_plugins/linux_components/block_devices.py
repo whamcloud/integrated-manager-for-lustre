@@ -149,9 +149,7 @@ def parse_lvm_uuids(dm_uuid):
     lvm_pfix = 'LVM-'
     uuid_len = 32
 
-    if (not dm_uuid.startswith(lvm_pfix)) or (len(dm_uuid) != (len(lvm_pfix) + (uuid_len * 2))):
-        # non-lvm uuid string
-        return None, None
+    assert (dm_uuid.startswith(lvm_pfix) and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
 
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
@@ -185,10 +183,10 @@ def lvm_populate(device):
 
 @curry
 def link_dm_slaves(block_device_nodes, ndt, x):
-    """ link dm slave devices back to the mapper device using mm to look up path """
+    """ link dm slave devices back to the mapper devices using mm to look up path """
     for slave_mm in x.get('dm_slave_mms', []):
-        ndt.add_normalized_device(block_device_nodes[slave_mm]['path'],
-                                  x.get('path'))
+        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, block_device_nodes[slave_mm]['paths']),
+                                   filter(MAPPER_PATH.match, x.get('paths')))
 
 
 def parse_dm_devs(xs, block_device_nodes, ndt):
@@ -202,7 +200,7 @@ def parse_dm_devs(xs, block_device_nodes, ndt):
         lvs[vg['name']][lv['name']] = lv
 
     c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
-    map(c_link_dm_slaves, xs)
+    map(c_link_dm_slaves, filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
 
     return ndt, vgs, lvs
 
@@ -300,7 +298,9 @@ class BlockDevices(object):
 
         ndt = NormalizedDeviceTable(xs)
 
-        (ndt, vgs, lvs) = parse_dm_devs(xs, block_device_nodes, ndt)
+        (ndt, vgs, lvs) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
+                                        block_device_nodes,
+                                        ndt)
 
         return block_device_nodes, node_block_devices, ndt, vgs, lvs
 

@@ -5,7 +5,6 @@ import os
 import mock
 from django.utils import unittest
 
-import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 
@@ -21,7 +20,9 @@ class MockDmsetupTable(DmsetupTable):
                     'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
                     return_value=(devices_data['block_device_nodes'],
                                   devices_data['node_block_devices'],
-                                  NormalizedDeviceTable([]))):
+                                  NormalizedDeviceTable([]),
+                                  None,
+                                  None)):
                 self.block_devices = BlockDevices()
         self._parse_dm_table(dmsetup_data)
 
@@ -38,7 +39,7 @@ class LinuxAgentTests(unittest.TestCase):
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)
 
-    def assertNormalizedPaths(self, normalized_values):
+    def assertNormalizedPaths(self, normalized_values, ndt):
         class mock_open:
             def __init__(self, fname):
                 pass
@@ -47,31 +48,26 @@ class LinuxAgentTests(unittest.TestCase):
                 return "root=/not/a/real/path"
 
         with mock.patch('__builtin__.open', mock_open):
-            for path, normalized_path in normalized_values.items():
-                self.assertEqual(normalized_path,
-                                 ndp.normalized_device_path(path),
+            for path, expected_path in normalized_values.items():
+                actual_path = ndt.normalized_device_path(path)
+                self.assertEqual(expected_path, actual_path,
                                  "Normalized path failure %s != %s" %
-                                 (normalized_path,
-                                  ndp.normalized_device_path(path)))
+                                 (expected_path, actual_path))
 
 
 class DummyDataTests(LinuxAgentTests):
     def setUp(self):
         super(DummyDataTests, self).setUp()
 
-        self.load_fixture(u'/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd')
-        self.load_expected()
+        self.load_fixture(u'device_scanner.json')
+        self.load_expected(u'agent_plugin.json')
 
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
 
-    def load_fixture(self, device_key, filename='device_scanner.json'):
+    def load_fixture(self, filename):
         str_data = self.load(filename)
-        dict_data = json.loads(str_data)
-        if device_key is None:
-            fixture = dict_data
-        else:
-            fixture = {device_key: dict_data[device_key]}
+        fixture = json.loads(str_data)
 
         with mock.patch('glob.glob', return_value=[]):
             with mock.patch(
@@ -79,81 +75,52 @@ class DummyDataTests(LinuxAgentTests):
                     return_value=fixture):
                 self.block_devices = BlockDevices()
 
-    def load_expected(self, filename='agent_plugin.json'):
+    def load_expected(self, filename):
         str_data = self.load(filename)
         self.expected = json.loads(str_data)['result']['linux']
 
 
 class TestBlockDevices(DummyDataTests):
     def test_block_device_lvm_output(self):
-        # load entire device_scanner output so parent of partition can be resolved
-        self.load_fixture(None)
-
-        [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['vgs', 'lvs']]  # , 'mpaths']]
+        [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['vgs', 'lvs']]
 
     def test_block_device_nodes_parsing(self):
         result = self.block_devices.block_device_nodes
 
-        self.assertEqual(result, {'8:48': self.expected['devs']['8:48']})
+        self.assertEqual(result['8:48'], self.expected['devs']['8:48'])
+
+        # partition
+        self.assertEqual(result['8:49'], self.expected['devs']['8:49'])
+
+        # dm-0 linear lvm
+        self.assertEqual(result['253:0'], self.expected['devs']['253:0'])
+
+        # dm-2 striped lvm
+        self.assertEqual(result['253:2'], self.expected['devs']['253:2'])
 
     def test_node_block_devices_parsing(self):
         result = self.block_devices.node_block_devices
 
-        self.assertEqual(result,
-                         {u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3': u'8:48'})
+        self.assertEqual(result[u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3'], u'8:48')
 
-    def test_partition_block_device_nodes_parsing(self):
-        # load entire device_scanner output so parent of partition can be resolved
-        self.load_fixture(None)
-        result = self.block_devices.block_device_nodes
+        # partition
+        self.assertEqual(result[u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part1'], u'8:49')
 
-        self.assertEqual(result['8:49'], self.expected['devs']['8:49'])
+        # dm-0 linear lvm
+        self.assertEqual(result[u'/dev/mapper/vg_00-lv_root'], u'253:0')
 
-    def test_partition_node_block_devices_parsing(self):
-        self.load_fixture(u'/devices/pci0000:00/0000:00:05.0/virtio1/host0/target0:0:0/0:0:0:2/block/sdd/sdd1')
-        result = self.block_devices.node_block_devices
+        # dm-2 striped lvm
+        self.assertEqual(result[u'/dev/mapper/vg_01-stripedlv'], u'253:2')
 
-        self.assertEqual(result,
-                         {u'/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3-part1': u'8:49'})
+    def test_normalized_device_table(self):
+        self.load_fixture(u'device_scanner_mpath.json')
+        self.load_expected(u'agent_plugin_mpath.json')
 
-    def test_dm_block_device_nodes_parsing(self):
-        self.load_fixture(u'/devices/virtual/block/dm-0')
-        result = self.block_devices.block_device_nodes
+        result = self.block_devices.normalized_device_table.table
 
-        self.assertEqual(result, {'253:0': self.expected['devs']['253:0']})
-
-    def test_dm_node_block_devices_parsing(self):
-        self.load_fixture(u'/devices/virtual/block/dm-0')
-        result = self.block_devices.node_block_devices
-
-        self.assertEqual(result,
-                         {u'/dev/mapper/vg_00-lv_root': u'253:0'})
-
-    def test_dm_striped_block_device_nodes_parsing(self):
-        self.load_fixture(u'/devices/virtual/block/dm-2')
-        result = self.block_devices.block_device_nodes
-
-        self.assertEqual(result, {"253:2": self.expected["devs"]["253:2"]})
-
-    def test_dm_striped_node_block_devices_parsing(self):
-        self.load_fixture(u'/devices/virtual/block/dm-2')
-        result = self.block_devices.node_block_devices
-
-        self.assertEqual(result,
-                         {u'/dev/mapper/vg_01-stripedlv': u'253:2'})
-
-#    def test_dm_mpath_block_device_nodes_parsing(self):
-#        self.load_fixture(u'/devices/virtual/block/dm-0')
-#        result = self.block_devices.block_device_nodes
-#
-#        self.assertEqual(result, {"253:0": self.expected["devs"]["253:0"]})
-#
-#    def test_dm_mpath_node_block_devices_parsing(self):
-#        self.load_fixture(u'/devices/virtual/block/dm-0')
-#        result = self.block_devices.node_block_devices
-#
-#        self.assertEqual(result,
-#                         {u'/dev/mapper/vg_00-lv_root': u'253:0'})
+        self.assertEqual(result[
+                u'/dev/disk/by-id/scsi-35000c50068b5a1c7'],
+            u"/dev/mapper/35000c50068b5a1c7")
 
 
 class TestDevMajorMinor(DummyDataTests):
