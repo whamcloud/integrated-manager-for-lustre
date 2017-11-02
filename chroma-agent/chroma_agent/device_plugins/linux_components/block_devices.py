@@ -149,9 +149,7 @@ def parse_lvm_uuids(dm_uuid):
     lvm_pfix = 'LVM-'
     uuid_len = 32
 
-    if (not dm_uuid.startswith(lvm_pfix)) or (len(dm_uuid) != (len(lvm_pfix) + (uuid_len * 2))):
-        # non-lvm uuid string
-        return None, None
+    assert (dm_uuid.startswith(lvm_pfix) and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
 
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
