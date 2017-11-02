@@ -36,7 +36,8 @@ class TestLogResource(ChromaApiTestCase):
         for client_key in ['filesystem_user', 'unauthenticated']:
             client = self.clients[client_key]
             log_entries = [log_entry['message'] for log_entry in self.deserialize(client.get('/api/log/'))['objects']]
-            self.assertListEqual(self.lustre_messages, log_entries)
+            xs = self.lustre_messages[::-1]
+            self.assertListEqual(xs, log_entries)
 
     def test_get_logs_all(self):
         """Verifies superusers and filesystem_administrators gets all log entries"""
@@ -44,4 +45,5 @@ class TestLogResource(ChromaApiTestCase):
         for client_key in ['filesystem_administrator', 'superuser']:
             client = self.clients[client_key]
             log_entries = [log_entry['message'] for log_entry in self.deserialize(client.get('/api/log/'))['objects']]
-            self.assertListEqual(self.messages, log_entries)
+            xs = self.messages[::-1]
+            self.assertListEqual(xs, log_entries)
