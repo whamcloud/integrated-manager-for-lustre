@@ -51,6 +51,15 @@ def read_from_store(key):
     return read_store()[key]
 
 
+def find_name_in_store(pool_name):
+    contents = read_store()
+
+    try:
+        next(pool for pool in contents.values() if pool['pool']['name'] == pool_name)
+    except StopIteration:
+        raise KeyError('No data for zpool %s found in store' % pool_name)
+
+
 def read_store():
     """ Store file should always exist because it's created on agent initialisation """
     x = '{}'
@@ -97,6 +106,7 @@ def _parse_line(xs):
 def get_zpools(active=True):
     """
     Parse shell output from 'zpool import' or 'zpool status' commands and return zpool details in list of dicts.
+    Always return list and split output on keyword followed by colon but ignore urls.
 
     Command issued depends on both input arguments and is either of the form:
 
@@ -133,18 +143,17 @@ def get_zpools(active=True):
       available for import 'zpool import'
     :return: list of dicts with details of either imported or importable zpools
     """
-
     cmd_args = ['zpool', 'status' if (active is True) else 'import']
     out = AgentShell.try_run(cmd_args)
 
     if 'pool: ' not in out:
-        return {}
+        return []
 
     transform_pools = compose(_parse_line,
-                              lambda x: clean_list(re.split('(\w+):[^/]', x)),
-                              lambda x: 'pool: ' + x)
+                              lambda x: clean_list(re.split(r'\n\s*(\w+):\s', x)),
+                              lambda x: '\npool: ' + x)
 
-    return map(transform_pools, clean_list(re.split('pool:\s+', out)))
+    return map(transform_pools, clean_list(re.split(r'pool:\s', out)))
 
 
 def _get_zpool_datasets(pool_name, drives):
@@ -268,6 +277,20 @@ def _get_all_zpool_devices(name):
     return devices
 
 
+def _populate_zpools():
+    """
+    Retrieve list of discovered ZfsPools, deal with race where pool is imported or exported
+    between get_zpools() calls by filtering duplicates
+
+    :return: set of ZfsPools which are either importable (inactive) or imported (active)
+    """
+    zpools = get_zpools()
+    active_pool_names = [pool['pool'] for pool in zpools]
+    zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
+
+    return zpools
+
+
 class ZfsDevices(object):
     """Reads zfs pools"""
     acceptable_health = ['ONLINE', 'DEGRADED']
@@ -284,36 +307,44 @@ class ZfsDevices(object):
         except (IOError, OSError):
             return []
 
+    def _process_zpool(self, pool, block_devices):
+        """
+        Either read pool info from store if unavailable or inspect by importing
+
+        :param pool: dict of pool info
+        :return: None
+        """
+        pool_name = pool['pool']
+
+        with ZfsDevice(pool_name, True) as zfs_device:
+
+            if zfs_device.available:
+                out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
+                self._add_zfs_pool(out, block_devices)
+            else:
+                # zpool probably imported elsewhere, attempt to read from store, this should return
+                # previously seen zpool state either with or without datasets
+                pool_id = pool.get('id', None)
+
+                try:
+                    if pool_id is None:
+                        data = find_name_in_store(pool_name)
+                    else:
+                        data = read_from_store(pool_id)
+                except KeyError as e:
+                    daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
+                                     "pool info: %s)" % (e, pool))
+                else:
+                    # populate self._pools/datasets/zvols info from saved data read from store
+                    self._update_pool_or_datasets(block_devices,
+                                                  data['pool'],
+                                                  data['datasets'],
+                                                  data['zvols'])
+
     @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
-        zpools = []
         try:
-            zpools.extend(get_zpools())
-            active_pool_names = [pool['pool'] for pool in zpools]
-            zpools.extend(filter(lambda x: x['pool'] not in active_pool_names, get_zpools(active=False)))
-
-            for pool in zpools:
-                with ZfsDevice(pool['pool'], True) as zfs_device:
-                    if zfs_device.available:
-                        out = AgentShell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool['pool']])
-                        self._add_zfs_pool(out, block_devices)
-                    elif pool['state'] == 'UNAVAIL':
-                        # zpool probably imported elsewhere, attempt to read from store, this should return
-                        # previously seen zpool state either with or without datasets
-                        try:
-                            data = read_from_store(pool['id'])
-                        except KeyError as e:
-                            daemon_log.error("ZfsPool unavailable and could not be retrieved from store: %s ("
-                                             "pool: %s)" % (e, pool['pool']))
-                            continue
-                        else:
-                            # populate self._pools/datasets/zvols info from saved data read from store
-                            self._update_pool_or_datasets(block_devices,
-                                                          data['pool'],
-                                                          data['datasets'],
-                                                          data['zvols'])
-                    else:
-                        daemon_log.error("ZfsPool could not be accessed, reported info: %s" % pool)
+            [self._process_zpool(pool, block_devices) for pool in _populate_zpools()]
         except OSError:  # OSError occurs when ZFS is not installed.
             self._zpools = {}
             self._datasets = {}
