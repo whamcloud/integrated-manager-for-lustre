@@ -21,7 +21,9 @@ class MockDmsetupTable(DmsetupTable):
                     'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
                     return_value=(devices_data['block_device_nodes'],
                                   devices_data['node_block_devices'],
-                                  NormalizedDeviceTable([]))):
+                                  NormalizedDeviceTable([]),
+                                  None,
+                                  None)):
                 self.block_devices = BlockDevices()
         self._parse_dm_table(dmsetup_data)
 
