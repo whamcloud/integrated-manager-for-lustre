@@ -367,22 +367,24 @@ class RealRemoteOperations(RemoteOperations):
         command matches expected_return_code unless expected_return_code=None.
         """
 
-        def host_test(address, issue_num):
+        def host_test(address, issue_num, e):
             def print_result(r):
                 return "rc: %s\n\nstdout:\n%s\n\nstderr:\n%s" % \
                        (r.rc, r.stdout, r.stderr)
 
+            # TODO: should really use the user that our caller used
+            ssh_result = Shell.run(['ssh', 'root@%s' % address, 'id'])
             ping_result1 = Shell.run(['ping', '-c', '1', '-W', '1', address])
             ping_result2_report = ""
             ip_addr_result = Shell.run(['ip', 'addr', 'ls'])
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
 
             try:
-                gw = [l for l in ip_route_ls_result.stdout.split('\n')
-                      if l.startswith("default ")][0].split()[2]
-                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
+                gateway = [l for l in ip_route_ls_result.stdout.split('\n')
+                           if l.startswith("default ")][0].split()[2]
+                ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gateway])
                 ping_gw_report = "\nping gateway (%s): %s" % \
-                    (gw, print_result(ping_gw_result))
+                    (gateway, print_result(ping_gw_result))
             except:
                 ping_gw_report = "\nUnable to ping gatewy.  " \
                                  "No gateway could be found in:\n" % \
@@ -393,11 +395,12 @@ class RealRemoteOperations(RemoteOperations):
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
-                
+
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
                   "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
                   "Performing some diagnostics...\n" \
+                  "ssh: %s\n" \
                   "ping: %s\n" \
                   "ifconfig -a: %s\n" \
                   "ip route ls: %s" \
@@ -405,6 +408,7 @@ class RealRemoteOperations(RemoteOperations):
                   "%s" % \
                   (address, e,
                    issue_num,
+                   print_result(ssh_result),
                    print_result(ping_result1),
                    print_result(ip_addr_result),
                    print_result(ip_route_ls_result),
@@ -466,8 +470,9 @@ class RealRemoteOperations(RemoteOperations):
         # Create ssh connection
         try:
             ssh.connect(address, **args)
-        except paramiko.ssh_exception.SSHException, e:
-            host_test(address, "29")
+        except (paramiko.ssh_exception.SSHException,
+                paramiko.ssh_exception.NoValidConnectionsError) as excpt:
+            host_test(address, "29", excpt)
             return Shell.RunResult(1, "", "", timeout=False)
 
         transport = ssh.get_transport()
@@ -478,8 +483,8 @@ class RealRemoteOperations(RemoteOperations):
         # Actually execute the command
         try:
             channel.exec_command(command)
-        except paramiko.transport.Socket, e:
-            host_test(address, "72")
+        except paramiko.ssh_exception.SSHException, excpt:
+            host_test(address, "72", excpt)
             return Shell.RunResult(1, "", "", timeout=False)
 
         if buffer:
