@@ -318,6 +318,7 @@ lustre-osd-zfs lustre-osd-ldiskfs-mount lustre-osd-zfs-mount libzpool2 libzfs2
 #of twice
 
 yum -y --nogpgcheck install lustre-ldiskfs-zfs kernel-devel-\*_lustre
+grubby --default-kernel
 $REBOOT_NODE" | dshbak -c
 if [ "${PIPESTATUS[0]}" != "0" ]; then
     exit 1
