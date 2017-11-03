@@ -15,5 +15,11 @@ class TestAllEndPoints(TestInstallationAndUpgrade):
             if end_point['list_endpoint'] not in end_point_exceptions:
                 import sys
                 sys.stderr.write("\nReading endpoint %s\n" % end_point['list_endpoint'])
-                self.get_json_by_uri(end_point['list_endpoint'], args={'limit': 0})
+                try:
+                    self.get_json_by_uri(end_point['list_endpoint'], args={'limit': 0})
+                except:
+                    self._fetch_help(lambda: self.assertEqual(False, True)
+                                     ['joe.grund@intel.com', 'brian.murrell@intel.com'],
+                                     "Hit #359", timeout=(86400*3))
+
                 sys.stderr.write("\nRead endpoint %s\n" % end_point['list_endpoint'])
