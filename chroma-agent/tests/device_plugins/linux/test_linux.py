@@ -5,7 +5,6 @@ import os
 import mock
 from django.utils import unittest
 
-import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 
@@ -40,7 +39,7 @@ class LinuxAgentTests(unittest.TestCase):
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)
 
-    def assertNormalizedPaths(self, normalized_values):
+    def assertNormalizedPaths(self, normalized_values, ndt):
         class mock_open:
             def __init__(self, fname):
                 pass
@@ -49,12 +48,11 @@ class LinuxAgentTests(unittest.TestCase):
                 return "root=/not/a/real/path"
 
         with mock.patch('__builtin__.open', mock_open):
-            for path, normalized_path in normalized_values.items():
-                self.assertEqual(normalized_path,
-                                 ndp.normalized_device_path(path),
+            for path, expected_path in normalized_values.items():
+                actual_path = ndt.normalized_device_path(path)
+                self.assertEqual(expected_path, actual_path,
                                  "Normalized path failure %s != %s" %
-                                 (normalized_path,
-                                  ndp.normalized_device_path(path)))
+                                 (expected_path, actual_path))
 
 
 class DummyDataTests(LinuxAgentTests):
