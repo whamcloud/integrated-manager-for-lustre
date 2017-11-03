@@ -79,7 +79,7 @@ unavailable_nodes () {
 
     local node
     for node in $nodes; do
-        if ssh root@"$node" id >&2; then
+        if ssh root@"$node" "uname -r; uptime; date" >&2; then
             nodes=$(remove_nodes_from_list "$nodes" "$node")
         fi
     done
