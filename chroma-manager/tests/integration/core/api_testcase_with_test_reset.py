@@ -57,10 +57,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     _chroma_manager = None
     _unauthorized_chroma_manager = None
 
-    # Should any filesystems left running at the end of the test
-    # be torn down?
-    teardown_fs = True
-
     def __init__(self, methodName='runTest'):
         super(ApiTestCaseWithTestReset, self).__init__(methodName)
         self.remote_operations = None
@@ -170,7 +166,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def tearDown(self):
         # TODO: move all of the (rest of the) "post-test cleanup" that is
         # done in setUp to here
-        if config.get('managed') and self.teardown_fs:
+        if config.get('managed'):
             self.remote_operations.unmount_clients()
             # stop any running filesystems
             for filesystem in [f for f in

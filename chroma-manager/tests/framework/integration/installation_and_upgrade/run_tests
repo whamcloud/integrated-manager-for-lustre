@@ -29,17 +29,6 @@ TESTS_DIR="tests/integration/installation_and_upgrade/"
 
 trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"" EXIT
 
-# first need to wipe the disks since this test doesn't use
-# setUp()
-pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-    for disk in /dev/sd[a-z]; do
-        wipefs -a \$disk
-    done
-blkid | sort" | dshbak -c
-if [ "${PIPESTATUS[0]}" != "0" ]; then
-    exit 1
-fi
-
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
 # Ensure that coverage is disabled
@@ -127,10 +116,12 @@ fi
 
 # Install a client
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
+wait_for_nodes "$CLIENT_1" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
 
 echo "Create and exercise a filesystem..."
 
 TESTS="$TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_clean_linux_devices \
        $TESTS_DIR/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
 # shellcheck disable=SC2086
@@ -167,7 +158,7 @@ if [ -f ~/storage_server.repo ]; then
 fi
 
 # Install and setup manager
-scp "$STORAGE_SERVER_REPO" "$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
+scp $STORAGE_SERVER_REPO "$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)

@@ -17,10 +17,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         )
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
-        # TODO: one of the storage servers is a:
-        #       "profile": "posix_copytool_worker",
-        #       we need to exclude it programatically
-        self.assertEqual(len(hosts), len(self.TEST_SERVERS) - 1)
+        self.assertEqual(len(hosts), len(self.config_servers))
 
         # Even though we have to stop a filesytem to do an upgrade (i.e. no
         # rolling upgrades, we stopped it before doing the upgrade to avoid
@@ -42,16 +39,10 @@ class TestYumUpdate(TestInstallationAndUpgrade):
                                                          of_type='UpdatesAvailableAlert'))
 
         # Fully update all installed packages on the server
-        for server in self.TEST_SERVERS[0:4]:
+        for server in self.config_servers:
             self.remote_operations.yum_update(server)
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
-
-        # Start the filesystem back up
-        filesystem = self.get_filesystem_by_name(self.fs_name)
-        self.start_filesystem(filesystem['id'])
-        # tell tearDown() not to stop this filesystem
-        self.teardown_fs = False
 
     @skip("Repos can't really be retired until at least an n+1 release")
     def test_no_retired_repos(self):
@@ -63,6 +54,11 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         current_repos = self.remote_operations.get_chroma_repos()
         for repo in retired_repos:
             self.assertFalse(repo in current_repos, "Unexpectedly found repo '%s' in %s" % (repo, current_repos))
+
+    # something we can run to clear the storage targets since this
+    # test class doesn't use setUp()
+    def test_clean_linux_devices(self):
+        self.cleanup_linux_devices(self.TEST_SERVERS)
 
     def test_stop_before_update(self):
         # Stop the filesystem. Currently the GUI forces you to stop the filesystem before
