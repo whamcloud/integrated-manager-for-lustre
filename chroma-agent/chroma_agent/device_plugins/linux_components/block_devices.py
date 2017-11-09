@@ -14,6 +14,9 @@ from chroma_agent.lib.shell import AgentShell
 from toolz.functoolz import pipe, curry
 from toolz.itertoolz import getter
 from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
+from collections import namedtuple
+
+DeviceMaps = namedtuple('device_maps', 'block_devices zfspools')
 
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
@@ -133,11 +136,15 @@ def filter_device(x):
     return True
 
 
-def fetch_device_list():
+def fetch_device_maps():
     AgentShell.run(["udevadm", "settle"])
     info = scanner_cmd("info")
 
-    return pipe(info.itervalues(),
+    return DeviceMaps(info["BLOCK_DEVICES"], info["ZFSPOOLS"])
+
+
+def create_device_list(device_dict):
+    return pipe(device_dict.itervalues(),
                 cmap(as_device), cfilter(filter_device), list)
 
 
@@ -282,11 +289,13 @@ class BlockDevices(object):
     DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 
     def __init__(self):
-        (self.block_device_nodes, self.node_block_devices,
-         self.normalized_device_table, self.vgs, self.lvs) = self._parse_sys_block()
+        device_maps = fetch_device_maps()
 
-    def _parse_sys_block(self):
-        xs = fetch_device_list()
+        (self.block_device_nodes, self.node_block_devices,
+         self.normalized_device_table, self.vgs, self.lvs) = self._parse_sys_block(device_maps.block_devices)
+
+    def _parse_sys_block(self, device_map):
+        xs = create_device_list(device_map)
 
         mutate_parent_prop(xs)
 
@@ -364,4 +373,5 @@ class BlockDevices(object):
 
     @classmethod
     def quick_scan(cls):
-        return pipe(fetch_device_list(), cmapcat(getter("paths")), sorted)
+        return pipe(create_device_list(fetch_device_maps().block_devices),
+                    cmapcat(getter("paths")), sorted)
