@@ -236,6 +236,7 @@ docs: requirements.txt version
 	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
 		virtualenv myenv;                                       \
 		. myenv/bin/activate;                                   \
+		python -m pip install -U pip;                           \
 		pip install --upgrade pip;                              \
 		pip install --upgrade setuptools;                       \
 		pip install -Ur requirements.txt;                       \
