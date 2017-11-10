@@ -689,7 +689,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
             result = self.remote_command(
                 chroma_manager['address'],
-                "ls /tmp/iml-*/",
+                "ls /tmp/iml-*/ || ls /tmp/ee-*/",
                 expected_return_code = None
             )
             installer_contents = result.stdout
@@ -703,7 +703,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             logger.debug("Found these profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/iml-*/$profile_pat; done &> config_profile.log" % profiles,
+                "if [ -d /tmp/iml-*/ ]; then dir=/tmp/iml-*; else dir=/tmp/ee-*; fi; for profile_pat in %s; do chroma-config profile register $dir/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
