@@ -62,7 +62,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         servers = config['lustre_servers']
         addresses = [server['address'] for server in servers]
 
-        for address in addresses
+        for address in addresses:
             result = self.remote_command(address, 'chroma-diagnostics')
             self.assertEqual(result, "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
 
