@@ -59,8 +59,12 @@ class TestYumUpdate(TestInstallationAndUpgrade):
 
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
-        msg = check_output('chroma-diagnostics')
-        self.assertEqual(msg, "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
+        servers = config['lustre_servers']
+        addresses = [server['address'] for server in servers]
+
+        for address in addresses
+            result = self.remote_command(address, 'chroma-diagnostics')
+            self.assertEqual(result, "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
 
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
