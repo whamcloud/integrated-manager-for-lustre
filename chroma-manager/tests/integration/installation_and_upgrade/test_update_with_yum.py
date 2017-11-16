@@ -1,4 +1,6 @@
+from subprocess import check_output
 from testconfig import config
+
 from django.utils.unittest import skip
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
@@ -54,6 +56,11 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         current_repos = self.remote_operations.get_chroma_repos()
         for repo in retired_repos:
             self.assertFalse(repo in current_repos, "Unexpectedly found repo '%s' in %s" % (repo, current_repos))
+
+    def test_obsolete_chroma_diagnostics(self):
+        """Test that chroma-diagnostics has been obsoleted"""
+        msg = check_output('chroma-diagnostics')
+        self.assertEqual(msg, "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
 
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
