@@ -63,6 +63,18 @@ fi
 # override /usr/share/chroma-manager/storage_server.repo
 if [ -f /tmp/storage_server.repo ]; then
     cp /tmp/storage_server.repo /usr/share/chroma-manager/storage_server.repo
+    cat <<\"EOF\" >> /usr/share/chroma-manager/storage_server.repo
+
+[brianjmurrell-iml-agent]
+name=Copr repo for iml-agent owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/epel-7-\$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+EOF
 fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
