@@ -1,12 +1,13 @@
-[managerforlustre-manager-for-lustre]
-name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+[wcjohnso-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by wcjohnso
+baseurl=https://copr-be.cloud.fedoraproject.org/results/wcjohnso/manager-for-lustre/epel-7-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/wcjohnso/manager-for-lustre/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
+enabled_metadata=1
 
 [extras]
 name=CentOS-7 - Extras
