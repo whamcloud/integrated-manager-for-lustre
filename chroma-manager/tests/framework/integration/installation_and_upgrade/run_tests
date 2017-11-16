@@ -333,7 +333,8 @@ echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
-TESTS="$TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
+TESTS="$TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_obsolete_chroma_diagnostics \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
        $TESTS_DIR/test_create_filesystem.py:TestExistsFilesystem.test_exists"
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
