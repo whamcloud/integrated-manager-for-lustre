@@ -8,9 +8,7 @@
   "corosync": false,
   "corosync2": false,
   "pacemaker": false,
-  "bundles": [
-    "iml-agent"
-  ],
+  "bundles": [],
   "ui_description": "A storage server suitable for monitoring only",
   "packages": {
   }

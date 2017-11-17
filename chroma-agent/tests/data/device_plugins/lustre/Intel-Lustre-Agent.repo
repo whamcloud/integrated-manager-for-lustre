@@ -20,17 +20,6 @@ sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
 proxy=_none_
 
-[iml-agent]
-name=Dummy bundle
-baseurl=https://cgearing-mac01.local:8000/repo//iml-agent
-enabled=0
-gpgcheck=0
-sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_
-
 [e2fsprogs]
 name=Dummy bundle
 baseurl=https://cgearing-mac01.local:8000/repo//e2fsprogs

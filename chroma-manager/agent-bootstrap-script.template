@@ -135,7 +135,7 @@ def create_repo():
 
 
 def install_agent():
-    return launch_command('yum install -y --enablerepo=%s %s' % ('{repo_names}', repo_packages))
+    return launch_command('yum install -y %s %s' % ('{enablerepo_arg}', repo_packages))
 
 
 def configure_server():

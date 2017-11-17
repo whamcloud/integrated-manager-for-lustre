@@ -408,9 +408,14 @@ proxy=_none_
                         'agent-bootstrap-script.template'), 'r') as f:
         setup_script_template = f.read()
 
+    if repo_names:
+        enablerepo_arg = "--enablerepo=%s" % ",".join(repo_names)
+    else:
+        enablerepo_arg = ""
+
     script_formatted = setup_script_template.format(reg_url=reg_url, cert_str=cert_str,
                                                     repo_url=repo_url, base_url=base_url,
-                                                    repos=repos, repo_names=",".join(repo_names),
+                                                    repos=repos, enablerepo_arg=enablerepo_arg,
                                                     server_epoch_seconds=server_epoch_seconds,
                                                     repo_packages=repo_packages,
                                                     profile_json=profile_json)

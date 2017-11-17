@@ -291,11 +291,9 @@ yum -y install pdsh
 pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
 pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
 # TODO: we really just need to adjust cache timeouts here to account for
 #       our compressed timelines
 yum clean all
-yum-config-manager --enable iml-agent
 
 yum -y upgrade chroma-agent\*
 

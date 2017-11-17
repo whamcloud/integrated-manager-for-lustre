@@ -112,7 +112,7 @@ class TestLustreScanPackages(CommandCaptureTestCase):
     commands are run and does a loose check of the scanning of the repo file. Pass alphabetically sorted repo_list.
     '''
     def test_scan_packages(self):
-        repo_list = sorted(['lustre-client', 'lustre', 'iml-agent', 'e2fsprogs', 'robinhood'])
+        repo_list = sorted(['lustre-client', 'lustre', 'e2fsprogs', 'robinhood'])
         lustre.REPO_PATH = os.path.join(os.path.dirname(__file__), '../data/device_plugins/lustre/Intel-Lustre-Agent.repo')
 
         lustre.rpm_lib = mock.Mock()
