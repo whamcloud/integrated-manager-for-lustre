@@ -1,4 +1,3 @@
-import logging
 from subprocess import check_output
 from testconfig import config
 
@@ -6,9 +5,6 @@ from django.utils.unittest import skip
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
-
-logger = logging.getLogger('test')
-logger.setLevel(logging.DEBUG)
 
 class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
@@ -64,12 +60,10 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         """Test that chroma-diagnostics has been obsoleted"""
         servers = config['lustre_servers']
         addresses = [server['address'] for server in servers]
-        logger.debug('obsolete test: addresses %s' % (addresses))
         
         for address in addresses:
             result = self.remote_command(address, 'chroma-diagnostics')
-            logger.debug('obsolete test: result of chroma-diagnostics on %s: %s' % (address, result.stdout))
-            self.assertEqual(result.stdout, "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
+            self.assertEqual(result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
 
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
