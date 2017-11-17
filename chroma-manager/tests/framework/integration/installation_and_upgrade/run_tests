@@ -120,8 +120,7 @@ wait_for_nodes "$CLIENT_1" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e
 
 echo "Create and exercise a filesystem..."
 
-TESTS="$TESTS_DIR/test_data_consistancy.py \
-       $TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
+TESTS="$TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
        $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_clean_linux_devices \
        $TESTS_DIR/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
@@ -342,7 +341,8 @@ echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
-TESTS="$TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
+TESTS="$TESTS_DIR/test_data_consistancy.py \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
        $TESTS_DIR/test_create_filesystem.py:TestExistsFilesystem.test_exists"
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
