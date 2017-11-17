@@ -1,4 +1,3 @@
-from subprocess import check_output
 from testconfig import config
 
 from django.utils.unittest import skip
