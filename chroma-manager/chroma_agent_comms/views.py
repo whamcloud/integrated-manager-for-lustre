@@ -47,11 +47,15 @@ class ValidatedClientView(View):
     def valid_fqdn(cls, request):
         "Return fqdn if certificate is valid."
         fqdn = cls.valid_certs.get(request.META['HTTP_X_SSL_CLIENT_SERIAL'])
-        if not fqdn:
-            log.warning("Rejecting certificate %s" % request.META['HTTP_X_SSL_CLIENT_SERIAL'])
-        elif fqdn != request.META['HTTP_X_SSL_CLIENT_NAME']:
-            log.info("Domain name changed %s" % fqdn)
-        return fqdn
+        try:
+            if not fqdn:
+                log.warning("Rejecting certificate %s" % request.META['HTTP_X_SSL_CLIENT_SERIAL'])
+            elif fqdn != request.META['HTTP_X_SSL_CLIENT_NAME']:
+                log.info("Domain name changed %s" % fqdn)
+            return fqdn
+        except KeyError:
+            log.error("Could not find key in %s of request %s" % \
+                      (request.META, request))
 
 
 class CopytoolEventView(ValidatedClientView):
