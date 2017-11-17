@@ -64,8 +64,8 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
             self.assertEqual(chroma_diagnostics_result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
             
-            yum_installed_result = self.remote_command(address, 'yum list installed')
-            self.assertGreaterEqual(yum_installed_result.stdout.find('chroma-diagnostics'), 0)
+            yum_installed_result = self.remote_command(address, 'rpm -q chroma-diagnostics')
+            self.assertNotEqual(yum_installed_result.exit_status, 0)
 
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
