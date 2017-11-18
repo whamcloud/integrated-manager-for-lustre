@@ -58,7 +58,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
         servers = config['lustre_servers']
-        addresses = [server['address'] for server in servers]
+        addresses = [server['address'] for server in servers][0:4].append(chroma_managers[0]['address'])
         
         for address in addresses:
             import sys
