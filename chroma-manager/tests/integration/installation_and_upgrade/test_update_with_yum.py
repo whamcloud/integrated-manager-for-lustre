@@ -61,10 +61,14 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         addresses = [server['address'] for server in servers]
         
         for address in addresses:
+            import sys
+            sys.stderr.write("\nChecking chroma-diagnostics at address: %s\n" % address)
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
+            sys.stderr.write("\nchroma_diagnostics_result: %s, %s\n" % (chroma_diagnostics_result.exit_status, chroma_diagnostics_result.stdout))
             self.assertEqual(chroma_diagnostics_result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
             
             yum_installed_result = self.remote_command(address, 'rpm -q chroma-diagnostics', expected_return_code=1)
+            sys.stderr.write("\nrpm -q chroma-diagnostics exit status: %s" % yum_installed_result.exit_status)
             self.assertNotEqual(yum_installed_result.exit_status, 0)
 
     # something we can run to clear the storage targets since this
