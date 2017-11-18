@@ -319,25 +319,26 @@ def _parse_zpools(zpool_map):
         name = pool['NAME']
         uuid = pool['UID']
 
-        datasets = {ds['DATASET_UID']: {"name": ds['DATASET_NAME'],
-                                        "path": ds['DATASET_NAME'],
-                                        "block_device": "zfsset:%s" % ds['DATASET_UID'],
-                                        "uuid": ds['DATASET_UID'],
-                                        "size": 0,
-                                        "drives": []} for ds in pool['DATASETS'].values()}
+        # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
+        datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
+                                         "path": ds['DATASET_NAME'],
+                                         "block_device": "zfsset:%s" % ds['DATASET_NAME'],
+                                         "uuid": ds['DATASET_UID'],
+                                         "size": 0,
+                                         "drives": []} for ds in pool['DATASETS'].values()}
 
         # normalized_table = block_devices.normalized_device_table
         # drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
         # zvols = _get_zpool_zvols(name, drive_mms, block_devices)
-
-        if datasets is {}:
+        if datasets == {}:
             drive_mms = []
 
             if drive_mms is None:
                 daemon_log.warning("Could not find major minors for zpool '%s'" % name)
                 return
 
-            major_minor = "zfspool:%s" % name
+            # keys should include the pool uuid because names not necessarily unique
+            major_minor = "zfspool:%s" % uuid
             _zpools[uuid] = {"name": name,
                              "path": name,
                              "block_device": major_minor,
@@ -345,14 +346,14 @@ def _parse_zpools(zpool_map):
                              "size": size,
                              "drives": drive_mms}
 
-            _devs[pool['block_device']] = {'major_minor': major_minor,
-                                           'path': name,
-                                           'paths': [name],
-                                           'serial_80': None,
-                                           'serial_83': None,
-                                           'size': size,
-                                           'filesystem_type': None,
-                                           'parent': None}
+            _devs[major_minor] = {'major_minor': major_minor,
+                                  'path': name,
+                                  'paths': [name],
+                                  'serial_80': None,
+                                  'serial_83': None,
+                                  'size': size,
+                                  'filesystem_type': None,
+                                  'parent': None}
 
             # Do this to cache the device, type see blockdevice and filesystem for info.
             BlockDevice('zfs', name)
