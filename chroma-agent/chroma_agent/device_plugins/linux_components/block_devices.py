@@ -286,7 +286,7 @@ class NormalizedDeviceTable(object):
         return normalized_path
 
 
-def _parse_sys_block(device_map):
+def parse_sys_block(device_map):
     xs = create_device_list(device_map)
 
     mutate_parent_prop(xs)
@@ -306,12 +306,12 @@ def _parse_sys_block(device_map):
     return block_device_nodes, node_block_devices, ndt, vgs, lvs
 
 
-def _parse_zpools(zpool_map):
-    _zpools = {}
-    _datasets = {}
+def parse_zpools(zpool_map, block_device_nodes):
+    zpools = {}
+    datasets = {}
     # fixme: get zvols from device-scanner
-    _zvols = {}
-    _devs = {}
+    zvols = {}
+    devs = {}
 
     for pool in zpool_map.values():
         # fixme: get sizes from device-scanner
@@ -319,66 +319,69 @@ def _parse_zpools(zpool_map):
         name = pool['NAME']
         uuid = pool['UID']
 
+        drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
+                     if '/dev/disk/by-label/%s' % name in dev['paths']]
+
+        if not drive_mms:
+            daemon_log.warning("Could not find major minors for zpool '%s'" % name)
+            return
+
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
         datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
                                          "path": ds['DATASET_NAME'],
                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
                                          "uuid": ds['DATASET_UID'],
                                          "size": 0,
-                                         "drives": []} for ds in pool['DATASETS'].values()}
+                                         "drives": drive_mms} for ds in pool['DATASETS'].values()}
 
         # normalized_table = block_devices.normalized_device_table
         # drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
         # zvols = _get_zpool_zvols(name, drive_mms, block_devices)
         if datasets == {}:
-            drive_mms = []
-
-            if drive_mms is None:
-                daemon_log.warning("Could not find major minors for zpool '%s'" % name)
-                return
-
             # keys should include the pool uuid because names not necessarily unique
             major_minor = "zfspool:%s" % uuid
-            _zpools[uuid] = {"name": name,
-                             "path": name,
-                             "block_device": major_minor,
-                             "uuid": uuid,
-                             "size": size,
-                             "drives": drive_mms}
+            zpools[uuid] = {"name": name,
+                            "path": name,
+                            "block_device": major_minor,
+                            "uuid": uuid,
+                            "size": size,
+                            "drives": drive_mms}
 
-            _devs[major_minor] = {'major_minor': major_minor,
-                                  'path': name,
-                                  'paths': [name],
-                                  'serial_80': None,
-                                  'serial_83': None,
-                                  'size': size,
-                                  'filesystem_type': None,
-                                  'parent': None}
+            devs[major_minor] = {'major_minor': major_minor,
+                                 'path': name,
+                                 'paths': [name],
+                                 'serial_80': None,
+                                 'serial_83': None,
+                                 'size': size,
+                                 'filesystem_type': None,
+                                 'parent': None}
 
             # Do this to cache the device, type see blockdevice and filesystem for info.
             BlockDevice('zfs', name)
             FileSystem('zfs', name)
 
         else:
-            _datasets.update(datasets)
+            datasets.update(datasets)
 
             for info in datasets.itervalues():
                 major_minor = info['block_device']
                 name = info['name']
-                _devs[major_minor] = {'major_minor': major_minor,
-                                      'path': name,
-                                      'paths': [name],
-                                      'serial_80': None,
-                                      'serial_83': None,
-                                      'size': 0,
-                                      'filesystem_type': 'zfs',
-                                      'parent': None}
+                devs[major_minor] = {'major_minor': major_minor,
+                                     'path': name,
+                                     'paths': [name],
+                                     'serial_80': None,
+                                     'serial_83': None,
+                                     'size': 0,
+                                     'filesystem_type': 'zfs',
+                                     'parent': None}
 
                 # Do this to cache the device, type see blockdevice and filesystem for info.
                 BlockDevice('zfs', name)
                 FileSystem('zfs', name)
 
-    return _zpools, _datasets, _zvols, _devs
+        block_device_nodes.update(devs)
+
+    return zpools, datasets, zvols, block_device_nodes
 
 
 class BlockDevices(object):
@@ -389,11 +392,10 @@ class BlockDevices(object):
         device_maps = fetch_device_maps()
 
         (self.block_device_nodes, self.node_block_devices,
-         self.normalized_device_table, self.vgs, self.lvs) = _parse_sys_block(device_maps.block_devices)
+         self.normalized_device_table, self.vgs, self.lvs) = parse_sys_block(device_maps.block_devices)
 
-        (self.zfspools, self.zfsdatasets, self.zfsvols, zfs_devs) = _parse_zpools(device_maps.zfspools)
-        self.block_device_nodes.update(zfs_devs)
-        del zfs_devs
+        (self.zfspools, self.zfsdatasets, self.zfsvols, self.block_device_nodes) = parse_zpools(device_maps.zfspools,
+                                                                                                self.block_device_nodes)
 
     def paths_to_major_minors(self, device_paths):
         """
