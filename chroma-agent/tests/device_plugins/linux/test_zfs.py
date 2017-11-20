@@ -1,8 +1,6 @@
 from mock import patch, Mock, MagicMock, call, PropertyMock
 
-from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-from chroma_agent.device_plugins.linux_components.zfs import get_zpools, _get_all_zpool_devices
 from tests.data import zfs_example_data
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
@@ -90,39 +88,14 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
 
     mock_device_nodes = MagicMock(spec_set=dict)
 
-    @patch('glob.glob', mock_empty_list)
     @patch('logging.Logger.debug', Mock())  # mock_debug)
-    @patch('chroma_agent.utils.BlkId', dict)
-    @patch('chroma_agent.device_plugins.linux_components.block_devices.scanner_cmd', mock_empty_dict)
-    @patch('chroma_agent.device_plugins.linux_components.zfs.ZfsDevice')
-    @patch('chroma_agent.device_plugins.linux_components.zfs.read_from_store', mock_read_from_store)
-    @patch('chroma_agent.device_plugins.linux_components.zfs.write_to_store', mock_write_to_store)
-    def _setup_zfs_devices(self, mock_zfs_device, available_side_effect=None):
-        # mock context manager __enter__ returned object
-        type(mock_zfs_device.return_value.__enter__.return_value).available = PropertyMock(
-            return_value=True) if available_side_effect is None else PropertyMock(side_effect=available_side_effect)
-
-        self.mock_read_from_store.reset_mock()
-        self.mock_write_to_store.reset_mock()
-
-        block_devices = BlockDevices()
-
-        zfs_devices = ZfsDevices()
-        zfs_devices.full_scan(block_devices)
-
-        return zfs_devices, block_devices
-
-    @patch('chroma_agent.device_plugins.linux_components.zfs.find_device_and_children', mock_find_device_and_children)
-    def _get_zfs_devices(self, pool_name):
-        """ test the process of using full partition paths and device basenames to resolve device paths """
-        return _get_all_zpool_devices(pool_name, None)
+    def _setup_devices(self, scanner_output):
+        with patch('chroma_agent.device_plugins.linux_components.block_devices.scanner_cmd', scanner_output):
+            return BlockDevices()
 
     def test_get_active_zpool(self):
-        """ WHEN active/imported zpools are output from 'zpool status' command THEN parser returns relevant pools """
-        self.add_commands(CommandCaptureCommand(("zpool", "status"),
-                                                stdout=zfs_example_data.multiple_imported_pools_status))
-
-        zpools = get_zpools()
+        """ WHEN active/imported zpools are output from device scanner THEN parser returns relevant pools """
+        zpools = ls -h
 
         self.assertRanAllCommandsInOrder()
         self.assertListEqual(['zfsPool3', 'zfsPool1'], [pool['pool'] for pool in zpools])

@@ -163,3 +163,14 @@ class TestDevMajorMinor(DummyDataTests):
         devices = self.block_devices.paths_to_major_minors(
             ['/dev/disk/by-id/idontexist', '/dev/disk/by-id/adisk'])
         self.assertEqual(devices, ['12:24'])
+
+
+class TestZfsDevices(DummyDataTests):
+    def setUp(self):
+        super(DummyDataTests, self).setUp()
+
+        self.load_fixture(u'device_scanner_zfs.json')
+        self.load_expected(u'agent_plugin_zfs.json')
+
+    def test_zfs_device_output(self):
+        [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['zfspools', 'zfsdatasets']]
