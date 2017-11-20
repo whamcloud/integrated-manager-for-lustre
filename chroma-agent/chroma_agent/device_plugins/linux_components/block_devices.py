@@ -311,7 +311,6 @@ def parse_zpools(zpool_map, block_device_nodes):
     datasets = {}
     # fixme: get zvols from device-scanner
     zvols = {}
-    devs = {}
 
     for pool in zpool_map.values():
         # fixme: get sizes from device-scanner
@@ -327,17 +326,19 @@ def parse_zpools(zpool_map, block_device_nodes):
             return
 
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
-        datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
-                                         "path": ds['DATASET_NAME'],
-                                         "block_device": "zfsset:%s" % ds['DATASET_NAME'],
-                                         "uuid": ds['DATASET_UID'],
-                                         "size": 0,
-                                         "drives": drive_mms} for ds in pool['DATASETS'].values()}
+        _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
+                                          "path": ds['DATASET_NAME'],
+                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
+                                          "uuid": ds['DATASET_UID'],
+                                          "size": 0,
+                                          "drives": drive_mms} for ds in pool['DATASETS'].values()}
+
+        _devs = {}
 
         # normalized_table = block_devices.normalized_device_table
         # drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
         # zvols = _get_zpool_zvols(name, drive_mms, block_devices)
-        if datasets == {}:
+        if _datasets == {}:
             # keys should include the pool uuid because names not necessarily unique
             major_minor = "zfspool:%s" % uuid
             zpools[uuid] = {"name": name,
@@ -347,39 +348,39 @@ def parse_zpools(zpool_map, block_device_nodes):
                             "size": size,
                             "drives": drive_mms}
 
-            devs[major_minor] = {'major_minor': major_minor,
-                                 'path': name,
-                                 'paths': [name],
-                                 'serial_80': None,
-                                 'serial_83': None,
-                                 'size': size,
-                                 'filesystem_type': None,
-                                 'parent': None}
+            _devs[major_minor] = {'major_minor': major_minor,
+                                  'path': name,
+                                  'paths': [name],
+                                  'serial_80': None,
+                                  'serial_83': None,
+                                  'size': size,
+                                  'filesystem_type': None,
+                                  'parent': None}
 
             # Do this to cache the device, type see blockdevice and filesystem for info.
             BlockDevice('zfs', name)
             FileSystem('zfs', name)
 
         else:
-            datasets.update(datasets)
+            datasets.update(_datasets)
 
-            for info in datasets.itervalues():
+            for info in _datasets.itervalues():
                 major_minor = info['block_device']
                 name = info['name']
-                devs[major_minor] = {'major_minor': major_minor,
-                                     'path': name,
-                                     'paths': [name],
-                                     'serial_80': None,
-                                     'serial_83': None,
-                                     'size': 0,
-                                     'filesystem_type': 'zfs',
-                                     'parent': None}
+                _devs[major_minor] = {'major_minor': major_minor,
+                                      'path': name,
+                                      'paths': [name],
+                                      'serial_80': None,
+                                      'serial_83': None,
+                                      'size': 0,
+                                      'filesystem_type': 'zfs',
+                                      'parent': None}
 
                 # Do this to cache the device, type see blockdevice and filesystem for info.
                 BlockDevice('zfs', name)
                 FileSystem('zfs', name)
 
-        block_device_nodes.update(devs)
+        block_device_nodes.update(_devs)
 
     return zpools, datasets, zvols, block_device_nodes
 
