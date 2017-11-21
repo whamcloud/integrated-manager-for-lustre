@@ -19,10 +19,10 @@
         }
       }, 
       "zfspools": {
-        "0x155B286320514306": {
-          "uuid": "0x155B286320514306", 
+        "0xD322CC960F8137BC": {
+          "uuid": "0xD322CC960F8137BC", 
           "name": "testPool1", 
-          "block_device": "zfspool:0x155B286320514306", 
+          "block_device": "zfspool:0xD322CC960F8137BC", 
           "drives": [
             "8:17"
           ], 
@@ -30,7 +30,30 @@
           "size": 0
         }
       }, 
-      "zfsdatasets": {}, 
+      "zfsdatasets": {
+        "testPool3/homer": {
+          "uuid": "147", 
+          "name": "testPool3/homer", 
+          "block_device": "zfsset:testPool3/homer", 
+          "drives": [
+            "8:1", 
+            "8:49"
+          ], 
+          "path": "testPool3/homer", 
+          "size": 0
+        }, 
+        "testPool3/backup": {
+          "uuid": "140", 
+          "name": "testPool3/backup", 
+          "block_device": "zfsset:testPool3/backup", 
+          "drives": [
+            "8:1", 
+            "8:49"
+          ], 
+          "path": "testPool3/backup", 
+          "size": 0
+        }
+      }, 
       "devs": {
         "8:1": {
           "dm_lv": null, 
@@ -91,9 +114,9 @@
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:4-part1", 
             "/dev/sdb1", 
             "/dev/disk/by-label/testPool1", 
-            "/dev/disk/by-partlabel/zfs-df67dc5a92826771", 
-            "/dev/disk/by-partuuid/3eef3596-31c9-0f42-83c3-ee8eaeb9d4e7", 
-            "/dev/disk/by-uuid/1538868103886226182"
+            "/dev/disk/by-partlabel/zfs-d470da01e1346938", 
+            "/dev/disk/by-partuuid/87157ccc-d69a-7646-95e0-aa80d3d4c130", 
+            "/dev/disk/by-uuid/15213947436088244156"
           ], 
           "dm_multipath": null, 
           "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:4/block/sdb/sdb1", 
@@ -190,6 +213,18 @@
           "filesystem_type": null, 
           "size": 8388608
         }, 
+        "zfspool:0xD322CC960F8137BC": {
+          "paths": [
+            "testPool1"
+          ], 
+          "serial_80": null, 
+          "parent": null, 
+          "major_minor": "zfspool:0xD322CC960F8137BC", 
+          "serial_83": null, 
+          "path": "testPool1", 
+          "filesystem_type": null, 
+          "size": 0
+        }, 
         "8:9": {
           "dm_lv": null, 
           "paths": [
@@ -239,18 +274,6 @@
           "path": "/dev/disk/by-id/lvm-pv-uuid-m5rGD7-Uxgp-rxB6-IwDt-p9Pe-auhF-pBkp7j", 
           "filesystem_type": "LVM2_member", 
           "size": 10737418240
-        }, 
-        "zfspool:0x155B286320514306": {
-          "paths": [
-            "testPool1"
-          ], 
-          "serial_80": null, 
-          "parent": null, 
-          "major_minor": "zfspool:0x155B286320514306", 
-          "serial_83": null, 
-          "path": "testPool1", 
-          "filesystem_type": null, 
-          "size": 0
         }, 
         "252:0": {
           "dm_lv": null, 
@@ -462,7 +485,7 @@
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5-part9", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:4-part9", 
             "/dev/sdb9", 
-            "/dev/disk/by-partuuid/b507afcf-66b5-3c4e-aeaf-44dce94996b1"
+            "/dev/disk/by-partuuid/99ac2805-11a4-7a4a-a02a-83e94a334e40"
           ], 
           "dm_multipath": null, 
           "device_path": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:4/block/sdb/sdb9", 
