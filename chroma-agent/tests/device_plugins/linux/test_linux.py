@@ -17,7 +17,7 @@ class MockDmsetupTable(DmsetupTable):
         self.mpaths = {}
         with mock.patch('chroma_agent.utils.BlkId', return_value={}):
             with mock.patch(
-                    'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+                    'chroma_agent.device_plugins.linux_components.block_devices.parse_sys_block',
                     return_value=(devices_data['block_device_nodes'],
                                   devices_data['node_block_devices'],
                                   NormalizedDeviceTable([]),
@@ -33,6 +33,7 @@ class LinuxAgentTests(unittest.TestCase):
 
         tests = os.path.join(os.path.dirname(__file__), '../../')
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
+        mock.patch('chroma_agent.lib.shell.AgentShell.run').start()
 
         self.existing_files = []
 
@@ -147,7 +148,7 @@ class TestDevMajorMinor(DummyDataTests):
                 }
             }).start()
         mock.patch(
-            'chroma_agent.device_plugins.linux_components.block_devices.BlockDevices._parse_sys_block',
+            'chroma_agent.device_plugins.linux_components.block_devices.parse_sys_block',
             return_value=(None, None, None)).start()
         self.addCleanup(mock.patch.stopall)
 
@@ -174,3 +175,8 @@ class TestZfsDevices(DummyDataTests):
 
     def test_zfs_device_output(self):
         [self.assertEqual(getattr(self.block_devices, x), self.expected[x]) for x in ['zfspools', 'zfsdatasets']]
+
+        for mm in ['zfspool:0xD322CC960F8137BC', 'zfsset:testPool3/backup', 'zfsset:testPool3/homer']:
+            self.assertEqual(self.block_devices.block_device_nodes[mm], self.expected['devs'][mm])
+
+    # todo: drive mm and size tests

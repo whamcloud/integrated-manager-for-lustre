@@ -261,11 +261,11 @@
       "PATHS": [
         "/dev/sdb1",
         "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5-part1",
-        "/dev/disk/by-label/zfs_pool_scsi0QEMU_QEMU_HARDDISK_disk5",
-        "/dev/disk/by-partlabel/zfs-df67dc5a92826771",
-        "/dev/disk/by-partuuid/3eef3596-31c9-0f42-83c3-ee8eaeb9d4e7",
+        "/dev/disk/by-label/testPool1",
+        "/dev/disk/by-partlabel/zfs-d470da01e1346938",
+        "/dev/disk/by-partuuid/87157ccc-d69a-7646-95e0-aa80d3d4c130",
         "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:4-part1",
-        "/dev/disk/by-uuid/4123781522689296041"
+        "/dev/disk/by-uuid/15213947436088244156"
       ],
       "DEVNAME": "/dev/sdb1",
       "DEVPATH": "/devices/pci0000:00/0000:00:05.0/virtio1/host2/target2:0:0/2:0:0:4/block/sdb/sdb1",
@@ -292,7 +292,7 @@
       "PATHS": [
         "/dev/sdb9",
         "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5-part9",
-        "/dev/disk/by-partuuid/b507afcf-66b5-3c4e-aeaf-44dce94996b1",
+        "/dev/disk/by-partuuid/99ac2805-11a4-7a4a-a02a-83e94a334e40",
         "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:4-part9"
       ],
       "DEVNAME": "/dev/sdb9",
@@ -463,10 +463,10 @@
     }
   },
   "ZFSPOOLS": {
-    "0x155B286320514306": {
+    "0xD322CC960F8137BC": {
       "NAME": "testPool1",
-      "UID": "0x155B286320514306",
-      "STATE_STR": "EXPORTED",
+      "UID": "0xD322CC960F8137BC",
+      "STATE_STR": "ACTIVE",
       "PATH": "testPool1",
       "DATASETS": {},
       "PROPERTIES": {}
