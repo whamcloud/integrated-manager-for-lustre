@@ -57,7 +57,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
 
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
-        addresses = [server['address'] for server in self.config_servers].append(chroma_managers[0]['address'])
+        addresses = [server['address'] for server in self.config_servers].append(config['chroma_managers'][0]['address'])
         
         for address in addresses:
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
