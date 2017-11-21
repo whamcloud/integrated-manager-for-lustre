@@ -8,7 +8,6 @@ import re
 import errno
 import socket
 import json
-from chroma_agent.log import daemon_log
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
@@ -318,12 +317,13 @@ def parse_zpools(zpool_map, block_device_nodes):
         name = pool['NAME']
         uuid = pool['UID']
 
+        # fixme: this is not reliable, use Libzfs bindings to provide disk mms for zpool
         drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
                      if '/dev/disk/by-label/%s' % name in dev['paths']]
 
-        if not drive_mms:
-            daemon_log.warning("Could not find major minors for zpool '%s'" % name)
-            return
+        # fixme: re-enable check when drive_mms is reliable
+        # if not drive_mms:
+        #     raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
 
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
         _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
