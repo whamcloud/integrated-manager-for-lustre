@@ -1,6 +1,7 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
+from chroma_agent.device_plugins.linux_components.block_devices import path_to_major_minor
 
 
 class LocalFilesystems(object):
@@ -13,7 +14,9 @@ class LocalFilesystems(object):
         from itertools import chain
         bdev_to_local_fs = {}
         for devpath, mntpnt, fstype in chain(fstab.all(), mounts.all()):
-            major_minor = block_devices.path_to_major_minor(devpath)
+            major_minor = path_to_major_minor(block_devices.node_block_devices,
+                                              block_devices.normalized_device_table,
+                                              devpath)
             if major_minor and fstype != 'lustre' and major_minor in block_devices.block_device_nodes:
                 bdev_to_local_fs[major_minor] = (mntpnt, fstype)
 
