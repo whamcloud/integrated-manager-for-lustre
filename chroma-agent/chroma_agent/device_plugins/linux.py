@@ -7,9 +7,6 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import config
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
-from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
-from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -41,24 +38,18 @@ class LinuxDevicePlugin(DevicePlugin):
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
-        # Software RAID
-        mds = MdRaid(block_devices).all()
-
+        # fixme: implement inside block_devices using device_scanner output
         # EMCPower Devices
-        emcpowers = EMCPower(block_devices).all()
+        # emcpowers = EMCPower(block_devices).all()
 
-        # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
-        local_fs = LocalFilesystems(block_devices).all()
-
-        # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
 
         block_device_dict = {s: getattr(block_devices, s) for s in
-                             ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
+                             ['local_fs', 'mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
 
         block_device_dict['devs'] = block_devices.block_device_nodes
 
-        block_device_dict.update({'local_fs': local_fs, 'emcpowers': emcpowers, 'mds': mds})
+        # block_device_dict['emcpowers'] = emcpowers
 
         return block_device_dict
 
