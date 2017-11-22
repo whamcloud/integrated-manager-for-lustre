@@ -9,7 +9,6 @@ from chroma_agent import config
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
-from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -41,9 +40,6 @@ class LinuxDevicePlugin(DevicePlugin):
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
-        # Software RAID
-        mds = MdRaid(block_devices).all()
-
         # EMCPower Devices
         emcpowers = EMCPower(block_devices).all()
 
@@ -54,12 +50,13 @@ class LinuxDevicePlugin(DevicePlugin):
         LinuxDevicePlugin.devices_scanned = True
 
         block_device_dict = {s: getattr(block_devices, s) for s in
-                             ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
+                             ['mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
 
         block_device_dict['devs'] = block_devices.block_device_nodes
 
-        block_device_dict.update({'local_fs': local_fs, 'emcpowers': emcpowers, 'mds': mds})
+        block_device_dict.update({'local_fs': local_fs, 'emcpowers': emcpowers})
 
+        block_device_dict['ndt'] = block_devices.normalized_device_table.table
         return block_device_dict
 
     def _scan_devices(self, scan_always):
