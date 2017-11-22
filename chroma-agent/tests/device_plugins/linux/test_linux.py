@@ -5,7 +5,8 @@ import os
 import mock
 from django.utils import unittest
 
-from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable, \
+    paths_to_major_minors
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 
 
@@ -113,7 +114,7 @@ class TestBlockDevices(DummyDataTests):
         # dm-2 striped lvm
         self.assertEqual(result[u'/dev/mapper/vg_01-stripedlv'], u'253:2')
 
-    def test_normalized_device_table(self):
+    def test_normalized_device_table_mpath(self):
         self.load_fixture(u'device_scanner_mpath.json')
         self.load_expected(u'agent_plugin_mpath.json')
 
@@ -122,6 +123,12 @@ class TestBlockDevices(DummyDataTests):
         self.assertEqual(result[
                 u'/dev/disk/by-id/scsi-35000c50068b5a1c7'],
             u"/dev/mapper/35000c50068b5a1c7")
+
+    def test_block_device_mdraid(self):
+        self.load_fixture(u'device_scanner_mdraid.json')
+        self.load_expected(u'agent_plugin_mdraid.json')
+
+        self.assertEqual(self.block_devices.mds, self.expected['mds'])
 
 
 class TestDevMajorMinor(DummyDataTests):
@@ -154,15 +161,17 @@ class TestDevMajorMinor(DummyDataTests):
 
     def test_paths_to_major_minors_paths_exist(self):
         self.block_devices.node_block_devices = self.node_block_devices
-        devices = self.block_devices.paths_to_major_minors(
-            ['/dev/disk/by-id/adisk'])
+        devices = paths_to_major_minors(self.block_devices.node_block_devices,
+                                        self.block_devices.normalized_device_table,
+                                        ['/dev/disk/by-id/adisk'])
         self.assertEqual(len(devices), 1)
         self.assertEqual(devices, ['12:24'])
 
     def test_paths_to_major_minors_a_path_doesnt_exist(self):
         self.block_devices.node_block_devices = self.node_block_devices
-        devices = self.block_devices.paths_to_major_minors(
-            ['/dev/disk/by-id/idontexist', '/dev/disk/by-id/adisk'])
+        devices = paths_to_major_minors(self.block_devices.node_block_devices,
+                                        self.block_devices.normalized_device_table,
+                                        ['/dev/disk/by-id/idontexist', '/dev/disk/by-id/adisk'])
         self.assertEqual(devices, ['12:24'])
 
 
