@@ -1003,10 +1003,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         # only partprobe the devices we are cleaning, as we can get
         # EBUSY for the root disk for example
-        self.execute_simultaneous_commands(['partprobe %s' % " ".join(device_paths),
-                                           'udevadm settle'], [
-            server['fqdn'] for server in test_servers
-        ], 'sync partitions')
+        try:
+            self.execute_simultaneous_commands(['partprobe %s' % " ".join(device_paths),
+                                               'udevadm settle'], [
+                server['fqdn'] for server in test_servers
+            ], 'sync partitions')
+        except:
+            for server in test_servers:
+                logger.debug("Found devices %s on %s" %
+                             (self.execute_commands(['ls -l /dev/disk/by-id/'],
+                              server['fqdn'], "directory listing"),
+                              server))
 
     @property
     def quick_setup(self):
