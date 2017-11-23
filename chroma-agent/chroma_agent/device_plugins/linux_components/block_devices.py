@@ -95,6 +95,7 @@ def as_device(x):
         'serial_83': x.get('IML_SCSI_83'),
         'size': int(get_default('IML_SIZE', 0, x)) * 512,
         'filesystem_type': x.get('ID_FS_TYPE'),
+        'filesystem_usage': x.get('ID_FS_USAGE'),
         'device_type': x.get('DEVTYPE'),
         'device_path': x.get('DEVPATH'),
         'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
@@ -234,6 +235,19 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
     return ndt, mds
 
 
+# fixme: too crude?
+def local_fs_filter(x):
+    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in ['ext2', 'ext3', 'ext4']:
+        return True
+    elif x['filesystem_usage'] == 'other' and x['filesystem_type'] == 'swap':
+        return True
+    return False
+
+
+def parse_localfs_devs(xs, node_block_devices, ndt):
+    return {path_to_major_minor(node_block_devices, ndt, x['path']): ["", x['filesystem_type']] for x in xs}
+
+
 class NormalizedDeviceTable(object):
     table = {}
 
@@ -264,7 +278,7 @@ class NormalizedDeviceTable(object):
 
     def find_normalized_start(self, device_fullpath):
         '''
-        :param device_path: The device_path being search for
+        :param device_fullpath: The device_path being search for
         :return: Given /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
                 returns
                 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
@@ -327,7 +341,11 @@ def parse_sys_block(device_map):
                                    node_block_devices,
                                    ndt)
 
-    return block_device_nodes, node_block_devices, ndt, vgs, lvs, mds
+    local_fs = parse_localfs_devs(filter(local_fs_filter, xs),
+                                  node_block_devices,
+                                  ndt)
+
+    return block_device_nodes, node_block_devices, ndt, vgs, lvs, mds, local_fs
 
 
 def parse_zpools(zpool_map, block_device_nodes):
@@ -422,7 +440,8 @@ class BlockDevices(object):
          self.normalized_device_table,
          self.vgs,
          self.lvs,
-         self.mds) = parse_sys_block(device_maps.block_devices)
+         self.mds,
+         self.local_fs) = parse_sys_block(device_maps.block_devices)
 
         (self.zfspools,
          self.zfsdatasets,

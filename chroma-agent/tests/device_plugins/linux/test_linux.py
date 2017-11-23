@@ -5,27 +5,7 @@ import os
 import mock
 from django.utils import unittest
 
-from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, NormalizedDeviceTable, \
-    paths_to_major_minors
-from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
-
-
-# included for legacy tests
-class MockDmsetupTable(DmsetupTable):
-    def __init__(self, dmsetup_data, devices_data):
-        self.lvs = devices_data['lvs']
-        self.vgs = devices_data['vgs']
-        self.mpaths = {}
-        with mock.patch('chroma_agent.utils.BlkId', return_value={}):
-            with mock.patch(
-                    'chroma_agent.device_plugins.linux_components.block_devices.parse_sys_block',
-                    return_value=(devices_data['block_device_nodes'],
-                                  devices_data['node_block_devices'],
-                                  NormalizedDeviceTable([]),
-                                  None,
-                                  None)):
-                self.block_devices = BlockDevices()
-        self._parse_dm_table(dmsetup_data)
+from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, paths_to_major_minors
 
 
 class LinuxAgentTests(unittest.TestCase):
@@ -120,15 +100,15 @@ class TestBlockDevices(DummyDataTests):
 
         result = self.block_devices.normalized_device_table.table
 
-        self.assertEqual(result[
-                u'/dev/disk/by-id/scsi-35000c50068b5a1c7'],
-            u"/dev/mapper/35000c50068b5a1c7")
+        self.assertEqual(result[u'/dev/disk/by-id/scsi-35000c50068b5a1c7'],
+                         u"/dev/mapper/35000c50068b5a1c7")
 
-    def test_block_device_mdraid(self):
+    def test_block_device_mdraid_localfs(self):
         self.load_fixture(u'device_scanner_mdraid.json')
         self.load_expected(u'agent_plugin_mdraid.json')
 
         self.assertEqual(self.block_devices.mds, self.expected['mds'])
+        self.assertEqual(self.block_devices.local_fs, self.expected['local_fs'])
 
 
 class TestDevMajorMinor(DummyDataTests):
