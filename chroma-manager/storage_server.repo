@@ -37,6 +37,16 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-
 repo_gpgcheck=0
 enabled=1
 
+[brianjmurrell-iml-agent]
+name=Copr repo for iml-agent owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
 [epel]
 name=Extra Packages for Enterprise Linux 7 - $basearch
 #baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch

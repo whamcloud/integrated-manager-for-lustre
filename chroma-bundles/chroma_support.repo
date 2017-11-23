@@ -8,6 +8,16 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-
 repo_gpgcheck=0
 enabled=1
 
+[brianjmurrell-iml-agent]
+name=Copr repo for iml-agent owned by brianjmurrell
+baseurl=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/brianjmurrell/iml-agent/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
 [extras]
 name=CentOS-7 - Extras
 #baseurl=http://mirror.centos.org/centos/7/extras/x86_64/
