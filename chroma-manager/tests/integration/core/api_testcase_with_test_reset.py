@@ -1014,6 +1014,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                              (self.execute_commands(['ls -l /dev/disk/by-id/'],
                               server['fqdn'], "directory listing"),
                               server))
+            raise
 
     @property
     def quick_setup(self):
