@@ -1,7 +1,7 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import argparse
 
 import hashlib
 import logging
@@ -586,11 +586,11 @@ class ServiceConfig(CommandLine):
 
         return error
 
-    def setup(self, username, password, ntp_server, check_db_space):
+    def setup(self, db_username, db_password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
 
-        error = self._setup_database(username, password, check_db_space)
+        error = self._setup_database(db_username, db_password, check_db_space)
         if error:
             return [error]
         self._setup_ntp(ntp_server)
@@ -824,14 +824,20 @@ def chroma_config():
 
     """
     service_config = ServiceConfig()
+    parser = argparse.ArgumentParser(description='Process chroma-config CLI commands')
+    parser.add_argument('-v', '--verbose', help='increase output verbosity')
+    parser.add_argument('command', required=True, help=service_config.print_usage_message())
+    args = parser.parse_args()
+    print args
 
-    try:
-        command = sys.argv[1]
-    except IndexError:
-        log.error('%s' % service_config.print_usage_message())
-        sys.exit(-1)
 
-    if command in ('stop', 'start', 'restart') and os.geteuid():
+#    try:
+#        command = sys.argv[1]
+#    except IndexError:
+#        log.error('%s' % service_config.print_usage_message())
+#        sys.exit(-1)
+
+    if args.command in ('stop', 'start', 'restart') and os.geteuid():
         log.error('You must be root to run this command.')
         sys.exit(-1)
 
@@ -852,7 +858,7 @@ def chroma_config():
 
     if command == 'setup':
         def usage():
-            log.error("Usage: setup [-v] [username password ntpserver]")
+            log.error("Usage: setup [-v] [db_username db_password ntpserver]")
             sys.exit(-1)
 
         if '--no-dbspace-check' in sys.argv:
@@ -862,20 +868,20 @@ def chroma_config():
             check_db_space = True
 
         if len(sys.argv) == 2:
-            username = None
-            password = None
+            db_username = None
+            db_password = None
             ntpserver = None
 
         elif len(sys.argv) == 5:
-            username = sys.argv[2]
-            password = sys.argv[3]
+            db_username = sys.argv[2]
+            db_password = sys.argv[3]
             ntpserver = sys.argv[4]
 
         else:
-                usage()
+            usage()
 
         log.info("Starting setup...\n")
-        errors = service_config.setup(username, password, ntpserver, check_db_space)
+        errors = service_config.setup(db_username, db_password, ntpserver, check_db_space)
         if errors:
             print_errors(errors)
             sys.exit(-1)
