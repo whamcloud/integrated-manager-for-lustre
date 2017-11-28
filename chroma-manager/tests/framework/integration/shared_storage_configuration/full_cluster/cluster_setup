@@ -41,6 +41,10 @@ if [ -f ~/storage_server.repo ]; then
     STORAGE_SERVER_REPO=~/storage_server.repo
 fi
 
+if [ -n "$RELEASE_ARCHIVE" ]; then
+    ARCHIVE_NAME=${RELEASE_ARCHIVE##*/}
+fi
+
 # Install and setup manager
 scp $STORAGE_SERVER_REPO $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
@@ -100,6 +104,12 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
 fi
 
+# any repos required by this test run
+if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+    for repo in $STORAGE_SERVER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
+fi
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
