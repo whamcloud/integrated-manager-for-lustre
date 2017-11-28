@@ -12,7 +12,9 @@ if ! $JENKINS; then
 fi
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
-if $JENKINS; then
+if [ -n "$RELEASE_ARCHIVE" ]; then
+    curl -L -f -O "https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download/$RELEASE_ARCHIVE"
+elif $JENKINS; then
     cd $WORKSPACE
     curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 fi
