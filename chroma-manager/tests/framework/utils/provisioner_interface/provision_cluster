@@ -6,8 +6,8 @@ if $JENKINS; then
     BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
     IEEL_VERSION=${IEEL_VERSION:?"Need to set IEEL_VERSION"}
     TEST_DISTRO_NAME=${TEST_DISTRO_NAME:?"Need to set TEST_DISTRO_NAME"}
-    TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:?"Need to set TEST_DISTRO_VERSION"}
 fi
+TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:?"Need to set TEST_DISTRO_VERSION"}
 CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:?"Need to specify a CLUSTER_CONFIG_TEMPLATE path"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:?"Need to specify a CLUSTER_CONFIG path to output the test json after provisioning"}
 
@@ -47,6 +47,16 @@ if $JENKINS; then
         exit 1
     fi
 else
+    # set the correct Vagrant box for the
+    # TEST_DISTRO_VERSION
+    declare -A vagrant_centos_boxes=( [7.2]=1511
+                                      [7.3]=1611
+                                      [7.4]=1708
+                                      [7.5]=9999 )
+
+    sed -i -e "/override\.vm\.box_version/s/> [0-9][0-9]*, *< *[0-9][0-9]*/> ${vagrant_centos_boxes[$TEST_DISTRO_VERSION]}, < ${vagrant_centos_boxes[$(echo "$TEST_DISTRO_VERSION+.1" | bc)]}/" Vagrantfile
+
+    make reset_cluster
     cp provisioner_output-vagrant-${MAKE_TARGET%_tests}.json provisioner_output.json
 fi
 
