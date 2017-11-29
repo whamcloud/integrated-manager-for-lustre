@@ -898,6 +898,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             'checking for zfs presence',
             expected_return_code=None)
 
+        partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
                 zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])		
@@ -909,12 +910,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.execute_commands(zfs_device.release_commands,
                                       server0['fqdn'],
                                       'export zfs device %s' % zfs_device)
+                partprobe_devices.append(server0['orig_device_paths'][lustre_device['path_index']])
 
-                # only partprobe the devices we are cleaning, as we can get
-                # EBUSY for the root disk for example
-                self.execute_simultaneous_commands(['partprobe %s' %
-                                                    server0['orig_device_paths'][lustre_device['path_index']],
-                                                    'udevadm settle'], fqdns, 'sync partitions')
+        if partprobe_devices:
+            # only partprobe the devices we are cleaning, as we can get
+            # EBUSY for the root disk for example
+            self.execute_simultaneous_commands(['partprobe %s' %
+                                                " ".join(partprobe_devices),
+                                                'udevadm settle'], fqdns,
+                                               'sync partitions')
 
     def cleanup_zpools(self):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
