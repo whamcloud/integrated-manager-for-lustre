@@ -817,32 +817,26 @@ def default_profile(name):
 
 
 def chroma_config():
-    """Entry point for chroma-config command line tool.
+    """
+    Entry point for chroma-config command line tool.
 
     Distinction between this and ServiceConfig is that CLI-specific stuff lives here:
     ServiceConfig utility methods don't do sys.exit or parse arguments.
-
     """
     service_config = ServiceConfig()
-    parser = argparse.ArgumentParser(description='Process chroma-config CLI commands')
-    parser.add_argument('-v', '--verbose', help='increase output verbosity')
-    parser.add_argument('command', required=True, help=service_config.print_usage_message())
-    args = parser.parse_args()
-    print args
 
+    def do_service_action(args):
+        if os.geteuid():
+            log.error('You must be root to run this command.')
+            sys.exit(-1)
 
-#    try:
-#        command = sys.argv[1]
-#    except IndexError:
-#        log.error('%s' % service_config.print_usage_message())
-#        sys.exit(-1)
-
-    if args.command in ('stop', 'start', 'restart') and os.geteuid():
-        log.error('You must be root to run this command.')
-        sys.exit(-1)
-
-    if command in ('-h', '--help'):
-        log.info('%s' % service_config.print_usage_message())
+        if args.action == 'stop':
+            service_config.stop()
+        elif args.action == 'start':
+            service_config.start()
+        elif args.action == 'restart':
+            service_config.stop()
+            service_config.start()
 
     def print_errors(errors):
         if errors:
@@ -852,73 +846,91 @@ def chroma_config():
         else:
             log.info("OK.")
 
-    if '-v' in sys.argv:
-        service_config.verbose = True
-        sys.argv.remove('-v')
-
-    if command == 'setup':
-        def usage():
-            log.error("Usage: setup [-v] [db_username db_password ntpserver]")
-            sys.exit(-1)
-
-        if '--no-dbspace-check' in sys.argv:
-            check_db_space = False
-            sys.argv.remove('--no-dbspace-check')
-        else:
-            check_db_space = True
-
-        if len(sys.argv) == 2:
-            db_username = None
-            db_password = None
-            ntpserver = None
-
-        elif len(sys.argv) == 5:
-            db_username = sys.argv[2]
-            db_password = sys.argv[3]
-            ntpserver = sys.argv[4]
-
-        else:
-            usage()
-
-        log.info("Starting setup...\n")
-        errors = service_config.setup(db_username, db_password, ntpserver, check_db_space)
-        if errors:
-            print_errors(errors)
-            sys.exit(-1)
-        else:
-            log.info("\nSetup complete.")
-            sys.exit(0)
-    elif command == 'validate':
+    def do_validate(_):
         errors = service_config.validate()
         print_errors(errors)
         if errors:
             sys.exit(1)
         else:
             sys.exit(0)
-    elif command == 'stop':
-        service_config.stop()
-    elif command == 'start':
-        service_config.start()
-    elif command == 'restart':
-        service_config.stop()
-        service_config.start()
-    elif command == 'bundle':
-        operation = sys.argv[2]
-        bundle(operation, path=sys.argv[3])
-    elif command == 'profile':
-        operation = sys.argv[2]
-        if operation == 'register':
-            try:
-                register_profile(open(sys.argv[3]))
-            except IOError:
-                print "Error opening %s" % sys.argv[3]
-                sys.exit(-1)
-        elif operation == 'delete':
-            delete_profile(sys.argv[3])
-        elif operation == 'default':
-            default_profile(sys.argv[3])
+
+    def do_setup(args):
+        if len(args.settings) != 3:
+            parser_setup.print_help()
+            sys.exit(-1)
+
+        log.info("Starting setup...\n")
+        errors = service_config.setup(*(args.settings + [args.check_db_space]))
+        if errors:
+            print_errors(errors)
+            sys.exit(-1)
         else:
-            raise NotImplementedError(operation)
-    else:
-        log.error("Invalid command '%s'" % command)
-        sys.exit(-1)
+            log.info("\nSetup complete.")
+            sys.exit(0)
+
+    def do_bundle(args):
+        bundle(args.operation, args.path)
+
+    def do_profile(args):
+        if args.operation == 'register':
+            try:
+                register_profile(open(args.profile_name))
+            except IOError:
+                log.error("Error opening %s" % args.profile_name)
+                sys.exit(-1)
+        elif args.operation == 'delete':
+            delete_profile(args.profile_name)
+        elif args.operation == 'default':
+            default_profile(args.profile_name)
+
+    parser = argparse.ArgumentParser(description='chroma-config command line tool for Intel Manager for Lustre.')
+    parser.add_argument('-v', '--verbose', action='store_true', help='increase output verbosity')
+
+    subparsers = parser.add_subparsers()
+
+    parser_stop = subparsers.add_parser('stop', help='Stop Intel Manager for Lustre services')
+    parser_stop.set_defaults(func=do_service_action, action='stop')
+
+    parser_start = subparsers.add_parser('start', help='Start Intel Manager for Lustre services')
+    parser_start.set_defaults(func=do_service_action, action='start')
+
+    parser_restart = subparsers.add_parser('restart', help='Restart Intel Manager for Lustre services')
+    parser_restart.set_defaults(func=do_service_action, action='restart')
+
+    parser_validate = subparsers.add_parser('validate', help='Check all services and print out any errors found '
+                                                             'during the service validation.')
+    parser_validate.set_defaults(func=do_validate)
+
+    parser_setup = subparsers.add_parser('setup',
+                                         help='Setup the name, e-mail address and password for '
+                                              'the first Intel Manager for Lustre software superuser. '
+                                              'Optionally you can use the NTP server (Internal or '
+                                              'External) used for your site by adding the fully '
+                                              'qualified domain name when prompted. If no NTP server '
+                                              "is set then the Intel Manager for Lustre Server's local "
+                                              'clock will act as the time source for the entire '
+                                              'storage cluster.')
+    parser_setup.add_argument('--no-dbspace-check',
+                              action='store_false',
+                              dest='check_db_space',
+                              help="don't verify free space requirements for database.")
+    parser_setup.add_argument('settings',
+                              nargs='*',
+                              default=[None, None, None],
+                              help='Configure DB username, DB password and NTP server. '
+                                   'Usage: [db_username db_password ntpserver]')
+    parser_setup.set_defaults(func=do_setup)
+
+    parser_bundle = subparsers.add_parser('bundle', help='Operate on bundles.')
+    parser_bundle.add_argument('operation', choices=['register', 'delete'])
+    parser_bundle.add_argument('path')
+    parser_bundle.set_defaults(func=do_bundle)
+
+    parser_profile = subparsers.add_parser('profile', help='Operate on profiles.')
+    parser_profile.add_argument('operation', choices=['register', 'delete', 'default'])
+    parser_profile.add_argument('profile_name')
+    parser_profile.set_defaults(func=do_profile)
+
+    args = parser.parse_args()
+    service_config.verbose = args.verbose
+    args.func(args)
