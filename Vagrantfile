@@ -88,6 +88,9 @@ __EOF
 	config.vm.provision "shell", inline: "systemctl enable firewalld"
 	config.vm.provision "shell", inline: "systemctl start firewalld"
 
+	# Verbose booting
+	config.vm.provision "shell", inline: "sed -ie 's/ rhgb quiet//' /boot/grub2/grub.cfg /etc/sysconfig/grub"
+
 	# The VMs will have IPv6 but no IPv6 connectivity so alter
 	# their gai.conf to prefer IPv4 addresses over IPv6
 	config.vm.provision "shell", inline: "echo \"precedence ::ffff:0:0/96  100\" > /etc/gai.conf"
