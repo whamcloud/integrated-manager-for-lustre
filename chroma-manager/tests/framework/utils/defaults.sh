@@ -47,7 +47,15 @@ set_defaults() {
     export SHORT_ARCHIVE_NAME="$(make -s -f $d/include/Makefile.version .short_archive_name)"
     export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz"
 
-    export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    if $JENKINS; then
+        export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    fi
+
+    if [ -n "$PROVISIONER" ]; then
+        export VAGRANT=false
+    else
+        export VAGRANT=true
+    fi
 
     if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
         if $JENKINS; then
