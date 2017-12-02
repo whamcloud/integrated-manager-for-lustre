@@ -17,6 +17,7 @@ from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 from chroma_core.models import ManagedHost
 from chroma_core.models import VolumeNode
 from settings import SERIAL_PREFERENCE
+from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 
 version = 1
 
@@ -82,22 +83,26 @@ class Partition(resources.LogicalDriveSlice):
 class MdRaid(resources.LogicalDrive):
     class Meta:
         identifier = GlobalId('uuid')
+
     uuid = attributes.String()
 
 
 class EMCPower(resources.LogicalDrive):
     class Meta:
         identifier = GlobalId('uuid')
+
     uuid = attributes.String()
 
 
 class ZfsPool(resources.LogicalDrive):
     class Meta:
         identifier = GlobalId('uuid')
+
     uuid = attributes.String()
     name = attributes.String()
 
     """ This has to be a class method today because at the point we call it we only has the type not the object"""
+
     @classmethod
     def device_type(cls):
         return "zfs"
@@ -121,6 +126,7 @@ class ZfsVol(ZfsPool):
 class LocalMount(resources.LogicalDriveOccupier):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
+
     class Meta:
         identifier = ScopedId('mount_point')
 
@@ -163,6 +169,7 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "%s-%s" % (self.vg.name, self.name)
 
     """ This has to be a class method today because at the point we call it we only has the type not the object"""
+
     @classmethod
     def device_type(cls):
         return "lvm_volume"
@@ -174,21 +181,26 @@ class Linux(Plugin):
     def __init__(self, resource_manager, scannable_id=None):
         super(Linux, self).__init__(resource_manager, scannable_id)
 
+        log.info("Linux.init")
         self.major_minor_to_node_resource = {}
+        self.res_by_serial = {}
 
     def teardown(self):
-        self.log.debug("Linux.teardown")
+        log.info("Linux.teardown")
 
     def agent_session_continue(self, host_id, data):
+        log.info("Linux.continue")
         # The agent plugin sends us another full report when it thinks something has changed
         self.agent_session_start(host_id, data, initial_scan=False)
 
     def agent_session_start(self, host_id, data, initial_scan=True):
+        log.info("Linux.start")
         devices = data
         initiate_device_poll = False
         reported_device_node_paths = []
 
-        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs',
+                              'local_fs', 'mds']:
             if expected_item not in devices:
                 devices[expected_item] = {}
 
@@ -246,20 +258,20 @@ class Linux(Plugin):
                 bdev['serial_83'] = None
 
         # Create ScsiDevices
-        res_by_serial = {}
+        self.res_by_serial = {}
         scsi_device_identifiers = []
 
         for bdev in devices['devs'].values():
             serial = preferred_serial(bdev)
             if not bdev['major_minor'] in special_block_devices:
-                if serial is not None and not serial in res_by_serial:
+                if serial is not None and not serial in self.res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
                     node, created = self.update_or_create(ScsiDevice,
                                                           serial=serial,
                                                           size=bdev['size'],
                                                           filesystem_type=bdev['filesystem_type'])
-                    res_by_serial[serial] = node
+                    self.res_by_serial[serial] = node
                     scsi_device_identifiers.append(node.id_tuple())
 
         # Map major:minor string to LinuxDeviceNode
@@ -279,25 +291,25 @@ class Linux(Plugin):
             serial = preferred_serial(bdev)
             if serial is not None:
                 # Serial is set, so look up the ScsiDevice
-                lun_resource = res_by_serial[serial]
+                lun_resource = self.res_by_serial[serial]
                 node, created = self.update_or_create(LinuxDeviceNode,
-                                    parents = [lun_resource],
-                                    logical_drive = lun_resource,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+                                                      parents=[lun_resource],
+                                                      logical_drive=lun_resource,
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
                 self.major_minor_to_node_resource[bdev['major_minor']] = node
                 reported_device_node_paths.append(bdev['path'])
             else:
                 # Serial is not set, so create an UnsharedDevice
                 device, created = self.update_or_create(UnsharedDevice,
-                        path = bdev['path'],
-                        size = bdev['size'],
-                        filesystem_type = bdev['filesystem_type'])
+                                                        path=bdev['path'],
+                                                        size=bdev['size'],
+                                                        filesystem_type=bdev['filesystem_type'])
                 node, created = self.update_or_create(LinuxDeviceNode,
-                        parents = [device],
-                        logical_drive = device,
-                        host_id = host_id,
-                        path = bdev['path'])
+                                                      parents=[device],
+                                                      logical_drive=device,
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
                 self.major_minor_to_node_resource[bdev['major_minor']] = node
                 reported_device_node_paths.append(bdev['path'])
 
@@ -307,16 +319,16 @@ class Linux(Plugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             elif bdev['parent']:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                        host_id = host_id,
-                        path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             else:
                 continue
 
@@ -334,9 +346,9 @@ class Linux(Plugin):
         for vg in devices['vgs'].values():
             # Create VG resource
             vg_resource, created = self.update_or_create(LvmGroup,
-                    uuid = vg['uuid'],
-                    name = vg['name'],
-                    size = vg['size'])
+                                                         uuid=vg['uuid'],
+                                                         name=vg['name'],
+                                                         size=vg['size'])
             vg_uuid_to_resource[vg['uuid']] = vg_resource
 
             # Add PV block devices as parents of VG
@@ -351,12 +363,13 @@ class Linux(Plugin):
 
                 # Make the LV a parent of its device node on this host
                 lv_resource, created = self.update_or_create(LvmVolume,
-                        parents = [vg_resource],
-                        uuid = lv['uuid'],
-                        name = lv['name'],
-                        vg = vg_resource,
-                        size = lv['size'],
-                        filesystem_type = devices['devs'][lv['block_device']]['filesystem_type'])
+                                                             parents=[vg_resource],
+                                                             uuid=lv['uuid'],
+                                                             name=lv['name'],
+                                                             vg=vg_resource,
+                                                             size=lv['size'],
+                                                             filesystem_type=devices['devs'][lv['block_device']][
+                                                                 'filesystem_type'])
 
                 try:
                     lv_node = self.major_minor_to_node_resource[lv['block_device']]
@@ -380,18 +393,22 @@ class Linux(Plugin):
 
         self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
-        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
+        # todo: add entries for hosts that can see the underlying block devices as well
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'],
+                                                                  reported_device_node_paths) or initiate_device_poll
 
-        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'],
+                                                                  reported_device_node_paths) or initiate_device_poll
 
-        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
+        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'],
+                                                                  reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
             self.update_or_create(LocalMount,
-                    parents=[bdev_resource],
-                    mount_point = mntpnt,
-                    fstype = fstype)
+                                  parents=[bdev_resource],
+                                  mount_point=mntpnt,
+                                  fstype=fstype)
 
         # Create Partitions (devices that have 'parent' set)
         partition_identifiers = []
@@ -404,11 +421,11 @@ class Linux(Plugin):
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
             partition, created = self.update_or_create(Partition,
-                    parents = [parent_resource],
-                    container = parent_resource.logical_drive,
-                    number = bdev['partition_number'],
-                    size = bdev['size'],
-                    filesystem_type = bdev['filesystem_type'])
+                                                       parents=[parent_resource],
+                                                       container=parent_resource.logical_drive,
+                                                       number=bdev['partition_number'],
+                                                       size=bdev['size'],
+                                                       filesystem_type=bdev['filesystem_type'])
 
             this_node.add_parent(partition)
             partition_identifiers.append(partition.id_tuple())
@@ -422,21 +439,26 @@ class Linux(Plugin):
 
         # If we see a device change and the data was sent by the agent poll rather than initial start up
         # then we need to cause all of the ha peer agents and any other nodes that we share VolumeNodes with
-        # re-poll themselves.
+        # to re-poll themselves.
         # This 'set' is probably a good balance between every node and no poll at all.
         if (initial_scan is False) and (initiate_device_poll is True):
             ha_peers = set(HaCluster.host_peers(ManagedHost.objects.get(id=host_id)))
 
-            hosts_volume_node_ids = [volume_node.volume_id for volume_node in VolumeNode.objects.filter(host_id=host_id)]
+            hosts_volume_node_ids = [volume_node.volume_id for volume_node in
+                                     VolumeNode.objects.filter(host_id=host_id)]
             all_volume_nodes = list(VolumeNode.objects.filter(volume_id__in=hosts_volume_node_ids))
-            all_volume_node_hosts = ManagedHost.objects.filter(id__in=set(volume_node.host_id for volume_node in all_volume_nodes))
+            all_volume_node_hosts = ManagedHost.objects.filter(
+                id__in=set(volume_node.host_id for volume_node in all_volume_nodes))
 
             ha_peers |= set(all_volume_node_hosts)
             JobSchedulerClient.trigger_plugin_update([peer.id for peer in ha_peers], [host_id], ['linux'])
 
-    def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list, reported_device_node_paths):
+    def _map_drives_to_device_to_node(self, devices, host_id, device_type, klass, attributes_list,
+                                      reported_device_node_paths):
         resources_changed = False
         device_identifiers = []
+
+        log.info('Linux.map_drives_to_devise_to_node {}'.format(device_type))
 
         for device_uuid, device_info in devices[device_type].items():
             block_device = devices['devs'][device_info['block_device']]
@@ -468,11 +490,33 @@ class Linux(Plugin):
 
             resources_changed = created_res or resources_changed
 
+            if created_res and device_type in ['zfspools', 'zfsdatasets', 'zfsvols']:
+                host_ids = self._find_hosts_with_drives(device_info['drives'], host_id)
+                log.info('created host-side zfs resource {}, hosts that share underlying devices {}.'.format(
+                    device_res, host_ids))
+
+                for host_id in host_ids:
+                    node_res, _ = self.update_or_create(LinuxDeviceNode,
+                                                        parents=[device_res],
+                                                        logical_drive=device_res,
+                                                        host_id=host_id,
+                                                        path=device_info['path'])
+
+                    log.info('created node resource {} for host {}'.format(node_res, host_id))
+
         resources_changed |= self.remove_missing_devices(host_id,
                                                          klass,
                                                          device_identifiers)
 
         return resources_changed
+
+    def _find_hosts_with_drives(self, mms, host_id):
+        """ Find device paths, then return host ids for those that have VolumeNodes for all relevant paths """
+        paths = [self.major_minor_to_node_resource[mm]._storage_dict['path'] for mm in mms]
+        log.info("Linux.find host with drives {} and paths {}".format(mms, paths))
+
+        return filter(lambda x: VolumeNode.objects.filter(host_id=x, path__in=paths).count() == len(paths),
+                      [t[0] for t in ManagedHost.objects.values_list('id') if t[0] != host_id])
 
     def remove_missing_devices(self, host_id, klass, device_identifiers):
         # Now look for any VolumeNodes that were not reported, these should be removed from the resources.
