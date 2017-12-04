@@ -57,8 +57,10 @@ class TestYumUpdate(TestInstallationAndUpgrade):
 
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
+        import sys
         addresses = [server['address'] for server in self.config_servers].append(config['chroma_managers'][0]['address'])
-        
+        sys.stderr.write("\nchroma-diagnostics test: addresses: %s\n" % addresses)
+
         for address in addresses:
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
             self.assertEqual(chroma_diagnostics_result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
