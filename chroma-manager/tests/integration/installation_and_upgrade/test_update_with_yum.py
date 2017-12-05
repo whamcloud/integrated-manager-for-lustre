@@ -58,9 +58,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
         import sys
-        sys.stderr.write("\nself.config_servers: %s\n" % self.config_servers)
-        sys.stderr.write("\nchroma_managers[0][address]: %s\n" % config['chroma_managers'][0]['address'])
-        addresses = [server['address'] for server in self.config_servers].append(config['chroma_managers'][0]['address'])
+        addresses = [server['fqdn'] for server in self.config_servers].append(config['chroma_managers'][0]['address'])
         sys.stderr.write("\nchroma-diagnostics test: addresses: %s\n" % addresses)
 
         for address in addresses:
