@@ -42,14 +42,14 @@ class Migration(DataMigration):
         map(delete_item, content_types)
 
         # Remove any entries from chroma_core_job.locks_json that have a locked_item_type_id referencing one of the rsyslog types
-    	jobs = orm['chroma_core.Job'].objects.all()
+        jobs = orm['chroma_core.Job'].objects.all()
         map(partial(update_locks_json, content_type_ids), jobs)
 
         # Remove any entries from chroma_core_job.wait_for_json whose entry points to a job id that no longer exists. These entries
         # were removed when the content type id was deleted.
         jobs = orm['chroma_core.Job'].objects.all()
         job_ids = map(get_id, jobs)
-        map(partial(update_wait_for_json_entries, job_ids) ,jobs)
+        map(partial(update_wait_for_json_entries, job_ids), jobs)
 
 
     def backwards(self, orm):
