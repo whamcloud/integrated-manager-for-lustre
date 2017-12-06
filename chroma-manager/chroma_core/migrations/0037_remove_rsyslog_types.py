@@ -53,7 +53,6 @@ class Migration(DataMigration):
 
 
     def backwards(self, orm):
-        "Write your backwards methods here."
 
     models = {
         'auth.group': {
