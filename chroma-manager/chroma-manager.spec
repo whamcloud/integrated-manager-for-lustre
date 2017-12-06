@@ -58,6 +58,7 @@ Requires: iml-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help
 Requires: createrepo
+Requires: python2-toolz
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd

@@ -3,6 +3,9 @@ import datetime
 import json
 
 from functools import partial
+from toolz import curry
+from toolz.functoolz import pipe
+from toolz.curried import filter as cfilter
 from south.db import db
 from south.v2 import DataMigration
 from django.db import models
@@ -13,18 +16,28 @@ def does_not_contain_content_type_id (content_type_ids, json):
     return json["locked_item_type_id"] not in content_type_ids
 
 def update_locks_json (content_type_ids, job):
-    locks_json = json.loads(job.locks_json)
-    locks_json = filter(partial(does_not_contain_content_type_id, content_type_ids) , locks_json)
-    job.locks_json = json.dumps(locks_json)
+    job.locks_json = pipe(
+        job.locks_json, 
+        json.loads, 
+        cfilter(partial(does_not_contain_content_type_id, content_type_ids)),
+        list,
+        json.dumps
+    )
+
     job.save()
 
 def item_in_list (items, item):
     return item in items
 
 def update_wait_for_json_entries (job_ids, job):
-    entries = json.loads(job.wait_for_json)
-    new_entries = filter(partial(item_in_list, job_ids), entries)
-    job.wait_for_json = json.dumps(new_entries)
+    job.wait_for_json = pipe(
+        job.wait_for_json,
+        json.loads,
+        cfilter(partial(item_in_list, job_ids)),
+        list,
+        json.dumps
+    )
+
     job.save()
 
 def get_id (item):
@@ -51,9 +64,8 @@ class Migration(DataMigration):
         job_ids = map(get_id, jobs)
         map(partial(update_wait_for_json_entries, job_ids), jobs)
 
-
     def backwards(self, orm):
-        """Backwards implementation"""
+        """backwards implementation"""
 
     models = {
         'auth.group': {
