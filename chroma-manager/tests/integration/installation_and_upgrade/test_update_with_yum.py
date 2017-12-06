@@ -60,7 +60,6 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         import sys
         addresses = [server['fqdn'] for server in self.config_servers]
         addresses.append(config['chroma_managers'][0]['address'])
-        sys.stderr.write("\nchroma-diagnostics test: addresses: %s\n" % addresses)
 
         for address in addresses:
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
