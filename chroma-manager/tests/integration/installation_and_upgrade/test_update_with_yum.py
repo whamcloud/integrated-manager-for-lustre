@@ -1,9 +1,9 @@
 from testconfig import config
+
 from django.utils.unittest import skip
 
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
-
 
 class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
@@ -54,6 +54,19 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         current_repos = self.remote_operations.get_chroma_repos()
         for repo in retired_repos:
             self.assertFalse(repo in current_repos, "Unexpectedly found repo '%s' in %s" % (repo, current_repos))
+
+    def test_obsolete_chroma_diagnostics(self):
+        """Test that chroma-diagnostics has been obsoleted"""
+        import sys
+        addresses = [server['fqdn'] for server in self.config_servers]
+        addresses.append(config['chroma_managers'][0]['address'])
+
+        for address in addresses:
+            chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
+            self.assertEqual(chroma_diagnostics_result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
+            
+            yum_installed_result = self.remote_command(address, 'rpm -q chroma-diagnostics', expected_return_code=1)
+            self.assertNotEqual(yum_installed_result.exit_status, 0)
 
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
