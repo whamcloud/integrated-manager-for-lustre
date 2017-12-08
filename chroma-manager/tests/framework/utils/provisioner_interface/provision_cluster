@@ -13,7 +13,7 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:?"Need to specify a CLUSTER_CONFIG path to outpu
 
 if ! $JENKINS; then
     export BUILD_JOB_NAME="foo"
-    export BUILD_JOB_BUILD_NUMBER=1
+    export BUILD_JOB_BUILD_NUMBER=0
     cp $CLUSTER_CONFIG_TEMPLATE{,.tmp}
     CLUSTER_CONFIG_TEMPLATE="${CLUSTER_CONFIG_TEMPLATE}.tmp"
 fi
@@ -29,7 +29,7 @@ sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
 python $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py $CLUSTER_CONFIG_TEMPLATE provisioner_input.json || (echo "test_json2provisioner_json.py failed. Input: `cat $CLUSTER_CONFIG_TEMPLATE`" && exit 1)
 cat provisioner_input.json
 
-if $JENKINS; then
+if ! $VAGRANT; then
     # Actually call the provisioner. Once the command returns, provisioning is complete.
     rc=0
     PROVISION_START_TIME=$(date '+%s')
