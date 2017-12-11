@@ -1,72 +1,19 @@
 # -*- coding: utf-8 -*-
-import json
-from functools import partial
-
-from toolz.functoolz import pipe
-from toolz.curried import filter as cfilter
-from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
-
+import cPickle as pickle
 from south.v2 import DataMigration
-
-
-def does_not_contain_content_type_id (content_type_ids, json):
-    return json["locked_item_type_id"] not in content_type_ids
-
-
-def update_locks_json (content_type_ids, job):
-    job.locks_json = pipe(
-        job.locks_json, 
-        json.loads, 
-        cfilter(partial(does_not_contain_content_type_id, content_type_ids)),
-        list,
-        json.dumps
-    )
-
-    job.save()
-
-
-def item_in_list (items, item):
-    return item in items
-
-
-def update_wait_for_json_entries (job_ids, job):
-    job.wait_for_json = pipe(
-        job.wait_for_json,
-        json.loads,
-        cfilter(partial(item_in_list, job_ids)),
-        list,
-        json.dumps
-    )
-
-    job.save()
-
-
-def get_id (item):
-    return item.id
-
-
-def delete_item (item):
-    item.delete()
+from toolz import pipe
+from toolz.curried import filter as cfilter
+from toolz.curried import map as cmap
 
 
 class Migration(DataMigration):
+
     def forwards(self, orm):
-        # get ids for rsyslogconfiguration, configurersyslogjob, unconfigurersyslogjob and delete these content types
-        content_types = ContentType.objects.filter(Q(model="rsyslogconfiguration") | Q(model="configurersyslogjob") |
-                                                   Q(model="unconfigurersyslogjob"))
-        content_type_ids = map(get_id, content_types)
-        map(delete_item, content_types)
-
-        # Remove any entries from chroma_core_job.locks_json that have a locked_item_type_id referencing one of the rsyslog types
-        jobs = orm['chroma_core.Job'].objects.all()
-        map(partial(update_locks_json, content_type_ids), jobs)
-
-        # Remove any entries from chroma_core_job.wait_for_json whose entry points to a job id that no longer exists. These entries
-        # were removed when the content type id was deleted.
-        jobs = orm['chroma_core.Job'].objects.all()
-        job_ids = map(get_id, jobs)
-        map(partial(update_wait_for_json_entries, job_ids), jobs)
+        # get stepresults for UpdateManagedTargetMount class and update stepresults to include 'primary' arg
+        pipe(orm['chroma_core.stepresult'].objects.all(),
+             cfilter(lambda x: 'UpdateManagedTargetMount' in str(x.step_class)),
+             cfilter(lambda x: 'primary' not in x.args),
+             cmap(lambda x: x.args.update({'primary': True})))
 
     def backwards(self, orm):
         """backwards implementation"""
