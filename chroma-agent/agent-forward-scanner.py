@@ -101,14 +101,12 @@ def forward_to_manager():
     nodename = os.uname()[1]
     csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" % (fqdn, PRIVATE_KEY))
 
-    data = json.dumps({{
-        'address': socket.gethostbyname(socket.gethostname()),
-        'fqdn': fqdn,
-        'nodename': nodename,
-        'version': 0,
-        'csr': csr,
-        'capabilities': []
-    }})
+    data = json.dumps({'address': socket.gethostbyname(socket.gethostname()),
+                       'fqdn': fqdn,
+                       'nodename': nodename,
+                       'version': 0,
+                       'csr': csr,
+                       'capabilities': []})
 
     try:
         import ipdb;ipdb.set_trace()
@@ -138,7 +136,7 @@ def main():
         setup_keys()
         # todo: make this forward device-scanner info to device-aggregator
         # endpoint
-        registration_response = reg_manager()
+        response = forward_to_manager()
 
         aggregator_log.info('Device aggregator update completed...')
 
