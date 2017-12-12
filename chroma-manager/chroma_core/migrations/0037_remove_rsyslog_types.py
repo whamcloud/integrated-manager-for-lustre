@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
+import datetime
 import json
-from functools import partial
 
+from functools import partial
+from toolz import curry
 from toolz.functoolz import pipe
 from toolz.curried import filter as cfilter
+from south.db import db
+from south.v2 import DataMigration
+from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from south.v2 import DataMigration
-
-
 def does_not_contain_content_type_id (content_type_ids, json):
     return json["locked_item_type_id"] not in content_type_ids
-
 
 def update_locks_json (content_type_ids, job):
     job.locks_json = pipe(
@@ -25,10 +26,8 @@ def update_locks_json (content_type_ids, job):
 
     job.save()
 
-
 def item_in_list (items, item):
     return item in items
-
 
 def update_wait_for_json_entries (job_ids, job):
     job.wait_for_json = pipe(
@@ -41,20 +40,17 @@ def update_wait_for_json_entries (job_ids, job):
 
     job.save()
 
-
 def get_id (item):
     return item.id
-
 
 def delete_item (item):
     item.delete()
 
-
 class Migration(DataMigration):
+
     def forwards(self, orm):
         # get ids for rsyslogconfiguration, configurersyslogjob, unconfigurersyslogjob and delete these content types
-        content_types = ContentType.objects.filter(Q(model="rsyslogconfiguration") | Q(model="configurersyslogjob") |
-                                                   Q(model="unconfigurersyslogjob"))
+        content_types = ContentType.objects.filter(Q(model = "rsyslogconfiguration") | Q(model = "configurersyslogjob") | Q(model = "unconfigurersyslogjob"))
         content_type_ids = map(get_id, content_types)
         map(delete_item, content_types)
 
