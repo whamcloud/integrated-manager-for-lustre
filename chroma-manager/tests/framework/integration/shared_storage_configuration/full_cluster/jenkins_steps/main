@@ -1,5 +1,9 @@
 #!/bin/bash -ex
 
+# simulate iml-agent driven testing
+export RELEASE_ARCHIVE="v4.0.1.0RC1/iml-4.0.1.0.tar.gz"
+export STORAGE_SERVER_REPOS="http://jenkins.lotus.hpdd.lab.intel.com/job/iml-agent/26/arch=x86_64,distro=el7/artifact/artifacts/iml-agent-test.repo"
+
 . chroma-manager/tests/framework/utils/defaults.sh
 . chroma-manager/tests/framework/utils/selective_auto_pass.sh
 . chroma-manager/tests/framework/utils/cleanup.sh
@@ -12,7 +16,9 @@ if ! $JENKINS; then
 fi
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 
-if $JENKINS; then
+if [ -n "$RELEASE_ARCHIVE" ]; then
+    curl -L -f -O "https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download/$RELEASE_ARCHIVE"
+elif $JENKINS; then
     cd $WORKSPACE
     curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 fi
