@@ -121,9 +121,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         else:
             self.remote_operations = RealRemoteOperations(self)
 
+        storage_servers = [s for s in self.TEST_SERVERS
+                           if 'worker' not in s.get('profile', "")]
         if self.quick_setup is False:
             # Ensure that all servers are up and available
-            for server in self.TEST_SERVERS:
+            for server in storage_servers:
                 logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
                 self.remote_operations.await_server_boot(server['fqdn'], restart = True)
                 logger.info("%s is running" % server['fqdn'])
@@ -138,7 +140,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 # Reset the manager via the API
                 self.wait_until_true(self.api_contactable)
                 self.api_force_clear()
-                self.remote_operations.clear_ha(self.TEST_SERVERS)
+                self.remote_operations.clear_ha(storage_servers)
                 self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
             if config.get('managed'):
@@ -152,7 +154,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.remote_operations.write_config(self.TEST_SERVERS)
 
                 # cleanup linux devices
-                self.cleanup_linux_devices(self.TEST_SERVERS)
+                self.cleanup_linux_devices(storage_servers)
 
                 self.cleanup_zpools()
                 self.create_zpools()
@@ -887,7 +889,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
 
     def create_zpools(self):
-        xs = config['lustre_servers'][:4]
+        xs = self.config_servers
         server0 = xs[0]
         fqdns = [x['fqdn'] for x in xs]
 
@@ -896,6 +898,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             'checking for zfs presence',
             expected_return_code=None)
 
+        partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
                 zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])		
@@ -907,8 +910,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.execute_commands(zfs_device.release_commands,
                                       server0['fqdn'],
                                       'export zfs device %s' % zfs_device)
+                partprobe_devices.append(server0['orig_device_paths'][lustre_device['path_index']])
 
-            self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
+        if partprobe_devices:
+            # only partprobe the devices we are cleaning, as we can get
+            # EBUSY for the root disk for example
+            self.execute_simultaneous_commands(['partprobe %s' %
+                                                " ".join(partprobe_devices),
+                                                'udevadm settle'], fqdns,
+                                               'sync partitions')
 
     def cleanup_zpools(self):
         if (self.simulator is not None) or (self.zfs_devices_exist() is False):
@@ -958,7 +968,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         self.execute_commands([wipe(x) for x in zfs_device_paths],
                               server0['fqdn'], 'wiping disks')
 
-        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], fqdns, 'sync partitions')
+        # only partprobe the devices we are cleaning, as we can get
+        # EBUSY for the root disk for example
+        self.execute_simultaneous_commands(['partprobe %s' % " ".join(zfs_device_paths),
+                                            'udevadm settle'], fqdns, 'sync partitions')
 
         [
             self.remote_operations.reset_server(
@@ -992,7 +1005,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         wipe_commands = map(cleanup_str, device_paths)
         self.execute_commands(wipe_commands, first_test_server['fqdn'], desc)
 
-        self.execute_simultaneous_commands(['partprobe', 'udevadm settle'], [
+        # only partprobe the devices we are cleaning, as we can get
+        # EBUSY for the root disk for example
+        self.execute_simultaneous_commands(['partprobe %s' % " ".join(device_paths),
+                                           'udevadm settle'], [
             server['fqdn'] for server in test_servers
         ], 'sync partitions')
 
