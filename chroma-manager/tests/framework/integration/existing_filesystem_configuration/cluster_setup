@@ -232,9 +232,9 @@ if $JENKINS; then
 else
     CMIT=/root/${CMIT##*/}
 fi
-if ! $PROXY yum -y install python-django \$CMIT; then
+if ! $PROXY yum -y install \$CMIT; then
     $PROXY yum clean all
-    $PROXY yum -y install python-django \$CMIT
+    $PROXY yum -y install \$CMIT
 fi
 
 if $USE_FENCE_XVM; then
