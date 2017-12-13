@@ -71,7 +71,8 @@ class TestYumUpdate(TestInstallationAndUpgrade):
     # something we can run to clear the storage targets since this
     # test class doesn't use setUp()
     def test_clean_linux_devices(self):
-        self.cleanup_linux_devices(self.TEST_SERVERS)
+        self.cleanup_linux_devices([s for s in self.TEST_SERVERS
+                                    if 'worker' not in s.get('profile', "")])
 
     def test_stop_before_update(self):
         # Stop the filesystem. Currently the GUI forces you to stop the filesystem before
