@@ -47,9 +47,9 @@ fi
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
 yum -y install epel-release
 
-if ! $PROXY yum -y install \$CMIT; then
+if ! $PROXY yum -y install python-django \$CMIT; then
     $PROXY yum clean all
-    $PROXY yum -y install \$CMIT
+    $PROXY yum -y install python-django \$CMIT
 fi
 
 if $USE_FENCE_XVM; then
