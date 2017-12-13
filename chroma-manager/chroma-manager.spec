@@ -134,7 +134,8 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common1.3
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.3
+Requires: Django >= 1.4, Django < 1.5
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
