@@ -43,7 +43,7 @@ Requires: postgresql-server
 Requires: python-psycopg2
 Requires: rabbitmq-server
 Requires: ntp
-Requires: Django >= 1.4, Django < 1.5
+Requires: python-django = 1.4.5
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.16
 Requires: django-picklefield
@@ -134,7 +134,7 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict python2-iml-common1.3
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django = 1.4.5 python-ordereddict python2-iml-common1.3
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.

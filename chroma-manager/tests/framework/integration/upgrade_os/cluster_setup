@@ -98,7 +98,7 @@ scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
 $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install python-django chroma-manager-integration-tests
+$PROXY yum -y install chroma-manager-integration-tests
 
 # Set up fencing on the vm host
 if $USE_FENCE_XVM; then
