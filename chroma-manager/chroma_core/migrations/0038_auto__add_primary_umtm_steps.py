@@ -13,7 +13,9 @@ class Migration(DataMigration):
         pipe(orm['chroma_core.stepresult'].objects.all(),
              cfilter(lambda x: 'UpdateManagedTargetMount' in str(x.step_class)),
              cfilter(lambda x: 'primary' not in x.args),
-             cmap(lambda x: x.args.update({'primary': True})))
+             cmap(lambda x: x.args.update({'primary': True}))
+             cmap(lambda x: x.save()))
+
 
     def backwards(self, orm):
         """backwards implementation"""
