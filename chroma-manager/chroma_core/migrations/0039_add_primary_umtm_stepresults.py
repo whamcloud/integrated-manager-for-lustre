@@ -20,7 +20,7 @@ class Migration(DataMigration):
 
 
     def backwards(self, orm):
-        pass
+        """backwards implementation"""
 
     models = {
         'auth.group': {
@@ -911,10 +911,10 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2017, 12, 12, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2017, 12, 5, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'4E48D0D2576922F31CD20D5885DB9D69'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'91B2558C879463672C6E081889695A75'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
