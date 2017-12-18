@@ -1,3 +1,4 @@
+import time
 from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
 
 
@@ -10,6 +11,7 @@ class TestAllEndPoints(TestInstallationAndUpgrade):
                                 '/api/test_host/']
 
         end_points = self.get_json_by_uri("/api/", args={'limit': 0})
+        time.sleep(7200)
 
         for end_point in end_points.values():
             if end_point['list_endpoint'] not in end_point_exceptions:
