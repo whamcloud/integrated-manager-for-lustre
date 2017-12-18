@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import cPickle as pickle
 from south.v2 import DataMigration
 from toolz import pipe
 from toolz.curried import filter as cfilter
