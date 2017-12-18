@@ -135,8 +135,8 @@ def fetch_device_list():
 
 
 def add_to_ndp(xs, ys):
-    for x in xs:
-        for y in ys:
+    for x in reversed(xs):
+        for y in reversed(ys):
             ndp.add_normalized_device(x, y)
 
 
