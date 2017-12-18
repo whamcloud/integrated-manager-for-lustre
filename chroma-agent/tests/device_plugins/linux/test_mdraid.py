@@ -95,7 +95,7 @@ unused devices: <none>\n""",
                         return MdRaid(dm_setup_table.block_devices).all()
 
     def test_mdraid_pass(self):
-        mds = self._setup_md_raid('devices_MdRaid_EMCPower.json', 'dmsetup_MdRaid_EMCPower.json', self.md_value_good)
+        mds = self._setup_md_raid('devices_MdRaid.json', 'dmsetup_MdRaid.json', self.md_value_good)
 
         self.assertTrue(len(mds) == len(self.md_value_good['results']))
 
