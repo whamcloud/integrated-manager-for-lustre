@@ -3,18 +3,20 @@ import cPickle as pickle
 from south.v2 import DataMigration
 from toolz import pipe
 from toolz.curried import filter as cfilter
-from toolz.curried import map as cmap
 
 
 class Migration(DataMigration):
 
     def forwards(self, orm):
-        # get stepresults for UpdateManagedTargetMount class and update stepresults to include 'primary' arg
-        pipe(orm['chroma_core.stepresult'].objects.all(),
-             cfilter(lambda x: 'UpdateManagedTargetMount' in str(x.step_class)),
-             cfilter(lambda x: 'primary' not in x.args),
-             cmap(lambda x: x.args.update({'primary': True})),
-             cmap(lambda x: x.save()))
+        # get stepresults for UpdateManagedTargetMount class that need updating
+        objs = pipe(orm['chroma_core.stepresult'].objects.all(),
+                    cfilter(lambda x: 'UpdateManagedTargetMount' in str(x.step_class)),
+                    cfilter(lambda x: 'primary' not in x.args))
+
+        # update selected stepresults to include 'primary' arg (arbitrary value)
+        for obj in objs:
+            obj.args['primary'] = True
+            obj.save()
 
 
     def backwards(self, orm):
