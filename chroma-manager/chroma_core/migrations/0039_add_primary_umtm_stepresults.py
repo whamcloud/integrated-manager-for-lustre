@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 from south.v2 import DataMigration
-from toolz import pipe
-from toolz.curried import filter as cfilter
 
 
 class Migration(DataMigration):
