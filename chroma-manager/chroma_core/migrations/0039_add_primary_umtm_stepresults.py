@@ -6,20 +6,12 @@ from toolz.curried import filter as cfilter
 
 class Migration(DataMigration):
     def forwards(self, orm):
-        # get stepresults for UpdateManagedTargetMount class that need updating
-        # objs = pipe(orm['chroma_core.stepresult'].objects.all(),
-        #             cfilter(lambda x: 'UpdateManagedTargetMount' in str(x.step_class)),
-        #             cfilter(lambda x: 'primary' not in x.args))
-
         # update selected stepresults to include 'primary' arg (arbitrary value)
         for obj in orm['chroma_core.stepresult'].objects.all():
-            try:
-                if obj.step_klass.__name__ == 'UpdateManagedTargetMount' \
-                        and 'primary' not in obj.args:
-                    obj.args['primary'] = True
-                    obj.save()
-            except Exception as e:
-                print "error (%s) obj dir: %s" % (e, dir(obj))
+            if obj.step_klass.__name__ == 'UpdateManagedTargetMount' \
+                    and 'primary' not in obj.args:
+                obj.args['primary'] = True
+                obj.save()
 
     def backwards(self, orm):
         pass
