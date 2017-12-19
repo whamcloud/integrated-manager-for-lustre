@@ -227,9 +227,14 @@ class TestCrypto(SupervisorTestCase):
                           ssl_version=ssl.PROTOCOL_SSLv3)
 
     def test_ssl2_disabled(self):
-        self.assertRaises(socket.error,
-                          self._connect_socket,
-                          ssl_version=ssl.PROTOCOL_SSLv2)
+        try:
+            self.assertRaises(socket.error,
+                              self._connect_socket,
+                              ssl_version=ssl.PROTOCOL_SSLv2)
+        except AttributeError:
+            # RHEL 7.5 (for example)'s Python doesn't support
+            # SSLv2 any more
+            pass
 
     def test_tls1_disabled(self):
         self.assertRaises(socket.error,

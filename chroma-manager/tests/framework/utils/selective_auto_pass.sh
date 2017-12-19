@@ -64,4 +64,12 @@ check_for_autopass() {
       fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
       exit 0
     fi
+
+    # RHEL 7.5 won't upgrade CentOS 7.3
+    if [[ ($JOB_NAME == upgrade-tests || $JOB_NAME == upgrade-tests/*) &&
+        $TEST_DISTRO_NAME != rhel ]]; then
+        fake_test_pass "upgrade-tests_skipped_on_centos7.3" "$WORKSPACE/test_reports/" "${BUILD_NUMBER}"
+        exit 0
+    fi
+
 }  # end of check_for_autopass()
