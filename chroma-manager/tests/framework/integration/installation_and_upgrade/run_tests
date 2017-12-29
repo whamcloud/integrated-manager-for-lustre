@@ -53,7 +53,7 @@ if ${UPGRADE_FROM_3:-false}; then
     . ~/auth.sh
     cat <<"EOF"
 ++ curl -s -k 'https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/ieel-b3_1/427/api/xml?xpath=*/artifact/fileName&wrapper=foo'
-++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/'
+++ sed -e 's/.*>\\([i]\\?ee[l]\\?-[0-9\\.][0-9\\.]*.tar.gz\\)<.*/\\1/'
 EOF
     IEEL_FROM_ARCHIVE=$(curl -s -k "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
     echo "+ IEEL_FROM_ARCHIVE=$IEEL_FROM_ARCHIVE"
@@ -67,12 +67,15 @@ EOF
 + curl -k -O https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE
 EOF
         curl -k -O "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-    set -x
+        set -x
     fi
 else
-    # first fetch and install IML 4.0.3
+    # first fetch and install IML 4.0.4
+    # starting with 4.0.5 might leave us with no not have anything to
+    # upgrade which will fail the upgrade test as it expects that there
+    # should always be an upgrade available
     BUILD_JOB=ieel
-    BUILD_NUM=3015
+    BUILD_NUM=3511
     IEEL_FROM_ARCHIVE=$(curl -s -k "http://jenkins.lotus.hpdd.lab.intel.com/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -re 's/.*>(([i]\?ee[l]\?|iml)-[0-9\.][0-9\.]*.tar.gz)<.*/\1/')
     IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
     IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
@@ -352,17 +355,9 @@ rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 if ${UPGRADE_FROM_3:-false}; then
     # the manual bits that need to be done for 3.x to 4.x upgrades
     # see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
+    # updated per https://github.com/intel-hpdd/Online-Help/pull/54
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-    yum -y install epel-release
-    yum -y install pdsh
-    mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}
-
-    # add any repos required by this test run
-    if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
-        for repo in $STORAGE_SERVER_REPOS; do
-            yum-config-manager --add-repo \$repo
-        done
-    fi" | dshbak -c
+    yum -y install pdsh" | dshbak -c
     if [ ${PIPESTATUS[0]} != 0 ]; then
         exit 1
     fi
@@ -376,7 +371,6 @@ if ${UPGRADE_FROM_3:-false}; then
     # TODO: we really just need to adjust cache timeouts here to account for
     #       our compressed timelines
     yum clean all
-    yum-config-manager --enable iml-agent
 
     yum -y upgrade chroma-agent\*
 
@@ -423,6 +417,7 @@ ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 export UPGRADE_FROM_3=$UPGRADE_FROM_3
+export UPGRADE_FROM_VER=$IEEL_FROM_VER
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS"
 
 # now provide an information inventory of the difference in the RPM
