@@ -9,15 +9,12 @@
   "corosync2": true,
   "pacemaker": true,
   "bundles": [
-    "iml-agent",
     "external"
   ],
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
   "packages": {
-    "iml-agent": [
-      "chroma-agent-management"
-    ],
     "external": [
+      "python2-iml-agent-management",
       "kernel-devel-lustre",
       "lustre-ldiskfs-zfs"
     ]

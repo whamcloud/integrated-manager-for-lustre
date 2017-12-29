@@ -41,10 +41,6 @@ EOC
 
   unset IML_DISABLE_THREADS
 
-  cd ../chroma-agent
-  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml --with-coverage
-  mv .coverage $WORKSPACE/.coverage.chroma_agent_unit_tests
-
   cd $WORKSPACE
   coverage combine
   coverage xml --include="$CHROMA_DIR/*" --omit="*junk.py,*/tests/*" --ignore-errors
@@ -56,9 +52,6 @@ EOC
   behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
 
   unset IML_DISABLE_THREADS
-
-  cd ../chroma-agent
-  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml
 fi
 
 set -e

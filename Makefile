@@ -18,12 +18,7 @@ cleandist:
 dist: cleandist
 	mkdir dist
 
-agent:
-	# On non-EL[67] builders, we'll only do an agent build
-	$(BUILDER_IS_EL) || $(MAKE) -C chroma-agent $(TARGET)
-	$(BUILDER_IS_EL) || cp -a chroma-agent/dist/* dist/
-
-$(SUBDIRS): dist agent
+$(SUBDIRS): dist
 	set -e; \
 	if $(BUILDER_IS_EL); then \
 		$(MAKE) -C $@ $(TARGET); \
@@ -41,7 +36,6 @@ bundles: repo
 deps: repo
 
 tags:
-	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
 	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir         \
 	                           --exclude=chroma-\*/myenv\*              \
 	                           --exclude=chroma_test_env                \
@@ -51,8 +45,8 @@ tags:
 	                           --exclude=workspace                      \
 	                           --exclude=chroma-manager/ui-modules .
 
-# build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
-chroma-dependencies: chroma-agent chroma-manager
+# build the chroma-management subdirs before the chroma-dependencies subdir
+chroma-dependencies: chroma-manager
 chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile

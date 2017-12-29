@@ -52,7 +52,6 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version ui-modules
-	$(MAKE) -C ../chroma-agent develop
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
@@ -112,12 +111,6 @@ service_tests: dev_setup
 	@PYTHONPATH=. nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
 
-agent_tests:
-	@echo "Running agent tests..."
-	@NOSE_ARGS=$(NOSE_ARGS) $(MAKE) -C ../chroma-agent test 2>&1 \
-			| tee ../chroma-agent/unit.log; \
-	exit $${PIPESTATUS[0]}
-
 unit_tests unit-tests:
 	@echo "Running standard unit tests..."
 	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
@@ -138,7 +131,7 @@ feature_tests:
 	done; \
 	exit $$brc
 
-tests test: unit_tests agent_tests feature_tests integration_tests service_tests
+tests test: unit_tests feature_tests integration_tests service_tests
 
 tarball: version ui-modules
 	echo "jenkins_fold:start:Make Manager Tarball"

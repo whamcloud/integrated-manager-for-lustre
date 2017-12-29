@@ -385,12 +385,12 @@ proxy=_none_
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = 'chroma-agent'
+    repo_packages = 'python2-iml-agent'
     server_profile = ServerProfile.objects.get(name = request.REQUEST['profile_name'])
 
     try:
         if server_profile.managed:
-            repo_packages += ' chroma-agent-management'
+            repo_packages += ' python2-iml-agent-management'
     except (ServerProfile.DoesNotExist, KeyError) as e:
         if type(e) is KeyError:
             err = "Profile name not specified"

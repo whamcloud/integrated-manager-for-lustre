@@ -18,7 +18,6 @@ check_for_autopass() {
     # vvvvvvvvvvv this should come from a pragma in the commit message
     local all_tests="integration-tests-existing-filesystem-configuration
                      integration-tests-shared-storage-configuration
-                     integration-tests-shared-storage-configuration-with-simulator
                      test-services
                      unit-tests
                      upgrade-tests"
