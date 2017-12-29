@@ -25,10 +25,10 @@ logger.setLevel(logging.DEBUG)
 
 
 stop_agent_cmd = '''
-    systemctl stop chroma-agent
+    systemctl stop iml-agent
     i=0
 
-    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
+    while systemctl status iml-agent && [ "$i" -lt {timeout} ]; do
         ((i++))
         sleep 1
     done
@@ -915,7 +915,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, 'systemctl start chroma-agent')
+            self._ssh_address(server, 'systemctl start iml-agent')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -986,12 +986,12 @@ class RealRemoteOperations(RemoteOperations):
                             firewall.remote_remove_port_cmd(mcast_port, 'udp')
                         )
 
-                rpm_q_result = self._ssh_address(address, "rpm -q chroma-agent", expected_return_code=None)
+                rpm_q_result = self._ssh_address(address, "rpm -q python2-iml-agent", expected_return_code=None)
                 if rpm_q_result.rc == 0:
                     # Stop the agent
                     self._ssh_address(
                         address,
-                        'systemctl stop chroma-agent'
+                        'systemctl stop iml-agent'
                     )
                     self._ssh_address(
                         address,

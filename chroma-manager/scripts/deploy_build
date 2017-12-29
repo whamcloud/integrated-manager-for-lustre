@@ -119,7 +119,7 @@ scrub_manager()
 scrub_servers()
 {
     server_list=$(h2hl $SERVERS)
-    remote_shell $server_list systemctl stop chroma-agent.service
+    remote_shell $server_list systemctl stop iml-agent.service
     remote_shell $server_list yum clean all --enablerepo=*
     remote_shell $server_list yum erase -y chroma* fence-agents*
     remote_shell $server_list rm -f /var/log/chroma* /var/lib/chroma/*

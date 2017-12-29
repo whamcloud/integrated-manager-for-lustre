@@ -319,10 +319,9 @@ rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 if ${UPGRADE_FROM_3:-false}; then
     # the manual bits that need to be done for 3.x to 4.x upgrades
     # see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
+    # updated per https://github.com/intel-hpdd/Online-Help/pull/54
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-    yum -y install epel-release
     yum -y install pdsh
-    mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}
 
     # add any repos required by this test run
     if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
@@ -339,13 +338,11 @@ if ${UPGRADE_FROM_3:-false}; then
     pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
     pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-    sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
     # TODO: we really just need to adjust cache timeouts here to account for
     #       our compressed timelines
     yum clean all
-    yum-config-manager --enable iml-agent
 
-    yum -y upgrade chroma-agent\*
+    yum -y upgrade python2-iml-agent\*
 
     systemctl stop zed
     rmmod zfs zcommon znvpair spl

@@ -29,7 +29,7 @@ class NotificationQueue(ServiceQueue):
 
 def notify(instance, time, update_attrs, from_states = []):
     """Having detected that the state of an object in the database does not
-    match information from real life (i.e. chroma-agent), call this to
+    match information from real life (i.e. iml-agent), call this to
     request an update to the object.
 
     :param instance: An instance of a StatefulObject

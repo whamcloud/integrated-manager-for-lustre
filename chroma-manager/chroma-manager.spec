@@ -59,7 +59,7 @@ Requires: iml-srcmap-reverse
 Requires: iml-online-help
 Requires: createrepo
 Requires: python2-toolz
-Conflicts: chroma-agent
+Conflicts: python2-iml-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
 Obsoletes: mod_proxy_wstunnel
