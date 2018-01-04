@@ -27,12 +27,6 @@ ALWAYS_NUKE_SIM_CFG ?= true
 SIM_CLUSTER_CONFIG ?= $(CURDIR)/tests/simulator.json
 FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
 
-# Location of the cluster-sim script
-CLUSTER_SIM_BIN := $(shell if which cluster-sim 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/cluster-sim; fi)
-CLUSTER_SIM_CFG ?= $(CURDIR)/cluster_sim
-CLUSTER_SIM_SETUP_ARGS ?= --cluster_size 2 --psu_count 2 --worker_count 4
-CLUSTER_SIM_REGISTER_ARGS ?= --username $(DEV_USERNAME) --password $(DEV_PASSWORD) --create_pdu_entries
-
 # Misc test config
 DB_NAME ?= chroma
 DB_USER ?= $(DB_NAME)
@@ -86,21 +80,6 @@ nuke_logs:
 		echo "Scrubbing devel logs..."; \
 		rm -f $(CURDIR)/*{.,_}log; \
 	} || true
-
-$(CLUSTER_SIM_BIN):
-	$(MAKE) develop
-
-sim simulator: $(CLUSTER_SIM_BIN) running_supervisor
-	@if [ -d $(CLUSTER_SIM_CFG) ]; then \
-		if $(ALWAYS_NUKE_SIM_CFG); then \
-			echo "Nuking old cluster sim cfg..."; \
-			rm -fr $(CLUSTER_SIM_CFG); \
-			cluster-sim --config $(CLUSTER_SIM_CFG) setup $(CLUSTER_SIM_SETUP_ARGS); \
-		fi; \
-	else \
-			cluster-sim --config $(CLUSTER_SIM_CFG) setup $(CLUSTER_SIM_SETUP_ARGS); \
-	fi; \
-	cluster-sim --config $(CLUSTER_SIM_CFG) register $(CLUSTER_SIM_REGISTER_ARGS)
 
 dev_setup: nuke_db nuke_logs
 	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?

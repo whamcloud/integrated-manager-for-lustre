@@ -14,7 +14,6 @@ monitoring service, while an instance of the agent runs on each Lustre server
 
   manager/index
   agent/index
-  cluster_sim
 
 Components
 ==========

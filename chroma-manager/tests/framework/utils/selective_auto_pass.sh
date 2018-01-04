@@ -38,6 +38,12 @@ check_for_autopass() {
         fi
     done
 
+    t="integration-tests-shared-storage-configuration-with-simulator"
+    if [[ $JOB_NAME == $t || $JOB_NAME == $t/* ]]; then
+        fake_test_pass "tests_skipped_because_agent_removed" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
+        exit 0
+    fi
+
     tests_required_for_gui_bumps="chroma-tests-services"
 
     if [[ $BUILD_JOB_NAME = *-reviews ]] && gui_bump && [[ ! $tests_required_for_gui_bumps = $JOB_NAME ]]; then
