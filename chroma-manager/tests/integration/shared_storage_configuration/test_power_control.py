@@ -74,7 +74,6 @@ class TestPduSetup(ChromaPowerControlTestCase):
 
 class TestHostFencingConfig(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
-    @unittest.skipIf(config.get('simulator', False), "Can't be simulated")
     def test_saved_outlet_triggers_fencing_update(self):
         # NB: This test relies on the target server's HA peer having had its
         # HA config scrubbed too. If that doesn't happen, the test could

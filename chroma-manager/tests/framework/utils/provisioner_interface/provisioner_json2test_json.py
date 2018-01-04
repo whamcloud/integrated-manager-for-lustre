@@ -68,10 +68,6 @@ for host in config['hosts'].values():
     if not host.get('reset_is_buggy', False):
         host['reset_is_buggy'] = True
 
-if config.get('chroma_managers') and config.get('simulator'):
-    for manager in config['chroma_managers']:
-        manager['server_http_url'] = "%s:8000/" % manager['server_http_url']
-
 if config.get('lustre_servers'):
     for server in config['lustre_servers']:
         start_command = server.get('start_command', None)
@@ -92,9 +88,8 @@ if config.get('lustre_servers'):
                 (server['nodename'], destroy_command)
 
 
-if not config.get('simulator', False):
-    setup_power_config()
-    setup_corosync_config()
+setup_power_config()
+setup_corosync_config()
 
 if config.get('filesystem') and config.get('lustre_servers'):
     for name, target in config['filesystem']['targets'].iteritems():

@@ -23,8 +23,7 @@ ALWAYS_NUKE_LOGS ?= false
 # Always wipe the simulated cluster config before starting?
 ALWAYS_NUKE_SIM_CFG ?= true
 
-# Location of cluster configs
-SIM_CLUSTER_CONFIG ?= $(CURDIR)/tests/simulator.json
+# Location of cluster config
 FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
 
 # Misc test config
@@ -54,7 +53,6 @@ version:
 
 develop: version ui-modules
 	$(MAKE) -C ../chroma-agent develop
-	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
@@ -102,14 +100,6 @@ fci full_cluster_integration: $(FCI_CLUSTER_CONFIG) running_supervisor
 	@$(CURDIR)/tests/integration/run_tests -c $(FCI_CLUSTER_CONFIG) \
 		$(CURDIR)/tests/integration/shared_storage_configuration \
 		2>&1 | tee fci-integration.log; \
-	exit $${PIPESTATUS[0]}
-
-integration_tests: running_supervisor
-	@echo "Running integration tests against the simulator..."
-	NOSE_ARGS=$(NOSE_ARGS) \
-	$(CURDIR)/tests/integration/run_tests -c $(SIM_CLUSTER_CONFIG) \
-		$(CURDIR)/tests/integration/shared_storage_configuration \
-		2>&1 | tee sim-integration.log; \
 	exit $${PIPESTATUS[0]}
 
 service_tests: dev_setup

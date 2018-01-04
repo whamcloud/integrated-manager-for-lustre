@@ -5,8 +5,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 
 
-@skipIf(
-    config.get('simulator', False), "Can't setup ZFS pools on the simulator")
 class TestConfigureZfsTargets(ChromaIntegrationTestCase):
     """
     Not a test as such but a method for turning some of the disks into zpools.

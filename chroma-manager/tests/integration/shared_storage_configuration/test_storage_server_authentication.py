@@ -4,7 +4,6 @@ from django.utils.unittest import skipIf
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skipIf(config.get('simulator'), 'RealRemoteOperations simulator cant fake out ssh')
 class TestStorageServerAuthentication(ChromaIntegrationTestCase):
 
     SERVER = config['lustre_servers'][0]

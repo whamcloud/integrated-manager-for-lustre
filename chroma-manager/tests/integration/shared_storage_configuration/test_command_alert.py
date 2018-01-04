@@ -1,10 +1,10 @@
 
 from testconfig import config
-from django.utils.unittest import skipIf
+from django.utils.unittest import skip
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skipIf(not config.get('simulator'), "RealRemoteOperations can't fake out network failures")
+@skip("Needs setup on real hardware")
 class TestCommandAlert(ChromaIntegrationTestCase):
     def _check_alert(self, alert_item_id, uri, alert_type):
         all_alerts = self.get_list("/api/alert/", {

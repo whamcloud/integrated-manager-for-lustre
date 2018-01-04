@@ -1,6 +1,6 @@
 import time
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from django.utils.unittest import skipIf
+from django.utils.unittest import skip
 from testconfig import config
 
 
@@ -10,7 +10,7 @@ HOST_POLL_PERIOD = 10
 MAX_AGENT_BACKOFF = 60
 
 
-@skipIf(not config.get('simulator'), "RealRemoteOperations can't fake out network failures")
+@skip("Needs setup on real hardware")
 class TestConnectivity(ChromaIntegrationTestCase):
     """
     Tests for the agent-manager communications behaviour when subject to communications failures.

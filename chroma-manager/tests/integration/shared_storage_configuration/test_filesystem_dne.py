@@ -103,8 +103,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
 
     def _check_stats(self, filesystem):
         """ Check that after exercising file system, relevant stats show expected change after given timeout """
-        if config.get('simulator', False):                                          # Don't validate stats on the simulator.
-            return
 
         mdt_indexes = [mdt['index'] for mdt in filesystem['mdts']]
         client = config['lustre_clients'][0]['address']

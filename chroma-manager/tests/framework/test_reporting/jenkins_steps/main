@@ -39,7 +39,6 @@ omit =
     *chroma/chroma-manager/benchmark/*
     *chroma/chroma-manager/chroma_core/migrations/*
     *chroma/chroma-manager/r3d/migrations/*
-    *chroma/cluster-sim/*
 " > .coveragerc
 
 coverage combine

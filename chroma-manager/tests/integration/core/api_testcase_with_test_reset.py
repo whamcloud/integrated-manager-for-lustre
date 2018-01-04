@@ -17,7 +17,7 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 from iml_common.lib import util
 
-from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
+from tests.integration.core.remote_operations import RealRemoteOperations
 
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
@@ -33,10 +33,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     """
     Adds convenience for interacting with the chroma api.
     """
-    # These are sufficient for tests existing at time of writing.
-    # Tests may ask for different values by defining these at class scope.
-    SIMULATOR_NID_COUNT = 5
-    SIMULATOR_CLUSTER_SIZE = 2
 
     # Used by tests so that we don't need to be root
     COPYTOOL_TESTING_FIFO_ROOT = "/tmp"
@@ -60,66 +56,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def __init__(self, methodName='runTest'):
         super(ApiTestCaseWithTestReset, self).__init__(methodName)
         self.remote_operations = None
-        self.simulator = None
         self.down_node_expected = False
 
     def setUp(self):
         super(ApiTestCaseWithTestReset, self).setUp()
 
-        if config.get('simulator', False):
-            # When we're running with the simulator, parts of the simulated
-            # Copytools use agent code, and the agent code expects to find
-            # a populated agent-side configuration. The safe way to handle
-            # this requirement is to use mock to patch in a fresh
-            # ConfigStore instance for each test run.
-            try:
-                from chroma_agent.config_store import ConfigStore
-            except ImportError:
-                raise ImportError("Cannot import agent, do you need to do a 'setup.py develop' of it?")
-
-            import mock         # Mock is only available when running the simulator, hence local inclusion
-            self.mock_config = ConfigStore(tempfile.mkdtemp())
-            mock.patch('chroma_agent.config', self.mock_config).start()
-            from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
-            reset_agent_config()
-            # Allow the worker to create a fifo in /tmp rather than /var/spool
-            set_agent_config('copytool_fifo_directory',
-                             self.COPYTOOL_TESTING_FIFO_ROOT)
-
-            try:
-                from cluster_sim.simulator import ClusterSimulator
-            except ImportError:
-                import traceback
-                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of it?\n%s" % str(traceback.format_exc()))
-
-            # The simulator's state directory will be left behind when a test fails,
-            # so make sure it has a unique-per-run name
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-            state_path = 'simulator_state_%s.%s_%s' % (self.__class__.__name__, self._testMethodName, timestamp)
-            if os.path.exists(state_path):
-                raise RuntimeError("Simulator state folder already exists at '%s'!" % state_path)
-
-            # Hook up the agent log to a file
-            from chroma_agent.agent_daemon import daemon_log
-            handler = logging.FileHandler(os.path.join(config.get('log_dir', '/var/log/'), 'chroma_test_agent.log'))
-            handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-            daemon_log.addHandler(handler)
-            daemon_log.setLevel(logging.DEBUG)
-
-            self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
-            volume_count = max([len(s['device_paths']) for s in self.config_servers])
-            self.simulator.setup(len(self.config_servers),
-                                 len(self.config_workers),
-                                 volume_count,
-                                 self.SIMULATOR_NID_COUNT,
-                                 self.SIMULATOR_CLUSTER_SIZE,
-                                 len(config['power_distribution_units']),
-                                 su_size=0)
-            self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
-            if self.TESTS_NEED_POWER_CONTROL:
-                self.simulator.power.start()
-        else:
-            self.remote_operations = RealRemoteOperations(self)
+        self.remote_operations = RealRemoteOperations(self)
 
         storage_servers = [s for s in self.TEST_SERVERS
                            if 'worker' not in s.get('profile', "")]
@@ -176,19 +118,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                if f['state'] == "available"]:
                 logger.debug("stopping filesystem %s" % filesystem)
                 self.stop_filesystem(filesystem['id'])
-
-        if self.simulator:
-            self.simulator.stop()
-            self.simulator.join()
-
-            # Clean up the temp agent config
-            import mock  # Mock is only available when running the simulator, hence local inclusion
-            mock.patch.stopall()
-            shutil.rmtree(self.mock_config.path)
-
-            passed = sys.exc_info() == (None, None, None)
-            if passed:
-                shutil.rmtree(self.simulator.folder)
         else:
             if self.remote_operations:
                 # Check that all servers are up and available after the test
@@ -921,7 +850,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                                'sync partitions')
 
     def cleanup_zpools(self):
-        if (self.simulator is not None) or (self.zfs_devices_exist() is False):
+        if (self.zfs_devices_exist() is False):
             return
 
         xs = config['lustre_servers'][:4]
@@ -984,8 +913,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         ]
 
     def cleanup_linux_devices(self, test_servers):
-        if (self.simulator is not None) or (self.linux_devices_exist() is
-                                            False):
+        if (self.linux_devices_exist() is False):
             return
 
         first_test_server = test_servers[0]
