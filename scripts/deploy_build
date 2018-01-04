@@ -25,7 +25,7 @@ ARCHIVE_NAME="iml-$EE_VERSION.tar.gz"
 
 CHROMA_DIR=.
 CHROMA_USER="admin"
-CHROMA_EMAIL="brian.murrell@intel.com"
+CHROMA_EMAIL="iml@intel.com"
 CHROMA_PASS="lustre"
 CHROMA_NTP_SERVER="localhost"
 pdsh -R ssh -l root -S -w "$ALL_NODES" "set -ex
