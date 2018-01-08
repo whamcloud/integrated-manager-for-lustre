@@ -286,20 +286,14 @@ rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 
 # the manual bits that need to be done for 3.x to 4.x upgrades
 # see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-yum -y install epel-release
-yum -y install pdsh
-mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
-
-ssh root@"$CHROMA_MANAGER" "exec 2>&1; set -xe
-yum -y install pdsh
-pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
-
+# updated per https://github.com/intel-hpdd/Online-Help/pull/54
 pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
+# get the storage server repo from the manager
+curl -o /etc/yum.repos.d/Intel-Lustre-Agent.repo \
+     --cacert /var/lib/chroma/authority.crt \
+     --cert /var/lib/chroma/self.crt \
+     --key /var/lib/chroma/private.pem \
+     'https://$CHROMA_MANAGER/repo/Intel-Lustre-Agent.repo'
 # TODO: we really just need to adjust cache timeouts here to account for
 #       our compressed timelines
 yum clean all
