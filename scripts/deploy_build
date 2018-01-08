@@ -38,6 +38,7 @@ fi
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
 yum -y install epel-release
+# alternative repos for lustre-master
 #yum-config-manager --add-repo https://build.whamcloud.com/job/lustre-master/lastSuccessfulBuild/arch=x86_64,build_type=server,distro=el7,ib_stack=inkernel/artifact/artifacts/
 ##sed -i -e '1d' -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-master_lastSuccessfulBuild_arch\=x86_64\,build_type\=server\,distro\=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
 #sed -i -e '2s/^.*$/[lustre]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/build.whamcloud.com_job_lustre-master_lastSuccessfulBuild_arch\=x86_64\,build_type\=server\,distro\=el7\,ib_stack\=inkernel_artifact_artifacts_.repo
