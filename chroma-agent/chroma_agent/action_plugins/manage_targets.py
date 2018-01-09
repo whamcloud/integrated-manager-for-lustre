@@ -560,6 +560,7 @@ def start_target(ha_label):
 
     Return: Value using simple return protocol
     '''
+    console_log.info("enter start_target(%s)" % ha_label)
     # HYD-1989: brute force, try up to 3 times to start the target
     i = 0
     while True:
@@ -568,6 +569,7 @@ def start_target(ha_label):
         error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Started'])
 
         if error:
+            console_log.info("exit start_target(%s) 1" % ha_label)
             return agent_error(error)
 
         # now wait for it to start
@@ -587,19 +589,24 @@ def start_target(ha_label):
             error = AgentShell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
 
             if error:
+                console_log.info("exit start_target(%s) 2" % ha_label)
                 return agent_error(error)
 
             if i < 4:
                 console_log.info("failed to start target %s" % ha_label)
             else:
+                console_log.info("exit start_target(%s) 3" % ha_label)
                 return agent_error("Failed to start target %s" % ha_label)
 
         else:
             location = get_resource_location(ha_label)
             if not location:
+                console_log.info("exit start_target(%s) 4" % ha_label)
                 return agent_error("Started %s but now can't locate it!" % ha_label)
+            console_log.info("exit start_target(%s) 5" % ha_label)
             return agent_result(location)
 
+    console_log.info("exit start_target(%s) 6" % ha_label)
 
 def stop_target(ha_label):
     '''
