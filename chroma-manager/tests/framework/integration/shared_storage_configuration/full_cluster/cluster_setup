@@ -34,7 +34,7 @@ fi
 if $JENKINS; then
     ARCHIVE_PATH=.
 else
-    ARCHIVE_PATH=chroma-bundles
+    ARCHIVE_PATH=$CHROMA_DIR/chroma-bundles
 fi
 
 if [ -f ~/storage_server.repo ]; then
@@ -144,7 +144,7 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 
 # Install and setup integration tests on integration test runner
 if ! $JENKINS; then
-    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+    CMIT=$(ls $CHROMA_DIR/chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
 fi
 scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF

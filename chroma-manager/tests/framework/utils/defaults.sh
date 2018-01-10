@@ -96,7 +96,7 @@ set_defaults() {
             export JENKINS_DISTRO="el6.4"
         fi
     else
-        export WORKSPACE=workspace
+        export WORKSPACE=$PWD/workspace
         mkdir -p $WORKSPACE
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
