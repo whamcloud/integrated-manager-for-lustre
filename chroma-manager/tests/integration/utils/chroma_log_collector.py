@@ -170,7 +170,7 @@ class ChromaLogCollector(object):
 
         # Install iml_sos_plugin if not already installed
         if shell_run(['ssh', server, 'yum -y install iml_sos_plugin']).rc:
-            return ["im_lsos_plugin failed to install on %s. skipping." % server]
+            return ["iml_sos_plugin failed to install on %s. skipping." % server]
 
         # Generate the diagnostics from the server
         result = shell_run(
