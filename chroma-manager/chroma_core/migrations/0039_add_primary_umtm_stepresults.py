@@ -6,10 +6,13 @@ class Migration(DataMigration):
     def forwards(self, orm):
         # update selected stepresults to include 'primary' arg (arbitrary value)
         for obj in orm['chroma_core.stepresult'].objects.all():
-            if obj.step_klass.__name__ == 'UpdateManagedTargetMount' \
-                    and 'primary' not in obj.args:
-                obj.args['primary'] = True
-                obj.save()
+            try:
+                if obj.step_klass.__name__ == 'UpdateManagedTargetMount' \
+                        and 'primary' not in obj.args:
+                    obj.args['primary'] = True
+                    obj.save()
+            except AttributeError:
+                pass
 
     def backwards(self, orm):
         pass
