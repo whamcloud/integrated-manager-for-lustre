@@ -109,7 +109,7 @@ set_defaults() {
     export COPR_PROJECT="manager-for-lustre"
     #LUSTRE_REVIEW_BUILD="12345"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
-        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type"
         export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
     else
