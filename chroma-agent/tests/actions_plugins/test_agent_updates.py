@@ -68,7 +68,7 @@ sslclientcert = {2}
         self.assertEqual(agent_updates.unconfigure_repo(self.tmpRepo.name), agent_result_ok)
 
     def test_kernel_status(self):
-        def run(arg_list):
+        def run(arg_list, shell=False):
             values = {("rpm", "-q", "--whatprovides", "kmod-lustre"):
                       "kmod-lustre-1.2.3-1.el6.x86_64\n",
                       ("uname", "-r"):
