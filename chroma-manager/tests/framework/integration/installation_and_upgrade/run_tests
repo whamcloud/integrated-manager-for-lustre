@@ -158,8 +158,16 @@ if [ -f ~/storage_server.repo ]; then
 fi
 
 # Install and setup manager
-scp $STORAGE_SERVER_REPO "$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
-ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+ARCHIVE_SUFFIX=.tar.gz
+if $JENKINS; then
+    ARCHIVE_PATH=.
+    ARCHIVE_SUFFIX="-current$ARCHIVE_SUFFIX"
+else
+    ARCHIVE_PATH=chroma-bundles
+    ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz
+fi
+scp $STORAGE_SERVER_REPO "$ARCHIVE_PATH/$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
+ssh root@"$CHROMA_MANAGER" "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
@@ -171,7 +179,7 @@ mv upgrade.exp $UPGRADE_INSTALL_DIR/upgrade.exp
 
 cd $UPGRADE_INSTALL_DIR
 tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME -current.tar.gz)
+cd \"${ARCHIVE_NAME%$ARCHIVE_SUFFIX}\"
 
 # Install from the installation package
 echo \"First without access to YUM repos\"
@@ -333,7 +341,9 @@ echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
-TESTS="$TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
+TESTS="$TESTS_DIR/test_data_consistancy.py \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_obsolete_chroma_diagnostics \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
        $TESTS_DIR/test_create_filesystem.py:TestExistsFilesystem.test_exists"
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe

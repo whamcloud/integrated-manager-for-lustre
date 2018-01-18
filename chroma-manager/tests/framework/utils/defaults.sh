@@ -47,7 +47,15 @@ set_defaults() {
     export SHORT_ARCHIVE_NAME="$(make -s -f $d/include/Makefile.version .short_archive_name)"
     export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz"
 
-    export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    if $JENKINS; then
+        export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    fi
+
+    if [ -n "$PROVISIONER" ]; then
+        export VAGRANT=false
+    else
+        export VAGRANT=true
+    fi
 
     if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
         if $JENKINS; then
@@ -88,7 +96,7 @@ set_defaults() {
             export JENKINS_DISTRO="el6.4"
         fi
     else
-        export WORKSPACE=workspace
+        export WORKSPACE=$PWD/workspace
         mkdir -p $WORKSPACE
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
@@ -109,11 +117,11 @@ set_defaults() {
         export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_server_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
         export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_client_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
     else
-        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.1/el7/"
+        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.2/el7/"
         export LUSTRE_SERVER_URL="$BASE_URL/server/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/"
         # these should be determined from the above
-        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_server_.repo"
-        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.1_el7_client_.repo"
+        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.2_el7_server_.repo"
+        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.2_el7_client_.repo"
     fi
 } # end of set_defaults()
