@@ -4,6 +4,7 @@ import errno
 import os
 import mock
 from django.utils import unittest
+import re
 
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices, paths_to_major_minors
 
@@ -69,16 +70,19 @@ class TestBlockDevices(DummyDataTests):
     def test_block_device_nodes_parsing(self):
         result = self.block_devices.block_device_nodes
 
-        self.assertEqual(result['8:48'], self.expected['devs']['8:48'])
+        p = re.compile('\d+:\d+$')
 
-        # partition
-        self.assertEqual(result['8:49'], self.expected['devs']['8:49'])
+        map(
+            lambda x: self.assertTrue(
+                all(item in result[x].items() for item in self.expected['devs'][x].items())
+            ),
+            [mm for mm in self.expected['devs'].keys() if p.match(mm)]
+        )
 
-        # dm-0 linear lvm
-        self.assertEqual(result['253:0'], self.expected['devs']['253:0'])
-
-        # dm-2 striped lvm
-        self.assertEqual(result['253:2'], self.expected['devs']['253:2'])
+        # todo: ensure we are testing all variants from relevant fixture:
+        # - partition
+        # - dm-0 linear lvm
+        # - dm-2 striped lvm
 
     def test_node_block_devices_parsing(self):
         result = self.block_devices.node_block_devices
