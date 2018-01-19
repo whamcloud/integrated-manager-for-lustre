@@ -8,6 +8,7 @@ from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.models import HaCluster
+from chroma_core.plugins.block_devices import get_block_devices
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
@@ -168,6 +169,23 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "lvm_volume"
 
 
+def get_data(host_id):
+    data = aggregator_get()
+
+def transform(data):
+    # Map of block devices major:minors to /dev/ path.
+    block_devices = BlockDevices()
+
+    # note: EMCPower Device detection has been deprecated
+
+    block_device_dict = {s: getattr(block_devices, s) for s in
+                         ['local_fs', 'mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
+
+    block_device_dict['devs'] = block_devices.block_device_nodes
+
+    return block_device_dict
+
+
 class Linux(Plugin):
     internal = True
 
@@ -179,14 +197,18 @@ class Linux(Plugin):
     def teardown(self):
         self.log.debug("Linux.teardown")
 
-    def agent_session_continue(self, host_id, data):
+    def agent_session_continue(self, host_id, _):
         # The agent plugin sends us another full report when it thinks something has changed
-        self.agent_session_start(host_id, data, initial_scan=False)
+        self.agent_session_start(host_id, None, initial_scan=False)
 
-    def agent_session_start(self, host_id, data, initial_scan=True):
-        devices = data
+    def agent_session_start(self, host_id, _, initial_scan=True):
+        # devices = data
         initiate_device_poll = False
         reported_device_node_paths = []
+
+        # todo: resolve host_id -> hostname
+        
+        devices = get_block_devices(hostname)
 
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices:
