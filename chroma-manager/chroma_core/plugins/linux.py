@@ -169,23 +169,6 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "lvm_volume"
 
 
-def get_data(host_id):
-    data = aggregator_get()
-
-def transform(data):
-    # Map of block devices major:minors to /dev/ path.
-    block_devices = BlockDevices()
-
-    # note: EMCPower Device detection has been deprecated
-
-    block_device_dict = {s: getattr(block_devices, s) for s in
-                         ['local_fs', 'mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
-
-    block_device_dict['devs'] = block_devices.block_device_nodes
-
-    return block_device_dict
-
-
 class Linux(Plugin):
     internal = True
 
@@ -207,9 +190,10 @@ class Linux(Plugin):
         reported_device_node_paths = []
 
         # todo: resolve host_id -> hostname
-        
+
         devices = get_block_devices(hostname)
 
+        # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices:
                 devices[expected_item] = {}
