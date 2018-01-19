@@ -144,7 +144,7 @@ def fetch_device_maps():
     AgentShell.run(["udevadm", "settle"])
     info = scanner_cmd("info")
 
-    return DeviceMaps(info["BLOCK_DEVICES"], info["ZFSPOOLS"])
+    return DeviceMaps(info["blockDevices"], info["zpools"])
 
 
 def create_device_list(device_dict):
@@ -357,8 +357,8 @@ def parse_zpools(zpool_map, block_device_nodes):
     for pool in zpool_map.values():
         # fixme: get sizes from device-scanner
         size = 0
-        name = pool['NAME']
-        uuid = pool['UID']
+        name = pool['name']
+        uuid = pool['guid']
 
         # fixme: this is not reliable, use Libzfs bindings to provide disk mms for zpool
         drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
