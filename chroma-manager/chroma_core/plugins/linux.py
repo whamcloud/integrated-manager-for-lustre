@@ -189,8 +189,8 @@ class Linux(Plugin):
         initiate_device_poll = False
         reported_device_node_paths = []
 
-        # todo: resolve host_id -> hostname
-
+        # todo: error handling
+        hostname = ManagedHost.objects.get(id=host_id).fqdn
         devices = get_block_devices(hostname)
 
         # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
