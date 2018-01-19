@@ -174,23 +174,6 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "lvm_volume"
 
 
-def get_data(host_id):
-    data = aggregator_get()
-
-def transform(data):
-    # Map of block devices major:minors to /dev/ path.
-    block_devices = BlockDevices()
-
-    # note: EMCPower Device detection has been deprecated
-
-    block_device_dict = {s: getattr(block_devices, s) for s in
-                         ['local_fs', 'mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
-
-    block_device_dict['devs'] = block_devices.block_device_nodes
-
-    return block_device_dict
-
-
 class Linux(Plugin):
     internal = True
 
