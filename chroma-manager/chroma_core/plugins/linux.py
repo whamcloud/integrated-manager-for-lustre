@@ -1,7 +1,8 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import json
+from logging import DEBUG
 
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
@@ -9,6 +10,7 @@ from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.models import HaCluster
 from chroma_core.plugins.block_devices import get_block_devices
+from chroma_core.services import log_register
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
@@ -18,6 +20,9 @@ from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 from chroma_core.models import ManagedHost
 from chroma_core.models import VolumeNode
 from settings import SERIAL_PREFERENCE
+
+log = log_register('plugin_runner')
+log.setLevel(DEBUG)
 
 version = 1
 
@@ -176,9 +181,10 @@ class Linux(Plugin):
         super(Linux, self).__init__(resource_manager, scannable_id)
 
         self.major_minor_to_node_resource = {}
+        self.current_devices = "{}"
 
     def teardown(self):
-        self.log.debug("Linux.teardown")
+        log.debug("Linux.teardown")
 
     def agent_session_continue(self, host_id, _):
         # The agent plugin sends us another full report when it thinks something has changed
@@ -190,8 +196,19 @@ class Linux(Plugin):
         reported_device_node_paths = []
 
         # todo: error handling
-        hostname = ManagedHost.objects.get(id=host_id).fqdn
-        devices = get_block_devices(hostname)
+        fqdn = ManagedHost.objects.get(id=host_id).fqdn
+        devices = get_block_devices(fqdn)
+
+        dev_json = json.dumps(devices['devs'], sort_keys=True)
+
+        if dev_json == self.current_devices:
+            log.debug("Linux.devices unchanged {}".format(fqdn))
+            return None
+
+        log.debug("Linux.devices changed on {}: {}".format(
+            fqdn,
+            set(json.loads(self.current_devices).keys()) - set(devices['devs'].keys())))
+        self.current_devices = dev_json
 
         # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
