@@ -10,7 +10,6 @@ import json
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
-from chroma_agent.lib.shell import AgentShell
 from toolz.functoolz import pipe, curry
 from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
 from collections import namedtuple
@@ -51,17 +50,17 @@ def sort_paths(xs):
     return sorted(xs, cmp=compare)
 
 
-def aggregator_get(hostname):
+def aggregator_get(fqdn):
     import requests_unixsocket
 
     session = requests_unixsocket.Session()
     resp = session.get('http+unix://%2Fvar%2Frun%2Fdevice-aggregator.sock')
-    payload = resp.json()
-    print "status code: {}\njson response: {}".format(resp.status_code, payload)
+    payload = resp.text
+    print "status code: {}\nresponse: {}".format(resp.status_code, payload)
 
     data = json.loads(payload)
 
-    return data[hostname]
+    return json.loads(data[fqdn])
 
 
 def get_default(prop, default_value, x):
@@ -130,9 +129,8 @@ def filter_device(x):
     return True
 
 
-def fetch_device_maps(hostname):
-    AgentShell.run(["udevadm", "settle"])
-    info = aggregator_get(hostname)
+def fetch_device_maps(fqdn):
+    info = aggregator_get(fqdn)
 
     return DeviceMaps(info["blockDevices"], info["zpools"])
 
@@ -360,12 +358,14 @@ def parse_zpools(zpool_map, block_device_nodes):
         #     raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
 
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
-        _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
-                                          "path": ds['DATASET_NAME'],
-                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
-                                          "uuid": ds['DATASET_UID'],
-                                          "size": 0,
-                                          "drives": drive_mms} for ds in pool['DATASETS'].values()}
+#        _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
+#                                          "path": ds['DATASET_NAME'],
+#                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
+#                                          "uuid": ds['DATASET_UID'],
+#                                          "size": 0,
+#                                          "drives": drive_mms} for ds in pool['DATASETS'].values()}
+        # todo: parse new format of scan output to populate datasets
+        _datasets = {}
 
         _devs = {}
 
@@ -419,8 +419,8 @@ def parse_zpools(zpool_map, block_device_nodes):
     return [zpools, datasets, zvols, block_device_nodes]
 
 
-def get_block_devices(hostname):
-    device_maps = fetch_device_maps(hostname)
+def get_block_devices(fqdn):
+    device_maps = fetch_device_maps(fqdn)
 
     all_devs = parse_sys_block(device_maps.block_devices)
     all_devs.extend(parse_zpools(device_maps.zpools, all_devs.pop(-1)))

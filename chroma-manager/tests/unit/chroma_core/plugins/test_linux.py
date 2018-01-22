@@ -1,6 +1,11 @@
 import json
 import os
+import mock
+import re
+from django.utils import unittest
+from toolz import compose
 
+from chroma_core.plugins.block_devices import get_block_devices
 from chroma_core.services.plugin_runner import ResourceManager
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -153,3 +158,48 @@ class LinuxPluginTestCase(IMLUnitTestCase):
         # Restart the session with no devices (should trigger a cull)
         self._start_session_with_data(host1, "NoDevices.json")
         self.assertEqual(Volume.objects.count(), 0)
+
+
+class TestBlockDevices(unittest.TestCase):
+    """ Verify aggregator output parsed through block_devices matches expected agent output """
+    def setUp(self):
+        super(TestBlockDevices, self).setUp()
+
+        self.test_root = os.path.join(os.path.dirname(__file__), "fixtures")
+
+        self.load_fixture(u'device_aggregator.text', u'vm7.foo.com')
+        self.load_expected(u'agent_plugin.json')
+
+    def load(self, filename):
+        return open(os.path.join(self.test_root, filename)).read()
+
+    def load_fixture(self, filename, host_fqdn):
+        data = compose(json.loads, self.load)(filename)
+        fixture = json.loads(data[host_fqdn])
+
+        with mock.patch('glob.glob', return_value=[]):
+            with mock.patch(
+                    'chroma_core.plugins.block_devices.aggregator_get',
+                    return_value=fixture):
+                self.block_devices = get_block_devices(host_fqdn)
+
+    def load_expected(self, filename):
+        str_data = self.load(filename)
+        self.expected = json.loads(str_data)['result']['linux']
+
+    def test_block_device_nodes_parsing(self):
+        result = self.block_devices['devs']
+
+        p = re.compile('\d+:\d+$')
+
+        map(
+            lambda x: self.assertTrue(
+                all(item in result[x].items() for item in self.expected['devs'][x].items())
+            ),
+            [mm for mm in self.expected['devs'].keys() if p.match(mm)]
+        )
+
+        # todo: ensure we are testing all variants from relevant fixture:
+        # - partition
+        # - dm-0 linear lvm
+        # - dm-2 striped lvm

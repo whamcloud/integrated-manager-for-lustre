@@ -195,7 +195,7 @@ class Linux(Plugin):
 
         # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
         for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
-            if expected_item not in devices:
+            if expected_item not in devices.keys():
                 devices[expected_item] = {}
 
         lv_block_devices = set()
