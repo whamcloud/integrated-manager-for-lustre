@@ -10,20 +10,11 @@ import json
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
-<<<<<<< HEAD
 from toolz.functoolz import pipe, curry
 from toolz.curried import map as cmap, filter as cfilter
 from collections import namedtuple
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
-=======
-from chroma_agent.lib.shell import AgentShell
-from toolz.functoolz import pipe, curry
-from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
-from collections import namedtuple
-
-DeviceMaps = namedtuple('device_maps', 'block_devices zpools')
->>>>>>> d096602... make a start on consuming aggregate output from socket over http, transform into agent output format and feed into host/manager side linux plug in handler
 
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
@@ -59,30 +50,17 @@ def sort_paths(xs):
     return sorted(xs, cmp=compare)
 
 
-<<<<<<< HEAD
 def aggregator_get(fqdn):
-=======
-def aggregator_get(hostname):
->>>>>>> d096602... make a start on consuming aggregate output from socket over http, transform into agent output format and feed into host/manager side linux plug in handler
     import requests_unixsocket
 
     session = requests_unixsocket.Session()
     resp = session.get('http+unix://%2Fvar%2Frun%2Fdevice-aggregator.sock')
-<<<<<<< HEAD
     payload = resp.text
     print "status code: {}\nresponse: {}".format(resp.status_code, payload)
 
     data = json.loads(payload)
 
     return json.loads(data[fqdn])
-=======
-    payload = resp.json()
-    print "status code: {}\njson response: {}".format(resp.status_code, payload)
-
-    data = json.loads(payload)
-
-    return data[hostname]
->>>>>>> d096602... make a start on consuming aggregate output from socket over http, transform into agent output format and feed into host/manager side linux plug in handler
 
 
 def get_default(prop, default_value, x):
@@ -151,7 +129,6 @@ def filter_device(x):
     return True
 
 
-<<<<<<< HEAD
 def fetch_device_maps(fqdn):
     info = aggregator_get(fqdn)
 
@@ -159,13 +136,6 @@ def fetch_device_maps(fqdn):
                       info["zpools"],
                       info["zfs"],
                       info["props"])
-=======
-def fetch_device_maps(hostname):
-    AgentShell.run(["udevadm", "settle"])
-    info = aggregator_get(hostname)
-
-    return DeviceMaps(info["blockDevices"], info["zpools"])
->>>>>>> d096602... make a start on consuming aggregate output from socket over http, transform into agent output format and feed into host/manager side linux plug in handler
 
 
 def create_device_list(device_dict):
