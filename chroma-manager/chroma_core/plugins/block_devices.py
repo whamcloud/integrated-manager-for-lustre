@@ -11,10 +11,10 @@ from iml_common.filesystems.filesystem import FileSystem
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
 from toolz.functoolz import pipe, curry
-from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
+from toolz.curried import map as cmap, filter as cfilter
 from collections import namedtuple
 
-DeviceMaps = namedtuple('device_maps', 'block_devices zpools')
+DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
 
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
@@ -132,7 +132,10 @@ def filter_device(x):
 def fetch_device_maps(fqdn):
     info = aggregator_get(fqdn)
 
-    return DeviceMaps(info["blockDevices"], info["zpools"])
+    return DeviceMaps(info["blockDevices"],
+                      info["zpools"],
+                      info["zfs"],
+                      info["props"])
 
 
 def create_device_list(device_dict):
@@ -333,52 +336,52 @@ def parse_sys_block(device_map):
                                   node_block_devices,
                                   ndt)
 
-    # return block_device_nodes, node_block_devices, ndt, vgs, lvs, mds, local_fs
     return [vgs, lvs, mds, local_fs, block_device_nodes]
 
 
-def parse_zpools(zpool_map, block_device_nodes):
+def parse_zpools(zpool_map, zfs_map, block_device_nodes):
     zpools = {}
     datasets = {}
-    # fixme: get zvols from device-scanner
-    zvols = {}
+    # fixme: get zvols from zfs_map using some identifier to discern from datasets
 
     for pool in zpool_map.values():
+        name = pool['name']
+        guid = pool['guid']
+
         # fixme: get sizes from device-scanner
         size = 0
-        name = pool['name']
-        uuid = pool['guid']
-
         # fixme: this is not reliable, use Libzfs bindings to provide disk mms for zpool
+        # get phys_path for each child device, this is brittle because by-label link is unreliable
+        zpool_disk_serials = [dev['serial_83'] for dev in block_device_nodes.values()
+                              if '/dev/disk/by-label/%s' % name in dev['paths']]
+
         drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
-                     if '/dev/disk/by-label/%s' % name in dev['paths']]
+                     if dev['serial_83'] in zpool_disk_serials]
+                     # if dev['id_path'] == phys_path]
+                     # if dev['id_fs_label'] == name]
 
         # fixme: re-enable check when drive_mms is reliable
         # if not drive_mms:
         #     raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
 
+        # check for guid in zfs_map (not ideal but keys currently not usable)
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
-#        _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
-#                                          "path": ds['DATASET_NAME'],
-#                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
-#                                          "uuid": ds['DATASET_UID'],
-#                                          "size": 0,
-#                                          "drives": drive_mms} for ds in pool['DATASETS'].values()}
-        # todo: parse new format of scan output to populate datasets
-        _datasets = {}
+        _datasets = {ds['name']: {"name": ds['name'],
+                                  "path": ds['name'],
+                                  "block_device": "zfsset:%s" % ds['name'],
+                                  "uuid": ds['id'],  # fixme: this is not a uuid and could collide
+                                  "size": 0,
+                                  "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid'] == guid]}
 
         _devs = {}
 
-        # normalized_table = block_devices.normalized_device_table
-        # drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
-        # zvols = _get_zpool_zvols(name, drive_mms, block_devices)
         if _datasets == {}:
             # keys should include the pool uuid because names not necessarily unique
-            major_minor = "zfspool:%s" % uuid
-            zpools[uuid] = {"name": name,
+            major_minor = "zfspool:%s" % guid
+            zpools[guid] = {"name": name,
                             "path": name,
                             "block_device": major_minor,
-                            "uuid": uuid,
+                            "uuid": guid,
                             "size": size,
                             "drives": drive_mms}
 
@@ -416,22 +419,20 @@ def parse_zpools(zpool_map, block_device_nodes):
 
         block_device_nodes.update(_devs)
 
-    return [zpools, datasets, zvols, block_device_nodes]
+    return [zpools, datasets, block_device_nodes]
 
 
 def get_block_devices(fqdn):
     device_maps = fetch_device_maps(fqdn)
 
     all_devs = parse_sys_block(device_maps.block_devices)
-    all_devs.extend(parse_zpools(device_maps.zpools, all_devs.pop(-1)))
+    all_devs.extend(parse_zpools(device_maps.zpools,
+                                 device_maps.zfs,
+                                 all_devs.pop(-1)))
 
     return dict(zip(
-        ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'zfsvols', 'devs'],
+        ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
         all_devs))
-
-# def quick_scan():
-#     return pipe(create_device_list(fetch_device_maps().block_devices),
-#                 cmapcat(getter("paths")), sorted) + fetch_device_maps().zpools.keys()
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):

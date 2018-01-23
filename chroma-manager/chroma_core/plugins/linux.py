@@ -211,7 +211,8 @@ class Linux(Plugin):
         self.current_devices = dev_json
 
         # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
-        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        # for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices.keys():
                 devices[expected_item] = {}
 
@@ -224,17 +225,18 @@ class Linux(Plugin):
                     # An inactive LV has no block device
                     pass
 
-        mpath_block_devices = set()
-        for mp_name, mp in devices['mpath'].items():
-            mpath_block_devices.add(mp['block_device'])
+        # mpath_block_devices = set()
+        # for mp_name, mp in devices['mpath'].items():
+        #     mpath_block_devices.add(mp['block_device'])
 
-        special_block_devices = lv_block_devices | mpath_block_devices
+        # special_block_devices = lv_block_devices | mpath_block_devices
+        special_block_devices = lv_block_devices
 
         for uuid, md_info in devices['mds'].items():
             special_block_devices.add(md_info['block_device'])
 
-        for uuid, emcpower_info in devices['emcpower'].items():
-            special_block_devices.add(emcpower_info['block_device'])
+        # for uuid, emcpower_info in devices['emcpower'].items():
+        #     special_block_devices.add(emcpower_info['block_device'])
 
         for uuid, zfs_pool_info in devices['zfspools'].items():
             special_block_devices.add(zfs_pool_info['block_device'])
@@ -242,8 +244,8 @@ class Linux(Plugin):
         for uuid, zfs_dataset_info in devices['zfsdatasets'].items():
             special_block_devices.add(zfs_dataset_info['block_device'])
 
-        for uuid, zfs_vol_info in devices['zfsvols'].items():
-            special_block_devices.add(zfs_vol_info['block_device'])
+        # for uuid, zfs_vol_info in devices['zfsvols'].items():
+        #     special_block_devices.add(zfs_vol_info['block_device'])
 
         def preferred_serial(bdev):
             for attr in SERIAL_PREFERENCE:
@@ -332,10 +334,10 @@ class Linux(Plugin):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
-            elif bdev['major_minor'] in mpath_block_devices:
-                node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+            # elif bdev['major_minor'] in mpath_block_devices:
+            #     node, created = self.update_or_create(LinuxDeviceNode,
+            #                         host_id = host_id,
+            #                         path = bdev['path'])
             elif bdev['parent']:
                 node, created = self.update_or_create(LinuxDeviceNode,
                         host_id = host_id,
@@ -389,25 +391,26 @@ class Linux(Plugin):
                     # Inactive LVs have no block device
                     pass
 
-        for mpath_alias, mpath in devices['mpath'].items():
+        # for mpath_alias, mpath in devices['mpath'].items():
             # Devices contributing to the multipath
-            mpath_parents = [self.major_minor_to_node_resource[n['major_minor']] for n in mpath['nodes']]
+            # mpath_parents = [self.major_minor_to_node_resource[n['major_minor']] for n in mpath['nodes']]
             # The multipath device node
-            mpath_node = self.major_minor_to_node_resource[mpath['block_device']]
-            for p in mpath_parents:
+            # mpath_node = self.major_minor_to_node_resource[mpath['block_device']]
+            # for p in mpath_parents:
                 # All the mpath_parents should have the same logical_drive
-                mpath_node.logical_drive = mpath_parents[0].logical_drive
-                mpath_node.add_parent(p)
+                # mpath_node.logical_drive = mpath_parents[0].logical_drive
+                # mpath_node.add_parent(p)
 
         self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [], reported_device_node_paths)
 
-        self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
+        # self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
+        log.debug("zfspools: {}".format(devices['zfspools']))
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
 
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
 
-        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
+        # initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
