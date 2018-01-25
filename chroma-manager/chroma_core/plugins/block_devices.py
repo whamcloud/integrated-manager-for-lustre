@@ -16,6 +16,8 @@ from collections import namedtuple
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
 
+_data = {}
+
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
 
@@ -50,7 +52,7 @@ def sort_paths(xs):
     return sorted(xs, cmp=compare)
 
 
-def aggregator_get(fqdn):
+def aggregator_get():
     import requests_unixsocket
 
     session = requests_unixsocket.Session()
@@ -58,9 +60,8 @@ def aggregator_get(fqdn):
     payload = resp.text
     print "status code: {}\nresponse: {}".format(resp.status_code, payload)
 
-    data = json.loads(payload)
-
-    return json.loads(data[fqdn])
+    global _data
+    _data = json.loads(payload)
 
 
 def get_default(prop, default_value, x):
@@ -129,13 +130,16 @@ def filter_device(x):
     return True
 
 
-def fetch_device_maps(fqdn):
-    info = aggregator_get(fqdn)
+def get_host_devices(fqdn):
+    global _data
+    host_data = _data.pop(fqdn)
 
-    return DeviceMaps(info["blockDevices"],
-                      info["zpools"],
-                      info["zfs"],
-                      info["props"])
+    devices = json.loads(host_data)
+
+    return DeviceMaps(devices["blockDevices"],
+                      devices["zpools"],
+                      devices["zfs"],
+                      devices["props"])
 
 
 def create_device_list(device_dict):
@@ -220,7 +224,6 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
         # Finally add these devices to the canonical path list.
         ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, x['paths']),
                                    filter(DEV_PATH.match, x['paths']))
-
         ndt.add_normalized_devices(x['md_device_paths'], [x['path']])
 
     return ndt, mds
@@ -366,6 +369,7 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
 
         # check for guid in zfs_map (not ideal but keys currently not usable)
         # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
+        # Note: may be able to use nested dataset information from libzfs bindings instead of zfs_map lookup
         _datasets = {ds['name']: {"name": ds['name'],
                                   "path": ds['name'],
                                   "block_device": "zfsset:%s" % ds['name'],
@@ -422,17 +426,61 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
     return [zpools, datasets, block_device_nodes]
 
 
+def get_drive_serials(zpool, device_nodes):
+    """ return a list of physical drive major-minors from aggregator zpool representation """
+    paths = [child.Disk.path for child in zpool.vdev.Root.children if child.Disk.whole_disk]
+    serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
+    mms = {d['major_minor'] for d in device_nodes.values()
+           if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
+    assert len(serials) == len(mms)
+
+    return mms
+
+
+def discover_zpools(all_devs):
+    # identify imported pools that reside on drives this host can see by
+    ## build list of mms for DEVTYPE=disk and matching ID_PATH
+    ## or matching serial (create serial set by matching paths in pools against those in devs)
+    #  retrieve pool and relevant datasets
+    # verify this host doesn't have conflicting view of imported state
+    # add pools to current state including zfspools zfsdatasets and devs values
+    # mm for
+    import ipdb;ipdb.set_trace()
+    # global _data
+    device_nodes = all_devs['devs']
+
+    def extract(acc, data):
+        maps = json.loads(data)
+
+        return acc['zpools'].extend(maps['zpools']), acc['zfs'].extend(maps['zfs'])
+
+    other_zpools_zfs = reduce(extract, _data.values(), {})
+
+    return all_devs
+    # matching = [p for p in device_maps.zpools.values()
+    #             if get_drive_serials(p, device_nodes).intersection({device_nodes.keys()})]
+    # return matching
+#  "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid']
+#  == guid]}
+
+
 def get_block_devices(fqdn):
-    device_maps = fetch_device_maps(fqdn)
+    aggregator_get()
 
-    all_devs = parse_sys_block(device_maps.block_devices)
-    all_devs.extend(parse_zpools(device_maps.zpools,
-                                 device_maps.zfs,
-                                 all_devs.pop(-1)))
+    device_maps = get_host_devices(fqdn)
 
-    return dict(zip(
+    devs_list = parse_sys_block(device_maps.block_devices)
+    devs_list.extend(parse_zpools(device_maps.zpools,
+                                  device_maps.zfs,
+                                  devs_list.pop(-1)))
+
+    devs_dict = dict(zip(
         ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
-        all_devs))
+        devs_list))
+
+    return discover_zpools(devs_dict)
+    #
+    # devs_list.extend(add_zpools(discovered_zpools))
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):

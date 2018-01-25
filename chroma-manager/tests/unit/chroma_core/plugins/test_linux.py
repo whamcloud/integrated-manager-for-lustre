@@ -1,11 +1,11 @@
 import json
 import os
-import mock
 import re
+from mock import patch, Mock
 from django.utils import unittest
 from toolz import compose
 
-from chroma_core.plugins.block_devices import get_block_devices
+from chroma_core.plugins.block_devices import get_block_devices, get_drive_serials, get_host_devices, discover_zpools
 from chroma_core.services.plugin_runner import ResourceManager
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -174,13 +174,11 @@ class TestBlockDevices(unittest.TestCase):
         return open(os.path.join(self.test_root, filename)).read()
 
     def load_fixture(self, filename, host_fqdn):
-        data = compose(json.loads, self.load)(filename)
-        fixture = json.loads(data[host_fqdn])
+        fixture = compose(json.loads, self.load)(filename)
 
-        with mock.patch('glob.glob', return_value=[]):
-            with mock.patch(
-                    'chroma_core.plugins.block_devices.aggregator_get',
-                    return_value=fixture):
+        with patch('chroma_core.plugins.block_devices.aggregator_get'):
+            with patch.dict('chroma_core.plugins.block_devices._data',
+                            fixture):
                 self.block_devices = get_block_devices(host_fqdn)
 
     def load_expected(self, filename):
@@ -203,3 +201,40 @@ class TestBlockDevices(unittest.TestCase):
         # - partition
         # - dm-0 linear lvm
         # - dm-2 striped lvm
+
+    def _get_test_pool(self):
+        testPool = Mock()
+        testPool.name = 'testPool4'
+        testPool.state = 'ACTIVE'
+        testPool.size = 10670309376
+        testPool.vdev = Mock()
+        testPool.datasets = []
+        testPool.vdev.Root = Mock()
+        disk1 = Mock()
+        disk1.Disk = Mock()
+        disk1.Disk.path = '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1'
+        disk1.Disk.path_id = 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1'
+        disk1.Disk.phys_path = 'virtio-pci-0000:00:05.0-scsi-0:0:0:1'
+        disk1.Disk.whole_disk = True
+        disk1.Disk.is_log = False
+        disk4 = Mock()
+        disk4.Disk = Mock()
+        disk4.Disk.path = '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1'
+        disk4.Disk.path_id = 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1'
+        disk4.Disk.phys_path = 'virtio-pci-0000:00:05.0-scsi-0:0:0:3'
+        disk4.Disk.whole_disk = True
+        disk4.Disk.is_log = False
+        testPool.vdev.Root.children = [disk1, disk4]
+
+        return testPool
+
+    def test_get_drive_serials(self):
+        self.assertEqual(get_drive_serials(self._get_test_pool(),
+                                           self.block_devices['devs']),
+                         {u'8:64', u'8:32'})
+
+    # def test_discover_zpools(self):
+    #     import ipdb;ipdb.set_trace()
+    #     self.assertEqual(discover_zpools(self.block_devices),
+    #                      [])
+
