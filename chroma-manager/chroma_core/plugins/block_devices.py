@@ -353,15 +353,17 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
 
         # fixme: get sizes from device-scanner
         size = 0
-        # fixme: this is not reliable, use Libzfs bindings to provide disk mms for zpool
-        # get phys_path for each child device, this is brittle because by-label link is unreliable
-        zpool_disk_serials = [dev['serial_83'] for dev in block_device_nodes.values()
-                              if '/dev/disk/by-label/%s' % name in dev['paths']]
+        # todo: won't work until bindings output integrated with device scanner
+        drive_mms = get_drives(pool, block_device_nodes)
 
-        drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
-                     if dev['serial_83'] in zpool_disk_serials]
-                     # if dev['id_path'] == phys_path]
-                     # if dev['id_fs_label'] == name]
+        # get phys_path for each child device, this is brittle because by-label link is unreliable
+        # zpool_disk_serials = [dev['serial_83'] for dev in block_device_nodes.values()
+        #                       if '/dev/disk/by-label/%s' % name in dev['paths']]
+        #
+        # drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
+        #              if dev['serial_83'] in zpool_disk_serials]
+        # if dev['id_path'] == phys_path]
+        # if dev['id_fs_label'] == name]
 
         # fixme: re-enable check when drive_mms is reliable
         # if not drive_mms:
@@ -426,14 +428,15 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
     return [zpools, datasets, block_device_nodes]
 
 
-def get_drive_serials(zpool, device_nodes):
+# fixme: won't work until bindings output integrated with device scanner, types need validating
+def get_drives(zpool, device_nodes):
     """ return a list of physical drive major-minors from aggregator zpool representation """
     paths = [child.Disk.path for child in zpool.vdev.Root.children if child.Disk.whole_disk]
     serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
     mms = {d['major_minor'] for d in device_nodes.values()
            if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
-    assert len(serials) == len(mms)
 
+    # return len(paths) == len(mms)
     return mms
 
 
@@ -445,21 +448,46 @@ def discover_zpools(all_devs):
     # verify this host doesn't have conflicting view of imported state
     # add pools to current state including zfspools zfsdatasets and devs values
     # mm for
-    import ipdb;ipdb.set_trace()
-    # global _data
+    UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
+
     device_nodes = all_devs['devs']
 
     def extract(acc, data):
         maps = json.loads(data)
 
-        return acc['zpools'].extend(maps['zpools']), acc['zfs'].extend(maps['zfs'])
+        # verify pool is imported
+        pools = {id: pool for id, pool in maps['zpools'].items()
+                 if pool['state'] not in UNSUPPORTED_STATES
+                 and get_drives(pool, device_nodes).intersection(set(device_nodes.keys()))}
 
-    other_zpools_zfs = reduce(extract, _data.values(), {})
+        # verify we haven't already got a representation for this pool on any of the other hosts
+        if any(id for id in pools.keys() if id in acc['zpools'].keys()):
+            raise RuntimeError("duplicate active representations of zpool (remote)")
+
+        acc['zpools'].update(pools)
+        acc['zfs'].update({k: v for k, v in maps['zfs'].items() if v['poolGuid'] in pools.keys()})
+
+        return acc
+
+    other_zpools_zfs = reduce(extract, _data.values(), defaultdict(dict))
+
+    # verify we haven't already got a representation for this pool locally
+    if any(id for id, pool in all_devs['zpools'].items()
+           if id in other_zpools_zfs['zpools'].keys() and pool['state'] not in UNSUPPORTED_STATES):
+        raise RuntimeError("duplicate active representations of zpool (local)")
+
+    out = parse_zpools(other_zpools_zfs['zpools'], other_zpools_zfs['zfs'], all_devs['devs'])
+
+    all_devs['zpools'].update(out[0])
+    all_devs['zfs'].update(out[1])
+    all_devs['devs'].update(out[2])
 
     return all_devs
     # matching = [p for p in device_maps.zpools.values()
     #             if get_drive_serials(p, device_nodes).intersection({device_nodes.keys()})]
     # return matching
+
+
 #  "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid']
 #  == guid]}
 
