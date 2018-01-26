@@ -5,7 +5,7 @@ from mock import patch, Mock
 from django.utils import unittest
 from toolz import compose
 
-from chroma_core.plugins.block_devices import get_block_devices, get_drive_serials, get_host_devices, discover_zpools
+from chroma_core.plugins.block_devices import get_block_devices, get_drives
 from chroma_core.services.plugin_runner import ResourceManager
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -229,8 +229,8 @@ class TestBlockDevices(unittest.TestCase):
         return testPool
 
     def test_get_drive_serials(self):
-        self.assertEqual(get_drive_serials(self._get_test_pool(),
-                                           self.block_devices['devs']),
+        self.assertEqual(get_drives(self._get_test_pool(),
+                                    self.block_devices['devs']),
                          {u'8:64', u'8:32'})
 
     # def test_discover_zpools(self):
