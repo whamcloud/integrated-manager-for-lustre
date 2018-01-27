@@ -351,10 +351,10 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
         name = pool['name']
         guid = pool['guid']
 
-        # fixme: get sizes from device-scanner
-        size = 0
         # todo: won't work until bindings output integrated with device scanner
-        drive_mms = get_drives(pool, block_device_nodes)
+        size = pool['size']
+        # todo: won't work until bindings output integrated with device scanner
+        drive_mms = get_drives(pool['vdev_root']['children'], block_device_nodes)
 
         # get phys_path for each child device, this is brittle because by-label link is unreliable
         # zpool_disk_serials = [dev['serial_83'] for dev in block_device_nodes.values()
@@ -429,9 +429,10 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
 
 
 # fixme: won't work until bindings output integrated with device scanner, types need validating
-def get_drives(zpool, device_nodes):
+def get_drives(pool_disks, device_nodes):
     """ return a list of physical drive major-minors from aggregator zpool representation """
-    paths = [child.Disk.path for child in zpool.vdev.Root.children if child.Disk.whole_disk]
+    # paths = [child.Disk.path for child in zpool.vdev.Root.children if child.Disk.whole_disk]
+    paths = [disk['path'] for disk in pool_disks if disk['whole_disk'] is True]
     serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
     mms = {d['major_minor'] for d in device_nodes.values()
            if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
@@ -458,7 +459,8 @@ def discover_zpools(all_devs):
         # verify pool is imported
         pools = {id: pool for id, pool in maps['zpools'].items()
                  if pool['state'] not in UNSUPPORTED_STATES
-                 and get_drives(pool, device_nodes).intersection(set(device_nodes.keys()))}
+                 and get_drives(pool['vdev_root']['children'],
+                                device_nodes).intersection(set(device_nodes.keys()))}
 
         # verify we haven't already got a representation for this pool on any of the other hosts
         if any(id for id in pools.keys() if id in acc['zpools'].keys()):

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from mock import patch, Mock
+from mock import patch
 from django.utils import unittest
 from toolz import compose
 
@@ -203,30 +203,27 @@ class TestBlockDevices(unittest.TestCase):
         # - dm-2 striped lvm
 
     def _get_test_pool(self):
-        testPool = Mock()
-        testPool.name = 'testPool4'
-        testPool.state = 'ACTIVE'
-        testPool.size = 10670309376
-        testPool.vdev = Mock()
-        testPool.datasets = []
-        testPool.vdev.Root = Mock()
-        disk1 = Mock()
-        disk1.Disk = Mock()
-        disk1.Disk.path = '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1'
-        disk1.Disk.path_id = 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1'
-        disk1.Disk.phys_path = 'virtio-pci-0000:00:05.0-scsi-0:0:0:1'
-        disk1.Disk.whole_disk = True
-        disk1.Disk.is_log = False
-        disk4 = Mock()
-        disk4.Disk = Mock()
-        disk4.Disk.path = '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1'
-        disk4.Disk.path_id = 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1'
-        disk4.Disk.phys_path = 'virtio-pci-0000:00:05.0-scsi-0:0:0:3'
-        disk4.Disk.whole_disk = True
-        disk4.Disk.is_log = False
-        testPool.vdev.Root.children = [disk1, disk4]
-
-        return testPool
+        return {
+            "name": 'testPool4',
+            "state": 'ACTIVE',
+            "size": 10670309376,
+            "datasets": [],
+            "vdev_root": [
+            {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
+                "whole_disk": True,
+                "is_log": False
+            },
+            {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
+                "whole_disk": True,
+                "is_log": False
+            }]
+        }
 
     def test_get_drive_serials(self):
         self.assertEqual(get_drives(self._get_test_pool(),
@@ -237,4 +234,3 @@ class TestBlockDevices(unittest.TestCase):
     #     import ipdb;ipdb.set_trace()
     #     self.assertEqual(discover_zpools(self.block_devices),
     #                      [])
-
