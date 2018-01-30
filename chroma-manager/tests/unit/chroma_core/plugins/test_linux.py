@@ -1,4 +1,3 @@
-from collections import defaultdict
 import json
 import os
 import re
@@ -273,29 +272,39 @@ class TestBlockDevices(unittest.TestCase):
 
     def test_discover_zpools_unavailable_other(self):
         """ verify block devices are unchanged when locally active pool exists unavailable on other hosts """
-        original_block_devices = dict(self.block_devices)
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
+                                      {},
+                                      {})
 
-        # fixture = self.patch_data(self.fixture, 'vm5.foo.com', {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')})
+        original_block_devices = self.get_patched_block_devices(fixture)
 
-        # with patch('chroma_core.plugins.block_devices.aggregator_get'):
-        #     with patch.dict('chroma_core.plugins.block_devices._data', fixture):
-        #         self.block_devices = get_block_devices(self.test_host_fqdn)
+        fixture = self.patch_zed_data(self.fixture,
+                                      'vm5.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')},
+                                      {},
+                                      {})
 
-        self.assertEqual(discover_zpools(self.block_devices),
-                         original_block_devices)
+        self.assertEqual(self.get_patched_block_devices(fixture), original_block_devices)
 
     def test_discover_zpools_exported_other(self):
         """ verify block devices are unchanged when locally active pool exists exported on other hosts """
-        original_block_devices = dict(self.block_devices)
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
+                                      {},
+                                      {})
 
-        # fixture = self.patch_data(self.fixture, 'vm5.foo.com', {'0x0123456789abcdef': self.get_test_pool('EXPORTED')})
+        original_block_devices = self.get_patched_block_devices(fixture)
 
-        # with patch('chroma_core.plugins.block_devices.aggregator_get'):
-        #     with patch.dict('chroma_core.plugins.block_devices._data', fixture):
-        #         self.block_devices = get_block_devices(self.test_host_fqdn)
+        fixture = self.patch_zed_data(self.fixture,
+                                      'vm5.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
+                                      {},
+                                      {})
 
-        self.assertEqual(discover_zpools(self.block_devices),
-                         original_block_devices)
+        self.assertEqual(self.get_patched_block_devices(fixture), original_block_devices)
 
     def test_discover_zpools_unknown(self):
         """ verify block devices are updated when accessible but unknown pools are active on other hosts """
@@ -322,15 +331,23 @@ class TestBlockDevices(unittest.TestCase):
         block_devices = self.get_patched_block_devices(fixture)
 
         # new pool on other host should be reported after processing, because drives are shared
-        # with patch('chroma_core.plugins.block_devices.get_drives', return_value=['9:99']):
-        block_devices = discover_zpools(block_devices)
-
         self.assertEqual(block_devices['zfspools'], self.zpool_result)
 
     def test_discover_zpools_both_active(self):
         """ verify exception thrown when accessible active pools are active on other hosts """
-        pass
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
+                                      {},
+                                      {})
 
-    # def test_discover_zpools_unknown(self):
-    #     """ verify block devices are updated when accessible unknown pools exist on other hosts """
-    #     pass
+        self.get_patched_block_devices(fixture)
+
+        fixture = self.patch_zed_data(self.fixture,
+                                      'vm5.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
+                                      {},
+                                      {})
+
+        with self.assertRaises(RuntimeError):
+            self.get_patched_block_devices(fixture)
