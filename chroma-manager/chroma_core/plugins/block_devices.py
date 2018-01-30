@@ -466,15 +466,16 @@ def discover_zpools(all_devs):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
-        acc['zfs'].update({k: v for k,v in maps['zed']['zfs'].iteritems() if v['poolGuid'] in pools.keys()})
+        acc['zfs'].update({k: v for k, v in maps['zed']['zfs'].iteritems() if v['poolGuid'] in pools.keys()})
 
         return acc
 
     other_zpools_zfs = reduce(extract, _data.values(), defaultdict(dict))
 
     # verify we haven't already got a representation for this pool locally
-    if any(id for id, pool in all_devs['zfspools'].items()
-           if id in other_zpools_zfs['zpools'].keys() and pool['state'] not in UNSUPPORTED_STATES):
+    if any(guid for guid in all_devs['zfspools'].iterkeys()
+           if guid in other_zpools_zfs['zpools'].keys()
+            and other_zpools_zfs['zpools'][guid]['state'] not in UNSUPPORTED_STATES):
         raise RuntimeError("duplicate active representations of zpool (local)")
 
     # updates reported devices
