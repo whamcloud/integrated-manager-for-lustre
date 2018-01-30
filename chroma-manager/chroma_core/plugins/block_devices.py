@@ -14,6 +14,8 @@ from toolz.functoolz import pipe, curry
 from toolz.curried import map as cmap, filter as cfilter
 from collections import namedtuple
 
+UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
+
 DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
 
 _data = {}
@@ -443,8 +445,6 @@ def discover_zpools(all_devs):
 
     :return: the new dictionary of devices reported on the given host
     """
-    UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
-
     def extract(acc, data):
         maps = json.loads(data)
 
