@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import os
 import re
@@ -5,7 +6,7 @@ from mock import patch
 from django.utils import unittest
 from toolz import compose
 
-from chroma_core.plugins.block_devices import get_block_devices, get_drives
+from chroma_core.plugins.block_devices import get_block_devices, get_drives, discover_zpools
 from chroma_core.services.plugin_runner import ResourceManager
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -162,38 +163,65 @@ class LinuxPluginTestCase(IMLUnitTestCase):
 
 class TestBlockDevices(unittest.TestCase):
     """ Verify aggregator output parsed through block_devices matches expected agent output """
+    test_host_fqdn = 'vm7.foo.com'
+    zpool_result = {u'0x0123456789abcdef': {'block_device': 'zfspool:0x0123456789abcdef',
+                                            'drives': set([u'8:32', u'8:64']),
+                                            'name': u'testPool4',
+                                            'path': u'testPool4',
+                                            'size': 10670309376,
+                                            'uuid': u'0x0123456789abcdef'}}
+
     def setUp(self):
         super(TestBlockDevices, self).setUp()
 
         self.test_root = os.path.join(os.path.dirname(__file__), "fixtures")
 
-        self.load_fixture(u'device_aggregator.text', u'vm7.foo.com')
-        self.load_expected(u'agent_plugin.json')
+        self.fixture = compose(json.loads, self.load)(u'device_aggregator.text')
+
+        self.block_devices = self.get_patched_block_devices(self.fixture)
+
+        self.expected = json.loads(self.load(u'agent_plugin.json'))['result']['linux']
+
+        self.addCleanup(patch.stopall)
 
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
 
-    def load_fixture(self, filename, host_fqdn):
-        fixture = compose(json.loads, self.load)(filename)
+    def patch_zed_data(self, fixture, host_fqdn, pools, zfs, props):
+        """ overwrite with supplied structures """
+        # copy existing host data if simulating new host
+        host_data = json.loads(fixture.setdefault(host_fqdn,
+                                                  fixture[self.test_host_fqdn]))
+        host_data['zed'] = {'zpools': pools,
+                            'zfs': zfs,
+                            'props': props}
 
+        fixture[host_fqdn] = json.dumps(host_data)
+
+        return fixture
+
+    def get_patched_block_devices(self, fixture):
         with patch('chroma_core.plugins.block_devices.aggregator_get'):
-            with patch.dict('chroma_core.plugins.block_devices._data',
-                            fixture):
-                self.block_devices = get_block_devices(host_fqdn)
-
-    def load_expected(self, filename):
-        str_data = self.load(filename)
-        self.expected = json.loads(str_data)['result']['linux']
+            with patch.dict('chroma_core.plugins.block_devices._data', fixture):
+                return get_block_devices(self.test_host_fqdn)
 
     def test_block_device_nodes_parsing(self):
         result = self.block_devices['devs']
 
         p = re.compile('\d+:\d+$')
 
+        def check(x):
+            for key in self.expected['devs'][x].keys():
+                expected = self.expected['devs'][x][key]
+                actual = result[x][key]
+                self.assertEqual(actual, expected,
+                                 "item {} ({}) in {} does not match expected ({})".format(key,
+                                                                                          actual,
+                                                                                          x,
+                                                                                          expected))
+
         map(
-            lambda x: self.assertTrue(
-                all(item in result[x].items() for item in self.expected['devs'][x].items())
-            ),
+            lambda x: check(x),
             [mm for mm in self.expected['devs'].keys() if p.match(mm)]
         )
 
@@ -202,35 +230,107 @@ class TestBlockDevices(unittest.TestCase):
         # - dm-0 linear lvm
         # - dm-2 striped lvm
 
-    def _get_test_pool(self):
+    @staticmethod
+    def get_test_pool(state='ACTIVE'):
         return {
+            "guid": '0x0123456789abcdef',
             "name": 'testPool4',
-            "state": 'ACTIVE',
+            "state": state,
             "size": 10670309376,
             "datasets": [],
-            "vdev_root": [
-            {
-                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
-                "whole_disk": True,
-                "is_log": False
-            },
-            {
-                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
-                "whole_disk": True,
-                "is_log": False
-            }]
+            "vdev": {'Root': {'children': [
+                {
+                    "Disk": {
+                        "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                        "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                        "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
+                        "whole_disk": True,
+                        "is_log": False
+                    }
+                },
+                {
+                    "Disk": {
+                        "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                        "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                        "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
+                        "whole_disk": True,
+                        "is_log": False
+                    }
+                }]
+            }}
         }
 
-    def test_get_drive_serials(self):
-        self.assertEqual(get_drives(self._get_test_pool(),
+    def test_get_drives(self):
+        self.assertEqual(get_drives([child['Disk'] for child in self.get_test_pool()['vdev']['Root']['children']],
                                     self.block_devices['devs']),
                          {u'8:64', u'8:32'})
 
-    # def test_discover_zpools(self):
-    #     import ipdb;ipdb.set_trace()
-    #     self.assertEqual(discover_zpools(self.block_devices),
-    #                      [])
+    def test_discover_zpools(self):
+        """ verify block devices are unchanged when no accessible pools exist on other hosts """
+        original_block_devices = dict(self.block_devices)
+        self.assertEqual(discover_zpools(self.block_devices),
+                         original_block_devices)
+
+    def test_discover_zpools_unavailable_other(self):
+        """ verify block devices are unchanged when locally active pool exists unavailable on other hosts """
+        original_block_devices = dict(self.block_devices)
+
+        # fixture = self.patch_data(self.fixture, 'vm5.foo.com', {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')})
+
+        # with patch('chroma_core.plugins.block_devices.aggregator_get'):
+        #     with patch.dict('chroma_core.plugins.block_devices._data', fixture):
+        #         self.block_devices = get_block_devices(self.test_host_fqdn)
+
+        self.assertEqual(discover_zpools(self.block_devices),
+                         original_block_devices)
+
+    def test_discover_zpools_exported_other(self):
+        """ verify block devices are unchanged when locally active pool exists exported on other hosts """
+        original_block_devices = dict(self.block_devices)
+
+        # fixture = self.patch_data(self.fixture, 'vm5.foo.com', {'0x0123456789abcdef': self.get_test_pool('EXPORTED')})
+
+        # with patch('chroma_core.plugins.block_devices.aggregator_get'):
+        #     with patch.dict('chroma_core.plugins.block_devices._data', fixture):
+        #         self.block_devices = get_block_devices(self.test_host_fqdn)
+
+        self.assertEqual(discover_zpools(self.block_devices),
+                         original_block_devices)
+
+    def test_discover_zpools_unknown(self):
+        """ verify block devices are updated when accessible but unknown pools are active on other hosts """
+        # remove pool and zfs data from fixture
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        # no pools or datasets should be reported after processing
+        block_devices = discover_zpools(block_devices)
+        [self.assertEqual(block_devices[key], {}) for key in ['zfspools', 'zfsdatasets']]
+
+        # add pool and zfs data to fixture for another host
+        fixture = self.patch_zed_data(fixture,
+                                      'vm5.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        # new pool on other host should be reported after processing, because drives are shared
+        # with patch('chroma_core.plugins.block_devices.get_drives', return_value=['9:99']):
+        block_devices = discover_zpools(block_devices)
+
+        self.assertEqual(block_devices['zfspools'], self.zpool_result)
+
+    def test_discover_zpools_both_active(self):
+        """ verify exception thrown when accessible active pools are active on other hosts """
+        pass
+
+    # def test_discover_zpools_unknown(self):
+    #     """ verify block devices are updated when accessible unknown pools exist on other hosts """
+    #     pass
