@@ -104,7 +104,7 @@
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part9", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:1-part9", 
             "/dev/sde9", 
-            "/dev/disk/by-partuuid/d4a84475-732e-9c45-bb61-e62f66297782"
+            "/dev/disk/by-partuuid/b149d9a2-1428-084a-a98a-ae324adf0a76"
           ], 
           "parent": "8:64", 
           "serial_83": "0QEMU    QEMU HARDDISK   disk2", 
@@ -141,10 +141,10 @@
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:1-part1", 
             "/dev/sde1", 
-            "/dev/disk/by-label/testPool1", 
-            "/dev/disk/by-partlabel/zfs-de48e16a933034a4", 
-            "/dev/disk/by-partuuid/d5282f0e-b1e0-5341-9ac0-29cd35e940d5", 
-            "/dev/disk/by-uuid/2358958433841370577"
+            "/dev/disk/by-label/testPool4",
+            "/dev/disk/by-partlabel/zfs-5801b45e6ca773af",
+            "/dev/disk/by-partuuid/7fd458eb-829c-aa4b-b1e1-7fba153378f4",
+            "/dev/disk/by-uuid/860770032025836784"
           ], 
           "parent": "8:64", 
           "serial_83": "0QEMU    QEMU HARDDISK   disk2", 
@@ -163,7 +163,7 @@
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part9", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:3-part9", 
             "/dev/sdc9", 
-            "/dev/disk/by-partuuid/78742c7e-352a-5444-b039-355e03e4b15b"
+            "/dev/disk/by-partuuid/2244cdb0-530a-7c42-83a7-e6416e427cfa"
           ], 
           "parent": "8:32", 
           "serial_83": "0QEMU    QEMU HARDDISK   disk4", 
@@ -238,10 +238,10 @@
             "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1", 
             "/dev/disk/by-path/virtio-pci-0000:00:05.0-scsi-0:0:0:3-part1", 
             "/dev/sdc1", 
-            "/dev/disk/by-label/testPool1", 
-            "/dev/disk/by-partlabel/zfs-4f11b1dc1c82bcba", 
-            "/dev/disk/by-partuuid/2e5bdae1-a9d4-cf41-a49c-7cb59593ee8b", 
-            "/dev/disk/by-uuid/10672567153034764125"
+            "/dev/disk/by-label/testPool4",
+            "/dev/disk/by-partlabel/zfs-8016251b6972c49f",
+            "/dev/disk/by-partuuid/6cd4ad3a-7a1d-824f-ad6c-07475dd41339",
+            "/dev/disk/by-uuid/16228446567985339623"
           ], 
           "parent": "8:32", 
           "serial_83": "0QEMU    QEMU HARDDISK   disk4", 

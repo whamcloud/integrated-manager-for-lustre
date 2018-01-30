@@ -137,9 +137,9 @@ def get_host_devices(fqdn):
     devices = json.loads(host_data)
 
     return DeviceMaps(devices["blockDevices"],
-                      devices["zpools"],
-                      devices["zfs"],
-                      devices["props"])
+                      devices["zed"]["zpools"],
+                      devices["zed"]["zfs"],
+                      devices["zed"]["props"])
 
 
 def create_device_list(device_dict):
@@ -351,39 +351,30 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
         name = pool['name']
         guid = pool['guid']
 
-        # todo: won't work until bindings output integrated with device scanner
         size = pool['size']
-        # todo: won't work until bindings output integrated with device scanner
-        drive_mms = get_drives(pool['vdev_root']['children'], block_device_nodes)
+        drive_mms = get_drives([child['Disk'] for child in pool['vdev']['Root']['children']],
+                               block_device_nodes)
 
-        # get phys_path for each child device, this is brittle because by-label link is unreliable
-        # zpool_disk_serials = [dev['serial_83'] for dev in block_device_nodes.values()
-        #                       if '/dev/disk/by-label/%s' % name in dev['paths']]
-        #
-        # drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
-        #              if dev['serial_83'] in zpool_disk_serials]
-        # if dev['id_path'] == phys_path]
-        # if dev['id_fs_label'] == name]
+        if not drive_mms:
+            raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
 
-        # fixme: re-enable check when drive_mms is reliable
-        # if not drive_mms:
-        #     raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
-
-        # check for guid in zfs_map (not ideal but keys currently not usable)
-        # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
+        # todo: use name/path as key, uid not guaranteed to be unique between datasets on different zpools
         # Note: may be able to use nested dataset information from libzfs bindings instead of zfs_map lookup
-        _datasets = {ds['name']: {"name": ds['name'],
+        def get_id(ds):
+            return ds['poolGuid'] + '-' + ds['name']
+
+        _datasets = {get_id(ds): {"name": ds['name'],
                                   "path": ds['name'],
-                                  "block_device": "zfsset:%s" % ds['name'],
-                                  "uuid": ds['id'],  # fixme: this is not a uuid and could collide
-                                  "size": 0,
+                                  "block_device": "zfsset:{}".format(get_id(ds)),
+                                  "uuid": get_id(ds),
+                                  "size": 0,  # fixme
                                   "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid'] == guid]}
 
         _devs = {}
 
         if _datasets == {}:
             # keys should include the pool uuid because names not necessarily unique
-            major_minor = "zfspool:%s" % guid
+            major_minor = "zfspool:{}".format(guid)
             zpools[guid] = {"name": name,
                             "path": name,
                             "block_device": major_minor,
@@ -428,70 +419,71 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
     return [zpools, datasets, block_device_nodes]
 
 
-# fixme: won't work until bindings output integrated with device scanner, types need validating
 def get_drives(pool_disks, device_nodes):
     """ return a list of physical drive major-minors from aggregator zpool representation """
-    # paths = [child.Disk.path for child in zpool.vdev.Root.children if child.Disk.whole_disk]
     paths = [disk['path'] for disk in pool_disks if disk['whole_disk'] is True]
+
     serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
+
     mms = {d['major_minor'] for d in device_nodes.values()
            if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
 
-    # return len(paths) == len(mms)
     return mms
 
 
 def discover_zpools(all_devs):
-    # identify imported pools that reside on drives this host can see by
-    ## build list of mms for DEVTYPE=disk and matching ID_PATH
-    ## or matching serial (create serial set by matching paths in pools against those in devs)
-    #  retrieve pool and relevant datasets
-    # verify this host doesn't have conflicting view of imported state
-    # add pools to current state including zfspools zfsdatasets and devs values
-    # mm for
-    UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
+    """
+    Identify imported pools that reside on drives this host can see
 
-    device_nodes = all_devs['devs']
+    - gather information on pools active on other hosts
+    - check the local host is reporting (can see) the underlying drives of said pool
+    - verify the poor we want to add hasn't also been reported as active one another host
+    - verify the localhost isn't also reporting the pool as active (it shouldn't be)
+    - add pool and contained datasets to those to be reported to be connected to local host
+
+    :return: the new dictionary of devices reported on the given host
+    """
+    UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
 
     def extract(acc, data):
         maps = json.loads(data)
 
+        def match_drives(pool):
+            pool_disks = [child['Disk'] for child in pool['vdev']['Root']['children']]
+
+            return get_drives(pool_disks, all_devs['devs']).intersection(set(all_devs['devs'].keys()))
+
         # verify pool is imported
-        pools = {id: pool for id, pool in maps['zpools'].items()
-                 if pool['state'] not in UNSUPPORTED_STATES
-                 and get_drives(pool['vdev_root']['children'],
-                                device_nodes).intersection(set(device_nodes.keys()))}
+        pools = pipe(maps['zed']['zpools'].itervalues(),
+                     cfilter(lambda pool: pool['state'] not in UNSUPPORTED_STATES),
+                     cfilter(match_drives),
+                     list)
+
+        pools = {pool['guid']: pool for pool in pools}
 
         # verify we haven't already got a representation for this pool on any of the other hosts
-        if any(id for id in pools.keys() if id in acc['zpools'].keys()):
+        if any(guid for guid in pools.keys() if guid in acc['zpools'].keys()):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
-        acc['zfs'].update({k: v for k, v in maps['zfs'].items() if v['poolGuid'] in pools.keys()})
+        acc['zfs'].update({k: v for k,v in maps['zed']['zfs'].iteritems() if v['poolGuid'] in pools.keys()})
 
         return acc
 
     other_zpools_zfs = reduce(extract, _data.values(), defaultdict(dict))
 
     # verify we haven't already got a representation for this pool locally
-    if any(id for id, pool in all_devs['zpools'].items()
+    if any(id for id, pool in all_devs['zfspools'].items()
            if id in other_zpools_zfs['zpools'].keys() and pool['state'] not in UNSUPPORTED_STATES):
         raise RuntimeError("duplicate active representations of zpool (local)")
 
-    out = parse_zpools(other_zpools_zfs['zpools'], other_zpools_zfs['zfs'], all_devs['devs'])
-
-    all_devs['zpools'].update(out[0])
-    all_devs['zfs'].update(out[1])
-    all_devs['devs'].update(out[2])
+    # updates reported devices
+    [all_devs[k].update(v) for k, v in zip(['zfspools', 'zfsdatasets', 'devs'],
+                                           parse_zpools(other_zpools_zfs['zpools'],
+                                                        other_zpools_zfs['zfs'],
+                                                        all_devs['devs']))]
 
     return all_devs
-    # matching = [p for p in device_maps.zpools.values()
-    #             if get_drive_serials(p, device_nodes).intersection({device_nodes.keys()})]
-    # return matching
-
-
-#  "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid']
-#  == guid]}
 
 
 def get_block_devices(fqdn):
@@ -509,8 +501,6 @@ def get_block_devices(fqdn):
         devs_list))
 
     return discover_zpools(devs_dict)
-    #
-    # devs_list.extend(add_zpools(discovered_zpools))
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
