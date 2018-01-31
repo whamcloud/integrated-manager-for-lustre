@@ -186,14 +186,14 @@ class TestBlockDevices(unittest.TestCase):
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
 
-    def patch_zed_data(self, fixture, host_fqdn, pools, zfs, props):
-        """ overwrite with supplied structures """
+    def patch_zed_data(self, fixture, host_fqdn, pools=None, zfs=None, props=None):
+        """ overwrite with supplied structures or if None supplied in parameters, copy from existing host """
         # copy existing host data if simulating new host
         host_data = json.loads(fixture.setdefault(host_fqdn,
                                                   fixture[self.test_host_fqdn]))
-        host_data['zed'] = {'zpools': pools,
-                            'zfs': zfs,
-                            'props': props}
+        host_data['zed'] = {'zpools': pools if pools is not None else host_data['zed']['zpools'],
+                            'zfs': zfs if zfs is not None else host_data['zed']['zfs'],
+                            'props': props if props is not None else host_data['zed']['props'],}
 
         fixture[host_fqdn] = json.dumps(host_data)
 
@@ -332,6 +332,26 @@ class TestBlockDevices(unittest.TestCase):
 
         # new pool on other host should be reported after processing, because drives are shared
         self.assertEqual(block_devices['zfspools'], self.zpool_result)
+
+    def test_discover_dataset_unknown(self):
+        """ verify block devices are updated when accessible but unknown datasets are active on other hosts """
+        # copy pool and zfs data to fixture for another host
+        fixture = self.patch_zed_data(self.fixture,
+                                      'vm5.foo.com')
+
+        # remove pool and zfs data from fixture for current host
+        fixture = self.patch_zed_data(fixture,
+                                      self.test_host_fqdn,
+                                      {},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        # datasets should be reported after processing
+        self.assertEqual(block_devices['zfspools'], {})
+        import ipdb;ipdb.set_trace()
+        self.assertEqual(block_devices['zfsdatasets'], self.zpool_result)
 
     def test_discover_zpools_both_active(self):
         """ verify exception thrown when accessible active pools are active on other hosts """
