@@ -107,21 +107,17 @@ set_defaults() {
 
     export COPR_OWNER="managerforlustre"
     export COPR_PROJECT="manager-for-lustre"
-    # if you use this, don't forget to update chroma-manager/chroma_agent_comms/views.py
     #LUSTRE_REVIEW_BUILD="12345"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
         export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
-        # these should be determined from the above
-        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_server_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
-        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/build.whamcloud.com_lustre-reviews_configurations_axis-arch_\\\$basearch_axis-build_type_client_axis-distro_el7_axis-ib_stack_inkernel_builds_${LUSTRE_REVIEW_BUILD}_archive_artifacts_.repo"
     else
         BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.2/el7/"
         export LUSTRE_SERVER_URL="$BASE_URL/server/"
         export LUSTRE_CLIENT_URL="$BASE_URL/client/"
-        # these should be determined from the above
-        export LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.2_el7_server_.repo"
-        export LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/downloads.hpdd.intel.com_public_lustre_lustre-2.10.2_el7_client_.repo"
     fi
+    LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_SERVER_URL" | sed -e 's/^.*:\/\///' -e 's/\//_/g').repo"
+    LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_CLIENT_URL" | sed -e 's/^.*:\/\///' -e 's/\//_/g').repo"
+    export LUSTRE_SERVER_REPO_FILE LUSTRE_CLIENT_REPO_FILE
 } # end of set_defaults()
