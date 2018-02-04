@@ -74,7 +74,12 @@ if $JENKINS; then
 else
     ARCHIVE_PATH=chroma-bundles
 fi
-scp $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+
+if [ -f ~/storage_server.repo ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo
+fi
+
+scp $STORAGE_SERVER_REPO $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect pdsh
@@ -95,6 +100,11 @@ if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_
     rc=\${PIPESTATUS[0]}
     cat /var/log/chroma/install.log
     exit \$rc
+fi
+
+# override /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo ]; then
+    cp /tmp/storage_server.repo /usr/share/chroma-manager/storage_server.repo
 fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py

@@ -305,7 +305,7 @@ def _new_profiles(upgrade):
 def _old_bundles():
     bundles = {}
     log.debug("Bundles currently installed:")
-    for bundle_meta_path in glob.glob(os.path.join(BUNDLE_ROOT, "*/meta")):
+    for bundle_meta_path in glob.glob(os.path.join(BUNDLE_ROOT, "*/*/meta")):
         meta = json.load(open(bundle_meta_path))
 
         log.debug("{name}-{version}: {description}".format(
@@ -449,6 +449,7 @@ def _backup_repo(old_bundles, bundle, meta):
     # repos
     if os.path.exists(os.path.join(BUNDLE_ROOT, meta['name'])):
         for path in os.listdir(os.path.join(BUNDLE_ROOT, meta['name'])):
+            path = os.path.join(BUNDLE_ROOT, meta['name'], path)
             if os.path.isdir(path):
                 shutil.rmtree(path)
             else:
@@ -507,6 +508,15 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             # repo will already have been moved to backup location
             log.debug("Removing retired bundle %s" % meta['name'])
             _run(['chroma-config', 'bundle', 'delete', install_location])
+            # agents will still have the repo we just deleted configured
+            # and be getting errors trying to find the metadata
+            # create an empty repo for this retired bundle
+            try:
+                os.makedirs(install_location)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise SystemExit("Failed to create %s" % install_location)
+            _run(['createrepo', install_location])
 
 
 def _install_or_upgrade_profiles(new_profiles):
@@ -614,7 +624,7 @@ def _check_repos():
                      'You may also see this message if Red Hat Satellite repos are enabled.\n'
                      'To skip this check, please rerun with the --no-repo-check flag.')
             log.info("URLs that failed: %s" % ' '.join(urls))
-            sys.exit(-11)
+            sys.exit(-1)
 
 
 def main():

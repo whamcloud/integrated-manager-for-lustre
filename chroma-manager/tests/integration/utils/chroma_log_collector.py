@@ -168,9 +168,9 @@ class ChromaLogCollector(object):
 
         """
 
-        # Check that iml-diagnostics is installed. May not be if installation failed, etc.
-        if shell_run(['ssh', server, 'which iml-diagnostics']).rc:
-            return ["iml-diagnostics not installed on %s. skipping." % server]
+        # Install iml_sos_plugin if not already installed
+        if shell_run(['ssh', server, 'yum -y install iml_sos_plugin']).rc:
+            return ["iml_sos_plugin failed to install on %s. skipping." % server]
 
         # Generate the diagnostics from the server
         result = shell_run(
