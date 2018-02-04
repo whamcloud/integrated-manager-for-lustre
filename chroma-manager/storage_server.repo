@@ -19,13 +19,13 @@ gpgkey=http://pgp.mit.edu/pks/lookup?op=get&search=0xA9D5A1C0F14AB620
 
 [lustre]
 name=Lustre Server
-baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.1/el7/patchless-ldiskfs-server/
+baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.3/el7/patchless-ldiskfs-server/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.2/el7/client/
+baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.3/el7/client/
 enabled=1
 gpgcheck=0
 
