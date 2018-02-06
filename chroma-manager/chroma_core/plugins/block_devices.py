@@ -13,6 +13,11 @@ from iml_common.lib.util import human_to_bytes
 from toolz.functoolz import pipe, curry
 from toolz.curried import map as cmap, filter as cfilter
 from collections import namedtuple
+from logging import DEBUG
+from chroma_core.services import log_register
+
+log = log_register('plugin_runner')
+log.setLevel(DEBUG)
 
 UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
 
@@ -134,14 +139,19 @@ def filter_device(x):
 
 def get_host_devices(fqdn):
     global _data
-    host_data = _data.pop(fqdn)
+
+    try:
+        host_data = _data.pop(fqdn)
+    except KeyError:
+        log.debug('no aggregator data found for {}'.format(fqdn))
+        return DeviceMaps({}, {}, [], [])
 
     devices = json.loads(host_data)
 
-    return DeviceMaps(devices["blockDevices"],
-                      devices["zed"]["zpools"],
-                      devices["zed"]["zfs"],
-                      devices["zed"]["props"])
+    return DeviceMaps(devices["blockDevices"],   # dict
+                      devices["zed"]["zpools"],  # dict
+                      devices["zed"]["zfs"],     # list
+                      devices["zed"]["props"])   # list
 
 
 def create_device_list(device_dict):
@@ -344,10 +354,16 @@ def parse_sys_block(device_map):
     return [vgs, lvs, mds, local_fs, block_device_nodes]
 
 
-def parse_zpools(zpool_map, zfs_map, block_device_nodes):
+def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
+    """
+    :param zpool_map: dictionary of pools keyed on guid
+    :param zfs_objs: list of dataset dictionaries
+    :param block_device_nodes: dictionary of block device dictionaries keyed on major minor
+    :return: list of pools datasets and block_device_nodes
+    """
     zpools = {}
     datasets = {}
-    # fixme: get zvols from zfs_map using some identifier to discern from datasets
+    # fixme: get zvols from zfs_objs using some identifier to discern from datasets
 
     for pool in zpool_map.values():
         name = pool['name']
@@ -361,7 +377,7 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
             raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
 
         # todo: use name/path as key, uid not guaranteed to be unique between datasets on different zpools
-        # Note: may be able to use nested dataset information from libzfs bindings instead of zfs_map lookup
+        # Note: may be able to use nested dataset information from libzfs bindings instead of zfs_objs lookup
         def get_id(ds):
             return ds['poolGuid'] + '-' + ds['name']
 
@@ -370,7 +386,7 @@ def parse_zpools(zpool_map, zfs_map, block_device_nodes):
                                   "block_device": "zfsset:{}".format(get_id(ds)),
                                   "uuid": get_id(ds),
                                   "size": 0,  # fixme
-                                  "drives": drive_mms} for ds in [x for x in zfs_map.values() if x['poolGuid'] == guid]}
+                                  "drives": drive_mms} for ds in [x for x in zfs_objs if x['poolGuid'] == guid]}
 
         _devs = {}
 
@@ -466,11 +482,14 @@ def discover_zpools(all_devs):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
-        acc['zfs'].update({k: v for k, v in maps['zed']['zfs'].iteritems() if v['poolGuid'] in pools.keys()})
+        acc['zfs'].extend([d for d in maps['zed']['zfs'] if d['poolGuid'] in pools.keys()])
 
         return acc
 
-    other_zpools_zfs = reduce(extract, _data.values(), defaultdict(dict))
+    other_zpools_zfs = reduce(extract, _data.values(), {'zpools': {}, 'zfs': []})
+
+    if other_zpools_zfs['zpools']:
+        log.debug("apply new zfs objs: {}".format(other_zpools_zfs))
 
     # verify we haven't already got a representation for this pool locally
     if any(guid for guid in all_devs['zfspools'].iterkeys()
@@ -490,6 +509,7 @@ def discover_zpools(all_devs):
 def get_block_devices(fqdn):
     aggregator_get()
 
+    log.debug('fetching devices for {}'.format(fqdn))
     device_maps = get_host_devices(fqdn)
 
     devs_list = parse_sys_block(device_maps.block_devices)
