@@ -19,7 +19,7 @@ from chroma_core.services import log_register
 log = log_register('plugin_runner')
 log.setLevel(DEBUG)
 
-UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
+UNAVAILABLE_STATES = ['EXPORTED', 'UNAVAIL']
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
 
@@ -365,7 +365,7 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
     datasets = {}
     # fixme: get zvols from zfs_objs using some identifier to discern from datasets
 
-    for pool in zpool_map.values():
+    def populate(pool):
         name = pool['name']
         guid = pool['guid']
 
@@ -435,6 +435,10 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
 
         block_device_nodes.update(_devs)
 
+    map(populate,
+        filter(lambda x: x['state'] not in UNAVAILABLE_STATES,
+               zpool_map.itervalues()))
+
     return [zpools, datasets, block_device_nodes]
 
 
@@ -472,7 +476,7 @@ def discover_zpools(all_devs):
 
         # verify pool is imported
         pools = pipe(maps['zed']['zpools'].itervalues(),
-                     cfilter(lambda pool: pool['state'] not in UNSUPPORTED_STATES),
+                     cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
                      cfilter(match_drives),
                      list)
 
@@ -497,7 +501,7 @@ def discover_zpools(all_devs):
     # verify we haven't already got a representation for this pool locally
     if any(guid for guid in all_devs['zfspools'].iterkeys()
            if guid in other_zpools_zfs['zpools'].keys()
-            and other_zpools_zfs['zpools'][guid]['state'] not in UNSUPPORTED_STATES):
+            and other_zpools_zfs['zpools'][guid]['state'] not in UNAVAILABLE_STATES):
         raise RuntimeError("duplicate active representations of zpool (local)")
 
     # updates reported devices

@@ -376,3 +376,35 @@ class TestBlockDevices(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             self.get_patched_block_devices(fixture)
+
+    def test_ignore_exported_zpools(self):
+        """ verify exported pools are not reported """
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        self.assertEqual(block_devices['zfspools'], {})
+        self.assertEqual(block_devices['zfsdatasets'], {})
+
+    def test_ignore_other_exported_zpools(self):
+        """ verify elsewhere exported pools are not reported """
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {},
+                                      {},
+                                      {})
+
+        fixture = self.patch_zed_data(fixture,
+                                      'vm5.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        self.assertEqual(block_devices['zfspools'], {})
+        self.assertEqual(block_devices['zfsdatasets'], {})
