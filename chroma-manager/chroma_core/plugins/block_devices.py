@@ -386,7 +386,8 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
                                   "block_device": "zfsset:{}".format(get_id(ds)),
                                   "uuid": get_id(ds),
                                   "size": 0,  # fixme
-                                  "drives": drive_mms} for ds in [x for x in zfs_objs if x['poolGuid'] == guid]}
+                                  "drives": drive_mms} for ds in [d for d in zfs_objs
+                                                                  if int(d['poolGuid'], 16) == int(guid, 16)]}
 
         _devs = {}
 
@@ -467,7 +468,7 @@ def discover_zpools(all_devs):
         def match_drives(pool):
             pool_disks = [child['Disk'] for child in pool['vdev']['Root']['children']]
 
-            return get_drives(pool_disks, all_devs['devs']).intersection(set(all_devs['devs'].keys()))
+            return get_drives(pool_disks, all_devs['devs']).issubset(set(all_devs['devs'].keys()))
 
         # verify pool is imported
         pools = pipe(maps['zed']['zpools'].itervalues(),
@@ -482,7 +483,9 @@ def discover_zpools(all_devs):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
-        acc['zfs'].extend([d for d in maps['zed']['zfs'] if d['poolGuid'] in pools.keys()])
+
+        acc['zfs'].extend([d for d in maps['zed']['zfs']
+                           if int(d['poolGuid'], 16) in [int(h, 16) for h in pools.keys()]])
 
         return acc
 
