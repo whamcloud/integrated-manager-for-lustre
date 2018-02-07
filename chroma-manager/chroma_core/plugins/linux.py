@@ -199,6 +199,10 @@ class Linux(Plugin):
         fqdn = ManagedHost.objects.get(id=host_id).fqdn
         devices = get_block_devices(fqdn)
 
+        log.debug("{} reporting datasets: {}, pools: {}".format(fqdn,
+                                                                devices['zfsdatasets'].keys(),
+                                                                devices['zfspools'].keys()))
+
         dev_json = json.dumps(devices['devs'], sort_keys=True)
 
         if dev_json == self.current_devices:
@@ -212,7 +216,7 @@ class Linux(Plugin):
 
         # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
         # for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
-        for expected_item in ['vgs', 'lvs', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices.keys():
                 devices[expected_item] = {}
 
