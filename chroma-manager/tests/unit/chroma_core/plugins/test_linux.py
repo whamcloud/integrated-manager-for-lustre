@@ -169,6 +169,12 @@ class TestBlockDevices(unittest.TestCase):
                                             'path': u'testPool4',
                                             'size': 10670309376,
                                             'uuid': u'0x0123456789abcdef'}}
+    dataset_result = {u'0x04e1f2b3ba6f5ce9-testPool4/ds1': {'block_device': 'zfsset:0x04e1f2b3ba6f5ce9-testPool4/ds1',
+                                                            'drives': set([u'8:32', u'8:64']),
+                                                            'name': u'testPool4/ds1',
+                                                            'path': u'testPool4/ds1',
+                                                            'size': 0,
+                                                            'uuid': u'0x04e1f2b3ba6f5ce9-testPool4/ds1'}}
 
     def setUp(self):
         super(TestBlockDevices, self).setUp()
@@ -193,7 +199,7 @@ class TestBlockDevices(unittest.TestCase):
                                                   fixture[self.test_host_fqdn]))
         host_data['zed'] = {'zpools': pools if pools is not None else host_data['zed']['zpools'],
                             'zfs': zfs if zfs is not None else host_data['zed']['zfs'],
-                            'props': props if props is not None else host_data['zed']['props'],}
+                            'props': props if props is not None else host_data['zed']['props']}
 
         fixture[host_fqdn] = json.dumps(host_data)
 
@@ -350,8 +356,7 @@ class TestBlockDevices(unittest.TestCase):
 
         # datasets should be reported after processing
         self.assertEqual(block_devices['zfspools'], {})
-        import ipdb;ipdb.set_trace()
-        self.assertEqual(block_devices['zfsdatasets'], self.zpool_result)
+        self.assertEqual(block_devices['zfsdatasets'], self.dataset_result)
 
     def test_discover_zpools_both_active(self):
         """ verify exception thrown when accessible active pools are active on other hosts """
