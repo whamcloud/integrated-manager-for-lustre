@@ -153,8 +153,8 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if [ -f ~/storage_server.repo ]; then
-    STORAGE_SERVER_REPO=~/storage_server.repo
+if [ -f ~/storage_server.repo.in ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo.in
 fi
 
 # Install and setup manager
@@ -275,8 +275,11 @@ $LOCAL_SETTINGS
 EOF1
 
 # override /usr/share/chroma-manager/storage_server.repo
-if [ -f /tmp/storage_server.repo ]; then
-    cp /tmp/storage_server.repo /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo.in ]; then
+    # make sure we use the correct lustre though!
+    sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
+        -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
+        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
 fi
 
 # Ensure that coverage is disabled

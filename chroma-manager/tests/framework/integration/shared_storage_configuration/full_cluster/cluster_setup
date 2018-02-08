@@ -37,8 +37,8 @@ else
     ARCHIVE_PATH=$CHROMA_DIR/chroma-bundles
 fi
 
-if [ -f ~/storage_server.repo ]; then
-    STORAGE_SERVER_REPO=~/storage_server.repo
+if [ -f ~/storage_server.repo.in ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo.in
 fi
 
 if [ -n "$RELEASE_ARCHIVE" ]; then
@@ -65,8 +65,11 @@ if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_
 fi
 
 # override /usr/share/chroma-manager/storage_server.repo
-if [ -f /tmp/storage_server.repo ]; then
-    cp /tmp/storage_server.repo /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo.in ]; then
+    # make sure we use the correct lustre though!
+    sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
+        -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
+        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
 fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
