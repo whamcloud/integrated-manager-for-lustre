@@ -138,10 +138,10 @@ else:
 yumdepfinder = YumDepFinder()
 deps, missing_deps = yumdepfinder.get_deps(repos, pkgs, excludes)
 
-if missing_deps:
-    print >>sys.stderr, "final missing_deps: %s" % missing_deps
-    print '\n'.join(missing_deps)
-    sys.exit(1)
+# if missing_deps:
+#     print >>sys.stderr, "final missing_deps: %s" % missing_deps
+#     print '\n'.join(missing_deps)
+#     sys.exit(1)
 
 print '\n'.join(["%s-%s-%s.%s" % (p.name, p.version, p.release, p.arch)
                 for p in deps if p.repoid == "repo0"])
