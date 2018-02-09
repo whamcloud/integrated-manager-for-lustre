@@ -34,7 +34,7 @@ Requires: python-uuid
 Requires: python-paramiko
 Requires: python2-kombu >= 3.0.19
 Requires: python-daemon
-Requires: python-requests >= 2.6.0
+Requires: python2-requests >= 2.6.0
 Requires: python-networkx
 Requires: python2-httpagentparser
 Requires: python-gunicorn
@@ -126,7 +126,7 @@ This package contains libraries for Chroma CLI and Chroma Server.
 %package cli
 Summary: Command-Line Interface for Chroma Server
 Group: System/Utility
-Requires: chroma-manager-libs = %{version}-%{release} python-argparse python-requests >= 2.6.0 python-tablib python-prettytable
+Requires: chroma-manager-libs = %{version}-%{release} python-argparse python2-requests >= 2.6.0 python-tablib python-prettytable
 %description cli
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
@@ -134,7 +134,7 @@ or on a separate node.
 %package integration-tests
 Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.3
+Requires: python2-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.3
 Requires: Django >= 1.4, Django < 1.5
 %description integration-tests
 This package contains the Intel Manager for Lustre integration tests and scripts and is intended
