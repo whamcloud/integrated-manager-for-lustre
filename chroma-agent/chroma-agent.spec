@@ -21,6 +21,7 @@ Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: ntp
 Requires: python-argparse
+Requires: python-daemon
 Requires: python-setuptools
 Requires: python-requests >= 2.6.0
 Requires: python2-tablib
