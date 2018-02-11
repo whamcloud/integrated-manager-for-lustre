@@ -144,6 +144,9 @@ fi
 MOST_RECENT_KERNEL_VERSION=$(rpm -q kernel --qf "%{INSTALLTIME} %{VERSION}-%{RELEASE}.%{ARCH}\n" | sort -nr | sed -n -e '/_lustre/{s/.* //p;q}')
 grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 
+%postun
+rm -rf /var/lib/iml*
+
 %files -f base.files
 %defattr(-,root,root)
 %attr(0755,root,root)/etc/init.d/chroma-agent
