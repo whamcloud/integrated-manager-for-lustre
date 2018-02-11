@@ -34,7 +34,8 @@ if ! $VAGRANT; then
     rc=0
     PROVISION_START_TIME=$(date '+%s')
     cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=${PIPESTATUS[1]}
-    touch cluster_provisioned
+    echo "$PWD" >&2
+    touch "$WORKSPACE"/cluster_provisioned
     PROVISION_END_TIME=$(date '+%s')
     PROVISION_DURATION=$(( PROVISION_END_TIME-PROVISION_START_TIME ))
     echo "$PROVISION_DURATION" > $WORKSPACE/provision_duration.txt
