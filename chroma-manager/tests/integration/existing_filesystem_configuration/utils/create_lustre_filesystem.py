@@ -3,6 +3,7 @@ import json
 import sys
 
 from testconfig import config
+from tests.integration.core.remote_operations import stop_agent_cmd
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
@@ -89,6 +90,12 @@ class CreateLustreFilesystem(UtilityTestCase):
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
+                stop_agent_cmd,
+                expected_return_code=None
+            )
+
+            self.remote_command(
+                server['address'],
                 'umount -t lustre -a'
             )
 
@@ -98,22 +105,23 @@ class CreateLustreFilesystem(UtilityTestCase):
                                   server['address'],
                                   'clear command')
 
-        # Wipe the start of the devices to make sure they are clean only after
+        # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
-        for server in config['lustre_servers']:
-            self.dd_devices(server['nodename'])
 
+        next((self.clear_devices(x['nodename']) for x in config['lustre_servers']), None)
+
+        for server in config['lustre_servers']:
             self.remote_command(server['address'],
                                 'reboot',
-                                expected_return_code = None)    # Sometimes reboot hangs, sometimes it doesn't
+                                expected_return_code=None)  # Sometimes reboot hangs, sometimes it doesn't
 
         def host_alive(hostname):
             try:
                 return self.remote_command(hostname,
                                            'hostname',
-                                           expected_return_code = None).exit_status == 0
+                                           expected_return_code=None).exit_status == 0
             except:
                 return False
 
@@ -152,8 +160,7 @@ class CreateLustreFilesystem(UtilityTestCase):
                                      'mgt',
                                      self.fsname,
                                      None,
-                                     ['--reformat',
-                                      '--mdt' if self.combined_mgt_mdt else '',
+                                     ['--mdt' if self.combined_mgt_mdt else '',
                                       '--mgs'])
 
         try:
@@ -171,15 +178,15 @@ class CreateLustreFilesystem(UtilityTestCase):
                                              'mdt',
                                              self.fsname,
                                              mgs_nids,
-                                             ['--reformat', '--mdt'])
+                                             ['--mdt'])
 
         for ost in self.osts:
-            self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--reformat', '--ost'])
+            self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--ost'])
 
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
-                'partprobe; sync; sync'
+                'partprobe || true; udevadm settle; sync; sync'
             )
 
         self._save_modified_config()
@@ -211,12 +218,12 @@ class CreateLustreFilesystem(UtilityTestCase):
             server_name,
             "sed -i '/lustre/d' /etc/fstab")
 
-    def dd_devices(self, server_name):
+    def clear_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
             self.remote_command(
                 server_name,
-                "dd if=/dev/zero of=%s bs=512 count=1" % device)
+                "wipefs -a %s" % device)
 
     def rename_device(self, device_old_path, device_new_path):
         for lustre_server in config['lustre_servers']:

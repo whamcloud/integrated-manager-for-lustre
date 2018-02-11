@@ -22,19 +22,16 @@ $(SUBDIRS):
 
 clean install:: subdirs
 
-package: subdirs $(PROFILES) lesskey.out EULA.txt create_installer
+package: subdirs $(PROFILES) lesskey.out create_installer
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(DISTRO_TAG)/$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
 		--show-transformed-names \
 		-C ../ \
 		--exclude README-INTERNAL \
-	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(WORKDIR)/EULA.txt $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
+	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/chroma_support.repo $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
 
 lesskey.out: lesskey.in
 	lesskey -o $@ $<
-
-EULA.txt: ../chroma-manager/chroma_help/help.py
-	python include/get_eula.py | html2text > $@
 
 rpms:
 	@echo "I don't know how to make RPMS!"

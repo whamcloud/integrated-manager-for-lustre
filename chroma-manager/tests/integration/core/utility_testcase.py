@@ -69,7 +69,7 @@ class UtilityTestCase(TestCase):
         stdout = []
         for command in commands:
             result = self.remote_command(target, command, expected_return_code=expected_return_code)
-            logger.info("%s command %s exit_status %s output:\n %s" % (debug_message, command, result.exit_status, result.stdout))
+            logger.info("%s command %s exit_status %s \noutput:\n %s \nstderr:\n %s" % (debug_message, command, result.exit_status, result.stdout, result.stderr))
 
             stdout.append(result.stdout)
 
@@ -106,7 +106,14 @@ class UtilityTestCase(TestCase):
         transport.set_keepalive(20)
         channel = transport.open_session()
         channel.settimeout(timeout)
-        channel.exec_command(command)
+        # exec 0<&- being prefixed to the shell command string below closes
+        # the shell's stdin as we don't expect any uses of remote_command()
+        # to read from stdin
+        # the set -e just sets up a fail-safe execution environment where
+        # any shell commands in command that fail and are not error checked
+        # cause the shell to fail, alerting the caller that one of their
+        # commands failed unexpectedly
+        channel.exec_command("exec 0<&-; set -e; %s" % command)
         exit_status = channel.recv_exit_status()
         stdout = channel.makefile('rb').read()
         stderr = channel.makefile_stderr('rb').read()

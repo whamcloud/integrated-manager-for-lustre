@@ -1,7 +1,10 @@
 map $ssl_client_s_dn $ssl_client_s_dn_cn {
     default "";
-    ~/CN=(?<CN>[^/]+) $CN;
+    ~CN=(?<CN>[^,]+) $CN;
 }
+
+error_log syslog:server=unix:/dev/log;
+access_log syslog:server=unix:/dev/log;
 
 server {
     listen {{HTTP_FRONTEND_PORT}};
@@ -50,8 +53,8 @@ server {
         return 301 https://$http_host/ui;
     }
 
-    location /static/webhelp {
-        alias {{APP_PATH}}/ui-modules/node_modules/intel-help-docs/;
+    location /help {
+        alias /usr/lib/iml-manager/iml-online-help;
 
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
@@ -199,5 +202,9 @@ server {
     location /client/ {
         autoindex on;
         alias {{REPO_PATH}}/lustre-client/;
+    }
+
+    location /iml-srcmap-reverse {
+        proxy_pass http://unix:/var/run/iml-srcmap-reverse.sock;
     }
 }

@@ -60,7 +60,11 @@ requirements::
 	echo "mock==1.0.1";                                       \
 	echo "gunicorn==18.0";                                    \
 	echo "pytz==2014.4";                                      \
-	echo "https://dl.dropboxusercontent.com/s/qqjud11bvh8vo68/coverage-3.5.2pl2.tar.gz"; \
+	echo "tzlocal";                                           \
+	echo "systemd-python";                                    \
+	echo "iml-common>=1.3,<1.4";                              \
+	echo "toolz";                                             \
+	echo "coverage==3.5.2";                                   \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
 	    $(TOP)/../chroma-manager/requirements.tmp
 

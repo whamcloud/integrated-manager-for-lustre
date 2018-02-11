@@ -15,13 +15,15 @@ function upgrade_os {
     echo "Now upgrade the operating system to ${upgrade_distro_name_version_arch} on nodes ${comma_list_nodes}"
 
     pdsh -l root -R ssh -S -w ${comma_list_nodes} "exec 2>&1; set -xe
-if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
-    cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
-fi
+if $JENKINS; then
+    if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
+        cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
+    fi
 
-# Fetch the cobbler repo file for the version we are upgrading to, and clean the repo of
-# the data form the previous repo file.
-curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
+    # Fetch the cobbler repo file for the version we are upgrading to, and clean the repo of
+    # the data form the previous repo file.
+    curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
+fi
 
 # On RHEL systems, we need to set the releasever
 if which subscription-manager; then
@@ -61,10 +63,12 @@ fi
 
 rpm -qa | sort >/tmp/after_upgrade
 
-# The yum upgrade might have restored the /etc/yum.repos.d/CentOS-*.repo
-# files so remove them here
-if ls /etc/yum.repos.d/CentOS-*.repo; then
-    rm /etc/yum.repos.d/CentOS-*.repo
+if $JENKINS; then
+    # The yum upgrade might have restored the /etc/yum.repos.d/CentOS-*.repo
+    # files so remove them here
+    if ls /etc/yum.repos.d/CentOS-*.repo; then
+        rm /etc/yum.repos.d/CentOS-*.repo
+    fi
 fi
 
 # TODO: we really ought to reboot here
@@ -79,4 +83,5 @@ fi
 
     # We have upgraded to the upgrade_distribution so the TEST_DISTRO_VERSION has now changed.
     export TEST_DISTRO_VERSION=${upgrade_distro_version}
+
 }

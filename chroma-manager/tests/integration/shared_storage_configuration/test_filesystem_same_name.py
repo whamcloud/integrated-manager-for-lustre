@@ -1,5 +1,4 @@
-
-from testconfig import config
+import time
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
@@ -10,7 +9,7 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         Test that creating a filesystem with the same name as a
         previously removed filesystem on the same MGS.
         """
-        self.assertGreaterEqual(len(config['lustre_servers'][0]['device_paths']), 5)
+        self.assertGreaterEqual(len(self.TEST_SERVERS[0]['device_paths']), 5)
 
         reused_name = 'testfs'
         other_name = 'foofs'
@@ -73,18 +72,50 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
         # Now remove any zfs datasets, this is a topic to be discussed, but until we remove the datasets
         # we cannot create a new filesystem. If IML does it directly as part of remove filesystem which it could
         # then removing the filesystem would be truly unrecoverable and people might not like that.
-        datasets = [ost['volume']['volume_nodes'][0]['path'] for ost in fs['osts']]
-        datasets.extend([mdt['volume']['volume_nodes'][0]['path'] for mdt in fs['mdts']])
+        datasets = [
+            ost['volume']['volume_nodes'][0]['path'] for ost in fs['osts']
+        ]
+        datasets.extend(
+            [mdt['volume']['volume_nodes'][0]['path'] for mdt in fs['mdts']])
 
         # Filter out the paths by removing anything with a leading /.
-        datasets = [dataset for dataset in datasets if dataset.startswith('/') is False]
+        datasets = [
+            dataset for dataset in datasets if dataset.startswith('/') is False
+        ]
+        datasets.sort(key=lambda x: -len(x))
 
-        self.remote_operations.stop_agents(s['address'] for s in self.TEST_SERVERS[:4])
-        self.cleanup_zfs_pools(self.TEST_SERVERS[:4],
-                               self.CZP_REMOVEDATASETS | self.CZP_EXPORTPOOLS,
-                               datasets,
-                               True)
-        self.remote_operations.start_agents(s['address'] for s in self.TEST_SERVERS[:4])
+        pools = map(lambda x: x.split('/')[0], datasets)
+
+        fqdns = [x['fqdn'] for x in self.TEST_SERVERS[:4]]
+
+        self.remote_operations.stop_agents(s['address']
+                                           for s in self.TEST_SERVERS[:4])
+        for pool in pools:
+            self.execute_commands(
+                ['zpool import %s' % pool],
+                fqdns[0],
+                'import pool %s' % pool,
+                expected_return_code=None)
+
+        for zpool_dataset in datasets:
+            self.execute_commands(
+                ['zfs destroy %s' % zpool_dataset],
+                fqdns[0],
+                'destroy zfs dataset %s' % zpool_dataset,
+                expected_return_code=None)
+
+        for pool in pools:
+            self.execute_commands(
+                ['zpool export %s' % pool],
+                fqdns[0],
+                'export pool %s' % pool,
+                expected_return_code=None)
+
+        self.remote_operations.start_agents(s['address']
+                                            for s in self.TEST_SERVERS[:4])
+
+        # Wait for agent responses to be detected by manager
+        time.sleep(10)
 
         # Our other FS should be untouched
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects']), 1)

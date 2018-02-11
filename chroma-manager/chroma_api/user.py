@@ -14,9 +14,7 @@ from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_core.models import UserProfile
 from chroma_api.chroma_model_resource import ChromaModelResource
-from chroma_api.validation_utils import validate
 
 
 class ChromaUserChangeForm(UserChangeForm):
@@ -123,14 +121,6 @@ class UserResource(ChromaModelResource):
 
     is_superuser = fields.BooleanField(readonly=True, help_text="Is the user a superuser", attribute="is_superuser")
 
-    accepted_eula = fields.CharField(help_text="Has a superuser accepted the eula")
-
-    gui_config = fields.DictField(help_text='JSON configuration used by the GUI.')
-
-    eula_state = fields.CharField(readonly=True, help_text="Should a eula be displayed for this user?"
-                                                           " Returns one of %s." %
-                                                           ", ".join(str(x) for x in UserProfile.STATES))
-
     def alter_deserialized_detail_data(self, request, data):
         def handle_groups(group):
             if isinstance(group, dict):
@@ -144,7 +134,6 @@ class UserResource(ChromaModelResource):
             data['groups'] = map(handle_groups, data['groups'])
 
         return data
-
 
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
@@ -204,42 +193,9 @@ class UserResource(ChromaModelResource):
                 bundle.obj.save()
 
         return bundle
-    
-    def obj_update(self, bundle, **kwargs):
-        bundle = super(UserResource, self).obj_update(bundle, **kwargs)
-
-        user_profile_changed = False
-        gui_config = bundle.data.get('gui_config')
-
-        if gui_config:
-            bundle.obj.userprofile.gui_config = gui_config
-            user_profile_changed = True
-
-        if bundle.obj.is_superuser:
-            accepted_eula = bundle.data["accepted_eula"]
-
-            if accepted_eula:
-                bundle.obj.userprofile.accepted_eula = accepted_eula
-                user_profile_changed = True
-            else:
-                UserProfile.objects.filter(user__is_superuser=True, accepted_eula=True).update(accepted_eula=False)
-
-        if user_profile_changed:
-            bundle.obj.userprofile.save()
-
-        return bundle
 
     def dehydrate_full_name(self, bundle):
         return bundle.obj.get_full_name()
-
-    def dehydrate_accepted_eula(self, bundle):
-        return UserProfile.objects.eula_accepted()
-
-    def dehydrate_eula_state(self, bundle):
-        return bundle.obj.get_profile().get_state()
-
-    def dehydrate_gui_config(self, bundle):
-        return bundle.obj.get_profile().gui_config
 
     def delete_detail(self, request, **kwargs):
         if int(kwargs['pk']) == request.user.id:

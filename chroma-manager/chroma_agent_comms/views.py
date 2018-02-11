@@ -360,7 +360,9 @@ def setup(request, key):
     if token_error:
         return token_error
 
-    repos = ""
+    # the minimum repos needed on a storage server now
+    repos = open("/usr/share/chroma-manager/storage_server.repo").read()
+
     repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
     for bundle in Bundle.objects.all():
         if bundle.bundle_name != "external":
@@ -383,7 +385,7 @@ proxy=_none_
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
-    repo_packages = 'chroma-agent chroma-diagnostics'
+    repo_packages = 'chroma-agent'
     server_profile = ServerProfile.objects.get(name = request.REQUEST['profile_name'])
 
     try:

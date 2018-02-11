@@ -4,7 +4,6 @@
   "worker": true,
   "name": "posix_copytool_worker",
   "initial_state": "working",
-  "rsyslog": true,
   "ntp": true,
   "corosync": false,
   "corosync2": false,

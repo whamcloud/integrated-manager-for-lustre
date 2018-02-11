@@ -1,0 +1,264 @@
+{
+  "ssh_config": "/tmp/ssh_config",
+  "power_control_types": [
+    {
+      "make": "KVM",
+      "poweron_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s",
+      "agent": "fence_virsh",
+      "monitor_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor",
+      "outlet_query_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s",
+      "default_username": "brian",
+      "default_password": "",
+      "model": "Virtual PDU",
+      "powercycle_template":
+        "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s",
+      "poweroff_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s",
+      "outlet_list_template":
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o list"
+    }
+  ],
+  "reset": true,
+  "managed": true,
+  "lustre_devices": [
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 0
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 1
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 2
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 3
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 4
+    }
+  ],
+  "power_distribution_units": [
+    {
+      "type": "KVM Virtual PDU",
+      "port": "22",
+      "address": "VM_HOST_IP"
+    }
+  ],
+  "lustre_clients": [
+    {
+      "nodename": "vm2",
+      "device_paths": [],
+      "destroy_command": "virsh destroy vm2",
+      "fqdn": "vm2",
+      "start_command": "virsh start vm2",
+      "status_command": "virsh domstate vm2",
+      "host": "host",
+      "lustre_client_version": "",
+      "address": "vm2",
+      "ip_address": "10.73.10.32",
+      "distro": "el7.4"
+    }
+  ],
+  "pacemaker_hard_reset": true,
+  "repos": {
+    "chroma": {
+      "build_number": 357,
+      "build_job": "manager-for-lustre"
+    }
+  },
+  "provision": true,
+  "hosts": {
+    "host": {
+      "virsh_as_root": false,
+      "cluster_num": 0,
+      "nodename": "host",
+      "ip_address": "192.168.121.1",
+      "fqdn": "host",
+      "address": "host"
+    }
+  },
+  "failover_is_configured": true,
+  "test_runners": [
+    {
+      "nodename": "vm4",
+      "device_paths": [],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm4",
+      "fqdn": "vm4",
+      "start_command": "virsh start vm4",
+      "status_command": "virsh domstate vm4",
+      "host": "host",
+      "address": "vm4",
+      "ip_address": "10.73.10.8",
+      "distro": "el7.4"
+    }
+  ],
+  "lustre_servers": [
+    {
+      "bridges": ["a"],
+      "firewall_enabled": true,
+      "nodename": "vm5",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "corosync_config": {
+        "mcast_port": "4242",
+        "ring1_iface": "eth3"
+      },
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm5",
+      "fqdn": "vm5",
+      "start_command": "virsh start vm5",
+      "status_command": "virsh domstate vm5",
+      "host": "host",
+      "selinux_enabled": true,
+      "root_password": "vagrant",
+      "address": "vm5",
+      "ip_address": "10.73.10.21",
+      "distro": "el7.4"
+    },
+    {
+      "bridges": ["a"],
+      "firewall_enabled": true,
+      "nodename": "vm6",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "corosync_config": {
+        "mcast_port": "4242",
+        "ring1_iface": "eth3"
+      },
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm6",
+      "fqdn": "vm6",
+      "start_command": "virsh start vm6",
+      "status_command": "virsh domstate vm6",
+      "host": "host",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "address": "vm6",
+      "ip_address": "10.73.10.22",
+      "distro": "el7.4"
+    },
+    {
+      "bridges": ["b"],
+      "firewall_enabled": true,
+      "nodename": "vm7",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "corosync_config": {
+        "mcast_port": "4244",
+        "ring1_iface": "eth3"
+      },
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm7",
+      "fqdn": "vm7",
+      "start_command": "virsh start vm7",
+      "status_command": "virsh domstate vm7",
+      "host": "host",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "address": "vm7",
+      "ip_address": "10.73.10.23",
+      "distro": "el7.4"
+    },
+    {
+      "bridges": ["b"],
+      "firewall_enabled": true,
+      "nodename": "vm8",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "corosync_config": {
+        "mcast_port": "4244",
+        "ring1_iface": "eth3"
+      },
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm8",
+      "fqdn": "vm8",
+      "start_command": "virsh start vm8",
+      "status_command": "virsh domstate vm8",
+      "host": "host",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "address": "vm8",
+      "ip_address": "10.73.10.24",
+      "distro": "el7.4"
+    },
+    {
+      "profile": "posix_copytool_worker",
+      "firewall_enabled": true,
+      "nodename": "vm9",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk5"
+      ],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm8",
+      "fqdn": "vm9",
+      "start_command": "virsh start vm9",
+      "status_command": "virsh domstate vm9",
+      "host": "host",
+      "selinux_enabled": true,
+      "root_password": "vagrant",
+      "address": "vm9",
+      "ip_address": "10.73.10.231",
+      "distro": "el7.4"
+    }
+  ],
+  "pdu_outlets": [],
+  "chroma_managers": [
+    {
+      "server_http_url": "https://vm3/",
+      "firewall_enabled": true,
+      "users": [
+        {
+          "username": "admin",
+          "password": "lustre",
+          "super": true,
+          "email": "nobody@example.com"
+        }
+      ],
+      "nodename": "vm3",
+      "device_paths": [],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy vm3",
+      "fqdn": "vm3",
+      "start_command": "virsh start vm3",
+      "status_command": "virsh domstate vm3",
+      "host": "host",
+      "selinux_enabled": true,
+      "address": "vm3",
+      "ip_address": "10.73.10.10",
+      "distro": "el7.4"
+    }
+  ]
+}

@@ -6,10 +6,8 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 @skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
-@skip("Disable until upgrade is fixed")
+@skip("Until upgrades are handled by IML proper")
 class TestUpdates(ChromaIntegrationTestCase):
-    TEST_SERVERS = [config['lustre_servers'][0]]
-
     def test_upgrade_alerting(self):
         """
         Test that when a server reports some upgrades available, the manager raises

@@ -22,9 +22,7 @@ class TestBlockDeviceLinux(TestBlockDevice):
 
     @property
     def destroy_commands(self):
-        # Needless to say, we're not bothering to scrub the whole device, just enough
-        # that it doesn't look formatted any more.
-        return ['dd if=/dev/zero of=%s bs=4k count=1; sync' % self.device_path]
+        return ['wipefs -a {}'.format(self.device_path)]
 
     def __str__(self):
-        return 'zpool(%s)' % self.device_path
+        return '%s' % self.device_path

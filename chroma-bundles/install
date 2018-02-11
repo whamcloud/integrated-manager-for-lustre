@@ -72,7 +72,7 @@ def _check_platform():
     SUPPORTED_DISTROS = ['redhat', 'centos']
     # Keep the version locked down for now -- if we can go with a minimum
     # version that'd be better, but we can't assume (c.f. pacemaker).
-    SUPPORTED_VERSIONS = ['7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1611', '7.4', '7.4.1707' ]
+    SUPPORTED_VERSIONS = ['7.1', '7.1.1503', '7.2', '7.2.1511', '7.3', '7.3.1611', '7.4', '7.4.1708']
     # This will work assuming we have version parity across all supported
     # distributions.
     SUPPORTED_PLATFORMS = ["%s-%s-%s" % p for p in itertools.product(SUPPORTED_DISTROS, SUPPORTED_VERSIONS, SUPPORTED_ARCHES)]
@@ -85,44 +85,6 @@ def _check_platform():
 
     log.debug("Platform check ... Supported")
 
-
-def _display_eula():
-    try:
-        p = subprocess.Popen(["less", "-F", "-X", "-e", "-k",
-                               "lesskey.out", "EULA.txt"])
-        p.wait()
-    except KeyboardInterrupt:
-        print "\n\nYou must read all of the EULA and agree to the terms in order to install the software"
-        # less can leave the terminal in a weird state
-        subprocess.call(["stty", "sane"])
-        sys.exit(0)
-
-    answer = ""
-    while answer not in ["yes", "no"]:
-       answer = raw_input("Do you agree to the license terms?  (yes/no) ")
-       log.debug("EULA response: %s" % answer)
-
-    if answer.lower() != "yes":
-        log.error("EULA declined -- exiting without installation")
-        sys.exit(0)
-
-
-def _check_no_epel():
-    """Check that the EPEL repository is available
-
-    IML requires certain packages from EPEL
-    It MUST be enabled.
-    """
-
-    log.debug("EPEL check ... ")
-
-    #  Most often this check will be enough.
-    with open(os.devnull, 'wb') as DEVNULL:
-        if (subprocess.call(['yum', 'info', 'epel-release'], stdout=DEVNULL, stderr=DEVNULL) != 0):
-            log.error("Could not find repository: EPEL. Please enable EPEL and then re-run the installer.")
-            sys.exit(-1)
-
-    log.debug("EPEL check ... Passed")
 
 def _mkdir_p(path):
     try:
@@ -343,7 +305,7 @@ def _new_profiles(upgrade):
 def _old_bundles():
     bundles = {}
     log.debug("Bundles currently installed:")
-    for bundle_meta_path in glob.glob(os.path.join(BUNDLE_ROOT, "*/meta")):
+    for bundle_meta_path in glob.glob(os.path.join(BUNDLE_ROOT, "*/*/meta")):
         meta = json.load(open(bundle_meta_path))
 
         log.debug("{name}-{version}: {description}".format(
@@ -362,6 +324,19 @@ def _old_bundles():
         bundles[bundle_name] = meta
 
     return bundles
+    
+def _create_support_repos():
+
+    repodir = "/etc/yum.repos.d"
+    repofile = "chroma_support.repo"
+    target_path = os.path.join(repodir, repofile)
+    if not os.path.exists(target_path):
+        try:
+            shutil.copy(repofile, repodir)
+        except:
+            log.debug("Failed to create %s." % target_path)
+            log.info("Failed to create %s." % target_path)
+            sys.exit(-1)
 
 def _create_manager_repo():
     manager_repo_dir = tempfile.mkdtemp()
@@ -474,6 +449,7 @@ def _backup_repo(old_bundles, bundle, meta):
     # repos
     if os.path.exists(os.path.join(BUNDLE_ROOT, meta['name'])):
         for path in os.listdir(os.path.join(BUNDLE_ROOT, meta['name'])):
+            path = os.path.join(BUNDLE_ROOT, meta['name'], path)
             if os.path.isdir(path):
                 shutil.rmtree(path)
             else:
@@ -532,6 +508,15 @@ def _install_or_upgrade_bundles(old_bundles, new_bundles):
             # repo will already have been moved to backup location
             log.debug("Removing retired bundle %s" % meta['name'])
             _run(['chroma-config', 'bundle', 'delete', install_location])
+            # agents will still have the repo we just deleted configured
+            # and be getting errors trying to find the metadata
+            # create an empty repo for this retired bundle
+            try:
+                os.makedirs(install_location)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise SystemExit("Failed to create %s" % install_location)
+            _run(['createrepo', install_location])
 
 
 def _install_or_upgrade_profiles(new_profiles):
@@ -639,14 +624,12 @@ def _check_repos():
                      'You may also see this message if Red Hat Satellite repos are enabled.\n'
                      'To skip this check, please rerun with the --no-repo-check flag.')
             log.info("URLs that failed: %s" % ' '.join(urls))
-            sys.exit(1)
+            sys.exit(-1)
 
 
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--no-epel-check', '-e', action='store_false', default=True,
-                        dest='epel_check', required=False)
     parser.add_argument('--no-repo-check', '-r', action='store_false', default=True,
                         dest='repo_check',  required=False)
     parser.add_argument('--no-platform-check', '-p', action='store_false', default=True,
@@ -658,13 +641,10 @@ def main():
     if args.platform_check:
         _check_platform()
 
-    if args.epel_check:
-        _check_no_epel()
+    _create_support_repos()
 
     if args.repo_check:
         _check_repos()
-
-    _display_eula()
 
     version, release = _get_version()
 

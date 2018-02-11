@@ -47,7 +47,15 @@ set_defaults() {
     export SHORT_ARCHIVE_NAME="$(make -s -f $d/include/Makefile.version .short_archive_name)"
     export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz"
 
-    export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    if $JENKINS; then
+        export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+    fi
+
+    if [ -n "$PROVISIONER" ]; then
+        export VAGRANT=false
+    else
+        export VAGRANT=true
+    fi
 
     if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
         if $JENKINS; then
@@ -88,7 +96,7 @@ set_defaults() {
             export JENKINS_DISTRO="el6.4"
         fi
     else
-        export WORKSPACE=workspace
+        export WORKSPACE=$PWD/workspace
         mkdir -p $WORKSPACE
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
@@ -96,4 +104,20 @@ set_defaults() {
     set_distro_vars "$JENKINS_DISTRO"
 
     export CLUSTER_CONFIG="cluster_cfg.json"
+
+    export COPR_OWNER="managerforlustre"
+    export COPR_PROJECT="manager-for-lustre"
+    #LUSTRE_REVIEW_BUILD="12345"
+    if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
+        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
+        export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
+        export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
+    else
+        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.3/el7/"
+        export LUSTRE_SERVER_URL="$BASE_URL/server/"
+        export LUSTRE_CLIENT_URL="$BASE_URL/client/"
+    fi
+    LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_SERVER_URL" | sed -e 's/^.*:\/\///' -e 's/\/\/*/_/g').repo"
+    LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_CLIENT_URL" | sed -e 's/^.*:\/\///' -e 's/\/\/*/_/g').repo"
+    export LUSTRE_SERVER_REPO_FILE LUSTRE_CLIENT_REPO_FILE
 } # end of set_defaults()
