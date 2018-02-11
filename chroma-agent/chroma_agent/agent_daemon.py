@@ -48,11 +48,6 @@ def main():
     parser.add_argument("--publish-zconf", action="store_true")
     args = parser.parse_args()
 
-    # FIXME: at startup, if there is a PID file hanging around, find any
-    # processes which are children of that old PID, and kill them: prevent
-    # orphaned processes from an old agent run hanging around where they
-    # could cause trouble (think of a 2 hour mkfs)
-
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
     daemon_log_setup()
