@@ -85,6 +85,7 @@ def main():
             [function() for function in agent_daemon_teardown_functions]
 
         signal.signal(signal.SIGINT, teardown_callback)
+        signal.signal(signal.SIGTERM, teardown_callback)
         signal.signal(signal.SIGUSR1, decrease_loglevel)
         signal.signal(signal.SIGUSR2, increase_loglevel)
 
