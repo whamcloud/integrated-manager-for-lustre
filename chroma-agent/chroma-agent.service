@@ -6,8 +6,8 @@ After=network.target
 Type=simple
 ExecStart=/usr/bin/chroma-agent-daemon
 Restart=on-failure
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-StandardOutput=journal
-StandardError=journal
