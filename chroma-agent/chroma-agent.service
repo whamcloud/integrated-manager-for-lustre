@@ -9,3 +9,5 @@ Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
+StandardOutput=journal
+StandardError=journal
