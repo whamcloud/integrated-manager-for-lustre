@@ -141,6 +141,8 @@ if [ $1 -eq 1 ]; then
     # new install; create default agent config
     chroma-agent reset_agent_config
 elif [ $1 -eq 2 ]; then
+    systemctl enable %{name}
+    systemctl start %{name}
     # upgrade; convert any older agent config
     chroma-agent convert_agent_config
 fi
