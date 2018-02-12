@@ -86,6 +86,7 @@ echo \"Installation complete.  Manager can be reached at https://\$(ip addr ls d
 pdsh -R ssh -l root -S -w "$STORAGE_NODES" "set -ex
 # if this node uses the Intel proxies, make sure the agent is doing so
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
+    mkdir -p /etc/systemd/system/chroma-agent.service.d/
     echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
 fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
