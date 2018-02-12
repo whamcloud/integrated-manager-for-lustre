@@ -8,7 +8,7 @@ Name: %{name}
 Version: %{version}
 Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
-Source1: chroma-agent-init.sh
+Source1: %{name}.service
 Source2: lustre-modules-init.sh
 Source3: logrotate.cfg
 License: Proprietary
@@ -95,8 +95,9 @@ rm -rf %{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 mv $RPM_BUILD_ROOT/usr/{,s}bin/fence_chroma
 mv $RPM_BUILD_ROOT/usr/{,s}bin/chroma-copytool-monitor
+mkdir -p %{buildroot}/usr/lib/systemd/system/
+cp %{SOURCE1} %{buildroot}/usr/lib/systemd/system/%{name}.service
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
-cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 
@@ -123,6 +124,12 @@ done
 %clean
 rm -rf %{buildroot}
 
+%pre
+if [ $1 -eq 2 ]; then
+  systemctl stop %{name}
+  systemctl disable %{name}
+fi
+
 %post
 chkconfig lustre-modules on
 # disable SELinux -- it prevents both lustre and pacemaker from working
@@ -146,7 +153,7 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 
 %files -f base.files
 %defattr(-,root,root)
-%attr(0755,root,root)/etc/init.d/chroma-agent
+%attr(0644,root,root)/usr/lib/systemd/system/%{name}.service
 %attr(0755,root,root)/etc/init.d/lustre-modules
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
