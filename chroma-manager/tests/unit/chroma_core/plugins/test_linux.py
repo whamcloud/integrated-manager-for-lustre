@@ -162,19 +162,20 @@ class LinuxPluginTestCase(IMLUnitTestCase):
 
 class TestBlockDevices(unittest.TestCase):
     """ Verify aggregator output parsed through block_devices matches expected agent output """
-    test_host_fqdn = 'vm7.foo.com'
+    test_host_fqdn = 'vm5.foo.com'
     zpool_result = {u'0x0123456789abcdef': {'block_device': 'zfspool:0x0123456789abcdef',
                                             'drives': set([u'8:32', u'8:64']),
                                             'name': u'testPool4',
                                             'path': u'testPool4',
                                             'size': 10670309376,
                                             'uuid': u'0x0123456789abcdef'}}
-    dataset_result = {u'0x04e1f2b3ba6f5ce9-testPool4/ds1': {'block_device': 'zfsset:0x04e1f2b3ba6f5ce9-testPool4/ds1',
-                                                            'drives': set([u'8:32', u'8:64']),
-                                                            'name': u'testPool4/ds1',
-                                                            'path': u'testPool4/ds1',
-                                                            'size': 0,
-                                                            'uuid': u'0x04e1f2b3ba6f5ce9-testPool4/ds1'}}
+    dataset_result = {u'0xDB55C7876B45A0FB-testPool4/f1-OST0000': {'block_device':
+                                                                   'zfsset:0xDB55C7876B45A0FB-testPool4/f1-OST0000',
+                                                                   'drives': set([u'8:32', u'8:64']),
+                                                                   'name': u'testPool4/f1-OST0000',
+                                                                   'path': u'testPool4/f1-OST0000',
+                                                                   'size': 0,
+                                                                   'uuid': u'0xDB55C7876B45A0FB-testPool4/f1-OST0000'}}
 
     def setUp(self):
         super(TestBlockDevices, self).setUp()
@@ -287,7 +288,7 @@ class TestBlockDevices(unittest.TestCase):
         original_block_devices = self.get_patched_block_devices(fixture)
 
         fixture = self.patch_zed_data(self.fixture,
-                                      'vm5.foo.com',
+                                      'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')},
                                       {},
                                       {})
@@ -305,7 +306,7 @@ class TestBlockDevices(unittest.TestCase):
         original_block_devices = self.get_patched_block_devices(fixture)
 
         fixture = self.patch_zed_data(self.fixture,
-                                      'vm5.foo.com',
+                                      'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
                                       {},
                                       {})
@@ -329,7 +330,7 @@ class TestBlockDevices(unittest.TestCase):
 
         # add pool and zfs data to fixture for another host
         fixture = self.patch_zed_data(fixture,
-                                      'vm5.foo.com',
+                                      'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
@@ -343,7 +344,7 @@ class TestBlockDevices(unittest.TestCase):
         """ verify block devices are updated when accessible but unknown datasets are active on other hosts """
         # copy pool and zfs data to fixture for another host
         fixture = self.patch_zed_data(self.fixture,
-                                      'vm5.foo.com')
+                                      'vm6.foo.com')
 
         # remove pool and zfs data from fixture for current host
         fixture = self.patch_zed_data(fixture,
@@ -369,10 +370,42 @@ class TestBlockDevices(unittest.TestCase):
         self.get_patched_block_devices(fixture)
 
         fixture = self.patch_zed_data(self.fixture,
-                                      'vm5.foo.com',
+                                      'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
 
         with self.assertRaises(RuntimeError):
             self.get_patched_block_devices(fixture)
+
+    def test_ignore_exported_zpools(self):
+        """ verify exported pools are not reported """
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        self.assertEqual(block_devices['zfspools'], {})
+        self.assertEqual(block_devices['zfsdatasets'], {})
+
+    def test_ignore_other_exported_zpools(self):
+        """ verify elsewhere exported pools are not reported """
+        fixture = self.patch_zed_data(self.fixture,
+                                      self.test_host_fqdn,
+                                      {},
+                                      {},
+                                      {})
+
+        fixture = self.patch_zed_data(fixture,
+                                      'vm6.foo.com',
+                                      {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
+                                      {},
+                                      {})
+
+        block_devices = self.get_patched_block_devices(fixture)
+
+        self.assertEqual(block_devices['zfspools'], {})
+        self.assertEqual(block_devices['zfsdatasets'], {})
