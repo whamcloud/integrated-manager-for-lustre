@@ -144,7 +144,7 @@ def get_host_devices(fqdn):
         host_data = _data.pop(fqdn)
     except KeyError:
         log.debug('no aggregator data found for {}'.format(fqdn))
-        return DeviceMaps({}, {}, [], [])
+        return None
 
     devices = json.loads(host_data)
 
@@ -251,7 +251,11 @@ def local_fs_filter(x):
 
 
 def parse_localfs_devs(xs, node_block_devices, ndt):
-    return {path_to_major_minor(node_block_devices, ndt, x['path']): ["", x['filesystem_type']] for x in xs}
+    """ map paths to major-minors but ignore paths that cannot be resolved (non-local) """
+    items = pipe([(path_to_major_minor(node_block_devices, ndt, x['path']), ["", x['filesystem_type']]) for x in xs],
+                 cfilter(lambda t: t[0] is not None),
+                 list)
+    return {t[0]: t[1] for t in items}
 
 
 class NormalizedDeviceTable(object):
@@ -514,6 +518,9 @@ def get_block_devices(fqdn):
 
     log.debug('fetching devices for {}'.format(fqdn))
     device_maps = get_host_devices(fqdn)
+
+    if device_maps is None:
+        return {}
 
     devs_list = parse_sys_block(device_maps.block_devices)
     devs_list.extend(parse_zpools(device_maps.zpools,
