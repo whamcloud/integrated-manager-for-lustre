@@ -1010,7 +1010,7 @@ class RegisterTargetJob(StateChangeJob):
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
             steps = [(RegisterTargetStep, {
@@ -1142,11 +1142,7 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        # Update MTMs before attempting to stop/unmount
-        device_type = self.target.volume.filesystem_type
-        return [(UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
-                (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
 class PreFormatCheck(Step):
@@ -1252,9 +1248,8 @@ class MkfsStep(Step):
 
 class UpdateManagedTargetMount(Step):
     """
-    This step will update the volume and volume_node relationships with
-    manage target mounts and managed targets to reflect changes during
-    MkfsStep and device mounting/unmounting.
+    This step will update the volume_nodes within the
+    manage target mounts to reflect changes during MkfsStep
     """
     database = True
 
@@ -1264,12 +1259,16 @@ class UpdateManagedTargetMount(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        device_type = kwargs['device_type']
         job_log.info("Updating mtm volume_nodes for target %s" % target)
+
+        original_volume = target.volume
+        device_type = original_volume.storage_resource.to_resource_class().device_type()
 
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
             current_volume_node = mtm.volume_node
+            assert original_volume == current_volume_node.volume
+            primary = current_volume_node.primary
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
@@ -1278,19 +1277,13 @@ class UpdateManagedTargetMount(Step):
                                        if device_type == 'zfs'
                                        else current_volume_node.path)
 
-            filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
-            job_log.info("Looking for volume_nodes for host %s , path %s" % (host,
-                                                                             filesystem.mount_path(target.name)))
-            job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
-
             mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(
-                                                                                      target.name)),
+                                                                                  path=filesystem.mount_path(target.name)),
                                                    logger=job_log,
-                                                   timeout=60 * 60,
+                                                   timeout = 60 * 60,
                                                    expected_exception_classes=[VolumeNode.DoesNotExist])
 
-            mtm.volume_node.primary = current_volume_node.primary
+            mtm.volume_node.primary = primary
             mtm.volume_node.save()
             mtm.save()
 
@@ -1345,7 +1338,7 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        primary_mount = self.target.managedtargetmount_set.get(primary=True)
+        primary_mount = self.target.managedtargetmount_set.get(primary = True)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1388,7 +1381,7 @@ class FormatTargetJob(StateChangeJob):
                                   'device_type': device_type,
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target, 'device_type': device_type})])
+                      (UpdateManagedTargetMount, {'target': self.target})])
 
         return steps
 
