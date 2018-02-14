@@ -6,7 +6,7 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 @skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
-@skip("Disable until upgrade is fixed")
+@skip("Until upgrades are handled by IML proper")
 class TestUpdates(ChromaIntegrationTestCase):
     def test_upgrade_alerting(self):
         """

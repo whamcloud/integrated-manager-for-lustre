@@ -24,17 +24,33 @@ yum-config-manager --disable mirror.centos.org_centos_7_extras_x86_64_
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
 fi
-yum install -y omping" | dshbak -c
+yum install -y omping redhat-lsb-core" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
 # Install and setup integration tests on integration test runner
-scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+if ! $JENKINS; then
+    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+fi
+scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-yum --disablerepo=\* --enablerepo=chroma makecache
-yum -y install chroma-manager-integration-tests
+if $JENKINS; then
+    yum --disablerepo=\* --enablerepo=chroma makecache
+    CMIT=chroma-manager-integration-tests
+else
+    CMIT=/root/${CMIT##*/}
+fi
+
+# set up required repos
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+yum -y install epel-release
+
+if ! $PROXY yum -y install \$CMIT; then
+    $PROXY yum clean all
+    $PROXY yum -y install \$CMIT
+fi
 
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured

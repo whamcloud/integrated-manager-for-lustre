@@ -29,6 +29,8 @@ Vagrant.configure("2") do |config|
 	# use the "images" storage pool
 	config.vm.provider :libvirt do |libvirt, override|
 		override.vm.box = "centos/7"
+                # set to distro version desired for test
+                override.vm.box_version = "> 1708, < 9999"
 		libvirt.storage_pool_name = "images"
 		libvirt.memory = 2048
 		libvirt.cpus = 2
@@ -85,6 +87,9 @@ __EOF
 	config.vm.provision "shell", inline: "cp -f /tmp/hosts /etc/hosts"
 	config.vm.provision "shell", inline: "systemctl enable firewalld"
 	config.vm.provision "shell", inline: "systemctl start firewalld"
+
+	# Verbose booting
+	config.vm.provision "shell", inline: "sed -ie 's/ rhgb quiet//' /boot/grub2/grub.cfg /etc/sysconfig/grub"
 
 	# The VMs will have IPv6 but no IPv6 connectivity so alter
 	# their gai.conf to prefer IPv4 addresses over IPv6

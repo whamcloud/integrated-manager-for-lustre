@@ -6,14 +6,14 @@ if $JENKINS; then
     BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
     IEEL_VERSION=${IEEL_VERSION:?"Need to set IEEL_VERSION"}
     TEST_DISTRO_NAME=${TEST_DISTRO_NAME:?"Need to set TEST_DISTRO_NAME"}
-    TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:?"Need to set TEST_DISTRO_VERSION"}
 fi
+TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:?"Need to set TEST_DISTRO_VERSION"}
 CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:?"Need to specify a CLUSTER_CONFIG_TEMPLATE path"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:?"Need to specify a CLUSTER_CONFIG path to output the test json after provisioning"}
 
 if ! $JENKINS; then
     export BUILD_JOB_NAME="foo"
-    export BUILD_JOB_BUILD_NUMBER=1
+    export BUILD_JOB_BUILD_NUMBER=0
     cp $CLUSTER_CONFIG_TEMPLATE{,.tmp}
     CLUSTER_CONFIG_TEMPLATE="${CLUSTER_CONFIG_TEMPLATE}.tmp"
 fi
@@ -29,12 +29,13 @@ sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
 python $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py $CLUSTER_CONFIG_TEMPLATE provisioner_input.json || (echo "test_json2provisioner_json.py failed. Input: `cat $CLUSTER_CONFIG_TEMPLATE`" && exit 1)
 cat provisioner_input.json
 
-if $JENKINS; then
+if ! $VAGRANT; then
     # Actually call the provisioner. Once the command returns, provisioning is complete.
     rc=0
     PROVISION_START_TIME=$(date '+%s')
     cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=${PIPESTATUS[1]}
-    touch cluster_provisioned
+    echo "$PWD" >&2
+    touch "$WORKSPACE"/cluster_provisioned
     PROVISION_END_TIME=$(date '+%s')
     PROVISION_DURATION=$(( PROVISION_END_TIME-PROVISION_START_TIME ))
     echo "$PROVISION_DURATION" > $WORKSPACE/provision_duration.txt
@@ -47,6 +48,16 @@ if $JENKINS; then
         exit 1
     fi
 else
+    # set the correct Vagrant box for the
+    # TEST_DISTRO_VERSION
+    declare -A vagrant_centos_boxes=( [7.2]=1511
+                                      [7.3]=1611
+                                      [7.4]=1708
+                                      [7.5]=9999 )
+
+    sed -i -e "/override\.vm\.box_version/s/> [0-9][0-9]*, *< *[0-9][0-9]*/> ${vagrant_centos_boxes[$TEST_DISTRO_VERSION]}, < ${vagrant_centos_boxes[$(echo "$TEST_DISTRO_VERSION+.1" | bc)]}/" Vagrantfile
+
+    make reset_cluster
     cp provisioner_output-vagrant-${MAKE_TARGET%_tests}.json provisioner_output.json
 fi
 

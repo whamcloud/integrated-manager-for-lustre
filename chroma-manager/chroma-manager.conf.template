@@ -1,6 +1,6 @@
 map $ssl_client_s_dn $ssl_client_s_dn_cn {
     default "";
-    ~/CN=(?<CN>[^/]+) $CN;
+    ~CN=(?<CN>[^,]+) $CN;
 }
 
 error_log syslog:server=unix:/dev/log;

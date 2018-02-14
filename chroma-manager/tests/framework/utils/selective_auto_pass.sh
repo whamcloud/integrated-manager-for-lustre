@@ -30,13 +30,6 @@ check_for_autopass() {
     else
         TESTS_TO_SKIP=$(echo "$commit_message" | sed -ne '/^ *Skip-tests:/s/^ *Skip-tests: *//p')
     fi
-
-    # temporarily skip the upgrade test
-    if [[ $JOB_NAME == upgrade-tests || $JOB_NAME == upgrade-tests/* ]]; then
-        fake_test_pass "upgrade-tests_skipped_soon_to_be_fixed" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
-        exit 1
-    fi
-
     for t in $TESTS_TO_SKIP; do
         if [[ $JOB_NAME == $t || $JOB_NAME == $t/* ]]; then
             echo "skipping this test due to {Run|Skip}-tests pragma"

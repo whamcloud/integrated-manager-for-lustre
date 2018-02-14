@@ -6,12 +6,16 @@
 set_defaults true
 check_for_autopass
 
+if ! $JENKINS; then
+    CHROMA_DIR="$PWD"
+fi
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
-SLAVE=${slave:?"Need to set slave"}
 
-cd $WORKSPACE
-curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
+if $JENKINS; then
+    cd $WORKSPACE
+    curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
+fi
 
 # Gather logs from nodes and release the cluster at exit
 trap "set +e
@@ -21,16 +25,6 @@ python \"$CHROMA_DIR\"/chroma-manager/tests/integration/utils/chroma_log_collect
 $CHROMA_DIR/chroma-manager/tests/framework/utils/provisioner_interface/provision_cluster
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
-
-# we can't currently upgrade a CentOS 7.3 node to RHEL 7.4 so just NOOP
-# out if that's the case we are testing
-# pity we have to wait for a provisioning to complete to bail out here
-if [ "$TEST_DISTRO_NAME" = "el" -a                  \
-     $(ssh root@$TEST_RUNNER "lsb_release -i -s") = \
-     CentOS ]; then
-    fake_test_pass "tests_skipped_because_RHEL_cant_upgrade_CentOS" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
-    exit 0
-fi
 
 # see if this mitigates the near constant failure to complete a yum upgrade from the RH CDN
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe

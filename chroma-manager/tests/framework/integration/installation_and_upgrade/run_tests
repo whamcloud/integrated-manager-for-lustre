@@ -4,6 +4,9 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
+# shellcheck source=chroma-manager/tests/framework/integration/utils/node_lib.sh
+. "$CHROMA_DIR"/chroma-manager/tests/framework/integration/utils/node_lib.sh
+
 [ -r localenv ] && . localenv
 
 # Remove test results and coverage reports from previous run
@@ -43,16 +46,31 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # first fetch and install chroma 3.1.1.0
-BUILD_JOB=ieel
-BUILD_NUM=37
-IEEL_FROM_ARCHIVE=$(curl -s -k "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+BUILD_JOB=ieel-b3_1
+BUILD_NUM=427
+set +x # don't remove this line lest you leak confidential information
+. ~/auth.sh
+cat <<"EOF"
+++ curl -s -k 'https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/ieel-b3_1/427/api/xml?xpath=*/artifact/fileName&wrapper=foo'
+++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/'
+EOF
+IEEL_FROM_ARCHIVE=$(curl -s -k "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
+echo "+ IEEL_FROM_ARCHIVE=$IEEL_FROM_ARCHIVE"
+set -x
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
 
-curl -k -O "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
+if [ ! -f "$IEEL_FROM_ARCHIVE" ]; then
+    set +x # don't remove this line lest you leak confidential information
+    cat <<EOF
++ curl -k -O https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE
+EOF
+    curl -k -O "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
+set -x
+fi
 
 # Install and setup old manager
-scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install-3.x.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
@@ -61,14 +79,14 @@ yum -y install expect
 cd /tmp
 mkdir $PREVIOUS_INSTALL_DIR
 mv $IEEL_FROM_ARCHIVE $PREVIOUS_INSTALL_DIR/$IEEL_FROM_ARCHIVE
-mv install.exp $PREVIOUS_INSTALL_DIR/install.exp
+mv install-3.x.exp $PREVIOUS_INSTALL_DIR/install-3.x.exp
 
 cd $PREVIOUS_INSTALL_DIR
 tar xzvf $IEEL_FROM_ARCHIVE
 
 # Install from the installation package
 cd ${IEEL_FROM_ARCHIVE%%.tar.gz}
-if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
+if ! expect ../install-3.x.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
     cat /var/log/chroma/install.log
@@ -92,15 +110,21 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
         subscription-manager config --server.proxy_hostname=\${BASH_REMATCH[1]} --server.proxy_port=\${BASH_REMATCH[2]}
     fi
 fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
 
 # Install a client
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
+wait_for_nodes "$CLIENT_1" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
 
 echo "Create and exercise a filesystem..."
 
 TESTS="$TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_clean_linux_devices \
        $TESTS_DIR/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
+# shellcheck disable=SC2086
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
@@ -129,9 +153,21 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
+if [ -f ~/storage_server.repo.in ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo.in
+fi
+
 # Install and setup manager
-scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
-ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+ARCHIVE_SUFFIX=.tar.gz
+if $JENKINS; then
+    ARCHIVE_PATH=.
+    ARCHIVE_SUFFIX="-current$ARCHIVE_SUFFIX"
+else
+    ARCHIVE_PATH=chroma-bundles
+    ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz
+fi
+scp $STORAGE_SERVER_REPO "$ARCHIVE_PATH/$ARCHIVE_NAME" "$CHROMA_DIR"/chroma-manager/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
+ssh root@"$CHROMA_MANAGER" "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
@@ -143,31 +179,44 @@ mv upgrade.exp $UPGRADE_INSTALL_DIR/upgrade.exp
 
 cd $UPGRADE_INSTALL_DIR
 tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME -current.tar.gz)
+cd \"${ARCHIVE_NAME%$ARCHIVE_SUFFIX}\"
 
 # Install from the installation package
 echo \"First without access to YUM repos\"
 
-ips=\$(grep -e ^base -e ^mirror /etc/yum.repos.d/* | sed -e 's/.*:\/\/\([^/]*\)\/.*/\1/g' -e 's/:.*//' | sort -u | while read n; do getent ahosts \$n | sed -ne 's/\(.*\)  STREAM .*/\1/p'; done | sort -u)
-for ip in \$ips; do
-    iptables -I OUTPUT -d \$ip -p tcp --dport 80 -j REJECT
+yum -y install bind-utils
+
+iptables_remove=\$(mktemp)
+trap 'bash -ex \"\$iptables_remove\"; rm \"\$iptables_remove\"' EXIT
+
+grep -e ^base -e ^mirror /etc/yum.repos.d/* | \
+    sed -e 's/.*=\(.*\):\/\/\([^/]*\)\/.*/\1 \2/' -e 's/\(.*\):\(.*\)/\1 \2/' | sort -u | \
+while read method host port; do
+    if [ \"\$method\" = \"file\" ]; then
+        continue
+    fi
+    if [ -z \"\$port\" ]; then
+        case \$method in
+             http)   port=80  ;;
+            https)   port=443 ;;
+        esac
+    fi
+    host \$host | sed -ne '/has address/s/.* //p' -e '/:/d' | \
+    while read ip; do
+        iptables -I OUTPUT -d \$ip -p tcp --dport \$port -j REJECT
+        echo \"iptables -D OUTPUT -d \$ip -p tcp --dport \$port -j REJECT\" >> \"\$iptables_remove\"
+    done
 done
-iptables -L -nv
 
 if expect ../upgrade.exp; then
     echo \"Installation unexpectedly succeeded without access to repos\"
-    for ip in \$ips; do
-        iptables -D OUTPUT -d \$ip -p tcp --dport 80 -j REJECT
-    done
+    iptables -L -nv
     exit 1
 fi
-for ip in \$ips; do
-    if ! iptables -D OUTPUT -d \$ip -p tcp --dport 80 -j REJECT; then
-        rc=\${PIPESTATUS[0]}
-        iptables -L -nv
-        exit \$rc
-    fi
-done
+
+bash -ex \"\$iptables_remove\"
+rm \"\$iptables_remove\"
+trap '' EXIT
 
 echo \"Now with EPEL disabled\"
 
@@ -214,7 +263,7 @@ fi
 
 if [[ $TEST_DISTRO_VERSION =~ 6.* ]]; then
     # install cman here to test that the fence-agents-iml package is being a
-    # "duck-like" replacement for fence-agents since cman depends on
+    # duck-like replacement for fence-agents since cman depends on
     # fence-agents
     yum -y install cman
 fi
@@ -225,17 +274,78 @@ LOG_LEVEL = logging.DEBUG
 $LOCAL_SETTINGS
 EOF1
 
+# override /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo.in ]; then
+    # make sure we use the correct lustre though!
+    sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
+        -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
+        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
+fi
+
 # Ensure that coverage is disabled
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
+
+# the manual bits that need to be done for 3.x to 4.x upgrades
+# see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+yum -y install epel-release
+yum -y install pdsh
+mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+ssh root@"$CHROMA_MANAGER" "exec 2>&1; set -xe
+yum -y install pdsh
+pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
+
+pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
+sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
+# TODO: we really just need to adjust cache timeouts here to account for
+#       our compressed timelines
+yum clean all
+yum-config-manager --enable iml-agent
+
+yum -y upgrade chroma-agent\*
+
+systemctl stop zed
+rmmod zfs zcommon znvpair spl
+
+yum erase -y zfs-dkms spl-dkms lustre lustre-modules lustre-osd-ldiskfs \
+lustre-osd-zfs lustre-osd-ldiskfs-mount lustre-osd-zfs-mount libzpool2 libzfs2
+
+#TODO: if we install the new kernel here and reboot, then continue
+#on with the below, we should only build dkms modules once instead
+#of twice
+
+yum -y --nogpgcheck install lustre-ldiskfs-zfs kernel-devel-\*_lustre
+grubby --default-kernel
+$REBOOT_NODE" | dshbak -c
+if [ "${PIPESTATUS[0]}" != "0" ]; then
+    exit 1
+fi
+
+# the second argumant closes a race where we check a node
+# before it's even been shut down
+wait_for_nodes "${STORAGE_APPLIANCES[*]}" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
+
+# give the choma agent time to start up and create a session
+# without this we get:
+# [2017-11-04 07:38:06,720: ERROR/job_scheduler] Job 83 step 0 encountered an agent error: Communications error with vm5 because session terminated
+# from the next test to run.
+# should we really have to wait externally here or should
+# agent <-> management communications be taking care of this for us?
+
+sleep 60
 
 echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
 
 TESTS="$TESTS_DIR/test_data_consistancy.py \
-       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_no_retired_repos \
+       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_obsolete_chroma_diagnostics \
        $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_yum_update \
        $TESTS_DIR/test_create_filesystem.py:TestExistsFilesystem.test_exists"
 
@@ -247,11 +357,20 @@ unset http_proxy; unset https_proxy
 # now provide an information inventory of the difference in the RPM
 # catalog after the upgrade
 
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "$ALL_NODES")" "exec 2>&1; set -xe
 if [ -f /tmp/rpms_before_upgrade ]; then
-    diff -u /tmp/rpms_before_upgrade <(rpm -qa | sort)
+    if ! diff -u /tmp/rpms_before_upgrade <(rpm -qa | sort); then
+        diff_rc=${PIPESTATUS[0]}
+        # diff exits with 1 if differences are found
+        if [ \"\$diff_rc\" -ne 1 ]; then
+            exit \"\$diff_rc\"
+        fi
+    fi
     rm /tmp/rpms_before_upgrade
 fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
 
 # test that removing the chroma-manager RPM removes /var/lib/chroma
 ssh root@$CHROMA_MANAGER "set -xe
