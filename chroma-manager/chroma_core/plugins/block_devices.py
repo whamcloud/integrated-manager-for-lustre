@@ -478,15 +478,11 @@ def discover_zpools(all_devs, _data):
 
             return get_drives(pool_disks, all_devs['devs']).issubset(set(all_devs['devs'].keys()))
 
-        try:
-            # verify pool is imported
-            pools = pipe(maps['zed']['zpools'].itervalues(),
-                         cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
-                         cfilter(match_drives),
-                         list)
-        except KeyError as e:
-            log.error('data not found, incorrect format %s [%s)' % (data, e))
-            return acc
+        # verify pool is imported
+        pools = pipe(maps['zed']['zpools'].itervalues(),
+                     cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
+                     cfilter(match_drives),
+                     list)
 
         pools = {pool['guid']: pool for pool in pools}
 
