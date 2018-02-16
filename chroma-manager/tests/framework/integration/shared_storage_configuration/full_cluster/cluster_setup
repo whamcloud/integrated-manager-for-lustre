@@ -10,6 +10,11 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster
 
 . $CHROMA_DIR/chroma-manager/tests/framework/utils/cluster_setup.sh
 
+# We need CLIENT_1 to exist after cluster_setup
+if [ -z ${CLIENT_1} ]l then
+    echo "Missing lustre_clients in cluster configuration"
+    exit 1
+fi
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 # Clean out any yum info, if this is a manual system not automated the underlying repos might have changed.
