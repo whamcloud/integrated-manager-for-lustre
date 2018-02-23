@@ -112,9 +112,12 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         next((self.clear_devices(x['nodename']) for x in config['lustre_servers']), None)
 
+        # There are some fs commands that need to be run when the chroma-agent daemon is not running; otherwise,
+        # it has the potential to cause disk I/O errors. Prevent the chroma-agent service from running after 
+        # rebooting the node.
         for server in config['lustre_servers']:
             self.remote_command(server['address'],
-                                'reboot',
+                                'systemctl disable chroma-agent.service && reboot',
                                 expected_return_code=None)  # Sometimes reboot hangs, sometimes it doesn't
 
         def host_alive(hostname):
@@ -190,6 +193,12 @@ class CreateLustreFilesystem(UtilityTestCase):
             )
 
         self._save_modified_config()
+
+        for server in config['lustre_servers']:
+            self.remote_command(
+                server['address'],
+                'systemctl enable chroma-agent.service && systemctl start chroma-agent.service'
+            )
 
     def get_targets_by_kind(self, kind):
         return [v for k, v in config['filesystem']['targets'].iteritems() if v['kind'] == kind]
