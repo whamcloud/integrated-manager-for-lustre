@@ -25,12 +25,6 @@ UPGRADE_INSTALL_DIR=upgrade_install
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-# We need CLIENT_1 to exist after cluster_setup
-if [ -z ${CLIENT_1} ]; then
-    echo "Missing lustre_clients in cluster configuration"
-    exit 1
-fi
-
 TESTS_DIR="tests/integration/installation_and_upgrade/"
 
 trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"" EXIT

@@ -24,12 +24,6 @@ USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-# We need CLIENT_1 to exist after cluster_setup
-if [ -z ${CLIENT_1} ]; then
-    echo "Missing lustre_clients in cluster configuration"
-    exit 1
-fi
-
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
