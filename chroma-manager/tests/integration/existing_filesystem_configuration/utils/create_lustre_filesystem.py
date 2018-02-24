@@ -194,12 +194,6 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         self._save_modified_config()
 
-        for server in config['lustre_servers']:
-            self.remote_command(
-                server['address'],
-                'systemctl enable chroma-agent.service && systemctl start chroma-agent.service'
-            )
-
     def get_targets_by_kind(self, kind):
         return [v for k, v in config['filesystem']['targets'].iteritems() if v['kind'] == kind]
 
