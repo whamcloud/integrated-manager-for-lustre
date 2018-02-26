@@ -105,6 +105,13 @@ class CreateLustreFilesystem(UtilityTestCase):
                                   server['address'],
                                   'clear command')
 
+        # By stoping and disabling the chroma-agent on each server, it will prevent the importing or exporting 
+        # of ZFS pools while the lustre filesystem is being created. 
+        for server in config['lustre_servers']:
+            self.remote_command(server['address'],
+                                'systemctl disable chroma-agent.service && systemctl stop chroma-agent.service',
+                                expected_return_code=None)
+
         # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
         # commands in clear_device_commands won't get to do all that they are
@@ -112,13 +119,10 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         next((self.clear_devices(x['nodename']) for x in config['lustre_servers']), None)
 
-        # There are some fs commands that need to be run when the chroma-agent daemon is not running; otherwise,
-        # it has the potential to cause disk I/O errors. Prevent the chroma-agent service from running after 
-        # rebooting the node.
         for server in config['lustre_servers']:
             self.remote_command(server['address'],
-                                'systemctl disable chroma-agent.service && reboot',
-                                expected_return_code=None)  # Sometimes reboot hangs, sometimes it doesn't
+                                'reboot',
+                                expected_return_code=None) # Sometimes reboot hangs
 
         def host_alive(hostname):
             try:
@@ -193,6 +197,11 @@ class CreateLustreFilesystem(UtilityTestCase):
             )
 
         self._save_modified_config()
+
+        for server in config['lustre_servers']:
+            self.remote_command(server['address'],
+                            'systemctl enable chroma-agent.service && systemctl start chroma-agent.service',
+                            expected_return_code=None)
 
     def get_targets_by_kind(self, kind):
         return [v for k, v in config['filesystem']['targets'].iteritems() if v['kind'] == kind]
