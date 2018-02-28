@@ -27,7 +27,7 @@ baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-manager-for-lustre]
+[tanabarr-manager-for-lustre]
 name=Copr repo for manager-for-lustre owned by tanabarr
 baseurl=https://copr-be.cloud.fedoraproject.org/results/tanabarr/manager-for-lustre/epel-7-$basearch/
 type=rpm-md
