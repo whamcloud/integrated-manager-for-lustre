@@ -9,6 +9,5 @@ WantedBy=multi-user.target
 Type=simple
 ExecStart=/usr/bin/chroma-agent-daemon
 Restart=on-failure
-SyslogFacility=daemon
 StandardOutput=journal
 StandardError=journal
