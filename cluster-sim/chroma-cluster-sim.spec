@@ -16,7 +16,7 @@ BuildArch: noarch
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
-Requires: python-argparse python-setuptools python-requests >= 2.6.0 chroma-agent = %{version}-%{release}
+Requires: python-argparse python-setuptools python-requests >= 2.6.0 python-urllib3 chroma-agent = %{version}-%{release}
 
 %description
 Simulates a cluster of storage servers. Intended for developers.
