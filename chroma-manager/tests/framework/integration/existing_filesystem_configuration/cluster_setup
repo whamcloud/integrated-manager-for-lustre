@@ -141,7 +141,8 @@ fi"
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
 # if this node uses the Intel proxies, make sure the agent is doing so
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
-    echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
+    mkdir -p /etc/systemd/system/chroma-agent.service.d/
+    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
 fi
 
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
