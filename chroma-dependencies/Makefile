@@ -51,6 +51,7 @@ requirements::
 	echo "South==0.7.5";                                      \
 	echo "tablib==0.9.11";                                    \
 	echo "requests==2.6.0";                                   \
+	echo "urllib3"                                            \
 	echo "python-dateutil==1.5";                              \
 	echo "nose==1.2.1";                                       \
 	echo "supervisor==3.0b1";                                 \
