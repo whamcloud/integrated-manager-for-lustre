@@ -91,7 +91,7 @@ class AgentShell(BaseShell):
 
     @classmethod
     def run_old(cls, arg_list):
-        """ This method is provided for backwards compatibility only, use run_new() in new code """
+        """ This method is provided for backwards compatibility only, use run() in new code """
         result = AgentShell.run(arg_list)
 
         return result.rc, result.stdout, result.stderr
