@@ -906,9 +906,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                                       server0['fqdn'],
                                       'create zfs device %s' % zfs_device)
 
-                self.execute_commands(zfs_device.release_commands,
-                                      server0['fqdn'],
-                                      'export zfs device %s' % zfs_device)
+#                self.execute_commands(zfs_device.release_commands,
+#                                      server0['fqdn'],
+#                                      'export zfs device %s' % zfs_device)
                 partprobe_devices.append(server0['orig_device_paths'][lustre_device['path_index']])
 
         if partprobe_devices:
