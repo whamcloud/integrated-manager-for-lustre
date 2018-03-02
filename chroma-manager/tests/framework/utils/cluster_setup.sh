@@ -38,6 +38,8 @@ for key in CentOS-7 redhat-release; do
     fi
 done
 
+yum-config-manager --add-repo http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/18/arch=x86_64,distro=el7/artifact/artifacts/iml-common-test.repo
+
 if [[ \$HOSTNAME = *vm*2 ]]; then
     yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
     sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"

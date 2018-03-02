@@ -2,6 +2,9 @@
 
 # Install the Lustre client
 
+# shellcheck disable=SC1091
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/reboot_node.sh
+
 # shellcheck disable=SC2029
 ssh root@"$CLIENT_1" "exec 2>&1; set -xe
 # set up required repos
