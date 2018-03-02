@@ -603,9 +603,10 @@ def start_target(ha_label):
             if not location:
                 console_log.info("exit start_target(%s) 4" % ha_label)
                 return agent_error("Started %s but now can't locate it!" % ha_label)
-            console_log.info("exit start_target(%s) 5\nlctl dl:\n%s" %
-                             (ha_label,
-                              AgentShell.run(['lctl', 'dl']).stdout))
+            console_log.info("exit start_target(%s) 5" % (ha_label))
+            for i in range(10):
+                console_log.info("lctl dl:\n%s" % (AgentShell.run(['lctl', 'dl']).stdout))
+                time.sleep(1)
             return agent_result(location)
 
     console_log.info("exit start_target(%s) 6" % ha_label)
