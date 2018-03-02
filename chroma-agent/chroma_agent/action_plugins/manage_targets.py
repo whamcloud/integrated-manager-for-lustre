@@ -448,7 +448,13 @@ def mount_target(uuid, pacemaker_ha_operation):
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    filesystem.mount(info['mntpt'])
+    try:
+        filesystem.mount(info['mntpt'])
+    except RuntimeError, e:
+        # Make sure we export any pools when a mount fails
+        export_target(info['device_type'], info['bdev'])
+
+        raise e
 
 
 def unmount_target(uuid):

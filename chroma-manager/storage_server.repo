@@ -25,7 +25,7 @@ gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.2/el7/client/
+baseurl=https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.3/el7/client/
 enabled=1
 gpgcheck=0
 
