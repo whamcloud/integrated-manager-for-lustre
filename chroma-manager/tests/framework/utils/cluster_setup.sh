@@ -38,7 +38,7 @@ for key in CentOS-7 redhat-release; do
     fi
 done
 
-if [[ \$HOSTNAME = *vm*2 ]]; then
+if [ -n "$CLIENT_1" ] && [[ \${HOSTNAME%%%.*} = ${CLIENT_1%%.*} ]]; then
     yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
     sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"
 fi" | dshbak -c
