@@ -893,8 +893,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         fqdns = [x['fqdn'] for x in xs]
 
         self.execute_simultaneous_commands(
-            ['modprobe zfs'], fqdns,
-            'checking for zfs presence',
+            ['modprobe zfs && systemctl start zfs-zed'], fqdns,
+            'checking for zfs presence and starting zed',
             expected_return_code=None)
 
         partprobe_devices = []
