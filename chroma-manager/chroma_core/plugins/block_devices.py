@@ -142,14 +142,11 @@ def get_host_devices(fqdn, _data):
 
     devices = json.loads(host_data)
 
-    try:
-        device_maps = DeviceMaps(devices["blockDevices"],   # dict
-                                 devices["zed"]["zpools"],  # dict
-                                 devices["zed"]["zfs"],     # list
-                                 devices["zed"]["props"])   # list
-    except KeyError as e:
-        log.error('badly formatted data found for {} : {} ({})'.format(fqdn, devices, e))
-        raise
+    return (DeviceMaps(devices["blockDevices"],   # dict
+                      devices["zed"]["zpools"],  # dict
+                      devices["zed"]["zfs"],     # list
+                      devices["zed"]["props"]),   # list
+            _data)
 
     return device_maps, _data
 
@@ -478,11 +475,15 @@ def discover_zpools(all_devs, _data):
 
             return get_drives(pool_disks, all_devs['devs']).issubset(set(all_devs['devs'].keys()))
 
-        # verify pool is imported
-        pools = pipe(maps['zed']['zpools'].itervalues(),
-                     cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
-                     cfilter(match_drives),
-                     list)
+        try:
+            # verify pool is imported
+            pools = pipe(maps['zed']['zpools'].itervalues(),
+                         cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
+                         cfilter(match_drives),
+                         list)
+        except KeyError as e:
+            log.debug('data not found, incorrect format %s [%s)' % (data, e))
+            return acc
 
         pools = {pool['guid']: pool for pool in pools}
 
@@ -519,13 +520,10 @@ def discover_zpools(all_devs, _data):
 def get_block_devices(fqdn):
     _data = aggregator_get()
 
-    try:
-        log.debug('fetching devices for {}'.format(fqdn))
-        device_maps, _data = get_host_devices(fqdn, _data)
-    except Exception as e:
-        log.error("iml-device-aggregator is not providing expected data, ensure "
-                  "iml-device-scanner package is installed and relevant "
-                  "services are running on storage servers (%s)" % e)
+    log.debug('fetching devices for {}'.format(fqdn))
+    device_maps, _data = get_host_devices(fqdn, _data)
+
+    if device_maps is None:
         return {}
 
     devs_list = parse_sys_block(device_maps.block_devices)
