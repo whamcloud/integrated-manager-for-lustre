@@ -23,8 +23,6 @@ UNAVAILABLE_STATES = ['EXPORTED', 'UNAVAIL']
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
 
-_data = {}
-
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
 
@@ -67,8 +65,7 @@ def aggregator_get():
     payload = resp.text
     print "status code: {}\nresponse: {}".format(resp.status_code, payload)
 
-    global _data
-    _data = json.loads(payload)
+    return json.loads(payload)
 
 
 def get_default(prop, default_value, x):
@@ -137,9 +134,7 @@ def filter_device(x):
     return True
 
 
-def get_host_devices(fqdn):
-    global _data
-
+def get_host_devices(fqdn, _data):
     try:
         host_data = _data.pop(fqdn)
     except KeyError:
@@ -148,10 +143,11 @@ def get_host_devices(fqdn):
 
     devices = json.loads(host_data)
 
-    return DeviceMaps(devices["blockDevices"],   # dict
+    return (DeviceMaps(devices["blockDevices"],   # dict
                       devices["zed"]["zpools"],  # dict
                       devices["zed"]["zfs"],     # list
-                      devices["zed"]["props"])   # list
+                      devices["zed"]["props"]),   # list
+            _data)
 
 
 def create_device_list(device_dict):
@@ -458,7 +454,7 @@ def get_drives(pool_disks, device_nodes):
     return mms
 
 
-def discover_zpools(all_devs):
+def discover_zpools(all_devs, _data):
     """
     Identify imported pools that reside on drives this host can see
 
@@ -497,7 +493,7 @@ def discover_zpools(all_devs):
 
         return acc
 
-    other_zpools_zfs = reduce(extract, _data.values(), {'zpools': {}, 'zfs': []})
+    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {'zpools': {}, 'zfs': []})
 
     if other_zpools_zfs['zpools']:
         log.debug("apply new zfs objs: {}".format(other_zpools_zfs))
@@ -514,14 +510,16 @@ def discover_zpools(all_devs):
                                                         other_zpools_zfs['zfs'],
                                                         all_devs['devs']))]
 
+    del _data
+
     return all_devs
 
 
 def get_block_devices(fqdn):
-    aggregator_get()
+    _data = aggregator_get()
 
     log.debug('fetching devices for {}'.format(fqdn))
-    device_maps = get_host_devices(fqdn)
+    device_maps, _data = get_host_devices(fqdn, _data)
 
     if device_maps is None:
         return {}
@@ -535,7 +533,7 @@ def get_block_devices(fqdn):
         ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
         devs_list))
 
-    return discover_zpools(devs_dict)
+    return discover_zpools(devs_dict, _data)
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
