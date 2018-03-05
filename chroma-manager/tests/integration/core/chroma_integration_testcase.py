@@ -346,10 +346,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a failover node)
-        ha_volumes = self._fetch_help(lambda: self.wait_for_shared_volumes(4, 4),
-                                      ['tom.nabarro@outlook.com'],
-                                      "waiting for shared volumes",
-                                      timeout=99999)
+        ha_volumes = self.wait_for_shared_volumes(4, 4)
 
         # Set primary and failover mounts explicitly and check they are respected
         self.set_volume_mounts(ha_volumes[0], hosts[0]['id'], hosts[1]['id'])
@@ -363,13 +360,16 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             mdt_params['mdt.hsm_control'] = "enabled"
 
         # Create new filesystem
-        filesystem_id = self.create_filesystem(hosts,
-                                               {'name': name,
-                                                'mgt': {'volume_id': ha_volumes[0]['id']},
-                                                'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': mdt_params}],
-                                                'osts': [{'volume_id': ha_volumes[2]['id'], 'conf_params': {}},
-                                                         {'volume_id': ha_volumes[3]['id'], 'conf_params': {}}],
-                                                'conf_params': {}})
+        filesystem_id = self._fetch_help(lambda: self.create_filesystem(hosts,
+                                                                        {'name': name,
+                                                                         'mgt': {'volume_id': ha_volumes[0]['id']},
+                                                                         'mdts': [{'volume_id': ha_volumes[1]['id'], 'conf_params': mdt_params}],
+                                                                         'osts': [{'volume_id': ha_volumes[2]['id'], 'conf_params': {}},
+                                                                                  {'volume_id': ha_volumes[3]['id'], 'conf_params': {}}],
+                                                                         'conf_params': {}}),
+                                         ['tom.nabarro@outlook.com'],
+                                         'failure in create filesystem',
+                                         timeout=99999)
 
         filesystem = self.get_filesystem(filesystem_id)
 
