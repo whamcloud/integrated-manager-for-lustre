@@ -138,16 +138,21 @@ def get_host_devices(fqdn, _data):
     try:
         host_data = _data.pop(fqdn)
     except KeyError:
-        log.debug('no aggregator data found for {}'.format(fqdn))
+        log.error('no aggregator data found for {}'.format(fqdn))
         return None
 
     devices = json.loads(host_data)
 
-    return (DeviceMaps(devices["blockDevices"],   # dict
-                      devices["zed"]["zpools"],  # dict
-                      devices["zed"]["zfs"],     # list
-                      devices["zed"]["props"]),   # list
-            _data)
+    try:
+        device_maps = DeviceMaps(devices["blockDevices"],   # dict
+                                 devices["zed"]["zpools"],  # dict
+                                 devices["zed"]["zfs"],     # list
+                                 devices["zed"]["props"])   # list
+    except KeyError as e:
+        log.error('badly formatted data found for {} : {} ({})'.format(fqdn, devices, e))
+        return None
+
+    return device_maps, _data
 
 
 def create_device_list(device_dict):
@@ -481,7 +486,7 @@ def discover_zpools(all_devs, _data):
                          cfilter(match_drives),
                          list)
         except KeyError as e:
-            log.debug('data not found, incorrect format %s [%s)' % (data, e))
+            log.error('data not found, incorrect format %s [%s)' % (data, e))
             return acc
 
         pools = {pool['guid']: pool for pool in pools}
