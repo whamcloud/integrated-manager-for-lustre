@@ -7,10 +7,6 @@ from chroma_agent.lib.shell import AgentShell
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import config
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
-from chroma_agent.device_plugins.linux_components.zfs import ZfsDevices
-from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
-from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
-from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -26,7 +22,7 @@ class LinuxDevicePlugin(DevicePlugin):
 
     def _quick_scan(self):
         """Lightweight enumeration of available block devices"""
-        return ZfsDevices().quick_scan() + BlockDevices.quick_scan()
+        return BlockDevices.quick_scan()
 
     def _full_scan(self):
         # If we are a worker node then return nothing because our devices are not of interest. This is a short term
@@ -42,31 +38,20 @@ class LinuxDevicePlugin(DevicePlugin):
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
-        # Software RAID
-        mds = MdRaid(block_devices).all()
-
-        # _zpools
-        zfs_devices = ZfsDevices()
-        zfs_devices.full_scan(block_devices)
-
+        # fixme: implement inside block_devices using device_scanner output
         # EMCPower Devices
-        emcpowers = EMCPower(block_devices).all()
+        # emcpowers = EMCPower(block_devices).all()
 
-        # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
-        local_fs = LocalFilesystems(block_devices).all()
-
-        # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
 
-        return {"vgs": block_devices.vgs,
-                "lvs": block_devices.lvs,
-                "zfspools": zfs_devices.zpools,
-                "zfsdatasets": zfs_devices.datasets,
-                "zfsvols": zfs_devices.zvols,
-                "devs": block_devices.block_device_nodes,
-                "local_fs": local_fs,
-                'emcpower': emcpowers,
-                'mds': mds}
+        block_device_dict = {s: getattr(block_devices, s) for s in
+                             ['local_fs', 'mds', 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols']}
+
+        block_device_dict['devs'] = block_devices.block_device_nodes
+
+        # block_device_dict['emcpowers'] = emcpowers
+
+        return block_device_dict
 
     def _scan_devices(self, scan_always):
         full_scan_result = None
