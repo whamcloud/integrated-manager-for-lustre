@@ -606,7 +606,12 @@ def start_target(ha_label):
             console_log.info("exit start_target(%s) 5" % (ha_label))
             for i in range(10):
                 console_log.info("lctl dl:\n%s" % (AgentShell.run(['lctl', 'dl']).stdout))
+                res = AgentShell.run(['lctl', 'conf_param', 'testfs.llite.max_cached_mb=16'])
+                console_log.info("lctl conf_param testfs.llite.max_cached_mb=16 returned:%s:\nstdout: %s\nstderr: %s" % (res.rc, res.stdout, res.stderr))
                 time.sleep(1)
+            AgentShell.try_run(['lctl dk >/var/tmp/debug%s-$(date +%%s).log' %
+                                "after-start"], shell=True)
+
             return agent_result(location)
 
     console_log.info("exit start_target(%s) 6" % ha_label)
