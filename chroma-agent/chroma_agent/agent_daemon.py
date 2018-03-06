@@ -3,11 +3,8 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-import time
 import datetime
-import errno
 import os
-import logging
 import sys
 import traceback
 import argparse
@@ -24,11 +21,12 @@ from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_func
 
 # Disable insecure requests warning
 # So we don't break our syslog handler.
-# This (disabled) warning is expected due to our use of 
+# This (disabled) warning is expected due to our use of
 # self-signed certificates when we communicate between
 # the agent and manager.
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 class ServerProperties(object):
     @property
@@ -53,7 +51,7 @@ def main():
         description="Intel® Manager for Lustre* software Agent")
 
     parser.add_argument("--publish-zconf", action="store_true")
-    args = parser.parse_args()
+    parser.parse_args()
 
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
