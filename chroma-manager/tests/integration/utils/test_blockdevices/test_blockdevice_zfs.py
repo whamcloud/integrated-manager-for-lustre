@@ -23,11 +23,10 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    # Use this opportunity to disable zfs.target to stop auto import as well.
+    # Autoimport will not occur if cachefile is none
     @property
     def prepare_device_commands(self):
-        return ["systemctl disable zfs.target",
-                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+        return ["zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
