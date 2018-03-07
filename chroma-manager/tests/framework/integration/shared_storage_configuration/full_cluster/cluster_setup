@@ -34,9 +34,19 @@ fi
 if $JENKINS; then
     ARCHIVE_PATH=.
 else
-    ARCHIVE_PATH=chroma-bundles
+    ARCHIVE_PATH=$CHROMA_DIR/chroma-bundles
 fi
-scp $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+
+if [ -f ~/storage_server.repo.in ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo.in
+fi
+
+if [ -n "$RELEASE_ARCHIVE" ]; then
+    ARCHIVE_NAME=${RELEASE_ARCHIVE##*/}
+fi
+
+# Install and setup manager
+scp $STORAGE_SERVER_REPO $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 # install cman here to test that the fence-agents-iml package is being a
@@ -52,6 +62,14 @@ if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_
     rc=\${PIPESTATUS[0]}
     cat /var/log/chroma/install.log
     exit \$rc
+fi
+
+# override /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo.in ]; then
+    # make sure we use the correct lustre though!
+    sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
+        -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
+        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
 fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
@@ -86,9 +104,16 @@ fi"
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 # if this node uses the Intel proxies, make sure the agent is doing so
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
-    echo \". /etc/profile.d/intel_proxy.sh\" > /etc/sysconfig/chroma-agent
+    mkdir -p /etc/systemd/system/chroma-agent.service.d/
+    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
 fi
 
+# any repos required by this test run
+if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+    for repo in $STORAGE_SERVER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
+fi
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 if $MEASURE_COVERAGE; then
@@ -123,7 +148,7 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 
 # Install and setup integration tests on integration test runner
 if ! $JENKINS; then
-    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+    CMIT=$(ls $CHROMA_DIR/chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
 fi
 scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF

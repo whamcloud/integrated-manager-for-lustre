@@ -24,6 +24,20 @@ logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 
+stop_agent_cmd = '''
+    systemctl stop chroma-agent
+    i=0
+
+    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
+        ((i++))
+        sleep 1
+    done
+
+    if [ "$i" -eq {timeout} ]; then
+        exit 1
+    fi
+    '''.format(timeout=TEST_TIMEOUT)
+
 class RemoteOperations(object):
     """
     Actions occuring 'out of band' with respect to manager, usually
@@ -1164,24 +1178,12 @@ class RealRemoteOperations(RemoteOperations):
             if self.has_chroma_agent(server):
                 self._ssh_address(
                     server,
-                    '''
-                    systemctl stop chroma-agent
-                    i=0
-
-                    while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
-                        ((i++))
-                        sleep 1
-                    done
-
-                    if [ "$i" -eq {timeout} ]; then
-                        exit 1
-                    fi
-                    '''.format(timeout=TEST_TIMEOUT)
+                    stop_agent_cmd
                 )
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, 'service chroma-agent start')
+            self._ssh_address(server, 'systemctl start chroma-agent')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -1257,7 +1259,7 @@ class RealRemoteOperations(RemoteOperations):
                     # Stop the agent
                     self._ssh_address(
                         address,
-                        'service chroma-agent stop'
+                        'systemctl stop chroma-agent'
                     )
                     self._ssh_address(
                         address,
