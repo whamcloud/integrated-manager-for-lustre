@@ -32,7 +32,7 @@ Requires: python2-iml-common1.3
 Requires: systemd-python
 Requires: python-tzlocal
 Requires: python2-toolz
-Requires: iml-device-scanner
+Requires: iml-device-scanner < 2.0.0
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
