@@ -449,7 +449,7 @@ def get_drives(pool_disks, device_nodes):
     serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
 
     mms = {d['major_minor'] for d in device_nodes.values()
-           if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
+           if (d['serial_83'] in serials)}
 
     return mms
 
