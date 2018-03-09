@@ -164,14 +164,16 @@ class TestBlockDevices(unittest.TestCase):
     """ Verify aggregator output parsed through block_devices matches expected agent output """
     test_host_fqdn = 'vm5.foo.com'
     zpool_result = {u'0x0123456789abcdef': {'block_device': 'zfspool:0x0123456789abcdef',
-                                            'drives': set([u'8:32', u'8:64']),
+                                            'drives': {u'8:64', u'8:32', u'8:65', u'8:41',
+                                                       u'8:73', u'8:33'},
                                             'name': u'testPool4',
                                             'path': u'testPool4',
                                             'size': 10670309376,
                                             'uuid': u'0x0123456789abcdef'}}
     dataset_result = {u'0xDB55C7876B45A0FB-testPool4/f1-OST0000': {'block_device':
                                                                    'zfsset:0xDB55C7876B45A0FB-testPool4/f1-OST0000',
-                                                                   'drives': set([u'8:32', u'8:64']),
+                                                                   'drives': {u'8:64', u'8:32', u'8:65', u'8:41',
+                                                                              u'8:73', u'8:33'},
                                                                    'name': u'testPool4/f1-OST0000',
                                                                    'path': u'testPool4/f1-OST0000',
                                                                    'size': 0,
@@ -271,7 +273,7 @@ class TestBlockDevices(unittest.TestCase):
     def test_get_drives(self):
         self.assertEqual(get_drives([child['Disk'] for child in self.get_test_pool()['vdev']['Root']['children']],
                                     self.block_devices['devs']),
-                         {u'8:64', u'8:32'})
+                         {u'8:64', u'8:32', u'8:65', u'8:41', u'8:73', u'8:33'})
 
     def test_discover_zpools(self):
         """ verify block devices are unchanged when no accessible pools exist on other hosts """
