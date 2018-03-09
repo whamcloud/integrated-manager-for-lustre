@@ -138,7 +138,7 @@ def get_host_devices(fqdn, _data):
         host_data = _data.pop(fqdn)
     except KeyError:
         log.error('no aggregator data found for {}'.format(fqdn))
-        return None
+        raise
 
     devices = json.loads(host_data)
 
@@ -149,7 +149,7 @@ def get_host_devices(fqdn, _data):
                                  devices["zed"]["props"])   # list
     except KeyError as e:
         log.error('badly formatted data found for {} : {} ({})'.format(fqdn, devices, e))
-        return None
+        raise
 
     return device_maps, _data
 
@@ -523,28 +523,25 @@ def discover_zpools(all_devs, _data):
 def get_block_devices(fqdn):
     _data = aggregator_get()
 
-    if _data:
+    try:
         log.debug('fetching devices for {}'.format(fqdn))
         device_maps, _data = get_host_devices(fqdn, _data)
-
-        if device_maps is None:
-            return {}
-
-        devs_list = parse_sys_block(device_maps.block_devices)
-        devs_list.extend(parse_zpools(device_maps.zpools,
-                                      device_maps.zfs,
-                                      devs_list.pop(-1)))
-
-        devs_dict = dict(zip(
-            ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
-            devs_list))
-
-        return discover_zpools(devs_dict, _data)
-    else:
-        log.error("iml-device-aggregator contains no data, ensure "
+    except Exception as e:
+        log.error("iml-device-aggregator is not providing expected data, ensure "
                   "iml-device-scanner package is installed and relevant "
-                  "services are running on storage servers")
+                  "services are running on storage servers (%s)" % e)
         return {}
+
+    devs_list = parse_sys_block(device_maps.block_devices)
+    devs_list.extend(parse_zpools(device_maps.zpools,
+                                  device_maps.zfs,
+                                  devs_list.pop(-1)))
+
+    devs_dict = dict(zip(
+        ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
+        devs_list))
+
+    return discover_zpools(devs_dict, _data)
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
