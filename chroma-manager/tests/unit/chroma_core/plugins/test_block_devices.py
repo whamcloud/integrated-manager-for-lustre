@@ -290,7 +290,9 @@ class TestBlockDevices(TestBase):
         super(TestBlockDevices, self).setUp()
 
         self.fixture = compose(json.loads, self.load)(u'device_aggregator.text')
+
         self.block_devices = self.get_patched_block_devices(dict(self.fixture))
+
         self.expected = json.loads(self.load(u'agent_plugin.json'))['result']['linux']
 
     def get_patched_block_devices(self, fixture):
@@ -313,35 +315,9 @@ class TestBlockDevices(TestBase):
 
         return fixture
 
-    @staticmethod
-    def get_test_pool(state='ACTIVE'):
-        return {
-          "guid": '0x0123456789abcdef',
-          "name": 'testPool4',
-          "state": state,
-          "size": 10670309376,
-          "datasets": [],
-          "vdev": {'Root': {'children': [
-            {
-              "Disk": {
-                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
-                "whole_disk": True,
-                "is_log": False
-              }
-            },
-            {
-              "Disk": {
-                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
-                "whole_disk": True,
-                "is_log": False
-              }
-            }]
-          }}
-        }
+    def get_patched_block_devices(self, fixture):
+        with patch('chroma_core.plugins.block_devices.aggregator_get', return_value=fixture):
+            return get_block_devices(self.test_host_fqdn)
 
     def test_block_device_nodes_parsing(self):
         p = re.compile('\d+:\d+$')
