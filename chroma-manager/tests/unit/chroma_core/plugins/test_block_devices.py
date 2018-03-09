@@ -184,7 +184,7 @@ class TestBlockDevices(unittest.TestCase):
 
         self.fixture = compose(json.loads, self.load)(u'device_aggregator.text')
 
-        self.block_devices = self.get_patched_block_devices(self.fixture)
+        self.block_devices = self.get_patched_block_devices(dict(self.fixture))
 
         self.expected = json.loads(self.load(u'agent_plugin.json'))['result']['linux']
 
@@ -195,6 +195,9 @@ class TestBlockDevices(unittest.TestCase):
 
     def patch_zed_data(self, fixture, host_fqdn, pools=None, zfs=None, props=None):
         """ overwrite with supplied structures or if None supplied in parameters, copy from existing host """
+        # take copy of fixture so we return a new one and leave the original untouched
+        fixture = dict(fixture)
+
         # copy existing host data if simulating new host
         host_data = json.loads(fixture.setdefault(host_fqdn,
                                                   fixture[self.test_host_fqdn]))
@@ -207,9 +210,8 @@ class TestBlockDevices(unittest.TestCase):
         return fixture
 
     def get_patched_block_devices(self, fixture):
-        with patch('chroma_core.plugins.block_devices.aggregator_get'):
-            with patch.dict('chroma_core.plugins.block_devices._data', fixture):
-                return get_block_devices(self.test_host_fqdn)
+        with patch('chroma_core.plugins.block_devices.aggregator_get', return_value=fixture):
+            return get_block_devices(self.test_host_fqdn)
 
     def test_block_device_nodes_parsing(self):
         result = self.block_devices['devs']
@@ -274,20 +276,20 @@ class TestBlockDevices(unittest.TestCase):
     def test_discover_zpools(self):
         """ verify block devices are unchanged when no accessible pools exist on other hosts """
         original_block_devices = dict(self.block_devices)
-        self.assertEqual(discover_zpools(self.block_devices),
+        self.assertEqual(discover_zpools(self.block_devices, self.fixture),
                          original_block_devices)
 
     def test_discover_zpools_unavailable_other(self):
         """ verify block devices are unchanged when locally active pool exists unavailable on other hosts """
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(self.fixture),
                                       self.test_host_fqdn,
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
 
-        original_block_devices = self.get_patched_block_devices(fixture)
+        original_block_devices = self.get_patched_block_devices(dict(fixture))
 
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(fixture),
                                       'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')},
                                       {},
@@ -297,15 +299,15 @@ class TestBlockDevices(unittest.TestCase):
 
     def test_discover_zpools_exported_other(self):
         """ verify block devices are unchanged when locally active pool exists exported on other hosts """
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(self.fixture),
                                       self.test_host_fqdn,
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
 
-        original_block_devices = self.get_patched_block_devices(fixture)
+        original_block_devices = self.get_patched_block_devices(dict(fixture))
 
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(fixture),
                                       'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
                                       {},
@@ -322,10 +324,10 @@ class TestBlockDevices(unittest.TestCase):
                                       {},
                                       {})
 
-        block_devices = self.get_patched_block_devices(fixture)
+        block_devices = self.get_patched_block_devices(dict(fixture))
 
         # no pools or datasets should be reported after processing
-        block_devices = discover_zpools(block_devices)
+        block_devices = discover_zpools(block_devices, fixture)
         [self.assertEqual(block_devices[key], {}) for key in ['zfspools', 'zfsdatasets']]
 
         # add pool and zfs data to fixture for another host
@@ -367,7 +369,7 @@ class TestBlockDevices(unittest.TestCase):
                                       {},
                                       {})
 
-        self.get_patched_block_devices(fixture)
+        block_devices = self.get_patched_block_devices(fixture)
 
         fixture = self.patch_zed_data(self.fixture,
                                       'vm6.foo.com',
@@ -376,7 +378,7 @@ class TestBlockDevices(unittest.TestCase):
                                       {})
 
         with self.assertRaises(RuntimeError):
-            self.get_patched_block_devices(fixture)
+            discover_zpools(block_devices, fixture)
 
     def test_ignore_exported_zpools(self):
         """ verify exported pools are not reported """
