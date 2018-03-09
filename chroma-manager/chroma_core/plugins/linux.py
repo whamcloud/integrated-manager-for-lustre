@@ -205,10 +205,6 @@ class Linux(Plugin):
             if expected_item not in devices.keys():
                 devices[expected_item] = {}
 
-        log.debug("{} reporting datasets: {}, pools: {}".format(fqdn,
-                                                                devices['zfsdatasets'].keys(),
-                                                                devices['zfspools'].keys()))
-
         dev_json = json.dumps(devices['devs'], sort_keys=True)
 
         if dev_json == self.current_devices:
@@ -218,6 +214,10 @@ class Linux(Plugin):
         log.debug("Linux.devices changed on {}: {}".format(
             fqdn,
             set(json.loads(self.current_devices).keys()) - set(devices['devs'].keys())))
+
+        log.debug("{} reporting datasets: {}, pools: {}".format(fqdn,
+                                                                devices['zfsdatasets'].keys(),
+                                                                devices['zfspools'].keys()))
 
         self.current_devices = dev_json
 
