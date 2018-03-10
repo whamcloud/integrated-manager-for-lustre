@@ -1259,16 +1259,16 @@ class UpdateManagedTargetMount(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
+        device_type = kwargs['device_type']
         job_log.info("Updating mtm volume_nodes for target %s" % target)
 
-        original_volume = target.volume
-        device_type = original_volume.storage_resource.to_resource_class().device_type()
+        # original_volume = target.volume
+        # device_type = original_volume.storage_resource.to_resource_class().device_type()
 
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
             current_volume_node = mtm.volume_node
-            assert original_volume == current_volume_node.volume
-            primary = current_volume_node.primary
+            # assert original_volume == current_volume_node.volume
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
@@ -1283,7 +1283,7 @@ class UpdateManagedTargetMount(Step):
                                                    timeout = 60 * 60,
                                                    expected_exception_classes=[VolumeNode.DoesNotExist])
 
-            mtm.volume_node.primary = primary
+            mtm.volume_node.primary = current_volume_node.primary
             mtm.volume_node.save()
             mtm.save()
 
@@ -1381,7 +1381,7 @@ class FormatTargetJob(StateChangeJob):
                                   'device_type': device_type,
                                   'backfstype': block_device.preferred_fstype,
                                   'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target})])
+                      (UpdateManagedTargetMount, {'target': self.target, 'device_type': device_type})])
 
         return steps
 
