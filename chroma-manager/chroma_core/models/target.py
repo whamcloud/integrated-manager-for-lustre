@@ -1221,7 +1221,13 @@ class MkfsStep(Step):
             target.inode_count = result['inode_count']
             target.inode_size = result['inode_size']
 
-        target.volume.save()
+        # in the case of formatting a zfs-backed target volume resource may have already been removed
+        try:
+            target.volume.save()
+        except AttributeError as e:
+            job_log.warning('saving target {} volume {} failed after mkfs ({})'.format(target.name,
+                                                                                       target.volume.label,
+                                                                                       e))
         target.save()
 
 
