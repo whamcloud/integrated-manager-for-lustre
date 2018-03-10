@@ -1198,36 +1198,30 @@ class MkfsStep(Step):
         if not (result['filesystem_type'] in FileSystem.all_supported_filesystems()):
             raise RuntimeError("Unexpected filesystem type '%s'" % result['filesystem_type'])
 
-        # I don't think this should be here - seems kind of out of place - but I also don't see when else to store it
-        # See comment above about database = True
-        target.volume.filesystem_type = result['filesystem_type']
-
         target.uuid = result['uuid']
 
-        if result['inode_count'] is not None:
-            # Check that inode_size was applied correctly
-            if target.inode_size:
-                if target.inode_size != result['inode_size']:
-                    raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
-                        target.inode_size, result['inode_size']))
+        if result['filesystem_type'] != 'zfs':
+            target.volume.filesystem_type = result['filesystem_type']
 
-            # Check that inode_count was applied correctly
-            if target.inode_count:
-                if target.inode_count != result['inode_count']:
-                    raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
-                        target.inode_count, result['inode_count']))
+            if result['inode_count'] is not None:
+                # Check that inode_size was applied correctly
+                if target.inode_size:
+                    if target.inode_size != result['inode_size']:
+                        raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
+                            target.inode_size, result['inode_size']))
 
-            # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
-            target.inode_count = result['inode_count']
-            target.inode_size = result['inode_size']
+                # Check that inode_count was applied correctly
+                if target.inode_count:
+                    if target.inode_count != result['inode_count']:
+                        raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
+                            target.inode_count, result['inode_count']))
 
-        # in the case of formatting a zfs-backed target volume resource may have already been removed
-        try:
+                # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
+                target.inode_count = result['inode_count']
+                target.inode_size = result['inode_size']
+
             target.volume.save()
-        except AttributeError as e:
-            job_log.warning('saving target {} volume {} failed after mkfs ({})'.format(target.name,
-                                                                                       target.volume.label,
-                                                                                       e))
+
         target.save()
 
 
