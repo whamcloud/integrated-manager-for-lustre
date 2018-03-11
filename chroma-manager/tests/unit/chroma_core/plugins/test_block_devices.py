@@ -234,9 +234,7 @@ class TestFormattedBlockDevices(TestBase):
             # fixme: currently the Mountpoint of the local mount is not being provided by block_devices.py
             lambda x: self.assertEqual(self.expected[key][x][1],
                                        self.block_devices[key][x][1]),
-            # self.expected[key].keys()
-            # fixme: currently ext4 formatted devices are not reported as local mounts
-            [k for k in self.expected[key].keys() if 'ext4' not in self.expected[key][k]]
+            self.expected[key].keys()
         )
 
     def test_block_device_lvs_parsing(self):
@@ -290,9 +288,7 @@ class TestBlockDevices(TestBase):
         super(TestBlockDevices, self).setUp()
 
         self.fixture = compose(json.loads, self.load)(u'device_aggregator.text')
-
         self.block_devices = self.get_patched_block_devices(dict(self.fixture))
-
         self.expected = json.loads(self.load(u'agent_plugin.json'))['result']['linux']
 
     def get_patched_block_devices(self, fixture):
@@ -315,9 +311,35 @@ class TestBlockDevices(TestBase):
 
         return fixture
 
-    def get_patched_block_devices(self, fixture):
-        with patch('chroma_core.plugins.block_devices.aggregator_get', return_value=fixture):
-            return get_block_devices(self.test_host_fqdn)
+    @staticmethod
+    def get_test_pool(state='ACTIVE'):
+        return {
+          "guid": '0x0123456789abcdef',
+          "name": 'testPool4',
+          "state": state,
+          "size": 10670309376,
+          "datasets": [],
+          "vdev": {'Root': {'children': [
+            {
+              "Disk": {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
+                "whole_disk": True,
+                "is_log": False
+              }
+            },
+            {
+              "Disk": {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
+                "whole_disk": True,
+                "is_log": False
+              }
+            }]
+          }}
+        }
 
     def test_block_device_nodes_parsing(self):
         p = re.compile('\d+:\d+$')
