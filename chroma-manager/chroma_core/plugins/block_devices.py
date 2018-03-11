@@ -243,7 +243,7 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
 
 # fixme: too crude?
 def local_fs_filter(x):
-    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in ['ext2', 'ext3', 'ext4']:
+    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in ['ext2', 'ext3']:
         return True
     elif x['filesystem_usage'] == 'other' and x['filesystem_type'] == 'swap':
         return True
