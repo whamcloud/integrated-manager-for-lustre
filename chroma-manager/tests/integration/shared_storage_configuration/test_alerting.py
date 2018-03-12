@@ -1,4 +1,4 @@
-
+from time import sleep
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -71,6 +71,8 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         # Stop the filesystem so that we can play with the host
         self.set_state(fs['resource_uri'], 'stopped')
+
+        sleep(99999)
 
         # Check that an alert is raised when lnet unexpectedly goes down
         host = self.get_json_by_uri(host['resource_uri'])
