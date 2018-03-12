@@ -28,8 +28,8 @@ enabled=1
 gpgcheck=0
 
 [iml-common-test]
-name=iml-common from: http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64,distro=el7/24/
-baseurl=http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64%2Cdistro=el7/24/artifact/artifacts/RPMS/
+name=iml-common from: http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64,distro=el7/31/
+baseurl=http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64%2Cdistro=el7/31/artifact/artifacts/RPMS/
 enabled=1
 gpgcheck=0
 
