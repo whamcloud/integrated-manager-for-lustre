@@ -876,7 +876,7 @@ class MountOrImportStep(Step):
         Create the kwargs appropriate for the MakeTargetActive step.
 
         :param target: The lustre target to be made available to host (and hence unavailable to other hosts)
-        :param host: The host target to be made available to, or None if target to be made unavailable on all hosts
+        :param host: The host target to be made available to
         :param start_target: True means the target is started False means it is just imported.
         :return:
         """
@@ -895,8 +895,7 @@ class MountOrImportStep(Step):
 
         job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
 
-        assert ((host is not None) and (active_volume_node is not None)) or \
-               ((host is None) and (active_volume_node is None))
+        assert (host is not None) and (active_volume_node is not None)
 
         return {'target': target,
                 'inactive_volume_nodes': inactive_volume_nodes,
