@@ -35,7 +35,7 @@ scp .ssh/* chromatest@$CHROMA_MANAGER:.ssh/
 chkconfig rabbitmq-server on
 
 # Some witch-craft to run rabbitmq as non-root in linux
-echo "%rabbitmq ALL=(ALL) NOPASSWD: /usr/sbin/rabbitmqctl"  > /etc/sudoers.d/rabbitmqctl
+echo "%rabbitmq ALL=(ALL) NOPASSWD: /usr/lib/rabbitmq/bin/rabbitmqctl"  > /etc/sudoers.d/rabbitmqctl
 chmod 440 /etc/sudoers.d/rabbitmqctl
 sed -i "s/Defaults    requiretty/# Defaults    requiretty/g" /etc/sudoers
 sed -i "s/rabbitmq:x:\([0-9]*\):[a-z]*/rabbitmq:x:\1:chromatest/g" /etc/group
