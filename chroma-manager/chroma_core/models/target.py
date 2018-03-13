@@ -853,27 +853,26 @@ class MountOrImportStep(Step):
         # This will raise an exception if any of the threads raise an exception
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
-        if kwargs['active_volume_node'] is None:
-            device_type = kwargs['target'].volume.filesystem_type
-            # in the case that the volume node is missing, attempt to import target volume
-            self.invoke_agent_expect_result(kwargs['host'],
-                                            'import_target',
-                                            {'device_type': ('linux' if device_type == 'ext4' else device_type),
-                                             'path': kwargs['target'].volume.label,
-                                             'pacemaker_ha_operation': False})
-        else:
-            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                            'import_target',
-                                            {'device_type': kwargs['active_volume_node'].device_type,
-                                             'path': kwargs['active_volume_node'].path,
-                                             'pacemaker_ha_operation': False})
+        if kwargs['active_volume_node'] is not None:
+            if kwargs['start_target'] is True:
+                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                'import_target',
+                                                {'device_type': kwargs['active_volume_node'].device_type,
+                                                 'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False})
 
         if kwargs['start_target'] is True:
             result = self.invoke_agent_expect_result(kwargs['host'],
                                                      "start_target",
                                                      {'ha_label': kwargs['target'].ha_label})
 
-            kwargs['target'].update_active_mount(result)
+                kwargs['target'].update_active_mount(result)
+            else:
+                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                                'import_target',
+                                                {'device_type': kwargs['active_volume_node'].device_type,
+                                                 'path': kwargs['active_volume_node'].path,
+                                                 'pacemaker_ha_operation': False})
 
     @classmethod
     def describe(cls, kwargs):
@@ -1142,7 +1141,11 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        # keep pool imported after stopping target under normal IML operation
+        host = self.target.best_available_host()
+        return [(UnmountStep, {"target": self.target, "host": host}),
+                (MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target, host, False))]
 
 
 class PreFormatCheck(Step):
