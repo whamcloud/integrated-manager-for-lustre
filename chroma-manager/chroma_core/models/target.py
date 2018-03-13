@@ -844,8 +844,7 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False,
-                                                 'validate_importable': True})
+                                                 'pacemaker_ha_operation': False})
 
                 result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
                                                          "start_target",
@@ -857,18 +856,14 @@ class MountOrImportStep(Step):
                                                 'import_target',
                                                 {'device_type': kwargs['active_volume_node'].device_type,
                                                  'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False,
-                                                 'validate_importable': False})
+                                                 'pacemaker_ha_operation': False})
 
     @classmethod
     def describe(cls, kwargs):
-        if kwargs['active_volume_node'] is None:
-            return help_text['export_target_from_nodes'] % kwargs['target']
+        if kwargs['start_target'] is True:
+            return help_text['mounting_target_on_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
         else:
-            if kwargs['start_target'] is True:
-                return help_text['mounting_target_on_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
-            else:
-                return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+            return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
 
     @classmethod
     def create_parameters(cls, target, host, start_target):
@@ -1120,7 +1115,11 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        # keep pool imported after stopping target under normal IML operation
+        host = self.target.best_available_host()
+        return [(UnmountStep, {"target": self.target, "host": host}),
+                (MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target, host, False))]
 
 
 class PreFormatCheck(Step):
