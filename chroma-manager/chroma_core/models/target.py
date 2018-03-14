@@ -1100,8 +1100,7 @@ class StartTargetJob(StateChangeJob):
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
                                                      False)),
-                (UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
+                (UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
                 (MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
@@ -1141,11 +1140,9 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        # keep pool imported after stopping target under normal IML operation
-        host = self.target.best_available_host()
-        return [(UnmountStep, {"target": self.target, "host": host}),
-                (MountOrImportStep,
-                 MountOrImportStep.create_parameters(self.target, host, False))]
+        # Update MTMs before attempting to stop/unmount
+        return [(UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+                (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
 class PreFormatCheck(Step):
@@ -1251,8 +1248,9 @@ class MkfsStep(Step):
 
 class UpdateManagedTargetMount(Step):
     """
-    This step will update the volume_nodes within the
-    manage target mounts to reflect changes during MkfsStep
+    This step will update the volume and volume_node relationships with
+    manage target mounts and managed targets to reflect changes during
+    MkfsStep and device mounting/unmounting.
     """
     database = True
 
@@ -1265,13 +1263,9 @@ class UpdateManagedTargetMount(Step):
         device_type = kwargs['device_type']
         job_log.info("Updating mtm volume_nodes for target %s" % target)
 
-        # original_volume = target.volume
-        # device_type = original_volume.storage_resource.to_resource_class().device_type()
-
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
             current_volume_node = mtm.volume_node
-            # assert original_volume == current_volume_node.volume
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
