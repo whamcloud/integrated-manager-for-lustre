@@ -1080,6 +1080,11 @@ class StartTargetJob(StateChangeJob):
         return [(MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
+                                                     False)),
+                (UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+                (MountOrImportStep,
+                 MountOrImportStep.create_parameters(self.target,
+                                                     self.target.best_available_host(),
                                                      True))]
 
 
@@ -1116,11 +1121,9 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        # keep pool imported after stopping target under normal IML operation
-        host = self.target.best_available_host()
-        return [(UnmountStep, {"target": self.target, "host": host}),
-                (MountOrImportStep,
-                 MountOrImportStep.create_parameters(self.target, host, False))]
+        # Update MTMs before attempting to stop/unmount
+        return [(UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+                (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
 class PreFormatCheck(Step):
@@ -1226,8 +1229,9 @@ class MkfsStep(Step):
 
 class UpdateManagedTargetMount(Step):
     """
-    This step will update the volume_nodes within the
-    manage target mounts to reflect changes during MkfsStep
+    This step will update the volume and volume_node relationships with
+    manage target mounts and managed targets to reflect changes during
+    MkfsStep and device mounting/unmounting.
     """
     database = True
 
@@ -1240,13 +1244,9 @@ class UpdateManagedTargetMount(Step):
         device_type = kwargs['device_type']
         job_log.info("Updating mtm volume_nodes for target %s" % target)
 
-        # original_volume = target.volume
-        # device_type = original_volume.storage_resource.to_resource_class().device_type()
-
         for mtm in target.managedtargetmount_set.all():
             host = mtm.host
             current_volume_node = mtm.volume_node
-            # assert original_volume == current_volume_node.volume
 
             block_device = BlockDevice(device_type, current_volume_node.path)
             filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
