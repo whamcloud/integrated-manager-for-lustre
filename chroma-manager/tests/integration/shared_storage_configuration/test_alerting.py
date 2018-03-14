@@ -65,7 +65,10 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.wait_for_assert(lambda: self.assertNoAlerts(mgt['resource_uri']))
 
         # Check that no alert is raised when intentionally stopping the target
-        self.set_state(mgt['resource_uri'], 'unmounted')
+        self._fetch_help(lambda: self.set_state(mgt['resource_uri'], 'unmounted'),
+                         ['tom.nabarro@outlook.com'],
+                         'failing to stop MGS',
+                         timeout=7200)
 
         # Expects no alerts?  This code above WILL generate alerts.  It used
         # to generate them in the dismissed state, and this method would ignore
