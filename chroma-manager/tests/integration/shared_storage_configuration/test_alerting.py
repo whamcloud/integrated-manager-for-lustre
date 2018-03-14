@@ -75,10 +75,10 @@ class TestAlerting(ChromaIntegrationTestCase):
         # now create the alerts in WARNING
         self.assertNoAlerts(mgt['resource_uri'], of_severity='ERROR')
 
-        sleep(99999)
-
         # Stop the filesystem so that we can play with the host
         self.set_state(fs['resource_uri'], 'stopped')
+
+        sleep(99999)
 
         # Check that an alert is raised when lnet unexpectedly goes down
         host = self.get_json_by_uri(host['resource_uri'])
