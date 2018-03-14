@@ -38,6 +38,7 @@ stop_agent_cmd = '''
     fi
     '''.format(timeout=TEST_TIMEOUT)
 
+
 class RemoteOperations(object):
     """
     Actions occuring 'out of band' with respect to manager, usually
@@ -145,6 +146,9 @@ class SimulatorRemoteOperations(RemoteOperations):
 
     def start_target(self, fqdn, ha_label):
         self._simulator.get_cluster(fqdn).start(ha_label)
+
+    def import_target(self, fqdn, type, path, pacemaker_ha_operation):
+        pass
 
     def start_lnet(self, fqdn):
         self._simulator.servers[fqdn].start_lnet()
@@ -393,7 +397,7 @@ class RealRemoteOperations(RemoteOperations):
                 ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
-                
+
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
                   "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
@@ -531,6 +535,11 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_target(self, fqdn, ha_label):
         self._ssh_fqdn(fqdn, "chroma-agent start_target --ha %s" % ha_label)
+
+    def import_target(self, fqdn, type, path, pacemaker_ha_operation):
+        self._ssh_fqdn(fqdn, "chroma-agent import_target --device_type %s "
+                             "--path %s --pacemaker_ha_operation %s" %
+                              (type, path, pacemaker_ha_operation))
 
     def stop_lnet(self, fqdn):
         self._ssh_fqdn(fqdn, "chroma-agent stop_lnet")

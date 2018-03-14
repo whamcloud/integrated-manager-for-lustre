@@ -50,8 +50,14 @@ class TestAlerting(ChromaIntegrationTestCase):
             raise
         self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
         target_offline_alert = self.get_alert(mgt['resource_uri'], alert_type="TargetOfflineAlert")
+
         self.assertEqual(target_offline_alert['severity'], 'ERROR')
         self.assertEqual(target_offline_alert['alert_type'], 'TargetOfflineAlert')
+
+        self.remote_operations.import_target(host['fqdn'],
+                                             mgt['volume']['filesystem_type'],
+                                             mgt['volume']['label'],
+                                             'false')
 
         # Check the alert is cleared when restarting the target
         self.remote_operations.start_target(host['fqdn'], mgt['ha_label'])
