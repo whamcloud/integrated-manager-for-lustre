@@ -1,4 +1,4 @@
-
+from time import sleep
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -40,6 +40,7 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         self.wait_alerts([], active=True, severity='ERROR')
 
+        sleep(99999)
         # Check the ERROR alert is raised when the target unexpectedly stops
         result = self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
         try:
@@ -100,7 +101,10 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         if not config.get('simulator', False):
             # Raise target offline alerts
-            self.set_state("/api/filesystem/%s/" % fs_id, 'available')
+            self._fetch_help(lambda: self.set_state("/api/filesystem/%s/" % fs_id, 'available'),
+                             ['tom.nabarro@outlook.com'],
+                             'failing to start target',
+                             timeout=7200)
             for target in self.get_list("/api/target/"):
                 self.remote_operations.stop_target(self.get_json_by_uri(target['active_host'])['fqdn'], target['ha_label'])
 
