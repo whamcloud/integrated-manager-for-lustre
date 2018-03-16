@@ -1119,7 +1119,8 @@ class StopTargetJob(StateChangeJob):
         host = self.target.best_available_host()
         return [(UnmountStep, {"target": self.target, "host": host}),
                 (MountOrImportStep,
-                 MountOrImportStep.create_parameters(self.target, host, False))]
+                 MountOrImportStep.create_parameters(self.target, host, False)),
+                (UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type})]
 
 
 class PreFormatCheck(Step):

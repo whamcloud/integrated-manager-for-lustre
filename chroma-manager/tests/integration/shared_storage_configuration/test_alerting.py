@@ -1,5 +1,3 @@
-from time import sleep
-
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
@@ -40,7 +38,6 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         self.wait_alerts([], active=True, severity='ERROR')
 
-        sleep(99999)
         # Check the ERROR alert is raised when the target unexpectedly stops
         result = self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
         try:
