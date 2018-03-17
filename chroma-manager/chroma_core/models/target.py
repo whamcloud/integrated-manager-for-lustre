@@ -70,27 +70,27 @@ def select_description(stateful_object, descriptions):
 
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
-    name = models.CharField(max_length = 64, null = True, blank = True,
-                            help_text = "Lustre target name, e.g. 'testfs-OST0001'.  May be null\
+    name = models.CharField(max_length=64, null=True, blank=True,
+                            help_text="Lustre target name, e.g. 'testfs-OST0001'.  May be null\
                             if the target has not yet been registered.")
 
-    uuid = models.CharField(max_length = 64, null = True, blank = True,
-                            help_text = "UUID of the target's internal file system.  May be null\
+    uuid = models.CharField(max_length=64, null=True, blank=True,
+                            help_text="UUID of the target's internal file system.  May be null\
                             if the target has not yet been formatted")
 
-    ha_label = models.CharField(max_length = 64, null = True, blank = True,
-                                help_text = "Label used for HA layer; human readable but unique")
+    ha_label = models.CharField(max_length=64, null=True, blank=True,
+                                help_text="Label used for HA layer; human readable but unique")
 
     volume = models.ForeignKey('Volume')
 
-    inode_size = models.IntegerField(null = True, blank = True, help_text = "Size in bytes per inode")
-    bytes_per_inode = models.IntegerField(null = True, blank = True, help_text = "Constant used during formatting to "
-                                          "determine inode count by dividing the volume size by ``bytes_per_inode``")
-    inode_count = models.BigIntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
-                                         "backing store")
+    inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
+    bytes_per_inode = models.IntegerField(null=True, blank=True, help_text="Constant used during formatting to "
+                                                                           "determine inode count by dividing the volume size by ``bytes_per_inode``")
+    inode_count = models.BigIntegerField(null=True, blank=True, help_text="The number of inodes in this target's"
+                                                                          "backing store")
 
     reformat = models.BooleanField(
-        help_text = "Only used during formatting, indicates that when formatting this target \
+        help_text="Only used during formatting, indicates that when formatting this target \
         any existing filesystem on the Volume should be overwritten")
 
     @property
@@ -121,18 +121,22 @@ class ManagedTarget(StatefulObject):
             started_on = ObjectCache.get_one(ManagedHost,
                                              lambda mh: (mh.nodename == nodename) or (mh.fqdn == nodename))
         except ManagedHost.DoesNotExist:
-            raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
+            raise RuntimeError(
+                "Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
 
         try:
             job_log.debug("Started %s on %s" % (self.ha_label, started_on))
-            target_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id)
+            target_mount = ObjectCache.get_one(ManagedTargetMount,
+                                               lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id)
             self.active_mount = target_mount
         except ManagedTargetMount.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this self" % (self, self.id, started_on, started_on.pk))
-            raise RuntimeError("Target %s reported as running on %s, but it is not configured there" % (self, started_on))
+            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this self" % (
+            self, self.id, started_on, started_on.pk))
+            raise RuntimeError(
+                "Target %s reported as running on %s, but it is not configured there" % (self, started_on))
 
     def get_param(self, key):
-        params = self.targetparam_set.filter(key = key)
+        params = self.targetparam_set.filter(key=key)
         return [p.value for p in params]
 
     def get_params(self):
@@ -140,10 +144,10 @@ class ManagedTarget(StatefulObject):
 
     def get_failover_nids(self):
         fail_nids = []
-        for secondary_mount in self.managedtargetmount_set.filter(primary = False):
+        for secondary_mount in self.managedtargetmount_set.filter(primary=False):
             host = secondary_mount.host
             failhost_nids = host.lnet_configuration.get_nids()
-            assert(len(failhost_nids) != 0)
+            assert (len(failhost_nids) != 0)
             fail_nids.extend(failhost_nids)
         return fail_nids
 
@@ -200,9 +204,9 @@ class ManagedTarget(StatefulObject):
     # Additional states needed for 'deactivated'?
     states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'forgotten']
     initial_state = 'unformatted'
-    active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
+    active_mount = models.ForeignKey('ManagedTargetMount', blank=True, null=True)
 
-    def set_state(self, state, intentional = False):
+    def set_state(self, state, intentional=False):
         job_log.debug("mt.set_state %s %s" % (state, intentional))
         super(ManagedTarget, self).set_state(state, intentional)
         if intentional:
@@ -214,7 +218,7 @@ class ManagedTarget(StatefulObject):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    def get_deps(self, state = None):
+    def get_deps(self, state=None):
         from chroma_core.models import ManagedFilesystem
         if not state:
             state = self.state
@@ -244,7 +248,8 @@ class ManagedTarget(StatefulObject):
             filesystem_id = self.downcast().filesystem_id
             filesystem = ObjectCache.get_by_id(ManagedFilesystem, filesystem_id)
             deps.append(DependOn(filesystem, 'available',
-                                 acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
+                                 acceptable_states=filesystem.not_states(['forgotten', 'removed']),
+                                 fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
             from chroma_core.models import LNetConfiguration
@@ -255,11 +260,14 @@ class ManagedTarget(StatefulObject):
                 fix_state = 'forgotten' if self.immutable_state else 'removed'
 
                 lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
-                deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
+                deps.append(
+                    DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
 
                 if host.pacemaker_configuration:
-                    pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
-                    deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'], fix_state=fix_state))
+                    pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration,
+                                                                    host.pacemaker_configuration.id)
+                    deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'],
+                                         fix_state=fix_state))
 
         return DependAll(deps)
 
@@ -273,12 +281,12 @@ class ManagedTarget(StatefulObject):
     }
 
     @classmethod
-    def create_for_volume(cls_, volume_id, create_target_mounts = True, **kwargs):
+    def create_for_volume(cls_, volume_id, create_target_mounts=True, **kwargs):
         # Local imports to avoid inter-model import dependencies
-        volume = Volume.objects.get(pk = volume_id)
+        volume = Volume.objects.get(pk=volume_id)
 
         try:
-            primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
+            primary_volume_node = volume.volumenode_set.get(primary=True, host__not_deleted=True)
 
         except VolumeNode.DoesNotExist:
             raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
@@ -287,7 +295,8 @@ class ManagedTarget(StatefulObject):
 
         host = primary_volume_node.host
         corosync_configuration = host.corosync_configuration
-        stonith_not_enabled = len(StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id)) > 0
+        stonith_not_enabled = len(
+            StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id)) > 0
 
         if stonith_not_enabled:
             raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
@@ -324,18 +333,18 @@ class ManagedTarget(StatefulObject):
 
         def create_target_mount(volume_node):
             mount = ManagedTargetMount(
-                volume_node = volume_node,
-                target = target,
-                host = volume_node.host,
-                mount_point = target.default_mount_point,
-                primary = volume_node.primary)
+                volume_node=volume_node,
+                target=target,
+                host=volume_node.host,
+                mount_point=target.default_mount_point,
+                primary=volume_node.primary)
             mount.save()
             target_mounts.append(mount)
 
         if create_target_mounts:
             create_target_mount(primary_volume_node)
 
-            for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
+            for secondary_volume_node in volume.volumenode_set.filter(use=True, primary=False, host__not_deleted=True):
                 create_target_mount(secondary_volume_node)
 
         return target, target_mounts
@@ -356,7 +365,8 @@ class ManagedTarget(StatefulObject):
 
             target_type = target_type.lower()
 
-            subtype = next(klass for klass in util.all_subclasses(ManagedTarget) if target_type == klass().target_type())
+            subtype = next(
+                klass for klass in util.all_subclasses(ManagedTarget) if target_type == klass().target_type())
 
             return subtype
         except StopIteration:
@@ -434,8 +444,8 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
 
 
 class ManagedMgs(ManagedTarget, MeasuredEntity):
-    conf_param_version = models.IntegerField(default = 0)
-    conf_param_version_applied = models.IntegerField(default = 0)
+    conf_param_version = models.IntegerField(default=0)
+    conf_param_version_applied = models.IntegerField(default=0)
 
     def get_available_states(self, begin_state):
         if self.immutable_state:
@@ -459,7 +469,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     @classmethod
     def get_by_host(cls, host):
-        return cls.objects.get(managedtargetmount__host = host)
+        return cls.objects.get(managedtargetmount__host=host)
 
     class Meta:
         app_label = 'chroma_core'
@@ -479,7 +489,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
         return tuple(host_nids)
 
-    def set_conf_params(self, params, new = True):
+    def set_conf_params(self, params, new=True):
         """
         :param new: If False, do not increment the conf param version number, resulting in
                     new conf params not immediately being applied to the MGS (use if importing
@@ -488,8 +498,8 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         version = None
         from django.db.models import F
         if new:
-            ManagedMgs.objects.filter(pk = self.id).update(conf_param_version = F('conf_param_version') + 1)
-        version = ManagedMgs.objects.get(pk = self.id).conf_param_version
+            ManagedMgs.objects.filter(pk=self.id).update(conf_param_version=F('conf_param_version') + 1)
+        version = ManagedMgs.objects.get(pk=self.id).conf_param_version
         for p in params:
             p.version = version
             p.save()
@@ -520,13 +530,13 @@ class TargetRecoveryInfo(models.Model):
     @staticmethod
     @transaction.commit_on_success
     def update(target, recovery_status):
-        TargetRecoveryInfo.objects.filter(target = target).delete()
+        TargetRecoveryInfo.objects.filter(target=target).delete()
         instance = TargetRecoveryInfo.objects.create(
-            target = target,
-            recovery_status = json.dumps(recovery_status))
+            target=target,
+            recovery_status=json.dumps(recovery_status))
         return instance.is_recovering(recovery_status)
 
-    def is_recovering(self, data = None):
+    def is_recovering(self, data=None):
         if not data:
             data = json.loads(self.recovery_status)
         return ("status" in data and data["status"] == "RECOVERING")
@@ -544,7 +554,7 @@ class TargetRecoveryInfo(models.Model):
 def _delete_target(target):
     if issubclass(target.downcast_class, ManagedMgs):
         from chroma_core.models.filesystem import ManagedFilesystem
-        assert ManagedFilesystem.objects.filter(mgs = target).count() == 0
+        assert ManagedFilesystem.objects.filter(mgs=target).count() == 0
     target.mark_deleted()
     job_log.debug("_delete_target: %s %s" % (target, id(target)))
 
@@ -605,7 +615,8 @@ class RemoveTargetJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unformatted', 'formatted', 'registered'], 'removed')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unformatted', 'formatted', 'registered'],
+                                                      'removed')
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
@@ -679,8 +690,10 @@ class RegisterTargetStep(Step):
         if not result['label'] == target.name:
             # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
             # pass --index to mkfs.lustre, so our name should match what is set after registration
-            raise RuntimeError("Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
-        job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
+            raise RuntimeError(
+                "Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
+        job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (
+        target.id, target.name, target.ha_label))
 
 
 class GenerateHaLabelStep(Step):
@@ -725,7 +738,7 @@ class ConfigureTargetStoreStep(Step):
         backfstype = kwargs['backfstype']
         device_type = kwargs['device_type']
 
-        assert(volume_node is not None)
+        assert (volume_node is not None)
 
         self.invoke_agent(host, "configure_target_store", {
             'device': volume_node.path,
@@ -755,7 +768,7 @@ class AddTargetToPacemakerConfigStep(Step):
         volume_node = kwargs['volume_node']
         host = kwargs['host']
 
-        assert(volume_node is not None)
+        assert (volume_node is not None)
 
         self.invoke_agent_expect_result(host, "configure_target_ha", {
             'device': volume_node.path,
@@ -946,7 +959,8 @@ class ConfigureTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
+        prim_mtm = ObjectCache.get_one(ManagedTargetMount,
+                                       lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
         deps.append(DependOn(prim_mtm.host.lnet_configuration, 'lnet_up'))
 
         for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
@@ -980,7 +994,7 @@ class RegisterTargetJob(StateChangeJob):
         if issubclass(target_class, ManagedMgs):
             steps = []
         elif issubclass(target_class, FilesystemMember):
-            primary_mount = self.target.managedtargetmount_set.get(primary = True)
+            primary_mount = self.target.managedtargetmount_set.get(primary=True)
             path = primary_mount.volume_node.path
 
             mgs_id = self.target.downcast().filesystem.mgs.id
@@ -991,7 +1005,7 @@ class RegisterTargetJob(StateChangeJob):
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
             steps = [(RegisterTargetStep, {
@@ -1068,10 +1082,11 @@ class StartTargetJob(StateChangeJob):
             from chroma_core.models import LNetConfiguration
 
             lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == target_mount.host_id)
-            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state = 'unmounted'))
+            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
 
-            pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id)
-            deps.append(DependOn(pacemaker_configuration, 'started', fix_state = 'unmounted'))
+            pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration,
+                                                          lambda pm: pm.host_id == target_mount.host_id)
+            deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
 
         return DependAny(deps)
 
@@ -1187,7 +1202,7 @@ class MkfsStep(Step):
     @classmethod
     def describe(cls, kwargs):
         target = kwargs['target']
-        target_mount = target.managedtargetmount_set.get(primary = True)
+        target_mount = target.managedtargetmount_set.get(primary=True)
         return "Format %s on %s" % (target, target_mount.host)
 
     def run(self, kwargs):
@@ -1247,13 +1262,23 @@ class UpdateManagedTargetMount(Step):
             host = mtm.host
             current_volume_node = mtm.volume_node
 
-            block_device = BlockDevice(device_type, current_volume_node.path)
-            filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
+            # represent underlying zpool as blockdevice if zfs
+            # todo: move this constraint into BlockDeviceZfs class
+            block_device = BlockDevice(device_type,
+                                       current_volume_node.path.split('/')[0]
+                                       if device_type == 'zfs'
+                                       else current_volume_node.path)
+
+            filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
+            job_log.info("Looking for volume_nodes for host %s , path %s" % (host,
+                                                                             filesystem.mount_path(target.name)))
+            job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
 
             mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(target.name)),
+                                                                                  path=filesystem.mount_path(
+                                                                                      target.name)),
                                                    logger=job_log,
-                                                   timeout = 60 * 60,
+                                                   timeout=60 * 60,
                                                    expected_exception_classes=[VolumeNode.DoesNotExist])
 
             mtm.volume_node.primary = current_volume_node.primary
@@ -1311,7 +1336,7 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        primary_mount = self.target.managedtargetmount_set.get(primary = True)
+        primary_mount = self.target.managedtargetmount_set.get(primary=True)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1403,11 +1428,11 @@ class MigrateTargetJob(AdvertisedJob):
         locks = super(MigrateTargetJob, self).create_locks()
 
         locks.append(StateLock(
-            job = self,
-            locked_item = self.target,
-            begin_state = 'mounted',
-            end_state = 'mounted',
-            write = True
+            job=self,
+            locked_item=self.target,
+            begin_state='mounted',
+            end_state='mounted',
+            write=True
         ))
 
         return locks
@@ -1435,8 +1460,8 @@ class FailbackTargetJob(MigrateTargetJob):
             return False
 
         return len(instance.failover_hosts) > 0 and \
-            instance.active_host is not None and\
-            instance.primary_host != instance.active_host
+               instance.active_host is not None and \
+               instance.primary_host != instance.active_host
         # HYD-1238: once we have a valid online/offline piece of info for each host,
         # reinstate the condition
         # instance.primary_host.is_available()
@@ -1461,7 +1486,7 @@ class FailbackTargetJob(MigrateTargetJob):
         return [(FailbackTargetStep, {
             'target': self.target,
             'host': self.target.primary_host,
-            'primary_mount': self.target.managedtargetmount_set.get(primary = True)
+            'primary_mount': self.target.managedtargetmount_set.get(primary=True)
         })]
 
     @classmethod
@@ -1490,11 +1515,12 @@ class FailoverTargetJob(MigrateTargetJob):
         if instance.immutable_state:
             return False
 
-        return len(instance.failover_hosts) > 0 and\
-            instance.primary_host == instance.active_host
+        return len(instance.failover_hosts) > 0 and \
+               instance.primary_host == instance.active_host
+
     # HYD-1238: once we have a valid online/offline piece of info for each host,
     # reinstate the condition
-#                instance.failover_hosts[0].is_available() and \
+    #                instance.failover_hosts[0].is_available() and \
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -1516,7 +1542,7 @@ class FailoverTargetJob(MigrateTargetJob):
         return [(FailoverTargetStep, {
             'target': self.target,
             'host': self.target.failover_hosts[0],
-            'secondary_mount': self.target.managedtargetmount_set.get(primary = False)
+            'secondary_mount': self.target.managedtargetmount_set.get(primary=False)
         })]
 
     @classmethod
@@ -1530,16 +1556,16 @@ class ManagedTargetMount(models.Model):
 
     # FIXME: both VolumeNode and TargetMount refer to the host
     host = models.ForeignKey('ManagedHost')
-    mount_point = models.CharField(max_length = 512, null = True, blank = True)
+    mount_point = models.CharField(max_length=512, null=True, blank=True)
     volume_node = models.ForeignKey('VolumeNode')
     primary = models.BooleanField()
     target = models.ForeignKey('ManagedTarget')
 
-    def save(self, force_insert = False, force_update = False, using = None):
+    def save(self, force_insert=False, force_update=False, using=None):
         # If primary is true, then target must be unique
         if self.primary:
             from django.db.models import Q
-            other_primaries = ManagedTargetMount.objects.filter(~Q(id = self.id), target = self.target, primary = True)
+            other_primaries = ManagedTargetMount.objects.filter(~Q(id=self.id), target=self.target, primary=True)
             if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
@@ -1548,7 +1574,9 @@ class ManagedTargetMount(models.Model):
         # this host
         if issubclass(self.target.downcast_class, ManagedMgs):
             from django.db.models import Q
-            other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id = self.id), target__in = ManagedMgs.objects.all(), host = self.host).count()
+            other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id=self.id),
+                                                                           target__in=ManagedMgs.objects.all(),
+                                                                           host=self.host).count()
             if other_mgs_mountables_local > 0:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
@@ -1587,10 +1615,10 @@ class TargetOfflineAlert(AlertStateBase):
 
     def end_event(self):
         return AlertEvent(
-            message_str = "%s started" % self.alert_item,
-            alert_item = self.alert_item.primary_host,
-            alert = self,
-            severity = logging.INFO)
+            message_str="%s started" % self.alert_item,
+            alert_item=self.alert_item.primary_host,
+            alert=self,
+            severity=logging.INFO)
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
@@ -1610,10 +1638,10 @@ class TargetFailoverAlert(AlertStateBase):
 
     def end_event(self):
         return AlertEvent(
-            message_str = "%s failover unmounted" % self.alert_item,
-            alert_item = self.alert_item.primary_host,
-            alert = self,
-            severity = logging.INFO)
+            message_str="%s failover unmounted" % self.alert_item,
+            alert_item=self.alert_item.primary_host,
+            alert=self,
+            severity=logging.INFO)
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
@@ -1634,10 +1662,10 @@ class TargetRecoveryAlert(AlertStateBase):
 
     def end_event(self):
         return AlertEvent(
-            message_str = "Target '%s' completed recovery" % self.alert_item,
-            alert_item = self.alert_item.primary_host,
-            alert = self,
-            severity = logging.INFO)
+            message_str="Target '%s' completed recovery" % self.alert_item,
+            alert_item=self.alert_item.primary_host,
+            alert=self,
+            severity=logging.INFO)
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
