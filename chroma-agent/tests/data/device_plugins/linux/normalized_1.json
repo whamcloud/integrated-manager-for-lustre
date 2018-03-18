@@ -1,8 +1,0 @@
-{
-  "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-4": "/dev/mapper/mpath10",
-  "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-5": "/dev/mapper/mpath10",
-  "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-0-1": "/dev/mapper/mpath11",
-  "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-0-0": "/dev/mapper/mpath11",
-  "/dev/mapper/mpath10": "/dev/mapper/mpath10",
-  "/dev/mapper/mpath11": "/dev/mapper/mpath11"
-}

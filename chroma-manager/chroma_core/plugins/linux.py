@@ -199,6 +199,16 @@ class Linux(Plugin):
         fqdn = ManagedHost.objects.get(id=host_id).fqdn
         devices = get_block_devices(fqdn)
 
+        # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
+        # for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
+            if expected_item not in devices.keys():
+                devices[expected_item] = {}
+
+        log.debug("{} reporting datasets: {}, pools: {}".format(fqdn,
+                                                                devices['zfsdatasets'].keys(),
+                                                                devices['zfspools'].keys()))
+
         dev_json = json.dumps(devices['devs'], sort_keys=True)
 
         if dev_json == self.current_devices:
@@ -208,13 +218,8 @@ class Linux(Plugin):
         log.debug("Linux.devices changed on {}: {}".format(
             fqdn,
             set(json.loads(self.current_devices).keys()) - set(devices['devs'].keys())))
-        self.current_devices = dev_json
 
-        # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
-        # for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
-        for expected_item in ['vgs', 'lvs', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
-            if expected_item not in devices.keys():
-                devices[expected_item] = {}
+        self.current_devices = dev_json
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
@@ -414,10 +419,7 @@ class Linux(Plugin):
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
-            self.update_or_create(LocalMount,
-                    parents=[bdev_resource],
-                    mount_point = mntpnt,
-                    fstype = fstype)
+            self.update_or_create(LocalMount, parents=[bdev_resource], mount_point=mntpnt, fstype=fstype)
 
         # Create Partitions (devices that have 'parent' set)
         partition_identifiers = []
