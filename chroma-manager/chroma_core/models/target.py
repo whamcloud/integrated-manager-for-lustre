@@ -816,6 +816,8 @@ class MountOrImportStep(Step):
     These parameters can be created using the create_parameters function, which allows the more complex building
     functionality to lie within the Step code but without the run itself requiring database access.
 
+    Note that this Method will fail if the desired volume is not imported (zfs) on an available host as then there
+    will be no relevant VolumeNodes!
     """
 
     idempotent = True
@@ -851,25 +853,27 @@ class MountOrImportStep(Step):
         # This will raise an exception if any of the threads raise an exception
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
-        if kwargs['active_volume_node'] is not None:
-            if kwargs['start_target'] is True:
-                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                'import_target',
-                                                {'device_type': kwargs['active_volume_node'].device_type,
-                                                 'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False})
+        if kwargs['active_volume_node'] is None:
+            device_type = kwargs['target'].volume.filesystem_type
+            # in the case that the volume node is missing, attempt to import target volume
+            self.invoke_agent_expect_result(kwargs['host'],
+                                            'import_target',
+                                            {'device_type': ('linux' if device_type == 'ext4' else device_type),
+                                             'path': kwargs['target'].volume.label,
+                                             'pacemaker_ha_operation': False})
+        else:
+            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                            'import_target',
+                                            {'device_type': kwargs['active_volume_node'].device_type,
+                                             'path': kwargs['active_volume_node'].path,
+                                             'pacemaker_ha_operation': False})
 
-                result = self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                         "start_target",
-                                                         {'ha_label': kwargs['target'].ha_label})
+        if kwargs['start_target'] is True:
+            result = self.invoke_agent_expect_result(kwargs['host'],
+                                                     "start_target",
+                                                     {'ha_label': kwargs['target'].ha_label})
 
-                kwargs['target'].update_active_mount(result)
-            else:
-                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                'import_target',
-                                                {'device_type': kwargs['active_volume_node'].device_type,
-                                                 'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False})
+            kwargs['target'].update_active_mount(result)
 
     @classmethod
     def describe(cls, kwargs):
@@ -888,6 +892,8 @@ class MountOrImportStep(Step):
         :param start_target: True means the target is started False means it is just imported.
         :return:
         """
+        assert (host is not None)
+
         inactive_volume_nodes = []
         active_volume_node = None
 
@@ -896,16 +902,15 @@ class MountOrImportStep(Step):
                                                   volume_node.path,
                                                   volume_node.volume.storage_resource.to_resource_class().device_type())
 
-            if host is not None and host == volume_node.host:
+            if host == volume_node.host:
                 active_volume_node = target_volume_info
             else:
                 inactive_volume_nodes.append(target_volume_info)
 
         job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
 
-        assert (host is not None) and (active_volume_node is not None)
-
         return {'target': target,
+                'host': host,
                 'inactive_volume_nodes': inactive_volume_nodes,
                 'active_volume_node': active_volume_node,
                 'start_target': start_target}
@@ -1091,11 +1096,13 @@ class StartTargetJob(StateChangeJob):
         return DependAny(deps)
 
     def get_steps(self):
+        device_type = self.target.volume.filesystem_type
         return [(MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
                                                      False)),
-                (UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+                (UpdateManagedTargetMount, {'target': self.target,
+                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
                 (MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
@@ -1136,7 +1143,9 @@ class StopTargetJob(StateChangeJob):
 
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount
-        return [(UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+        device_type = self.target.volume.filesystem_type
+        return [(UpdateManagedTargetMount, {'target': self.target,
+                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
                 (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
