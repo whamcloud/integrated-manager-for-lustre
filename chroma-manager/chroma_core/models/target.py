@@ -853,26 +853,27 @@ class MountOrImportStep(Step):
         # This will raise an exception if any of the threads raise an exception
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
-        if kwargs['active_volume_node'] is not None:
-            if kwargs['start_target'] is True:
-                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                'import_target',
-                                                {'device_type': kwargs['active_volume_node'].device_type,
-                                                 'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False})
+        if kwargs['active_volume_node'] is None:
+            device_type = kwargs['target'].volume.filesystem_type
+            # in the case that the volume node is missing, attempt to import target volume
+            self.invoke_agent_expect_result(kwargs['host'],
+                                            'import_target',
+                                            {'device_type': ('linux' if device_type == 'ext4' else device_type),
+                                             'path': kwargs['target'].volume.label,
+                                             'pacemaker_ha_operation': False})
+        else:
+            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
+                                            'import_target',
+                                            {'device_type': kwargs['active_volume_node'].device_type,
+                                             'path': kwargs['active_volume_node'].path,
+                                             'pacemaker_ha_operation': False})
 
         if kwargs['start_target'] is True:
             result = self.invoke_agent_expect_result(kwargs['host'],
                                                      "start_target",
                                                      {'ha_label': kwargs['target'].ha_label})
 
-                kwargs['target'].update_active_mount(result)
-            else:
-                self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                                'import_target',
-                                                {'device_type': kwargs['active_volume_node'].device_type,
-                                                 'path': kwargs['active_volume_node'].path,
-                                                 'pacemaker_ha_operation': False})
+            kwargs['target'].update_active_mount(result)
 
     @classmethod
     def describe(cls, kwargs):
@@ -1100,7 +1101,8 @@ class StartTargetJob(StateChangeJob):
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
                                                      False)),
-                (UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+                (UpdateManagedTargetMount, {'target': self.target,
+                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
                 (MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
@@ -1141,7 +1143,9 @@ class StopTargetJob(StateChangeJob):
 
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount
-        return [(UpdateManagedTargetMount, {'target': self.target, 'device_type': self.target.volume.filesystem_type}),
+        device_type = self.target.volume.filesystem_type
+        return [(UpdateManagedTargetMount, {'target': self.target,
+                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
                 (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
@@ -1267,7 +1271,7 @@ class UpdateManagedTargetMount(Step):
             host = mtm.host
             current_volume_node = mtm.volume_node
 
-            # represent underlying zpool as blockdevice if zfs
+            # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
             block_device = BlockDevice(device_type,
                                        current_volume_node.path.split('/')[0]
