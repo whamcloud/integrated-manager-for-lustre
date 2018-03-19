@@ -167,6 +167,10 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
 
+        self.execute_commands(['zpool import -a'],
+                              host_addresses[0],
+                              'import all pools')
+
         # Wait for the host to have reported the volumes and discovered HA configuration.
         ha_volumes = self.wait_for_shared_volumes(4, 2)
 
