@@ -104,13 +104,6 @@ class TestFilesystemSameNameHYD832(ChromaIntegrationTestCase):
                 'destroy zfs dataset %s' % zpool_dataset,
                 expected_return_code=None)
 
-        for pool in pools:
-            self.execute_commands(
-                ['zpool export %s' % pool],
-                fqdns[0],
-                'export pool %s' % pool,
-                expected_return_code=None)
-
         self.remote_operations.start_agents(s['address']
                                             for s in self.TEST_SERVERS[:4])
 
