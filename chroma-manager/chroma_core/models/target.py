@@ -1009,7 +1009,7 @@ class RegisterTargetJob(StateChangeJob):
             backfstype = BlockDevice(device_type, primary_mount.volume_node.path).preferred_fstype
 
             # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
             steps = [(RegisterTargetStep, {
@@ -1335,7 +1335,7 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        primary_mount = self.target.managedtargetmount_set.get(primary = True)
+        primary_mount = self.target.managedtargetmount_set.get(primary=True)
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
