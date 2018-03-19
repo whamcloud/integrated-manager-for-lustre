@@ -1263,13 +1263,23 @@ class UpdateManagedTargetMount(Step):
             host = mtm.host
             current_volume_node = mtm.volume_node
 
-            block_device = BlockDevice(device_type, current_volume_node.path)
-            filesystem = FileSystem(block_device.preferred_fstype, current_volume_node.path)
+            # represent underlying zpool as blockdevice if zfs
+            # todo: move this constraint into BlockDeviceZfs class
+            block_device = BlockDevice(device_type,
+                                       current_volume_node.path.split('/')[0]
+                                       if device_type == 'zfs'
+                                       else current_volume_node.path)
+
+            filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
+            job_log.info("Looking for volume_nodes for host %s , path %s" % (host,
+                                                                             filesystem.mount_path(target.name)))
+            job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
 
             mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(target.name)),
+                                                                                  path=filesystem.mount_path(
+                                                                                      target.name)),
                                                    logger=job_log,
-                                                   timeout = 60 * 60,
+                                                   timeout=60 * 60,
                                                    expected_exception_classes=[VolumeNode.DoesNotExist])
 
             mtm.volume_node.primary = current_volume_node.primary
