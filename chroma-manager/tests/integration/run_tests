@@ -51,7 +51,7 @@ echo "----------------------------------------------------------------------"
 for TEST in $TESTS; do
     if [ -d $TEST ]; then
         if [ -e "$TEST/test_cluster_setup.py" ]; then
-            nosetests --verbosity=2 "$TEST/test_cluster_setup.py" --tc-format=json --tc-file="$CONFIG_FILE"
+            nosetests -x --verbosity=2 "$TEST/test_cluster_setup.py" --tc-format=json --tc-file="$CONFIG_FILE"
 
             # If the cluster isn't set up properly, just exit and don't execute the tests.
             cluster_setup_status=${PIPESTATUS[0]}
@@ -70,7 +70,7 @@ if ! $FORCED
         echo "----------------------------------------------------------------------"
         echo "Checking that cluster is not already configured..."
         echo "----------------------------------------------------------------------"
-        nosetests tests/integration/utils/verify_cluster_not_configured.py --tc-format=json --tc-file="$CONFIG_FILE" #2> /dev/null
+        nosetests -x tests/integration/utils/verify_cluster_not_configured.py --tc-format=json --tc-file="$CONFIG_FILE" #2> /dev/null
         if [ ${PIPESTATUS[0]} -ne 0 ]
         then
             echo ""
@@ -87,4 +87,4 @@ if [ -n "$XML_REPORT" ]; then
 else
     XUNIT_ARGS=""
 fi
-nosetests --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $NOSE_ARGS $TESTS
+nosetests -x --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $NOSE_ARGS $TESTS
