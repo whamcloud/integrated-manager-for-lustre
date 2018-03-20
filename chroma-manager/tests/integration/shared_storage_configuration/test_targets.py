@@ -80,14 +80,15 @@ class TestReformatTarget(ChromaIntegrationTestCase):
 
         # Optionally create a local filesystem on a volume before it is added to chroma
         if occupy_initial:
-            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext2')
+            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext4')
 
         # Now add it to chroma
         self.add_hosts([host_config['address']])
         volumes = self.get_usable_volumes()
 
+        # why is this done twice? do we need this?
         if occupy_initial:
-            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext2')
+            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext4')
 
         # Check that our victim volume has come back over the API and is marked as occupied
         # NB logic here relies on there only being one server in play
@@ -98,14 +99,14 @@ class TestReformatTarget(ChromaIntegrationTestCase):
                 break
         self.assertIsNotNone(victim_volume)
         if occupy_initial:
-            self.assertEqual(victim_volume['filesystem_type'], 'ext2')
+            self.assertEqual(victim_volume['filesystem_type'], 'ext4')
         else:
             self.assertEqual(victim_volume['filesystem_type'], None)
 
         # Optionally create a local filesystem on a volume that has already been detected by
         # chroma
         if occupy_after_add:
-            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext2')
+            self.remote_operations.format_block_device(host_config['fqdn'], device_path, 'ext4')
 
         response = self.chroma_manager.post("/api/target/", body={
             'volume_id': victim_volume['id'],

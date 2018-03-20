@@ -249,7 +249,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def format_block_device(self, fqdn, path, filesystem_type):
         commands = {
-            'ext2': "mkfs.ext2 -F '{path}'".format(path=path),
+            'ext4': "mkfs.ext4 -F '{path}'".format(path=path),
             'lustre': "mkfs.lustre --mgs '{path}'".format(path=path)
         }
         try:
