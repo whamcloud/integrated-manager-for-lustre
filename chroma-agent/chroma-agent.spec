@@ -28,7 +28,7 @@ Requires: python2-tablib
 Requires: yum-utils
 Requires: initscripts
 Requires: iml_sos_plugin
-Requires: python2-iml-common1.3
+Requires: python2-iml-common >= 1, python2-iml-common < 2
 Requires: systemd-python
 Requires: python-tzlocal
 Requires: python2-toolz
