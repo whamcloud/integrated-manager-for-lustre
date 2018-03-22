@@ -243,6 +243,14 @@ if $JENKINS; then
 else
     CMIT=/root/${CMIT##*/}
 fi
+
+# add any repos required by this test run
+if [ -n \"$TEST_RUNNER_REPOS\" ]; then
+    for repo in $TEST_RUNNER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
+fi
+
 if ! $PROXY yum -y install \$CMIT; then
     $PROXY yum clean all
     $PROXY yum -y install \$CMIT
