@@ -101,6 +101,7 @@ fi"
 
 
 # Install and setup chroma software storage appliances
+# shellcheck disable=SC2153
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 # if this node uses the Intel proxies, make sure the agent is doing so
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
@@ -108,7 +109,7 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
     echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
 fi
 
-# any repos required by this test run
+# add any repos required by this test run
 if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
     for repo in $STORAGE_SERVER_REPOS; do
         yum-config-manager --add-repo \$repo
