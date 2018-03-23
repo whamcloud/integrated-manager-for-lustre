@@ -1,10 +1,13 @@
+import os
+
 from django.utils.unittest import skipIf
 from django.utils.unittest import skip
 from testconfig import config
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-@skip("Until upgrades are handled by IML proper")
+@skipIf(os.environ.get('UPGRADE_FROM_3', 'false') == 'true',
+        "Until upgrades are handled by IML proper")
 class TestUpdates(ChromaIntegrationTestCase):
     def test_upgrade_alerting(self):
         """
