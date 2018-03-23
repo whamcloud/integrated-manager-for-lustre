@@ -22,8 +22,12 @@ fi
 # remove any previous chroma-externals content
 rm -rf chroma-externals .git/modules/chroma-externals
 
-# Pip install requirements
 cd $CHROMA_DIR/chroma-manager
+
+# Configure required repo for project RPM packages
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+
+# Install required RPM and python packages
 make install_requirements
 
 # disable threading for manager unit tests, evaluating database transactions will not

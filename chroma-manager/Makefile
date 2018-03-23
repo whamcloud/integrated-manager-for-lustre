@@ -204,6 +204,9 @@ rpms: cleandist tarball
 	echo "jenkins_fold:end:Make Manager RPMS"
 
 install_requirements: requirements.txt
+	echo "jenkins_fold:start:Install project RPM requirements"
+	yum install -y python-iml-common1.3
+	echo "jenkins_fold:end:Install project RPM requirements"
 	echo "jenkins_fold:start:Install Python requirements"
 	pip install --upgrade pip;                              \
 	pip install --upgrade setuptools;                       \
