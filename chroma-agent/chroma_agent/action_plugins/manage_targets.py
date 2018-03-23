@@ -165,7 +165,22 @@ def get_resource_locations():
         if columns[3] == "(disabled)":
             columns[3] = None
 
-        locations[columns[0]] = columns[3]
+        # Similar to above, the third column can report one of various
+        # states such as Starting, Started, Stopping, Stopped so only
+        # consider targets which are Started
+        # If we still have 4 columns at this point, the third column
+        # must be the state
+        if columns[2] not in ['Starting', 'Started', 'Stopping', 'Stopped']:
+            console_log.error("Unable to determine state of %s in\n%s'" %
+                              (columns[0], lines_text))
+
+        # a target that is "Stopping" has not completed the transistion
+        # from "Started" (i.e. running) to Stopped, so count it as running
+        # until it completes the transition
+        if columns[2] == "Started" or columns[2] == "Stopping":
+            locations[columns[0]] = columns[3]
+        else:
+            locations[columns[0]] = None
 
     return locations
 
@@ -603,7 +618,7 @@ def start_target(ha_label):
 
 def stop_target(ha_label):
     '''
-    Start the high availability target
+    Stop the high availability target
 
     Return: Value using simple return protocol
     '''

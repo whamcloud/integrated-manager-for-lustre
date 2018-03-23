@@ -117,7 +117,8 @@ fi
 
 # Install a client
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
-wait_for_nodes "$CLIENT_1" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
+wait_for_nodes "$CLIENT_1" "rpm -q kmod-lustre-client || exit 0
+[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
 
 echo "Create and exercise a filesystem..."
 
