@@ -151,7 +151,9 @@ fi
 # when a kernel is installed, make sure that our kernel is reset back to
 # being the preferred boot kernel
 MOST_RECENT_KERNEL_VERSION=$(rpm -q kernel --qf "%{INSTALLTIME} %{VERSION}-%{RELEASE}.%{ARCH}\n" | sort -nr | sed -n -e '/_lustre/{s/.* //p;q}')
-grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
+if [ -n "$MOST_RECENT_KERNEL_VERSION" ]; then
+    grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
+fi
 
 %files -f base.files
 %defattr(-,root,root)

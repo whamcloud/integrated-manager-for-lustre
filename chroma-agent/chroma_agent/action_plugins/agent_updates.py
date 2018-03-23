@@ -164,14 +164,24 @@ def kernel_status():
     if AgentShell.run(["rpm", "-q", "--whatprovides", "kmod-lustre"]).rc == 0:
         # on a server, a required kernel is a lustre patched kernel since we
         # are building storage servers that can support both ldiskfs and zfs
+        required_kernel = None
         try:
-            required_kernel = \
-                next(k for k in sorted(AgentShell.try_run(["rpm", "-q",
-                                                           "kernel"]).split('\n'),
-                                       reverse=True)
-                     if "_lustre" in k)
+            PDE_DATA_sym = \
+                next(s for s in AgentShell.try_run(["rpm", "-q", "--requires",
+                                                    "kmod-lustre"]).split('\n')
+                     if "kernel(PDE_DATA) =" in s)
         except (AgentShell.CommandExecutionError, StopIteration):
-            required_kernel = None
+            PDE_DATA_sym = None
+        if PDE_DATA_sym:
+            try:
+                required_kernel = \
+                    next(k for k in AgentShell.try_run(["repoquery", "-q",
+                                                        "--qf", "%{name}-%{version}-%{release}.%{arch}",
+                                                        "--whatprovides",
+                                                        PDE_DATA_sym]).split('\n')
+                         if AgentShell.run(['rpm', '-q', k]).rc == 0)
+            except (AgentShell.CommandExecutionError, StopIteration):
+                required_kernel = None
     elif AgentShell.run(["rpm", "-q", "kmod-lustre-client"]).rc == 0:
         # but on a worker, we can ask kmod-lustre-client what the required
         # kernel is
