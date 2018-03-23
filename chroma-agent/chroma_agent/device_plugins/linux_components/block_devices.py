@@ -1,21 +1,19 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-from collections import defaultdict
-
+import errno
+import json
 import os
 import re
-import errno
 import socket
-import json
-from iml_common.filesystems.filesystem import FileSystem
+from collections import defaultdict
+from collections import namedtuple
+
+from toolz.curried import map as cmap, filter as cfilter
+from toolz.functoolz import pipe, curry
+
 from iml_common.blockdevices.blockdevice import BlockDevice
 from iml_common.lib.util import human_to_bytes
-from chroma_agent.lib.shell import AgentShell
-from toolz.functoolz import pipe, curry
-from toolz.itertoolz import getter
-from toolz.curried import map as cmap, filter as cfilter, mapcat as cmapcat
-from collections import namedtuple
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zfspools')
 
@@ -138,13 +136,6 @@ def filter_device(x):
         return False
 
     return True
-
-
-def fetch_device_maps():
-    AgentShell.run(["udevadm", "settle"])
-    info = scanner_cmd("info")
-
-    return DeviceMaps(info["blockDevices"], info["zpools"])
 
 
 def create_device_list(device_dict):
@@ -333,166 +324,22 @@ def parse_sys_block(device_map):
 
     ndt = NormalizedDeviceTable(xs)
 
-    (ndt, vgs, lvs) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
-                                    block_device_nodes,
-                                    ndt)
+    (ndt, _, _) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
+                                block_device_nodes,
+                                ndt)
 
-    (ndt, mds) = parse_mdraid_devs(filter(lambda x: x.get('md_uuid') is not None, xs),
-                                   node_block_devices,
-                                   ndt)
+    (ndt, _) = parse_mdraid_devs(filter(lambda x: x.get('md_uuid') is not None, xs),
+                                 node_block_devices,
+                                 ndt)
 
-    local_fs = parse_localfs_devs(filter(local_fs_filter, xs),
-                                  node_block_devices,
-                                  ndt)
+    parse_localfs_devs(filter(local_fs_filter, xs), node_block_devices, ndt)
 
-    return block_device_nodes, node_block_devices, ndt, vgs, lvs, mds, local_fs
+    return ndt
 
 
-def parse_zpools(zpool_map, block_device_nodes):
-    zpools = {}
-    datasets = {}
-    # fixme: get zvols from device-scanner
-    zvols = {}
-
-    for pool in zpool_map.values():
-        # fixme: get sizes from device-scanner
-        size = 0
-        name = pool['name']
-        uuid = pool['guid']
-
-        # fixme: this is not reliable, use Libzfs bindings to provide disk mms for zpool
-        drive_mms = [dev['major_minor'] for dev in block_device_nodes.values()
-                     if '/dev/disk/by-label/%s' % name in dev['paths']]
-
-        # fixme: re-enable check when drive_mms is reliable
-        # if not drive_mms:
-        #     raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
-
-        # use name/path as key, uid not guaranteed to be unique between datasets on different zpools
-        _datasets = {ds['DATASET_NAME']: {"name": ds['DATASET_NAME'],
-                                          "path": ds['DATASET_NAME'],
-                                          "block_device": "zfsset:%s" % ds['DATASET_NAME'],
-                                          "uuid": ds['DATASET_UID'],
-                                          "size": 0,
-                                          "drives": drive_mms} for ds in pool['DATASETS'].values()}
-
-        _devs = {}
-
-        # normalized_table = block_devices.normalized_device_table
-        # drive_mms = block_devices.paths_to_major_minors(_get_all_zpool_devices(name, normalized_table))
-        # zvols = _get_zpool_zvols(name, drive_mms, block_devices)
-        if _datasets == {}:
-            # keys should include the pool uuid because names not necessarily unique
-            major_minor = "zfspool:%s" % uuid
-            zpools[uuid] = {"name": name,
-                            "path": name,
-                            "block_device": major_minor,
-                            "uuid": uuid,
-                            "size": size,
-                            "drives": drive_mms}
-
-            _devs[major_minor] = {'major_minor': major_minor,
-                                  'path': name,
-                                  'paths': [name],
-                                  'serial_80': None,
-                                  'serial_83': None,
-                                  'size': size,
-                                  'filesystem_type': None,
-                                  'parent': None}
-
-            # Do this to cache the device, type see blockdevice and filesystem for info.
-            BlockDevice('zfs', name)
-            FileSystem('zfs', name)
-
-        else:
-            datasets.update(_datasets)
-
-            for info in _datasets.itervalues():
-                major_minor = info['block_device']
-                name = info['name']
-                _devs[major_minor] = {'major_minor': major_minor,
-                                      'path': name,
-                                      'paths': [name],
-                                      'serial_80': None,
-                                      'serial_83': None,
-                                      'size': 0,
-                                      'filesystem_type': 'zfs',
-                                      'parent': None}
-
-                # Do this to cache the device, type see blockdevice and filesystem for info.
-                BlockDevice('zfs', name)
-                FileSystem('zfs', name)
-
-        block_device_nodes.update(_devs)
-
-    return zpools, datasets, zvols, block_device_nodes
-
-
-class BlockDevices(object):
-    MAPPERPATH = os.path.join('/dev', 'mapper')
-    DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
-
-    def __init__(self):
-        device_maps = fetch_device_maps()
-
-        (self.block_device_nodes,
-         self.node_block_devices,
-         self.normalized_device_table,
-         self.vgs,
-         self.lvs,
-         self.mds,
-         self.local_fs) = parse_sys_block(device_maps.block_devices)
-
-        (self.zfspools,
-         self.zfsdatasets,
-         self.zfsvols,
-         self.block_device_nodes) = parse_zpools(device_maps.zfspools,
-                                                 self.block_device_nodes)
-
-    def composite_device_list(self, source_devices):
-        """
-        This function takes a bunch of devices like MdRaid, EMCPower
-        which are effectively composite devices made up
-        from a collection of other devices and returns that
-        list with the drives and everything nicely assembled.
-        """
-        devices = {}
-
-        for device in source_devices:
-            drive_mms = paths_to_major_minors(self.node_block_devices,
-                                              self.normalized_device_table,
-                                              device['device_paths'])
-
-            if drive_mms:
-                devices[device['uuid']] = {
-                    'path': device['path'],
-                    'block_device': device['mm'],
-                    'drives': drive_mms
-                }
-
-                # Finally add these devices to the canonical path list.
-                for device_path in device['device_paths']:
-                    self.normalized_device_table.add_normalized_device(
-                        device_path, device['path'])
-
-        return devices
-
-    def find_block_devs(self, folder):
-        # Map of major_minor to path
-        # Should be able to look at the paths prop for all devs, and put
-        # matching MM to path back in a list.
-
-        def build_paths(x):
-            return [(x['major_minor'], path) for path in x['paths']
-                    if path.startswith(folder)]
-
-        return pipe(self.block_device_nodes.itervalues(),
-                    cmapcat(build_paths), dict)
-
-    @classmethod
-    def quick_scan(cls):
-        return pipe(create_device_list(fetch_device_maps().block_devices),
-                    cmapcat(getter("paths")), sorted) + fetch_device_maps().zfspools.keys()
+def get_normalized_device_table():
+    """ process block device info returned by device-scanner to produce a ndt """
+    return parse_sys_block(scanner_cmd("info"))
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
