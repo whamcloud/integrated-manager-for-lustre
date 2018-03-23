@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 from copy import deepcopy
 import traceback
@@ -30,7 +31,7 @@ class FakeController(Persisted):
 
     def add_lun(self, serial, size):
         if serial in self.state['luns']:
-            raise RuntimeError("A lun with serial '%s' already exists" % serial)
+            raise RuntimeError(_("A lun with serial '%s' already exists") % serial)
 
         wwids = []
         disk_count = 10

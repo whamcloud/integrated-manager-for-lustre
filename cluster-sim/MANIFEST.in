@@ -1,1 +1,2 @@
 include cluster_sim/*.json
+include cluster_sim/locale/*/LC_MESSAGE/cluster_sim.*

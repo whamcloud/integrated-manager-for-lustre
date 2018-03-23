@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import glob
 import json
@@ -36,7 +37,7 @@ OUTLET_CYCLE_TIME = 3
 
 class PDUSimulatorTcpHandler(SocketServer.BaseRequestHandler):
     def handle(self):
-        log.debug("Handling PDU request from %s:%s" % self.client_address)
+        log.debug(_("Handling PDU request from %s:%s") % self.client_address)
         self.server.pdu_simulator.handle_client(self.request,
                                                 self.client_address)
 
@@ -53,7 +54,7 @@ class PDUSimulatorTcpServer(SocketServer.TCPServer):
 
 class PDUSimulatorServer(ExceptionCatchingThread):
     def __init__(self, pdu):
-        log.info("Creating PDU server for %s on %s:%s" %
+        log.info(_("Creating PDU server for %s on %s:%s") %
                  (pdu.name, pdu.address, pdu.port))
 
         self.server = PDUSimulatorTcpServer((pdu.address, pdu.port),
@@ -98,7 +99,7 @@ class PDUSimulator(Persisted):
             self.save()
 
     def handle_client(self, sock, address):
-        log.info("%s: received connection from %s:%s" % (self.__class__.__name__,
+        log.info(_("%s: received connection from %s:%s") % (self.__class__.__name__,
                                                          address[0], address[1]))
         fd = sock.makefile()
         fd.write("NOT IMPLEMENTED\r\n")
@@ -130,7 +131,7 @@ class PDUSimulator(Persisted):
     def toggle_outlet(self, outlet, state):
         with self._lock:
             self.state['outlets'][outlet] = state
-            log.info("POWER: Toggled %s:%s to %s" % (self.name, outlet,
+            log.info(_("POWER: Toggled %s:%s to %s") % (self.name, outlet,
                                                      self.outlet_state(outlet)))
             self.save()
 
@@ -154,7 +155,7 @@ class PDUSimulator(Persisted):
 
 class APC79xxSimulator(PDUSimulator):
     def handle_client(self, sock, address):
-        log.info("%s: received connection from %s:%s" % (self.__class__.__name__,
+        log.info(_("%s: received connection from %s:%s") % (self.__class__.__name__,
                                                          address[0], address[1]))
         self.client_address = address
         self.socket = sock
@@ -163,7 +164,7 @@ class APC79xxSimulator(PDUSimulator):
         try:
             self.login()
         except socket.error:
-            log.info("%s: client %s:%s disconnected" % (self.__class__.__name__,
+            log.info(_("%s: client %s:%s disconnected") % (self.__class__.__name__,
                                                         address[0], address[1]))
 
     def navigation_prompt(self, prompt, forward_choices, forward, backward, banner=None):
@@ -215,7 +216,7 @@ class APC79xxSimulator(PDUSimulator):
                     caller = inspect.stack()[1][3]
 
                     decoded_response = [ord(c) for c in response]
-                    log.error("Unhandled response in %s: '%s' (%s)" %
+                    log.error(_("Unhandled response in %s: '%s' (%s)") %
                               (caller, response, decoded_response))
 
                     self.fd.write("\r\n%s" % prompt)
@@ -242,16 +243,16 @@ class APC79xxSimulator(PDUSimulator):
         # telnet control characters for logging.
         username = self._strip_controls(self.fd.readline().rstrip())
         self.fd.readline()
-        log.debug("Received username: %s" % username)
+        log.debug(_("Received username: %s") % username)
         self.fd.write("\rPassword : ")
         self.fd.flush()
         password = self.fd.readline().rstrip()
         self.fd.readline()
-        log.debug("Received password: %s" % password)
+        log.debug(_("Received password: %s") % password)
         self.control_console()
 
     def control_console(self, *args):
-        banner = """\n\n
+        banner = _("""\n\n
 American Power Conversion               Network Management Card AOS      v3.7.3
 (c) Copyright 2009 All Rights Reserved  Rack PDU APP                     v3.7.3
 -------------------------------------------------------------------------------
@@ -261,8 +262,8 @@ Location  : Unknown                                   User : Administrator
 Up Time   : 7 Days 15 Hours 31 Minutes                Stat : P+ N+ A+
 
 Switched Rack PDU: Communication Established
-"""
-        prompt = """
+""")
+        prompt = _("""
 ------- Control Console -------------------------------------------------------
 
      1- Device Manager
@@ -271,12 +272,12 @@ Switched Rack PDU: Communication Established
      4- Logout
 
      <ESC>- Main Menu, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """
+> """)
         self.navigation_prompt(prompt, "1", self.device_manager,
                                self.control_console, banner)
 
     def device_manager(self, *args):
-        prompt = """
+        prompt = _("""
 ------- Device Manager --------------------------------------------------------
 
      1- Phase Management
@@ -284,20 +285,20 @@ Switched Rack PDU: Communication Established
      3- Power Supply Status
 
      <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """
+> """)
 
         self.navigation_prompt(prompt, "2", self.outlet_manager,
                                self.control_console)
 
     def outlet_manager(self, *args):
-        prompt = """
+        prompt = _("""
 ------- Outlet Management -----------------------------------------------------
 
      1- Outlet Control/Configuration
      2- Outlet Restriction
 
      <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """
+> """)
 
         self.navigation_prompt(prompt, "1", self.outlet_control,
                                self.device_manager)
@@ -310,19 +311,19 @@ Switched Rack PDU: Communication Established
         return "\r\n".join(status_strings)
 
     def outlet_control(self, *args):
-        prompt = """
+        prompt = _("""
 ------- Outlet Control/Configuration ------------------------------------------
 %s\r
 
      <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """ % self.outlet_status_string
+> """) % self.outlet_status_string
         outlet_choices = self.state['outlets'].keys()
 
         self.navigation_prompt(prompt, outlet_choices, self.display_outlet,
                                self.outlet_manager)
 
     def display_outlet(self, number):
-        prompt = """
+        prompt = _("""
 ------- Outlet %s -------------------------------------------------------------
 
         Name         : Outlet %s
@@ -333,14 +334,14 @@ Switched Rack PDU: Communication Established
      2- Configure Outlet
 
      ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """ % (number, number, number, self.outlet_state(number))
+> """) % (number, number, number, self.outlet_state(number))
 
         self.current_outlet = number
         self.navigation_prompt(prompt, "1", self.control_outlet,
                                self.outlet_control)
 
     def control_outlet(self, number):
-        prompt = """
+        prompt = _("""
 ------- Control Outlet --------------------------------------------------------
 
         Name         : Outlet %s
@@ -356,19 +357,19 @@ Switched Rack PDU: Communication Established
      7- Cancel
 
      ?- Help, <ESC>- Back, <ENTER>- Refresh, <CTRL-L>- Event Log
-> """ % (self.current_outlet, self.current_outlet, self.outlet_state(self.current_outlet))
+> """) % (self.current_outlet, self.current_outlet, self.outlet_state(self.current_outlet))
 
         choices = [str(c) for c in range(1, 7)]
         self.navigation_prompt(prompt, choices, self.switch_outlet,
                                self.display_outlet)
 
     def switch_outlet(self, choice):
-        prompt = """
+        prompt = _("""
         -----------------------------------------------------------------------
         I'm too lazy to go through all the various permutations.
         The key line expected by fence_apc is the next one:
 
-        Enter 'YES' to continue or <ENTER> to cancel : """
+        Enter 'YES' to continue or <ENTER> to cancel : """)
 
         padding = "        "
 
@@ -387,19 +388,19 @@ Switched Rack PDU: Communication Established
         self.fd.readline()
         if response == "YES":
             commands[choice](self.current_outlet)
-            self.fd.write("%sCommand successfully issued.\r\n" % padding)
+            self.fd.write(_("%sCommand successfully issued.\r\n") % padding)
             self.fd.flush()
 
-        self.fd.write("\r\n%sPress <ENTER> to continue...\r\n" % padding)
+        self.fd.write(_("\r\n%sPress <ENTER> to continue...\r\n") % padding)
         self.fd.flush()
 
         self.last_choice = self.current_outlet
         self.control_outlet(self.current_outlet)
 
     def logout(self):
-        self.fd.write("Connection Closed - Bye\r\n")
+        self.fd.write(_("Connection Closed - Bye\r\n"))
         self.fd.flush()
-        log.info("Client %s:%s logged out" % self.client_address)
+        log.info(_("Client %s:%s logged out") % self.client_address)
         self.fd.close()
         self.socket.close()
 
@@ -410,7 +411,7 @@ class APC79xxSimulatorClient(object):
         self.port = port
 
     def perform_outlet_action(self, outlet, action):
-        log.debug("%s: Running %s -> %s on %s:%s" %
+        log.debug(_("%s: Running %s -> %s on %s:%s") %
                   (self.__class__.__name__, outlet, action, self.address, self.port))
         actions = {
             "on": "1",
@@ -549,7 +550,7 @@ class FakePowerControl(Persisted):
         fqdn = self.state['outlet_servers'][outlet]
 
         if not self.server_has_power(fqdn):
-            log.debug("stopping %s in poweroff_hook" % fqdn)
+            log.debug(_("stopping %s in poweroff_hook") % fqdn)
             self.stop_server_fn(fqdn)
 
     def server_poweron_hook(self, outlet):
@@ -559,27 +560,27 @@ class FakePowerControl(Persisted):
         """
         fqdn = self.state['outlet_servers'][outlet]
 
-        log.debug("starting %s in poweron_hook" % fqdn)
+        log.debug(_("starting %s in poweron_hook") % fqdn)
         self.start_server_fn(fqdn)
 
     def start_sim_server(self, pdu_name):
-        log.debug("starting server for %s" % pdu_name)
+        log.debug(_("starting server for %s") % pdu_name)
         assert pdu_name not in self.sim_servers
         pdu = self.pdu_sims[pdu_name]
         self.sim_servers[pdu_name] = PDUSimulatorServer(pdu)
         self.sim_servers[pdu_name].start()
 
     def start(self):
-        log.info("Power control: starting...")
+        log.info(_("Power control: starting..."))
         for pdu_name in self.pdu_sims:
             self.start_sim_server(pdu_name)
 
     def stop(self):
-        log.info("Power control: stopping...")
+        log.info(_("Power control: stopping..."))
         for sim_server in self.sim_servers.values():
             sim_server.stop()
 
     def join(self):
-        log.info("Power control: joining...")
+        log.info(_("Power control: joining..."))
         for sim_server in self.sim_servers.values():
             sim_server.join()

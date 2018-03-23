@@ -2,7 +2,6 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
 from copy import deepcopy
 import json
 import random
@@ -19,9 +18,11 @@ from iml_common.lib import util
 
 class DictStruct(dict):
     '''
-    Slightly elaborate implementation given the purpose today for just this and the following 2 classes. But maybe it
-    will develop into something more useful. The key thing here is that at times out dict based structures turn back
-    into dict's. For example when loading from file. This class allows them to be retured with the simple
+    Slightly elaborate implementation given the purpose today for just this and
+the following 2 classes. But maybe it will develop into something more useful.
+The key thing here is that at times out dict based structures turn back into
+dict's. For example when loading from file. This class allows them to be
+retured with the simple
 
     struct = DictStruct.from_dict(dictionary)
 
@@ -29,11 +30,13 @@ class DictStruct(dict):
 
     known_struct = KnownStruct.from_dict(dictionary)
 
-    Maybe we can even add some post hook to json.loads (to make this happen automagically). I've chosen __dict_struct_type__
-    so that we don't get a name clash with something.
+    Maybe we can even add some post hook to json.loads (to make this happen
+automagically). I've chosen __dict_struct_type__ so that we don't get a name
+clash with something.
 
-    At present I'm not putting this in iml_common, because I'm not convinced it is good enough yet as an idea, but
-    maybe moving forwards with a little more work and generalization we can do that.
+    At present I'm not putting this in iml_common, because I'm not convinced it
+is good enough yet as an idea, but maybe moving forwards with a little more
+work and generalization we can do that.
     '''
 
     def __init__(self):
@@ -43,7 +46,8 @@ class DictStruct(dict):
     @classmethod
     def from_dict(cls, dict):
         cls_name = dict.pop('__dict_struct_type__')
-        cls_ = next(class_ for class_ in util.all_subclasses(DictStruct) if class_.__module__ + "." + class_.__name__ == cls_name)
+        cls_ = next(class_ for class_ in util.all_subclasses(DictStruct)
+                           if class_.__module__ + "." + class_.__name__ == cls_name)
         return cls_(**dict)
 
     @classmethod
@@ -56,7 +60,10 @@ class DictStruct(dict):
 
 
 def load_data(filename):
-    return json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), filename), 'r').read())
+    return json.loads(open(os.path.join(
+                               os.path.dirname(os.path.abspath(__file__)),
+                               filename),
+                           'r').read())
 
 
 def perturb(value, max_perturb, min_bound, max_bound):

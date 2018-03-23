@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import os
 import random
@@ -90,16 +91,16 @@ class FakeHsmCoordinatorThread(threading.Thread):
             while self.agent_request_count(agent.uuid) < self.MAX_REQUESTS_PER_COPYTOOL:
                 try:
                     action = self.unassigned_requests.get_nowait()
-                    log.debug("Took %s from unassigned: %d" % (action, self.unassigned_requests.qsize()))
+                    log.debug(_("Took %s from unassigned: %d") % (action, self.unassigned_requests.qsize()))
                 except Queue.Empty:
                     action = self.get_random_action()
-                    log.debug("Got random action: %s" % action)
+                    log.debug(_("Got random action: %s") % action)
                 self.agent_requests[agent.uuid].put(action)
 
     def start_request(self, agent_uuid, request):
         fid = request['fid']
         if fid in self.active_requests[agent_uuid]:
-            log.error("Received duplicate start request %s for %s" % (request, fid))
+            log.error(_("Received duplicate start request %s for %s") % (request, fid))
             return
 
         self.active_requests[agent_uuid][fid] = request
@@ -109,7 +110,7 @@ class FakeHsmCoordinatorThread(threading.Thread):
         try:
             del self.active_requests[agent_uuid][fid]
         except KeyError:
-            log.error("Received finish request %s for unknown action on %s" % (request, fid))
+            log.error(_("Received finish request %s for unknown action on %s") % (request, fid))
             return
 
         request['completed_at'] = time.time()
@@ -125,7 +126,7 @@ class FakeHsmCoordinatorThread(threading.Thread):
 
         culled = start - self.complete_request_count
         if culled:
-            log.debug("Culled %d completed requests" % culled)
+            log.debug(_("Culled %d completed requests") % culled)
 
     @property
     def waiting_request_count(self):
@@ -141,14 +142,14 @@ class FakeHsmCoordinatorThread(threading.Thread):
         return len(self.complete_requests)
 
     def stop(self):
-        log.debug("Coordinator thread for %s stopping" % self.coordinator.filesystem)
+        log.debug(_("Coordinator thread for %s stopping") % self.coordinator.filesystem)
         self._stopping.set()
 
     def run(self):
         if not self.coordinator.enabled:
             return
 
-        log.debug("Coordinator thread for %s starting: %s" %
+        log.debug(_("Coordinator thread for %s starting: %s") %
                   (self.coordinator.filesystem, threading.current_thread()))
 
         while not self._stopping.is_set():
@@ -211,13 +212,13 @@ class FakeHsmCoordinator(Persisted):
                 return [a for a in self.registered_agents.values()
                         if a.id == agent_id][0]
             except IndexError:
-                log.error("Cannot find unknown agent by id: %s" % agent_id)
+                log.error(_("Cannot find unknown agent by id: %s") % agent_id)
                 raise
 
     def register_agent(self, agent):
         try:
             exists = self.get_agent_by_id(agent.id)
-            log.warn("Deregistering existing agent with id %s" % exists.id)
+            log.warn(_("Deregistering existing agent with id %s") % exists.id)
             self.deregister_agent(exists.id)
         except IndexError:
             pass
@@ -226,13 +227,13 @@ class FakeHsmCoordinator(Persisted):
             agent.set_uuid(str(uuid.uuid4()))
             agent.coordinator = self
             self.registered_agents[agent.uuid] = agent
-            log.info("Registered agent: %s (%s)" % (agent.id, agent.uuid))
+            log.info(_("Registered agent: %s (%s)") % (agent.id, agent.uuid))
 
     def deregister_agent(self, agent):
         with self._lock:
             del self.registered_agents[agent.uuid]
             self._thread.purge_agent_requests(agent.uuid)
-            log.info("Deregistered agent: %s" % agent.id)
+            log.info(_("Deregistered agent: %s") % agent.id)
 
     @property
     def agent_stats(self):
@@ -299,11 +300,11 @@ class FakeHsmCoordinator(Persisted):
                 break
 
     def start_request(self, agent_uuid, request):
-        log.debug("Got start on %s from %s" % (request, agent_uuid))
+        log.debug(_("Got start on %s from %s") % (request, agent_uuid))
         self._thread.start_request(agent_uuid, request)
 
     def finish_request(self, agent_uuid, request):
-        log.debug("Got finish on %s from %s" % (request, agent_uuid))
+        log.debug(_("Got finish on %s from %s") % (request, agent_uuid))
         self._thread.finish_request(agent_uuid, request)
 
     def enable(self):
@@ -344,20 +345,20 @@ class FakeHsmCoordinator(Persisted):
 
     def control(self, control_value):
         if not control_value in self.control_map:
-            raise RuntimeError("Unknown HSM Coordinator control value: %s"
+            raise RuntimeError(_("Unknown HSM Coordinator control value: %s")
                                % control_value)
 
         getattr(self, self.control_map[control_value])()
 
     def start(self):
         if self.enabled:
-            log.info("Starting HSM Coordinator for %s" % self.mdt)
+            log.info(_("Starting HSM Coordinator for %s") % self.mdt)
             self._new_thread()
             self._thread.start()
 
     def stop(self):
         if self.running:
-            log.info("Stopping HSM Coordinator for %s" % self.mdt)
+            log.info(_("Stopping HSM Coordinator for %s") % self.mdt)
             self._thread.stop()
 
     def join(self):

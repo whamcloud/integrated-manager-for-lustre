@@ -15,7 +15,7 @@ Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
-BuildRequires: python-setuptools
+BuildRequires: python-setuptools python-tools
 Requires: python-argparse python-setuptools python-requests >= 2.6.0 chroma-agent = %{version}-%{release}
 
 %description
@@ -42,3 +42,4 @@ rm -rf %{buildroot}
 %{_bindir}/cluster-sim-benchmark
 %{python_sitelib}/chroma_cluster_sim-*.egg-info/*
 %{python_sitelib}/cluster_sim/*
+%{python_sitelib}/cluster_sim/locale/ru/LC_MESSAGE/*

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import os
 import threading
@@ -34,7 +35,7 @@ class FakeHsmCopytoolThread(threading.Thread):
     def _open_fifo(self):
         fifo_path = self.wrapper.event_fifo
         self.fifo = open(fifo_path, "w", 1)
-        log.debug("Opened %s for write" % fifo_path)
+        log.debug(_("Opened %s for write") % fifo_path)
 
     @property
     def uuid(self):
@@ -143,7 +144,7 @@ class FakeHsmCopytoolThread(threading.Thread):
 
         self.started = True
 
-        log.info("Copytool %s started" % self.wrapper.copytool.id)
+        log.info(_("Copytool %s started") % self.wrapper.copytool.id)
         while not self._stopping.is_set():
             for request in self.coordinator.get_agent_requests(self.uuid):
                 self.start_request(request)
@@ -185,7 +186,7 @@ class FakeHsmCopytool(Persisted):
 
     def _new_thread(self):
         if not self.coordinator:
-            raise RuntimeError("Attempt to start unregistered copytool: %s" % self.id)
+            raise RuntimeError(_("Attempt to start unregistered copytool: %s") % self.id)
         self._thread = FakeHsmCopytoolThread(self, self.coordinator)
 
     def __str__(self):
@@ -247,7 +248,7 @@ class FakeHsmCopytool(Persisted):
             self.join()
 
     def start(self, coordinator):
-        log.info("Starting HSM Copytool: %s" % self.id)
+        log.info(_("Starting HSM Copytool: %s") % self.id)
         coordinator.register_agent(self)
 
         self._new_thread()
@@ -263,11 +264,11 @@ class FakeHsmCopytool(Persisted):
             time.sleep(1)
             startup_timeout -= 1
 
-        raise RuntimeError("Timed out waiting for copytool thread to start")
+        raise RuntimeError(_("Timed out waiting for copytool thread to start"))
 
     def stop(self):
         if self.running:
-            log.info("Stopping HSM Copytool: %s" % self.id)
+            log.info(_("Stopping HSM Copytool: %s") % self.id)
             try:
                 self.coordinator.deregister_agent(self)
             except KeyError:

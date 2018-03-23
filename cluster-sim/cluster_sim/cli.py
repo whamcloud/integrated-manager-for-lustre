@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from cluster_sim.i18n import _
 
 import argparse
 import json
@@ -36,7 +37,7 @@ class RpcThread(threading.Thread):
         self.server = SimpleXMLRPCServer(('localhost', SIMULATOR_PORT), allow_none = True)
         self.server.register_instance(self.simulator)
 
-        log.info("Listening on %s" % SIMULATOR_PORT)
+        log.info(_("Listening on %s") % SIMULATOR_PORT)
         self.server.serve_forever()
 
     def stop(self):
@@ -48,7 +49,7 @@ class SimulatorCli(object):
         self._stopping = threading.Event()
 
     def setup(self, args):
-        log.info("Setting up simulator configuration for %s servers in %s/" % (args.server_count, args.config))
+        log.info(_("Setting up simulator configuration for %s servers in %s/") % (args.server_count, args.config))
 
         worker_count = int(args.worker_count)
 
@@ -71,7 +72,7 @@ class SimulatorCli(object):
 
         response = session.get("%sapi/session/" % url)
         if not response.ok:
-            raise RuntimeError("Failed to open session")
+            raise RuntimeError(_("Failed to open session"))
         session.headers['X-CSRFToken'] = response.cookies['csrftoken']
         session.cookies['csrftoken'] = response.cookies['csrftoken']
         session.cookies['sessionid'] = response.cookies['sessionid']
@@ -80,7 +81,7 @@ class SimulatorCli(object):
                                 data = json.dumps({'username': username, 'password': password}),
                                 headers = {"Content-type": "application/json"})
         if not response.ok:
-            raise RuntimeError("Failed to authenticate")
+            raise RuntimeError(_("Failed to authenticate"))
 
         return session
 
@@ -98,7 +99,7 @@ class SimulatorCli(object):
             try:
                 profile = [p for p in response.json()['objects'] if p['name'] == preferred_profile][0]
             except IndexError:
-                raise RuntimeError("No such profile: %s" % preferred_profile)
+                raise RuntimeError(_("No such profile: %s") % preferred_profile)
 
         args = {
             'credits': credit_count,
@@ -122,10 +123,10 @@ class SimulatorCli(object):
             server_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='base_managed_rh7')
             worker_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='posix_copytool_worker')
         else:
-            sys.stderr.write("Must pass either --secret or --username and --password\n")
+            sys.stderr.write(_("Must pass either --secret or --username and --password\n"))
             sys.exit(-1)
 
-        log.info("Registering %s servers in %s/" % (server_count, args.config))
+        log.info(_("Registering %s servers in %s/") % (server_count, args.config))
         register_count = simulator.register_all(server_secret, worker_secret)
 
         if args.create_pdu_entries and register_count > 0:
@@ -135,16 +136,16 @@ class SimulatorCli(object):
 
     def create_pdu_entries(self, simulator, args):
         if not (args.username and args.password):
-            sys.stderr.write("Username and password required to create PDU entries\n")
+            sys.stderr.write(_("Username and password required to create PDU entries\n"))
             sys.exit(-1)
 
         session = self._get_authenticated_session(args.url, args.username, args.password)
 
-        log.info("Creating PDU entries and associating PDU outlets with servers...")
+        log.info(_("Creating PDU entries and associating PDU outlets with servers..."))
         outlet_count = len(simulator.servers)
 
         if outlet_count < 1:
-            log.error("Skipping PDU creation (no servers)")
+            log.error(_("Skipping PDU creation (no servers)"))
             return
 
         # Create a custom type to ensure that it has enough outlets.
@@ -162,7 +163,7 @@ class SimulatorCli(object):
         assert 200 <= response.status_code < 300, response.text
         fence_apc = json.loads(response.text)
 
-        log.debug("Created power_control_type: %s" % fence_apc['name'])
+        log.debug(_("Created power_control_type: %s") % fence_apc['name'])
 
         pdu_entries = []
         for pdu_sim in simulator.power.pdu_sims.values():
@@ -175,7 +176,7 @@ class SimulatorCli(object):
 
             assert 200 <= response.status_code < 300, response.text
             pdu_entries.append(json.loads(response.text))
-            log.debug("Created power_control_device: %s" % pdu_entries[-1]['name'])
+            log.debug(_("Created power_control_device: %s") % pdu_entries[-1]['name'])
 
         response = session.get("%s/api/host/" % args.url, data = json.dumps({
             'limit': 0
@@ -190,11 +191,11 @@ class SimulatorCli(object):
                     'host': server['resource_uri']
                 }))
                 assert 200 <= response.status_code < 300, response.text
-                log.debug("Created association %s <=> %s:%s" % (server['fqdn'], pdu['name'], outlet['identifier']))
+                log.debug(_("Created association %s <=> %s:%s") % (server['fqdn'], pdu['name'], outlet['identifier']))
 
     def run(self, args):
         simulator = ClusterSimulator(args.config, args.url)
-        log.info("Running %s servers in %s/" % (len(simulator.servers), args.config))
+        log.info(_("Running %s servers in %s/") % (len(simulator.servers), args.config))
         simulator.start_all()
 
         return simulator
@@ -216,28 +217,28 @@ class SimulatorCli(object):
         # but let's not completely rule out the possibility that someone might want to run
         # the tests on a remote system using a proxy.
         if 'https_proxy' in os.environ:
-            sys.stderr.write("Warning: Using proxy %s from https_proxy" % os.environ['https_proxy'] +
+            sys.stderr.write(_("Warning: Using proxy %s from https_proxy") % os.environ['https_proxy'] +
                              " environment variable, you probably don't want that\n")
 
-        parser = argparse.ArgumentParser(description = "Cluster simulator")
-        parser.add_argument('--config', required = False, help = "Simulator configuration/state directory", default = "cluster_sim")
-        parser.add_argument('--url', required = False, help = "Manager URL", default = "https://localhost:8000/")
+        parser = argparse.ArgumentParser(description = _("Cluster simulator"))
+        parser.add_argument('--config', required = False, help = _("Simulator configuration/state directory"), default = "cluster_sim")
+        parser.add_argument('--url', required = False, help = _("Manager URL"), default = "https://localhost:8000/")
         subparsers = parser.add_subparsers()
         setup_parser = subparsers.add_parser("setup")
-        setup_parser.add_argument('--su_size', required = False, help = "Servers per SU", default = '0')
-        setup_parser.add_argument('--cluster_size', required = False, help = "Number of simulated storage servers", default = '4')
-        setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
-        setup_parser.add_argument('--worker_count', required = False, help = "Number of simulated HSM workers", default = '1')
-        setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')
-        setup_parser.add_argument('--volume_count', required = False, help = "Number of simulated storage devices, defaults to twice the number of servers")
-        setup_parser.add_argument('--psu_count', required = False, help = "Number of simulated server Power Supply Units, defaults to one per server", default = '1')
+        setup_parser.add_argument('--su_size', required = False, help = _("Servers per SU"), default = '0')
+        setup_parser.add_argument('--cluster_size', required = False, help = _("Number of simulated storage servers"), default = '4')
+        setup_parser.add_argument('--server_count', required = False, help = _("Number of simulated storage servers"), default = '8')
+        setup_parser.add_argument('--worker_count', required = False, help = _("Number of simulated HSM workers"), default = '1')
+        setup_parser.add_argument('--nid_count', required = False, help = _("Number of LNet NIDs per storage server, defaults to 1 per server"), default = '1')
+        setup_parser.add_argument('--volume_count', required = False, help = _("Number of simulated storage devices, defaults to twice the number of servers"))
+        setup_parser.add_argument('--psu_count', required = False, help = _("Number of simulated server Power Supply Units, defaults to one per server"), default = '1')
         setup_parser.set_defaults(func = self.setup)
 
-        register_parser = subparsers.add_parser("register", help = "Provide a secret for registration, or provide API credentials for the simulator to acquire a token itself")
-        register_parser.add_argument('--secret', required = False, help = "Registration token secret")
-        register_parser.add_argument('--username', required = False, help = "API username")
-        register_parser.add_argument('--password', required = False, help = "API password")
-        register_parser.add_argument('--create_pdu_entries', action='store_true', help = "Create PDU entries on the manager")
+        register_parser = subparsers.add_parser("register", help = _("Provide a secret for registration, or provide API credentials for the simulator to acquire a token itself"))
+        register_parser.add_argument('--secret', required = False, help = _("Registration token secret"))
+        register_parser.add_argument('--username', required = False, help = _("API username"))
+        register_parser.add_argument('--password', required = False, help = _("API password"))
+        register_parser.add_argument('--create_pdu_entries', action='store_true', help = _("Create PDU entries on the manager"))
         register_parser.set_defaults(func = self.register)
 
         run_parser = subparsers.add_parser("run")
@@ -254,7 +255,7 @@ class SimulatorCli(object):
             # Wake up periodically to handle signals, instead of going straight into join
             while not self._stopping.is_set():
                 self._stopping.wait(timeout = 1)
-            log.info("Running indefinitely.")
+            log.info(_("Running indefinitely."))
 
             self.simulator.join()
 
@@ -266,7 +267,7 @@ def main():
     cli = SimulatorCli()
 
     def handler(*args, **kwargs):
-        log.info("Stopping...")
+        log.info(_("Stopping..."))
         cli.stop()
 
     signal.signal(signal.SIGINT, handler)
@@ -329,19 +330,19 @@ class PowerControlCli(object):
                         (self.power.outlet_server_name(outlet), outlet, state)
 
     def main(self):
-        parser = argparse.ArgumentParser(description = "Cluster Power Control")
-        parser.add_argument('--config', required = False, help = "Simulator configuration/state directory", default = "cluster_sim")
+        parser = argparse.ArgumentParser(description = _("Cluster Power Control"))
+        parser.add_argument('--config', required = False, help = _("Simulator configuration/state directory"), default = "cluster_sim")
         subparsers = parser.add_subparsers()
 
         pdu_parser = subparsers.add_parser('pdu')
-        pdu_parser.add_argument('name', help = "PDU name")
-        pdu_parser.add_argument('outlet', help = "PDU outlet number")
-        pdu_parser.add_argument('action', help = "Action to be performed (off|on|reboot)")
+        pdu_parser.add_argument('name', help = _("PDU name"))
+        pdu_parser.add_argument('outlet', help = _("PDU outlet number"))
+        pdu_parser.add_argument('action', help = _("Action to be performed (off|on|reboot)"))
         pdu_parser.set_defaults(func = self.control_pdu)
 
         server_parser = subparsers.add_parser('server')
-        server_parser.add_argument('fqdn', help = "Server FQDN")
-        server_parser.add_argument('action', help = "Action to be performed (off|on|reboot)")
+        server_parser.add_argument('fqdn', help = _("Server FQDN"))
+        server_parser.add_argument('action', help = _("Action to be performed (off|on|reboot)"))
         server_parser.set_defaults(func = self.control_server)
 
         status_parser = subparsers.add_parser('status')
