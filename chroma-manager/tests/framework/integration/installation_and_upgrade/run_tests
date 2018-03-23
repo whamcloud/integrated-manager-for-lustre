@@ -45,32 +45,19 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# first fetch and install chroma 3.1.1.0
-BUILD_JOB=ieel-b3_1
-BUILD_NUM=427
-set +x # don't remove this line lest you leak confidential information
-. ~/auth.sh
-cat <<"EOF"
-++ curl -s -k 'https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/ieel-b3_1/427/api/xml?xpath=*/artifact/fileName&wrapper=foo'
-++ sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/'
-EOF
-IEEL_FROM_ARCHIVE=$(curl -s -k "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-echo "+ IEEL_FROM_ARCHIVE=$IEEL_FROM_ARCHIVE"
-set -x
+# first fetch and install IML 4.0.3
+BUILD_JOB=ieel
+BUILD_NUM=3015
+IEEL_FROM_ARCHIVE=$(curl -s -k "http://jenkins.lotus.hpdd.lab.intel.com/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -re 's/.*>(([i]\?ee[l]\?|iml)-[0-9\.][0-9\.]*.tar.gz)<.*/\1/')
 IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
 IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
 
 if [ ! -f "$IEEL_FROM_ARCHIVE" ]; then
-    set +x # don't remove this line lest you leak confidential information
-    cat <<EOF
-+ curl -k -O https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE
-EOF
-    curl -k -O "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-set -x
+    curl -k -O "http://jenkins.lotus.hpdd.lab.intel.com/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
 fi
 
 # Install and setup old manager
-scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install-3.x.exp root@$CHROMA_MANAGER:/tmp
+scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
@@ -79,14 +66,14 @@ yum -y install expect
 cd /tmp
 mkdir $PREVIOUS_INSTALL_DIR
 mv $IEEL_FROM_ARCHIVE $PREVIOUS_INSTALL_DIR/$IEEL_FROM_ARCHIVE
-mv install-3.x.exp $PREVIOUS_INSTALL_DIR/install-3.x.exp
+mv install.exp $PREVIOUS_INSTALL_DIR/install.exp
 
 cd $PREVIOUS_INSTALL_DIR
 tar xzvf $IEEL_FROM_ARCHIVE
 
 # Install from the installation package
 cd ${IEEL_FROM_ARCHIVE%%.tar.gz}
-if ! expect ../install-3.x.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
+if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
     cat /var/log/chroma/install.log
@@ -248,6 +235,9 @@ EOF
     fi
 fi
 
+# remove the old version's chroma-support.repo
+rm -f /etc/yum.repos.d/chroma_support.repo
+
 if ! expect ../upgrade.exp; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
@@ -288,59 +278,6 @@ fi
 # https://github.com/pypa/virtualenv/issues/355
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
-
-# the manual bits that need to be done for 3.x to 4.x upgrades
-# see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-yum -y install epel-release
-yum -y install pdsh
-mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
-
-ssh root@"$CHROMA_MANAGER" "exec 2>&1; set -xe
-yum -y install pdsh
-pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
-
-pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
-# TODO: we really just need to adjust cache timeouts here to account for
-#       our compressed timelines
-yum clean all
-yum-config-manager --enable iml-agent
-
-yum -y upgrade chroma-agent\*
-
-systemctl stop zed
-rmmod zfs zcommon znvpair spl
-
-yum erase -y zfs-dkms spl-dkms lustre lustre-modules lustre-osd-ldiskfs \
-lustre-osd-zfs lustre-osd-ldiskfs-mount lustre-osd-zfs-mount libzpool2 libzfs2
-
-#TODO: if we install the new kernel here and reboot, then continue
-#on with the below, we should only build dkms modules once instead
-#of twice
-
-yum -y --nogpgcheck install lustre-ldiskfs-zfs kernel-devel-\*_lustre
-grubby --default-kernel
-$REBOOT_NODE" | dshbak -c
-if [ "${PIPESTATUS[0]}" != "0" ]; then
-    exit 1
-fi
-
-# the second argumant closes a race where we check a node
-# before it's even been shut down
-wait_for_nodes "${STORAGE_APPLIANCES[*]}" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
-
-# give the choma agent time to start up and create a session
-# without this we get:
-# [2017-11-04 07:38:06,720: ERROR/job_scheduler] Job 83 step 0 encountered an agent error: Communications error with vm5 because session terminated
-# from the next test to run.
-# should we really have to wait externally here or should
-# agent <-> management communications be taking care of this for us?
-
-sleep 60
 
 echo "End upgrade and setup."
 
