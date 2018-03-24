@@ -2,11 +2,8 @@
 
 # Functions to deal with nodes
 
-# shellcheck disable=SC2034
-# REBOOT_NODE is used by other scripts that include this one
-REBOOT_NODE="sync
-sync
-nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0"
+# shellcheck disable=SC1091
+. $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/reboot_node.sh
 
 reset_node() {
     local node="$1"
