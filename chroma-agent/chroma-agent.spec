@@ -124,12 +124,6 @@ done
 %clean
 rm -rf %{buildroot}
 
-%pre
-if [ $1 -eq 2 ]; then
-  systemctl stop %{name}
-  systemctl disable %{name}
-fi
-
 %post
 chkconfig lustre-modules on
 # disable SELinux -- it prevents both lustre and pacemaker from working
@@ -141,10 +135,13 @@ if [ $1 -eq 1 ]; then
     # new install; create default agent config
     chroma-agent reset_agent_config
 elif [ $1 -eq 2 ]; then
-    systemctl enable %{name}
-    systemctl start %{name}
-    # upgrade; convert any older agent config
+    # upgrade; convert any older agent config and then restart
     chroma-agent convert_agent_config
+    # it's tempting to restart the agent here, but this upgrade
+    # could have been initiated from the running chroma-agent and
+    # so restarting here would pull the rug out from under that
+    # upgrade procedure
+    #systemctl restart %{name}
 fi
 
 %triggerin management -- kernel
