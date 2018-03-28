@@ -4,8 +4,6 @@ from testconfig import config
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-
-@skipIf(not config.get('simulator'), "Automated test of upgrades is HYD-1739")
 @skip("Until upgrades are handled by IML proper")
 class TestUpdates(ChromaIntegrationTestCase):
     def test_upgrade_alerting(self):
@@ -26,11 +24,6 @@ class TestUpdates(ChromaIntegrationTestCase):
                 original_packages[p['name']] = (p['epoch'], p['version'], p['release'], p['arch'])
 
         self.assertNotEqual(len(original_packages), 0)
-
-        if config.get('simulator'):
-            # the simulator only does a package scan on initial (fake) plug-in update,
-            # therefore we have to do it manually to avoid race conditions failing this test
-            self.remote_operations.scan_packages()
 
         self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'], of_type='UpdatesAvailableAlert'))
 

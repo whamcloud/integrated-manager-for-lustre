@@ -4,7 +4,6 @@ from iml_common.lib.name_value_list import NameValueList
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skipIf(config.get('simulator'), 'RealRemoteOperations cant fake out ssh')
 class TestHostValidations(ChromaIntegrationTestCase):
 
     def setUp(self):

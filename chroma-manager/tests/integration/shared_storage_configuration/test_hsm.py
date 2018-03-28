@@ -1,6 +1,7 @@
 import os
 from mock import patch, Mock
 from django.utils.unittest import skipUnless
+from django.utils.unittest import skip
 
 from testconfig import config
 import logging
@@ -130,8 +131,7 @@ def patch_fifo(obj):
     obj.fifo = Mock()
 
 
-@skipUnless(config.get('simulator', False), "Can only be tested in simulation")
-@patch('cluster_sim.fake_hsm_copytool.FakeHsmCopytoolThread._open_fifo', patch_fifo)
+@skip("Needs implementation for real hardware")
 class TestHsmCopytoolEventRelay(ManagedCopytoolTestCase):
     def _get_fifo_writer(self, copytool):
         fifo_path = os.path.join(self.COPYTOOL_TESTING_FIFO_ROOT,

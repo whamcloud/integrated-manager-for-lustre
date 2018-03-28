@@ -6,7 +6,6 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestHostid(ChromaIntegrationTestCase):
-    @skipIf(config.get('simulator'), "Testing hostid generation requires real nodes (not simulated)")
     def test_create_hostid(self):
         """
         Test that when a host is added, the /etc/hostid file is created containing a 'unique' binary identity.

@@ -1,5 +1,4 @@
 {
-    "simulator": false,
     "log_dir": "/var/log/",
     "reset": true,
     "failover_is_configured": true,

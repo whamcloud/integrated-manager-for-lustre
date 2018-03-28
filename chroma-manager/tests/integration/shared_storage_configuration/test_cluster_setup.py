@@ -38,7 +38,7 @@ class TestClusterSetup(TestCase):
 
         # If we indicate failover is set up, ensure we have the proper
         # information configured to test it.
-        if config['failover_is_configured'] and not config.get('simulator'):
+        if config['failover_is_configured']:
             self.assertGreaterEqual(len(config['hosts']), 1)
             for lustre_server in self.config_servers:
                 self.assertTrue(lustre_server['host'])
@@ -58,7 +58,7 @@ class TestClusterSetup(TestCase):
             pipe.send(json.dumps(response))
 
         num_requests = 5
-        if config['failover_is_configured'] and not config.get('simulator'):
+        if config['failover_is_configured']:
             self.remote_operations = RealRemoteOperations(self)
             pipe_outs = {}
             processes = {}

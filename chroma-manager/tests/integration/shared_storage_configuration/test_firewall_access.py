@@ -13,7 +13,6 @@ class TestFirewall(ChromaIntegrationTestCase):
         super(TestFirewall, self).setUp()
         self.remote_operations = RealRemoteOperations(self)
 
-    @skipIf(config.get('simulator'), "Can't be simulated")
     def test_manager(self):
         """ Test that the manager has the required selinux setting and firewall access rules installed"""
         chroma_manager = config['chroma_managers'][0]
@@ -61,7 +60,6 @@ class TestFirewall(ChromaIntegrationTestCase):
         else:
             return firewall.rules
 
-    @skipIf(config.get('simulator'), "Can't be simulated")
     def test_agent(self):
         """
         Test that when hosts are added and a filesytem is created, that all required firewall accesses are
