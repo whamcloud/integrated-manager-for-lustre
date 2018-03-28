@@ -1,3 +1,4 @@
+import errno
 import mock
 from chroma_agent.lib import node_admin
 from chroma_agent.lib.shell import AgentShell
@@ -23,12 +24,23 @@ class TestNodeAdmin(CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
         self.write_ifcfg_mock.assert_called_with(self.device_name, self.mac_address, None, None)
 
+    def test_unmanage_network_nm_permission_denied(self):
+        noent_exception = OSError()
+        noent_exception.errno = errno.EACCES
+
+        with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=noent_exception):
+            with self.assertRaises(OSError):
+                self.assertIsNone(node_admin.unmanage_network(self.device_name, self.mac_address))
+
     def test_unmanage_network_nm_not_installed(self):
-        with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=OSError):
+        noent_exception = OSError()
+        noent_exception.errno = errno.ENOENT
+
+        with mock.patch('chroma_agent.lib.shell.AgentShell.try_run', side_effect=noent_exception):
             self.assertIsNone(node_admin.unmanage_network(self.device_name, self.mac_address))
 
     def test_unmanage_network_nm_known_failures(self):
-        for expected_rc in [8]:
+        for expected_rc in [node_admin.NM_STOPPED_RC]:
             self.reset_command_capture()
             self.add_commands(CommandCaptureCommand(('nmcli', 'con', 'load', self.write_ifcfg_result), rc=expected_rc))
 
@@ -37,7 +49,7 @@ class TestNodeAdmin(CommandCaptureTestCase):
             self.assertRanAllCommandsInOrder()
 
     def test_unmanage_network_nm_unknown_failures(self):
-        for expected_rc in [2, 127]:
+        for expected_rc in [2, 127]:  # Network Manager bad syntax and command unavailable return codes
             self.reset_command_capture()
             self.add_commands(CommandCaptureCommand(('nmcli', 'con', 'load', self.write_ifcfg_result), rc=expected_rc))
 

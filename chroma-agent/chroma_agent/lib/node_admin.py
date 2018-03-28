@@ -1,11 +1,13 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import errno
 from jinja2 import Environment, PackageLoader
 from chroma_agent.lib.shell import AgentShell
 
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
+
+NM_STOPPED_RC = 8  # network manager stopped
 
 
 def write_ifcfg(device, mac_address, ipv4_address, ipv4_netmask):
@@ -32,9 +34,9 @@ def unmanage_network(device, mac_address):
     if ifcfg_path:
         try:
             AgentShell.try_run(['nmcli', 'con', 'load', ifcfg_path])
-        except OSError:
-            # Network Manager not installed
-            pass
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise e
         except AgentShell.CommandExecutionError as cee:
-            if cee.result.rc != 8:  # network manager stopped
-                raise
+            if cee.result.rc != NM_STOPPED_RC:
+                raise cee
