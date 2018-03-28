@@ -82,7 +82,7 @@
                   "parent": null,
                   "serial_83": null,
                   "serial_80": null,
-                  "path": "/dev/emcpowera",
+                  path": "/dev/emcpowera",
                   "size": 16442064896
     },
     "98:12": {
