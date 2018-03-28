@@ -30,4 +30,5 @@ http {
     keepalive_timeout  65;
 
     include {{var}}/chroma-manager.conf;
+    include {{var}}/chroma-manager-browser.conf;
 }

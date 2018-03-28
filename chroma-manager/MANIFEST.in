@@ -4,6 +4,7 @@ include logrotate.cfg
 include chroma-manager.py
 include production_supervisord.conf
 include chroma-manager.conf.template
+include chroma-manager-browser.conf.template
 include mime.types
 include agent-bootstrap-script.template
 include chroma_core/fixtures/*

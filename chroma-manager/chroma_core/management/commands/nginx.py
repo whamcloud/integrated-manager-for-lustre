@@ -49,6 +49,9 @@ class Command(BaseCommand):
         NGINX_CONF_TEMPLATE = join_site_root("nginx.conf.template")
         NGINX_CONF = join_nginx_dir("nginx.conf")
 
+        CHROMA_MANAGER_BROWSER_CONF_TEMPLATE = join_site_root("chroma-manager-browser.conf.template")
+        CHROMA_MANAGER_BROWSER_CONF = join_nginx_dir("chroma-manager-browser.conf")
+
         CHROMA_MANAGER_CONF_TEMPLATE = join_site_root("chroma-manager.conf.template")
         CHROMA_MANAGER_CONF = join_nginx_dir("chroma-manager.conf")
 
@@ -73,5 +76,6 @@ class Command(BaseCommand):
 
         write_conf(NGINX_CONF_TEMPLATE, NGINX_CONF)
         write_conf(CHROMA_MANAGER_CONF_TEMPLATE, CHROMA_MANAGER_CONF)
+        write_conf(CHROMA_MANAGER_BROWSER_CONF_TEMPLATE, CHROMA_MANAGER_BROWSER_CONF)
 
         print " ".join([self._nginx_path, "-c", NGINX_CONF])
