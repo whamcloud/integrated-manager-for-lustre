@@ -133,6 +133,18 @@ if [ -f /etc/profile.d/intel_proxy.sh ]; then
         [[ \$proxy =~ \/\/([^:]{1,}):{0,1}([[:digit:]]{1,}) ]]
         subscription-manager config --server.proxy_hostname=\${BASH_REMATCH[1]} --server.proxy_port=\${BASH_REMATCH[2]}
     fi
+fi
+# let's see what's in yum.conf at this point
+cat /etc/yum.conf
+if grep  ^distroverpkg= /etc/yum.conf; then
+    # and fix it if necessary
+    RH_RELEASE=\$(rpm -q --whatprovides redhat-release)
+    ed <<EOF /etc/yum.conf
+/distroverpkg=/c
+distroverpkg=\${RH_RELEASE%-*-*}
+.
+wq
+EOF
 fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
