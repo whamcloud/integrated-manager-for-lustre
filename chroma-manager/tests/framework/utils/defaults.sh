@@ -16,7 +16,11 @@ set_distro_vars() {
 
     if [ "$distro" = "el7" ]; then
         if ${upgrade_test}; then
-            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.4"}
+            if ${UPGRADE_FROM_3:-false}; then
+                export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}
+            else
+                export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.4"}
+            fi
             export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.5"}
         else
             export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.5"}

@@ -54,7 +54,31 @@ yum makecache
 yum-config-manager --disable *[eE][pP][eE][lL]*
 
 rpm -qa | sort >/tmp/before_upgrade
+
+# a little bit of jiggery to make RHEL upgrade CentOS
+# should be benign on RHEL
+rpm --nodeps -e \$(rpm -q --whatprovides redhat-release)
+RH_RELEASE=\$(repoquery -q --whatprovides redhat-release | tail -1)
+yum -y install \$RH_RELEASE
+if grep  ^distroverpkg= /etc/yum.conf; then
+    ed <<EOF /etc/yum.conf
+/distroverpkg=/c
+distroverpkg=\${RH_RELEASE%-*-*}
+.
+wq
+EOF
+fi
+
 yum -y upgrade
+
+# CentOS->RHEL upgrades need some additional packages
+if [ "$upgrade_distro_name" = "el" ] &&
+   [ \$(lsb_release -s -i) = RedHatEnterpriseServer ]; then
+    yum -y install subscription-manager
+    yum -y erase redhat-lsb-{submod-security,core}
+    yum -y install redhat-lsb-core
+
+fi
 
 if [[ ! \$(lsb_release -r -s) =~ ${upgrade_distro_version}(\\.[0-9]*.*)?$ ]]; then
     echo \"O/S didn't actually upgrade\"
