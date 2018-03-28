@@ -36,7 +36,7 @@ def parse_journal(data):
     return {
         'datetime': datetime.datetime.isoformat(utc_dt),
         'severity': data['PRIORITY'],
-        'facility': data.get('SYSLOG_FACILITY', 'unknown'),
+        'facility': data.get('SYSLOG_FACILITY', 3),
         'source': data.get('SYSLOG_IDENTIFIER', 'unknown'),
         'message': data['MESSAGE']
     }
