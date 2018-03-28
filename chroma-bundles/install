@@ -330,13 +330,12 @@ def _create_support_repos():
     repodir = "/etc/yum.repos.d"
     repofile = "chroma_support.repo"
     target_path = os.path.join(repodir, repofile)
-    if not os.path.exists(target_path):
-        try:
-            shutil.copy(repofile, repodir)
-        except:
-            log.debug("Failed to create %s." % target_path)
-            log.info("Failed to create %s." % target_path)
-            sys.exit(-1)
+    try:
+        shutil.copy(repofile, repodir)
+    except:
+        log.debug("Failed to create %s." % target_path)
+        log.info("Failed to create %s." % target_path)
+        sys.exit(-1)
 
 def _create_manager_repo():
     manager_repo_dir = tempfile.mkdtemp()
