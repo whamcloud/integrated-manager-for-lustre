@@ -9,7 +9,6 @@
 
 check_for_autopass() {
     # currently defined tests:
-    # integration-tests-shared-storage-configuration-with-simulator
     # integration-tests-existing-filesystem-configuration
     # integration-tests-shared-storage-configuration
     # test-services
@@ -18,7 +17,6 @@ check_for_autopass() {
     # vvvvvvvvvvv this should come from a pragma in the commit message
     local all_tests="integration-tests-existing-filesystem-configuration
                      integration-tests-shared-storage-configuration
-                     integration-tests-shared-storage-configuration-with-simulator
                      test-services
                      unit-tests
                      upgrade-tests"
@@ -50,12 +48,6 @@ check_for_autopass() {
             exit 1
         fi
     done
-
-    t="integration-tests-shared-storage-configuration-with-simulator"
-    if [[ $JOB_NAME == $t || $JOB_NAME == $t/* ]]; then
-        fake_test_pass "tests_skipped_because_agent_removed" "$WORKSPACE/test_reports/" ${BUILD_NUMBER}
-        exit 0
-    fi
 
     tests_required_for_gui_bumps="chroma-tests-services"
 

@@ -8,8 +8,8 @@ rm -rf chroma-externals .git/modules/chroma-externals
 pip install nose
 pip install jenkinsapi==0.2.28
 
-VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
-REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
+VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-unit-tests chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
+REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-unit-tests chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
 
 cd $WORKSPACE
 shopt -s expand_aliases

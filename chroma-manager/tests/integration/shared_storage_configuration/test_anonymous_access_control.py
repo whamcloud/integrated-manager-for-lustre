@@ -4,7 +4,6 @@ from django.utils.unittest import skip
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skip("Needs to work with real cluster")
 class TestAnonymousAccessControl(ChromaIntegrationTestCase):
 
     manager = config['chroma_managers'][0]
