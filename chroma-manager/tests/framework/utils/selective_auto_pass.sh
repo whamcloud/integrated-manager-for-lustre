@@ -31,6 +31,7 @@ check_for_autopass() {
     else
         tests_to_skip=$(echo "$commit_message" | sed -ne '/^ *Skip-tests:/s/^ *Skip-tests: *//p')
     fi
+
     # set any environment the test run wants
     local environment
     environment=$(echo "$commit_message" | sed -ne '/^ *Environment:/s/^ *Environment: *//p')
@@ -38,6 +39,12 @@ check_for_autopass() {
         # shellcheck disable=SC2163
         # shellcheck disable=SC2086
         export ${environment?}
+    fi
+
+    # use specified module builds
+    jenkins_modules=$(echo "$commit_message" | sed -ne '/^ *Module: *jenkins\//s/^ *Module: *jenkins\/\([^:]*\): *\([0-9][0-9]*\)/http:\/\/jenkins.lotus.hpdd.lab.intel.com\/job\/\1\/\2\/arch=x86_64,distro=el7\/artifact\/artifacts\/\1-test.repo/gp')
+    if [ -n "$jenkins_modules" ]; then
+        export STORAGE_SERVER_REPOS="$jenkins_modules $STORAGE_SERVER_REPOS"
     fi
 
     local t
