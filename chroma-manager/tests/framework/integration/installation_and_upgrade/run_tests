@@ -280,6 +280,12 @@ if ! expect ../upgrade.exp; then
     cat /var/log/chroma/install.log
     exit \$rc
 fi
+# make some compatibilty links for older versions of RHEL
+# this is most likely a product gap
+ln -s 7 /var/lib/chroma/repo/iml-agent/7.5
+ln -s 7 /var/lib/chroma/repo/iml-agent/7.4
+ln -s 7 /var/lib/chroma/repo/iml-agent/7.3
+
 # make sure it really did do an upgrade
 upgraded_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 if [ \$existing_IML_version = \$upgraded_IML_version ]; then
