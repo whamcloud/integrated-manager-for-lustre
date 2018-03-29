@@ -19,10 +19,6 @@ class TestSshAuth(ChromaIntegrationTestCase):
     set up.  Ticket HYD-1901 addresses extending the test infrastructure to
     support the different ssh auth schemes.
 
-    This test completely skips execution against the simulators.
-    HYD-1889 addresses the need for simulator support to test ssh auth.  Once
-    this is complete, this test can be implemented against the simulator.
-
     TODO:  HYD-1902 update this test to use different auth schemes
     """
 
@@ -69,7 +65,6 @@ class TestSshAuth(ChromaIntegrationTestCase):
         # As we have 1 result just return that result
         return results[0]
 
-    @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_public_private_key(self):
         """Test using .ssh/id_rsa private key to authenticate
 
@@ -80,7 +75,6 @@ class TestSshAuth(ChromaIntegrationTestCase):
 
         self.assertTrue(result['auth'])
 
-    @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_root_password(self):
         """Passing a root password with effect a root/pw based auth"""
 
@@ -88,7 +82,6 @@ class TestSshAuth(ChromaIntegrationTestCase):
 
         self.assertTrue(result['auth'])
 
-    @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_entered_private_key(self):
         """Test user can submit a private key to authenticate"""
 
@@ -96,7 +89,6 @@ class TestSshAuth(ChromaIntegrationTestCase):
 
         self.assertTrue(result['auth'])
 
-    @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_entered_private_key_with_passphrase(self):
         """Test user can submit an enc private key and passphrase to auth"""
 

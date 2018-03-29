@@ -10,8 +10,6 @@ logger.setLevel(logging.DEBUG)
 class TestLNetFunctionality(ChromaIntegrationTestCase):
 
     def setUp(self):
-        self.SIMULATOR_NID_COUNT = 10
-
         super(TestLNetFunctionality, self).setUp()
 
         # Create a host with all the bits working.
