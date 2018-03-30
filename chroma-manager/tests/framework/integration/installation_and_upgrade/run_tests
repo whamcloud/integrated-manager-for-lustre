@@ -396,7 +396,8 @@ export UPGRADE_FROM_3=$UPGRADE_FROM_3
 
 pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "$ALL_NODES")" "exec 2>&1; set -xe
 if [ -f /tmp/rpms_before_upgrade ]; then
-    if ! diff -u /tmp/rpms_before_upgrade <(rpm -qa | sort); then
+    # try side-by-side mode
+    if ! diff -W 60 -y /tmp/rpms_before_upgrade <(rpm -qa | sort); then
         diff_rc=${PIPESTATUS[0]}
         # diff exits with 1 if differences are found
         if [ \"\$diff_rc\" -ne 1 ]; then
