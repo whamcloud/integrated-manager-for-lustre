@@ -20,9 +20,6 @@ ALWAYS_NUKE_DB ?= false
 # Always nuke logs when running tests?
 ALWAYS_NUKE_LOGS ?= false
 
-# Always wipe the simulated cluster config before starting?
-ALWAYS_NUKE_SIM_CFG ?= true
-
 # Location of cluster config
 FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
 
