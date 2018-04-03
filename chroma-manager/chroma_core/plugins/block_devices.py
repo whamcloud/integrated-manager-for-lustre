@@ -73,35 +73,35 @@ def get_default(prop, default_value, x):
 
 
 def get_major_minor(x):
-    return "%s:%s" % (x.get('MAJOR'), x.get('MINOR'))
+    return "%s:%s" % (x.get('major'), x.get('minor'))
 
 
 def as_device(x):
-    paths = sort_paths(get_default('PATHS', [], x))
+    paths = sort_paths(get_default('paths', [], x))
     path = next(iter(paths), None)
 
     return {
         'major_minor': get_major_minor(x),
         'path': path,
         'paths': paths,
-        'serial_80': x.get('IML_SCSI_80'),
-        'serial_83': x.get('IML_SCSI_83'),
-        'size': int(get_default('IML_SIZE', 0, x)) * 512,
-        'filesystem_type': x.get('ID_FS_TYPE'),
-        'filesystem_usage': x.get('ID_FS_USAGE'),
-        'device_type': x.get('DEVTYPE'),
-        'device_path': x.get('DEVPATH'),
-        'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
-        'is_ro': x.get('IML_IS_RO'),
+        'serial_80': x.get('scsi80'),
+        'serial_83': x.get('scsi83'),
+        'size': int(get_default('size', 0, x)) * 512,
+        'filesystem_type': x.get('idFsType'),
+        'filesystem_usage': x.get('idFsUsage'),
+        'device_type': x.get('devType'),
+        'device_path': x.get('devPath'),
+        'partition_number': x.get('idPartEntryNumber'),
+        'is_ro': x.get('isReadOnly'),
         'parent': None,
-        'dm_multipath': x.get('DM_MULTIPATH_DEVICE_PATH'),
-        'dm_lv': x.get('DM_LV_NAME'),
-        'dm_vg': x.get('DM_VG_NAME'),
-        'dm_uuid': x.get('DM_UUID'),
-        'dm_slave_mms': get_default('IML_DM_SLAVE_MMS', [], x),
-        'dm_vg_size': x.get('IML_DM_VG_SIZE'),
-        'md_uuid': x.get('MD_UUID'),
-        'md_device_paths': x.get('IML_MD_DEVICES')
+        'dm_multipath': x.get('dmMultipathDevicePath'),
+        'dm_lv': x.get('dmLvName'),
+        'dm_vg': x.get('dmVgName'),
+        'dm_uuid': x.get('dmUuid'),
+        'dm_slave_mms': get_default('dmSlaveMms', [], x),
+        'dm_vg_size': x.get('dmVgSize'),
+        'md_uuid': x.get('mdUuid'),
+        'md_device_paths': x.get('mdDevices')
     }
 
 
@@ -143,20 +143,22 @@ def get_host_devices(fqdn, _data):
     devices = json.loads(host_data)
 
     try:
-        device_maps = DeviceMaps(devices["blockDevices"],   # dict
-                                 devices["zed"]["zpools"],  # dict
-                                 devices["zed"]["zfs"],     # list
-                                 devices["zed"]["props"])   # list
+        device_maps = DeviceMaps(
+            devices["blockDevices"],  # dict
+            devices["zed"]["zpools"],  # dict
+            devices["zed"]["zfs"],  # list
+            devices["zed"]["props"])  # list
     except KeyError as e:
-        log.error('badly formatted data found for {} : {} ({})'.format(fqdn, devices, e))
+        log.error('badly formatted data found for {} : {} ({})'.format(
+            fqdn, devices, e))
         raise
 
     return device_maps, _data
 
 
 def create_device_list(device_dict):
-    return pipe(device_dict.itervalues(),
-                cmap(as_device), cfilter(filter_device), list)
+    return pipe(device_dict.itervalues(), cmap(as_device),
+                cfilter(filter_device), list)
 
 
 def parse_lvm_uuids(dm_uuid):
@@ -167,7 +169,8 @@ def parse_lvm_uuids(dm_uuid):
     lvm_pfix = 'LVM-'
     uuid_len = 32
 
-    assert (dm_uuid.startswith(lvm_pfix) and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
+    assert (dm_uuid.startswith(lvm_pfix)
+            and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
 
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
@@ -180,21 +183,27 @@ def lvm_populate(device):
 
     vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
 
-    vg = {'name': vg_name,
-          'uuid': vg_uuid,
-          'size': human_to_bytes(vg_size),
-          'pvs_major_minor': []}
+    vg = {
+        'name': vg_name,
+        'uuid': vg_uuid,
+        'size': human_to_bytes(vg_size),
+        'pvs_major_minor': []
+    }
 
-    [vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
-     if mm not in vg['pvs_major_minor']]
+    [
+        vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+        if mm not in vg['pvs_major_minor']
+    ]
 
     # Do this to cache the device, type see blockdevice and filesystem for info.
     BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
 
-    lv = {'name': lv_name,
-          'uuid': lv_uuid,
-          'size': lv_size,
-          'block_device': lv_mm}
+    lv = {
+        'name': lv_name,
+        'uuid': lv_uuid,
+        'size': lv_size,
+        'block_device': lv_mm
+    }
 
     return vg, lv
 
@@ -203,8 +212,10 @@ def lvm_populate(device):
 def link_dm_slaves(block_device_nodes, ndt, x):
     """ link dm slave devices back to the mapper devices using mm to look up path """
     for slave_mm in x.get('dm_slave_mms', []):
-        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, block_device_nodes[slave_mm]['paths']),
-                                   filter(MAPPER_PATH.match, x.get('paths')))
+        ndt.add_normalized_devices(
+            filter(DISK_BY_ID_PATH.match,
+                   block_device_nodes[slave_mm]['paths']),
+            filter(MAPPER_PATH.match, x.get('paths')))
 
 
 def parse_dm_devs(xs, block_device_nodes, ndt):
@@ -218,7 +229,8 @@ def parse_dm_devs(xs, block_device_nodes, ndt):
         lvs[vg['name']][lv['name']] = lv
 
     c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
-    map(c_link_dm_slaves, filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
+    map(c_link_dm_slaves,
+        filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
 
     return ndt, vgs, lvs
 
@@ -227,15 +239,20 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
     mds = {}
 
     for x in xs:
-        mds[x['md_uuid']] = {'path': x['path'],
-                             'block_device': x['major_minor'],
-                             'drives': paths_to_major_minors(node_block_devices,
-                                                             ndt,
-                                                             x['md_device_paths'])}
+        mds[x['md_uuid']] = {
+            'path':
+            x['path'],
+            'block_device':
+            x['major_minor'],
+            'drives':
+            paths_to_major_minors(node_block_devices, ndt,
+                                  x['md_device_paths'])
+        }
 
         # Finally add these devices to the canonical path list.
-        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, x['paths']),
-                                   filter(DEV_PATH.match, x['paths']))
+        ndt.add_normalized_devices(
+            filter(DISK_BY_ID_PATH.match, x['paths']),
+            filter(DEV_PATH.match, x['paths']))
         ndt.add_normalized_devices(x['md_device_paths'], [x['path']])
 
     return ndt, mds
@@ -243,7 +260,9 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
 
 # fixme: too crude?
 def local_fs_filter(x):
-    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in ['ext2', 'ext3']:
+    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in [
+            'ext2', 'ext3'
+    ]:
         return True
     elif x['filesystem_usage'] == 'other' and x['filesystem_type'] == 'swap':
         return True
@@ -252,9 +271,9 @@ def local_fs_filter(x):
 
 def parse_localfs_devs(xs, node_block_devices, ndt):
     """ map paths to major-minors but ignore paths that cannot be resolved (non-local) """
-    items = pipe([(path_to_major_minor(node_block_devices, ndt, x['path']), ["", x['filesystem_type']]) for x in xs],
-                 cfilter(lambda t: t[0] is not None),
-                 list)
+    items = pipe([(path_to_major_minor(node_block_devices, ndt, x['path']),
+                   ["", x['filesystem_type']]) for x in xs],
+                 cfilter(lambda t: t[0] is not None), list)
     return {t[0]: t[1] for t in items}
 
 
@@ -300,7 +319,7 @@ class NormalizedDeviceTable(object):
         return [
             value for value in self.table.values()
             if value.startswith(device_fullpath)
-            ]
+        ]
 
     def normalized_device_path(self, device_path):
         normalized_path = os.path.realpath(device_path)
@@ -323,7 +342,7 @@ class NormalizedDeviceTable(object):
         visited = set()
 
         while (normalized_path not in visited) and (
-                    normalized_path in self.table):
+                normalized_path in self.table):
             visited.add(normalized_path)
             normalized_path = self.table[normalized_path]
 
@@ -343,17 +362,16 @@ def parse_sys_block(device_map):
 
     ndt = NormalizedDeviceTable(xs)
 
-    (ndt, vgs, lvs) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
-                                    block_device_nodes,
-                                    ndt)
+    (ndt, vgs, lvs) = parse_dm_devs(
+        filter(lambda x: x.get('dm_uuid') is not None, xs), block_device_nodes,
+        ndt)
 
-    (ndt, mds) = parse_mdraid_devs(filter(lambda x: x.get('md_uuid') is not None, xs),
-                                   node_block_devices,
-                                   ndt)
+    (ndt, mds) = parse_mdraid_devs(
+        filter(lambda x: x.get('md_uuid') is not None, xs), node_block_devices,
+        ndt)
 
-    local_fs = parse_localfs_devs(filter(local_fs_filter, xs),
-                                  node_block_devices,
-                                  ndt)
+    local_fs = parse_localfs_devs(
+        filter(local_fs_filter, xs), node_block_devices, ndt)
 
     return [vgs, lvs, mds, local_fs, block_device_nodes]
 
@@ -367,6 +385,7 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
     """
     zpools = {}
     datasets = {}
+
     # fixme: get zvols from zfs_objs using some identifier to discern from datasets
 
     def populate(pool):
@@ -374,45 +393,56 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
         guid = pool['guid']
 
         size = pool['size']
-        drive_mms = get_drives([child['Disk'] for child in pool['vdev']['Root']['children']],
-                               block_device_nodes)
+        drive_mms = get_drives(
+            [child['Disk'] for child in pool['vdev']['Root']['children']],
+            block_device_nodes)
 
         if not drive_mms:
-            raise RuntimeWarning("Could not find major minors for zpool '%s'" % name)
+            raise RuntimeWarning(
+                "Could not find major minors for zpool '%s'" % name)
 
         # todo: use name/path as key, uid not guaranteed to be unique between datasets on different zpools
         # Note: may be able to use nested dataset information from libzfs bindings instead of zfs_objs lookup
         def get_id(ds):
             return ds['poolGuid'] + '-' + ds['name']
 
-        _datasets = {get_id(ds): {"name": ds['name'],
-                                  "path": ds['name'],
-                                  "block_device": "zfsset:{}".format(get_id(ds)),
-                                  "uuid": get_id(ds),
-                                  "size": 0,  # fixme
-                                  "drives": drive_mms} for ds in [d for d in zfs_objs
-                                                                  if int(d['poolGuid'], 16) == int(guid, 16)]}
+        _datasets = {
+            get_id(ds): {
+                "name": ds['name'],
+                "path": ds['name'],
+                "block_device": "zfsset:{}".format(get_id(ds)),
+                "uuid": get_id(ds),
+                "size": 0,  # fixme
+                "drives": drive_mms
+            }
+            for ds in
+            [d for d in zfs_objs if int(d['poolGuid'], 16) == int(guid, 16)]
+        }
 
         _devs = {}
 
         if _datasets == {}:
             # keys should include the pool uuid because names not necessarily unique
             major_minor = "zfspool:{}".format(guid)
-            zpools[guid] = {"name": name,
-                            "path": name,
-                            "block_device": major_minor,
-                            "uuid": guid,
-                            "size": size,
-                            "drives": drive_mms}
+            zpools[guid] = {
+                "name": name,
+                "path": name,
+                "block_device": major_minor,
+                "uuid": guid,
+                "size": size,
+                "drives": drive_mms
+            }
 
-            _devs[major_minor] = {'major_minor': major_minor,
-                                  'path': name,
-                                  'paths': [name],
-                                  'serial_80': None,
-                                  'serial_83': None,
-                                  'size': size,
-                                  'filesystem_type': None,
-                                  'parent': None}
+            _devs[major_minor] = {
+                'major_minor': major_minor,
+                'path': name,
+                'paths': [name],
+                'serial_80': None,
+                'serial_83': None,
+                'size': size,
+                'filesystem_type': None,
+                'parent': None
+            }
 
             # Do this to cache the device, type see blockdevice and filesystem for info.
             BlockDevice('zfs', name)
@@ -424,14 +454,16 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
             for info in _datasets.itervalues():
                 major_minor = info['block_device']
                 name = info['name']
-                _devs[major_minor] = {'major_minor': major_minor,
-                                      'path': name,
-                                      'paths': [name],
-                                      'serial_80': None,
-                                      'serial_83': None,
-                                      'size': 0,
-                                      'filesystem_type': 'zfs',
-                                      'parent': None}
+                _devs[major_minor] = {
+                    'major_minor': major_minor,
+                    'path': name,
+                    'paths': [name],
+                    'serial_80': None,
+                    'serial_83': None,
+                    'size': 0,
+                    'filesystem_type': 'zfs',
+                    'parent': None
+                }
 
                 # Do this to cache the device, type see blockdevice and filesystem for info.
                 BlockDevice('zfs', name)
@@ -450,10 +482,15 @@ def get_drives(pool_disks, device_nodes):
     """ return a list of physical drive major-minors from aggregator zpool representation """
     paths = [disk['path'] for disk in pool_disks if disk['whole_disk'] is True]
 
-    serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
+    serials = {
+        d['serial_83']
+        for d in device_nodes.values() if set(paths) & set(d['paths'])
+    }
 
-    mms = {d['major_minor'] for d in device_nodes.values()
-           if (d['serial_83'] in serials)}
+    mms = {
+        d['major_minor']
+        for d in device_nodes.values() if (d['serial_83'] in serials)
+    }
 
     return mms
 
@@ -470,20 +507,24 @@ def discover_zpools(all_devs, _data):
 
     :return: the new dictionary of devices reported on the given host
     """
+
     def extract(acc, data):
         maps = json.loads(data)
 
         def match_drives(pool):
-            pool_disks = [child['Disk'] for child in pool['vdev']['Root']['children']]
+            pool_disks = [
+                child['Disk'] for child in pool['vdev']['Root']['children']
+            ]
 
-            return get_drives(pool_disks, all_devs['devs']).issubset(set(all_devs['devs'].keys()))
+            return get_drives(pool_disks, all_devs['devs']).issubset(
+                set(all_devs['devs'].keys()))
 
         try:
             # verify pool is imported
-            pools = pipe(maps['zed']['zpools'].itervalues(),
-                         cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
-                         cfilter(match_drives),
-                         list)
+            pools = pipe(
+                maps['zed']['zpools'].itervalues(),
+                cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
+                cfilter(match_drives), list)
         except KeyError as e:
             log.error('data not found, incorrect format %s [%s)' % (data, e))
             return acc
@@ -492,28 +533,37 @@ def discover_zpools(all_devs, _data):
 
         # verify we haven't already got a representation for this pool on any of the other hosts
         if any(guid for guid in pools.keys() if guid in acc['zpools'].keys()):
-            raise RuntimeError("duplicate active representations of zpool (remote)")
+            raise RuntimeError(
+                "duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
 
-        acc['zfs'].extend([d for d in maps['zed']['zfs']
-                           if int(d['poolGuid'], 16) in [int(h, 16) for h in pools.keys()]])
+        acc['zfs'].extend([
+            d for d in maps['zed']['zfs']
+            if int(d['poolGuid'], 16) in [int(h, 16) for h in pools.keys()]
+        ])
 
         return acc
 
-    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {'zpools': {}, 'zfs': []})
+    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {
+        'zpools': {},
+        'zfs': []
+    })
 
     # verify we haven't already got a representation for this pool locally
     if any(guid for guid in all_devs['zfspools'].iterkeys()
            if guid in other_zpools_zfs['zpools'].keys()
-            and other_zpools_zfs['zpools'][guid]['state'] not in UNAVAILABLE_STATES):
+           and other_zpools_zfs['zpools'][guid]['state'] not in
+           UNAVAILABLE_STATES):
         raise RuntimeError("duplicate active representations of zpool (local)")
 
     # updates reported devices
-    [all_devs[k].update(v) for k, v in zip(['zfspools', 'zfsdatasets', 'devs'],
-                                           parse_zpools(other_zpools_zfs['zpools'],
-                                                        other_zpools_zfs['zfs'],
-                                                        all_devs['devs']))]
+    [
+        all_devs[k].update(v) for k, v in zip(
+            ['zfspools', 'zfsdatasets', 'devs'],
+            parse_zpools(other_zpools_zfs['zpools'], other_zpools_zfs['zfs'],
+                         all_devs['devs']))
+    ]
 
     del _data
 
@@ -527,19 +577,20 @@ def get_block_devices(fqdn):
         log.debug('fetching devices for {}'.format(fqdn))
         device_maps, _data = get_host_devices(fqdn, _data)
     except Exception as e:
-        log.error("iml-device-aggregator is not providing expected data, ensure "
-                  "iml-device-scanner package is installed and relevant "
-                  "services are running on storage servers (%s)" % e)
+        log.error(
+            "iml-device-aggregator is not providing expected data, ensure "
+            "iml-device-scanner package is installed and relevant "
+            "services are running on storage servers (%s)" % e)
         return {}
 
     devs_list = parse_sys_block(device_maps.block_devices)
-    devs_list.extend(parse_zpools(device_maps.zpools,
-                                  device_maps.zfs,
-                                  devs_list.pop(-1)))
+    devs_list.extend(
+        parse_zpools(device_maps.zpools, device_maps.zfs, devs_list.pop(-1)))
 
-    devs_dict = dict(zip(
-        ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
-        devs_list))
+    devs_dict = dict(
+        zip([
+            'vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'
+        ], devs_list))
 
     return discover_zpools(devs_dict, _data)
 
@@ -559,8 +610,7 @@ def paths_to_major_minors(node_block_devices, ndt, device_paths):
     """
     c_path_to_major_minor = path_to_major_minor(node_block_devices, ndt)
 
-    return pipe(device_paths,
-                cmap(c_path_to_major_minor), cfilter(None), list)
+    return pipe(device_paths, cmap(c_path_to_major_minor), cfilter(None), list)
 
 
 @curry

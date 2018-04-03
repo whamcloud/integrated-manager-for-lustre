@@ -55,21 +55,19 @@ def scanner_cmd(cmd):
     client = socket.socket(socket.AF_UNIX)
     client.settimeout(1)
     client.connect_ex("/var/run/device-scanner.sock")
-    client.sendall(json.dumps({"ACTION": cmd}))
-    client.shutdown(socket.SHUT_WR)
+    client.sendall(json.dumps(cmd) + "\n")
 
     out = ''
 
     while True:
-        data = client.recv(1024)
-        size = len(data)
+        out += client.recv(1024)
 
-        if size == 0:
-            break
+        if out.endswith("\n"):
 
-        out += data
-
-    return json.loads(out)
+            try:
+                return json.loads(out)
+            except ValueError:
+                pass
 
 
 def get_default(prop, default_value, x):
@@ -78,35 +76,35 @@ def get_default(prop, default_value, x):
 
 
 def get_major_minor(x):
-    return "%s:%s" % (x.get('MAJOR'), x.get('MINOR'))
+    return "%s:%s" % (x.get('major'), x.get('minor'))
 
 
 def as_device(x):
-    paths = sort_paths(get_default('PATHS', [], x))
+    paths = sort_paths(get_default('paths', [], x))
     path = next(iter(paths), None)
 
     return {
         'major_minor': get_major_minor(x),
         'path': path,
         'paths': paths,
-        'serial_80': x.get('IML_SCSI_80'),
-        'serial_83': x.get('IML_SCSI_83'),
-        'size': int(get_default('IML_SIZE', 0, x)) * 512,
-        'filesystem_type': x.get('ID_FS_TYPE'),
-        'filesystem_usage': x.get('ID_FS_USAGE'),
-        'device_type': x.get('DEVTYPE'),
-        'device_path': x.get('DEVPATH'),
-        'partition_number': x.get('ID_PART_ENTRY_NUMBER'),
-        'is_ro': x.get('IML_IS_RO'),
+        'serial_80': x.get('scsi80'),
+        'serial_83': x.get('scsi83'),
+        'size': int(get_default('size', 0, x)) * 512,
+        'filesystem_type': x.get('idFsType'),
+        'filesystem_usage': x.get('idFsUsage'),
+        'device_type': x.get('devType'),
+        'device_path': x.get('devPath'),
+        'partition_number': x.get('idPartEntryNumber'),
+        'is_ro': x.get('isReadOnly'),
         'parent': None,
-        'dm_multipath': x.get('DM_MULTIPATH_DEVICE_PATH'),
-        'dm_lv': x.get('DM_LV_NAME'),
-        'dm_vg': x.get('DM_VG_NAME'),
-        'dm_uuid': x.get('DM_UUID'),
-        'dm_slave_mms': get_default('IML_DM_SLAVE_MMS', [], x),
-        'dm_vg_size': x.get('IML_DM_VG_SIZE'),
-        'md_uuid': x.get('MD_UUID'),
-        'md_device_paths': x.get('IML_MD_DEVICES')
+        'dm_multipath': x.get('dmMultipathDevicePath'),
+        'dm_lv': x.get('dmLvName'),
+        'dm_vg': x.get('dmVgName'),
+        'dm_uuid': x.get('dmUuid'),
+        'dm_slave_mms': get_default('dmSlaveMms', [], x),
+        'dm_vg_size': x.get('dmVgSize'),
+        'md_uuid': x.get('mdUuid'),
+        'md_device_paths': x.get('mdDevices')
     }
 
 
@@ -139,8 +137,8 @@ def filter_device(x):
 
 
 def create_device_list(device_dict):
-    return pipe(device_dict.itervalues(),
-                cmap(as_device), cfilter(filter_device), list)
+    return pipe(device_dict.itervalues(), cmap(as_device),
+                cfilter(filter_device), list)
 
 
 def parse_lvm_uuids(dm_uuid):
@@ -151,7 +149,8 @@ def parse_lvm_uuids(dm_uuid):
     lvm_pfix = 'LVM-'
     uuid_len = 32
 
-    assert (dm_uuid.startswith(lvm_pfix) and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
+    assert (dm_uuid.startswith(lvm_pfix)
+            and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
 
     return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
 
@@ -164,21 +163,27 @@ def lvm_populate(device):
 
     vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
 
-    vg = {'name': vg_name,
-          'uuid': vg_uuid,
-          'size': human_to_bytes(vg_size),
-          'pvs_major_minor': []}
+    vg = {
+        'name': vg_name,
+        'uuid': vg_uuid,
+        'size': human_to_bytes(vg_size),
+        'pvs_major_minor': []
+    }
 
-    [vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
-     if mm not in vg['pvs_major_minor']]
+    [
+        vg['pvs_major_minor'].append(mm) for mm in lv_slave_mms
+        if mm not in vg['pvs_major_minor']
+    ]
 
     # Do this to cache the device, type see blockdevice and filesystem for info.
     BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
 
-    lv = {'name': lv_name,
-          'uuid': lv_uuid,
-          'size': lv_size,
-          'block_device': lv_mm}
+    lv = {
+        'name': lv_name,
+        'uuid': lv_uuid,
+        'size': lv_size,
+        'block_device': lv_mm
+    }
 
     return vg, lv
 
@@ -187,8 +192,10 @@ def lvm_populate(device):
 def link_dm_slaves(block_device_nodes, ndt, x):
     """ link dm slave devices back to the mapper devices using mm to look up path """
     for slave_mm in x.get('dm_slave_mms', []):
-        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, block_device_nodes[slave_mm]['paths']),
-                                   filter(MAPPER_PATH.match, x.get('paths')))
+        ndt.add_normalized_devices(
+            filter(DISK_BY_ID_PATH.match,
+                   block_device_nodes[slave_mm]['paths']),
+            filter(MAPPER_PATH.match, x.get('paths')))
 
 
 def parse_dm_devs(xs, block_device_nodes, ndt):
@@ -202,7 +209,8 @@ def parse_dm_devs(xs, block_device_nodes, ndt):
         lvs[vg['name']][lv['name']] = lv
 
     c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
-    map(c_link_dm_slaves, filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
+    map(c_link_dm_slaves,
+        filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
 
     return ndt, vgs, lvs
 
@@ -211,15 +219,20 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
     mds = {}
 
     for x in xs:
-        mds[x['md_uuid']] = {'path': x['path'],
-                             'block_device': x['major_minor'],
-                             'drives': paths_to_major_minors(node_block_devices,
-                                                             ndt,
-                                                             x['md_device_paths'])}
+        mds[x['md_uuid']] = {
+            'path':
+            x['path'],
+            'block_device':
+            x['major_minor'],
+            'drives':
+            paths_to_major_minors(node_block_devices, ndt,
+                                  x['md_device_paths'])
+        }
 
         # Finally add these devices to the canonical path list.
-        ndt.add_normalized_devices(filter(DISK_BY_ID_PATH.match, x['paths']),
-                                   filter(DEV_PATH.match, x['paths']))
+        ndt.add_normalized_devices(
+            filter(DISK_BY_ID_PATH.match, x['paths']),
+            filter(DEV_PATH.match, x['paths']))
 
         ndt.add_normalized_devices(x['md_device_paths'], [x['path']])
 
@@ -228,7 +241,9 @@ def parse_mdraid_devs(xs, node_block_devices, ndt):
 
 # fixme: too crude?
 def local_fs_filter(x):
-    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in ['ext2', 'ext3', 'ext4']:
+    if x['filesystem_usage'] == 'filesystem' and x['filesystem_type'] in [
+            'ext2', 'ext3', 'ext4'
+    ]:
         return True
     elif x['filesystem_usage'] == 'other' and x['filesystem_type'] == 'swap':
         return True
@@ -236,7 +251,11 @@ def local_fs_filter(x):
 
 
 def parse_localfs_devs(xs, node_block_devices, ndt):
-    return {path_to_major_minor(node_block_devices, ndt, x['path']): ["", x['filesystem_type']] for x in xs}
+    return {
+        path_to_major_minor(node_block_devices, ndt, x['path']):
+        ["", x['filesystem_type']]
+        for x in xs
+    }
 
 
 class NormalizedDeviceTable(object):
@@ -281,7 +300,7 @@ class NormalizedDeviceTable(object):
         return [
             value for value in self.table.values()
             if value.startswith(device_fullpath)
-            ]
+        ]
 
     def normalized_device_path(self, device_path):
         normalized_path = os.path.realpath(device_path)
@@ -304,7 +323,7 @@ class NormalizedDeviceTable(object):
         visited = set()
 
         while (normalized_path not in visited) and (
-                    normalized_path in self.table):
+                normalized_path in self.table):
             visited.add(normalized_path)
             normalized_path = self.table[normalized_path]
 
@@ -324,13 +343,13 @@ def parse_sys_block(device_map):
 
     ndt = NormalizedDeviceTable(xs)
 
-    (ndt, _, _) = parse_dm_devs(filter(lambda x: x.get('dm_uuid') is not None, xs),
-                                block_device_nodes,
-                                ndt)
+    (ndt, _, _) = parse_dm_devs(
+        filter(lambda x: x.get('dm_uuid') is not None, xs), block_device_nodes,
+        ndt)
 
-    (ndt, _) = parse_mdraid_devs(filter(lambda x: x.get('md_uuid') is not None, xs),
-                                 node_block_devices,
-                                 ndt)
+    (ndt, _) = parse_mdraid_devs(
+        filter(lambda x: x.get('md_uuid') is not None, xs), node_block_devices,
+        ndt)
 
     parse_localfs_devs(filter(local_fs_filter, xs), node_block_devices, ndt)
 
@@ -339,7 +358,7 @@ def parse_sys_block(device_map):
 
 def get_normalized_device_table():
     """ process block device info returned by device-scanner to produce a ndt """
-    return parse_sys_block(scanner_cmd("info"))
+    return parse_sys_block(scanner_cmd("stream"))
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
@@ -357,8 +376,7 @@ def paths_to_major_minors(node_block_devices, ndt, device_paths):
     """
     c_path_to_major_minor = path_to_major_minor(node_block_devices, ndt)
 
-    return pipe(device_paths,
-                cmap(c_path_to_major_minor), cfilter(None), list)
+    return pipe(device_paths, cmap(c_path_to_major_minor), cfilter(None), list)
 
 
 @curry
