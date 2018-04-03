@@ -54,7 +54,11 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             self.assertEqual(response.successful, True, response.text)
             command = response.json
 
-            self.wait_for_command(self.chroma_manager, command['id'], timeout=LONG_TEST_TIMEOUT)
+            self._fetch_help(lambda: self.wait_for_command(self.chroma_manager, command['id'],
+                                                           timeout=LONG_TEST_TIMEOUT),
+                             ['tom.nabarro@outlook.com'],
+                             'failing to detect filesystem',
+                             timeout=7200)
 
             # Verify it detected the filesystem
             filesystem = self._filesystem

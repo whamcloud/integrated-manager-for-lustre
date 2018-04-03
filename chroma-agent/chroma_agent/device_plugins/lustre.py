@@ -17,7 +17,7 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from iml_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
+from chroma_agent.device_plugins.linux_components.block_devices import get_normalized_device_table
 from chroma_agent.lib.yum_utils import yum_util
 from iml_common.lib.date_time import IMLDateTime
 
@@ -145,7 +145,7 @@ class LustrePlugin(DevicePlugin):
                 except AgentShell.CommandExecutionError:
                     continue
 
-            ndp = BlockDevices().normalized_device_table
+            ndp = get_normalized_device_table()
             dev_normalized = ndp.normalized_device_path(device)
 
             recovery_status = {}

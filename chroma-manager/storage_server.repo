@@ -27,13 +27,19 @@ baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-manager-for-lustre]
-name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+[iml-common-test]
+name=iml-common from: http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64,distro=el7/32/
+baseurl=http://jenkins.lotus.hpdd.lab.intel.com/job/iml-common/arch=x86_64%2Cdistro=el7/32/artifact/artifacts/RPMS/
+enabled=1
+gpgcheck=0
+
+[joegrund-manager-for-lustre]
+name=Copr repo for manager-for-lustre owned by joegrund
+baseurl=https://copr-be.cloud.fedoraproject.org/results/joegrund/manager-for-lustre/epel-7-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/joegrund/manager-for-lustre/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 
