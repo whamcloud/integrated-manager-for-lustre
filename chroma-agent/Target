@@ -54,7 +54,8 @@ END
 }
 
 dbg() {
-    echo "`date` RA $1" >> /var/log/chroma-agent.log
+    # shellcheck disable=SC2102
+    echo "$(date +[%d/%b/%Y:%H:%M:%S]) RA $1" >> /var/log/chroma-agent.log
 }
 
 Target_start() {
@@ -79,6 +80,7 @@ Target_start() {
         dbg "Couldn't start target $TARGET"
         return $OCF_ERR_GENERIC
     fi
+    dbg "Leaving Target_start() with success"
     return $OCF_SUCCESS
 }
 

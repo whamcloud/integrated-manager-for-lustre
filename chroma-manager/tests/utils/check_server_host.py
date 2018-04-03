@@ -67,9 +67,8 @@ def check_host_status(server):
 
 
 def check_nodes_status(config):
-    if not config.get('simulator', False):
-        for server in config['lustre_servers']:
-            check_host_status(server)
+    for server in config['lustre_servers']:
+        check_host_status(server)
 
         for manager in config['chroma_managers']:
             check_manager_status(manager)

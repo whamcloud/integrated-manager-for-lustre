@@ -236,38 +236,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                          "Waiting for developer inspection due to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050.",
                          lambda: check_for_HYD_2849_4050())
 
-    def register_simulated_hosts(self, addresses):
-        host_create_command_ids = {}
-        for host_address in addresses:
-            host = next(h for h in config['lustre_servers'] if h['address'] == host_address)
-
-            # POST to the /registration_token/ REST API resource to acquire
-            # permission to add a server
-            profile = self.get_named_profile(host['profile'])
-            response = self.chroma_manager.post(
-                '/api/registration_token/',
-                body={
-                    'credits': 1,
-                    'profile': profile['resource_uri']
-                }
-            )
-            self.assertTrue(response.successful, response.text)
-            token = response.json
-
-            # Pass our token to the simulator to register a server
-            registration_result = self.simulator.register(host['fqdn'], token['secret'])
-            host_create_command_ids[host_address] = registration_result['command_id']
-
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
-
     def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""
-        if self.simulator:
-            self.register_simulated_hosts(addresses)
-        else:
-            self.validate_hosts(addresses, auth_type)
-            self.deploy_agents(addresses, auth_type)
-            self.set_host_profiles(self.get_hosts(addresses))
+        self.validate_hosts(addresses, auth_type)
+        self.deploy_agents(addresses, auth_type)
+        self.set_host_profiles(self.get_hosts(addresses))
 
         # Verify the new hosts are now in the database and in the correct state
         new_hosts = self.get_hosts(addresses)

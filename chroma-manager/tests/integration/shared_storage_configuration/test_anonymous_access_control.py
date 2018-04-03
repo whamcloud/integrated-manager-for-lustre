@@ -1,10 +1,9 @@
 from testconfig import config
-from django.utils.unittest import skipIf
+from django.utils.unittest import skip
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-@skipIf(config.get('simulator'), 'RealRemoteOperations simulator cant fake out ssh')
 class TestAnonymousAccessControl(ChromaIntegrationTestCase):
 
     manager = config['chroma_managers'][0]

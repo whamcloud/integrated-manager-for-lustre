@@ -173,15 +173,13 @@ class TestCorosync(ChromaIntegrationTestCase):
         corosync_ports = [self.remote_operations.get_corosync_port(server['fqdn']) for server in self.server_configs]
         self.assertNotEqual(corosync_ports[1:], corosync_ports[:-1])       # Check all corosync ports are now different.
 
-        # The simulator doesn't support detecting offline so for know don't do that test in the simulator
-        if config.get('simulator', False) == False:
-            # These nodes can now not see each other. What actually happens today is that they each report themselves online
-            # and the other offline so the Alert flips on and off between them. This code validates that flipping.
-            # When the behaviour changes (and it should) this code will not pass. When you are at this point look at the gui
-            #and watch the alert move between the nodes.
-            for server in self.server_configs:
-                self.wait_for_assert(lambda: self.assertHasAlert(server['resource_uri'], of_type='HostOfflineAlert'))
-                self.wait_for_assert(lambda: self.assertNoAlerts(server['resource_uri'], of_type='HostOfflineAlert'))
+        # These nodes can now not see each other. What actually happens today is that they each report themselves online
+        # and the other offline so the Alert flips on and off between them. This code validates that flipping.
+        # When the behaviour changes (and it should) this code will not pass. When you are at this point look at the gui
+        #and watch the alert move between the nodes.
+        for server in self.server_configs:
+            self.wait_for_assert(lambda: self.assertHasAlert(server['resource_uri'], of_type='HostOfflineAlert'))
+            self.wait_for_assert(lambda: self.assertNoAlerts(server['resource_uri'], of_type='HostOfflineAlert'))
 
         # Now set them back the same - but both as the new value.
         self.set_value(self.server_configs[1]['corosync_configuration'], 'mcast_port', new_mcast_port, self.VERIFY_SUCCESS_WAIT)

@@ -132,10 +132,6 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         Smoke test that checks a laundry list of stats can be requested without exception and that a few are updated as
         expected when corresponding actions are taken. Far from exhaustive.
         """
-        if config.get('simulator', False):
-            # Simulator doesn't know how to map client writes to decrementing
-            # OST stats
-            return
 
         filesystem = self.get_filesystem(filesystem_id)
         filesystem_name = filesystem['name']
