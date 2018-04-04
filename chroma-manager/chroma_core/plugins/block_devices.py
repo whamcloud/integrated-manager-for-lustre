@@ -490,18 +490,17 @@ def discover_zpools(all_devs, _data):
 
         pools = {pool['guid']: pool for pool in pools}
 
-        # verify we haven't already got a representation for this pool on any of the other hosts
+        # verify we haven't already got a representation for this pool on any other hosts
         if any(guid for guid in pools.keys() if guid in acc['zpools'].keys()):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
 
-        acc['zfs'].extend([d for d in maps['zed']['zfs']
-                           if int(d['poolGuid'], 16) in [int(h, 16) for h in pools.keys()]])
-
         return acc
 
-    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {'zpools': {}, 'zfs': []})
+    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {
+        'zpools': {}
+    })
 
     # verify we haven't already got a representation for this pool locally
     if any(guid for guid in all_devs['zfspools'].iterkeys()
