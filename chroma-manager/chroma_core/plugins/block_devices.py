@@ -390,7 +390,7 @@ def parse_zpools(zed, block_device_nodes):
                 "size": 0,  # fixme
                 "drives": drive_mms
             }
-            for ds in [d for d in pool.datasets]
+            for ds in [d for d in pool['datasets']]
         }
 
         _devs = {}
