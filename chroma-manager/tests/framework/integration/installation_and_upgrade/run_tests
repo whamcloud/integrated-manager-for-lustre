@@ -291,10 +291,18 @@ rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 
 # the manual bits that need to be done for 3.x to 4.x upgrades
 # see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
+# shellcheck disable=SC2153
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
 yum -y install epel-release
 yum -y install pdsh
-mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}" | dshbak -c
+mv /etc/yum.repos.d/Intel-Lustre-Agent.repo{,.iml-3.x}
+
+# add any repos required by this test run
+if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+    for repo in $STORAGE_SERVER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
