@@ -270,7 +270,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if verify_successful and (command['errored'] or command['cancelled']):
             self._print_command(command, "FAILED", msg)
 
-            self.assertFalse(command['errored'] or command['cancelled'], command)
+            self._fetch_help(
+                lambda: self.assertFalse(command['errored'] or command['cancelled'], command),
+                ['brian.murrell@intel.com'],
+                "Waiting for developer inspection.  DO NOT ABORT THIS TEST.",
+                timeout=60*60*24*3)
 
         return command
 

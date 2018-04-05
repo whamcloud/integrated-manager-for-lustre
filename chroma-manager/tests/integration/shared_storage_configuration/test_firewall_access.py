@@ -98,8 +98,13 @@ class TestFirewall(ChromaIntegrationTestCase):
         mcast_ports = {}
 
         for server in servers:
-            self.assertNotEqual('Enforcing\n',
-                                self.remote_operations._ssh_address(server['address'], 'getenforce').stdout)
+            self._fetch_help(
+                lambda: self.assertNotEqual('Enforcing\n',
+                                            self.remote_operations._ssh_address(server['address'],
+                                            'getenforce').stdout),
+                ['brian.murrell@intel.com'],
+                "Waiting for developer inspection.  DO NOT ABORT THIS TEST.",
+                timeout=60*60*24*3)
 
             mcast_port = self.remote_operations.get_corosync_port(server['fqdn'])
             self.assertIsNotNone(mcast_port)
