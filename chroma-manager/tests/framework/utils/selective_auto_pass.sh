@@ -57,19 +57,10 @@ check_for_autopass() {
     fi
 
     # regex matches separated by |
-    supported_distro_versions="7\.[0-9]+"
+    supported_distro_versions="7\\.[0-9]+"
     if [[ ! $TEST_DISTRO_VERSION =~ $supported_distro_versions ]] && ([ -z "$UPGRADE_TEST_DISTRO" ] || [[ ! $UPGRADE_TEST_DISTRO =~ $supported_distro_versions ]]); then
       fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
       exit 0
     fi
-
-    # RHEL 7.5 won't upgrade CentOS 7.3
-    # still true?
-    #if [[ ($JOB_NAME == upgrade-tests || $JOB_NAME == upgrade-tests/*) &&
-    #      ("$TEST_DISTRO_VERSION" = "7.3" && "$UPGRADE_DISTRO_VERSION" = "7.5") &&
-    #       $TEST_DISTRO_NAME != rhel ]]; then
-    #    fake_test_pass "upgrade-tests_skipped_on_centos7.3" "$WORKSPACE/test_reports/" "${BUILD_NUMBER}"
-    #    exit 0
-    #fi
 
 }  # end of check_for_autopass()
