@@ -71,7 +71,7 @@ yum -y install pdsh" | dshbak -c
 
 # Install and setup manager
 if $JENKINS; then
-    ARCHIVE_PATH=.
+    ARCHIVE_PATH=$CHROMA_DIR
 else
     ARCHIVE_PATH=chroma-bundles
 fi
@@ -243,7 +243,17 @@ scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
 if $JENKINS; then
-    $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+    if $VAGRANT; then
+        cat <<EOF2 > /etc/yum.repos.d/autotest.repo
+[chroma]
+name=chroma
+baseurl=$JENKINS_URL/job/$CHROMA_BUILD_JOB_NAME/arch=x86_64%2Cdistro=el7/$CHROMA_BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo/
+enabled=1
+priority=1
+gpgcheck=0
+sslverify=0
+EOF2
+    fi
     CMIT=chroma-manager-integration-tests
 else
     CMIT=/root/${CMIT##*/}

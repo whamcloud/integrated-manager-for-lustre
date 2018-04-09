@@ -1,6 +1,34 @@
 # vi: set ft=ruby :
 
 require 'etc'
+require "socket"
+
+if ENV["JENKINS"] == "true"
+	ci_cluster = true
+	fqdn = Socket.gethostname
+	dot = fqdn.index(".")
+	hostname = fqdn[0..dot - 1]
+	domain = fqdn[dot + 1..-1]
+	mach_num = hostname[hostname.index("-") + 1..-1]
+	cluster_num = 0
+	if cluster_num == 0
+		cluster_num_s = ""
+	else
+		cluster_num_s = cluster_num
+	end
+else
+	ci_cluster = false
+	hostname = ""
+	cluster_num_s = ""
+end
+
+# Vagrant removed the atlas.hashicorp.com to vagrantcloud.com
+# redirect. The value of DEFAULT_SERVER_URL in Vagrant versions
+# less than 1.9.3 is atlas.hashicorp.com. This breaks the fetching
+# and updating of boxes as they are now stored in
+# vagrantcloud.com instead of atlas.hashicorp.com.
+# https://github.com/hashicorp/vagrant/issues/9442
+Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 
 Vagrant.configure("2") do |config|
 
@@ -26,14 +54,18 @@ Vagrant.configure("2") do |config|
 	#     it really only applies for the vbox provider
 	vdisk_root = "#{ENV['HOME']}/VirtualBox\ VMs/vdisks"
 
-	# use the "images" storage pool
 	config.vm.provider :libvirt do |libvirt, override|
-		override.vm.box = "centos/7"
-                # set to distro version desired for test
-                override.vm.box_version = "> 1708, < 9999"
+		# prefix of what the VM will be named on the host
+		libvirt.default_prefix = hostname
+		# use the "images" storage pool
 		libvirt.storage_pool_name = "images"
+		# 2G of RAM and 2 CPUS
 		libvirt.memory = 2048
 		libvirt.cpus = 2
+		libvirt.cpu_mode = 'host-passthrough'
+		override.vm.box = "centos/7"
+		# set to distro version desired for test
+		override.vm.box_version = "> 1804, < 9999"
 	end
 
 	# Number of shared disk devices
@@ -44,7 +76,7 @@ Vagrant.configure("2") do |config|
 	# ct<vmax><vmin>: CentOS <vmax>.<vmin>, e.g. ct73 = CentOS 7.3
 	# rh<vmax><vmin>: RHEL <vmax>.<vmin>, e.g. rh73 = RHEL 7.3
 	# el<vmax><vmin>: Generic RHEL derivative <vmax>.<vmin>,
-	# 	e.g. el73 = RHEL/CentOS 7.3
+	#	e.g. el73 = RHEL/CentOS 7.3
 	# el<vmax>: Generic RHEL derivative <vmax>, e.g. el7 = RHEL/CentOS 7.x
 	# sl<vmax><vmin>: SLES <vmax> SP<vmin>, e.g. sl121 = SLES 12 sp1
 	# ub<vmax><vmin>: Ubuntu <vmax>.<vmin>, e.g. ub1604 = Ubuntu 16.04
@@ -65,9 +97,19 @@ Vagrant.configure("2") do |config|
 	# Subnet index used to create cross-over nets for each HA cluster pair
 	xnet_idx=230
 
-	# Create a basic hosts file for the VMs.
-	open('hosts', 'w') { |f|
-	f.puts <<-__EOF
+	if ci_cluster
+		# Vagrant (dumbly) adds the host's name to the loopback /etc/hosts
+		# entry.  https://github.com/hashicorp/vagrant/issues/7263
+		# They seem to be preferring simplicity-in-simple scnearios and
+		# do really bad things to that end.  Things that blow up in real-
+		# world complexity levels
+	        config.vm.provision "fix /etc/hosts",
+			type: "shell",
+			inline: "sed -ie \"/^127.0.0.1/s/\$HOSTNAME  *//\" /etc/hosts /etc/hosts"
+	else
+		# Create a basic hosts file for the VMs.
+		open('hosts', 'w') { |f|
+		f.puts <<-__EOF
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
 ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
 
@@ -79,12 +121,13 @@ Vagrant.configure("2") do |config|
 #{mgmt_net_pfx}.23 vm7
 #{mgmt_net_pfx}.24 vm8
 __EOF
-	[2,9].each do |cidx|
-		f.puts "#{mgmt_net_pfx}.3#{cidx} vm#{cidx}\n"
+		[2,9].each do |cidx|
+			f.puts "#{mgmt_net_pfx}.3#{cidx} vm#{cidx}\n"
+		end
+		}
+		config.vm.provision "file", source: "hosts", destination: "/tmp/hosts"
+		config.vm.provision "shell", inline: "cp -f /tmp/hosts /etc/hosts"
 	end
-	}
-	config.vm.provision "file", source: "hosts", destination: "/tmp/hosts"
-	config.vm.provision "shell", inline: "cp -f /tmp/hosts /etc/hosts"
 	config.vm.provision "shell", inline: "systemctl enable firewalld"
 	config.vm.provision "shell", inline: "systemctl start firewalld"
 
@@ -116,12 +159,23 @@ __EOF
 	# Add the generated SSH public key to each host's
 	# authorized_keys file.
 	config.vm.provision "file", source: "id_rsa.pub", destination: "/tmp/id_rsa.pub"
-	config.vm.provision "shell", inline: "mkdir -m 0700 -p /root/.ssh; [ -f /tmp/id_rsa.pub ] && (awk -v pk=\"`cat /tmp/id_rsa.pub`\" 'BEGIN{split(pk,s,\" \")} $2 == s[2] {m=1;exit}END{if (m==0)print pk}' /root/.ssh/authorized_keys )>> /root/.ssh/authorized_keys; cat /home/vagrant/.ssh/authorized_keys >> /root/.ssh/authorized_keys; chmod 0600 /root/.ssh/authorized_keys"
+        if File.exist?("site-authorized_keys")
+		config.vm.provision "file", source: "site-authorized_keys", destination: "/tmp/authorized_keys"
+	end
+	config.vm.provision "shell", inline: "mkdir -m 0700 -p /root/.ssh; if ! grep -q -f /tmp/id_rsa.pub /root/.ssh/authorized_keys; then cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys; fi; cat /home/vagrant/.ssh/authorized_keys /tmp/authorized_keys >> /root/.ssh/authorized_keys; chmod 0600 /root/.ssh/authorized_keys"
 
 	# And make the private key available
 	config.vm.provision "file", source: "id_rsa", destination: "/tmp/id_rsa"
 	config.vm.provision "shell", inline: "mkdir -m 0700 -p /root/.ssh; cp /tmp/id_rsa /root/.ssh/.; chmod 0600 /root/.ssh/id_rsa"
 
+	if ci_cluster
+		# delete default gw on eth0
+		config.vm.provision "remove eth0 default route",
+			type: "shell",
+			run: "always",
+			inline: "ip route del $(ip route ls | grep \"default via .* dev eth0\"); \
+			         echo \"DEFROUTE=no\" >> /etc/sysconfig/network-scripts/ifcfg-eth0"
+	end
 
 	# The test framework needs an ssh_config file if not sshing to
 	# the host machine as root
@@ -129,29 +183,34 @@ __EOF
 	f.puts <<-__EOF
 Host host
   User #{Etc.getlogin}
-
-Host vm2
   StrictHostKeyChecking no
 
-Host vm3
+Host #{hostname} vmhost
+  User #{ENV['USER']}
   StrictHostKeyChecking no
 
-Host vm4
+Host #{hostname}vm#{cluster_num_s}2
   StrictHostKeyChecking no
 
-Host vm5
+Host #{hostname}vm#{cluster_num_s}3
   StrictHostKeyChecking no
 
-Host vm6
+Host #{hostname}vm#{cluster_num_s}4
   StrictHostKeyChecking no
 
-Host vm7
+Host #{hostname}vm#{cluster_num_s}5
   StrictHostKeyChecking no
 
-Host vm8
+Host #{hostname}vm#{cluster_num_s}6
   StrictHostKeyChecking no
 
-Host vm9
+Host #{hostname}vm#{cluster_num_s}7
+  StrictHostKeyChecking no
+
+Host #{hostname}vm#{cluster_num_s}8
+  StrictHostKeyChecking no
+
+Host #{hostname}vm#{cluster_num_s}9
   StrictHostKeyChecking no
 __EOF
 	}
@@ -166,12 +225,20 @@ __EOF
 		vm3.vm.provider "virtualbox" do |v|
 			v.memory = 2048
 		end
-		vm3.vm.host_name = "vm3"
+		vm3.vm.host_name = "#{hostname}vm#{cluster_num_s}3"
 		vm3.vm.network "forwarded_port", guest: 443, host: 8443
 		# Admin / management network
-		vm3.vm.network "private_network",
-			ip: "#{mgmt_net_pfx}.10",
-			netmask: "255.255.255.0"
+		if ci_cluster
+			vm3.vm.network "public_network",
+			    :libvirt__dhcp_enabled => false,
+			    :type => 'bridge',
+			    :dev => 'br0',
+			    :mac => "525400%02dD9%d3" % [mach_num, cluster_num]
+		else
+			vm3.vm.network "private_network",
+				ip: "#{mgmt_net_pfx}.10",
+				netmask: "255.255.255.0"
+		end
 	end
 
 	#
@@ -181,11 +248,19 @@ __EOF
 		vm4.vm.provider "virtualbox" do |v|
 			v.memory = 2048
 		end
-		vm4.vm.host_name = "vm4"
+		vm4.vm.host_name = "#{hostname}vm#{cluster_num_s}4"
 		# Admin / management network
-		vm4.vm.network "private_network",
-			ip: "#{mgmt_net_pfx}.8",
-			netmask: "255.255.255.0"
+		if ci_cluster
+			vm4.vm.network "public_network",
+			    :libvirt__dhcp_enabled => false,
+			    :type => 'bridge',
+			    :dev => 'br0',
+			    :mac => "525400%02dD9%d4" % [mach_num, cluster_num]
+		else
+			vm4.vm.network "private_network",
+				ip: "#{mgmt_net_pfx}.8",
+				netmask: "255.255.255.0"
+		end
 	end
 
 	#
@@ -250,11 +325,19 @@ __EOF
 							:type => 'raw'
 				end
 			end
-			ss.vm.host_name = "vm#{vm_num}"
+			ss.vm.host_name = "#{hostname}vm#{cluster_num_s}#{vm_num}"
 			# Admin / management network
-			ss.vm.network "private_network",
-				ip: "#{mgmt_net_pfx}.2#{ss_idx}",
-				netmask: "255.255.255.0"
+			if ci_cluster
+				ss.vm.network "public_network",
+					:libvirt__dhcp_enabled => false,
+					:type => 'bridge',
+					:dev => 'br0',
+					:mac => "525400%02dD9%d%d" % [mach_num, cluster_num, vm_num]
+			else
+				ss.vm.network "private_network",
+					ip: "#{mgmt_net_pfx}.2#{ss_idx}",
+					netmask: "255.255.255.0"
+			end
 			# Lustre / application network
 			ss.vm.network "private_network",
 				ip: "#{lnet_pfx}.2#{ss_idx}",
@@ -272,10 +355,6 @@ __EOF
 			if ss_idx % 2 == 0
 				xnet_idx+=1
 			end
-		config.vm.provision "shell", inline: "selinuxenabled && setenforce 0; cat >/etc/selinux/config<<__EOF
-SELINUX=disabled
-SELINUXTYPE=targeted
-__EOF"
 		config.vm.provision "shell", inline: "sed -i -e '/PasswordAuthentication no/s/no/yes/' /etc/ssh/sshd_config"
 		end
 	end
@@ -285,11 +364,19 @@ __EOF"
 	# The configuration supports a maximum of 8 compute nodes.
 	[2,9].each do |c_idx|
 		config.vm.define "vm#{c_idx}", autostart: true do |c|
-			c.vm.host_name = "vm#{c_idx}"
+			c.vm.host_name = "#{hostname}vm#{cluster_num_s}#{c_idx}"
 			# Admin / management network
-			c.vm.network "private_network",
-				ip: "#{mgmt_net_pfx}.3#{c_idx}",
-				netmask: "255.255.255.0"
+			if ci_cluster
+				c.vm.network "public_network",
+					:libvirt__dhcp_enabled => false,
+					:type => 'bridge',
+					:dev => 'br0',
+					:mac => "525400%02dD9%d%d" % [mach_num, cluster_num, c_idx]
+			else
+				c.vm.network "private_network",
+					ip: "#{mgmt_net_pfx}.3#{c_idx}",
+					netmask: "255.255.255.0"
+			end
 			# Lustre / application network
 			c.vm.network "private_network",
 				ip: "#{lnet_pfx}.3#{c_idx}",

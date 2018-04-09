@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if $JENKINS; then
+if $JENKINS && ! ${VAGRANT:-false}; then
     PROVISIONER=${PROVISIONER:?"Need to specify a PROVISIONER string"}
     BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
     BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
@@ -11,7 +11,7 @@ TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:?"Need to set TEST_DISTRO_VERSION"}
 CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:?"Need to specify a CLUSTER_CONFIG_TEMPLATE path"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:?"Need to specify a CLUSTER_CONFIG path to output the test json after provisioning"}
 
-if ! $JENKINS; then
+if ! $JENKINS || ${VAGRANT:-false}; then
     export BUILD_JOB_NAME="foo"
     export BUILD_JOB_BUILD_NUMBER=0
     cp $CLUSTER_CONFIG_TEMPLATE{,.tmp}
@@ -53,12 +53,66 @@ else
     declare -A vagrant_centos_boxes=( [7.2]=1511
                                       [7.3]=1611
                                       [7.4]=1708
-                                      [7.5]=9999 )
+                                      [7.5]=1804
+                                      [7.6]=9999 )
 
+    if $JENKINS; then
+        pushd $CHROMA_DIR
+    fi
     sed -i -e "/override\.vm\.box_version/s/> [0-9][0-9]*, *< *[0-9][0-9]*/> ${vagrant_centos_boxes[$TEST_DISTRO_VERSION]}, < ${vagrant_centos_boxes[$(echo "$TEST_DISTRO_VERSION+.1" | bc)]}/" Vagrantfile
 
     make reset_cluster
-    cp provisioner_output-vagrant-${MAKE_TARGET%_tests}.json provisioner_output.json
+    if $JENKINS; then
+        popd
+        if [ "$EXECUTOR_NUMBER" = "0" ]; then
+           cluster="" # or a number > 0
+        else
+           cluster="$EXECUTOR_NUMBER"
+        fi
+        sed -e "s/@HOSTNAME@/${HOSTNAME%%.*}/g"                              \
+            -e "s/@VMHOST_ACCOUNT@/$USER/g"                                  \
+            -e "s/@DOMAINNAME@/.$(domainname)/g"                             \
+            -e "s/@VMHOST@/${HOSTNAME%%.*}/g"                                \
+            -e "s/@CLUSTER@/$cluster/g"                                      \
+            -e "s/@CLUSTER_NUM@/"$EXECUTOR_NUMBER"/g"                        \
+            -e "s/@HOST_IP_ADDRESS@/$(host "$HOSTNAME" | sed 's/.* //')/g"   \
+            -e "s/@VM2_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"2 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM3_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"3 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM4_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"4 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM5_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"5 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM6_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"6 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM7_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"7 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM8_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"8 |  \
+                                    sed 's/.* //')/g"                        \
+            -e "s/@VM9_IPADDRESS@/$(host "${HOSTNAME%%.*}"vm"${cluster}"9 |  \
+                                    sed 's/.* //')/g"                        \
+            < "$CHROMA_DIR"/provisioner_output-vagrant-"${MAKE_TARGET%_tests}".json.in \
+            > provisioner_output.json
+    else
+        sed -e "s/@HOSTNAME@//g"                     \
+            -e "s/@VMHOST_ACCOUNT@/$USER/g"          \
+            -e "s/@DOMAINNAME@//g"                   \
+            -e "s/@VMHOST@/host/g"                   \
+            -e "s/@CLUSTER@//g"                      \
+            -e "s/@CLUSTER_NUM@/0/g"                 \
+            -e "s/@HOST_IP_ADDRESS@/192.168.121.1/g" \
+            -e "s/@VM2_IPADDRESS@/10.73.10.32/g"     \
+            -e "s/@VM3_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM4_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM5_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM6_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM7_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM8_IPADDRESS@/10.73.10.10/g"     \
+            -e "s/@VM9_IPADDRESS@/10.73.10.10/g"     \
+            < "$CHROMA_DIR"/provisioner_output-vagrant-"${MAKE_TARGET%_tests}".json.in \
+            > provisioner_output.json
+    fi
 fi
 
 # Pass the provisioner output back through an interpreter back to our test json format
