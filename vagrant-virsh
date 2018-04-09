@@ -6,25 +6,39 @@ set -e
 # this needs to be set and there is no way to have it set from fence_virsh
 export LIBVIRT_DEFAULT_URI=qemu:///system
 
-echo "got command: $SSH_ORIGINAL_COMMAND" >> /tmp/vagrant-virsh.log
+if [ -e /tmp/vagrant-virsh.log ]; then
+    echo "$(date) got command: $SSH_ORIGINAL_COMMAND" >> /tmp/vagrant-virsh.log
+fi
 
 if [[ "$SSH_ORIGINAL_COMMAND" = *EXPECT* ]]; then
-    echo -n "[EXPECT]# "
-    read COMMAND
-    # TODO: a bit more security here to isolate this script to only desired
-    # virsh commands would be good
-    if [[ $COMMAND = virsh\ * ]]; then
-        if [ -e /tmp/vagrant-virsh.log ]; then
-            echo "executing command: $COMMAND" >> /tmp/vagrant-virsh.log
-        fi
-        ${COMMAND/ vm/ intel-manager-for-lustre_vm}
+    while true; do
         echo -n "[EXPECT]# "
-    else
-        echo "Disallowed command: $SSH_ORIGINAL_COMMAND"
-        exit 1
-    fi
+        read -r COMMAND
+        # TODO: a bit more security here to isolate this script to only desired
+        # virsh commands would be good
+        if [[ $COMMAND = virsh\ * ]]; then
+            if [ -e /tmp/vagrant-virsh.log ]; then
+                echo "$(date) executing command: $COMMAND" >> /tmp/vagrant-virsh.log
+            fi
+            $COMMAND
+        elif [[ $COMMAND = quit ]]; then
+            if [ -e /tmp/vagrant-virsh.log ]; then
+                echo "$(date) got quit command, exiting" >> /tmp/vagrant-virsh.log
+            fi
+            exit 0
+        else
+            if [ -e /tmp/vagrant-virsh.log ]; then
+                echo "$(date) not executing disallowed command: $COMMAND" >> /tmp/vagrant-virsh.log
+            fi
+            echo "Disallowed command: $SSH_ORIGINAL_COMMAND"
+            exit 1
+        fi
+    done
 else
     # TODO: a bit more security here to isolate this script to only desired
     # virsh commands would be good
-    eval ${SSH_ORIGINAL_COMMAND// vm/ intel-manager-for-lustre_vm}
+    if [ -e /tmp/vagrant-virsh.log ]; then
+        echo "$(date) executing command: $SSH_ORIGINAL_COMMAND" >> /tmp/vagrant-virsh.log
+    fi
+    eval $SSH_ORIGINAL_COMMAND
 fi

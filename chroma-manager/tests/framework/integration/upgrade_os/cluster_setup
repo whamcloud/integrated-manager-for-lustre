@@ -97,7 +97,17 @@ source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_clie
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+if $VAGRANT; then
+    cat <<EOF2 > /etc/yum.repos.d/autotest.repo
+[chroma]
+name=chroma
+baseurl=http://$JENKINS_URL/job/$CHROMA_BUILD_JOB_NAME/arch=x86_64%2Cdistro=el7/$CHROMA_BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo/
+enabled=1
+priority=1
+gpgcheck=0
+sslverify=0
+EOF2
+fi
 $PROXY yum -y install chroma-manager-integration-tests
 
 # Set up fencing on the vm host
