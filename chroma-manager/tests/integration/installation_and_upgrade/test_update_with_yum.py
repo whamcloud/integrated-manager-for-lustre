@@ -1,3 +1,5 @@
+import os
+
 from testconfig import config
 
 from django.utils.unittest import skip
@@ -18,6 +20,30 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
         self.assertEqual(len(hosts), len(self.config_servers))
+
+        if os.environ.get('UPGRADE_FROM_3', 'false') == 'false':
+            # Ensure that IML notices its storage servers needs upgraded
+            for host in hosts:
+                # wait for an upgrade available alert
+                self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'],
+                                                                 of_type='UpdatesAvailableAlert'))
+                alerts = self.get_list("/api/alert/", {'active': True,
+                                                       'alert_type': 'UpdatesAvailableAlert'})
+
+                # Should be the only alert
+                # FIXME HYD-2101 have to filter these alerts to avoid spurious ones.  Once that
+                # ticket is fixed, remove the filter so that we are checking that this really is
+                # the only alert systemwide as it should be.
+                alerts = [a for a in alerts if a['alert_item'] == host['resource_uri']]
+                self.assertEqual(len(alerts), 1)
+
+                # Should be an 'updates needed' alert
+                self.assertRegexpMatches(alerts[0]['message'], "Updates are ready.*")
+
+                # The needs_update flag should be set on the host
+                self.assertEqual(self.get_json_by_uri(host['resource_uri'])['needs_update'], True)
+
+            self.assertEqual(len(hosts), len(self.config_servers))
 
         # Even though we have to stop a filesytem to do an upgrade (i.e. no
         # rolling upgrades, we stopped it before doing the upgrade to avoid
@@ -44,6 +70,11 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
 
+        if os.environ.get('UPGRADE_FROM_3', 'false') == 'false':
+            # Start the filesystem back up
+            filesystem = self.get_filesystem_by_name(self.fs_name)
+            self.start_filesystem(filesystem['id'])
+
     @skip("Repos can't really be retired until at least an n+1 release")
     def test_no_retired_repos(self):
         "Test that no retired repos exist after an upgrade"
@@ -64,7 +95,7 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         for address in addresses:
             chroma_diagnostics_result = self.remote_command(address, 'chroma-diagnostics')
             self.assertEqual(chroma_diagnostics_result.stdout.split('\n')[0], "chroma-diagnostics no longer exists. Please use 'iml-diagnostics' instead.")
-            
+
             yum_installed_result = self.remote_command(address, 'rpm -q chroma-diagnostics', expected_return_code=1)
             self.assertNotEqual(yum_installed_result.exit_status, 0)
 

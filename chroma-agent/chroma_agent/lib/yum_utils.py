@@ -94,6 +94,6 @@ def yum_check_update(repos):
         if len(elements) == 3 and (elements[2] in repos):
             packages.append(elements[0])
         else:
-            daemon_log.warning("yum check_update found unknown response of: %s\nIn: %s\nLooking at: repos %s" % (line, yum_response, repos))
+            daemon_log.warning("dnf check-update found unknown response of: %s\nIn: %s\nLooking at: repos %s" % (line, yum_response, repos))
 
     return packages
