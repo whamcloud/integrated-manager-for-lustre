@@ -35,13 +35,15 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         # about its vmhost and how to destroy it.
         primary_host['config'] = self.get_host_config(primary_host['nodename'])
 
-        # "Push the reset button" on the primary lustre server
-        self.remote_operations.reset_server(primary_host['config']['fqdn'])
+        # "Push the power off button" on the primary lustre server
+        self.remote_operations.kill_server(primary_host['config']['fqdn'])
 
         # Wait for failover to occur
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
+        # Start up the primary now
+        self.remote_operations.start_server(primary_host['config']['fqdn'])
         self.remote_operations.await_server_boot(primary_host['fqdn'], secondary_host['fqdn'])
 
         # Verify did not auto-failback

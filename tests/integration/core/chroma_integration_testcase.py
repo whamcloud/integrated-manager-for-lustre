@@ -233,8 +233,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         self._fetch_help(lambda: self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT),
                          ['brian.murrell@intel.com'],
-                         "Waiting for developer inspection due to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050.",
-                         lambda: check_for_HYD_2849_4050())
+                         "Waiting for developer inspection.  DO NOT ABORT THIS TEST.",
+                         timeout=60*60*24*3)
 
     def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""

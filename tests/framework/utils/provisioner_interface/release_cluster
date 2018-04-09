@@ -1,13 +1,17 @@
 #!/bin/bash -ex
 
-PROVISIONER=${PROVISIONER:?"Need to specify a PROVISIONER string"}
+if $JENKINS && ! ${VAGRANT:-false}; then
+    PROVISIONER=${PROVISIONER:?"Need to specify a PROVISIONER string"}
+fi
 
 # cluster_provisioned protects us from releasing the same cluster twice
 echo "$PWD" >&2
-if [ -f "$WORKSPACE"/cluster_provisioned ]; then
-    if ! sed -e 's/provision\": *true/provision\":false/g' < provisioner_output.json | $PROVISIONER; then
-        rc="${PIPESTATUS[0]}"
-        echo "unprovisioning failed: $rc" >&2
+if ! $VAGRANT; then
+    if [ -f "$WORKSPACE"/cluster_provisioned ]; then
+        if ! sed -e 's/provision\": *true/provision\":false/g' < provisioner_output.json | $PROVISIONER; then
+            rc="${PIPESTATUS[0]}"
+            echo "unprovisioning failed: $rc" >&2
+        fi
+        rm -f cluster_provisioned
     fi
-    rm -f cluster_provisioned
 fi
