@@ -230,9 +230,10 @@ class UtilityTestCase(TestCase):
 
             # First create the file, errors in here do destroy the original, but will be reported by the test framework
             fd = os.open(key_file, os.O_RDWR | os.O_CREAT)
-            os.write(fd, "Subject: %s\n\n%s\n\nTest Runner %s" % (message, message, socket.gethostname()))
+            os.write(fd, "To: %s\nSubject: %s\n\n%s\n\nTest Runner %s" %
+                     (', '.join(tell_who), message, message, socket.gethostname()))
             os.lseek(fd, 0, os.SEEK_SET)
-            subprocess.call(['sendmail'] + tell_who, stdin=fd)
+            subprocess.call(['sendmail'] + ['-t'], stdin=fd)
             os.close(fd)
 
             while timeout > 0 and os.path.isfile(key_file):
