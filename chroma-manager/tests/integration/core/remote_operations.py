@@ -745,7 +745,7 @@ class RealRemoteOperations(RemoteOperations):
         """
         Unmount all filesystems of type lustre from all clients in the config.
         """
-        for client in config['lustre_clients'] + self.config_workers:
+        for client in config['lustre_clients']:
             self._ssh_address(client['address'],
                               'umount -t lustre -a')
             self._ssh_address(client['address'],
