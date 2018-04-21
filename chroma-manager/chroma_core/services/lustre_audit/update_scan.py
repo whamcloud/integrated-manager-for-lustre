@@ -11,7 +11,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost
+from chroma_core.models.host import ManagedHost, VolumeNode
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler import job_scheduler_notify
@@ -250,12 +250,16 @@ class UpdateScan(object):
             return []
 
         try:
-            target = ManagedTarget.objects.get(name=target_name,
-                                               managedtargetmount__host=self.host,
-                                               managedtargetmount__not_deleted=True).downcast()
-        except ManagedTarget.DoesNotExist:
+            target = ManagedTarget.objects.get(name=target_name).downcast()
+
+            if target.immutable_state:
+                # in monitored mode we want to make sure the target volume is accessible on current host
+                target.volume.volumenode_set.get(host=self.host, not_deleted=True)
+            else:
+                target.managedtargetmount_set.get(host=self.host, not_deleted=True)
+        except (ManagedTarget.DoesNotExist, VolumeNode.DoesNotExist) as e:
             # Unknown target -- ignore metrics
-            log.warning("Discarding metrics for unknown target: %s" % target_name)
+            log.warning("Discarding metrics for unknown target: %s (%s)" % (target_name, e))
             return []
 
         return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
