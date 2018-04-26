@@ -18,8 +18,8 @@ if ! $JENKINS; then
     CLUSTER_CONFIG_TEMPLATE="${CLUSTER_CONFIG_TEMPLATE}.tmp"
 fi
 # Fill in the Jenkins Build Job and Build Number, the IEEL version under test, and what OS to test it on.
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
-       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
+sed -i -e "s/BUILD_JOB_NAME/${OVERRIDE_BUILD_JOB_NAME:-$BUILD_JOB_NAME}/g" \
+       -e "s/BUILD_JOB_BUILD_NUMBER/${OVERRIDE_BUILD_JOB_BUILD_NUMBER:-$BUILD_JOB_BUILD_NUMBER}/g" \
        -e "s/IEEL_VERSION/${IEEL_VERSION}/g" \
        -e "s/TEST_DISTRO_NAME/${TEST_DISTRO_NAME}/g" \
        -e "s/TEST_DISTRO_VERSION/${TEST_DISTRO_VERSION}/g" \
