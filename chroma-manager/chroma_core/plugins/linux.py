@@ -245,18 +245,24 @@ class Linux(Plugin):
             bdid = zfs_info['block_device']
             special_block_devices.add(bdid)
             dev = devices['devs'][bdid]
-            dev['filesystem_type'] = 'zfs' if bdid.startswith('zfsset') else None
             dev['major_minor'] = bdid
             dev['parent'] = None
             dev['serial_80'] = None
             dev['serial_83'] = None
 
+            if bdid.startswith('zfsset'):
+                dev['filesystem_type'] = 'zfs'
+                device_type = 'zfsdatasets'
+            else:
+                dev['filesystem_type'] = None
+                device_type = 'zfspools'
+
             # add drive partitions to avoid https://github.com/intel-hpdd/intel-manager-for-lustre/issues/493
             serials = [devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']]
-            [devices['zfspools'][uuid]['drives'].append(x['major_minor'])
+            [devices[device_type][uuid]['drives'].append(x['major_minor'])
              for x in devices['devs'].values()
-             if x['serial_80'] in serials
-             and x['major_minor'] not in devices['zfspools'][uuid]['drives']]
+             if x.get('serial_80') in serials
+             and x['major_minor'] not in devices[device_type][uuid]['drives']]
 
         for uuid, zfs_info in merge(devices['zfspools'], devices['zfsdatasets']).items():
             add_zfs(zfs_info)
@@ -428,8 +434,9 @@ class Linux(Plugin):
         # initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
-            bdev_resource = self.major_minor_to_node_resource[bdev]
-            self.update_or_create(LocalMount, parents=[bdev_resource], mount_point=mntpnt, fstype=fstype)
+            if fstype != 'lustre':
+                bdev_resource = self.major_minor_to_node_resource[bdev]
+                self.update_or_create(LocalMount, parents=[bdev_resource], mount_point=mntpnt, fstype=fstype)
 
         # Create Partitions (devices that have 'parent' set)
         partition_identifiers = []
