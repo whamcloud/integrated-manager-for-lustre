@@ -12,7 +12,9 @@ fi
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json"}
 CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
 
-if $JENKINS; then
+if [ -n "$RELEASE_ARCHIVE" ]; then
+    curl -L -f -O "${RELEASE_ARCHIVE_PATH:-https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
+elif $JENKINS; then
     cd $WORKSPACE
     curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
 fi
