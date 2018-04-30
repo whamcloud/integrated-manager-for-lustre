@@ -19,7 +19,7 @@ else
 fi
 if $JENKINS; then
     cd "$WORKSPACE"
-    curl -f -k -o "$SHORT_ARCHIVE_NAME"-"$CURRENT_IEEL_VERSION"-current.tar.gz "$IML_CURRENT_URL"
+    curl -f -k -L -o "$SHORT_ARCHIVE_NAME"-"$CURRENT_IEEL_VERSION"-current.tar.gz "$IML_CURRENT_URL"
 fi
 
 # Gather logs from nodes and release the cluster at exit
