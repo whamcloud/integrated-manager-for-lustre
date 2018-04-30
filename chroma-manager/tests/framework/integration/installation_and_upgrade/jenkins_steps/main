@@ -13,11 +13,13 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/chroma-ma
 CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
 
 if [ -n "$RELEASE_ARCHIVE" ]; then
-    cd $WORKSPACE
-    curl -L -f -O "${RELEASE_ARCHIVE_PATH:-https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
-elif $JENKINS; then
-    cd $WORKSPACE
-    curl -f -k -o $SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION-current.tar.gz "$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
+    IML_CURRENT_URL="${RELEASE_ARCHIVE_PATH:-https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
+else
+    IML_CURRENT_URL="$JOB_URL/$SHORT_ARCHIVE_NAME-$CURRENT_IEEL_VERSION.tar.gz"
+fi
+if $JENKINS; then
+    cd "$WORKSPACE"
+    curl -f -k -o "$SHORT_ARCHIVE_NAME"-"$CURRENT_IEEL_VERSION"-current.tar.gz "$IML_CURRENT_URL"
 fi
 
 # Gather logs from nodes and release the cluster at exit
