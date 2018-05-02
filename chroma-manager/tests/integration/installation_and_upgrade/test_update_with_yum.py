@@ -7,6 +7,7 @@ from django.utils.unittest import skip
 from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_installation_and_upgrade import TestInstallationAndUpgrade
 
+
 class TestYumUpdate(TestInstallationAndUpgrade):
     def test_yum_update(self):
         """ Test for lustre kernel is set to boot after yum update"""
@@ -88,7 +89,6 @@ class TestYumUpdate(TestInstallationAndUpgrade):
 
     def test_obsolete_chroma_diagnostics(self):
         """Test that chroma-diagnostics has been obsoleted"""
-        import sys
         addresses = [server['fqdn'] for server in self.config_servers]
         addresses.append(config['chroma_managers'][0]['address'])
 

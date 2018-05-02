@@ -1,13 +1,16 @@
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import json
+from logging import DEBUG
 
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.models import HaCluster
+from chroma_core.plugins.block_devices import get_block_devices
+from chroma_core.services import log_register
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
@@ -17,6 +20,9 @@ from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 from chroma_core.models import ManagedHost
 from chroma_core.models import VolumeNode
 from settings import SERIAL_PREFERENCE
+
+log = log_register('plugin_runner')
+log.setLevel(DEBUG)
 
 version = 1
 
@@ -175,22 +181,45 @@ class Linux(Plugin):
         super(Linux, self).__init__(resource_manager, scannable_id)
 
         self.major_minor_to_node_resource = {}
+        self.current_devices = "{}"
 
     def teardown(self):
-        self.log.debug("Linux.teardown")
+        log.debug("Linux.teardown")
 
-    def agent_session_continue(self, host_id, data):
+    def agent_session_continue(self, host_id, _):
         # The agent plugin sends us another full report when it thinks something has changed
-        self.agent_session_start(host_id, data, initial_scan=False)
+        self.agent_session_start(host_id, None, initial_scan=False)
 
-    def agent_session_start(self, host_id, data, initial_scan=True):
-        devices = data
+    def agent_session_start(self, host_id, _, initial_scan=True):
+        # devices = data
         initiate_device_poll = False
         reported_device_node_paths = []
 
-        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
-            if expected_item not in devices:
+        # todo: error handling
+        fqdn = ManagedHost.objects.get(id=host_id).fqdn
+        devices = get_block_devices(fqdn)
+
+        # todo: EMCPower Device detection has been deprecated and mpath it is not provided and is unused
+        # for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'devs', 'local_fs', 'mds']:
+            if expected_item not in devices.keys():
                 devices[expected_item] = {}
+
+        log.debug("{} reporting datasets: {}, pools: {}".format(fqdn,
+                                                                devices['zfsdatasets'].keys(),
+                                                                devices['zfspools'].keys()))
+
+        dev_json = json.dumps(devices['devs'], sort_keys=True)
+
+        if dev_json == self.current_devices:
+            log.debug("Linux.devices unchanged {}".format(fqdn))
+            return None
+
+        log.debug("Linux.devices changed on {}: {}".format(
+            fqdn,
+            set(json.loads(self.current_devices).keys()) - set(devices['devs'].keys())))
+
+        self.current_devices = dev_json
 
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
@@ -201,17 +230,18 @@ class Linux(Plugin):
                     # An inactive LV has no block device
                     pass
 
-        mpath_block_devices = set()
-        for mp_name, mp in devices['mpath'].items():
-            mpath_block_devices.add(mp['block_device'])
+        # mpath_block_devices = set()
+        # for mp_name, mp in devices['mpath'].items():
+        #     mpath_block_devices.add(mp['block_device'])
 
-        special_block_devices = lv_block_devices | mpath_block_devices
+        # special_block_devices = lv_block_devices | mpath_block_devices
+        special_block_devices = lv_block_devices
 
         for uuid, md_info in devices['mds'].items():
             special_block_devices.add(md_info['block_device'])
 
-        for uuid, emcpower_info in devices['emcpower'].items():
-            special_block_devices.add(emcpower_info['block_device'])
+        # for uuid, emcpower_info in devices['emcpower'].items():
+        #     special_block_devices.add(emcpower_info['block_device'])
 
         for uuid, zfs_pool_info in devices['zfspools'].items():
             special_block_devices.add(zfs_pool_info['block_device'])
@@ -219,8 +249,8 @@ class Linux(Plugin):
         for uuid, zfs_dataset_info in devices['zfsdatasets'].items():
             special_block_devices.add(zfs_dataset_info['block_device'])
 
-        for uuid, zfs_vol_info in devices['zfsvols'].items():
-            special_block_devices.add(zfs_vol_info['block_device'])
+        # for uuid, zfs_vol_info in devices['zfsvols'].items():
+        #     special_block_devices.add(zfs_vol_info['block_device'])
 
         def preferred_serial(bdev):
             for attr in SERIAL_PREFERENCE:
@@ -309,10 +339,10 @@ class Linux(Plugin):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
-            elif bdev['major_minor'] in mpath_block_devices:
-                node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+            # elif bdev['major_minor'] in mpath_block_devices:
+            #     node, created = self.update_or_create(LinuxDeviceNode,
+            #                         host_id = host_id,
+            #                         path = bdev['path'])
             elif bdev['parent']:
                 node, created = self.update_or_create(LinuxDeviceNode,
                         host_id = host_id,
@@ -366,32 +396,30 @@ class Linux(Plugin):
                     # Inactive LVs have no block device
                     pass
 
-        for mpath_alias, mpath in devices['mpath'].items():
+        # for mpath_alias, mpath in devices['mpath'].items():
             # Devices contributing to the multipath
-            mpath_parents = [self.major_minor_to_node_resource[n['major_minor']] for n in mpath['nodes']]
+            # mpath_parents = [self.major_minor_to_node_resource[n['major_minor']] for n in mpath['nodes']]
             # The multipath device node
-            mpath_node = self.major_minor_to_node_resource[mpath['block_device']]
-            for p in mpath_parents:
+            # mpath_node = self.major_minor_to_node_resource[mpath['block_device']]
+            # for p in mpath_parents:
                 # All the mpath_parents should have the same logical_drive
-                mpath_node.logical_drive = mpath_parents[0].logical_drive
-                mpath_node.add_parent(p)
+                # mpath_node.logical_drive = mpath_parents[0].logical_drive
+                # mpath_node.add_parent(p)
 
         self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [], reported_device_node_paths)
 
-        self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
+        # self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
+        log.debug("zfspools: {}".format(devices['zfspools']))
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
 
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
 
-        initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
+        # initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = self.major_minor_to_node_resource[bdev]
-            self.update_or_create(LocalMount,
-                    parents=[bdev_resource],
-                    mount_point = mntpnt,
-                    fstype = fstype)
+            self.update_or_create(LocalMount, parents=[bdev_resource], mount_point=mntpnt, fstype=fstype)
 
         # Create Partitions (devices that have 'parent' set)
         partition_identifiers = []
