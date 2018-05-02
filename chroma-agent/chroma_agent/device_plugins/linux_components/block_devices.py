@@ -199,7 +199,7 @@ class BlockDevices(object):
 
     def composite_device_list(self, source_devices):
         """
-        This function takes a bunch of devices like MdRaid, EMCPower
+        This function takes a bunch of devices like MdRaid
         which are effectively composite devices made up
         from a collection of other devices and returns that
         list with the drives and everything nicely assembled.

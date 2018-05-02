@@ -84,13 +84,6 @@ class MdRaid(resources.LogicalDrive):
         identifier = GlobalId('uuid')
     uuid = attributes.String()
 
-
-class EMCPower(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId('uuid')
-    uuid = attributes.String()
-
-
 class ZfsPool(resources.LogicalDrive):
     class Meta:
         identifier = GlobalId('uuid')
@@ -188,7 +181,7 @@ class Linux(Plugin):
         initiate_device_poll = False
         reported_device_node_paths = []
 
-        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices:
                 devices[expected_item] = {}
 
@@ -209,9 +202,6 @@ class Linux(Plugin):
 
         for uuid, md_info in devices['mds'].items():
             special_block_devices.add(md_info['block_device'])
-
-        for uuid, emcpower_info in devices['emcpower'].items():
-            special_block_devices.add(emcpower_info['block_device'])
 
         for uuid, zfs_pool_info in devices['zfspools'].items():
             special_block_devices.add(zfs_pool_info['block_device'])
@@ -377,8 +367,6 @@ class Linux(Plugin):
                 mpath_node.add_parent(p)
 
         self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [], reported_device_node_paths)
-
-        self._map_drives_to_device_to_node(devices, host_id, 'emcpower', EMCPower, [], reported_device_node_paths)
 
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
 

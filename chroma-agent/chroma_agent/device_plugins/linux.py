@@ -2,14 +2,12 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import config
 from chroma_agent.device_plugins.linux_components.block_devices import BlockDevices
 from chroma_agent.device_plugins.linux_components.zfs import ZfsDevices
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
-from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
 from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
 
@@ -53,25 +51,23 @@ class LinuxDevicePlugin(DevicePlugin):
         zfs_devices = ZfsDevices()
         zfs_devices.full_scan(block_devices)
 
-        # EMCPower Devices
-        emcpowers = EMCPower(block_devices).all()
-
         # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
         local_fs = LocalFilesystems(block_devices).all()
 
         # We have scan devices, so set the devices scanned flags.
         LinuxDevicePlugin.devices_scanned = True
 
-        return {"vgs": dmsetup.vgs,
-                "lvs": dmsetup.lvs,
-                "zfspools": zfs_devices.zpools,
-                "zfsdatasets": zfs_devices.datasets,
-                "zfsvols": zfs_devices.zvols,
-                "mpath": dmsetup.mpaths,
-                "devs": block_devices.block_device_nodes,
-                "local_fs": local_fs,
-                'emcpower': emcpowers,
-                'mds': mds}
+        return {
+            "vgs": dmsetup.vgs,
+            "lvs": dmsetup.lvs,
+            "zfspools": zfs_devices.zpools,
+            "zfsdatasets": zfs_devices.datasets,
+            "zfsvols": zfs_devices.zvols,
+            "mpath": dmsetup.mpaths,
+            "devs": block_devices.block_device_nodes,
+            "local_fs": local_fs,
+            'mds': mds
+        }
 
     def _scan_devices(self, scan_always):
         full_scan_result = None
