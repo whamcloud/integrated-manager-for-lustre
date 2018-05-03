@@ -23,11 +23,13 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    # Use this opportunity to disable zfs.target to stop auto import as well.
+    # Autoimport will not occur if cachefile is none
     @property
     def prepare_device_commands(self):
-        return ["systemctl disable zfs.target",
-                "zpool create %s -o cachefile=none -o multihost=on %s" % (self.device_path, self._device_path)]
+        return [
+            "zpool create %s -o cachefile=none -o multihost=on %s" %
+            (self.device_path, self._device_path)
+        ]
 
     @property
     def device_path(self):
@@ -35,23 +37,48 @@ class TestBlockDeviceZfs(TestBlockDevice):
             return self._device_path
 
         basename = os.path.basename(self._device_path)
-        return "zfs_pool_%s" % "".join([c for c in basename if re.match(r'\w', c)])
+        return "zfs_pool_%s" % "".join(
+            [c for c in basename if re.match(r'\w', c)])
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list {0}; then zpool destroy {0} && zpool labelclear {0}; else exit 0; fi".format(
-            TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths]
+        return [
+            """
+        if zpool list {0}; then
+            if zpool destroy {0}; then
+                udevadm settle;
+
+                if zpool labelclear {1}-part1; then
+                    exit 0
+                else
+                    echo "zpool labelclear failed"
+                    exit 1
+                fi
+            else
+                echo "zpool destroy failed"
+                exit 2
+            fi
+        fi
+        """.format(
+                TestBlockDeviceZfs('zfs', device_path).device_path,
+                TestBlockDeviceZfs('zfs', device_path)._device_path)
+            for device_path in device_paths
+        ]
 
     @property
     def install_packages_commands(self):
         installer_path = config.get('installer_path', '/tmp')
-        return ["flock -x /var/lock/lustre_installer_lock -c 'rpm -q zfs || (cd %s && tar zxf lustre-zfs-%s-installer.tar.gz && cd lustre-zfs && ./install > /tmp/zfs_installer.stdout)'" % (installer_path, "el" + platform.dist()[1][0:1]),
-                "modprobe zfs"]
+        return [
+            "flock -x /var/lock/lustre_installer_lock -c 'rpm -q zfs || (cd %s && tar zxf lustre-zfs-%s-installer.tar.gz && cd lustre-zfs && ./install > /tmp/zfs_installer.stdout)'"
+            % (installer_path, "el" + platform.dist()[1][0:1]), "modprobe zfs"
+        ]
 
     @property
     def remove_packages_commands(self):
-        return ["yum remove -y zfs libzfs2 zfs-dkms spl lustre-osd-zfs*",
-                "if [ -e /etc/zfs ]; then rm -rf /etc/zfs; else exit 0; fi"]
+        return [
+            "yum remove -y zfs libzfs2 zfs-dkms spl lustre-osd-zfs*",
+            "if [ -e /etc/zfs ]; then rm -rf /etc/zfs; else exit 0; fi"
+        ]
 
     @property
     def release_commands(self):
@@ -64,13 +91,14 @@ class TestBlockDeviceZfs(TestBlockDevice):
         # For test we want to import, which is not a risk-free operation
         # but between tests we want to reset
         # partprobe always exits 1 so smother then return
-        return ["partprobe | true",
-                "udevadm settle",
-                "zpool import %s" % self.device_path]
+        return [
+            "partprobe | true", "udevadm settle",
+            "zpool import %s" % self.device_path
+        ]
 
     @classmethod
     def list_devices_commands(cls):
-        return['zfs list -H -o name']
+        return ['zfs list -H -o name']
 
     @classmethod
     def zfs_install_commands(cls):
