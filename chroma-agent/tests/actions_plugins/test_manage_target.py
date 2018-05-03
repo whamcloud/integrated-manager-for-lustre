@@ -80,9 +80,6 @@ class TestFormatTarget(CommandCaptureTestCase):
     def setUp(self):
         super(TestFormatTarget, self).setUp()
 
-        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
-        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
-
         self.addCleanup(mock.patch.stopall)
 
     def _mkfs_path(self, block_device, target_name):
@@ -366,12 +363,6 @@ class TestXMLParsing(unittest.TestCase):
 
 
 class TestCheckBlockDevice(CommandCaptureTestCase, AgentUnitTestCase):
-    def setUp(self):
-        super(TestCheckBlockDevice, self).setUp()
-
-        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.lock_pool').start()
-        mock.patch('iml_common.blockdevices.blockdevice_zfs.ZfsDevice.unlock_pool').start()
-
     def test_occupied_device_ldiskfs(self):
         self.add_commands(CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"), stdout="ext4\n"))
 
