@@ -11,6 +11,9 @@ Source0: %{name}-%{version}.tar.gz
 Source1: %{name}.service
 Source2: lustre-modules-init.sh
 Source3: logrotate.cfg
+Source4: iml-storage-server.target
+Source5: 10-device-scanner.target.conf
+Source6: 10-device-scanner.socket.conf
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -100,6 +103,11 @@ cp %{SOURCE1} %{buildroot}/usr/lib/systemd/system/%{name}.service
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
+cp %{SOURCE4} %{buildroot}/usr/lib/systemd/system/iml-storage-server.target
+mkdir -p %{buildroot}/etc/systemd/system/device-scanner.target.d/
+cp %{SOURCE5} %{buildroot}/etc/systemd/system/device-scanner.target.d/10-device-scanner.target.conf
+mkdir -p %{buildroot}/etc/systemd/system/device-scanner.socket.d/
+cp %{SOURCE6} %{buildroot}/etc/systemd/system/device-scanner.socket.d/10-device-scanner.socket.conf
 
 touch management.files
 cat <<EndOfList>>management.files
@@ -157,6 +165,9 @@ grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
 %files -f base.files
 %defattr(-,root,root)
 %attr(0644,root,root)/usr/lib/systemd/system/%{name}.service
+%attr(0644,root,root)/usr/lib/systemd/system/iml-storage-server.target
+%attr(0644,root,root)/etc/systemd/system/device-scanner.target.d/10-device-scanner.target.conf
+%attr(0644,root,root)/etc/systemd/system/device-scanner.socket.d/10-device-scanner.socket.conf
 %attr(0755,root,root)/etc/init.d/lustre-modules
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*

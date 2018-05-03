@@ -1,5 +1,3 @@
-
-
 import logging
 import socket
 import time
@@ -19,13 +17,11 @@ from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
 
-
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
-
 stop_agent_cmd = '''
-    systemctl stop chroma-agent
+    systemctl stop iml-storage-server.target
     i=0
 
     while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
@@ -66,8 +62,8 @@ class RemoteOperations(object):
     def get_fence_nodes_list(self, address, ignore_failure=False):
         return ["fake", "fake"]
 
-class RealRemoteOperations(RemoteOperations):
 
+class RealRemoteOperations(RemoteOperations):
     def __init__(self, test_case):
         self._test_case = test_case
 
@@ -87,12 +83,18 @@ class RealRemoteOperations(RemoteOperations):
 
     def _ssh_address_no_check(self, address, command_string):
         """ pass _ssh_address expected_return_code=None, so exception not raised on nonzero return code """
-        return self._ssh_address(address, command_string, expected_return_code=None)
+        return self._ssh_address(
+            address, command_string, expected_return_code=None)
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
-    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None,
-                     as_root = True):
+    def _ssh_address(self,
+                     address,
+                     command,
+                     expected_return_code=0,
+                     timeout=TEST_TIMEOUT,
+                     buffer=None,
+                     as_root=True):
         """
         Executes a command on a remote server over ssh.
 
@@ -112,8 +114,10 @@ class RealRemoteOperations(RemoteOperations):
             ip_route_ls_result = Shell.run(['ip', 'route', 'ls'])
 
             try:
-                gw = [l for l in ip_route_ls_result.stdout.split('\n')
-                      if l.startswith("default ")][0].split()[2]
+                gw = [
+                    l for l in ip_route_ls_result.stdout.split('\n')
+                    if l.startswith("default ")
+                ][0].split()[2]
                 ping_gw_result = Shell.run(['ping', '-c', '1', '-W', '1', gw])
                 ping_gw_report = "\nping gateway (%s): %s" % \
                     (gw, print_result(ping_gw_result))
@@ -124,7 +128,8 @@ class RealRemoteOperations(RemoteOperations):
 
             if ping_result1.rc != 0:
                 time.sleep(30)
-                ping_result2 = Shell.run(['ping', '-c', '1', '-W', '1', address])
+                ping_result2 = Shell.run(
+                    ['ping', '-c', '1', '-W', '1', address])
                 ping_result2_report = "\n30s later ping: %s" % \
                     print_result(ping_result2)
 
@@ -148,11 +153,13 @@ class RealRemoteOperations(RemoteOperations):
             logger.error(msg)
 
             DEVNULL = open(os.devnull, 'wb')
-            p = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE,
-                                 stdout=DEVNULL, stderr=DEVNULL)
+            p = subprocess.Popen(
+                ['sendmail', '-t'],
+                stdin=subprocess.PIPE,
+                stdout=DEVNULL,
+                stderr=DEVNULL)
             p.communicate(input=b'To: brian.murrell@intel.com\n'
-                          'Subject: GH#%s\n\n' % issue_num +
-                          msg)
+                          'Subject: GH#%s\n\n' % issue_num + msg)
             p.wait()
             DEVNULL.close()
 
@@ -186,7 +193,8 @@ class RealRemoteOperations(RemoteOperations):
             if 'user' in host_config:
                 args['username'] = host_config['user']
                 if args['username'] != 'root' and as_root:
-                    command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
+                    command = "sudo sh -c \"{}\"".format(
+                        command.replace('"', '\\"'))
 
             if 'identityfile' in host_config:
                 args['key_filename'] = host_config['identityfile'][0]
@@ -234,11 +242,19 @@ class RealRemoteOperations(RemoteOperations):
 
         # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
-            self._test_case.assertEqual(rc, expected_return_code, "rc (%s) != expected_return_code (%s), stdout: '%s', stderr: '%s'" % (rc, expected_return_code, stdout, stderr))
+            self._test_case.assertEqual(
+                rc, expected_return_code,
+                "rc (%s) != expected_return_code (%s), stdout: '%s', stderr: '%s'"
+                % (rc, expected_return_code, stdout, stderr))
 
         return Shell.RunResult(rc, stdout, stderr, timeout=False)
 
-    def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
+    def _ssh_fqdn(self,
+                  fqdn,
+                  command,
+                  expected_return_code=0,
+                  timeout=TEST_TIMEOUT,
+                  buffer=None):
         address = None
         for host in config['lustre_servers']:
             if host['fqdn'] == fqdn:
@@ -246,7 +262,8 @@ class RealRemoteOperations(RemoteOperations):
         if address is None:
             raise KeyError(fqdn)
 
-        return self._ssh_address(address, command, expected_return_code, timeout, buffer)
+        return self._ssh_address(address, command, expected_return_code,
+                                 timeout, buffer)
 
     def format_block_device(self, fqdn, path, filesystem_type):
         commands = {
@@ -256,20 +273,23 @@ class RealRemoteOperations(RemoteOperations):
         try:
             command = commands[filesystem_type]
         except KeyError:
-            raise RuntimeError("Unknown filesystem type %s (known types are %s)" % (filesystem_type, commands.keys()))
+            raise RuntimeError(
+                "Unknown filesystem type %s (known types are %s)" %
+                (filesystem_type, commands.keys()))
 
         self._ssh_fqdn(fqdn, command)
 
     def stop_target(self, fqdn, ha_label):
-        return self._ssh_fqdn(fqdn, "chroma-agent stop_target --ha %s" % ha_label)
+        return self._ssh_fqdn(fqdn,
+                              "chroma-agent stop_target --ha %s" % ha_label)
 
     def start_target(self, fqdn, ha_label):
         self._ssh_fqdn(fqdn, "chroma-agent start_target --ha %s" % ha_label)
 
     def import_target(self, fqdn, type, path, pacemaker_ha_operation):
         self._ssh_fqdn(fqdn, "chroma-agent import_target --device_type %s "
-                             "--path %s --pacemaker_ha_operation %s" %
-                              (type, path, pacemaker_ha_operation))
+                       "--path %s --pacemaker_ha_operation %s" %
+                       (type, path, pacemaker_ha_operation))
 
     def stop_lnet(self, fqdn):
         self._ssh_fqdn(fqdn, "chroma-agent stop_lnet")
@@ -294,9 +314,10 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(fqdn, 'chroma-config restart')
 
     def run_iml_diagnostics(self, server, verbose):
-        return self._ssh_fqdn(server['fqdn'],
-                              "iml-diagnostics" + " --all-logs" if verbose else "",
-                              timeout=LONG_TEST_TIMEOUT)
+        return self._ssh_fqdn(
+            server['fqdn'],
+            "iml-diagnostics" + " --all-logs" if verbose else "",
+            timeout=LONG_TEST_TIMEOUT)
 
     def inject_log_message(self, fqdn, message):
         self._ssh_fqdn(fqdn, "logger \"%s\"" % message)
@@ -320,10 +341,12 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(address, 'rm -rf %s' % file_path)
 
     def copy_file(self, address, current_file_path, new_file_path):
-        self._ssh_address(address, 'cp %s %s' % (current_file_path, new_file_path))
+        self._ssh_address(address, 'cp %s %s' % (current_file_path,
+                                                 new_file_path))
 
     def file_exists(self, address, file_path):
-        return self._ssh_address(address, 'ls %s' % file_path, expected_return_code=None).rc == 0
+        return self._ssh_address(
+            address, 'ls %s' % file_path, expected_return_code=None).rc == 0
 
     def cibadmin(self, server, args, buffer=None):
         # -t 1 == time out after 1 sec. of no response
@@ -331,7 +354,8 @@ class RealRemoteOperations(RemoteOperations):
 
         tries = 300
         while tries > 0:
-            result = self._ssh_fqdn(server['fqdn'], cmd, expected_return_code=None, buffer=buffer)
+            result = self._ssh_fqdn(
+                server['fqdn'], cmd, expected_return_code=None, buffer=buffer)
 
             # retry on expected (i.e. waiting for dust to settle, etc.)
             # failures
@@ -345,11 +369,12 @@ class RealRemoteOperations(RemoteOperations):
 
     def backup_cib(self, server):
         backup = "/tmp/cib-backup-%s.xml" % server['nodename']
-        running_targets = self.get_pacemaker_targets(server, running = True)
+        running_targets = self.get_pacemaker_targets(server, running=True)
         for target in running_targets:
             self.stop_target(server['fqdn'], target)
 
-        self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
+        self._test_case.wait_until_true(
+            lambda: len(self.get_pacemaker_targets(server, running=True)) < 1)
 
         with open(backup, "w") as f:
             f.write(self.cibadmin(server, "--query").stdout)
@@ -359,79 +384,64 @@ class RealRemoteOperations(RemoteOperations):
     def restore_cib(self, server, start_targets):
         import xml.etree.ElementTree as xml
 
-        new_cib = xml.fromstring(open("/tmp/cib-backup-%s.xml" %
-                                      server['nodename']).read())
+        new_cib = xml.fromstring(
+            open("/tmp/cib-backup-%s.xml" % server['nodename']).read())
 
         # get the current admin_epoch
         current_cib = xml.fromstring(self.cibadmin(server, "--query").stdout)
 
-        new_cib.set('admin_epoch', str(int(current_cib.get('admin_epoch')) + 1))
+        new_cib.set('admin_epoch',
+                    str(int(current_cib.get('admin_epoch')) + 1))
         new_cib.set('epoch', "0")
 
-        self.cibadmin(server, "--replace --xml-pipe",
-                      buffer=xml.tostring(new_cib))
+        self.cibadmin(
+            server, "--replace --xml-pipe", buffer=xml.tostring(new_cib))
 
         for target in start_targets:
             self.start_target(server['fqdn'], target)
 
-        self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) == len(start_targets))
+        self._test_case.wait_until_true(
+            lambda: len(self.get_pacemaker_targets(server, running=True)) == len(start_targets)
+        )
 
     # HYD-2071: These two methods may no longer be useful after the API-side
     # work lands.
     def set_node_standby(self, server):
-        self._ssh_address(server['address'],
-                          "chroma-agent set_node_standby --node %s" % server['nodename'])
+        self._ssh_address(
+            server['address'],
+            "chroma-agent set_node_standby --node %s" % server['nodename'])
 
     def set_node_online(self, server):
-        self._ssh_address(server['address'],
-                          "chroma-agent set_node_online --node %s" % server['nodename'])
+        self._ssh_address(
+            server['address'],
+            "chroma-agent set_node_online --node %s" % server['nodename'])
 
     def mount_filesystem(self, client_address, filesystem):
         """
         Mounts a lustre filesystem on a specified client.
         """
-        self._ssh_address(
-            client_address,
-            "mkdir -p /mnt/%s" % filesystem['name']
-        )
+        self._ssh_address(client_address,
+                          "mkdir -p /mnt/%s" % filesystem['name'])
 
-        self._ssh_address(
-            client_address,
-            filesystem['mount_command']
-        )
+        self._ssh_address(client_address, filesystem['mount_command'])
 
-        result = self._ssh_address(
-            client_address,
-            'mount'
-        )
+        result = self._ssh_address(client_address, 'mount')
         self._test_case.assertRegexpMatches(
-            result.stdout,
-            " on /mnt/%s " % filesystem['name'])
+            result.stdout, " on /mnt/%s " % filesystem['name'])
 
     def _unmount_filesystem(self, client, filesystem_name):
         """
         Unmounts a lustre filesystem from the specified client if mounted.
         """
-        result = self._ssh_address(
-            client,
-            'mount'
-        )
+        result = self._ssh_address(client, 'mount')
         if re.search(" on /mnt/%s " % filesystem_name, result.stdout):
             logger.debug("Unmounting %s" % filesystem_name)
-            self._ssh_address(
-                client,
-                "umount /mnt/%s" % filesystem_name
-            )
-        result = self._ssh_address(
-            client,
-            'mount'
-        )
+            self._ssh_address(client, "umount /mnt/%s" % filesystem_name)
+        result = self._ssh_address(client, 'mount')
         mount_output = result.stdout
         logger.debug("`Mount`: %s" % mount_output)
         self._test_case.assertNotRegexpMatches(
-            mount_output,
-            " on /mnt/%s " % filesystem_name
-        )
+            mount_output, " on /mnt/%s " % filesystem_name)
 
     def unmount_filesystem(self, client_address, filesystem):
         """
@@ -443,25 +453,25 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(
             host['address'],
             'crm_resource -r %s -W' % ha_label,
-            timeout = 30  # shorter timeout since shouldn't take long and increases turnaround when there is a problem
+            timeout=
+            30  # shorter timeout since shouldn't take long and increases turnaround when there is a problem
         )
         resource_status = result.stdout
 
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
-        hostname = host['fqdn'] if self.distro_version(host) >= 7 else host['nodename']
+        hostname = host['fqdn'] if self.distro_version(host) >= 7 else host[
+            'nodename']
         result = self._ssh_address(
             host['address'],
-            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, hostname)
-        )
-        self._test_case.assertRegexpMatches(
-            result.stdout,
-            'value=0'
-        )
+            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' %
+            (ha_label, hostname))
+        self._test_case.assertRegexpMatches(result.stdout, 'value=0')
 
         # Check pacemaker thinks it's running on the right host.
-        expected_resource_status = "%s is running on: %s" % (ha_label, host['nodename'])
+        expected_resource_status = "%s is running on: %s" % (ha_label,
+                                                             host['nodename'])
 
         return bool(re.search(expected_resource_status, resource_status))
 
@@ -489,17 +499,20 @@ class RealRemoteOperations(RemoteOperations):
             result = self.cibadmin(host, '--query')
             configuration = xml.fromstring(result.stdout)
 
-            rsc_locations = configuration.findall('./configuration/constraints/rsc_location')
-            self._test_case.assertTrue(host_has_location(rsc_locations,
-                                                         host),
-                                       xml.tostring(configuration))
+            rsc_locations = configuration.findall(
+                './configuration/constraints/rsc_location')
+            self._test_case.assertTrue(
+                host_has_location(rsc_locations, host),
+                xml.tostring(configuration))
 
-            primatives = configuration.findall('./configuration/resources/primitive')
-            self._test_case.assertTrue(has_primitive(primatives,
-                                                     filesystem_name),
-                                       xml.tostring(configuration))
+            primatives = configuration.findall(
+                './configuration/resources/primitive')
+            self._test_case.assertTrue(
+                has_primitive(primatives, filesystem_name),
+                xml.tostring(configuration))
 
-    def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
+    def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index,
+                                files_to_create):
         """
         Verify we can actually exercise a filesystem on a specific mdt.
 
@@ -509,13 +522,15 @@ class RealRemoteOperations(RemoteOperations):
         # TODO: Expand on entire function. Perhaps use existing lustre client tests.
 
         if not filesystem.get('bytes_free'):
-            self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free'))
+            self._test_case.wait_until_true(
+                lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free')
+            )
             filesystem = self._test_case.get_filesystem(filesystem['id'])
 
         bytes_free = filesystem.get('bytes_free')
         assert bytes_free > 0, "Expected bytes_free to be > 0"
-        logger.debug("exercise_filesystem: API reports %s has %s bytes free"
-                     % (filesystem['name'], bytes_free))
+        logger.debug("exercise_filesystem: API reports %s has %s bytes free" %
+                     (filesystem['name'], bytes_free))
 
         test_root = '/mnt/%s/mdt%s' % (filesystem['name'], mdt_index)
 
@@ -523,34 +538,40 @@ class RealRemoteOperations(RemoteOperations):
             self._ssh_address(client_address,
                               "lfs mkdir -i %s %s" % (mdt_index, test_root))
         else:
-            self._ssh_address(client_address,
-                              "mkdir -p %s" % test_root)
+            self._ssh_address(client_address, "mkdir -p %s" % test_root)
 
-        def actual_exercise(client_address, test_root, file_no, bytes_to_write):
-            self._ssh_address(client_address,
-                              "mkdir -p %s/%s" % (test_root, file_no))
+        def actual_exercise(client_address, test_root, file_no,
+                            bytes_to_write):
+            self._ssh_address(client_address, "mkdir -p %s/%s" % (test_root,
+                                                                  file_no))
 
-            self._ssh_address(client_address,
-                              "dd if=/dev/zero of=%s/%s/exercisetest-%s.dat bs=1000 count=%s" % (test_root,
-                                                                                                 file_no,
-                                                                                                 file_no,
-                                                                                                 bytes_to_write))
+            self._ssh_address(
+                client_address,
+                "dd if=/dev/zero of=%s/%s/exercisetest-%s.dat bs=1000 count=%s"
+                % (test_root, file_no, file_no, bytes_to_write))
 
         threads = []
 
         for file_no in range(0, files_to_create):
-            thread = ExceptionThrowingThread(target=actual_exercise,
-                                             args=(client_address, test_root, file_no, min((bytes_free * 0.4), 512000) / 1000),
-                                             use_threads=False)
+            thread = ExceptionThrowingThread(
+                target=actual_exercise,
+                args=(client_address, test_root, file_no,
+                      min((bytes_free * 0.4), 512000) / 1000),
+                use_threads=False)
             thread.start()
             threads.append(thread)
 
-        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+        ExceptionThrowingThread.wait_for_threads(
+            threads
+        )  # This will raise an exception if any of the threads raise an exception
 
-        self._ssh_address(client_address,
-                          "rm -rf %s" % test_root)
+        self._ssh_address(client_address, "rm -rf %s" % test_root)
 
-    def exercise_filesystem(self, client_address, filesystem, mdt_indexes = [0], no_of_files_per_mdt = None):
+    def exercise_filesystem(self,
+                            client_address,
+                            filesystem,
+                            mdt_indexes=[0],
+                            no_of_files_per_mdt=None):
         """
         Verify we can actually exercise a filesystem.
 
@@ -564,13 +585,17 @@ class RealRemoteOperations(RemoteOperations):
         threads = []
 
         for index, mdt_index in enumerate(mdt_indexes):
-            thread = ExceptionThrowingThread(target = self.exercise_filesystem_mdt,
-                                             args = (client_address, filesystem, mdt_index, no_of_files_per_mdt[index]))
+            thread = ExceptionThrowingThread(
+                target=self.exercise_filesystem_mdt,
+                args=(client_address, filesystem, mdt_index,
+                      no_of_files_per_mdt[index]))
 
             thread.start()
             threads.append(thread)
 
-        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+        ExceptionThrowingThread.wait_for_threads(
+            threads
+        )  # This will raise an exception if any of the threads raise an exception
 
     def _fqdn_to_server_config(self, fqdn):
         for server in config['lustre_servers']:
@@ -585,8 +610,7 @@ class RealRemoteOperations(RemoteOperations):
             result = self._ssh_address(
                 address,
                 "echo 'Checking if node is ready to receive commands.'",
-                expected_return_code=None
-            )
+                expected_return_code=None)
 
         except socket.error:
             logger.debug("Unknown socket error when checking %s" % address)
@@ -595,15 +619,18 @@ class RealRemoteOperations(RemoteOperations):
             logger.debug("Auth error when checking %s: %s" % (address, e))
             return False
         except paramiko.SSHException, e:
-            logger.debug("General SSH error when checking %s: %s" % (address, e))
+            logger.debug("General SSH error when checking %s: %s" % (address,
+                                                                     e))
             return False
         except EOFError:
-            logger.debug("Connection unexpectedly killed while checking %s" % address)
+            logger.debug(
+                "Connection unexpectedly killed while checking %s" % address)
             return False
 
         if not result.rc == 0:
             # Wait, what?  echo returned !0?  How is that possible?
-            logger.debug("exit status %d from echo on %s: inconceivable!" % (result.rc, address))
+            logger.debug("exit status %d from echo on %s: inconceivable!" %
+                         (result.rc, address))
             return False
 
         return True
@@ -630,17 +657,18 @@ class RealRemoteOperations(RemoteOperations):
             result = self._ssh_address(
                 server_config['host'],
                 reset_cmd,
-                ssh_key_file = server_config.get('ssh_key_file', None)
-            )
+                ssh_key_file=server_config.get('ssh_key_file', None))
             node_status = result.stdout
             if re.search('was reset', node_status):
                 logger.info("%s reset successfully" % fqdn)
         else:
-            self._ssh_address(server_config['address'],
-                              '''
+            self._ssh_address(
+                server_config['address'],
+                '''
                               echo 1 > /proc/sys/kernel/sysrq;
                               echo b > /proc/sysrq-trigger
-                              ''', expected_return_code = -1)
+                              ''',
+                expected_return_code=-1)
 
     def kill_server(self, fqdn):
         # "Pull the plug" on host
@@ -648,8 +676,8 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_address(
             server_config['host'],
             server_config['destroy_command'],
-            as_root=self._host_of_server(server_config).get('virsh_as_root', True)
-        )
+            as_root=self._host_of_server(server_config).get(
+                'virsh_as_root', True))
 
         i = 0
         last_secs_up = 0
@@ -665,7 +693,9 @@ class RealRemoteOperations(RemoteOperations):
             i += 1
             time.sleep(1)
             if i > TEST_TIMEOUT:
-                raise RuntimeError("Host %s didn't terminate within %s seconds" % (fqdn, TEST_TIMEOUT))
+                raise RuntimeError(
+                    "Host %s didn't terminate within %s seconds" %
+                    (fqdn, TEST_TIMEOUT))
 
     def start_server(self, fqdn):
         boot_server = self._fqdn_to_server_config(fqdn)
@@ -673,21 +703,23 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(
             boot_server['host'],
             boot_server['start_command'],
-            as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
-        )
+            as_root=self._host_of_server(boot_server).get(
+                'virsh_as_root', True))
         node_status = result.stdout
         if re.search('started', node_status):
             logger.info("%s started successfully" % fqdn)
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = False):
+    def await_server_boot(self, boot_fqdn, monitor_fqdn=None, restart=False):
         """
         Wait for the stonithed server to come back online
         """
         boot_server = self._fqdn_to_server_config(boot_fqdn)
-        monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
+        monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(
+            monitor_fqdn)
         restart_attempted = False
 
-        hostname = boot_server['fqdn'] if self.distro_version(boot_server) >= 7 else boot_server['nodename']
+        hostname = boot_server['fqdn'] if self.distro_version(
+            boot_server) >= 7 else boot_server['nodename']
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
@@ -696,17 +728,17 @@ class RealRemoteOperations(RemoteOperations):
                 # drop out here
                 if monitor_server:
                     # Verify other host knows it is no longer offline
-                    result = self._ssh_address(
-                        monitor_server['address'],
-                        "crm_mon -1"
-                    )
+                    result = self._ssh_address(monitor_server['address'],
+                                               "crm_mon -1")
                     node_status = result.stdout
 
-                    logger.info("Response running crm_mon -1 on %s:  %s" % (hostname, node_status))
+                    logger.info("Response running crm_mon -1 on %s:  %s" %
+                                (hostname, node_status))
                     err = result.stderr
                     if err:
                         logger.error("    result.stderr:  %s" % err)
-                    if re.search('Online: \[.* %s .*\]' % hostname, node_status):
+                    if re.search('Online: \[.* %s .*\]' % hostname,
+                                 node_status):
                         break
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
@@ -718,11 +750,12 @@ class RealRemoteOperations(RemoteOperations):
                     result = self._ssh_address(
                         boot_server['host'],
                         boot_server['status_command'],
-                        as_root=self._host_of_server(boot_server).get('virsh_as_root', True)
-                    )
+                        as_root=self._host_of_server(boot_server).get(
+                            'virsh_as_root', True))
                     node_status = result.stdout
                     if re.search('running', node_status):
-                        logger.info("%s seems to be running, but unresponsive" % boot_fqdn)
+                        logger.info("%s seems to be running, but unresponsive"
+                                    % boot_fqdn)
                         self.kill_server(boot_fqdn)
                     self.start_server(boot_fqdn)
                     restart_attempted = True
@@ -731,37 +764,33 @@ class RealRemoteOperations(RemoteOperations):
             running_time += 3
 
         if running_time >= TEST_TIMEOUT:
-            host_alive = self._ssh_address(boot_server['address'],
-                                           "hostname",
-                                           expected_return_code=None).rc == 0
+            host_alive = self._ssh_address(
+                boot_server['address'], "hostname",
+                expected_return_code=None).rc == 0
 
-            self._test_case.assertTrue(False,
-                                       "Timed out waiting for host %s to come back online.\n"
-                                       "Host is actually alive %s" % (hostname, host_alive))
+            self._test_case.assertTrue(
+                False, "Timed out waiting for host %s to come back online.\n"
+                "Host is actually alive %s" % (hostname, host_alive))
 
         if monitor_server:
-            result = self._ssh_address(
-                monitor_server['address'],
-                "crm_mon -1"
-            )
-            self._test_case.assertRegexpMatches(result.stdout,
-                                                'Online: \[.* %s .*\]' %
-                                                hostname)
+            result = self._ssh_address(monitor_server['address'], "crm_mon -1")
+            self._test_case.assertRegexpMatches(
+                result.stdout, 'Online: \[.* %s .*\]' % hostname)
 
     def unmount_clients(self):
         """
         Unmount all filesystems of type lustre from all clients in the config.
         """
         for client in config['lustre_clients']:
-            self._ssh_address(client['address'],
-                              'umount -t lustre -a')
+            self._ssh_address(client['address'], 'umount -t lustre -a')
             self._ssh_address(client['address'],
                               'sed -i \'/lustre/d\' /etc/fstab')
-            if client not in [server['address'] for server in config['lustre_servers']]:
+            if client not in [
+                    server['address'] for server in config['lustre_servers']
+            ]:
                 # Skip this check if the client is also a server, because
                 # both targets and clients look like 'lustre' mounts
-                result = self._ssh_address(client['address'],
-                                           'mount')
+                result = self._ssh_address(client['address'], 'mount')
                 self._test_case.assertNotRegexpMatches(result.stdout,
                                                        " type lustre")
 
@@ -774,15 +803,18 @@ class RealRemoteOperations(RemoteOperations):
         """
         try:
             result = self._ssh_address(server['address'],
-                              'umount -t lustre -a')
-            logger.info("Unmounting Lustre on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
-                        (server['nodename'], result.rc, result.stdout, result.stderr))
+                                       'umount -t lustre -a')
+            logger.info(
+                "Unmounting Lustre on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
+                % (server['nodename'], result.rc, result.stdout,
+                   result.stderr))
         except socket.timeout:
             # Uh-oh.  Something bad is happening with Lustre.  Let's see if
             # we can gather some information for the LU team.
-            logger.info("Unmounting Lustre on %s timed out.  Going to try to gather debug information." % server['nodename'])
-            self._ssh_address(server['address'],
-                              '''set -ex
+            logger.info(
+                "Unmounting Lustre on %s timed out.  Going to try to gather debug information."
+                % server['nodename'])
+            self._ssh_address(server['address'], '''set -ex
                               echo 1 > /proc/sys/kernel/sysrq
                               echo 8 > /proc/sysrq-trigger
                               echo t > /proc/sysrq-trigger
@@ -794,14 +826,19 @@ class RealRemoteOperations(RemoteOperations):
                                "Make sure to add it to an existing ticket or "
                                "create a new one." % server['nodename'])
         if result.rc != 0:
-            logger.info("Unmounting Lustre on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
-                        (server['nodename'], result.rc, result.stdout, result.stderr))
-            raise RuntimeError("Failed to unmount lustre on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
-                               (server, result.rc, result.stdout, result.stderr))
+            logger.info(
+                "Unmounting Lustre on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
+                % (server['nodename'], result.rc, result.stdout,
+                   result.stderr))
+            raise RuntimeError(
+                "Failed to unmount lustre on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
+                % (server, result.rc, result.stdout, result.stderr))
 
     def is_worker(self, server):
-        workers = [w['address'] for w in
-                   config['lustre_servers'] if 'worker' in w.get('profile', "")]
+        workers = [
+            w['address'] for w in config['lustre_servers']
+            if 'worker' in w.get('profile', "")
+        ]
         return server['address'] in workers
 
     @property
@@ -810,21 +847,15 @@ class RealRemoteOperations(RemoteOperations):
 
     def has_pacemaker(self, server):
         result = self._ssh_address(
-            server['address'],
-            'which crmadmin',
-            expected_return_code = None
-        )
+            server['address'], 'which crmadmin', expected_return_code=None)
         return result.rc == 0
 
-    def get_pacemaker_targets(self, server, running = False):
+    def get_pacemaker_targets(self, server, running=False):
         """
         Returns a list of chroma targets configured in pacemaker on a server.
         :param running: Restrict the returned list only to running targets.
         """
-        result = self._ssh_address(
-            server['address'],
-            'crm_resource -L'
-        )
+        result = self._ssh_address(server['address'], 'crm_resource -L')
         crm_resources = result.stdout.split('\n')
         targets = []
         for r in crm_resources:
@@ -839,16 +870,15 @@ class RealRemoteOperations(RemoteOperations):
         return targets
 
     def is_pacemaker_target_running(self, server, target):
-        result = self._ssh_address(
-            server['address'],
-            "crm_resource -r %s -W" % target
-
-        )
+        result = self._ssh_address(server['address'],
+                                   "crm_resource -r %s -W" % target)
         return re.search('is running', result.stdout)
 
     def get_fence_nodes_list(self, address, ignore_failure=False):
-        result = self._ssh_address(address, "fence_chroma -o list",
-                                   expected_return_code=None if ignore_failure else 0)
+        result = self._ssh_address(
+            address,
+            "fence_chroma -o list",
+            expected_return_code=None if ignore_failure else 0)
 
         if result.rc != 0:
             logger.debug("fence_chroma stderr: %s" % result.stderr)
@@ -859,7 +889,9 @@ class RealRemoteOperations(RemoteOperations):
         # host2,\n
         # ...
         # List is fqdns on el7, short names on el6, normalised to always contain fqdns
-        return [socket.getfqdn(node) for node in result.stdout.split(',\n') if node]
+        return [
+            socket.getfqdn(node) for node in result.stdout.split(',\n') if node
+        ]
 
     def remove_config(self, server_list):
         """
@@ -892,8 +924,7 @@ class RealRemoteOperations(RemoteOperations):
                 self._ssh_address(
                     server['address'],
                     'cat > /etc/chroma.cfg',
-                    buffer = cfg_str.getvalue()
-                )
+                    buffer=cfg_str.getvalue())
 
         self.sync_disks([s['address'] for s in server_list])
 
@@ -907,22 +938,19 @@ class RealRemoteOperations(RemoteOperations):
             self._ssh_address(server, 'sync; sync')
 
     def has_chroma_agent(self, server):
-        result = self._ssh_address(server,
-                                   'which chroma-agent',
-                                   expected_return_code = None)
+        result = self._ssh_address(
+            server, 'which chroma-agent', expected_return_code=None)
         return result.rc == 0
 
     def stop_agents(self, server_list):
         for server in server_list:
             if self.has_chroma_agent(server):
-                self._ssh_address(
-                    server,
-                    stop_agent_cmd
-                )
+                self._ssh_address(server, stop_agent_cmd)
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, 'systemctl start chroma-agent')
+            self._ssh_address(server,
+                              'systemctl start iml-storage-server.target')
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -944,31 +972,44 @@ class RealRemoteOperations(RemoteOperations):
             address = server['address']
 
             if self.is_worker(server):
-                logger.info("%s is configured as a worker -- skipping." % server['address'])
+                logger.info("%s is configured as a worker -- skipping." %
+                            server['address'])
                 continue
 
             if self.has_pacemaker(server):
-                firewall = RemoteFirewallControl.create(address, self._ssh_address_no_check)
+                firewall = RemoteFirewallControl.create(
+                    address, self._ssh_address_no_check)
 
                 if config.get('pacemaker_hard_reset', False):
-                    clear_ha_script_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                        "clear_ha_el%s.sh" % re.search('\d', server['distro']).group(0))
+                    clear_ha_script_file = os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)),
+                        "clear_ha_el%s.sh" % re.search(
+                            '\d', server['distro']).group(0))
 
                     with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        result = self._ssh_address(address, "ring1_iface=%s\n%s" %
-                                                   (server['corosync_config']['ring1_iface'],
-                                                    clear_ha_script.read()))
-                        logger.info("clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s" %
-                        (server['nodename'], result.rc, result.stdout, result.stderr))
+                        result = self._ssh_address(
+                            address, "ring1_iface=%s\n%s" %
+                            (server['corosync_config']['ring1_iface'],
+                             clear_ha_script.read()))
+                        logger.info(
+                            "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
+                            % (server['nodename'], result.rc, result.stdout,
+                               result.stderr))
 
                         if result.rc != 0:
-                            logger.info("clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s" %
-                                        (server['nodename'], result.rc, result.stdout, result.stderr))
-                            raise RuntimeError("Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s" %
-                                               (server, result.rc, result.stdout, result.stderr))
+                            logger.info(
+                                "clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
+                                % (server['nodename'], result.rc,
+                                   result.stdout, result.stderr))
+                            raise RuntimeError(
+                                "Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
+                                % (server, result.rc, result.stdout,
+                                   result.stderr))
 
-                    self._ssh_address(address, firewall.remote_add_port_cmd(22, 'tcp'))
-                    self._ssh_address(address, firewall.remote_add_port_cmd(988, 'tcp'))
+                    self._ssh_address(address,
+                                      firewall.remote_add_port_cmd(22, 'tcp'))
+                    self._ssh_address(address,
+                                      firewall.remote_add_port_cmd(988, 'tcp'))
 
                     self.unmount_lustre_targets(server)
                 else:
@@ -976,39 +1017,45 @@ class RealRemoteOperations(RemoteOperations):
 
                     # Stop targets and delete targets
                     for target in crm_targets:
-                        self._ssh_address(address, 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
+                        self._ssh_address(
+                            address,
+                            'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped'
+                            % target)
                     for target in crm_targets:
                         self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                        self._ssh_address(address, 'pcs resource delete %s' % target)
-                        self._ssh_address(address, 'crm_resource -C -r %s' % target)
+                        self._ssh_address(address,
+                                          'pcs resource delete %s' % target)
+                        self._ssh_address(address,
+                                          'crm_resource -C -r %s' % target)
 
                     # Verify no more targets
-                    self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+                    self._test_case.wait_until_true(
+                        lambda: not self.get_pacemaker_targets(server))
 
                     # remove firewall rules previously added for corosync
                     mcast_port = self.get_corosync_port(server['fqdn'])
                     if mcast_port:
-                        self._ssh_address(
-                            address,
-                            firewall.remote_remove_port_cmd(mcast_port, 'udp')
-                        )
+                        self._ssh_address(address,
+                                          firewall.remote_remove_port_cmd(
+                                              mcast_port, 'udp'))
 
-                rpm_q_result = self._ssh_address(address, "rpm -q chroma-agent", expected_return_code=None)
+                rpm_q_result = self._ssh_address(
+                    address, "rpm -q chroma-agent", expected_return_code=None)
                 if rpm_q_result.rc == 0:
                     # Stop the agent
-                    self._ssh_address(
-                        address,
-                        'systemctl stop chroma-agent'
-                    )
+                    self._ssh_address(address, 'systemctl stop chroma-agent')
                     self._ssh_address(
                         address,
                         '''
                         rm -rf /var/lib/chroma/*;
                         ''',
-                        expected_return_code = None  # Keep going if it failed - may be none there.
+                        expected_return_code=
+                        None  # Keep going if it failed - may be none there.
                     )
             else:
-                logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % address)
+                logger.info(
+                    "%s does not appear to have pacemaker - skipping any removal of targets."
+                    % address)
 
     def clear_lnet_config(self, server_list):
         """
@@ -1019,18 +1066,20 @@ class RealRemoteOperations(RemoteOperations):
         # to at most an extra reboot cycle per test session.
         # Note the sleep ensures the reboot really happens otherwise it might look alive in the await_server_boot
         for server in server_list:
-            self._ssh_address(server['address'],
-                              '''
+            self._ssh_address(
+                server['address'],
+                '''
                               [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
                               rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
                               reboot &&
                               sleep 20
                               ''',
-                              expected_return_code=None)              # Keep going if it failed - may be none there.
+                expected_return_code=None
+            )  # Keep going if it failed - may be none there.
 
         # Now ensure they have all comeback to life
         for server in server_list:
-            self.await_server_boot(server['fqdn'], restart = True)
+            self.await_server_boot(server['fqdn'], restart=True)
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
@@ -1043,8 +1092,9 @@ class RealRemoteOperations(RemoteOperations):
 
     def get_corosync_port(self, fqdn):
         mcast_port = None
-        for line in self._ssh_address(fqdn,
-                                      "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
+        for line in self._ssh_address(
+                fqdn,
+                "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
                 mcast_port = match.group(1)
@@ -1053,12 +1103,14 @@ class RealRemoteOperations(RemoteOperations):
         return int(mcast_port) if mcast_port is not None else None
 
     def grep_file(self, server, string, file):
-        result = self._ssh_address(server['address'], "grep -e \"%s\" %s || true" %
-                                   (string, file)).stdout
+        result = self._ssh_address(server['address'],
+                                   "grep -e \"%s\" %s || true" % (string,
+                                                                  file)).stdout
         return result
 
     def get_file_content(self, server, file):
-        result = self._ssh_address(server['address'], "cat \"%s\" || true" % file).stdout
+        result = self._ssh_address(server['address'],
+                                   "cat \"%s\" || true" % file).stdout
         return result
 
     def enable_agent_debug(self, server_list):
@@ -1072,16 +1124,18 @@ class RealRemoteOperations(RemoteOperations):
                               "rm -f /tmp/chroma-agent-debug")
 
     def omping(self, server, servers, count=5, timeout=30):
-        firewall = RemoteFirewallControl.create(server['address'], self._ssh_address_no_check)
+        firewall = RemoteFirewallControl.create(server['address'],
+                                                self._ssh_address_no_check)
 
-        self._ssh_address(server['address'], firewall.remote_add_port_cmd(4321, 'udp'))
+        self._ssh_address(server['address'],
+                          firewall.remote_add_port_cmd(4321, 'udp'))
 
-        result = self._ssh_address(server['address'],
-                                   'exec 2>&1; omping -T %s -c %s %s' % (timeout,
-                                                                         count,
-                                                                         " ".join([s['nodename'] for s in servers])))
+        result = self._ssh_address(
+            server['address'], 'exec 2>&1; omping -T %s -c %s %s' %
+            (timeout, count, " ".join([s['nodename'] for s in servers])))
 
-        self._ssh_address(server['address'], firewall.remote_remove_port_cmd(4321, 'udp'))
+        self._ssh_address(server['address'],
+                          firewall.remote_remove_port_cmd(4321, 'udp'))
 
         return result.stdout
 
@@ -1095,10 +1149,8 @@ class RealRemoteOperations(RemoteOperations):
         return stdout
 
     def get_chroma_repos(self):
-        result = self._ssh_address(
-            config['chroma_managers'][0]['address'],
-            "ls /var/lib/chroma/repo/"
-        )
+        result = self._ssh_address(config['chroma_managers'][0]['address'],
+                                   "ls /var/lib/chroma/repo/")
         return result.stdout.split()
 
     def check_time_within_range(self, first_dt, second_dt, minutes):
@@ -1112,16 +1164,20 @@ class RealRemoteOperations(RemoteOperations):
         """return datetime.datetime from UTC date on client"""
         _date_get_format = '%Y:%m:%d:%H:%M'
 
-        time_string = self._ssh_address(client_address, 'date -u +%s' % _date_get_format).stdout.strip('\n')
+        time_string = self._ssh_address(
+            client_address,
+            'date -u +%s' % _date_get_format).stdout.strip('\n')
 
         # create datetime.datetime from linux date utility shell output
-        return datetime.datetime(*[int(element) for element in time_string.split(':')])
+        return datetime.datetime(
+            *[int(element) for element in time_string.split(':')])
 
     def set_server_time(self, client_address, new_datetime):
         """set client date & time with date utility, use utility defined format"""
         _date_set_format = '%Y%m%d %H:%M'
 
         time_string = new_datetime.strftime(_date_set_format)
-        result = self._ssh_address(client_address, 'date -u --set="%s"' % time_string)
+        result = self._ssh_address(client_address,
+                                   'date -u --set="%s"' % time_string)
 
         return result
