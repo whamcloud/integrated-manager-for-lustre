@@ -38,8 +38,8 @@ $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_confi
 
 setup_rc=0
 test_run_rc=0
-for dne in true false; do
-    for test_ha in true false; do
+for dne in false true; do
+    for test_ha in false true; do
         if $test_ha; then
             device_types_to_test=(linux)
         else

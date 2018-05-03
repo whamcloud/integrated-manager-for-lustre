@@ -1,28 +1,20 @@
-import datetime
-import os
-import requests
-import shutil
-import sys
-import platform
-import tempfile
-
 import logging
-import time
+import os
+import platform
 import re
+import time
 
+import requests
 from testconfig import config
 
-from tests.utils.http_requests import HttpRequests
-from tests.utils.http_requests import AuthorizedHttpRequests
-
 from iml_common.lib import util
-
-from tests.integration.core.remote_operations import RealRemoteOperations
-
-from tests.integration.core.utility_testcase import UtilityTestCase
-from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.remote_operations import RealRemoteOperations
+from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
+from tests.utils.http_requests import AuthorizedHttpRequests
+from tests.utils.http_requests import HttpRequests
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -62,18 +54,23 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         self.remote_operations = RealRemoteOperations(self)
 
-        storage_servers = [s for s in self.TEST_SERVERS
-                           if 'worker' not in s.get('profile', "")]
+        storage_servers = [
+            s for s in self.TEST_SERVERS
+            if 'worker' not in s.get('profile', "")
+        ]
         if self.quick_setup is False:
             # Ensure that all servers are up and available
             for server in storage_servers:
-                logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
-                self.remote_operations.await_server_boot(server['fqdn'], restart = True)
+                logger.info(
+                    "Checking that %s is running and restarting if necessary..."
+                    % server['fqdn'])
+                self.remote_operations.await_server_boot(
+                    server['fqdn'], restart=True)
                 logger.info("%s is running" % server['fqdn'])
-                self.remote_operations.inject_log_message(server['fqdn'],
-                                                          "==== "
-                                                          "starting test %s "
-                                                          "=====" % self)
+                self.remote_operations.inject_log_message(
+                    server['fqdn'], "==== "
+                    "starting test %s "
+                    "=====" % self)
 
             if config.get('reset', True):
                 self.reset_cluster()
@@ -104,7 +101,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
 
         self.wait_until_true(self.supervisor_controlled_processes_running)
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
+        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times(
+        )
 
     def tearDown(self):
         # TODO: move all of the (rest of the) "post-test cleanup" that is
@@ -112,9 +110,10 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if config.get('managed'):
             self.remote_operations.unmount_clients()
             # stop any running filesystems
-            for filesystem in [f for f in
-                               self.get_list("/api/filesystem/")
-                               if f['state'] == "available"]:
+            for filesystem in [
+                    f for f in self.get_list("/api/filesystem/")
+                    if f['state'] == "available"
+            ]:
                 logger.debug("stopping filesystem %s" % filesystem)
                 self.stop_filesystem(filesystem['id'])
         else:
@@ -122,49 +121,64 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 # Check that all servers are up and available after the test
                 down_nodes = []
                 for server in self.TEST_SERVERS:
-                    if not self.remote_operations.host_contactable(server['address']):
+                    if not self.remote_operations.host_contactable(
+                            server['address']):
                         down_nodes.append(server['address'])
                     else:
-                        self.remote_operations.inject_log_message(server['fqdn'],
-                                                                  "==== stopping test %s =====" % self)
+                        self.remote_operations.inject_log_message(
+                            server['fqdn'],
+                            "==== stopping test %s =====" % self)
 
                 if len(down_nodes) and (self.down_node_expected is False):
-                    logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
-                    raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+                    logger.warning(
+                        "After test, some servers were no longer running: %s" %
+                        ", ".join(down_nodes))
+                    raise RuntimeError(
+                        "AWOL servers after test: %s" % ", ".join(down_nodes))
 
         self.assertTrue(self.supervisor_controlled_processes_running())
-        self.assertEqual(self.initial_supervisor_controlled_process_start_times,
-                         self.get_supervisor_controlled_process_start_times())
+        self.assertEqual(
+            self.initial_supervisor_controlled_process_start_times,
+            self.get_supervisor_controlled_process_start_times())
 
     @property
     def config_servers(self):
-        return [s for s in config['lustre_servers']
-                if 'worker' not in s.get('profile', "")]
+        return [
+            s for s in config['lustre_servers']
+            if 'worker' not in s.get('profile', "")
+        ]
 
     @property
     def config_workers(self):
-        return [w for w in config['lustre_servers']
-                if 'worker' in w.get('profile', "")]
+        return [
+            w for w in config['lustre_servers']
+            if 'worker' in w.get('profile', "")
+        ]
 
     @property
     def chroma_manager(self):
         if self._chroma_manager is None:
             user = config['chroma_managers'][0]['users'][0]
-            self._chroma_manager = AuthorizedHttpRequests(user['username'],
-                                                          user['password'],
-                                                          server_http_url=config['chroma_managers'][0]['server_http_url'])
+            self._chroma_manager = AuthorizedHttpRequests(
+                user['username'],
+                user['password'],
+                server_http_url=config['chroma_managers'][0][
+                    'server_http_url'])
         return self._chroma_manager
 
     @property
     def unauthorized_chroma_manager(self):
         if self._unauthorized_chroma_manager is None:
-            self._unauthorized_chroma_manager = HttpRequests(server_http_url=config['chroma_managers'][0]['server_http_url'])
+            self._unauthorized_chroma_manager = HttpRequests(
+                server_http_url=config['chroma_managers'][0][
+                    'server_http_url'])
         return self._unauthorized_chroma_manager
 
     def restart_chroma_manager(self, fqdn):
         self.remote_operations.restart_chroma_manager(fqdn)
         # Process start times will be outdated after restarting chroma-manager so must update start times
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
+        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times(
+        )
 
     def api_contactable(self):
         try:
@@ -189,7 +203,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 non_running_processes.append(process)
 
         if non_running_processes:
-            logger.warning("Supervisor processes found not to be running: '%s'" % non_running_processes)
+            logger.warning("Supervisor processes found not to be running: '%s'"
+                           % non_running_processes)
             return False
         else:
             return True
@@ -200,7 +215,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         system_status = response.json
         supervisor_controlled_process_start_times = {}
         for process in system_status['supervisor']:
-            supervisor_controlled_process_start_times[process['name']] = process['start']
+            supervisor_controlled_process_start_times[process[
+                'name']] = process['start']
         return supervisor_controlled_process_start_times
 
     def _print_command(self, command, disposition, msg):
@@ -216,7 +232,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             job_steps = [self.get_json_by_uri(s) for s in job['steps']]
             if disposition == "FAILED":
                 if job['errored']:
-                    print "Job %s Errored (%s):" % (job['id'], job['description'])
+                    print "Job %s Errored (%s):" % (job['id'],
+                                                    job['description'])
                     print job
                     print ''
                     for step in job_steps:
@@ -240,8 +257,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 for step in job_steps:
                     print step
 
-    def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True, test_for_eventual_completion=True, msg=None):
-        logger.debug("wait_for_command: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
+    def wait_for_command(self,
+                         chroma_manager,
+                         command_id,
+                         timeout=TEST_TIMEOUT,
+                         verify_successful=True,
+                         test_for_eventual_completion=True,
+                         msg=None):
+        logger.debug("wait_for_command: %s" % self.get_json_by_uri(
+            '/api/command/%s/' % command_id))
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
@@ -260,8 +284,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if test_for_eventual_completion:
                 retry_time = time.time()
                 # If it fails the second time this will throw an exception and never return.
-                self._print_command(self.wait_for_command(chroma_manager, command_id, timeout=timeout, verify_successful=verify_successful, test_for_eventual_completion=False),
-                                    "COMPLETED %s SECONDS AFTER TIMEOUT" % int(time.time() - retry_time), None)
+                self._print_command(
+                    self.wait_for_command(
+                        chroma_manager,
+                        command_id,
+                        timeout=timeout,
+                        verify_successful=verify_successful,
+                        test_for_eventual_completion=False),
+                    "COMPLETED %s SECONDS AFTER TIMEOUT" %
+                    int(time.time() - retry_time), None)
         else:
             logger.debug("command for %s complete: %s" % (msg, command))
 
@@ -269,28 +300,46 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if verify_successful and (command['errored'] or command['cancelled']):
             self._print_command(command, "FAILED", msg)
 
-            self.assertFalse(command['errored'] or command['cancelled'], command)
+            self.assertFalse(command['errored'] or command['cancelled'],
+                             command)
 
         return command
 
-    def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT, verify_successful = True):
-        assert type(chroma_manager) is AuthorizedHttpRequests, "chroma_manager is not an AuthorizedHttpRequests: %s" % chroma_manager
-        assert type(command_ids) is list, "command_ids is not an int: %s" % type(command_ids)
-        assert type(timeout) is int, "timeout is not an int: %s" % type(timeout)
-        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+    def wait_for_commands(self,
+                          chroma_manager,
+                          command_ids,
+                          timeout=TEST_TIMEOUT,
+                          verify_successful=True):
+        assert type(
+            chroma_manager
+        ) is AuthorizedHttpRequests, "chroma_manager is not an AuthorizedHttpRequests: %s" % chroma_manager
+        assert type(
+            command_ids) is list, "command_ids is not an int: %s" % type(
+                command_ids)
+        assert type(timeout) is int, "timeout is not an int: %s" % type(
+            timeout)
+        assert type(verify_successful
+                    ) is bool, "verify_successful is not a bool: %s" % type(
+                        verify_successful)
 
         for command_id in command_ids:
-            self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
+            self.wait_for_command(chroma_manager, command_id, timeout,
+                                  verify_successful)
 
-    def wait_last_command_complete(self, timeout=TEST_TIMEOUT, verify_successful=True):
+    def wait_last_command_complete(self,
+                                   timeout=TEST_TIMEOUT,
+                                   verify_successful=True):
         '''
         This actually waits for all commands to be complete and then verifies that the last command completed successfully
         :param timeout: Time to wait for commands to complete
         :param verify_successful: True if we should verify the last command completed OK.
         :return: No return value
         '''
-        assert type(timeout) is int, "timeout is not an int: %s" % type(timeout)
-        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+        assert type(timeout) is int, "timeout is not an int: %s" % type(
+            timeout)
+        assert type(verify_successful
+                    ) is bool, "verify_successful is not a bool: %s" % type(
+                        verify_successful)
 
         self.wait_for_assert(lambda: self.assertEqual(0,
                                                       len(self.get_json_by_uri('/api/command/', args={'complete': False})['objects'])),
@@ -298,15 +347,20 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         if verify_successful:
             response = self.get_json_by_uri('/api/command/', args={'limit': 0})
-            last_command = max(response['objects'], key= lambda command: int(command['id']))
-            self.wait_for_command(self.chroma_manager, last_command['id'], timeout, True)
+            last_command = max(
+                response['objects'], key=lambda command: int(command['id']))
+            self.wait_for_command(self.chroma_manager, last_command['id'],
+                                  timeout, True)
 
     def wait_alerts(self, expected_alerts, **filters):
         "Wait and assert correct number of matching alerts."
         expected_alerts.sort()
 
         for _ in util.wait(TEST_TIMEOUT):
-            alerts = [alert['alert_type'] for alert in self.get_list("/api/alert/", filters)]
+            alerts = [
+                alert['alert_type']
+                for alert in self.get_list("/api/alert/", filters)
+            ]
             alerts.sort()
             if alerts == expected_alerts:
                 return alerts
@@ -324,7 +378,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def get_by_uri(self, uri, args=None, verify_successful=True):
         args = args if args else {}
         assert type(args) is dict, "args is not a dictionary: %s" % type(args)
-        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+        assert type(verify_successful
+                    ) is bool, "verify_successful is not a bool: %s" % type(
+                        verify_successful)
 
         response = self.chroma_manager.get(uri, params=args)
 
@@ -336,7 +392,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def get_json_by_uri(self, uri, args=None, verify_successful=True):
         args = args if args else {}
         assert type(args) is dict, "args is not a dictionary: %s" % type(args)
-        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+        assert type(verify_successful
+                    ) is bool, "verify_successful is not a bool: %s" % type(
+                        verify_successful)
 
         return self.get_by_uri(uri, args, verify_successful).json
 
@@ -346,23 +404,29 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         or the timeout is reached, filtering on action keys: class_name, state.
         """
         for _ in util.wait(timeout):
-            actions = self.get_json_by_uri(victim['resource_uri'])['available_actions']
+            actions = self.get_json_by_uri(
+                victim['resource_uri'])['available_actions']
             for action in actions:
                 if all(action.get(key) == filters[key] for key in filters):
                     return action
-        actions = [dict((key, action.get(key)) for key in filters) for action in actions]
+        actions = [
+            dict((key, action.get(key)) for key in filters)
+            for action in actions
+        ]
         raise AssertionError('{0} not found in {1}'.format(filters, actions))
 
-    def run_command(self, jobs, message = None, verify_successful = True):
+    def run_command(self, jobs, message=None, verify_successful=True):
         message = message if message else "Test command"
-        assert type(message) in [str, unicode], "message is not a str/unicode: %s" % type(message)
-        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+        assert type(message) in [
+            str, unicode
+        ], "message is not a str/unicode: %s" % type(message)
+        assert type(verify_successful
+                    ) is bool, "verify_successful is not a bool: %s" % type(
+                        verify_successful)
 
         logger.debug("Running %s (%s)" % (jobs, message))
-        response = self.chroma_manager.post('/api/command/', body = dict(
-            jobs = jobs,
-            message = message
-        ))
+        response = self.chroma_manager.post(
+            '/api/command/', body=dict(jobs=jobs, message=message))
 
         if verify_successful:
             self.assertTrue(response.successful, response.text)
@@ -371,14 +435,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     def post_by_uri(self, uri, object, verify_successful=True):
         logger.debug("post_by_uri(%s, ...)" % uri)
-        response = self.chroma_manager.post(uri, body = object)
+        response = self.chroma_manager.post(uri, body=object)
 
         if response.status_code == 204:
             logger.warning("post_by_uri(%s, ...) - no-op" % uri)
             command = None
         else:
             self.assertEquals(response.status_code, 202, response.content)
-            command = self.wait_for_command(self.chroma_manager, response.json['command']['id'], verify_successful=verify_successful)
+            command = self.wait_for_command(
+                self.chroma_manager,
+                response.json['command']['id'],
+                verify_successful=verify_successful)
 
         return command
 
@@ -386,15 +453,21 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     VERIFY_SUCCESS_INSTANT = 1
     VERIFY_SUCCESS_WAIT = 2
 
-    def set_value(self, uri, value_name, value, verify_successful=VERIFY_SUCCESS_INSTANT, msg=None):
-        logger.debug("set_%s %s %s%s" % (value_name, uri, value, ": %s" % msg if msg else ""))
+    def set_value(self,
+                  uri,
+                  value_name,
+                  value,
+                  verify_successful=VERIFY_SUCCESS_INSTANT,
+                  msg=None):
+        logger.debug("set_%s %s %s%s" % (value_name, uri, value, ": %s" % msg
+                                         if msg else ""))
         object = self.get_json_by_uri(uri)
         # We do this because some objects will presume a put with 'state' is a state change.
         # Do it before the object value setting so that if state is being set we don't break it.
         object.pop('state', None)
         object[value_name] = value
 
-        response = self.chroma_manager.put(uri, body = object)
+        response = self.chroma_manager.put(uri, body=object)
         if response.status_code == 204:
             logger.warning("set_%s %s %s - no-op" % (value_name, uri, value))
             command = None
@@ -412,22 +485,27 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 command_id = json['command']['id']
 
             if command_id:
-                command = self.wait_for_command(self.chroma_manager, command_id, verify_successful=(verify_successful != self.VERIFY_SUCCESS_NO), msg=msg, timeout=LONG_TEST_TIMEOUT)
+                command = self.wait_for_command(
+                    self.chroma_manager,
+                    command_id,
+                    verify_successful=(verify_successful !=
+                                       self.VERIFY_SUCCESS_NO),
+                    msg=msg,
+                    timeout=LONG_TEST_TIMEOUT)
             else:
                 command = None
 
         if verify_successful == self.VERIFY_SUCCESS_INSTANT:
             self.assertValue(uri, value_name, value)
         elif verify_successful == self.VERIFY_SUCCESS_WAIT:
-            self.wait_for_assert(lambda: self.assertValue(uri, value_name, value))
+            self.wait_for_assert(
+                lambda: self.assertValue(uri, value_name, value))
 
         return command
 
     def set_state(self, uri, state, verify_successful=True, msg=None):
-        return self.set_value(uri,
-                              'state',
-                              state,
-                              self.VERIFY_SUCCESS_INSTANT if verify_successful else self.VERIFY_SUCCESS_NO,
+        return self.set_value(uri, 'state', state, self.VERIFY_SUCCESS_INSTANT
+                              if verify_successful else self.VERIFY_SUCCESS_NO,
                               msg)
 
     def set_state_dry_run(self, uri, state):
@@ -436,8 +514,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         stateful_object['state'] = state
         stateful_object['dry_run'] = True
 
-        response = self.chroma_manager.put(uri,
-                                           body=stateful_object)
+        response = self.chroma_manager.put(uri, body=stateful_object)
 
         self.assertEquals(response.status_code, 200, response.content)
 
@@ -478,28 +555,36 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         if of_type is not None:
             data['alert_type'] = of_type
         alerts = self.get_list("/api/alert/", data)
-        self.assertIn(uri, [a['alert_item'] for a in alerts], [a['alert_item'] for a in alerts])
+        self.assertIn(uri, [a['alert_item'] for a in alerts],
+                      [a['alert_item'] for a in alerts])
 
     def get_alert(self, uri, regex=None, alert_type=None, active=True):
         """Given that there is an active alert for object `uri` whose
            message matches `regex`, return it.  Raise an AssertionError
            if no such alert exists"""
 
-        all_alerts = self.get_list("/api/alert/", {'active': active,
-                                                   'limit': 0})
+        all_alerts = self.get_list("/api/alert/", {
+            'active': active,
+            'limit': 0
+        })
         alerts = [a for a in all_alerts if a['alert_item'] == uri]
         if not alerts:
-            raise AssertionError("No alerts for object %s (alerts are %s)" % (uri, all_alerts))
+            raise AssertionError("No alerts for object %s (alerts are %s)" %
+                                 (uri, all_alerts))
 
         if regex is not None:
             alerts = [a for a in alerts if re.match(regex, a['message'])]
             if not alerts:
-                raise AssertionError("No alerts for object %s matching %s (alerts are %s)" % (uri, regex, all_alerts))
+                raise AssertionError(
+                    "No alerts for object %s matching %s (alerts are %s)" %
+                    (uri, regex, all_alerts))
 
         if alert_type is not None:
             alerts = [a for a in alerts if a['alert_type'] == alert_type]
             if not alerts:
-                raise AssertionError("No alerts of type %s found (alerts are %s)" % (alert_type, all_alerts))
+                raise AssertionError(
+                    "No alerts of type %s found (alerts are %s)" %
+                    (alert_type, all_alerts))
 
         if len(alerts) > 1:
             raise AssertionError("Multiple alerts match: %s" % alerts)
@@ -509,7 +594,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def assertValue(self, uri, value_name, value):
         logger.debug("assertValue %s %s %s" % (value_name, uri, value))
         obj = self.get_json_by_uri(uri)
-        self.assertEqual(str(obj[value_name]), str(value))              # Convert to strings so we don't get type issues.
+        self.assertEqual(
+            str(obj[value_name]),
+            str(value))  # Convert to strings so we don't get type issues.
 
     def assertState(self, uri, state):
         self.assertValue(uri, 'state', state)
@@ -537,7 +624,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         :return: hash of the api
         '''
         if ApiTestCaseWithTestReset._chroma_manager_api is None:
-            ApiTestCaseWithTestReset._chroma_manager_api = self.get_json_by_uri("/api/")
+            ApiTestCaseWithTestReset._chroma_manager_api = self.get_json_by_uri(
+                "/api/")
 
         return ApiTestCaseWithTestReset._chroma_manager_api
 
@@ -549,7 +637,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
           - unconfiguring any chroma targets in pacemaker
         """
         self.reset_chroma_manager_db()
-        self.remote_operations.stop_agents(s['address'] for s in config['lustre_servers'])
+        self.remote_operations.stop_agents(
+            s['address'] for s in config['lustre_servers'])
         if config.get('managed'):
             self.remote_operations.clear_ha(self.TEST_SERVERS)
             self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
@@ -562,10 +651,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             result = self.remote_command(
                 chroma_manager['address'],
                 'chroma-config stop',
-                expected_return_code = None
-            )
+                expected_return_code=None)
             if not result.exit_status == 0:
-                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout, result.stderr))
+                logger.warn(
+                    "chroma-config stop failed: rc:%s out:'%s' err:'%s'" %
+                    (result.exit_status, result.stdout, result.stderr))
 
             # Wait for all of the manager services to stop
             running_time = 0
@@ -575,74 +665,81 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     result = self.remote_command(
                         chroma_manager['address'],
                         'service %s status' % service,
-                        expected_return_code = None
-                    )
+                        expected_return_code=None)
                     if result.exit_status == 3:
                         services.remove(service)
                 time.sleep(1)
                 running_time += 1
-            self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
+            self.assertEqual(
+                services, [],
+                "Not all services were stopped by chroma-config before timeout: %s"
+                % services)
 
             # Completely nuke the database to start from a clean state.
             self.remote_command(
                 chroma_manager['address'],
-                'service postgresql stop && rm -fr /var/lib/pgsql/data/*'
-            )
+                'service postgresql stop && rm -fr /var/lib/pgsql/data/*')
 
             # Run chroma-config setup to recreate the database and start the manager.
             result = self.remote_command(
                 chroma_manager['address'],
-                "chroma-config setup %s %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost"), "--no-dbspace-check"),
-                expected_return_code = None
-            )
+                "chroma-config setup %s %s %s %s &> config_setup.log" %
+                (superuser['username'], superuser['password'],
+                 chroma_manager.get('ntp_server', "localhost"),
+                 "--no-dbspace-check"),
+                expected_return_code=None)
             chroma_config_exit_status = result.exit_status
             if not chroma_config_exit_status == 0:
-                result = self.remote_command(
-                    chroma_manager['address'],
-                    "cat config_setup.log"
-                )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout)
+                result = self.remote_command(chroma_manager['address'],
+                                             "cat config_setup.log")
+                self.assertEqual(
+                    0, chroma_config_exit_status,
+                    "chroma-config setup failed: '%s'" % result.stdout)
 
             # Register the default bundles and profile again
             result = self.remote_command(
                 chroma_manager['address'],
-                "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log" % platform.dist()[1][0:1],
-                expected_return_code = None
-            )
+                "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log"
+                % platform.dist()[1][0:1],
+                expected_return_code=None)
             chroma_config_exit_status = result.exit_status
             if not chroma_config_exit_status == 0:
-                result = self.remote_command(
-                    chroma_manager['address'],
-                    "cat config_bundle.log"
-                )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout)
+                result = self.remote_command(chroma_manager['address'],
+                                             "cat config_bundle.log")
+                self.assertEqual(0, chroma_config_exit_status,
+                                 "chroma-config bundle register failed: '%s'" %
+                                 result.stdout)
 
             result = self.remote_command(
                 chroma_manager['address'],
                 "ls /tmp/iml-*/ || ls /tmp/ee-*/",
-                expected_return_code = None
-            )
+                expected_return_code=None)
             installer_contents = result.stdout
-            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr))
+            self.assertEqual(
+                0, result.exit_status,
+                "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'"
+                % (installer_contents, result.stderr))
 
             logger.debug("Installer contents: %s" % installer_contents)
 
             # get a list of profiles in the installer and re-register them
-            profiles = " ".join([line for line in installer_contents.split("\n")
-                                 if 'profile' in line])
+            profiles = " ".join([
+                line for line in installer_contents.split("\n")
+                if 'profile' in line
+            ])
             logger.debug("Found these profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "if [ -d /tmp/iml-*/ ]; then dir=/tmp/iml-*; else dir=/tmp/ee-*; fi; for profile_pat in %s; do chroma-config profile register $dir/$profile_pat; done &> config_profile.log" % profiles,
-                expected_return_code = None
-            )
+                "if [ -d /tmp/iml-*/ ]; then dir=/tmp/iml-*; else dir=/tmp/ee-*; fi; for profile_pat in %s; do chroma-config profile register $dir/$profile_pat; done &> config_profile.log"
+                % profiles,
+                expected_return_code=None)
             chroma_config_exit_status = result.exit_status
             if not chroma_config_exit_status == 0:
-                result = self.remote_command(
-                    chroma_manager['address'],
-                    "cat config_profile.log"
-                )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config profile register failed: '%s'" % result.stdout)
+                result = self.remote_command(chroma_manager['address'],
+                                             "cat config_profile.log")
+                self.assertEqual(0, chroma_config_exit_status,
+                                 "chroma-config profile register failed: '%s'"
+                                 % result.stdout)
 
     def graceful_teardown(self, chroma_manager):
         """
@@ -651,10 +748,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         verify that the manager instance was in a nice state, rather than
         in setUp/tearDown hooks to ensure a clean system.
         """
-        response = chroma_manager.get(
-            '/api/filesystem/',
-            params = {'limit': 0}
-        )
+        response = chroma_manager.get('/api/filesystem/', params={'limit': 0})
         self.assertEqual(response.status_code, 200)
         filesystems = response.json['objects']
 
@@ -670,15 +764,17 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.assertTrue(command_id)
                 remove_filesystem_command_ids.append(command_id)
 
-            self.wait_for_commands(chroma_manager,
-                                   remove_filesystem_command_ids,
-                                   timeout=LONG_TEST_TIMEOUT)
+            self.wait_for_commands(
+                chroma_manager,
+                remove_filesystem_command_ids,
+                timeout=LONG_TEST_TIMEOUT)
 
         # Remove MGT
         response = chroma_manager.get(
-            '/api/target/',
-            params = {'kind': 'MGT', 'limit': 0}
-        )
+            '/api/target/', params={
+                'kind': 'MGT',
+                'limit': 0
+            })
         self.assertTrue(response.successful, response.text)
         mgts = response.json['objects']
 
@@ -693,10 +789,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             self.wait_for_commands(chroma_manager, remove_mgt_command_ids)
 
         # Remove hosts
-        response = chroma_manager.get(
-            '/api/host/',
-            params = {'limit': 0}
-        )
+        response = chroma_manager.get('/api/host/', params={'limit': 0})
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
 
@@ -709,15 +802,18 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 self.assertTrue(command_id)
                 remove_host_command_ids.append(command_id)
 
-            self.wait_for_commands(chroma_manager,
-                                   remove_host_command_ids,
-                                   timeout=LONG_TEST_TIMEOUT)
+            self.wait_for_commands(
+                chroma_manager,
+                remove_host_command_ids,
+                timeout=LONG_TEST_TIMEOUT)
 
         self.assertDatabaseClear()
 
     def api_clear_resource(self, resource):
-        response = self.chroma_manager.get('/api/%s' % resource,
-                                           params = {'limit': 0})
+        response = self.chroma_manager.get(
+            '/api/%s' % resource, params={
+                'limit': 0
+            })
         self.assertTrue(response.successful, response.text)
         objects = response.json['objects']
 
@@ -732,27 +828,33 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         remove corosync resources: do that separately.
         """
 
-        response = self.chroma_manager.get(
-            '/api/host/',
-            params = {'limit': 0}
-        )
+        response = self.chroma_manager.get('/api/host/', params={'limit': 0})
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
 
         if len(hosts) > 0:
             remove_host_command_ids = []
             for host in hosts:
-                command = self.chroma_manager.post("/api/command/", body = {
-                    'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
-                    'message': "Test force remove hosts"
-                }).json
+                command = self.chroma_manager.post(
+                    "/api/command/",
+                    body={
+                        'jobs': [{
+                            'class_name': 'ForceRemoveHostJob',
+                            'args': {
+                                'host_id': host['id']
+                            }
+                        }],
+                        'message':
+                        "Test force remove hosts"
+                    }).json
                 remove_host_command_ids.append(command['id'])
 
-            self.wait_for_commands(self.chroma_manager, remove_host_command_ids)
+            self.wait_for_commands(self.chroma_manager,
+                                   remove_host_command_ids)
 
         self.api_clear_resource('power_control_type')
 
-    def assertDatabaseClear(self, chroma_manager = None):
+    def assertDatabaseClear(self, chroma_manager=None):
         """
         Checks that the manager API is now clear of filesystems, targets,
         hosts and volumes.
@@ -762,36 +864,25 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             chroma_manager = self.chroma_manager
 
         # Verify there are zero filesystems
-        response = chroma_manager.get(
-            '/api/filesystem/',
-            params = {'limit': 0}
-        )
+        response = chroma_manager.get('/api/filesystem/', params={'limit': 0})
         self.assertTrue(response.successful, response.text)
         filesystems = response.json['objects']
         self.assertEqual(0, len(filesystems))
 
         # Verify there are zero mgts
-        response = chroma_manager.get(
-            '/api/target/',
-            params = {'kind': 'MGT'}
-        )
+        response = chroma_manager.get('/api/target/', params={'kind': 'MGT'})
         self.assertTrue(response.successful, response.text)
         mgts = response.json['objects']
         self.assertEqual(0, len(mgts))
 
         # Verify there are now zero hosts in the database.
-        response = chroma_manager.get(
-            '/api/host/',
-        )
+        response = chroma_manager.get('/api/host/', )
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
         self.assertEqual(0, len(hosts))
 
         # Verify there are now zero volumes in the database.
-        response = chroma_manager.get(
-            '/api/volume/',
-            params = {'limit': 0}
-        )
+        response = chroma_manager.get('/api/volume/', params={'limit': 0})
         self.assertTrue(response.successful, response.text)
         volumes = response.json['objects']
         self.assertEqual(0, len(volumes))
@@ -800,9 +891,11 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         """Remove any user accounts which are not in the config (such as
         those left hanging by tests)"""
 
-        configured_usernames = [u['username'] for u in config['chroma_managers'][0]['users']]
+        configured_usernames = [
+            u['username'] for u in config['chroma_managers'][0]['users']
+        ]
 
-        response = chroma_manager.get('/api/user/', data = {'limit': 0})
+        response = chroma_manager.get('/api/user/', data={'limit': 0})
         self.assertEqual(response.status_code, 200)
         for user in response.json['objects']:
             if not user['username'] in configured_usernames:
@@ -810,11 +903,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     @classmethod
     def linux_devices_exist(cls):
-        return any(lustre_device['backend_filesystem'] == 'ldiskfs' for lustre_device in config['lustre_devices'])
+        return any(lustre_device['backend_filesystem'] == 'ldiskfs'
+                   for lustre_device in config['lustre_devices'])
 
     @classmethod
     def zfs_devices_exist(cls):
-        return any(lustre_device['backend_filesystem'] == 'zfs' for lustre_device in config['lustre_devices'])
+        return any(lustre_device['backend_filesystem'] == 'zfs'
+                   for lustre_device in config['lustre_devices'])
 
     def create_zpools(self):
         xs = self.config_servers
@@ -822,31 +917,31 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         fqdns = [x['fqdn'] for x in xs]
 
         self.execute_simultaneous_commands(
-            ['modprobe zfs'], fqdns,
+            ['udevadm info --path=/module/zfs'],
+            fqdns,
             'checking for zfs presence',
             expected_return_code=None)
 
         partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
-                zfs_device = TestBlockDevice('zfs', server0['orig_device_paths'][lustre_device['path_index']])
+                zfs_device = TestBlockDevice(
+                    'zfs',
+                    server0['orig_device_paths'][lustre_device['path_index']])
 
                 self.execute_commands(zfs_device.prepare_device_commands,
                                       server0['fqdn'],
                                       'create zfs device %s' % zfs_device)
 
-#                self.execute_commands(zfs_device.release_commands,
-#                                      server0['fqdn'],
-#                                      'export zfs device %s' % zfs_device)
-                partprobe_devices.append(server0['orig_device_paths'][lustre_device['path_index']])
+                partprobe_devices.append(
+                    server0['orig_device_paths'][lustre_device['path_index']])
 
         if partprobe_devices:
             # only partprobe the devices we are cleaning, as we can get
             # EBUSY for the root disk for example
-            self.execute_simultaneous_commands(['partprobe %s' %
-                                                " ".join(partprobe_devices),
-                                                'udevadm settle'], fqdns,
-                                               'sync partitions')
+            self.execute_simultaneous_commands([
+                'partprobe %s' % " ".join(partprobe_devices), 'udevadm settle'
+            ], fqdns, 'sync partitions')
 
     def cleanup_zpools(self):
         if (self.zfs_devices_exist() is False):
@@ -855,32 +950,27 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         xs = config['lustre_servers'][:4]
         fqdns = [x['fqdn'] for x in xs]
 
-        # Ensure agents stopped to avoid interference with pool imports/exports
-        self.remote_operations.stop_agents(fqdns)
-
         # Attempt to unmount all lustre targets otherwise
         # we won't be able to export parent pool
-        [
-            self.remote_operations.unmount_lustre_targets(x)
-            for x in xs
-        ]
+        [self.remote_operations.unmount_lustre_targets(x) for x in xs]
 
         # If ZFS if not installed on the test servers, then presume no ZFS to clear from any.
         # Might need to improve on this moving forwards.
         self.execute_simultaneous_commands(
-            ['modprobe zfs'], fqdns,
+            ['udevadm info --path=/module/zfs'],
+            fqdns,
             'checking for zfs presence',
             expected_return_code=None)
 
         server0 = xs[0]
 
         zfs_device_paths = [
-            server0['orig_device_paths'][x['path_index']] for x in config['lustre_devices']
-            if x['backend_filesystem'] == 'zfs']
-
-        zfs_devices = [
-            TestBlockDevice('zfs', x) for x in zfs_device_paths
+            server0['orig_device_paths'][x['path_index']]
+            for x in config['lustre_devices']
+            if x['backend_filesystem'] == 'zfs'
         ]
+
+        zfs_devices = [TestBlockDevice('zfs', x) for x in zfs_device_paths]
 
         [
             self.execute_simultaneous_commands(
@@ -898,18 +988,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         # only partprobe the devices we are cleaning, as we can get
         # EBUSY for the root disk for example
-        self.execute_simultaneous_commands(['partprobe %s' % " ".join(zfs_device_paths),
-                                            'udevadm settle'], fqdns, 'sync partitions')
-
-        [
-            self.remote_operations.reset_server(
-                x) for x in fqdns
-        ]
-
-        [
-            self.remote_operations.await_server_boot(
-                x) for x in fqdns
-        ]
+        self.execute_simultaneous_commands(
+            ['partprobe %s' % " ".join(zfs_device_paths), 'udevadm settle'],
+            fqdns, 'sync partitions')
 
     def cleanup_linux_devices(self, test_servers):
         if (self.linux_devices_exist() is False):
@@ -934,10 +1015,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
         # only partprobe the devices we are cleaning, as we can get
         # EBUSY for the root disk for example
-        self.execute_simultaneous_commands(['partprobe %s' % " ".join(device_paths),
-                                           'udevadm settle'], [
-            server['fqdn'] for server in test_servers
-        ], 'sync partitions')
+        self.execute_simultaneous_commands(
+            ['partprobe %s' % " ".join(device_paths), 'udevadm settle'],
+            [server['fqdn'] for server in test_servers], 'sync partitions')
 
     @property
     def quick_setup(self):

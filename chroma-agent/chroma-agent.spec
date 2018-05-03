@@ -131,6 +131,8 @@ sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  set to permissive currently, also
 setenforce 0
 
+rm -f /var/lib/iml/zfs_store.json
+
 if [ $1 -eq 1 ]; then
     # new install; create default agent config
     systemctl enable %{name}
