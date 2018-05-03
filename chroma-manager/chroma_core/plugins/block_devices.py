@@ -21,9 +21,7 @@ log.setLevel(DEBUG)
 
 UNSUPPORTED_STATES = ['EXPORTED', 'UNAVAIL']
 
-DeviceMaps = namedtuple('device_maps', 'block_devices zpools zfs props')
-
-_data = {}
+DeviceMaps = namedtuple('device_maps', ['block_devices', 'zed'])
 
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
@@ -65,10 +63,8 @@ def aggregator_get():
     session = requests_unixsocket.Session()
     resp = session.get('http+unix://%2Fvar%2Frun%2Fdevice-aggregator.sock')
     payload = resp.text
-    print "status code: {}\nresponse: {}".format(resp.status_code, payload)
 
-    global _data
-    _data = json.loads(payload)
+    return json.loads(payload)
 
 
 def get_default(prop, default_value, x):
@@ -137,21 +133,22 @@ def filter_device(x):
     return True
 
 
-def get_host_devices(fqdn):
-    global _data
-
+def get_host_devices(fqdn, _data):
     try:
         host_data = _data.pop(fqdn)
     except KeyError:
-        log.debug('no aggregator data found for {}'.format(fqdn))
-        return None
+        log.error('no aggregator data found for {}'.format(fqdn))
+        raise
 
     devices = json.loads(host_data)
 
-    return DeviceMaps(devices["blockDevices"],   # dict
-                      devices["zed"]["zpools"],  # dict
-                      devices["zed"]["zfs"],     # list
-                      devices["zed"]["props"])   # list
+    try:
+        device_maps = DeviceMaps(devices["blockDevices"], devices["zed"])
+    except KeyError as e:
+        log.error('badly formatted data found for {} : {} ({})'.format(fqdn, devices, e))
+        raise
+
+    return device_maps, _data
 
 
 def create_device_list(device_dict):
@@ -358,10 +355,9 @@ def parse_sys_block(device_map):
     return [vgs, lvs, mds, local_fs, block_device_nodes]
 
 
-def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
+def parse_zpools(zed, block_device_nodes):
     """
     :param zpool_map: dictionary of pools keyed on guid
-    :param zfs_objs: list of dataset dictionaries
     :param block_device_nodes: dictionary of block device dictionaries keyed on major minor
     :return: list of pools datasets and block_device_nodes
     """
@@ -385,13 +381,17 @@ def parse_zpools(zpool_map, zfs_objs, block_device_nodes):
         def get_id(ds):
             return ds['poolGuid'] + '-' + ds['name']
 
-        _datasets = {get_id(ds): {"name": ds['name'],
-                                  "path": ds['name'],
-                                  "block_device": "zfsset:{}".format(get_id(ds)),
-                                  "uuid": get_id(ds),
-                                  "size": 0,  # fixme
-                                  "drives": drive_mms} for ds in [d for d in zfs_objs
-                                                                  if int(d['poolGuid'], 16) == int(guid, 16)]}
+        _datasets = {
+            get_id(ds): {
+                "name": ds['name'],
+                "path": ds['name'],
+                "block_device": "zfsset:{}".format(get_id(ds)),
+                "uuid": get_id(ds),
+                "size": 0,  # fixme
+                "drives": drive_mms
+            }
+            for ds in [d for d in pool['datasets']]
+        }
 
         _devs = {}
 
@@ -449,12 +449,12 @@ def get_drives(pool_disks, device_nodes):
     serials = {d['serial_83'] for d in device_nodes.values() if set(paths) & set(d['paths'])}
 
     mms = {d['major_minor'] for d in device_nodes.values()
-           if (d['serial_83'] in serials) and (d['device_type'] == 'disk')}
+           if (d['serial_83'] in serials)}
 
     return mms
 
 
-def discover_zpools(all_devs):
+def discover_zpools(all_devs, _data):
     """
     Identify imported pools that reside on drives this host can see
 
@@ -474,29 +474,29 @@ def discover_zpools(all_devs):
 
             return get_drives(pool_disks, all_devs['devs']).issubset(set(all_devs['devs'].keys()))
 
-        # verify pool is imported
-        pools = pipe(maps['zed']['zpools'].itervalues(),
-                     cfilter(lambda pool: pool['state'] not in UNSUPPORTED_STATES),
-                     cfilter(match_drives),
-                     list)
+        try:
+            # verify pool is imported
+            pools = pipe(
+                maps['zed'].itervalues(),
+                cfilter(lambda pool: pool['state'] not in UNAVAILABLE_STATES),
+                cfilter(match_drives), list)
+        except KeyError as e:
+            log.error('data not found, incorrect format %s [%s)' % (data, e))
+            return acc
 
         pools = {pool['guid']: pool for pool in pools}
 
-        # verify we haven't already got a representation for this pool on any of the other hosts
+        # verify we haven't already got a representation for this pool on any other hosts
         if any(guid for guid in pools.keys() if guid in acc['zpools'].keys()):
             raise RuntimeError("duplicate active representations of zpool (remote)")
 
         acc['zpools'].update(pools)
 
-        acc['zfs'].extend([d for d in maps['zed']['zfs']
-                           if int(d['poolGuid'], 16) in [int(h, 16) for h in pools.keys()]])
-
         return acc
 
-    other_zpools_zfs = reduce(extract, _data.values(), {'zpools': {}, 'zfs': []})
-
-    if other_zpools_zfs['zpools']:
-        log.debug("apply new zfs objs: {}".format(other_zpools_zfs))
+    other_zpools_zfs = reduce(extract, filter(None, _data.values()), {
+        'zpools': {}
+    })
 
     # verify we haven't already got a representation for this pool locally
     if any(guid for guid in all_devs['zfspools'].iterkeys()
@@ -505,33 +505,37 @@ def discover_zpools(all_devs):
         raise RuntimeError("duplicate active representations of zpool (local)")
 
     # updates reported devices
-    [all_devs[k].update(v) for k, v in zip(['zfspools', 'zfsdatasets', 'devs'],
-                                           parse_zpools(other_zpools_zfs['zpools'],
-                                                        other_zpools_zfs['zfs'],
-                                                        all_devs['devs']))]
+    [
+        all_devs[k].update(v) for k, v in zip(
+            ['zfspools', 'zfsdatasets', 'devs'],
+            parse_zpools(other_zpools_zfs['zpools'], all_devs['devs']))
+    ]
+
+    del _data
 
     return all_devs
 
 
 def get_block_devices(fqdn):
-    aggregator_get()
+    _data = aggregator_get()
 
-    log.debug('fetching devices for {}'.format(fqdn))
-    device_maps = get_host_devices(fqdn)
-
-    if device_maps is None:
+    try:
+        log.debug('fetching devices for {}'.format(fqdn))
+        device_maps, _data = get_host_devices(fqdn, _data)
+    except Exception as e:
+        log.error("iml-device-aggregator is not providing expected data, ensure "
+                  "iml-device-scanner package is installed and relevant "
+                  "services are running on storage servers (%s)" % e)
         return {}
 
     devs_list = parse_sys_block(device_maps.block_devices)
-    devs_list.extend(parse_zpools(device_maps.zpools,
-                                  device_maps.zfs,
-                                  devs_list.pop(-1)))
+    devs_list.extend(parse_zpools(device_maps.zed, devs_list.pop(-1)))
 
     devs_dict = dict(zip(
         ['vgs', 'lvs', 'mds', 'local_fs', 'zfspools', 'zfsdatasets', 'devs'],
         devs_list))
 
-    return discover_zpools(devs_dict)
+    return discover_zpools(devs_dict, _data)
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
