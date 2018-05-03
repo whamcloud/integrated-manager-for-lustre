@@ -3,9 +3,10 @@ import os
 import re
 from mock import patch
 from django.utils import unittest
-from toolz import compose
+from toolz import compose, curry
 
 from chroma_core.plugins.block_devices import get_block_devices, get_drives, discover_zpools
+
 # from chroma_core.services.plugin_runner import ResourceManager
 # from chroma_core.models.host import Volume, VolumeNode
 # from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -159,19 +160,125 @@ from chroma_core.plugins.block_devices import get_block_devices, get_drives, dis
 #        self._start_session_with_data(host1, "NoDevices.json")
 #        self.assertEqual(Volume.objects.count(), 0)
 
-
-class TestBlockDevices(unittest.TestCase):
-    """ Verify aggregator output parsed through block_devices matches expected agent output """
+class TestBase(unittest.TestCase):
     test_host_fqdn = 'vm5.foo.com'
+
+    def setUp(self):
+        super(TestBase, self).setUp()
+        self.test_root = os.path.join(os.path.dirname(__file__), "fixtures")
+        self.addCleanup(patch.stopall)
+
+    def load(self, filename):
+        return open(os.path.join(self.test_root, filename)).read()
+
+    def check(self, skip_keys, expect, result, x):
+        from toolz import pipe
+        from toolz.curried import map as cmap, filter as cfilter
+
+        def cmpval(key):
+            expected = expect[x][key]
+            actual = result[x][key]
+            if type(expected) is dict:
+                self.check(skip_keys, expect[x], result[x], key)
+            else:
+                self.assertEqual(actual, expected,
+                                 "item {} ({}) in {} does not match expected ({})".format(key,
+                                                                                          actual,
+                                                                                          x,
+                                                                                          expected))
+
+        pipe(expect[x].keys(),
+             cfilter(lambda y: y not in skip_keys),
+             cmap(cmpval),
+             list)
+
+
+class TestFormattedBlockDevices(TestBase):
+    """ Verify aggregator output parsed through block_devices matches expected agent output """
+
+    def setUp(self):
+        super(TestFormattedBlockDevices, self).setUp()
+
+        self.test_root = os.path.join(os.path.dirname(__file__), "fixtures")
+        self.fixture = json.loads(self.load(u'device_aggregator_formatted_ldiskfs.text'))
+        self.block_devices = self.get_patched_block_devices(dict(self.fixture))
+        self.expected = json.loads(self.load(u'agent_plugin_formatted_ldiskfs.json'))['result']['linux']
+
+        self.addCleanup(patch.stopall)
+
+    def get_patched_block_devices(self, fixture):
+        with patch('chroma_core.plugins.block_devices.aggregator_get', return_value=fixture):
+            return get_block_devices(self.test_host_fqdn)
+
+    def test_block_device_nodes_parsing(self):
+        p = re.compile('\d+:\d+$')
+        print 'Omitted devices:'
+        print (set(self.expected['devs'].keys()) - set([mm for mm in self.expected['devs'].keys() if p.match(mm)]))
+        ccheck = curry(self.check, [], self.expected['devs'], self.block_devices['devs'])
+
+        map(
+            lambda x: ccheck(x),
+            [mm for mm in self.expected['devs'].keys() if p.match(mm)]
+        )
+
+        # todo: ensure we are testing all variants from relevant fixture:
+        # - partition
+        # - dm-0 linear lvm
+        # - dm-2 striped lvm
+
+    def test_block_device_local_fs_parsing(self):
+        key = 'local_fs'
+        map(
+            # lambda x: self.assertListEqual(self.expected[key][x],
+            #                                self.block_devices[key][x]),
+            # fixme: currently the Mountpoint of the local mount is not being provided by block_devices.py
+            lambda x: self.assertEqual(self.expected[key][x][1],
+                                       self.block_devices[key][x][1]),
+            self.expected[key].keys()
+        )
+
+    def test_block_device_lvs_parsing(self):
+        key = 'lvs'
+        # uuid format changed with output now coming from device-scanner
+        ccheck = curry(self.check, ['uuid'], self.expected[key], self.block_devices[key])
+
+        map(
+            lambda x: ccheck(x),
+            self.expected[key].keys()
+        )
+
+    def test_block_device_mds_parsing(self):
+        key = 'mds'
+        ccheck = curry(self.check, [], self.expected[key], self.block_devices[key])
+
+        map(
+            lambda x: ccheck(x),
+            self.expected[key].keys()
+        )
+
+    def test_block_device_vgs_parsing(self):
+        key = 'vgs'
+        ccheck = curry(self.check, ['uuid'], self.expected[key], self.block_devices[key])
+
+        map(
+            lambda x: ccheck(x),
+            self.expected[key].keys()
+        )
+
+
+class TestBlockDevices(TestBase):
+    """ Verify aggregator output parsed through block_devices matches expected agent output """
     zpool_result = {u'0x0123456789abcdef': {'block_device': 'zfspool:0x0123456789abcdef',
-                                            'drives': set([u'8:32', u'8:64']),
+                                            'drives': {u'8:64', u'8:32', u'8:65', u'8:41',
+                                                       u'8:73', u'8:33'},
                                             'name': u'testPool4',
                                             'path': u'testPool4',
                                             'size': 10670309376,
                                             'uuid': u'0x0123456789abcdef'}}
     dataset_result = {u'0xDB55C7876B45A0FB-testPool4/f1-OST0000': {'block_device':
                                                                    'zfsset:0xDB55C7876B45A0FB-testPool4/f1-OST0000',
-                                                                   'drives': set([u'8:32', u'8:64']),
+                                                                   'drives': {u'8:64', u'8:32', u'8:65', u'8:41',
+                                                                              u'8:73', u'8:33'},
                                                                    'name': u'testPool4/f1-OST0000',
                                                                    'path': u'testPool4/f1-OST0000',
                                                                    'size': 0,
@@ -180,21 +287,19 @@ class TestBlockDevices(unittest.TestCase):
     def setUp(self):
         super(TestBlockDevices, self).setUp()
 
-        self.test_root = os.path.join(os.path.dirname(__file__), "fixtures")
-
         self.fixture = compose(json.loads, self.load)(u'device_aggregator.text')
-
-        self.block_devices = self.get_patched_block_devices(self.fixture)
-
+        self.block_devices = self.get_patched_block_devices(dict(self.fixture))
         self.expected = json.loads(self.load(u'agent_plugin.json'))['result']['linux']
 
-        self.addCleanup(patch.stopall)
-
-    def load(self, filename):
-        return open(os.path.join(self.test_root, filename)).read()
+    def get_patched_block_devices(self, fixture):
+        with patch('chroma_core.plugins.block_devices.aggregator_get', return_value=fixture):
+            return get_block_devices(self.test_host_fqdn)
 
     def patch_zed_data(self, fixture, host_fqdn, pools=None, zfs=None, props=None):
         """ overwrite with supplied structures or if None supplied in parameters, copy from existing host """
+        # take copy of fixture so we return a new one and leave the original untouched
+        fixture = dict(fixture)
+
         # copy existing host data if simulating new host
         host_data = json.loads(fixture.setdefault(host_fqdn,
                                                   fixture[self.test_host_fqdn]))
@@ -206,28 +311,42 @@ class TestBlockDevices(unittest.TestCase):
 
         return fixture
 
-    def get_patched_block_devices(self, fixture):
-        with patch('chroma_core.plugins.block_devices.aggregator_get'):
-            with patch.dict('chroma_core.plugins.block_devices._data', fixture):
-                return get_block_devices(self.test_host_fqdn)
+    @staticmethod
+    def get_test_pool(state='ACTIVE'):
+        return {
+          "guid": '0x0123456789abcdef',
+          "name": 'testPool4',
+          "state": state,
+          "size": 10670309376,
+          "datasets": [],
+          "vdev": {'Root': {'children': [
+            {
+              "Disk": {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
+                "whole_disk": True,
+                "is_log": False
+              }
+            },
+            {
+              "Disk": {
+                "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
+                "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
+                "whole_disk": True,
+                "is_log": False
+              }
+            }]
+          }}
+        }
 
     def test_block_device_nodes_parsing(self):
-        result = self.block_devices['devs']
-
         p = re.compile('\d+:\d+$')
-
-        def check(x):
-            for key in self.expected['devs'][x].keys():
-                expected = self.expected['devs'][x][key]
-                actual = result[x][key]
-                self.assertEqual(actual, expected,
-                                 "item {} ({}) in {} does not match expected ({})".format(key,
-                                                                                          actual,
-                                                                                          x,
-                                                                                          expected))
+        ccheck = curry(self.check, [], self.expected['devs'], self.block_devices['devs'])
 
         map(
-            lambda x: check(x),
+            lambda x: ccheck(x),
             [mm for mm in self.expected['devs'].keys() if p.match(mm)]
         )
 
@@ -236,58 +355,28 @@ class TestBlockDevices(unittest.TestCase):
         # - dm-0 linear lvm
         # - dm-2 striped lvm
 
-    @staticmethod
-    def get_test_pool(state='ACTIVE'):
-        return {
-            "guid": '0x0123456789abcdef',
-            "name": 'testPool4',
-            "state": state,
-            "size": 10670309376,
-            "datasets": [],
-            "vdev": {'Root': {'children': [
-                {
-                    "Disk": {
-                        "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                        "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk2-part1',
-                        "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:1',
-                        "whole_disk": True,
-                        "is_log": False
-                    }
-                },
-                {
-                    "Disk": {
-                        "path": '/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                        "path_id": 'scsi-0QEMU_QEMU_HARDDISK_disk4-part1',
-                        "phys_path": 'virtio-pci-0000:00:05.0-scsi-0:0:0:3',
-                        "whole_disk": True,
-                        "is_log": False
-                    }
-                }]
-            }}
-        }
-
     def test_get_drives(self):
         self.assertEqual(get_drives([child['Disk'] for child in self.get_test_pool()['vdev']['Root']['children']],
                                     self.block_devices['devs']),
-                         {u'8:64', u'8:32'})
+                         {u'8:64', u'8:32', u'8:65', u'8:41', u'8:73', u'8:33'})
 
     def test_discover_zpools(self):
         """ verify block devices are unchanged when no accessible pools exist on other hosts """
         original_block_devices = dict(self.block_devices)
-        self.assertEqual(discover_zpools(self.block_devices),
+        self.assertEqual(discover_zpools(self.block_devices, self.fixture),
                          original_block_devices)
 
     def test_discover_zpools_unavailable_other(self):
         """ verify block devices are unchanged when locally active pool exists unavailable on other hosts """
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(self.fixture),
                                       self.test_host_fqdn,
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
 
-        original_block_devices = self.get_patched_block_devices(fixture)
+        original_block_devices = self.get_patched_block_devices(dict(fixture))
 
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(fixture),
                                       'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('UNAVAIL')},
                                       {},
@@ -297,15 +386,15 @@ class TestBlockDevices(unittest.TestCase):
 
     def test_discover_zpools_exported_other(self):
         """ verify block devices are unchanged when locally active pool exists exported on other hosts """
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(self.fixture),
                                       self.test_host_fqdn,
                                       {'0x0123456789abcdef': self.get_test_pool('ACTIVE')},
                                       {},
                                       {})
 
-        original_block_devices = self.get_patched_block_devices(fixture)
+        original_block_devices = self.get_patched_block_devices(dict(fixture))
 
-        fixture = self.patch_zed_data(self.fixture,
+        fixture = self.patch_zed_data(dict(fixture),
                                       'vm6.foo.com',
                                       {'0x0123456789abcdef': self.get_test_pool('EXPORTED')},
                                       {},
@@ -322,10 +411,10 @@ class TestBlockDevices(unittest.TestCase):
                                       {},
                                       {})
 
-        block_devices = self.get_patched_block_devices(fixture)
+        block_devices = self.get_patched_block_devices(dict(fixture))
 
         # no pools or datasets should be reported after processing
-        block_devices = discover_zpools(block_devices)
+        block_devices = discover_zpools(block_devices, fixture)
         [self.assertEqual(block_devices[key], {}) for key in ['zfspools', 'zfsdatasets']]
 
         # add pool and zfs data to fixture for another host
@@ -367,7 +456,7 @@ class TestBlockDevices(unittest.TestCase):
                                       {},
                                       {})
 
-        self.get_patched_block_devices(fixture)
+        block_devices = self.get_patched_block_devices(fixture)
 
         fixture = self.patch_zed_data(self.fixture,
                                       'vm6.foo.com',
@@ -376,7 +465,7 @@ class TestBlockDevices(unittest.TestCase):
                                       {})
 
         with self.assertRaises(RuntimeError):
-            self.get_patched_block_devices(fixture)
+            discover_zpools(block_devices, fixture)
 
     def test_ignore_exported_zpools(self):
         """ verify exported pools are not reported """
