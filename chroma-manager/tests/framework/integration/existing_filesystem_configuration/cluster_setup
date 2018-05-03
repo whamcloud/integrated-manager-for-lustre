@@ -139,10 +139,13 @@ fi"
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-# if this node uses the Intel proxies, make sure the agent is doing so
+# if this node uses the Intel proxies, make sure the agent and scanner-proxy are doing so
 if [ -f /etc/profile.d/intel_proxy.sh ]; then
     mkdir -p /etc/systemd/system/chroma-agent.service.d/
     echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
+
+    mkdir -p /etc/systemd/system/scanner-proxy.service.d/
+    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/scanner-proxy.service.d/override.conf
 fi
 
 # add any repos required by this test run

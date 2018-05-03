@@ -38,7 +38,7 @@ rpms: production cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES
-	cp chroma-agent.service lustre-modules-init.sh logrotate.cfg \
+	cp chroma-agent.service lustre-modules-init.sh logrotate.cfg iml-storage-server.target 10-device-scanner.target.conf 10-device-scanner.socket.conf \
 	   _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
 	dist=$$(rpm --eval %dist);                             \
