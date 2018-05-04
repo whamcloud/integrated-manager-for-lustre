@@ -25,31 +25,6 @@ DISK_BY_ID_PATH = re.compile('^/dev/disk/by-id/')
 DISK_BY_PATH_PATH = re.compile('^/dev/disk/by-path/')
 MAPPER_PATH = re.compile('^/dev/mapper/')
 
-PRECEDENCE = [
-    MAPPER_PATH, DISK_BY_ID_PATH, DISK_BY_PATH_PATH,
-    re.compile('.+')
-]
-
-
-def get_idx(x):
-    return [index for index, v in enumerate(PRECEDENCE) if v.match(x)][0]
-
-
-def compare(x, y):
-    idx1 = get_idx(x)
-    idx2 = get_idx(y)
-
-    if idx1 == idx2:
-        return 0
-    elif idx1 > idx2:
-        return 1
-
-    return -1
-
-
-def sort_paths(xs):
-    return sorted(xs, cmp=compare)
-
 
 def scanner_cmd(cmd):
     client = socket.socket(socket.AF_UNIX)
@@ -80,7 +55,7 @@ def get_major_minor(x):
 
 
 def as_device(x):
-    paths = sort_paths(get_default('paths', [], x))
+    paths = get_default('paths', [], x)
     path = next(iter(paths), None)
 
     return {
@@ -89,7 +64,7 @@ def as_device(x):
         'paths': paths,
         'serial_80': x.get('scsi80'),
         'serial_83': x.get('scsi83'),
-        'size': int(get_default('size', 0, x)) * 512,
+        'size': int(get_default('size', 0, x)),
         'filesystem_type': x.get('idFsType'),
         'filesystem_usage': x.get('idFsUsage'),
         'device_type': x.get('devType'),
@@ -100,11 +75,13 @@ def as_device(x):
         'dm_multipath': x.get('dmMultipathDevicePath'),
         'dm_lv': x.get('dmLvName'),
         'dm_vg': x.get('dmVgName'),
-        'dm_uuid': x.get('dmUuid'),
+        'lv_uuid': x.get('lvUuid'),
+        'vg_uuid': x.get('vgUuid'),
         'dm_slave_mms': get_default('dmSlaveMms', [], x),
         'dm_vg_size': x.get('dmVgSize'),
         'md_uuid': x.get('mdUuid'),
-        'md_device_paths': x.get('mdDevices')
+        'md_device_paths': x.get('mdDevices'),
+        'is_mpath': get_default('isMpath', False, x),
     }
 
 
@@ -141,27 +118,11 @@ def create_device_list(device_dict):
                 cfilter(filter_device), list)
 
 
-def parse_lvm_uuids(dm_uuid):
-    """
-    :param dm_uuid: device mapper uuid string (combined vg and lv with lvm prefix) from device_scanner
-    :return: tuple of vg and lv UUIDs
-    """
-    lvm_pfix = 'LVM-'
-    uuid_len = 32
-
-    assert (dm_uuid.startswith(lvm_pfix)
-            and len(dm_uuid) == (len(lvm_pfix) + (uuid_len * 2)))
-
-    return dm_uuid[len(lvm_pfix):-uuid_len], dm_uuid[len(lvm_pfix) + uuid_len:]
-
-
 def lvm_populate(device):
     """ Create vg and lv entries for devices with dm attributes """
-    vg_name, vg_size, lv_name, dm_uuid, lv_size, lv_mm, lv_slave_mms = \
+    vg_name, vg_size, lv_name, lv_uuid, vg_uuid, lv_size, lv_mm, lv_slave_mms = \
         map(device.get,
-            ('dm_vg', 'dm_vg_size', 'dm_lv', 'dm_uuid', 'size', 'major_minor', 'dm_slave_mms'))
-
-    vg_uuid, lv_uuid = parse_lvm_uuids(dm_uuid)
+            ('dm_vg', 'dm_vg_size', 'dm_lv', 'lv_uuid', 'vg_uuid', 'size', 'major_minor', 'dm_slave_mms'))
 
     vg = {
         'name': vg_name,
@@ -209,8 +170,7 @@ def parse_dm_devs(xs, block_device_nodes, ndt):
         lvs[vg['name']][lv['name']] = lv
 
     c_link_dm_slaves = link_dm_slaves(block_device_nodes, ndt)
-    map(c_link_dm_slaves,
-        filter(lambda x: x['dm_uuid'].startswith('mpath-'), xs))
+    map(c_link_dm_slaves, filter(lambda x: x['is_mpath'], xs))
 
     return ndt, vgs, lvs
 
@@ -325,7 +285,7 @@ def parse_sys_block(device_map):
     ndt = NormalizedDeviceTable(xs)
 
     (ndt, _, _) = parse_dm_devs(
-        filter(lambda x: x.get('dm_uuid') is not None, xs), block_device_nodes,
+        filter(lambda x: x.get('lv_uuid') is not None, xs), block_device_nodes,
         ndt)
 
     (ndt, _) = parse_mdraid_devs(
