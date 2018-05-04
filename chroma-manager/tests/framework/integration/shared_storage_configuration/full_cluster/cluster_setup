@@ -69,7 +69,7 @@ if [ -f /tmp/storage_server.repo.in ]; then
     # make sure we use the correct lustre though!
     sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
-        -e 's/manager-for-lustre/manager-for-lustre-devel/g' \
+        -e 's/managerforlustre/joegrund/g' \
         < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
 fi
 

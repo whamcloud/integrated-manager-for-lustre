@@ -4,5 +4,5 @@ mkdir -p chroma_test_env
 tar -C chroma_test_env -xizf -"
 
 ssh root@$CHROMA_MANAGER "set -ex
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/joegrund/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum -y install nodejs npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help"
