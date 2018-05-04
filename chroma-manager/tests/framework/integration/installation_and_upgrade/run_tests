@@ -170,6 +170,10 @@ export UPGRADE_FROM_3=$UPGRADE_FROM_3
 
 echo "Now upgrade the OS and IML..."
 
+# since stopping trashes the note attributes, save them to restore
+# them later
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+cibadmin --query --scope nodes > /tmp/cib-nodes.xml" | dshbak -c
 # first have to shut down the filesystem so that we don't have incompatible OS/IML issues
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
@@ -407,6 +411,9 @@ fi
 echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
+# first have to restore the node attributes wiped out by the stop
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+cibadmin --replace --scope nodes --xml-file /tmp/cib-nodes.xml" | dshbak -c
 
 TESTS="$TESTS_DIR/test_data_consistancy.py \
        $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_obsolete_chroma_diagnostics \
