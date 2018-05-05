@@ -17,7 +17,7 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from iml_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.device_plugins.linux_components.block_devices import get_normalized_device_table
+from chroma_agent.device_plugins.block_devices import get_normalized_device_table
 from chroma_agent.lib.yum_utils import yum_util
 from iml_common.lib.date_time import IMLDateTime
 
