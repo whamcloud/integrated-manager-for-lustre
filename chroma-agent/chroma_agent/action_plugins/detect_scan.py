@@ -6,7 +6,7 @@
 from datetime import datetime
 
 from chroma_agent.lib.shell import AgentShell
-from chroma_agent.device_plugins.linux_components.block_devices import get_normalized_device_table
+from chroma_agent.device_plugins.block_devices import get_normalized_device_table
 from iml_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
 from chroma_agent import config

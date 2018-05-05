@@ -127,7 +127,7 @@ def lvm_populate(device):
     vg = {
         'name': vg_name,
         'uuid': vg_uuid,
-        'size': human_to_bytes(vg_size),
+        'size': int(vg_size),
         'pvs_major_minor': []
     }
 
