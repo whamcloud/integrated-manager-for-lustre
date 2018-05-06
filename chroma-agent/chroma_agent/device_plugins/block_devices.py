@@ -13,7 +13,6 @@ from toolz.curried import map as cmap, filter as cfilter
 from toolz.functoolz import pipe, curry
 
 from iml_common.blockdevices.blockdevice import BlockDevice
-from iml_common.lib.util import human_to_bytes
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zfspools')
 
@@ -298,6 +297,14 @@ def parse_sys_block(device_map):
 def get_normalized_device_table():
     """ process block device info returned by device-scanner to produce a ndt """
     return parse_sys_block(scanner_cmd("Stream"))
+
+
+def get_local_mounts():
+    """ process block device info returned by device-scanner to produce a ndt """
+    return [
+        (d['source'], d['target'], d['fstype'])
+        for d in scanner_cmd("Stream")['localMounts']
+    ]
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):

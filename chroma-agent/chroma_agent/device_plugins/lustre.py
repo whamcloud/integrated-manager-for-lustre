@@ -11,13 +11,12 @@ import ConfigParser
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.log import daemon_log
 from chroma_agent.log import console_log
-from chroma_agent.utils import Mounts
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from iml_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.device_plugins.block_devices import get_normalized_device_table
+from chroma_agent.device_plugins.block_devices import get_normalized_device_table, get_local_mounts
 from chroma_agent.lib.yum_utils import yum_util
 from iml_common.lib.date_time import IMLDateTime
 
@@ -121,7 +120,7 @@ class LustrePlugin(DevicePlugin):
     def _scan_mounts(self):
         mounts = {}
 
-        for device, mntpnt, fstype in Mounts().all():
+        for device, mntpnt, fstype in get_local_mounts():
             if fstype != 'lustre':
                 continue
 
