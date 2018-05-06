@@ -109,7 +109,7 @@ set_defaults() {
 
     export CLUSTER_CONFIG="cluster_cfg.json"
 
-    export COPR_OWNER="managerforlustre"
+    export COPR_OWNER="joegrund"
     export COPR_PROJECT="manager-for-lustre"
     #LUSTRE_REVIEW_BUILD="12345"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
