@@ -6,11 +6,10 @@
 from datetime import datetime
 
 from chroma_agent.lib.shell import AgentShell
-from chroma_agent.device_plugins.block_devices import get_normalized_device_table
+from chroma_agent.device_plugins.block_devices import get_normalized_device_table, get_local_mounts
 from iml_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
 from chroma_agent import config
-from chroma_agent.utils import Mounts
 
 
 class LocalTargets(object):
@@ -49,7 +48,8 @@ class LocalTargets(object):
 
             ndp = get_normalized_device_table()
 
-            mounted = ndp.normalized_device_path(device['path']) in set([ndp.normalized_device_path(path) for path, _, _ in Mounts().all()])
+            mounted = ndp.normalized_device_path(device['path']) in set([ndp.normalized_device_path(path)
+                                                                         for path, _, _ in get_local_mounts()])
 
             for name in targets.names:
                 daemon_log.info("Device %s contained name:%s and is %smounted" % (device['path'], name, "" if mounted else "un"))

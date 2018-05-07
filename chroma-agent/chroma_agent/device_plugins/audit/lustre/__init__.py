@@ -10,7 +10,8 @@ from collections import defaultdict
 from collections import namedtuple
 
 from tablib.packages import yaml
-from chroma_agent.utils import Mounts
+
+from chroma_agent.device_plugins.block_devices import get_local_mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
@@ -627,9 +628,9 @@ class ClientAudit(LustreAudit):
     @classmethod
     def _client_mounts(cls):
         spec = re.compile(r'@\w+:/\w+')
-        # Mounts().all() returns a list of tuples in which the third element
+        # get_local_mounts() returns a list of tuples in which the third element
         # is the filesystem type.
-        return [mount for mount in Mounts().all()
+        return [mount for mount in get_local_mounts()
                 if mount[2] == 'lustre' and spec.search(mount[0])]
 
     def _gather_raw_metrics(self):
