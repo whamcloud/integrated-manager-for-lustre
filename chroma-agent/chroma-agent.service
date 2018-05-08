@@ -1,9 +1,9 @@
 [Unit]
 Description=IML Agent Daemon
 After=network.target
-
-[Install]
-WantedBy=multi-user.target
+After=device-scanner.socket
+Requires=device-scanner.socket
+PartOf=iml-storage-server.target
 
 [Service]
 Type=simple
@@ -11,3 +11,7 @@ ExecStart=/usr/bin/chroma-agent-daemon
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=iml-storage-server.target
