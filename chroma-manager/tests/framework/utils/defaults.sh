@@ -110,7 +110,7 @@ set_defaults() {
     export CLUSTER_CONFIG="cluster_cfg.json"
 
     export COPR_OWNER="managerforlustre"
-    export COPR_PROJECT="manager-for-lustre"
+    export COPR_PROJECT="manager-for-lustre-devel"
     #LUSTRE_REVIEW_BUILD="12345"
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
