@@ -78,20 +78,12 @@ for dne in false true; do
             if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup; then
                 let setup_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} setup failed"
-                if [ "$NOSE_ARGS" = "-x" ]; then
-                    exit 1
-                else
-                    continue
-                fi
+                exit 1
             fi
             if ! $CHROMA_DIR/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests; then
                 let test_run_rc+=${PIPESTATUS[0]}
                 echo "Automated ${device_type} run failed"
-                if [ "$NOSE_ARGS" = "-x" ]; then
-                    exit 1
-                else
-                    continue
-                fi
+                exit 1
             fi
             echo "Automated ${device_type} run complete."
         done
