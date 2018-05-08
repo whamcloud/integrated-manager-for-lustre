@@ -3,7 +3,6 @@ import json
 import sys
 
 from testconfig import config
-from tests.integration.core.remote_operations import stop_agent_cmd
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
@@ -93,9 +92,6 @@ class CreateLustreFilesystem(UtilityTestCase):
 
     def _clear_current_target_devices(self):
         for server in config['lustre_servers']:
-            self.remote_command(
-                server['address'], stop_agent_cmd, expected_return_code=None)
-
             self.remote_command(server['address'], 'umount -t lustre -a')
 
             self.umount_devices(server['nodename'])
@@ -105,33 +101,17 @@ class CreateLustreFilesystem(UtilityTestCase):
                     server['device_paths']), server['address'],
                 'clear command')
 
+            self.remote_command(
+                server['address'],
+                'modprobe lnet; lctl network up; modprobe lustre')
+
         # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
         # commands in clear_device_commands won't get to do all that they are
         # supposed to (eg, lvremove removing lvm metadata).
 
         next((self.clear_devices(x['nodename'])
-              for x in config['lustre_servers']), None)
-
-        for server in config['lustre_servers']:
-            self.remote_command(
-                server['address'], 'reboot', expected_return_code=None
-            )  # Sometimes reboot hangs, sometimes it doesn't
-
-        def host_alive(hostname):
-            try:
-                return self.remote_command(
-                    hostname, 'hostname',
-                    expected_return_code=None).exit_status == 0
-            except:
-                return False
-
-        for server in config['lustre_servers']:
-            self.wait_until_true(lambda: host_alive(server['address']))
-
-            self.remote_command(
-                server['address'],
-                'modprobe lnet; lctl network up; modprobe lustre')
+             for x in config['lustre_servers']), None)
 
         self.used_devices = []
 
