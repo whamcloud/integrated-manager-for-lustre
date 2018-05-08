@@ -110,7 +110,7 @@ set_defaults() {
     export CLUSTER_CONFIG="cluster_cfg.json"
 
     export COPR_OWNER="managerforlustre"
-    export COPR_PROJECT="manager-for-lustre"
+    export COPR_PROJECT="manager-for-lustre-devel"
 
     # to build a job from a jenkins branch
     #JENKINS_JOB=lustre-b2_10
