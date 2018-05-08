@@ -1,9 +1,10 @@
-
 # Set the time, so certs work below ALWAYS.
 # Future NTP job will set it again,
 # so preserving host's date is unecessary
+
 import subprocess
-ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
+ret = subprocess.call(
+    "date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
 import sys
 import httplib
@@ -25,7 +26,9 @@ bootstrap_log.setLevel(logging.DEBUG)
 
 handler = logging.FileHandler('/var/log/chroma-agent.log')
 handler.setLevel(logging.DEBUG)
-handler.setFormatter(logging.Formatter('[%(asctime)s] bootstrap %(name)s %(levelname)s %(message)s'))
+handler.setFormatter(
+    logging.Formatter(
+        '[%(asctime)s] bootstrap %(name)s %(levelname)s %(message)s'))
 bootstrap_log.addHandler(handler)
 
 SSL_DIR = "/var/lib/chroma/"
@@ -57,13 +60,15 @@ class VerifiedHTTPSConnection(httplib.HTTPSConnection):
         if self._tunnel_host:
             self.sock = sock
             self._tunnel()
-        self.sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_REQUIRED, ca_certs=AUTHORITY_CERT)
+        self.sock = ssl.wrap_socket(
+            sock, cert_reqs=ssl.CERT_REQUIRED, ca_certs=AUTHORITY_CERT)
 
 
 class VerifiedHTTPSHandler(urllib2.HTTPSHandler):
-    def __init__(self, connection_class = VerifiedHTTPSConnection):
+    def __init__(self, connection_class=VerifiedHTTPSConnection):
         self.specialized_conn_class = connection_class
         urllib2.HTTPSHandler.__init__(self)
+
     def https_open(self, req):
         return self.do_open(self.specialized_conn_class, req)
 
@@ -98,7 +103,8 @@ def setup_keys():
 def reg_manager():
     fqdn = socket.getfqdn()
     nodename = os.uname()[1]
-    csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" % (fqdn, PRIVATE_KEY))
+    csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" %
+                         (fqdn, PRIVATE_KEY))
 
     data = json.dumps({{
         'address': socket.gethostbyname(socket.gethostname()),
@@ -107,7 +113,7 @@ def reg_manager():
         'version': 0,
         'csr': csr,
         'capabilities': []
-        }})
+    }})
 
     try:
         https_handler = VerifiedHTTPSHandler()
@@ -127,7 +133,8 @@ def reg_manager():
 
 def create_repo():
     tmp = tempfile.NamedTemporaryFile()
-    tmp.write(REPO_CONTENT.format(repo_url, AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
+    tmp.write(
+        REPO_CONTENT.format(repo_url, AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
 
     tmp.flush()
     launch_command('cp %s %s' % (tmp.name, REPO_PATH))
@@ -135,20 +142,30 @@ def create_repo():
 
 
 def install_agent():
-    return launch_command('yum install -y --enablerepo=%s %s' % ('{repo_names}', repo_packages))
+    return launch_command('yum install -y --enablerepo=%s %s' %
+                          ('{repo_names}', repo_packages))
 
 
 def configure_server():
-    launch_command('chroma-agent set_server_url --url %s' % base_url + 'agent/')
-    launch_command("chroma-agent set_profile --profile_json '%s'" % profile_json)
+    launch_command(
+        'chroma-agent set_server_url --url %s' % base_url + 'agent/')
+    launch_command(
+        "chroma-agent set_profile --profile_json '%s'" % profile_json)
 
 
-def start_agent():
-    output = launch_command("systemctl enable chroma-agent")
-    output = launch_command("systemctl start chroma-agent")
+def start_services():
+    launch_command("systemctl enable chroma-agent.service")
+    launch_command("systemctl start iml-storage-server.target")
 
 
 def kill_zombies():
+    try:
+        # attempt to stop a pre-installed instance
+        launch_command("systemctl stop iml-storage-server.target")
+    except Exception:
+        # Will fail if not pre-installed
+        pass
+
     # ensure that there are no old agents hanging around
     for pid in [d for d in os.listdir('/proc') if d.isdigit()]:
         try:
@@ -158,6 +175,7 @@ def kill_zombies():
         except (OSError, IOError):
             # Don't bail if this fails -- it's not critical
             pass
+
 
 def main():
     try:
@@ -181,16 +199,20 @@ def main():
 
         bootstrap_log.info('Agent bootstrap completed, starting agent...')
 
-        # Finally start the agent, it will take it from here.
-        start_agent()
+        # Finally start the services.
+        start_services()
 
-        print json.dumps({{'host_id': registration_response['host_id'], 'command_id': registration_response['command_id']}})
+        print json.dumps({{
+            'host_id': registration_response['host_id'],
+            'command_id': registration_response['command_id']
+        }})
 
         return 0
 
     except Exception, err:
         bootstrap_log.exception('Error from agent-bootstrap-script main():')
         return 1
+
 
 if __name__ == '__main__':
     sys.exit(main())
