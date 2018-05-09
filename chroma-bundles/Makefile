@@ -8,6 +8,9 @@ WORKDIR := $(notdir $(CURDIR))
 PROFILES := default.profile base_managed_RH7.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
+MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
+MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
+
 all: package
 
 clean: TARGET=clean
@@ -22,7 +25,12 @@ $(SUBDIRS):
 
 clean install:: subdirs
 
-package: subdirs $(PROFILES) lesskey.out create_installer
+chroma_support.repo: chroma_support.repo.in
+	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
+	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
+	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
+
+package: subdirs $(PROFILES) lesskey.out create_installer chroma_support.repo
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(DISTRO_TAG)/$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
 		--show-transformed-names \
@@ -38,3 +46,7 @@ rpms:
 
 docs download:
 	@echo "Nothing to do here"
+
+substs: chroma_support.repo
+
+.PHONY: substs

@@ -96,3 +96,7 @@ FORCE:
 
 docs:
 	@echo "Nothing to do here"
+
+substs:
+
+.PHONY: substs
