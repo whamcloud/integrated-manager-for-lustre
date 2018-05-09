@@ -27,6 +27,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return [
+            "parted -s %s mklabel gpt" % self._device_path,
             "zpool create %s -o cachefile=none -o multihost=on %s" %
             (self.device_path, self._device_path)
         ]
