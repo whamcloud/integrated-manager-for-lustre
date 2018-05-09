@@ -127,7 +127,7 @@ def process_zfs_mount(device, data, zfs_mounts):
         if p['name'] == 'lustre:svname'  # used to be fsname
     )
 
-    fs_uuid = pool['guid']
+    fs_uuid = dataset['guid']
 
     # note: this will be one of the many partitions that belong to the pool
     new_device = next(
@@ -148,7 +148,7 @@ class LustrePlugin(DevicePlugin):
     def reset_state(self):
         self._mount_cache = defaultdict(dict)
 
-    # @exceptionSandBox(console_log, {})
+    @exceptionSandBox(console_log, {})
     def _scan_mounts(self):
         mounts = {}
 
