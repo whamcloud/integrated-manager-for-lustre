@@ -299,11 +299,11 @@ def get_normalized_device_table():
     return parse_sys_block(scanner_cmd("Stream"))
 
 
-def get_local_mounts():
+def get_local_mounts(data_source=scanner_cmd("Stream")['localMounts']):
     """ process block device info returned by device-scanner to produce a ndt """
     return [
         (d['source'], d['target'], d['fstype'])
-        for d in scanner_cmd("Stream")['localMounts']
+        for d in data_source
     ]
 
 
