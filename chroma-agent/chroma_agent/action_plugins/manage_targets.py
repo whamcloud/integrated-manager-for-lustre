@@ -10,6 +10,7 @@ import tempfile
 import time
 import socket
 
+from chroma_agent.device_plugins.block_devices import get_local_mounts
 from chroma_agent.lib.shell import AgentShell
 from iml_common.filesystems.filesystem import FileSystem
 from iml_common.blockdevices.blockdevice import BlockDevice
@@ -738,7 +739,6 @@ def _get_target_config(uuid):
 
 def target_running(uuid):
     from os import _exit
-    from chroma_agent.utils import Mounts
     try:
         info = _get_target_config(uuid)
     except (KeyError, TypeError) as e:
@@ -749,8 +749,7 @@ def target_running(uuid):
 
     filesystem = FileSystem(info['backfstype'], info['bdev'])
 
-    mounts = Mounts()
-    for device, mntpnt, fstype in mounts.all():
+    for device, mntpnt, fstype in get_local_mounts():
         if (mntpnt == info['mntpt']) and filesystem.devices_match(device, info['bdev'], uuid):
             _exit(0)
 

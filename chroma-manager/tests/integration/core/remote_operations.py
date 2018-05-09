@@ -1042,8 +1042,7 @@ class RealRemoteOperations(RemoteOperations):
                 rpm_q_result = self._ssh_address(
                     address, "rpm -q chroma-agent", expected_return_code=None)
                 if rpm_q_result.rc == 0:
-                    # Stop the agent
-                    self._ssh_address(address, 'systemctl stop chroma-agent')
+                    self.stop_agents([address])
                     self._ssh_address(
                         address,
                         '''
