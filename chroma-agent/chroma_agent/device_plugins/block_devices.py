@@ -12,6 +12,7 @@ from collections import namedtuple
 from toolz.curried import map as cmap, filter as cfilter
 from toolz.functoolz import pipe, curry
 
+from chroma_agent.lib.shell import AgentShell
 from iml_common.blockdevices.blockdevice import BlockDevice
 
 DeviceMaps = namedtuple('device_maps', 'block_devices zfspools')
@@ -26,6 +27,11 @@ MAPPER_PATH = re.compile('^/dev/mapper/')
 
 
 def scanner_cmd(cmd):
+    # Because we are pulling from device-scanner,
+    # It is very important that we wait for
+    # the udev queue to settle before requesting new data
+    AgentShell.run(["udevadm", "settle"])
+
     client = socket.socket(socket.AF_UNIX)
     client.settimeout(1)
     client.connect_ex("/var/run/device-scanner.sock")
@@ -301,10 +307,7 @@ def get_normalized_device_table():
 
 def get_local_mounts(data_source=scanner_cmd("Stream")['localMounts']):
     """ process block device info returned by device-scanner to produce a ndt """
-    return [
-        (d['source'], d['target'], d['fstype'])
-        for d in data_source
-    ]
+    return [(d['source'], d['target'], d['fstype']) for d in data_source]
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
