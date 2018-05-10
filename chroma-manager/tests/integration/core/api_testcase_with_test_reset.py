@@ -981,7 +981,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         ]
 
         def wipe(x):
-            return 'wipefs -a {0}'.format(x)
+            return 'wipefs -a {0} && parted {0} mklabel gpt'.format(x)
 
         self.execute_commands([wipe(x) for x in zfs_device_paths],
                               server0['fqdn'], 'wiping disks')
