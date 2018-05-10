@@ -6,8 +6,6 @@ import logging
 import os
 import sys
 
-from systemd.journal import JournalHandler
-
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
 # in warnings and errors
@@ -62,16 +60,19 @@ def decrease_loglevel(signal, frame):
 # Not setting up logs at import time because we want to
 # set them up after daemonization
 def daemon_log_setup():
+    from systemd.journal import JournalHandler
     daemon_log.addHandler(JournalHandler(SYSLOG_IDENTIFIER='iml-agent-daemon'))
 
 
 def console_log_setup():
+    from systemd.journal import JournalHandler
     console_log.addHandler(
         JournalHandler(SYSLOG_IDENTIFIER='iml-agent-console'))
 
 
 # Log copytool stuff to syslog because we may have multiple processes running.
 def copytool_log_setup():
+    from systemd.journal import JournalHandler
     copytool_log.addHandler(
         JournalHandler(SYSLOG_IDENTIFIER='iml-agent-copytool'))
 
