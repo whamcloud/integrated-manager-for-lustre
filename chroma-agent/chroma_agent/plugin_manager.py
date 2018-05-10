@@ -77,6 +77,7 @@ class PluginManager(object):
             except Exception:
                 daemon_log.warn("** error loading plugin %s" % name)
                 daemon_log.warn(traceback.format_exc())
+                raise
 
     @classmethod
     def _find_plugins(cls):
