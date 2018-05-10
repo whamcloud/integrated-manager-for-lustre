@@ -24,8 +24,9 @@ class TestBlockDeviceLvm(TestBlockDevice):
         # and should be reverted when #500 is fixed
         return [
             "wipefs -a {}".format(self._device_path),
-            "vgcreate --yes %s %s; lvcreate --yes --wipesignatures n -l 100%%FREE --name %s %s"
-            % (self.vg_name, self._device_path, self.lv_name, self.vg_name)
+            "vgcreate --yes {0} {1} && lvcreate --yes --wipesignatures n -l 100%%FREE --name {2} {0}".format(
+                self.vg_name, self._device_path, self.lv_name
+            )
         ]
 
     @property
