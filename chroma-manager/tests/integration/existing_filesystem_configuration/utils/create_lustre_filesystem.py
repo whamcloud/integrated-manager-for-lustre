@@ -136,6 +136,23 @@ class CreateLustreFilesystem(UtilityTestCase):
             json.dump(config, outfile, indent=2, separators=(',', ': '))
 
     def create_lustre_filesystem_for_test(self):
+        # for the moment efs tests are not run with mixed device types
+        # therefore install on all hosts straightaway
+        def get_hosts(target):
+            return [target['primary_server']] + [target['secondary_server']] if 'secondary_server' in target else []
+
+        hosts = get_hosts(self.mgt)
+        device_type = self.get_lustre_server_by_name(hosts[0])['device_type']
+
+        [hosts.extend(get_hosts(mdt)) for mdt in self.mdts if mdt != self.combined_mgt_mdt]
+        [hosts.extend(get_hosts(ost)) for ost in self.osts]
+
+        block_device = TestBlockDevice(device_type, '')
+
+        self.execute_simultaneous_commands(
+            block_device.install_packages_commands, hosts,
+            'install blockdevice packages')
+
         self.configure_target_device(
             self.mgt, 'mgt', self.fsname, None,
             ['--mdt' if self.combined_mgt_mdt else '', '--mgs'])
