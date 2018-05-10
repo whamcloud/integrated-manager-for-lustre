@@ -16,7 +16,7 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from iml_common.lib.exception_sandbox import exceptionSandBox
-from chroma_agent.device_plugins.block_devices import get_normalized_device_table, get_local_mounts, scanner_cmd
+from chroma_agent.device_plugins.block_devices import get_normalized_device_table, get_local_mounts
 from chroma_agent.lib.yum_utils import yum_util
 from iml_common.lib.date_time import IMLDateTime
 
@@ -152,8 +152,7 @@ class LustrePlugin(DevicePlugin):
     def _scan_mounts(self):
         mounts = {}
 
-        data = scanner_cmd("Stream")
-        local_mounts = get_local_mounts(data['localMounts'])
+        local_mounts = get_local_mounts()
         zfs_mounts = [(d, m, f) for d, m, f in local_mounts if f == 'zfs']
 
         for device, mntpnt, fstype in local_mounts:
