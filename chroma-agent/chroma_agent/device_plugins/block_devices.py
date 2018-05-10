@@ -305,9 +305,12 @@ def get_normalized_device_table():
     return parse_sys_block(scanner_cmd("Stream"))
 
 
-def get_local_mounts(data_source=scanner_cmd("Stream")['localMounts']):
+def get_local_mounts():
     """ process block device info returned by device-scanner to produce a ndt """
-    return [(d['source'], d['target'], d['fstype']) for d in data_source]
+    return [
+        (d['source'], d['target'], d['fstype'])
+        for d in scanner_cmd("Stream")['localMounts']
+    ]
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
