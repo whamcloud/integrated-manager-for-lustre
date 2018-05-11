@@ -20,10 +20,8 @@ class TestBlockDeviceLvm(TestBlockDevice):
     # Create a lvm on the device.
     @property
     def prepare_device_commands(self):
-        # FIXME: the use of --yes in the {vg,lv}create commands is a work-around for #500
-        # and should be reverted when #500 is fixed
         return [
-            "vgcreate --yes %s %s; lvcreate --yes --wipesignatures n -l 100%%FREE --name %s %s"
+            "vgcreate %s %s; lvcreate --wipesignatures n -l 100%%FREE --name %s %s"
             % (self.vg_name, self._device_path, self.lv_name, self.vg_name)
         ]
 
