@@ -929,7 +929,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     'zfs',
                     server0['orig_device_paths'][lustre_device['path_index']])
 
-                self.execute_commands(zfs_device.prepare_device_commands,
+                self.execute_commands(zfs_device.reset_device_commands,
                                       server0['fqdn'],
                                       'create zfs device %s' % zfs_device)
 
@@ -981,7 +981,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         ]
 
         def wipe(x):
-            return 'wipefs -a {0} && parted {0} mklabel gpt'.format(x)
+            return 'wipefs -a {0}'.format(x)
 
         self.execute_commands([wipe(x) for x in zfs_device_paths],
                               server0['fqdn'], 'wiping disks')

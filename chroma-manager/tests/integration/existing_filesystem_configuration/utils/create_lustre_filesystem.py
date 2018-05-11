@@ -203,7 +203,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         for device in lustre_server['device_paths']:
             self.remote_command(
                 server_name,
-                "wipefs -a {0} && parted {0} mklabel gpt".format(device))
+                "wipefs -a {0}".format(device))
 
     def rename_device(self, device_old_path, device_new_path):
         for lustre_server in config['lustre_servers']:
@@ -263,7 +263,7 @@ class CreateLustreFilesystem(UtilityTestCase):
             block_device.install_packages_commands, targets.values(),
             'install blockdevice packages')
 
-        self.execute_commands(block_device.prepare_device_commands,
+        self.execute_commands(block_device.reset_device_commands,
                               targets['primary_server'], 'prepare device')
 
         filesystem = TestFileSystem(block_device.preferred_fstype,
