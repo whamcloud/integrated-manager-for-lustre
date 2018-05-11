@@ -139,7 +139,10 @@ class CreateLustreFilesystem(UtilityTestCase):
         # for the moment efs tests are not run with mixed device types
         # therefore install on all hosts straightaway
         def get_hosts(target):
-            return [target['primary_server']] + [target['secondary_server']] if 'secondary_server' in target else []
+            host_list = [target['primary_server']]
+            if 'secondary_server' in target:
+                host_list.append(target['secondary_server'])
+            return host_list
 
         hosts = get_hosts(self.mgt)
         device_type = self.get_lustre_server_by_name(hosts[0])['device_type']
