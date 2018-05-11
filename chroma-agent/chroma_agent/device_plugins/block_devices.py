@@ -301,16 +301,25 @@ def parse_sys_block(device_map):
 
 
 def get_normalized_device_table():
-    """ process block device info returned by device-scanner to produce a ndt """
+    """ process block device info returned by
+        device-scanner to produce a ndt
+    """
     return parse_sys_block(scanner_cmd("Stream"))
 
 
-def get_local_mounts():
-    """ process block device info returned by device-scanner to produce a ndt """
+def parse_local_mounts(xs):
+    """ process block device info returned by device-scanner to produce
+        a legacy version of local mounts
+    """
     return [
         (d['source'], d['target'], d['fstype'])
-        for d in scanner_cmd("Stream")['localMounts']
+        for d in xs
     ]
+
+
+def get_local_mounts():
+    xs = scanner_cmd("Stream")['localMounts']
+    return parse_local_mounts(xs)
 
 
 def paths_to_major_minors(node_block_devices, ndt, device_paths):
