@@ -2,9 +2,9 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
-from collections import defaultdict
+import os
 import re
+from collections import defaultdict
 
 from chroma_agent.lib.shell import AgentShell
 
@@ -41,3 +41,11 @@ def lsof(pid=None, file=None):
             pids[current_pid][file] = {'mode': mode}
 
     return pids
+
+
+def set_server_url(url):
+    if not os.path.exists('/etc/iml'):
+        os.makedirs('/etc/iml')
+
+    with open('/etc/iml/manager-url.conf', 'w+') as f:
+        f.write("IML_MANAGER_URL={}\n".format(url))

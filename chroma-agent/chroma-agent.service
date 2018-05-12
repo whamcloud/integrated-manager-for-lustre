@@ -8,6 +8,7 @@ PartOf=iml-storage-server.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/chroma-agent-daemon
+EnvironmentFile=/etc/iml/manager-url.conf
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal

@@ -4,9 +4,9 @@ baseurl=https://cgearing-mac01.local:8000/repo//lustre
 enabled=0
 gpgcheck=0
 sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
+sslcacert = /etc/iml/authority.crt
+sslclientkey = /etc/iml/private.pem
+sslclientcert = /etc/iml/self.crt
 proxy=_none_
 
 [lustre-client]
@@ -15,9 +15,9 @@ baseurl=https://cgearing-mac01.local:8000/repo//lustre-client
 enabled=0
 gpgcheck=0
 sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
+sslcacert = /etc/iml/authority.crt
+sslclientkey = /etc/iml/private.pem
+sslclientcert = /etc/iml/self.crt
 proxy=_none_
 
 [iml-agent]
@@ -26,9 +26,9 @@ baseurl=https://cgearing-mac01.local:8000/repo//iml-agent
 enabled=0
 gpgcheck=0
 sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
+sslcacert = /etc/iml/authority.crt
+sslclientkey = /etc/iml/private.pem
+sslclientcert = /etc/iml/self.crt
 proxy=_none_
 
 [e2fsprogs]
@@ -37,9 +37,9 @@ baseurl=https://cgearing-mac01.local:8000/repo//e2fsprogs
 enabled=0
 gpgcheck=0
 sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
+sslcacert = /etc/iml/authority.crt
+sslclientkey = /etc/iml/private.pem
+sslclientcert = /etc/iml/self.crt
 proxy=_none_
 
 [robinhood]
@@ -48,7 +48,7 @@ baseurl=https://cgearing-mac01.local:8000/repo//robinhood
 enabled=0
 gpgcheck=0
 sslverify = 1
-sslcacert = /var/lib/chroma/authority.crt
-sslclientkey = /var/lib/chroma/private.pem
-sslclientcert = /var/lib/chroma/self.crt
+sslcacert = /etc/iml/authority.crt
+sslclientkey = /etc/iml/private.pem
+sslclientcert = /etc/iml/self.crt
 proxy=_none_
