@@ -58,3 +58,7 @@ class TestFileSystem(object):
     @abc.abstractproperty
     def mount_path(self):
         pass
+
+    @property
+    def install_packages_commands(cls):
+        return []
