@@ -241,15 +241,15 @@ class CreateLustreFilesystem(UtilityTestCase):
         # When this routine is called the target must be accessible from the primary_target
         if (target.get('failover_mode') == 'failnode') and (
                 target.get('mount_server') == 'secondary_server'):
-            self.remote_command(target['primary_server'],
-                                'systemctl daemon-reload')
-            self.remote_command(target['primary_server'],
-                                'mkdir -p %s' % target['mount_path'])
-            self.remote_command(target['primary_server'],
-                                'mount -t lustre %s %s' %
-                                (device, target['mount_path']))
-            self.remote_command(target['primary_server'],
-                                'umount %s' % target['mount_path'])
+            self.start_mount(
+                target['primary_server'],
+                source=device,
+                target=target['mount_path'],
+                opts='defaults,_netdev')
+
+            self.stop_mount(
+                target['primary_server'],
+                target=target['mount_path'])
 
         target_server = target[target.get('mount_server', 'primary_server')]
 
@@ -262,14 +262,12 @@ class CreateLustreFilesystem(UtilityTestCase):
             self.execute_commands(block_device.capture_commands,
                                   target['secondary_server'], 'Capture device')
 
-        self.remote_command(target_server,
-                            'mkdir -p %s' % target['mount_path'])
-        self.remote_command(target_server, 'mount -t lustre %s %s' %
-                            (device, target['mount_path']))
-        self.remote_command(
+        self.start_mount(
             target_server,
-            "echo '%s   %s  lustre  defaults,_netdev    0 0' >> /etc/fstab" %
-            (device, target['mount_path']))
+            source=device,
+            target=target['mount_path'],
+            opts='defaults,_netdev'
+        )
 
     def configure_target_device(self, target, target_type, fsname, mgs_nids,
                                 mkfs_options):

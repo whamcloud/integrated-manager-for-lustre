@@ -24,6 +24,19 @@ logger.addHandler(handler)
 paramiko_logger = logging.getLogger('paramiko.transport')
 paramiko_logger.setLevel(logging.WARN)
 
+mount_unit_template = '''[Unit]
+Description=Lustre Mount for IML Tests
+
+[Mount]
+What={source}
+Where={target}
+Type=lustre
+Options={opts}
+
+[Install]
+WantedBy=multi-user.target
+'''
+
 
 class ExceptionThread(threading.Thread):
     def __init__(self, *args, **kwargs):
@@ -241,3 +254,57 @@ class UtilityTestCase(TestCase):
                 time.sleep(1)
 
             raise
+
+    @staticmethod
+    def _get_unit_name(target):
+        name = target.strip('/').replace('/', '-') + '.mount'
+        return name, os.path.join('/etc/systemd/system/', name)
+
+    def start_mount(self, server, **kwargs):
+        """ Create (if doesn't exist) mount unit file and start it """
+        name, path = self._get_unit_name(kwargs['target'])
+
+        contents = mount_unit_template.format(**kwargs)
+
+        self.remote_command(
+            server,
+            "mkdir -p {}".format(kwargs['target']))
+
+        self.remote_command(
+            server,
+            "echo '{0}' > {1}".format(contents, path),
+            expected_return_code=None)
+
+        self.remote_command(
+            server,
+            "systemctl daemon-reload")
+
+#        self.remote_command(
+#            server,
+#            "systemctl enable {}".format(name))
+
+        self.remote_command(
+            server,
+            "systemctl restart {}".format(name))
+
+    def stop_mount(self, server, target):
+        """ Stop mount unit file and remove it """
+        name, path = self._get_unit_name(target)
+
+        self.remote_command(
+            server,
+            "systemctl disable {}".format(name),
+            expected_return_code=None)
+
+        self.remote_command(
+            server,
+            "systemctl stop {}".format(name),
+            expected_return_code=None)
+
+        self.remote_command(
+            server,
+            "rm -f {}".format(path))
+
+        self.remote_command(
+            server,
+            "systemctl daemon-reload")
