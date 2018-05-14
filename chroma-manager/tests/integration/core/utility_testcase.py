@@ -279,9 +279,9 @@ class UtilityTestCase(TestCase):
             server,
             "systemctl daemon-reload")
 
-#        self.remote_command(
-#            server,
-#            "systemctl enable {}".format(name))
+        self.remote_command(
+            server,
+            "systemctl enable {}".format(name))
 
         self.remote_command(
             server,
