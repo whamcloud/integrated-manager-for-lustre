@@ -46,6 +46,10 @@ check_for_autopass() {
     if [ -n "$jenkins_modules" ]; then
         export STORAGE_SERVER_REPOS="$jenkins_modules $STORAGE_SERVER_REPOS"
     fi
+    copr_modules=$(echo "$commit_message" | sed -ne '/^ *COPR Module: */s/^ *COPR Module: *\(.*\)\/\(.*\)/https:\/\/copr.fedorainfracloud.org\/coprs\/\1\/\2\/repo\/epel-7\/\1-\2-epel-7.repo/gp')
+    if [ -n "$copr_modules" ]; then
+        export STORAGE_SERVER_REPOS="$copr_modules $STORAGE_SERVER_REPOS"
+    fi
 
     local t
     for t in $tests_to_skip; do
