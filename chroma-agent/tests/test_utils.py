@@ -1,12 +1,15 @@
 import mock
 from django.utils import unittest
-from iml_common.test.command_capture_testcase import CommandCaptureTestCase
 
 
 class PatchedContextTestCase(unittest.TestCase):
     def __init__(self, methodName):
         super(PatchedContextTestCase, self).__init__(methodName)
         self._test_root = None
+
+        empty_map = {'blockDevices': {}, 'zed': {}, 'localMounts': []}
+        mock.patch('chroma_agent.device_plugins.block_devices.scanner_cmd',
+                   return_value=empty_map).start()
 
     def _find_subclasses(self, klass):
         """Introspectively find all descendents of a class"""
@@ -22,7 +25,7 @@ class PatchedContextTestCase(unittest.TestCase):
 
     @test_root.setter
     def test_root(self, value):
-        assert self._test_root == None, "test_root can only be set once per test"
+        assert self._test_root is None, "test_root can only be set once per test"
 
         self._test_root = value
 
