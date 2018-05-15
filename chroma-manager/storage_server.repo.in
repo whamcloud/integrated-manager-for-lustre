@@ -27,13 +27,13 @@ baseurl=https://downloads.hpdd.intel.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-manager-for-lustre-devel]
-name=Copr repo for manager-for-lustre-devel owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-$basearch/
+[@MFL_REPO_OWNER@@MFL_REPO_NAME@]
+name=Copr repo for @MFL_REPO_NAME@ owned by @MFL_REPO_OWNER@
+baseurl=https://copr-be.cloud.fedoraproject.org/results/@MFL_COPR_REPO@/epel-7-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/pubkey.gpg
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/@MFL_COPR_REPO@/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 
