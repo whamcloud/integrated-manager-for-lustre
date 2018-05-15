@@ -314,17 +314,11 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
         cls.cached_results = raw_result
 
     def _lnet_state(self):
-        '''
-        Uses /proc/module and /proc/sys/lnet/stats to decide is lnet is up, down or unloaded
-        :return: lnet_up, lnet_down or lnet_unloaded
-        '''
-        lnet_loaded = False
-        for module_line in open("/proc/modules").readlines():
-            if module_line.startswith("lnet "):
-                lnet_loaded = True
-                break
-
-        lnet_up = os.path.exists("/proc/sys/lnet/stats")
+        lnet_up = False
+        lnet_loaded = not bool(AgentShell.run(['udevadm', 'info', '--path', '/sys/module/lnet']).rc)
+        
+        if lnet_loaded:
+            lnet_up = not bool(AgentShell.run(['lnetctl', 'net', 'show']).rc)
 
         return {(False, False): "lnet_unloaded",
                  (False, True): "lnet_unloaded",
