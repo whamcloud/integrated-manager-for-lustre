@@ -3,7 +3,7 @@ import json
 import sys
 
 from testconfig import config
-from tests.integration.core.utility_testcase import UtilityTestCase
+from tests.integration.core.utility_testcase import UtilityTestCase, stop_mount_commands
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
 
@@ -100,7 +100,7 @@ class CreateLustreFilesystem(UtilityTestCase):
         self.execute_simultaneous_commands(
             reduce(
                 lambda acc, x: acc + x,
-                [self.stop_mount_commands(m) for m in mounts],
+                [stop_mount_commands(m) for m in mounts],
                 []),
             [s['address'] for s in config['lustre_servers']],
             'stop all lustre systemd mount units',
