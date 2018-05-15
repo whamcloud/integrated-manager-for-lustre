@@ -199,11 +199,7 @@ class TestFormattedBlockDevices(TestBase):
     def setUp(self):
         super(TestFormattedBlockDevices, self).setUp()
 
-        # self.fixture = json.loads(self.load(u'device_aggregator_formatted_ldiskfs.text'))
         self.fixture = json.loads(self.load(u'scanner-lu-mounted.out'))
-        # self.block_devices = self.get_patched_block_devices(dict(self.fixture))
-        # self.expected = json.loads(self.load(u'agent_plugin_formatted_ldiskfs.json'))['result']['linux']
-
         self.addCleanup(patch.stopall)
 
     def get_patched_ndt(self, fixture):

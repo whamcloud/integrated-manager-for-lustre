@@ -99,7 +99,8 @@ class TestFormatTarget(CommandCaptureTestCase):
     def _setup_run_exceptions(self, block_device, run_args):
         self._run_command = CommandCaptureCommand(tuple(filter(None, run_args)))
 
-        self.add_commands(CommandCaptureCommand(("zpool", "set", "failmode=panic", "lustre1")),
+        self.add_commands(CommandCaptureCommand(("/usr/sbin/udevadm", "info", "--path=/module/zfs")),
+                          CommandCaptureCommand(("zpool", "set", "failmode=panic", "lustre1")),
                           CommandCaptureCommand(("dumpe2fs", "-h", "/dev/foo"),
                                                 stdout="Inode size: 1024\nInode count: 1024\n"),
                           CommandCaptureCommand(("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"),
