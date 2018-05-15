@@ -198,6 +198,8 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         self.remote_command(server_name, "sed -i '/lustre/d' /etc/fstab")
 
+        self.remote_command(server_name, "systemctl daemon-reload")
+
     def clear_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
@@ -220,6 +222,8 @@ class CreateLustreFilesystem(UtilityTestCase):
         if (target.get('failover_mode') == 'failnode') and (
                 target.get('mount_server') == 'secondary_server'):
             self.remote_command(target['primary_server'],
+                                'systemctl daemon-reload')
+            self.remote_command(target['primary_server'],
                                 'mkdir -p %s' % target['mount_path'])
             self.remote_command(target['primary_server'],
                                 'mount -t lustre %s %s' %
@@ -228,6 +232,8 @@ class CreateLustreFilesystem(UtilityTestCase):
                                 'umount %s' % target['mount_path'])
 
         target_server = target[target.get('mount_server', 'primary_server')]
+
+        self.remote_command(target_server, "systemctl daemon-reload")
 
         # If we are going to mount on the secondary the move the block device from the primary to the secondary.
         if target.get('mount_server') == 'secondary_server':

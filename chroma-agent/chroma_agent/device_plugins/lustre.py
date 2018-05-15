@@ -71,7 +71,7 @@ def scan_packages():
             if stdout:
                 for line in [l.strip() for l in stdout.strip().split("\n")]:
                     if line.startswith("Last metadata expiration check") or \
-                       line.startswith("Waiting for process with pid"):
+                        line.startswith("Waiting for process with pid"):
                         continue
                     epoch, name, version, release, arch = line.split()
                     if arch == "src":
@@ -111,6 +111,7 @@ def process_zfs_mount(device, data, zfs_mounts):
     # and nested dataset in zed structures to access lustre svname (label).
     dev_root = device.split('/')[0]
     if dev_root not in [d for d, m, f in zfs_mounts]:
+        daemon_log.debug('lustre device is not zfs')
         return None, None, None
 
     pool = next(
@@ -138,6 +139,24 @@ def process_zfs_mount(device, data, zfs_mounts):
     return fs_label, fs_uuid, new_device
 
 
+def process_lvm_mount(device, data):
+    try:
+        bdev = next(
+            (v['paths'], v['lvUuid']) for v in data['blockDevices'].itervalues()
+            if device in v['paths'] and v.get('lvUuid')
+        )
+    except StopIteration:
+        daemon_log.debug('lustre device is not lvm')
+        return None, None, None
+
+    label_prefix = '/dev/disk/by-label/'
+    fs_label = next(
+        p.split(label_prefix, 1)[1] for p in bdev[0] if p.startswith(label_prefix)
+    )
+
+    return fs_label, bdev[1], None
+
+
 class LustrePlugin(DevicePlugin):
     delta_fields = ['capabilities', 'properties', 'mounts', 'packages', 'resource_locations']
 
@@ -155,34 +174,35 @@ class LustrePlugin(DevicePlugin):
         data = scanner_cmd("Stream")
         local_mounts = parse_local_mounts(data['localMounts'])
         zfs_mounts = [(d, m, f) for d, m, f in local_mounts if f == 'zfs']
+        lustre_mounts = [(d, m, f) for d, m, f in local_mounts if f == 'lustre']
 
-        for device, mntpnt, fstype in local_mounts:
-            if fstype != 'lustre':
-                continue
-
+        for device, mntpnt, fstype in lustre_mounts:
             fs_label, fs_uuid, new_device = process_zfs_mount(device, data, zfs_mounts)
 
             if not fs_label:
-                # todo: derive information directly from device-scanner output
-                # Assume that while a filesystem is mounted, its UUID and LABEL don't change.
-                # Therefore we can avoid repeated blkid calls with a little caching.
-                if device in self._mount_cache:
-                    fs_uuid = self._mount_cache[device]['fs_uuid']
-                    fs_label = self._mount_cache[device]['fs_label']
-                else:
-                    # Sending none as the type means BlockDevice will use it's local cache to work the type.
-                    # This is not a good method, and we should work on a way of not storing such state but for the
-                    # present it is the best we have.
-                    try:
-                        fs_uuid = BlockDevice(None, device).uuid
-                        fs_label = FileSystem(None, device).label
+                fs_label, fs_uuid, new_device = process_lvm_mount(device, data)
 
-                        # If we have scanned the devices then it is safe to cache the values.
-                        if LinuxDevicePlugin.devices_scanned:
-                            self._mount_cache[device]['fs_uuid'] = fs_uuid
-                            self._mount_cache[device]['fs_label'] = fs_label
-                    except AgentShell.CommandExecutionError:
-                        continue
+                if not fs_label:
+                    # todo: derive information directly from device-scanner output for ldiskfs
+                    # Assume that while a filesystem is mounted, its UUID and LABEL don't change.
+                    # Therefore we can avoid repeated blkid calls with a little caching.
+                    if device in self._mount_cache:
+                        fs_uuid = self._mount_cache[device]['fs_uuid']
+                        fs_label = self._mount_cache[device]['fs_label']
+                    else:
+                        # Sending none as the type means BlockDevice will use it's local cache to work the type.
+                        # This is not a good method, and we should work on a way of not storing such state but for the
+                        # present it is the best we have.
+                        try:
+                            fs_uuid = BlockDevice(None, device).uuid
+                            fs_label = FileSystem(None, device).label
+
+                            # If we have scanned the devices then it is safe to cache the values.
+                            if LinuxDevicePlugin.devices_scanned:
+                                self._mount_cache[device]['fs_uuid'] = fs_uuid
+                                self._mount_cache[device]['fs_label'] = fs_label
+                        except AgentShell.CommandExecutionError:
+                            continue
 
             ndt = get_normalized_device_table()
             dev_normalized = ndt.normalized_device_path(device if not new_device else new_device)
