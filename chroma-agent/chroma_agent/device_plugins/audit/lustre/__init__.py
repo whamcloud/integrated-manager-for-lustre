@@ -11,7 +11,6 @@ from collections import namedtuple
 
 from tablib.packages import yaml
 
-from chroma_agent.device_plugins.block_devices import get_local_mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
@@ -627,6 +626,7 @@ class ClientAudit(LustreAudit):
 
     @classmethod
     def _client_mounts(cls):
+        from chroma_agent.device_plugins.block_devices import get_local_mounts
         spec = re.compile(r'@\w+:/\w+')
         # get_local_mounts() returns a list of tuples in which the third element
         # is the filesystem type.

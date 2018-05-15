@@ -63,7 +63,7 @@ requirements::
 	echo "pytz==2014.4";                                      \
 	echo "tzlocal";                                           \
 	echo "systemd-python";                                    \
-	echo "iml-common>=1.3,<1.4";                              \
+	echo "iml-common>=1.4,<1.5";                              \
 	echo "toolz";                                             \
 	echo "coverage==3.5.2";                                   \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
@@ -96,3 +96,7 @@ FORCE:
 
 docs:
 	@echo "Nothing to do here"
+
+substs:
+
+.PHONY: substs

@@ -21,6 +21,7 @@ class TestBlockDeviceLvm(TestBlockDevice):
     @property
     def prepare_device_commands(self):
         return [
+            "wipefs -a {}".format(self._device_path),
             "vgcreate %s %s; lvcreate --wipesignatures n -l 100%%FREE --name %s %s"
             % (self.vg_name, self._device_path, self.lv_name, self.vg_name)
         ]
