@@ -285,8 +285,8 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         block_device = TestBlockDevice(device_type, device_path)
 
-        self.execute_commands(block_device.reset_device_commands,
-                              targets['primary_server'], 'reset device')
+        self.execute_commands(block_device.prepare_device_commands,
+                              targets['primary_server'], 'prepare device')
 
         filesystem = TestFileSystem(block_device.preferred_fstype,
                                     block_device.device_path)
