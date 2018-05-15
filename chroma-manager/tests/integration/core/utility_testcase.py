@@ -24,6 +24,49 @@ logger.addHandler(handler)
 paramiko_logger = logging.getLogger('paramiko.transport')
 paramiko_logger.setLevel(logging.WARN)
 
+mount_unit_template = '''[Unit]
+Description=Lustre Mount for IML Tests
+
+[Mount]
+What={source}
+Where={target}
+Type=lustre
+Options={opts}
+
+[Install]
+WantedBy=multi-user.target
+'''
+
+
+def _get_unit_name(target):
+    name = target.strip('/').replace('/', '-') + '.mount'
+    return name, os.path.join('/etc/systemd/system/', name)
+
+
+def start_mount_commands(**kwargs):
+    """ Commands to create/overwrite mount unit file and then start/enable it """
+    name, path = _get_unit_name(kwargs['target'])
+
+    contents = mount_unit_template.format(**kwargs)
+
+    return [
+        "mkdir -p {}".format(kwargs['target']),
+        "echo '{0}' > {1}".format(contents, path),
+        "systemctl daemon-reload",
+        "systemctl enable {}".format(name),
+        "systemctl restart {}".format(name)]
+
+
+def stop_mount_commands(target):
+    """ Commands to stop mount unit file and remove it """
+    name, path = _get_unit_name(target)
+
+    return [
+        "systemctl disable {}".format(name),
+        "systemctl stop {}".format(name),
+        "rm -f {}".format(path),
+        "systemctl daemon-reload"]
+
 
 class ExceptionThread(threading.Thread):
     def __init__(self, *args, **kwargs):
@@ -241,3 +284,11 @@ class UtilityTestCase(TestCase):
                 time.sleep(1)
 
             raise
+
+    def start_mount(self, server, **kwargs):
+        [self.remote_command(server, cmd)
+         for cmd in start_mount_commands(**kwargs)]
+
+    def stop_mount(self, server, target):
+        [self.remote_command(server, cmd, expected_return_code=None)
+         for cmd in stop_mount_commands(target)]

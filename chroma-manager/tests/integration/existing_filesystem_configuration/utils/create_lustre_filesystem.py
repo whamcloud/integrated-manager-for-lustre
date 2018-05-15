@@ -3,7 +3,7 @@ import json
 import sys
 
 from testconfig import config
-from tests.integration.core.utility_testcase import UtilityTestCase
+from tests.integration.core.utility_testcase import UtilityTestCase, stop_mount_commands
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 from tests.integration.utils.test_filesystems.test_filesystem import TestFileSystem
 
@@ -91,9 +91,22 @@ class CreateLustreFilesystem(UtilityTestCase):
                         del target[key]
 
     def _clear_current_target_devices(self):
-        for server in config['lustre_servers']:
-            self.remote_command(server['address'], 'umount -t lustre -a')
+        # collect all mount_paths and attempt to unmount on all servers
+        mounts = filter(
+            None,
+            [target.get("mount_path") for target
+             in config['filesystem']['targets'].values()])
 
+        self.execute_simultaneous_commands(
+            reduce(
+                lambda acc, x: acc + x,
+                [stop_mount_commands(m) for m in mounts],
+                []),
+            [s['address'] for s in config['lustre_servers']],
+            'stop all lustre systemd mount units',
+            expected_return_code=None)
+
+        for server in config['lustre_servers']:
             self.umount_devices(server['nodename'])
 
             self.execute_commands(
@@ -210,15 +223,12 @@ class CreateLustreFilesystem(UtilityTestCase):
                 return device
 
     def umount_devices(self, server_name):
+        """ Clear devices not mounted using systemd """
         lustre_server = self.get_lustre_server_by_name(server_name)
         for device in lustre_server['device_paths']:
             self.remote_command(server_name,
                                 "if mount | grep %s; then umount %s; fi;" %
                                 (device, device))
-
-        self.remote_command(server_name, "sed -i '/lustre/d' /etc/fstab")
-
-        self.remote_command(server_name, "systemctl daemon-reload")
 
     def clear_devices(self, server_name):
         lustre_server = self.get_lustre_server_by_name(server_name)
@@ -241,15 +251,15 @@ class CreateLustreFilesystem(UtilityTestCase):
         # When this routine is called the target must be accessible from the primary_target
         if (target.get('failover_mode') == 'failnode') and (
                 target.get('mount_server') == 'secondary_server'):
-            self.remote_command(target['primary_server'],
-                                'systemctl daemon-reload')
-            self.remote_command(target['primary_server'],
-                                'mkdir -p %s' % target['mount_path'])
-            self.remote_command(target['primary_server'],
-                                'mount -t lustre %s %s' %
-                                (device, target['mount_path']))
-            self.remote_command(target['primary_server'],
-                                'umount %s' % target['mount_path'])
+            self.start_mount(
+                target['primary_server'],
+                source=device,
+                target=target['mount_path'],
+                opts='defaults,_netdev')
+
+            self.stop_mount(
+                target['primary_server'],
+                target=target['mount_path'])
 
         target_server = target[target.get('mount_server', 'primary_server')]
 
@@ -262,14 +272,12 @@ class CreateLustreFilesystem(UtilityTestCase):
             self.execute_commands(block_device.capture_commands,
                                   target['secondary_server'], 'Capture device')
 
-        self.remote_command(target_server,
-                            'mkdir -p %s' % target['mount_path'])
-        self.remote_command(target_server, 'mount -t lustre %s %s' %
-                            (device, target['mount_path']))
-        self.remote_command(
+        self.start_mount(
             target_server,
-            "echo '%s   %s  lustre  defaults,_netdev    0 0' >> /etc/fstab" %
-            (device, target['mount_path']))
+            source=device,
+            target=target['mount_path'],
+            opts='defaults,_netdev'
+        )
 
     def configure_target_device(self, target, target_type, fsname, mgs_nids,
                                 mkfs_options):
