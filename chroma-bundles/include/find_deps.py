@@ -90,16 +90,12 @@ class YumDepFinder(object):
                repo.id != "updates" and repo.id != "updates-centos7.3-x86_64" and \
                repo.id != "extras" and repo.id != "extras-centos7.3-x86_64" and \
                repo.id != "addon-epel7-x86_64" and repo.id != "epel" and \
-               repo.id != "ngompa-dnf-el7" and \
-               repo.id != "managerforlustre-manager-for-lustre" and \
-               repo.id != "copr-be.cloud.fedoraproject.org_results_managerforlustre_manager-for-lustre_epel-7-x86_64_":
+               repo.id != "ngompa-dnf-el7":
                 repo.disable()
 
     def add_repo(self, repo, num):
-        repopath = os.path.normpath(repo)
         newrepo = yum.yumRepo.YumRepository("repo%s" % num)
-        newrepo.name = repopath
-        newrepo.baseurl = "file://" + repopath
+        newrepo.baseurl = repo
         newrepo.basecachedir = self.yb.conf.cachedir
         self.yb.repos.add(newrepo)
         self.yb.repos.enableRepo(newrepo.id)
@@ -126,7 +122,11 @@ class YumDepFinder(object):
 
         return self.all_deps, self.missing_deps
 
-repos = [os.path.abspath(path) for path in sys.argv[1].split(" ")]
+repos = []
+for repo in sys.argv[1].split(" "):
+    if repo[0] == "/":
+        repo = "file://" + os.path.normpath(os.path.abspath(repo))
+    repos.append(repo)
 
 pkgs = sys.argv[2].split(" ")
 
