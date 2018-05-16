@@ -21,6 +21,10 @@ class TestBlockDeviceLinux(TestBlockDevice):
         return self._device_path
 
     @property
+    def wipe_device_commands(self):
+        return ['wipefs -a {}'.format(self.device_path)]
+
+    @property
     def destroy_commands(self):
         return ['wipefs -a {}'.format(self.device_path)]
 
