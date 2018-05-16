@@ -35,7 +35,7 @@ Requires: python2-iml-common1.4
 Requires: systemd-python
 Requires: python-tzlocal
 Requires: python2-toolz
-Requires: iml-device-scanner-proxy < 3
+Requires: iml-device-scanner-proxy = 2.0.0
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif

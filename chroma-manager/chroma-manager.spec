@@ -58,7 +58,7 @@ Requires: iml-supervisor-status
 Requires: iml-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help
-Requires: iml-device-scanner-aggregator
+Requires: iml-device-scanner-aggregator = 2.0.0
 Requires: createrepo
 Requires: python2-toolz
 Conflicts: chroma-agent
