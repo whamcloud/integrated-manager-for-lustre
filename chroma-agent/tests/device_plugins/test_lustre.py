@@ -1,10 +1,9 @@
 import os
 import mock
 
-from chroma_agent.device_plugins import lustre
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase
-from django.utils import unittest
-
+from tests.lib.agent_unit_testcase import AgentUnitTestCase
+from chroma_agent.device_plugins import lustre
 from chroma_agent.device_plugins.lustre import LustrePlugin
 
 
@@ -21,7 +20,7 @@ class MockActionPluginManager():
     pass
 
 
-class TestLustreAudit(unittest.TestCase):
+class TestLustreAudit(AgentUnitTestCase):
     def mock_capabilities(self):
         return {'capabilities': TestLustreAudit.values['capabilities']}
 
@@ -35,6 +34,8 @@ class TestLustreAudit(unittest.TestCase):
         return {'scan_packages': TestLustreAudit.values['scan_packages']}
 
     def setUp(self):
+        super(TestLustreAudit, self).setUp()
+
         self.addCleanup(mock.patch.stopall)
 
         TestLustreAudit.values = {'capabilities': True,
