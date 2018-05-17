@@ -253,17 +253,17 @@ class Linux(Plugin):
 
             if bdid.startswith('zfsset'):
                 dev['filesystem_type'] = 'zfs'
-                device_type = 'zfsdatasets'
+#                device_type = 'zfsdatasets'
             else:
                 dev['filesystem_type'] = None
-                device_type = 'zfspools'
+#                device_type = 'zfspools'
 
             # add drive partitions to avoid https://github.com/intel-hpdd/intel-manager-for-lustre/issues/493
-            serials = [devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']]
-            [devices[device_type][uuid]['drives'].append(x['major_minor'])
-             for x in devices['devs'].values()
-             if x.get('serial_80') in serials
-             and x['major_minor'] not in devices[device_type][uuid]['drives']]
+#            serials = [devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']]
+#            [devices[device_type][uuid]['drives'].append(x['major_minor'])
+#             for x in devices['devs'].values()
+#             if x.get('serial_80') in serials
+#             and x['major_minor'] not in devices[device_type][uuid]['drives']]
 
         for uuid, zfs_info in merge(devices['zfspools'], devices['zfsdatasets']).items():
             add_zfs(zfs_info)
@@ -360,6 +360,20 @@ class Linux(Plugin):
                                                       host_id=host_id,
                                                       path=bdev['path'])
             elif bdev['parent']:
+                if bdev['filesystem_type'] == 'zfs_member':
+                    continue
+                elif bdev['partition_number'] == 9:
+                    # if zfs_member exists at partition 1, mark partition 9 as not usable
+                    try:
+                        next(
+                            bd for bd in devices['devs'].values()
+                            if bd['parent'] == bdev['parent']
+                            and bd['filesystem_type'] == 'zfs_member'
+                            and bd['partition_number'] == 1)
+                        continue
+                    except StopIteration:
+                        pass
+
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
@@ -444,9 +458,8 @@ class Linux(Plugin):
             if not parent_resource.logical_drive:
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
-            usable = True
             if bdev['filesystem_type'] == 'zfs_member':
-                usable = False
+                continue
             elif bdev['partition_number'] == 9:
                 # if zfs_member exists at partition 1, mark partition 9 as not usable
                 try:
@@ -455,7 +468,7 @@ class Linux(Plugin):
                         if bd['parent'] == bdev['parent']
                         and bd['filesystem_type'] == 'zfs_member'
                         and bd['partition_number'] == 1)
-                    usable = False
+                    continue
                 except StopIteration:
                     pass
 
@@ -465,8 +478,7 @@ class Linux(Plugin):
                 container=parent_resource.logical_drive,
                 number=bdev['partition_number'],
                 size=bdev['size'],
-                filesystem_type=bdev['filesystem_type'],
-                usable_for_lustre=usable)
+                filesystem_type=bdev['filesystem_type'])
 
             this_node.add_parent(partition)
             partition_identifiers.append(partition.id_tuple())
