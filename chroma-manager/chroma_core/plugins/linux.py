@@ -82,6 +82,7 @@ class Partition(resources.LogicalDriveSlice):
 
     number = attributes.Integer()
     container = attributes.ResourceReference()
+    usable_for_lustre = True
 
     def get_label(self):
         return "%s-%s" % (self.container.get_label(), self.number)
@@ -267,9 +268,6 @@ class Linux(Plugin):
         for uuid, zfs_info in merge(devices['zfspools'], devices['zfsdatasets']).items():
             add_zfs(zfs_info)
 
-        # for uuid, zfs_vol_info in devices['zfsvols'].items():
-        #     special_block_devices.add(zfs_vol_info['block_device'])
-
         def preferred_serial(bdev):
             for attr in SERIAL_PREFERENCE:
                 if bdev[attr]:
@@ -300,7 +298,7 @@ class Linux(Plugin):
         for bdev in devices['devs'].values():
             serial = preferred_serial(bdev)
             if not bdev['major_minor'] in special_block_devices:
-                if serial is not None and not serial in res_by_serial:
+                if serial is not None and serial not in res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
                     node, created = self.update_or_create(ScsiDevice,
@@ -355,16 +353,16 @@ class Linux(Plugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                                    host_id = host_id,
-                                    path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             elif bdev['parent']:
                 node, created = self.update_or_create(LinuxDeviceNode,
-                        host_id = host_id,
-                        path = bdev['path'])
+                                                      host_id=host_id,
+                                                      path=bdev['path'])
             else:
                 continue
 
@@ -431,8 +429,6 @@ class Linux(Plugin):
 
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
 
-        # initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsvols', ZfsVol, ['name'], reported_device_node_paths) or initiate_device_poll
-
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             if fstype != 'lustre':
                 bdev_resource = self.major_minor_to_node_resource[bdev]
@@ -448,12 +444,29 @@ class Linux(Plugin):
             if not parent_resource.logical_drive:
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
-            partition, created = self.update_or_create(Partition,
-                    parents = [parent_resource],
-                    container = parent_resource.logical_drive,
-                    number = bdev['partition_number'],
-                    size = bdev['size'],
-                    filesystem_type = bdev['filesystem_type'])
+            usable = True
+            if bdev['filesystem_type'] == 'zfs_member':
+                usable = False
+            elif bdev['partition_number'] == 9:
+                # if zfs_member exists at partition 1, mark partition 9 as not usable
+                try:
+                    next(
+                        bd for bd in devices['devs'].values()
+                        if bd['parent'] == bdev['parent']
+                        and bd['filesystem_type'] == 'zfs_member'
+                        and bd['partition_number'] == 1)
+                    usable = False
+                except StopIteration:
+                    pass
+
+            partition, created = self.update_or_create(
+                Partition,
+                parents=[parent_resource],
+                container=parent_resource.logical_drive,
+                number=bdev['partition_number'],
+                size=bdev['size'],
+                filesystem_type=bdev['filesystem_type'],
+                usable_for_lustre=usable)
 
             this_node.add_parent(partition)
             partition_identifiers.append(partition.id_tuple())
