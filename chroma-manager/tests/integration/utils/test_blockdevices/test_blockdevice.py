@@ -51,8 +51,16 @@ class TestBlockDevice(object):
         return []
 
     @property
-    def prepare_device_commands(self):
+    def wipe_device_commands(self):
+        return ['wipefs -a {}'.format(self._device_path)]
+
+    @property
+    def create_device_commands(self):
         return []
+
+    @property
+    def reset_device_commands(self):
+        return self.wipe_device_commands + self.create_device_commands
 
     @classmethod
     def all_clear_device_commands(cls, device_paths):

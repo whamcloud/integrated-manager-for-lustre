@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
+make substs
 . chroma-manager/tests/framework/utils/defaults.sh
 . chroma-manager/tests/framework/utils/selective_auto_pass.sh
 
