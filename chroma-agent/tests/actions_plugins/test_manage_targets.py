@@ -1,7 +1,6 @@
 import mock
 
 
-from chroma_agent.action_plugins import manage_targets
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
@@ -21,6 +20,7 @@ class TestManagePacemaker(CommandCaptureTestCase):
                           CommandCaptureCommand(('crm_resource', '--resource', self.target_disk, '--un-move', '--node', self.target_node)))
 
     def test__move_target(self):
+        from chroma_agent.action_plugins import manage_targets
         mock.patch('chroma_agent.action_plugins.manage_targets.get_resource_location',
                    side_effect=[self.target_node]).start()
 
@@ -28,6 +28,7 @@ class TestManagePacemaker(CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test__move_target_retry(self):
+        from chroma_agent.action_plugins import manage_targets
         mock.patch('chroma_agent.action_plugins.manage_targets.get_resource_location',
                    side_effect=['', '', self.target_node]).start()
 
@@ -35,6 +36,7 @@ class TestManagePacemaker(CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test__move_target_fail(self):
+        from chroma_agent.action_plugins import manage_targets
         mock.patch('chroma_agent.action_plugins.manage_targets.get_resource_location', return_value='').start()
 
         self.assertEqual(manage_targets._move_target(self.target_disk, self.target_node),
