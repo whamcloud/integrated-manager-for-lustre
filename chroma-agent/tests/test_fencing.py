@@ -1,7 +1,5 @@
 import mock
 
-from chroma_agent.action_plugins.manage_pacemaker import configure_fencing, set_node_standby, set_node_online
-from chroma_agent.action_plugins import manage_corosync
 from chroma_agent.lib.pacemaker import PacemakerNode
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
@@ -70,6 +68,7 @@ class FencingTestCase(CommandCaptureTestCase):
 class TestAgentConfiguration(FencingTestCase):
     def setUp(self):
         super(TestAgentConfiguration, self).setUp()
+        from chroma_agent.action_plugins import manage_corosync
         self.add_command(('cibadmin', '--query', '--local'))
 
         self.fake_node_attributes = {'0_fence_agent': 'fake_agent',
@@ -80,6 +79,8 @@ class TestAgentConfiguration(FencingTestCase):
         manage_corosync.pacemaker_configured = False
 
     def test_multi_agent_config(self):
+        from chroma_agent.action_plugins.manage_pacemaker import configure_fencing
+
         agents = [{'agent': 'fence_virsh',
                    'ipaddr': '1.2.3.4',
                    'ipport': '22',
@@ -108,12 +109,14 @@ class TestAgentConfiguration(FencingTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test_node_standby(self):
+        from chroma_agent.action_plugins.manage_pacemaker import set_node_standby
         self.add_command(('crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'))
         set_node_standby(self.fake_node_hostname)
 
         self.assertRanAllCommands()
 
     def test_node_online(self):
+        from chroma_agent.action_plugins.manage_pacemaker import set_node_online
         self.add_command(('crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'off', '--lifetime=forever'))
 
         set_node_online(self.fake_node_hostname)

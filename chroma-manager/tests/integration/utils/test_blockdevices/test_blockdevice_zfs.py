@@ -25,9 +25,11 @@ class TestBlockDeviceZfs(TestBlockDevice):
 
     # Autoimport will not occur if cachefile is none
     @property
-    def prepare_device_commands(self):
+    def create_device_commands(self):
         return [
-            "zpool create %s -o cachefile=none -o multihost=on %s" %
+            'parted {0} mklabel gpt'.format(self._device_path),
+            'udevadm settle',
+            'zpool create %s -o cachefile=none -o multihost=on %s' %
             (self.device_path, self._device_path)
         ]
 

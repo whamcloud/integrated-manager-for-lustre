@@ -45,7 +45,12 @@ fi
 
 # set up required repos
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
-yum -y install epel-release
+EPEL_REPO=\$(repoquery --enablerepo=\*epel\* -q --qf %{repoid} epel-release)
+if [ -n "\$EPEL_REPO" ]; then
+    yum-config-manager --enable \$EPEL_REPO
+else
+    yum -y install epel-release
+fi
 
 if ! $PROXY yum -y install \$CMIT; then
     $PROXY yum clean all
