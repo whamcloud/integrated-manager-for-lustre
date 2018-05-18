@@ -4,7 +4,6 @@ from datetime import timedelta
 import json
 
 
-from chroma_agent.device_plugins.corosync import CorosyncPlugin
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from iml_common.lib.date_time import IMLDateTime
 
@@ -36,6 +35,7 @@ class TestCorosync(CommandCaptureTestCase):
         tested.  The different states of corosync, and different types of return
         values from crm_mon are tested.
         """
+        from chroma_agent.device_plugins.corosync import CorosyncPlugin
 
         feed_tz = -8
         feed_local_datetime = "Fri Jan 11 11:04:07 2013"  # PST  (UTC-8)
@@ -112,6 +112,7 @@ class TestCorosync(CommandCaptureTestCase):
 
         { 'ERROR':  'Connection to cluster failed: connection failed' }
         """
+        from chroma_agent.device_plugins.corosync import CorosyncPlugin
 
         self.add_commands(CommandCaptureCommand(CMD, rc=10, stdout="""Connection to cluster failed: connection failed"""),
                           CommandCaptureCommand(('service', 'corosync', 'status'), rc=1),
@@ -138,6 +139,7 @@ class TestCorosync(CommandCaptureTestCase):
         see also:  https://jira.hpdd.intel.com/browse/HYD-1914
 
         """
+        from chroma_agent.device_plugins.corosync import CorosyncPlugin
 
         #  Simulate crm_mon returning an unexpected error code
         self.add_commands(CommandCaptureCommand(CMD, rc=107),
