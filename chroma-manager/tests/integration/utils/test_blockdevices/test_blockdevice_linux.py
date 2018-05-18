@@ -22,11 +22,14 @@ class TestBlockDeviceLinux(TestBlockDevice):
 
     @property
     def wipe_device_commands(self):
-        return ['wipefs -a {}'.format(self.device_path)]
+        return [
+            'wipefs -a {}'.format(self.device_path),
+            'udevadm settle'
+        ]
 
     @property
     def destroy_commands(self):
-        return ['wipefs -a {}'.format(self.device_path)]
+        return self.wipe_device_commands
 
     def __str__(self):
         return '%s' % self.device_path

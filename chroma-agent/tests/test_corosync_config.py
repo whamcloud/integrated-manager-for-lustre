@@ -1,14 +1,6 @@
 import sys
 import mock
 
-from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
-from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
-from chroma_agent.action_plugins.manage_corosync2 import change_mcast_port
-from chroma_agent.action_plugins.manage_corosync2 import unconfigure_corosync2
-from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
-from chroma_agent.action_plugins.manage_corosync_common import configure_network
-from chroma_agent.lib.corosync import env
-from chroma_agent.action_plugins.manage_corosync import configure_corosync
 from iml_common.test.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from iml_common.lib.firewall_control import FirewallControlEL7
 from iml_common.lib.service_control import ServiceControlEL7
@@ -48,6 +40,7 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         super(TestConfigureCorosync, self).setUp()
 
         from chroma_agent.lib.corosync import CorosyncRingInterface
+        from chroma_agent.lib.corosync import env
 
         def get_ring0():
             return CorosyncRingInterface('eth0.1.1?1b34*430')
@@ -158,6 +151,9 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         return self.conf_template.render(interfaces=self._ring_iface_info(mcast_port))
 
     def test_manual_ring1_config(self):
+        from chroma_agent.action_plugins.manage_corosync_common import configure_network
+        from chroma_agent.action_plugins.manage_corosync import configure_corosync
+
         ring0_name = 'eth0.1.1?1b34*430'
         ring1_name = 'eth1'
         ring1_ipaddr = '10.42.42.42'
@@ -215,6 +211,11 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         self.mock_corosync_service.enable.assert_called_once_with()
 
     def test_manual_ring1_config_corosync2(self):
+        from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_1
+        from chroma_agent.action_plugins.manage_corosync2 import configure_corosync2_stage_2
+        from chroma_agent.action_plugins.manage_corosync2 import change_mcast_port
+        from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
+        from chroma_agent.action_plugins.manage_corosync_common import configure_network
 
         ring0_name = 'eth0.1.1?1b34*430'
         ring1_name = 'eth1'
@@ -302,6 +303,9 @@ class TestConfigureCorosync(CommandCaptureTestCase):
         self.assertRanAllCommandsInOrder()
 
     def test_unconfigure_corosync2(self):
+        from chroma_agent.action_plugins.manage_corosync2 import unconfigure_corosync2
+        from chroma_agent.action_plugins.manage_corosync2 import PCS_TCP_PORT
+
         host_fqdn = "serverb.somewhere.org"
         mcast_port = "4242"
 
