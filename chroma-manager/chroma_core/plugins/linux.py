@@ -78,10 +78,11 @@ class LinuxDeviceNode(resources.DeviceNode):
 
 class Partition(resources.LogicalDriveSlice):
     class Meta:
-        identifier = GlobalId('container', 'number')
+        identifier = GlobalId('container', 'number', 'usable_for_lustre')
 
     number = attributes.Integer()
     container = attributes.ResourceReference()
+    usable_for_lustre = attributes.Boolean()
 
     def get_label(self):
         return "%s-%s" % (self.container.get_label(), self.number)
@@ -380,7 +381,7 @@ class Linux(Plugin):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
-            elif bdev['parent'] and not _check_zfs_member(bdev, devices['devs'].values()):
+            elif bdev['parent']:  # and not _check_zfs_member(bdev, devices['devs'].values()):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
@@ -459,8 +460,8 @@ class Linux(Plugin):
         partition_identifiers = []
 
         for bdev in [x for x in devices['devs'].values() if x['parent']]:
-            if _check_zfs_member(bdev, devices['devs'].values()):
-                continue
+#            if _check_zfs_member(bdev, devices['devs'].values()):
+#                continue
 
             this_node = self.major_minor_to_node_resource[bdev['major_minor']]
             parent_resource = self.major_minor_to_node_resource[bdev['parent']]
@@ -472,6 +473,7 @@ class Linux(Plugin):
                 Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
+                usable_for_lustre=False,
                 number=bdev['partition_number'],
                 size=bdev['size'],
                 filesystem_type=bdev['filesystem_type'])
@@ -527,14 +529,14 @@ class Linux(Plugin):
             device_identifiers.append(device_res.id_tuple())
 
             for drive_bd in device_info['drives']:
-                try:
-                    drive_res = self.major_minor_to_node_resource[drive_bd]
-                    device_res.add_parent(drive_res)
-                except KeyError:
-                    if device_type in ['zfspools', 'zfsdatasets'] and \
-                      devices['devs'][drive_bd]['partition_number'] in [1, 9]:
-                        log.debug('skipping parent lookup for zfs device: {}'.format(drive_bd))
-                        continue
+            #    try:
+                drive_res = self.major_minor_to_node_resource[drive_bd]
+                device_res.add_parent(drive_res)
+            #    except KeyError:
+            #        if device_type in ['zfspools', 'zfsdatasets'] and \
+            #          devices['devs'][drive_bd]['partition_number'] in [1, 9]:
+            #            log.debug('skipping parent lookup for zfs device: {}'.format(drive_bd))
+            #            continue
 
             self.major_minor_to_node_resource[device_info['block_device']] = node_res
 
