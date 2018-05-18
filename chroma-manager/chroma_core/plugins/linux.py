@@ -287,11 +287,6 @@ class Linux(Plugin):
              for x in devices['devs'].values()
              if x.get('serial_80') in serials
              and x['major_minor'] not in devices[device_type][uuid]['drives']]
-#            serials = {devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']}
-#            devices[device_type][uuid]['drives'] = [
-#                x['major_minor'] for x in devices['devs'].values()
-#                if x.get('serial_80') in serials
-#                and x.get('device_type') == 'disk']
 
         for uuid, zfs_info in merge(devices['zfspools'], devices['zfsdatasets']).items():
             add_zfs(zfs_info)
@@ -387,7 +382,7 @@ class Linux(Plugin):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
-            elif bdev['parent']:  # and not _check_zfs_member(bdev, devices['devs'].values()):
+            elif bdev['parent']:
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
@@ -452,7 +447,6 @@ class Linux(Plugin):
 
         self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [], reported_device_node_paths)
 
-        log.debug("zfspools: {}".format(devices['zfspools']))
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfspools', ZfsPool, ['name'], reported_device_node_paths) or initiate_device_poll
 
         initiate_device_poll = self._map_drives_to_device_to_node(devices, host_id, 'zfsdatasets', ZfsDataset, ['name'], reported_device_node_paths) or initiate_device_poll
@@ -466,9 +460,6 @@ class Linux(Plugin):
         partition_identifiers = []
 
         for bdev in [x for x in devices['devs'].values() if x['parent']]:
-#            if _check_zfs_member(bdev, devices['devs'].values()):
-#                continue
-
             this_node = self.major_minor_to_node_resource[bdev['major_minor']]
             parent_resource = self.major_minor_to_node_resource[bdev['parent']]
 
@@ -476,6 +467,7 @@ class Linux(Plugin):
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
             partition, created = self.update_or_create(
+                # ZfsPartitions should be differentiated as they are not usable for lustre
                 ZfsPartition if _check_zfs_member(bdev, devices['devs'].values()) else Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
@@ -538,14 +530,8 @@ class Linux(Plugin):
             device_identifiers.append(device_res.id_tuple())
 
             for drive_bd in device_info['drives']:
-            #    try:
                 drive_res = self.major_minor_to_node_resource[drive_bd]
                 device_res.add_parent(drive_res)
-            #    except KeyError:
-            #        if device_type in ['zfspools', 'zfsdatasets'] and \
-            #          devices['devs'][drive_bd]['partition_number'] in [1, 9]:
-            #            log.debug('skipping parent lookup for zfs device: {}'.format(drive_bd))
-            #            continue
 
             self.major_minor_to_node_resource[device_info['block_device']] = node_res
 
