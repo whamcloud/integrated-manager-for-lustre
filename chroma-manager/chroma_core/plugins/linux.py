@@ -78,11 +78,10 @@ class LinuxDeviceNode(resources.DeviceNode):
 
 class Partition(resources.LogicalDriveSlice):
     class Meta:
-        identifier = GlobalId('container', 'number', 'usable_for_lustre')
+        identifier = GlobalId('container', 'number')
 
     number = attributes.Integer()
     container = attributes.ResourceReference()
-    usable_for_lustre = attributes.Boolean()
 
     def get_label(self):
         return "%s-%s" % (self.container.get_label(), self.number)
@@ -125,6 +124,13 @@ class ZfsDataset(ZfsPool):
 class ZfsVol(ZfsPool):
     class Meta:
         identifier = GlobalId('uuid')
+
+
+class ZfsPartition(Partition):
+    class Meta:
+        identifier = GlobalId('container', 'number')
+
+    usable_for_lustre = False
 
 
 class LocalMount(resources.LogicalDriveOccupier):
@@ -470,10 +476,9 @@ class Linux(Plugin):
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
             partition, created = self.update_or_create(
-                Partition,
+                ZfsPartition if _check_zfs_member(bdev, devices['devs'].values()) else Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
-                usable_for_lustre=False,
                 number=bdev['partition_number'],
                 size=bdev['size'],
                 filesystem_type=bdev['filesystem_type'])
@@ -484,6 +489,10 @@ class Linux(Plugin):
         # Finally remove any of the partitions that are no longer present.
         initiate_device_poll |= self.remove_missing_devices(host_id,
                                                             Partition,
+                                                            partition_identifiers)
+
+        initiate_device_poll |= self.remove_missing_devices(host_id,
+                                                            ZfsPartition,
                                                             partition_identifiers)
 
         initiate_device_poll |= self.remove_missing_devicenodes(reported_device_node_paths)
