@@ -82,7 +82,6 @@ class Partition(resources.LogicalDriveSlice):
 
     number = attributes.Integer()
     container = attributes.ResourceReference()
-    usable_for_lustre = True
 
     def get_label(self):
         return "%s-%s" % (self.container.get_label(), self.number)
@@ -177,6 +176,25 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "lvm_volume"
 
 
+def _check_zfs_member(bdev, all_devs):
+    """ Return True if bdev is a zfs_member """
+    if bdev['filesystem_type'] == 'zfs_member':
+        return True
+    elif bdev['partition_number'] == 9:
+        # if zfs_member exists at partition 1, mark partition 9 as not usable
+        try:
+            next(
+                bd for bd in all_devs
+                if bd['parent'] == bdev['parent']
+                and bd['filesystem_type'] == 'zfs_member'
+                and bd['partition_number'] == 1)
+            return True
+        except StopIteration:
+            pass
+
+    return False
+
+
 class Linux(Plugin):
     internal = True
 
@@ -201,8 +219,6 @@ class Linux(Plugin):
         fqdn = ManagedHost.objects.get(id=host_id).fqdn
         devices = get_devices(fqdn)
 
-        # todo: mpath is to be reinstated
-        # note: zvols and emcpower have been removed from this list
         for expected_item in ['vgs', 'lvs', 'zfspools', 'zfsdatasets', 'devs', 'local_fs', 'mds', 'mpath']:
             if expected_item not in devices.keys():
                 devices[expected_item] = {}
@@ -359,21 +375,7 @@ class Linux(Plugin):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
-            elif bdev['parent']:
-                if bdev['filesystem_type'] == 'zfs_member':
-                    continue
-                elif bdev['partition_number'] == 9:
-                    # if zfs_member exists at partition 1, mark partition 9 as not usable
-                    try:
-                        next(
-                            bd for bd in devices['devs'].values()
-                            if bd['parent'] == bdev['parent']
-                            and bd['filesystem_type'] == 'zfs_member'
-                            and bd['partition_number'] == 1)
-                        continue
-                    except StopIteration:
-                        pass
-
+            elif bdev['parent'] and not _check_zfs_member(bdev, devices['devs'].values()):
                 node, created = self.update_or_create(LinuxDeviceNode,
                                                       host_id=host_id,
                                                       path=bdev['path'])
@@ -452,25 +454,14 @@ class Linux(Plugin):
         partition_identifiers = []
 
         for bdev in [x for x in devices['devs'].values() if x['parent']]:
+            if _check_zfs_member(bdev, devices['devs'].values()):
+                continue
+
             this_node = self.major_minor_to_node_resource[bdev['major_minor']]
             parent_resource = self.major_minor_to_node_resource[bdev['parent']]
 
             if not parent_resource.logical_drive:
                 raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
-
-            if bdev['filesystem_type'] == 'zfs_member':
-                continue
-            elif bdev['partition_number'] == 9:
-                # if zfs_member exists at partition 1, mark partition 9 as not usable
-                try:
-                    next(
-                        bd for bd in devices['devs'].values()
-                        if bd['parent'] == bdev['parent']
-                        and bd['filesystem_type'] == 'zfs_member'
-                        and bd['partition_number'] == 1)
-                    continue
-                except StopIteration:
-                    pass
 
             partition, created = self.update_or_create(
                 Partition,
