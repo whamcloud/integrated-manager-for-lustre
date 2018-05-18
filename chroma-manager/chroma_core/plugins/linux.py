@@ -269,17 +269,22 @@ class Linux(Plugin):
 
             if bdid.startswith('zfsset'):
                 dev['filesystem_type'] = 'zfs'
-#                device_type = 'zfsdatasets'
+                device_type = 'zfsdatasets'
             else:
                 dev['filesystem_type'] = None
-#                device_type = 'zfspools'
+                device_type = 'zfspools'
 
             # add drive partitions to avoid https://github.com/intel-hpdd/intel-manager-for-lustre/issues/493
-#            serials = [devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']]
-#            [devices[device_type][uuid]['drives'].append(x['major_minor'])
-#             for x in devices['devs'].values()
-#             if x.get('serial_80') in serials
-#             and x['major_minor'] not in devices[device_type][uuid]['drives']]
+            serials = [devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']]
+            [devices[device_type][uuid]['drives'].append(x['major_minor'])
+             for x in devices['devs'].values()
+             if x.get('serial_80') in serials
+             and x['major_minor'] not in devices[device_type][uuid]['drives']]
+#            serials = {devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']}
+#            devices[device_type][uuid]['drives'] = [
+#                x['major_minor'] for x in devices['devs'].values()
+#                if x.get('serial_80') in serials
+#                and x.get('device_type') == 'disk']
 
         for uuid, zfs_info in merge(devices['zfspools'], devices['zfsdatasets']).items():
             add_zfs(zfs_info)
@@ -522,8 +527,14 @@ class Linux(Plugin):
             device_identifiers.append(device_res.id_tuple())
 
             for drive_bd in device_info['drives']:
-                drive_res = self.major_minor_to_node_resource[drive_bd]
-                device_res.add_parent(drive_res)
+                try:
+                    drive_res = self.major_minor_to_node_resource[drive_bd]
+                    device_res.add_parent(drive_res)
+                except KeyError:
+                    if device_type in ['zfspools', 'zfsdatasets'] and \
+                      devices['devs'][drive_bd]['partition_number'] in [1, 9]:
+                        log.debug('skipping parent lookup for zfs device: {}'.format(drive_bd))
+                        continue
 
             self.major_minor_to_node_resource[device_info['block_device']] = node_res
 
