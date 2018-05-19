@@ -52,7 +52,10 @@ class TestBlockDevice(object):
 
     @property
     def wipe_device_commands(self):
-        return ['wipefs -a {}'.format(self._device_path)]
+        return [
+            'wipefs -a {}'.format(self._device_path),
+            'udevadm settle'
+        ]
 
     @property
     def create_device_commands(self):
