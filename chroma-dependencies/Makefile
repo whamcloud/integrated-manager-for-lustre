@@ -63,7 +63,6 @@ requirements::
 	echo "pytz==2014.4";                                      \
 	echo "tzlocal";                                           \
 	echo "systemd-python";                                    \
-	echo "iml-common>=1.3,<1.4";                              \
 	echo "toolz";                                             \
 	echo "coverage==3.5.2";                                   \
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev; } >> \
