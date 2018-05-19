@@ -399,12 +399,26 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         filesystem_id = response.json['filesystem']['id']
         command_id = response.json['command']['id']
 
-        self.wait_for_command(
-            self.chroma_manager,
-            command_id,
-            verify_successful=verify_successful,
-            timeout = LONG_TEST_TIMEOUT
-        )
+        def check_for_issue_107():
+            command = self.get_json_by_uri('/api/command/%s/' % command_id)
+            for job_uri in command['jobs']:
+                job = self.get_json_by_uri(job_uri)
+                job_steps = [self.get_json_by_uri(s) for s in job['steps']]
+                if job['errored']:
+                    for step in job_steps:
+                        if step['class_name'] == 'MountOrImportStep' and step['state'] == 'failed':
+                            return True
+
+            return False
+
+        self._fetch_help(lambda: self.wait_for_command(self.chroma_manager,
+                                                       command_id,
+                                                       verify_successful=verify_successful,
+                                                       timeout=LONG_TEST_TIMEOUT),
+                         ['tom.nabarro@intel.com'],
+                         'Investigation of issue #107, starting filesystem/start target/MountOrImportStep',
+                         lambda: check_for_issue_107(),
+                         99999)
 
         # Verify mgs and fs targets in pacemaker config for hosts
         self.remote_operations.check_ha_config(hosts, filesystem['name'])
