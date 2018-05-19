@@ -23,14 +23,6 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def preferred_fstype(self):
         return 'zfs'
 
-    @property
-    def wipe_device_commands(self):
-        return [
-            'zpool destroy {}'.format(self.device_path),
-            'zpool labelclear {}-part1'.format(self._device_path),
-            'wipefs -a {}'.format(self._device_path), 'udevadm settle'
-        ]
-
     # Autoimport will not occur if cachefile is none
     @property
     def create_device_commands(self):
