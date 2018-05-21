@@ -137,7 +137,7 @@ INSTALLED_APPS = (
     'benchmark'
 )
 
-OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose', 'djsupervisor']
+OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose']
 for app in OPTIONAL_APPS:
     import imp
     try:
