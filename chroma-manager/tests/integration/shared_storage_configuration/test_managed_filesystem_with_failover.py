@@ -33,10 +33,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_operations.exercise_filesystem(client, filesystem)
-            self._fetch_help(lambda: self.check_stats(filesystem_id),
-                             ['tom.nabarro@outlook.com', 'joe.grund@intel.com'],
-                             'Create filesystem failed during check stats',
-                             timeout=9000)
+            self.check_stats(filesystem_id)
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
