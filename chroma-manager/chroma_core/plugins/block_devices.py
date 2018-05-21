@@ -12,10 +12,9 @@ log.setLevel(DEBUG)
 
 
 def fetch_aggregator():
-    import requests_unixsocket
+    import requests
 
-    session = requests_unixsocket.Session()
-    resp = session.get('http+unix://%2Fvar%2Frun%2Fdevice-aggregator.sock')
+    resp = requests.get('http://127.0.0.1:8008/device-aggregator')
     payload = resp.text
 
     return json.loads(payload)
