@@ -929,9 +929,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                     'zfs',
                     server0['orig_device_paths'][lustre_device['path_index']])
 
-                self.execute_commands(zfs_device.reset_device_commands,
+                self.execute_commands(zfs_device.create_device_commands,
                                       server0['fqdn'],
-                                      'reset zfs device %s' % zfs_device)
+                                      'create zfs device %s' % zfs_device)
 
                 partprobe_devices.append(
                     server0['orig_device_paths'][lustre_device['path_index']])
@@ -970,14 +970,12 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if x['backend_filesystem'] == 'zfs'
         ]
 
-        zfs_devices = [TestBlockDevice('zfs', x) for x in zfs_device_paths]
-
         [
             self.execute_simultaneous_commands(
-                x.clear_device_commands([x.device_path]),
+                TestBlockDevice('zfs', x).clear_device_commands([x]),
                 fqdns,
                 'destroy zpool %s' % x,
-                expected_return_code=None) for x in zfs_devices
+                expected_return_code=None) for x in zfs_device_paths
         ]
 
         def wipe(x):
