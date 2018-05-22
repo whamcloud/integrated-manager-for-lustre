@@ -17,10 +17,11 @@ from chroma_agent.plugin_manager import ActionPluginManager
 def configure_logging():
     import logging
     from chroma_agent.log import console_log, daemon_log
+    from systemd.journal import JournalHandler
 
-    console_log.addHandler(logging.StreamHandler(sys.stderr))
+    console_log.addHandler(JournalHandler(SYSLOG_IDENTIFIER='iml-agent-console'))
     console_log.setLevel(logging.INFO)
-    daemon_log.addHandler(logging.StreamHandler(sys.stderr))
+    daemon_log.addHandler(JournalHandler(SYSLOG_IDENTIFIER='iml-agent-daemon'))
     daemon_log.setLevel(logging.WARNING)
 
 
