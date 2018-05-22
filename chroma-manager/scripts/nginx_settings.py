@@ -39,6 +39,9 @@ _settings = {
     'SSL_PATH': {
         'dev': SITE_ROOT,
         'prod': '/var/lib/chroma'
+    },
+    'DEVICE_AGGREGATOR_PORT': {
+        'all': 8008
     }
 }
 

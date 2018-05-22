@@ -5,6 +5,7 @@
 import json
 from logging import DEBUG
 
+import settings
 from chroma_core.services import log_register
 
 log = log_register('plugin_runner')
@@ -14,7 +15,7 @@ log.setLevel(DEBUG)
 def fetch_aggregator():
     import requests
 
-    resp = requests.get('http://127.0.0.1:8008/device-aggregator')
+    resp = requests.get(settings.LOCAL_DEVICE_AGGREGATOR_URL)
     payload = resp.text
 
     return json.loads(payload)

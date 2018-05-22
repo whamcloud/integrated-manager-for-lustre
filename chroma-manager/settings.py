@@ -289,6 +289,8 @@ DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settin
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
 
+LOCAL_DEVICE_AGGREGATOR_URL = "http://127.0.0.1:{}/device-aggregator".format(DEVICE_AGGREGATOR_PORT)
+
 # Supported power control agents
 SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh', 'fence_vbox']
 
