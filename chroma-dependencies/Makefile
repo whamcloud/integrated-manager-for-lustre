@@ -54,7 +54,6 @@ requirements::
 	echo "urllib3";                                           \
 	echo "python-dateutil==1.5";                              \
 	echo "nose==1.2.1";                                       \
-	echo "supervisor==3.0b1";                                 \
 	echo "pyparsing==1.5.6";                                  \
 	echo "jsonschema==0.8.0";                                 \
 	echo "nose-testconfig==0.8";                              \

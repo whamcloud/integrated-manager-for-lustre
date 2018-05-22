@@ -1,0 +1,17 @@
+[Unit]
+Description=IML View Server Service
+PartOf=iml-manager.target
+After=iml-settings-populator.service
+Requires=iml-settings-populator.service
+
+[Service]
+Type=simple
+EnvironmentFile=/var/lib/chroma/iml-settings.conf
+Environment=NODE_ENV=production
+ExecStart=/bin/node /usr/share/chroma-manager/ui-modules/node_modules/@iml/view-server/dist/bundle.js
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=iml-manager.target

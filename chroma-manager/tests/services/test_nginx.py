@@ -11,12 +11,12 @@ import settings
 import socket
 import ssl
 from tests.services.http_listener import HttpListener
-from tests.services.supervisor_test_case import SupervisorTestCase
+from tests.services.systemd_test_case import SystemdTestCase
 
 
-class NginxTestCase(SupervisorTestCase):
+class NginxTestCase(SystemdTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ['nginx', 'gunicorn', 'job_scheduler', 'view_server']
+    SERVICES = ['nginx', 'iml-gunicorn', 'iml-job-scheduler', 'iml-view-server']
 
 
 class TestUi(NginxTestCase):
@@ -45,7 +45,7 @@ class TestInsecureUrls(NginxTestCase):
     def test_missing_slash(self):
         """Test rewriting of HTTP redirects is happening (ProxyPassReverse)"""
 
-        without_slash = "https://localhost:%s/api/session" % settings.HTTPS_FRONTEND_PORT
+        without_slash = "https://localhost/api/session"
         response = requests.get(without_slash, verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.headers['location'], without_slash + "/")
@@ -73,7 +73,7 @@ class TestInsecureUrls(NginxTestCase):
 
     def test_certificate(self):
         """Test certificate is fetchable"""
-        with open("%s/authority.crt" % settings.APP_PATH, 'r') as cert:
+        with open("%s/authority.crt" % settings.SSL_PATH, 'r') as cert:
             text = cert.read()
             response = requests.get("https://localhost:%s/certificate" % settings.HTTPS_FRONTEND_PORT, verify=False)
             self.assertEqual(response.text, text)
@@ -174,8 +174,8 @@ class TestSecureUrls(NginxTestCase):
 
         client_cn = "myserver"
         # FIXME: move these filenames out into settings.py (duplicated here from Crypto())
-        authority_key = "authority.pem"
-        authority_cert = "authority.crt"
+        authority_key = "{0}/authority.pem".format(settings.SSL_PATH)
+        authority_cert = "{0}/authority.crt".format(settings.SSL_PATH)
         cert, key = self._client_credentials(client_cn, authority_key, authority_cert)
 
         rc, stdout, stderr = self._openssl(['x509', '-in', cert, '-serial', '-noout'])
@@ -203,7 +203,7 @@ class TestSecureUrls(NginxTestCase):
             self.assertEqual(response.status_code, 200)
 
 
-class TestCrypto(SupervisorTestCase):
+class TestCrypto(SystemdTestCase):
     SERVICES = ['nginx']
 
     def _connect_socket(self, *args, **kwargs):
@@ -211,7 +211,7 @@ class TestCrypto(SupervisorTestCase):
 
         ssl_sock = ssl.wrap_socket(sock, *args, **kwargs)
 
-        ssl_sock.connect(('127.0.0.1', 8000))
+        ssl_sock.connect(('127.0.0.1', settings.HTTPS_FRONTEND_PORT))
 
         sock.close()
 

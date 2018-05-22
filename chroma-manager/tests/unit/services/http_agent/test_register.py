@@ -5,7 +5,7 @@ from django.test import Client
 
 from chroma_core.models import ManagedHost, ServerProfile, Nid
 from chroma_core.models.registration_token import RegistrationToken
-from chroma_core.services.http_agent.crypto import Crypto
+from chroma_core.services.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_agent_comms.views import ValidatedClientView
 from tests.unit.chroma_core.helpers import generate_csr, synthetic_host, load_default_profile
