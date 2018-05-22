@@ -1,5 +1,3 @@
-
-
 import logging
 
 from testconfig import config
@@ -36,8 +34,6 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         'kbytesfree',
         'kbytestotal',
         'num_exports',
-        'stats_connect',
-        'stats_create',
         'stats_read_bytes',
         'stats_read_iops',
         'stats_write_bytes',
@@ -108,9 +104,11 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         fs = self.get_filesystem(filesystem_id)
         self.assertTrue(len(targets_metrics) == len(fs[target_kind.lower() + 's']))
 
-        # logger.debug('Checking target metrics are present, metrics: %s , provided metric names: %s' % (targets_metrics,
-        #                                                                                                metric_names))
-        return all((set(target_metrics.keys()) == set(metric_names)) for target_metrics in targets_metrics)
+        logger.debug(
+            'Checking target metrics are present, metrics: %s , provided metric names: %s'
+            % (targets_metrics, metric_names))
+        return all((set(target_metrics.keys()) == set(metric_names))
+                   for target_metrics in targets_metrics)
 
     def _compare_files(self, address, path1, path2, length_bytes):
         try:
@@ -148,10 +146,14 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
             self.remote_operations.mount_filesystem(client, filesystem)
 
         # At start-up, validate expected list of mdt and ost stats are returned from the API before performing checks
-        self.wait_until_true(lambda: self._compare_target_metric_names('MDT', self.mdt_stats, filesystem_id),
-                             'Error in verifying expected MDT metric names being returned from API')
-        self.wait_until_true(lambda: self._compare_target_metric_names('OST', self.ost_stats, filesystem_id),
-                             'Error in verifying expected MDT metric names being returned from API')
+        self.wait_until_true(
+            lambda: self._compare_target_metric_names('MDT', self.mdt_stats, filesystem_id),
+            'Error in verifying expected MDT metric names being returned from API'
+        )
+        self.wait_until_true(
+            lambda: self._compare_target_metric_names('OST', self.ost_stats, filesystem_id),
+            'Error in verifying expected OST metric names being returned from API'
+        )
 
         # Wait for and keep track of client_count
         starting_client_count = 1.0
