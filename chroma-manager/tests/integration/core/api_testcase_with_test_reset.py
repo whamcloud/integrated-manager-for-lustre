@@ -925,17 +925,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
+                zfs_device = TestBlockDevice(
+                    'zfs',
+                    server0['orig_device_paths'][lustre_device['path_index']])
 
-                def create():
-                    path_idx = lustre_device['path_index']
-                    zfs_device = TestBlockDevice(
-                        'zfs', server0['orig_device_paths'][path_idx])
-
-                    self.execute_commands(zfs_device.create_device_commands,
-                                          server0['fqdn'],
-                                          'create zfs device %s' % zfs_device)
-
-                self.wait_for_assert(create, TEST_TIMEOUT)
+                self.execute_commands(zfs_device.create_device_commands,
+                                      server0['fqdn'],
+                                      'create zfs device %s' % zfs_device)
 
                 partprobe_devices.append(
                     server0['orig_device_paths'][lustre_device['path_index']])
