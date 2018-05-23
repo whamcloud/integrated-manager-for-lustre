@@ -36,6 +36,13 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
+MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
+MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
+
+COPR_REPO_TARGETS := storage_server.repo tests/framework/utils/defaults.sh
+
+SUBSTS := $(COPR_REPO_TARGETS)
+
 all: rpms docs
 
 cleandist:
@@ -137,7 +144,7 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version ui-modules
+tarball: version ui-modules $(COPR_REPO_TARGETS)
 	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
@@ -148,6 +155,15 @@ tarball: version ui-modules
 	fi
 	rm -f sdist.out
 	echo "jenkins_fold:end:Make Manager Tarball"
+
+storage_server.repo: storage_server.repo.in
+
+tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in
+
+$(COPR_REPO_TARGETS):
+	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
+	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
+	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
 
 rpms: cleandist tarball
 	echo "jenkins_fold:start:Make Manager RPMS"
@@ -209,4 +225,11 @@ docs: requirements.txt version
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"
 
-.PHONY: docs download ui-modules
+substs: $(SUBSTS)
+
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
+
+.PHONY: docs download ui-modules substs

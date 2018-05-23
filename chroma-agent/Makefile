@@ -63,3 +63,13 @@ update_repo: rpms
 	rm -f $(DEV_REPO)/chroma-agent/chroma-agent-*.rpm
 	cp -a dist/chroma-agent-*.rpm $(DEV_REPO)/chroma-agent
 	cd $(DEV_REPO) && createrepo --pretty .
+
+substs: $(SUBSTS)
+
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
+
+
+.PHONY: substs

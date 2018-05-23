@@ -1,5 +1,7 @@
 BUILDER_IS_EL = $(shell rpm --eval '%{?rhel:true}%{!?rhel:false}')
 
+MFL_COPR_REPO=managerforlustre/manager-for-lustre
+
 # Top-level Makefile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
@@ -9,8 +11,10 @@ all: TARGET=all
 rpms: TARGET=rpms
 docs: TARGET=docs
 download: TARGET=download
+substs: TARGET=substs
+clean_substs: TARGET=clean_substs
 
-all rpms docs download subdirs: $(SUBDIRS)
+all rpms docs download subdirs substs clean_substs: $(SUBDIRS)
 
 cleandist:
 	rm -rf dist
@@ -26,7 +30,7 @@ agent:
 $(SUBDIRS): dist agent
 	set -e; \
 	if $(BUILDER_IS_EL); then \
-		$(MAKE) -C $@ $(TARGET); \
+		$(MAKE) MFL_COPR_REPO=$(MFL_COPR_REPO) -C $@ $(TARGET); \
 		if [ $(TARGET) != download -a -d $@/dist/ ]; then \
 			cp -a $@/dist/* dist/; \
 		fi; \
@@ -36,7 +40,7 @@ repo: rpms
 	$(MAKE) -C chroma-dependencies repo
 
 bundles: repo
-	$(MAKE) -C chroma-bundles
+	$(MAKE) MFL_COPR_REPO=$(MFL_COPR_REPO) -C chroma-bundles
 
 deps: repo
 

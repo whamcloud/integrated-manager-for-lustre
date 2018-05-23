@@ -96,3 +96,12 @@ FORCE:
 
 docs:
 	@echo "Nothing to do here"
+
+substs: $(SUBSTS)
+
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
+
+.PHONY: substs
