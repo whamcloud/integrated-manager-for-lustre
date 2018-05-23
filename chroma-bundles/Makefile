@@ -11,6 +11,8 @@ SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
+SUBSTS := chroma_support.repo
+
 all: package
 
 clean: TARGET=clean
@@ -47,6 +49,11 @@ rpms:
 docs download:
 	@echo "Nothing to do here"
 
-substs: chroma_support.repo
+substs: $(SUBSTS)
+
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
 
 .PHONY: substs
