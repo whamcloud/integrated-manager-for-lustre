@@ -182,5 +182,5 @@ class TestPduOperations(ChromaPowerControlTestCase):
         # remove any corrupted dnf lock files https://github.com/intel-hpdd/intel-manager-for-lustre/issues/618
         self.remote_command(
             self.server['address'],
-            'systemd-tmpfiles --remove dnf.conf',
+            '[[ -f {0} && ! -s {0} ]] && rm -f {0}'.format('/var/cache/dnf/metadata_lock.pid'),
             expected_return_code=None)
