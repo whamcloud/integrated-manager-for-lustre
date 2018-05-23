@@ -41,6 +41,8 @@ MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
 COPR_REPO_TARGETS := storage_server.repo tests/framework/utils/defaults.sh
 
+SUBSTS := $(COPR_REPO_TARGETS)
+
 all: rpms docs
 
 cleandist:
@@ -223,6 +225,11 @@ docs: requirements.txt version
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 	echo "jenkins_fold:end:Make Docs"
 
-substs: $(COPR_REPO_TARGETS)
+substs: $(SUBSTS)
+
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
 
 .PHONY: docs download ui-modules substs

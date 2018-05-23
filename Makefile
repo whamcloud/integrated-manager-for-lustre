@@ -11,14 +11,10 @@ all: TARGET=all
 rpms: TARGET=rpms
 docs: TARGET=docs
 download: TARGET=download
+substs: TARGET=substs
+clean_substs: TARGET=clean_substs
 
-all rpms docs download subdirs: $(SUBDIRS)
-
-substs:
-	for subdir in $(SUBDIRS); do                                   \
-		$(MAKE) MFL_COPR_REPO=$(MFL_COPR_REPO) -C $$subdir $@; \
-	done
-
+all rpms docs download subdirs substs clean_substs: $(SUBDIRS)
 
 cleandist:
 	rm -rf dist
