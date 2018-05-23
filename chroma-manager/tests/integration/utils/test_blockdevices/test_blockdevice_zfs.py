@@ -29,7 +29,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
         return [
             'parted {0} mklabel gpt'.format(self._device_path),
             'udevadm settle',
-            'zpool create %s -o cachefile=none -o multihost=on %s' %
+            'i=0; while ! zpool create %s -o cachefile=none -o multihost=on %s && [ $i -lt 10 ]; do sleep 1; let i+=1; done; exit ${PIPESTATUS[0]}' %
             (self.device_path, self._device_path)
         ]
 
