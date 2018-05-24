@@ -188,23 +188,6 @@ class LvmVolume(resources.LogicalDriveSlice):
         return "lvm_volume"
 
 
-def _check_zfs_member(bdev, all_devs):
-    """ Return True if bdev is a zfs_member """
-    if bdev['filesystem_type'] == 'zfs_member':
-        return True
-    elif bdev['partition_number'] == 9:
-        # if zfs_member exists at partition 1, mark partition 9 as not usable
-        try:
-            next(bd for bd in all_devs
-                 if bd['parent'] == bdev['parent'] and bd['filesystem_type'] ==
-                 'zfs_member' and bd['partition_number'] == 1)
-            return True
-        except StopIteration:
-            pass
-
-    return False
-
-
 class Linux(Plugin):
     internal = True
 
@@ -279,24 +262,9 @@ class Linux(Plugin):
             dev['parent'] = None
             dev['serial_80'] = None
             dev['serial_83'] = None
-
-            if bdid.startswith('zfsset'):
-                dev['filesystem_type'] = 'zfs'
-                device_type = 'zfsdatasets'
-            else:
-                dev['filesystem_type'] = None
-                device_type = 'zfspools'
-
-            # add drive partitions to avoid https://github.com/intel-hpdd/intel-manager-for-lustre/issues/493
-            serials = [
-                devices['devs'][mm]['serial_80'] for mm in zfs_info['drives']
-            ]
-            [
-                devices[device_type][uuid]['drives'].append(x['major_minor'])
-                for x in devices['devs'].values()
-                if x.get('serial_80') in serials and x['major_minor'] not in
-                devices[device_type][uuid]['drives']
-            ]
+            dev['filesystem_type'] = 'zfs' \
+                if bdid.startswith('zfsset') \
+                else None
 
         for uuid, zfs_info in merge(devices['zfspools'],
                                     devices['zfsdatasets']).items():
@@ -496,8 +464,8 @@ class Linux(Plugin):
             partition, created = self.update_or_create(
                 # ZfsPartitions should be differentiated as they are not usable for lustre
                 ZfsPartition
-                if _check_zfs_member(bdev, devices['devs'].values()) else
-                Partition,
+                if bdev.get('zfs_partition') or bdev['filesystem_type'] == 'zfs_member'
+                else Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
                 number=bdev['partition_number'],
