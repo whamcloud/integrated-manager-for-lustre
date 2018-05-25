@@ -111,16 +111,32 @@ set_defaults() {
 
     export COPR_OWNER="@MFL_REPO_OWNER@"
     export COPR_PROJECT="@MFL_REPO_NAME@"
-    #LUSTRE_REVIEW_BUILD="12345"
+
+    # to build a job from a jenkins branch
+    #JENKINS_JOB=lustre-b2_10
+    #JENKINS_BUILD=111
+    # or to just build the latest from that branch
+    #JENKINS_BUILD=lastSuccessfulBuild
+    # or to build a Lustre Review job:
+    #LUSTRE_REVIEW_BUILD="56451"
+    # or build a GA release
+    LUSTRE_VERSION=2.10.4
+
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
-        BASE_URL="https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/\\\$basearch/axis-build_type"
-        export LUSTRE_SERVER_URL="$BASE_URL/server/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
-        export LUSTRE_CLIENT_URL="$BASE_URL/client/axis-distro/el7/axis-ib_stack/inkernel/builds/$LUSTRE_REVIEW_BUILD/archive/artifacts/"
-    else
-        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-2.10.3/el7/"
-        export LUSTRE_SERVER_URL="$BASE_URL/server/"
-        export LUSTRE_CLIENT_URL="$BASE_URL/client/"
+        JENKINS_JOB="lustre-reviews"
+        JENKINS_BUILD="$LUSTRE_REVIEW_BUILD"
     fi
+    if [ -n "$JENKINS_JOB" ]; then
+        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
+    elif [ -n "$LUSTRE_VERSION" ]; then
+        # To use a GA release of Lustre:
+        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"
+    else
+        echo "I don't know which Lustre you want to use.  Bailing."
+        exit 1
+    fi
+    export LUSTRE_SERVER_URL="${BASE_URL//@CLIENT_OR_SERVER@/server}"
+    export LUSTRE_CLIENT_URL="${BASE_URL//@CLIENT_OR_SERVER@/client}"
     LUSTRE_SERVER_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_SERVER_URL" | sed -e 's/^.*:\/\///' -e 's/\/\/*/_/g').repo"
     LUSTRE_CLIENT_REPO_FILE="/etc/yum.repos.d/$(echo "$LUSTRE_CLIENT_URL" | sed -e 's/^.*:\/\///' -e 's/\/\/*/_/g').repo"
     export LUSTRE_SERVER_REPO_FILE LUSTRE_CLIENT_REPO_FILE
