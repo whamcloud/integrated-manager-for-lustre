@@ -21,7 +21,7 @@ REPO_PATH = '/etc/yum.repos.d'
 
 
 def configure_repo(filename, file_contents):
-    crypto = Crypto(config.path)
+    crypto = Crypto('/etc/iml/')
     full_filename = os.path.join(REPO_PATH, filename)
     temp_full_filename = full_filename + '.tmp'
 

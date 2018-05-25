@@ -1048,7 +1048,16 @@ class RealRemoteOperations(RemoteOperations):
                         '''
                         rm -rf /var/lib/chroma/*;
                         ''',
-                        expected_return_code=
+                        expected_return_code =
+                        None  # Keep going if it failed - may be none there.
+                    )
+
+                    self._ssh_address(
+                        address,
+                        '''
+                        rm -rf /etc/iml/*;
+                        ''',
+                        expected_return_code =
                         None  # Keep going if it failed - may be none there.
                     )
             else:

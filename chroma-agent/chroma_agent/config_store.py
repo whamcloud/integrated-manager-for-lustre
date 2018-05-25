@@ -1,8 +1,6 @@
-
 # Copyright (c) 2017 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
 
 import os
 import errno
@@ -19,7 +17,8 @@ class ConfigKeyExistsError(Exception):
         self.key = key
 
     def __str__(self):
-        return "The key '%s' already exists in section '%s'. Please use update() if that's what you intended." % (self.key, self.section)
+        return "The key '%s' already exists in section '%s'. Please use update() if that's what you intended." % (
+            self.key, self.section)
 
 
 class InvalidConfigIdentifier(Exception):
@@ -71,9 +70,10 @@ class ConfigStore(object):
     @property
     def sections(self):
         with self._lock:
-            return sorted([os.path.basename(e)
-                           for e in os.listdir(self.path)
-                           if os.path.isdir(os.path.join(self.path, e))])
+            return sorted([
+                os.path.basename(e) for e in os.listdir(self.path)
+                if os.path.isdir(os.path.join(self.path, e))
+            ])
 
     def get_section_keys(self, section):
         dir = os.path.join(self.path, self._ck_str(section))
@@ -111,8 +111,8 @@ class ConfigStore(object):
         safe_key = self._encode_key(key)
 
         with self._lock:
-            dir = self._create_path(os.path.join(self.path,
-                                                 self._ck_str(section)))
+            dir = self._create_path(
+                os.path.join(self.path, self._ck_str(section)))
 
             if not update and key in self.get_section_keys(section):
                 raise ConfigKeyExistsError(section, key)
@@ -140,14 +140,18 @@ class ConfigStore(object):
             except IOError as e:
                 if e.errno == errno.ENOENT:
                     if not section in self.sections:
-                        raise TypeError("Invalid config section: '%s'" % section)
+                        raise TypeError(
+                            "Invalid config section: '%s'" % section)
                     elif not key in self.get_section_keys(section):
-                        raise KeyError("Invalid key '%s' for config section '%s'"
-                                       % (key, section))
+                        raise KeyError(
+                            "Invalid key '%s' for config section '%s'" %
+                            (key, section))
                 raise
             except Exception as e:
-                daemon_log.warn("Json error %s, file was %s" % (e, os.path.join(dir, safe_key)))
-                daemon_log.warn("File contents %s" % open(os.path.join(dir, safe_key), "r").read())
+                daemon_log.warn("Json error %s, file was %s" %
+                                (e, os.path.join(dir, safe_key)))
+                daemon_log.warn("File contents %s" % open(
+                    os.path.join(dir, safe_key), "r").read())
                 raise
 
     def delete(self, section, key):

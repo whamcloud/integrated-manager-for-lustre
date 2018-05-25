@@ -62,8 +62,8 @@ def main():
     try:
         daemon_log.info("Entering main loop")
         try:
-            conf = config.get('settings', 'server')
-        except (KeyError, TypeError) as e:
+            url = os.environ["IML_MANAGER_URL"] + 'agent/message/'
+        except KeyError as e:
             daemon_log.error(
                 "No configuration found (must be registered before running the agent service), "
                 "details: %s" % e)
@@ -79,10 +79,9 @@ def main():
             import chroma_agent.plugin_manager
             chroma_agent.plugin_manager.EXCLUDED_PLUGINS += ['corosync']
 
-        agent_client = AgentClient(conf['url'] + "message/",
-                                   ActionPluginManager(),
+        agent_client = AgentClient(url, ActionPluginManager(),
                                    DevicePluginManager(), ServerProperties(),
-                                   Crypto(config.path))
+                                   Crypto('/etc/iml'))
 
         def teardown_callback(*args, **kwargs):
             agent_client.stop()
