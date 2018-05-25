@@ -67,7 +67,8 @@ class Command(BaseCommand):
                 'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
                 'HTTP_API_PORT': settings.HTTP_API_PORT,
                 'REALTIME_PORT': settings.REALTIME_PORT,
-                'VIEW_SERVER_PORT': settings.VIEW_SERVER_PORT
+                'VIEW_SERVER_PORT': settings.VIEW_SERVER_PORT,
+                'DEVICE_AGGREGATOR_PORT': settings.DEVICE_AGGREGATOR_PORT
             }))
             open(conf_path, 'w').write(conf_text)
 

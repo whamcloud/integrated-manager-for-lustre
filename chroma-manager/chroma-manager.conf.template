@@ -224,3 +224,11 @@ server {
         proxy_pass http://unix:/var/run/device-aggregator.sock;
     }
 }
+
+server {
+    listen 127.0.0.1:{{DEVICE_AGGREGATOR_PORT}};
+
+    location /device-aggregator {
+        proxy_pass http://unix:/var/run/device-aggregator.sock;
+    }
+}

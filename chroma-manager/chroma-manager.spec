@@ -35,7 +35,6 @@ Requires: python-paramiko
 Requires: python2-kombu >= 3.0.19
 Requires: python-daemon
 Requires: python-requests >= 2.6.0
-Requires: python2-requests-unixsocket
 Requires: python-networkx
 Requires: python2-httpagentparser
 Requires: python-gunicorn
