@@ -1,4 +1,3 @@
-from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
@@ -99,10 +98,10 @@ class TestAlerting(ChromaIntegrationTestCase):
             self.remote_operations.stop_target(self.get_json_by_uri(target['active_host'])['fqdn'], target['ha_label'])
 
         self.wait_alerts(['TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert'],
-                            active=True)
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert'],
+                         active=True)
 
         # Raise service stopped alerts
         self.remote_operations.stop_lnet(host['fqdn'])
@@ -110,14 +109,14 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.stop_corosync(host['fqdn'])
 
         self.wait_alerts(['TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'LNetOfflineAlert',
-                            'PacemakerStoppedAlert',
-                            'CorosyncStoppedAlert',
-                            'HostOfflineAlert'],
-                            active=True)
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'LNetOfflineAlert',
+                          'PacemakerStoppedAlert',
+                          'CorosyncStoppedAlert',
+                          'HostOfflineAlert'],
+                         active=True)
 
         alert_end_events_before = {}
         for alert in self.get_list("/api/alert/", args={'alert_type': 'AlertEvent'}):
@@ -130,10 +129,10 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.start_pacemaker(host['fqdn'])
 
         self.wait_alerts(['TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert',
-                            'TargetOfflineAlert'],
-                            active=True)
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert',
+                          'TargetOfflineAlert'],
+                         active=True)
 
         # And check that we have an AlertEvent for the Alerts that just finished.
         alert_end_events_new = [alert for alert
@@ -145,8 +144,8 @@ class TestAlerting(ChromaIntegrationTestCase):
         # check. So explicitly check it did at least what we wanted it to do.
         for alert_event_expected in ['Pacemaker started', 'Corosync started', 'LNet started']:
             alert_event = next(alert_event for alert_event
-                                in alert_end_events_new
-                                if alert_event['message'].startswith(alert_event_expected))
+                               in alert_end_events_new
+                               if alert_event['message'].startswith(alert_event_expected))
 
             self.assertEqual(alert_event['alert_item'], host['resource_uri'])
             self.assertEqual(alert_event['begin'], alert_event['end'])

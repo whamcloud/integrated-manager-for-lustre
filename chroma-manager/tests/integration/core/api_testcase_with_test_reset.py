@@ -360,6 +360,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             alerts = [
                 alert['alert_type']
                 for alert in self.get_list("/api/alert/", filters)
+                if alert['alert_type'] is not 'UpdatesAvailableAlert'
             ]
             alerts.sort()
             if alerts == expected_alerts:
