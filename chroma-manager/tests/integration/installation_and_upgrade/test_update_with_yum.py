@@ -1,4 +1,5 @@
 import os
+import packaging.version
 
 from testconfig import config
 
@@ -22,7 +23,8 @@ class TestYumUpdate(TestInstallationAndUpgrade):
         hosts = response.json['objects']
         self.assertEqual(len(hosts), len(self.config_servers))
 
-        if os.environ.get('UPGRADE_FROM_3', 'false') == 'false':
+        if packaging.version.parse(os.environ['UPGRADE_FROM_VER']) > \
+            packaging.version.parse('4.1'):
             # Ensure that IML notices its storage servers needs upgraded
             for host in hosts:
                 # wait for an upgrade available alert
@@ -71,7 +73,8 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
 
-        if os.environ.get('UPGRADE_FROM_3', 'false') == 'false':
+        if packaging.version.parse(os.environ['UPGRADE_FROM_VER']) >= \
+            packaging.version.parse('4.0'):
             # Start the filesystem back up
             filesystem = self.get_filesystem_by_name(self.fs_name)
             self.start_filesystem(filesystem['id'])

@@ -9,14 +9,11 @@
   "corosync2": false,
   "pacemaker": false,
   "bundles": [
-    "iml-agent"
   ],
   "ui_description": "A server running the Robinhood Policy Engine",
   "packages": {
-    "iml-agent": [
-      "chroma-agent-management"
-    ],
     "external": [
+      "python2-iml-agent-management",
       "lustre-client",
       "robinhood-lhsm",
       "robinhood-webgui",

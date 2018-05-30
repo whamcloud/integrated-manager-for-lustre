@@ -1,5 +1,0 @@
-  0 UP osd-ldiskfs testfs-OST0000-osd testfs-OST0000-osd_UUID 5
-  1 UP mgc MGC10.14.83.68@tcp 0a5f962a-b7ae-e77f-be3d-b1811ea5b7e2 5
-  2 UP ost OSS OSS_uuid 3
-  3 UP obdfilter testfs-OST0000 testfs-OST0000_UUID 7
-  4 UP lwp testfs-MDT0000-lwp-OST0000 testfs-MDT0000-lwp-OST0000_UUID 5

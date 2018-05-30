@@ -1,4 +1,0 @@
-lrh=[type=10680000 len=136 idx=34/1] fid=[0x200011d41:0x1:0x0] dfid=[0x200011d41:0x1:0x0] compound/cookie=0x52e65e68/0x52e65e68 action=ARCHIVE archive#=2 flags=0x0 extent=0x0-0xffffffffffffffff gid=0x0 datalen=0 status=CANCELED data=[]
-lrh=[type=10680000 len=136 idx=34/1] fid=[0x200011d41:0x1:0x0] dfid=[0x200011d41:0x1:0x0] compound/cookie=0x52e65e68/0x52e65e68 action=ARCHIVE archive#=2 flags=0x0 extent=0x0-0xffffffffffffffff gid=0x0 datalen=0 status=WAITING data=[]
-lrh=[type=10680000 len=136 idx=34/1] fid=[0x200011d41:0x1:0x0] dfid=[0x200011d41:0x1:0x0] compound/cookie=0x52e65e68/0x52e65e68 action=ARCHIVE archive#=2 flags=0x0 extent=0x0-0xffffffffffffffff gid=0x0 datalen=0 status=SUCCEED data=[]
-lrh=[type=10680000 len=136 idx=34/1] fid=[0x200011d41:0x1:0x0] dfid=[0x200011d41:0x1:0x0] compound/cookie=0x52e65e68/0x52e65e68 action=ARCHIVE archive#=2 flags=0x0 extent=0x0-0xffffffffffffffff gid=0x0 datalen=0 status=STARTED data=[]

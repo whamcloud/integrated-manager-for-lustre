@@ -1,7 +1,0 @@
-Copyright (c) 2013 Intel Corproration. All Rights Reserved.
-
-This software is the confidential and proprietary information of
-Intel Corporation ("Confidential Information").  You shall not disclose
-such Confidential Information and shall use it only in accordance with
-the terms of the license agreement you entered into with
-Intel Corporation.
