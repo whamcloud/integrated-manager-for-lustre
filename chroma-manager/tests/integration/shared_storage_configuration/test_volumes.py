@@ -49,8 +49,8 @@ class TestVolumes(ChromaIntegrationTestCase):
     #     self.assertNotIn(ost_volumes[0]['label'], usable_volumes_labels)
 
     def test_volumes_cleared_on_teardown(self):
-        # Create a file system and tear it down, then verify after
-        # tear down that the volumes from the file system no longer
+        # Create a file system and then tear down the manager, then verify
+        # after tear down that the volumes from the file system no longer
         # appear in the database. Repro of HYD-1143.
         host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
         hosts = self.add_hosts(host_addresses)
