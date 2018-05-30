@@ -200,6 +200,26 @@ if [ -f ~/storage_server.repo.in ]; then
     STORAGE_SERVER_REPO=~/storage_server.repo.in
 fi
 
+if ! ${UPGRADE_FROM_3:-false}; then
+    # need to get the additional storage server repos on the agent
+    # nodes *BEFORE* the upgrade so that when the upgrade completes
+    # and the sessions to the agent are re-established, the agent
+    # already has access to the needed additional repos
+    # this also simulates the state of the MFL repo when the upgrade
+    # will be done in production
+    pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" \
+        "exec 2>&1; set -xe
+    # add any repos required by this test run
+    if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+        for repo in $STORAGE_SERVER_REPOS; do
+            curl \"\$repo\" >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
+        done
+    fi" | dshbak -c
+    if [ "${PIPESTATUS[0]}" != "0" ]; then
+        exit 1
+    fi
+fi
+
 # Install and setup manager
 ARCHIVE_SUFFIX=.tar.gz
 if $JENKINS; then
@@ -314,6 +334,15 @@ if [ -f /tmp/storage_server.repo.in ]; then
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
         < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
 fi
+# add any repos needed by the test
+if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+    for repo in $STORAGE_SERVER_REPOS; do
+        {
+            echo
+            curl \"\$repo\"
+        } >> /usr/share/chroma-manager/storage_server.repo
+    done
+fi
 
 # Ensure that coverage is disabled
 # https://github.com/pypa/virtualenv/issues/355
@@ -343,7 +372,7 @@ if ${UPGRADE_FROM_3:-false}; then
     pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
     pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-    sed -ne '/\[iml-agent\]/,/^$/p' /etc/yum.repos.d/Intel-Lustre-Agent.repo.iml-3.x >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
+
     # TODO: we really just need to adjust cache timeouts here to account for
     #       our compressed timelines
     yum clean all
@@ -381,7 +410,6 @@ if ${UPGRADE_FROM_3:-false}; then
 
     sleep 60
 fi
-
 echo "End upgrade and setup."
 
 echo "Test existing filesystem is still there"
