@@ -25,7 +25,6 @@ def get_devices(fqdn):
     try:
         _data = _fetch_aggregator()
 
-        log.debug('fetching devices for {}'.format(fqdn))
         host_data = _data[fqdn]
         return json.loads(host_data)
     except Exception as e:
