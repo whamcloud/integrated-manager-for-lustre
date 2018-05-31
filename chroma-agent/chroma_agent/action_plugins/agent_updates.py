@@ -201,10 +201,10 @@ def kernel_status():
 
 def restart_agent():
     def _shutdown():
-        daemon_log.info("Restarting agent")
+        daemon_log.info("Restarting iml-storage-server.target")
         # Use subprocess.Popen instead of try_run because we don't want to
         # wait for completion.
-        subprocess.Popen(['service', 'chroma-agent', 'restart'])
+        subprocess.Popen(['systemctl', 'restart', 'iml-storage-server.target'])
 
     raise CallbackAfterResponse(None, _shutdown)
 
