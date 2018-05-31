@@ -372,7 +372,12 @@ if ${UPGRADE_FROM_3:-false}; then
     #       our compressed timelines
     yum clean all
 
-    yum -y upgrade chroma-agent\*
+    yum -y upgrade python2-iml-agent\*
+    echo \"waiting for help on \$HOSTNAME\" | mail -s \"waiting help\" brian.murrell@intel.com
+    touch /tmp/waiting_help
+    while [ -f /tmp/waiting_help ]; do
+        sleep 1
+    done
 
     systemctl stop zed
     rmmod zfs zcommon znvpair spl
