@@ -110,8 +110,6 @@ class Command(BaseCommand):
 
         from chroma_core.lib.service_config import ServiceConfig
         if not ServiceConfig().configured():
-            # FIXME: return an error code which will prevent supervisord from restarting this service
-            # (using the 'exitcodes' option for the programs in the supervisord conf)
             sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 

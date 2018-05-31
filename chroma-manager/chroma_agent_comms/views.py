@@ -22,7 +22,7 @@ from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperati
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
-from chroma_core.services.http_agent.crypto import Crypto
+from chroma_core.services.crypto import Crypto
 from iml_common.lib.date_time import IMLDateTime
 
 log = log_register('agent_views')

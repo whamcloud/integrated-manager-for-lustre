@@ -1,20 +1,24 @@
 #!/usr/bin/env python
-# Copyright (c) 2017 Intel Corporation. All rights reserved.
+
+# Copyright (c) 2018 Intel Corporation. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
 
-"""This script substitutes production mode values into the nginx
-configuration template, and outputs the configuration on stdout"""
-
 import sys
-from nginx_settings import get_production_nginx_settings
+import settings
 
 template_file = sys.argv[1]
 
 
+nginx_settings = [
+    'APP_PATH', 'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
+    'HTTP_AGENT_PORT', 'HTTP_API_PORT', 'REALTIME_PORT', 'VIEW_SERVER_PORT',
+    'SSL_PATH', 'DEVICE_AGGREGATOR_PORT'
+]
+
 config = open(template_file).read()
-for setting, value in get_production_nginx_settings().items():
-    config = config.replace("{{%s}}" % setting, str(value))
+for setting in nginx_settings:
+    config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
 
 print config
