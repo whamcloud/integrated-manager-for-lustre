@@ -1,0 +1,9 @@
+[Unit]
+Description=IML Settings Populator
+Requires=postgresql.service
+After=postgresql.service
+
+[Service]
+WorkingDirectory=/usr/share/chroma-manager
+ExecStart=/bin/bash -c "exec /bin/python ./manage.py print-settings > /var/lib/chroma/iml-settings.conf"
+Type=oneshot

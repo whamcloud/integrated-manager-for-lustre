@@ -1,33 +1,47 @@
-%{!?name: %define name chroma-manager}
-%{?!version: %define version %(%{__python} -c "from scm_version import PACKAGE_VERSION; sys.stdout.write(PACKAGE_VERSION)")}
-%{?!package_release: %define package_release 1}
-%{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
+%{?systemd_requires}
+BuildRequires: systemd
+
+%{!?name: %global name chroma-manager}
+%{?!version: %global version %(%{__python} -c "from scm_version import PACKAGE_VERSION; sys.stdout.write(PACKAGE_VERSION)")}
+%{?!package_release: %global package_release 1}
+%{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 # The install directory for the manager
-%{?!manager_root: %define manager_root /usr/share/chroma-manager}
-
+%{?!manager_root: %global manager_root /usr/share/chroma-manager}
 
 Summary: The Intel Manager for Lustre Monitoring and Administration Interface
 Name: %{name}
 Version: %{version}
 Release: %{package_release}%{?dist}
 Source0: %{name}-%{version}.tar.gz
-Source1: chroma-supervisor-init.sh
-Source2: chroma-host-discover-init.sh
-Source3: logrotate.cfg
-Source4: chroma-config.1.gz
-License: Proprietary
+Source1: chroma-host-discover-init.sh
+Source2: logrotate.cfg
+Source3: chroma-config.1.gz
+Source4: iml-corosync.service
+Source5: iml-gunicorn.service
+Source6: iml-http-agent.service
+Source7: iml-job-scheduler.service
+Source8: iml-lustre-audit.service
+Source9: iml-manager.target
+Source10: iml-plugin-runner.service
+Source11: iml-power-control.service
+Source12: iml-realtime.service
+Source13: iml-settings-populator.service
+Source14: iml-stats.service
+Source15: iml-syslog.service
+Source16: iml-view-server.service
+
+License: MIT
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
-Vendor: Intel Corporation <hpdd-info@intel.com>
+Vendor: Intel Corporation <iml@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 BuildRequires: ed
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
-Requires: python2-supervisor
 Requires: python2-jsonschema < 0.9.0
 Requires: python-ordereddict
 Requires: python-uuid
@@ -53,7 +67,6 @@ Requires: policycoreutils-python
 Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
-Requires: iml-supervisor-status
 Requires: iml-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help
@@ -103,16 +116,9 @@ Obsoletes: nodejs-json-mask
 Obsoletes: nodejs-zeparser
 Obsoletes: django-celery
 
-%if 0%{?rhel} < 7
-Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
-Requires: nginx >= 1.11.6
-%endif
-
-%if 0%{?rhel} > 6
 Requires: fence-agents
 Requires: fence-agents-virsh
 Requires: nginx >= 1:1.11.6
-%endif
 
 %description
 This is the Intel Manager for Lustre Monitoring and Administration Interface
@@ -165,7 +171,6 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.py build/lib
 cp -a storage_server.repo build/lib
-cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
 cp -a mime.types build/lib
 cp -a agent-bootstrap-script.template build/lib
@@ -178,11 +183,24 @@ mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
-cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
-cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
+cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
-install %{SOURCE4} $RPM_BUILD_ROOT/usr/share/man/man1
-install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
+install %{SOURCE3} $RPM_BUILD_ROOT/usr/share/man/man1
+install -m 644 %{SOURCE2} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE8} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE9} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 %{SOURCE16} $RPM_BUILD_ROOT%{_unitdir}/
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -213,7 +231,7 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post
-%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
+PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
 # Create chroma-config MAN Page
@@ -225,11 +243,7 @@ sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
 
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
-%if 0%{?rhel} > 6
-    systemctl enable nginx
-%else if 0%{?rhel} < 7
-    chkconfig nginx on
-%endif
+systemctl enable nginx
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/chroma
@@ -255,42 +269,31 @@ else
 fi
 
 
-%if 0%{?rhel} > 6
-    if [ $(systemctl is-active firewalld) == "active" ]; then
-        for port in 80 443; do
-            firewall-cmd --permanent --add-port=$port/tcp
-            firewall-cmd --add-port=$port/tcp
-        done
-    fi
-%else if 0%{?rhel} < 7
-    if ! out=$(service iptables status) || [ "$out" = "Table: filter
-Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination
+if [ $(systemctl is-active firewalld) == "active" ]; then
+    for port in 80 443; do
+        firewall-cmd --permanent --add-port=$port/tcp
+        firewall-cmd --add-port=$port/tcp
+    done
+fi
 
-Chain FORWARD (policy ACCEPT)
-num  target     prot opt source               destination
-
-Chain OUTPUT (policy ACCEPT)
-num  target     prot opt source               destination         " ]; then
-        arg="-n"
-    else
-        arg=""
-    fi
-    if [ $1 -lt 2 ]; then
-        # open ports in the firewall for access to the manager
-        for port in 80 443; do
-            lokkit $arg -p $port:tcp
-        done
-    fi
-%endif
 
 echo "Thank you for installing Chroma.  To complete your installation, please"
 echo "run \"chroma-config setup\""
 
 %preun
-service chroma-supervisor stop
-# remove the /static/ dir of files that was created by Django's collectstatic
-rm -rf %{manager_root}/static
+%systemd_preun iml-manager.target
+%systemd_preun iml-corosync.service
+%systemd_preun iml-gunicorn.service
+%systemd_preun iml-http-agent.service
+%systemd_preun iml-job-scheduler.service
+%systemd_preun iml-lustre-audit.service
+%systemd_preun iml-plugin-runner.service
+%systemd_preun iml-power-control.service
+%systemd_preun iml-realtime.service
+%systemd_preun iml-settings-populator.service
+%systemd_preun iml-stats.service
+%systemd_preun iml-syslog.service
+%systemd_preun iml-view-server.service
 
 if [ $1 -lt 1 ]; then
     #reset worker processes
@@ -300,26 +303,15 @@ fi
 
 %postun
 # Remove chroma-config MAN Page
-rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE4}.gz
+rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE3}.gz
 
 if [ $1 -lt 1 ]; then
-    %if 0%{?rhel} > 6
-        for port in 80 443; do
-            firewall-cmd --permanent --remove-port=$port/tcp
-            firewall-cmd --remove-port=$port/tcp
-        done
-        firewall-cmd --permanent --remove-port=123/udp
-        firewall-cmd --remove-port=123/udp
-    %else if 0%{?rhel} < 7
-        # close previously opened ports in the firewall for access to the manager
-        sed -i \
-            -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT/d'\
-            -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT/d' \
-            -e '/INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT/d' \
-            /etc/sysconfig/iptables
-        sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
-               -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
-    %endif
+    for port in 80 443; do
+        firewall-cmd --permanent --remove-port=$port/tcp
+        firewall-cmd --remove-port=$port/tcp
+    done
+    firewall-cmd --permanent --remove-port=123/udp
+    firewall-cmd --remove-port=123/udp
 
     # clean out /var/lib/chroma
     if [ -d /var/lib/chroma ]; then
@@ -332,13 +324,24 @@ fi
 %{_bindir}/chroma-host-discover
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
-/etc/nginx/conf.d/chroma-manager.conf
-%attr(0755,root,root)/etc/init.d/chroma-supervisor
+%ghost /etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
+%attr(0644,root,root)%{_unitdir}/iml-corosync.service
+%attr(0644,root,root)%{_unitdir}/iml-gunicorn.service
+%attr(0644,root,root)%{_unitdir}/iml-http-agent.service
+%attr(0644,root,root)%{_unitdir}/iml-job-scheduler.service
+%attr(0644,root,root)%{_unitdir}/iml-lustre-audit.service
+%attr(0644,root,root)%{_unitdir}/iml-manager.target
+%attr(0644,root,root)%{_unitdir}/iml-plugin-runner.service
+%attr(0644,root,root)%{_unitdir}/iml-power-control.service
+%attr(0644,root,root)%{_unitdir}/iml-realtime.service
+%attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
+%attr(0644,root,root)%{_unitdir}/iml-stats.service
+%attr(0644,root,root)%{_unitdir}/iml-syslog.service
+%attr(0644,root,root)%{_unitdir}/iml-view-server.service
 %attr(0755,root,root)%{manager_root}/manage.py
-%{manager_root}/*.conf
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template

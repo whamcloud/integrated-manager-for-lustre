@@ -1,0 +1,20 @@
+[Unit]
+Description=IML Manager Target
+Requires=iml-corosync.service
+Requires=iml-gunicorn.service
+Requires=iml-http-agent.service
+Requires=iml-job-scheduler.service
+Requires=iml-lustre-audit.service
+Requires=iml-plugin-runner.service
+Requires=iml-power-control.service
+Requires=iml-realtime.service
+Requires=iml-stats.service
+Requires=iml-syslog.service
+Requires=iml-view-server.service
+Requires=iml-settings-populator.service
+Requires=nginx.service
+After=iml-settings-populator.service
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
