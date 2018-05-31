@@ -460,7 +460,7 @@ class Linux(Plugin):
             partition, created = self.update_or_create(
                 # ZfsPartitions should be differentiated as they are not usable for lustre
                 ZfsPartition
-                if bdev.get('zfs_partition') or bdev['filesystem_type'] == 'zfs_member'
+                if bdev.get('is_zfs_reserved') or bdev['filesystem_type'] == 'zfs_member'
                 else Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
