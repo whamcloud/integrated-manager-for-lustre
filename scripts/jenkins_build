@@ -61,6 +61,7 @@ pre_build()
 {
     run_repo_maintenance
     clean_uncommitted_artifacts
+    make clean_substs
     # Nuke these tarballs to deal with name changes
     rm -f chroma-bundles/*.tar.gz
     # remove any previous chroma-externals content
