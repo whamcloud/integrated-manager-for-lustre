@@ -213,8 +213,8 @@ class BaseStoragePlugin(object):
 
         # Resources created since last update
         with self._resource_lock:
-            self._commit_resource_creates()
             self._commit_resource_deletes()
+            self._commit_resource_creates()
             self._commit_resource_updates()
             self._commit_resource_statistics()
             self._check_alert_conditions()
