@@ -9,7 +9,7 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
 
     def setUp(self):
         super(ChromaPowerControlTestCase, self).setUp()
-        
+
         # Even though the tests only need 1 server, we need to add a server
         # and its HA peer in order to ensure that the peer doesn't send
         # outdated CIB data over. There is an assumption here that the
@@ -178,3 +178,9 @@ class TestPduOperations(ChromaPowerControlTestCase):
             return post_boot_time > pre_boot_time
 
         self.wait_until_true(boot_time_is_newer)
+
+        # remove any corrupted dnf lock files https://github.com/intel-hpdd/intel-manager-for-lustre/issues/618
+        self.remote_command(
+            self.server['address'],
+            '[[ -f {0} && ! -s {0} ]] && rm -f {0}'.format('/var/cache/dnf/metadata_lock.pid'),
+            expected_return_code=None)
