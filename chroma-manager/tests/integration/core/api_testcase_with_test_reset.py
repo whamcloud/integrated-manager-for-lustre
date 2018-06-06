@@ -860,6 +860,15 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             'checking for zfs presence',
             expected_return_code=None)
 
+        self.execute_simultaneous_commands(
+            [
+                'echo 100 > /sys/module/zfs/parameters/zfs_multihost_history',
+                'echo 20 > /sys/module/zfs/parameters/zfs_multihost_fail_intervals',
+            ],
+            fqdns,
+            'set multihost params for test',
+            expected_return_code=None)
+
         partprobe_devices = []
         for lustre_device in config['lustre_devices']:
             if lustre_device['backend_filesystem'] == 'zfs':
