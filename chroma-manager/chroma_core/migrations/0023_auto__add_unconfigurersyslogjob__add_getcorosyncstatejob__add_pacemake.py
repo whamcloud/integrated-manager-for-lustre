@@ -4,15 +4,6 @@ from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
 
-def create_table_dict (model_name, state, host_id):
-    return { k: v for k, v in (
-        ('state_modified_at', datetime.datetime.now()),
-        ('state', state),
-        ('immutable_state', 'f'),
-        ('host_id', host_id),
-        ('corosync_reported_up', 'False' if model_name == 'corosyncconfiguration' else None)
-    ) if v is not None}  
-
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
@@ -240,18 +231,6 @@ class Migration(SchemaMigration):
         # Deleting field 'ManagedHost.corosync_reported_up'
         db.delete_column('chroma_core_managedhost', 'corosync_reported_up')
 
-        def create_action_record(model_name, table_dict):
-            app_name = 'chroma_core'
-            ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(model=model_name.lower(),
-                                                                          app_label=app_name,
-                                                                          defaults=dict(name=model_name))
-
-            table_dict['content_type_id'] = ct.id
-            fields = ", ".join(map(str, table_dict.keys()))
-            values = ", ".join(map(str, map(lambda x: "'%s'" % x, table_dict.values())))
-            query = "insert into chroma_core_%s (%s) values (%s)" % (model_name, fields, values)
-            db.execute(query)
-
         # Now create the new chroma_core_corosyncconfiguration, chroma_core_ntpconfiguration
         # and chroma_core_pacemakerconfiguration for managed servers.
         table_rows = db.execute("select chroma_core_managedhost.id from chroma_core_managedhost, chroma_core_serverprofile "
@@ -261,14 +240,35 @@ class Migration(SchemaMigration):
         # Setup the new stateful objects, we presume that they were all successfully configured before hand, if this was
         # not the case the user would need to manually do it in the gui.
         # Most other state like mcastport will be read by the agents.
-        
+        def create_action_record(host_id, model_name, state, extra=[]):
+            app_name = 'chroma_core'
+            ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(
+                model=model_name.lower(),
+                app_label=app_name,
+                defaults=dict(name=model_name))
+
+            data = [
+                ('state_modified_at', str(datetime.datetime.now())),
+                ('state', state),
+                ('immutable_state', 'f'),
+                ('host_id', host_id),
+                ('content_type_id', ct.id),
+            ] + extra
+
+            [keys, values] = zip(*data)
+            values = map(lambda x: "'{0}'".format(x), values)
+
+            query = "insert into chroma_core_{0} ({1}) values ({2})".format(
+                model_name, ", ".join(keys), ", ".join(values))
+
+            db.execute(query)
 
         for host_id, in table_rows:
-            for model_name, state in [('corosyncconfiguration', 'started'),
-                                      ('ntpconfiguration', 'configured'),
-                                      ('pacemakerconfiguration', 'started')]:
-                table_dict = create_table_dict (model_name, state, host_id)                   
-                create_action_record(model_name, table_dict)
+            for args in [('corosyncconfiguration', 'started',
+                          [('corosync_reported_up',
+                            'f')]), ('ntpconfiguration', 'configured'),
+                         ('pacemakerconfiguration', 'started')]:
+                create_action_record(host_id, *args)
 
         # Now create the new chroma_core_rsyslogconfiguration for all hosts.
         table_rows = db.execute("select id from chroma_core_managedhost")
@@ -276,8 +276,7 @@ class Migration(SchemaMigration):
         # Setup the new stateful objects, we presume that they were all successfully configured before hand, if this was
         # not the case the user would need to manually do it in the gui.
         for host_id, in table_rows:
-            table_dict = create_table_dict (model_name, 'configured', host_id)
-            create_action_record('rsyslogconfiguration', table_dict)
+            create_action_record(host_id, 'rsyslogconfiguration', 'configured')
 
 
     def backwards(self, orm):
