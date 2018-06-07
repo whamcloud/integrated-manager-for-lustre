@@ -24,9 +24,7 @@ def _fetch_aggregator():
 def get_devices(fqdn):
     try:
         _data = _fetch_aggregator()
-
-        host_data = _data[fqdn]
-        return json.loads(host_data)
+        return _data[fqdn]
     except Exception as e:
         log.error("iml-device-aggregator is not providing expected data, ensure "
                   "iml-device-scanner package is installed and relevant "
