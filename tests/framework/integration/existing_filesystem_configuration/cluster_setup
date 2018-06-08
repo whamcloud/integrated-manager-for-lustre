@@ -1,0 +1,305 @@
+#!/bin/bash -ex
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
+
+. $CHROMA_DIR/tests/framework/utils/cluster_setup.sh
+
+# need to remove the chroma repositories configured by the provisioner
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER) "exec 2>&1; set -xe
+if $MEASURE_COVERAGE; then
+    if [ -f /etc/yum.repos.d/autotest.repo ]; then
+        cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+retries=50
+timeout=180
+EOF
+    fi
+    $PROXY yum install -y python-setuptools python2-coverage
+fi
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    rm -f /etc/yum.repos.d/autotest.repo
+fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# And install the MFL required repos
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
+if ! yum repolist | grep addon-epel; then
+    yum -y install epel-release
+fi
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+
+yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
+ed <<EOF /etc/yum.repos.d/mirror.centos.org_centos_7_extras_x86_64_.repo
+/enabled/a
+gpgcheck=1
+gpgkey=http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+.
+wq
+EOF
+
+if [[ \$HOSTNAME = *vm*9 ]]; then
+    yum-config-manager --add-repo "$LUSTRE_CLIENT_URL"
+    sed -i -e '1d' -e \"2s/^.*$/[lustre-client]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_CLIENT_REPO_FILE"
+else
+    yum-config-manager --add-repo "$LUSTRE_SERVER_URL"
+    sed -i -e '1d' -e \"2s/^.*$/[lustre-server]/\" -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' "$LUSTRE_SERVER_REPO_FILE"
+fi
+
+yum-config-manager --add-repo https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
+sed -i -e '1d' -e '2s/^.*$/[e2fsprogs]/' -e '/baseurl/s/,/%2C/g' -e '/enabled/a gpgcheck=0' /etc/yum.repos.d/downloads.whamcloud.com_public_e2fsprogs_latest_el7_.repo
+
+yum -y install distribution-gpg-keys-copr
+if ! ls /usr/share/distribution-gpg-keys/copr/copr-*$COPR_PROJECT*; then
+    rpm --import https://copr-be.cloud.fedoraproject.org/results/$COPR_OWNER/$COPR_PROJECT/pubkey.gpg
+fi
+$LOCAL_CLUSTER_SETUP" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# Install pdsh on storage nodes
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+yum -y install pdsh" | dshbak -c
+
+# Install and setup manager
+if $JENKINS; then
+    ARCHIVE_PATH=.
+else
+    ARCHIVE_PATH=chroma-bundles
+fi
+
+if [ -f ~/storage_server.repo.in ]; then
+    STORAGE_SERVER_REPO=~/storage_server.repo.in
+fi
+
+scp $STORAGE_SERVER_REPO $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+set -ex
+yum -y install expect pdsh
+# Install from the installation package
+cd /tmp
+tar xzvf $ARCHIVE_NAME
+cd ${ARCHIVE_NAME%.tar.gz}
+
+# Execute the create_installer script and distribute the install procedure to the storage nodes
+./create_installer zfs
+./create_installer ldiskfs
+if ! pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz lustre-ldiskfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH; then
+    echo "Failed to copy installer files"
+    exit 1
+fi
+
+if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
+    rc=\${PIPESTATUS[0]}
+    cat /var/log/chroma/install.log
+    exit \$rc
+fi
+
+# override /usr/share/chroma-manager/storage_server.repo
+if [ -f /tmp/storage_server.repo.in ]; then
+    # make sure we use the correct lustre though!
+    sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
+        -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
+        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
+fi
+# add any repos needed by the test
+if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
+    for repo in $STORAGE_SERVER_REPOS; do
+        {
+            echo
+            curl \"\$repo\"
+       } >> /usr/share/chroma-manager/storage_server.repo
+    done
+fi
+
+cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
+import logging
+LOG_LEVEL = logging.DEBUG
+EOF1
+
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+if $MEASURE_COVERAGE; then
+    cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/share/chroma-manager/
+EOF1
+    cat <<\"EOF1\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
+import coverage
+cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
+cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+EOF1
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
+fi"
+
+# Install and setup chroma software storage appliances
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+# if this node uses the Intel proxies, make sure the agent and scanner-proxy are doing so
+if [ -f /etc/profile.d/intel_proxy.sh ]; then
+    mkdir -p /etc/systemd/system/chroma-agent.service.d/
+    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
+
+    mkdir -p /etc/systemd/system/scanner-proxy.service.d/
+    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/scanner-proxy.service.d/override.conf
+fi
+
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+retries=50
+timeout=180
+
+EOF
+fi
+
+$PROXY yum -y install python-setuptools python2-coverage
+pushd /tmp/
+tar xzvf lustre-ldiskfs-el7-installer.tar.gz
+tries=0
+failed=true
+while \$failed && [ \$tries -lt 10 ]; do
+    if ! bash -x lustre-ldiskfs/install; then
+        yum --enablerepo=lustre clean metadata
+        let tries+=1
+    else
+        failed=false
+    fi
+done
+if \$failed; then
+    exit 1
+fi
+popd
+
+# Make sure the firewall is not in the way
+if firewall-cmd --state; then
+    firewall-cmd --add-port=988/tcp
+    firewall-cmd --permanent --add-port=988/tcp
+else
+    firewall_status=\${PIPESTATUS[0]}
+    if [ \$firewall_status != 252 ]; then
+        echo \"Unknown firewall state: \$firewall_status\"
+        exit 1
+    fi
+fi
+
+# https://github.com/pypa/virtualenv/issues/355
+python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
+if $MEASURE_COVERAGE; then
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/.coveragerc
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/lib/python\$python_version/site-packages/chroma_agent/
+EOF
+    cat <<\"EOF\" > /usr/lib/python\$python_version/site-packages/sitecustomize.py
+import coverage
+cov = coverage.coverage(config_file='/usr/lib/python\$python_version/site-packages/.coveragerc', auto_data=True)
+cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+EOF
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*
+fi
+
+if $USE_FENCE_XVM; then
+    # fence_xvm support
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+fi
+
+# ensure hostid exists as a prerequisite of ZFS MMP
+genhostid
+
+# Removed and installed a kernel, so need a reboot
+sync
+sync
+nohup bash -c \"sleep 2; init 6\" >/dev/null 2>/dev/null </dev/null & exit 0" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+source $CHROMA_DIR/tests/framework/integration/utils/install_client.sh
+
+# Install and setup integration tests
+if ! $JENKINS; then
+    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+fi
+scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
+ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -xe
+if $JENKINS; then
+    $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+    CMIT=chroma-manager-integration-tests
+else
+    CMIT=/root/${CMIT##*/}
+fi
+
+# add any repos required by this test run
+if [ -n \"$TEST_RUNNER_REPOS\" ]; then
+    for repo in $TEST_RUNNER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
+fi
+
+if ! $PROXY yum -y install \$CMIT; then
+    $PROXY yum clean all
+    $PROXY yum -y install \$CMIT
+fi
+
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
+fi
+EOF
+
+$CHROMA_DIR/tests/framework/integration/utils/wait_for_nodes.sh "${STORAGE_APPLIANCES[*]} $CLIENT_1"
+
+echo "End cluster installation and setup."

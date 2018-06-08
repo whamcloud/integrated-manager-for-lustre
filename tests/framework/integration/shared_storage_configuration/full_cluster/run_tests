@@ -1,0 +1,47 @@
+#!/bin/bash -ex
+
+. $CHROMA_DIR/tests/framework/utils/collect_reports.sh
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
+
+eval $(python $CHROMA_DIR/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+if [ -z "$TESTS" ]; then
+    TESTS="tests/integration/shared_storage_configuration/"
+else
+    # if the caller specified test(s), make sure the
+    # test_setup_zfs_targets_for_test() hackery is included
+    TESTS="tests/integration/shared_storage_configuration/test_aaa_zfs_setup.py:TestConfigureZfsTargets.test_setup_zfs_targets_for_test $TESTS"
+fi
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+
+trap "set +e; collect_reports" EXIT
+
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
+repoquery -q epel-release | grep epel-release || {
+    yum repolist
+    repoquery -qi epel-release
+    yum-config-manager | grep -e "==================" -e "enabled = "
+    repoquery -qi epel-release
+    echo "not doing yum-config-manager --enable addon-epel7-x86_64"
+    echo "not doing repoquery -qi epel-release"
+    yum repolist
+}' | dshbak -c
+
+echo "Begin running tests..."
+
+ssh root@$TEST_RUNNER "exec 2>&1; set -xe
+export NOSE_ARGS=\"$NOSE_ARGS\"
+cd /usr/share/chroma-manager/
+unset http_proxy; unset https_proxy
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
+
+echo "End running tests."
+exit 0
