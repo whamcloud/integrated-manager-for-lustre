@@ -49,8 +49,9 @@ all: rpms
 
 genfiles: $(RPM_SPEC)
 
-develop:
+develop: $(DEVELOP_DEPS)
 	python setup.py develop
+	$(DEVELOP_POST)
 
 tarball: dist/$(NAME)-$(PACKAGE_VERSION).tar.gz
 
