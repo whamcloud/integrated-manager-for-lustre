@@ -557,7 +557,9 @@ class ResourceManager(object):
                     ancestors = self._record_find_ancestors(logicaldrive_id, LogicalDrive)
                     record_class = self._class_index.get(logicaldrive_id)
                     ancestors.remove(logicaldrive_id)
-                    if len(ancestors) == 1 and not issubclass(record_class, LogicalDriveSlice):
+                    if len(ancestors) == 1 \
+                        and not issubclass(record_class, LogicalDriveSlice) \
+                        and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice):
                         label = self.get_label(ancestors[0])
                     else:
                         label = self.get_label(logicaldrive_id)

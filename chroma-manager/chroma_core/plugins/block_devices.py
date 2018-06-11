@@ -12,7 +12,7 @@ log = log_register('plugin_runner')
 log.setLevel(DEBUG)
 
 
-def fetch_aggregator():
+def _fetch_aggregator():
     import requests
 
     resp = requests.get(settings.LOCAL_DEVICE_AGGREGATOR_URL)
@@ -22,10 +22,9 @@ def fetch_aggregator():
 
 
 def get_devices(fqdn):
-    _data = fetch_aggregator()
-
     try:
-        log.debug('fetching devices for {}'.format(fqdn))
+        _data = _fetch_aggregator()
+
         host_data = _data[fqdn]
         return json.loads(host_data)
     except Exception as e:
