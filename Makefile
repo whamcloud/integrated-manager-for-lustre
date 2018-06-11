@@ -1,57 +1,21 @@
-BUILDER_IS_EL = $(shell rpm --eval '%{?rhel:true}%{!?rhel:false}')
+NAME          := iml-manager
+#SUBPACKAGES   := management
+#TEST_DEPS     := python2-tablib python2-iml-common1.4 python-netaddr \
+#                 python2-toolz python-django
+MODULE_SUBDIR  = chroma_manager
+
+include include/python-localsrc.mk
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
-
-# Top-level Makefile
-SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
-
-.PHONY: all rpms docs subdirs $(SUBDIRS) tags
-
-all: TARGET=all
-rpms: TARGET=rpms
-docs: TARGET=docs
-download: TARGET=download
-substs: TARGET=substs
-clean_substs: TARGET=clean_substs
-
-all rpms docs download subdirs substs clean_substs: $(SUBDIRS)
-
-cleandist:
-	rm -rf dist
-
-dist: cleandist
-	mkdir dist
-
-$(SUBDIRS): dist
-	set -e; \
-	if $(BUILDER_IS_EL); then \
-		$(MAKE) MFL_COPR_REPO=$(MFL_COPR_REPO) -C $@ $(TARGET); \
-		if [ $(TARGET) != download -a -d $@/dist/ ]; then \
-			cp -a $@/dist/* dist/; \
-		fi; \
-	fi
-
-repo: rpms
-	$(MAKE) -C chroma-dependencies repo
-
-bundles: repo
-	$(MAKE) MFL_COPR_REPO=$(MFL_COPR_REPO) -C chroma-bundles
-
-deps: repo
 
 tags:
 	ctags --python-kinds=-i -R --exclude=chroma-manager/_topdir         \
 	                           --exclude=chroma-\*/myenv\*              \
 	                           --exclude=chroma_test_env                \
 	                           --exclude=chroma-manager/chroma_test_env \
-	                           --exclude=chroma-dependencies            \
 	                           --exclude=chroma_unit_test_env           \
 	                           --exclude=workspace                      \
 	                           --exclude=chroma-manager/ui-modules .
-
-# build the chroma-management subdirs before the chroma-dependencies subdir
-chroma-dependencies: chroma-manager
-chroma-bundles: chroma-dependencies
 
 destroy_cluster: Vagrantfile
 	time vagrant destroy -f
@@ -174,10 +138,7 @@ efs_tests:
 	pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf; systemctl disable firewalld; systemctl stop firewalld"
 	chroma-manager/tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
-requirements:
-	make -C chroma-manager requirements.txt
-
-chroma_test_env: requirements chroma_test_env/bin/activate
+chroma_test_env: chroma_test_env/bin/activate
 
 chroma_test_env/bin/activate: chroma-manager/requirements.txt
 	test -d chroma_test_env || virtualenv --no-site-packages chroma_test_env

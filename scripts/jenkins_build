@@ -19,7 +19,7 @@ run_repo_maintenance()
 
 clean_uncommitted_artifacts()
 {
-    local EXCLUDES=". .git dist include chroma-bundles chroma-dependencies"
+    local EXCLUDES=". .git dist include chroma-bundles"
     for subdir in $(find . -maxdepth 1 -type d); do
         dirname=$(basename $subdir)
         if [[ $EXCLUDES == *$dirname* ]]; then continue; fi
@@ -45,7 +45,7 @@ run_pre_commit_hook()
 {
     # only run this on el6 since the el5 builders produce too many failures
     if [ $distro = el6 ]; then
-        scripts/pre-commit --all-files --exclude myenv --exclude chroma-dependencies
+        scripts/pre-commit --all-files --exclude myenv
     fi
 }
 
@@ -71,21 +71,10 @@ pre_build()
     #update_nodejs_version
 }
 
-build_dependencies()
-{
-    if [ -d chroma-dependencies ]; then
-        if [ $distro = el6 ]; then
-            # can only do this on el6 builders for now
-            make -C chroma-dependencies repo
-        fi
-    fi
-}
-
 build()
 {
     export CACHE=/mnt/builder_cache/
     make
-    build_dependencies
 }
 
 create_repository()

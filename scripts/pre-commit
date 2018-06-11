@@ -95,7 +95,6 @@ CHECKS = [
             '.*update_scan.py',
             '.*/scripts/.*',
             '.*/BUILD/.*',
-            '.*/chroma-dependencies/.*',
         ],
         'print_filename': True
     }

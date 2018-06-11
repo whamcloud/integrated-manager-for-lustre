@@ -173,24 +173,6 @@ install_requirements: requirements.txt
 	pip install -Ur requirements.txt
 	echo "jenkins_fold:end:Install Python requirements"
 
-requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makefile requirements.dev
-	echo "jenkins_fold:start:Make requirements.txt"
-	rm -f requirements.tmp
-	$(MAKE) -C ../chroma-dependencies requirements
-	{ echo "# DO NOT UPDATE THIS FILE MANUALLY.";                                         \
-	echo "# This file is generated automatically.";                                       \
-	echo "# If you want to add a new requirement please see:";                            \
-	echo "# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements";  \
-	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file."; \
-	sort < requirements.tmp; } > $@
-	rm -f requirements.tmp
-	set -e;                                                   \
-	if grep ^make $@; then                                    \
-		echo "why is this not quiet like it should be?";  \
-		sed -i -e '/^make\[[0-9]\]: /d' $@;               \
-	fi
-	echo "jenkins_fold:end:Make requirements.txt"
-
 download: install_requirements
 
 substs: $(SUBSTS)
