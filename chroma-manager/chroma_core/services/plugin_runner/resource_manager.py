@@ -1105,10 +1105,13 @@ class ResourceManager(object):
         reported_scoped_resources = []
         reported_global_resources = []
         for r in reported_resources:
-            if isinstance(r._meta.identifier, BaseScopedId):
-                reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
-            else:
-                reported_global_resources.append(session.local_id_to_global_id[r._handle])
+            try:
+                if isinstance(r._meta.identifier, BaseScopedId):
+                    reported_scoped_resources.append(session.local_id_to_global_id[r._handle])
+                else:
+                    reported_global_resources.append(session.local_id_to_global_id[r._handle])
+            except KeyError as e:
+                log.warning('attempting to access resource missing from local-global map {}'.format(e))
 
         # This generator re-runs the query on every loop iteration in order
         # to handle situations where resources returned by the query are
