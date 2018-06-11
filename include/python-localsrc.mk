@@ -24,9 +24,9 @@ endif
 	python setup.py egg_info
 
 deps: $(subst -,_,$(NAME)).egg-info/SOURCES.txt
-	sed -e 's/^/dist\/python-$(NAME)-$(PACKAGE_VERSION).tar.gz: /' < $< > deps
+	sed -e 's/ /\\ /g' -e 's/^/dist\/$(NAME)-$(PACKAGE_VERSION).tar.gz: /' < $< > deps
 
-dist/$(NAME)-$(PACKAGE_VERSION).tar.gz: Makefile $(MODULE_SUBDIR)/__init__.py
+dist/$(NAME)-$(PACKAGE_VERSION).tar.gz: Makefile $(DIST_DEPS) deps
 	echo "jenkins_fold:start:Make Agent Tarball"
 	rm -f MANIFEST
 	python setup.py sdist
@@ -81,4 +81,4 @@ install_build_deps-stamp:
 include deps
 
 tags: deps
-	ctags --python-kinds=-i -R --exclude=_topdir
+	ctags --python-kinds=-i -R --exclude=_topdir $(TAGS_ARGS)
