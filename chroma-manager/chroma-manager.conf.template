@@ -32,7 +32,7 @@ server {
     gzip_comp_level 2;
 
     location /favicon.ico {
-      alias /usr/lib/iml-manager/iml-gui/intel.ico;
+      alias /usr/lib/iml-manager/iml-gui/favicon.ico;
     }
 
     location /certificate/ {
