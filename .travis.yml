@@ -22,7 +22,6 @@ jobs:
   - stage: test
     env: Type='unit tests'
     install:
-      - cd chroma-manager
       - pip install -r requirements.txt
     before_script:
       - psql -c "CREATE USER chroma;" -U postgres
@@ -35,7 +34,6 @@ jobs:
   - stage: test
     env: Type='behave tests'
     install:
-      - cd chroma-manager
       - pip install -r requirements.txt
     before_script:
       - psql -c "CREATE USER chroma;" -U postgres
@@ -48,4 +46,4 @@ jobs:
     env: Type='service tests'
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/intel-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
-      - docker exec -i systemd bash -c "./intel-manager-for-lustre/chroma-manager/tests/framework/services/runner.sh"
+      - docker exec -i systemd bash -c "./intel-manager-for-lustre/tests/framework/services/runner.sh"
