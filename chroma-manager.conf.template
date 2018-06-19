@@ -60,7 +60,7 @@ server {
     }
 
     location /gui/node_modules/socket-worker/dist {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/socket-worker/dist;
+        alias /usr/lib/node_modules/@iml/socket-worker/targetdir;
 
         etag on;
         expires 1y;
