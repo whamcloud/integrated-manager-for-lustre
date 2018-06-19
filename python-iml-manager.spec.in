@@ -35,8 +35,7 @@ Source12:       iml-realtime.service
 Source13:       iml-settings-populator.service
 Source14:       iml-stats.service
 Source15:       iml-syslog.service
-Source16:       iml-view-server.service
-Source17:       storage_server.repo
+Source16:       storage_server.repo
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -83,6 +82,7 @@ Requires:       iml-gui
 Requires:       iml-srcmap-reverse
 Requires:       iml-online-help
 Requires:       iml-device-scanner-aggregator
+Requires:       iml-view-server
 Requires:       createrepo
 Requires:       python2-toolz
 Conflicts:      chroma-agent
@@ -221,7 +221,6 @@ install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE16} $RPM_BUILD_ROOT%{_unitdir}/
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -378,7 +377,6 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
 %attr(0644,root,root)%{_unitdir}/iml-stats.service
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
-%attr(0644,root,root)%{_unitdir}/iml-view-server.service
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.py

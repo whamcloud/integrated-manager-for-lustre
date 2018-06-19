@@ -161,7 +161,7 @@ $(COPR_REPO_TARGETS):
 #	gzip -c chroma-config.1 > chroma-config.1.gz
 #	cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service _topdir/SOURCES
 #	cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service _topdir/SOURCES
-#	cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service iml-view-server.service _topdir/SOURCES
+#	cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service _topdir/SOURCES
 #	cp chroma-host-discover-init.sh logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 #	cp chroma-manager.spec _topdir/SPECS
 #	set -e;                                                \
