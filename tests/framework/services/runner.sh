@@ -57,7 +57,7 @@ systemctl restart postgresql
 
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo
-yum -y install nodejs npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help iml-view-server
+yum -y install nodejs npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help iml-view-server iml-old-gui
 
 cd /intel-manager-for-lustre
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
