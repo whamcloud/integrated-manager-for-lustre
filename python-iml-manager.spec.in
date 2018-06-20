@@ -31,11 +31,10 @@ Source8:        iml-lustre-audit.service
 Source9:        iml-manager.target
 Source10:       iml-plugin-runner.service
 Source11:       iml-power-control.service
-Source12:       iml-realtime.service
-Source13:       iml-settings-populator.service
-Source14:       iml-stats.service
-Source15:       iml-syslog.service
-Source16:       storage_server.repo
+Source12:       iml-settings-populator.service
+Source13:       iml-stats.service
+Source14:       iml-syslog.service
+Source15:       storage_server.repo
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -83,6 +82,7 @@ Requires:       iml-old-gui
 Requires:       iml-srcmap-reverse
 Requires:       iml-online-help
 Requires:       iml-device-scanner-aggregator
+Requires:       iml-realtime
 Requires:       iml-view-server
 Requires:       iml-socket-worker
 Requires:       createrepo
@@ -222,7 +222,6 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -384,7 +383,6 @@ fi
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
-%{manager_root}/ui-modules/node_modules/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING

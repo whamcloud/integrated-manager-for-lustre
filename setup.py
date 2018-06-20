@@ -37,10 +37,6 @@ setup(
         'tests': [
             "integration/run_tests", "integration/*/*.json", "sample_data/*",
             "integration/core/clear_ha_el?.sh"
-        ],
-        'ui-modules': [
-            sub(r'^ui-modules/', '', x)
-            for x in findall('ui-modules/node_modules/')
         ]
     },
     scripts=["chroma-host-discover"],

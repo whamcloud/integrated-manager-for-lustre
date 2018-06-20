@@ -3,21 +3,20 @@ NAME          := iml-manager
 #TEST_DEPS     := python2-tablib python2-iml-common1.4 python-netaddr \
 #                 python2-toolz python-django
 MODULE_SUBDIR  = chroma_manager
-DEVELOP_DEPS  := version ui-modules
+DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup $(DEV_SETUP_BUNDLES)
-DIST_DEPS     := storage_server.repo version ui-modules $(COPR_REPO_TARGETS)
+DIST_DEPS     := storage_server.repo version $(COPR_REPO_TARGETS)
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
-TAGS_ARGS      := --exclude=chroma-manager/_topdir         \
+TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 	          --exclude=chroma-\*/myenv\*              \
 	          --exclude=chroma_test_env                \
 	          --exclude=chroma-manager/chroma_test_env \
 	          --exclude=chroma_unit_test_env           \
-	          --exclude=workspace                      \
-	          --exclude=chroma-manager/ui-modules
+	          --exclude=workspace
 
 
 #include ../include/Makefile.version
@@ -77,16 +76,6 @@ version:
 	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> scm_version.py
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
-
-ui-modules:
-	echo "jenkins_fold:start:Setting up ui-modules"
-	@echo "Setting up ui-modules"; \
-	set -e;                        \
-	export NODE_ENV=production &&  \
-	cd ui-modules &&               \
-	npm i -d &&                    \
-	npm prune
-	echo "jenkins_fold:end:Setting up ui-modules"
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -161,7 +150,7 @@ $(COPR_REPO_TARGETS):
 #	gzip -c chroma-config.1 > chroma-config.1.gz
 #	cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service _topdir/SOURCES
 #	cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service _topdir/SOURCES
-#	cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service _topdir/SOURCES
+#	cp iml-settings-populator.service iml-stats.service iml-syslog.service _topdir/SOURCES
 #	cp chroma-host-discover-init.sh logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 #	cp chroma-manager.spec _topdir/SPECS
 #	set -e;                                                \
@@ -286,4 +275,4 @@ chroma_test_env/bin/activate: chroma-manager/requirements.txt
 unit_tests: chroma_test_env
 	sh -c '. chroma_test_env/bin/activate; make -C chroma-manager unit_tests'
 
-.PHONY: download ui-modules substs
+.PHONY: download substs
