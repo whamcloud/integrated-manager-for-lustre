@@ -82,7 +82,7 @@ server {
     }
 
     location /old-gui {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/old-gui/static;
+        alias /usr/lib/node_modules/@iml/old-gui/static;
 
         etag on;
         expires 1y;
