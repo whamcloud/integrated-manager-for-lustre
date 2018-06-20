@@ -23,6 +23,7 @@ check_for_autopass() {
     local commit_message tests_to_run
     commit_message=$(git log -n 1)
     tests_to_run=$(echo "$commit_message" | sed -ne '/^ *Run-tests:/s/^ *Run-tests: *//p')
+    tests_to_run=${tests_to_run//,/ }
     if [ -n "$tests_to_run" ]; then
         tests_to_skip=$all_tests
         for t in $tests_to_run; do
@@ -30,6 +31,7 @@ check_for_autopass() {
         done
     else
         tests_to_skip=$(echo "$commit_message" | sed -ne '/^ *Skip-tests:/s/^ *Skip-tests: *//p')
+        tests_to_skip=${tests_to_skip//,/ }
     fi
 
     # set any environment the test run wants
@@ -52,8 +54,10 @@ check_for_autopass() {
     fi
 
     local t
+    # shellcheck disable=SC2153
+    local job_name=${JOB_NAME%%/*}
     for t in $tests_to_skip; do
-        if [[ $JOB_NAME == "$t" || $JOB_NAME == "$t/*" ]]; then
+        if [[ $job_name == "$t" ]]; then
             echo "skipping this test due to {Run|Skip}-tests pragma"
             fake_test_pass "tests_skipped_because_commit_pragma" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
             exit 1
@@ -62,16 +66,25 @@ check_for_autopass() {
 
     tests_required_for_gui_bumps="chroma-tests-services"
 
-    if [[ $BUILD_JOB_NAME = "*-reviews" ]] && gui_bump && [[ ! $tests_required_for_gui_bumps = "$JOB_NAME" ]]; then
-      fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
-      exit 0
+    if [[ $BUILD_JOB_NAME == "*-reviews" ]] && gui_bump &&
+       [[ ! $tests_required_for_gui_bumps == "$job_name" ]]; then
+        fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
+        exit 0
     fi
 
     # regex matches separated by |
     supported_distro_versions="7\\.[0-9]+"
-    if [[ ! $TEST_DISTRO_VERSION =~ $supported_distro_versions ]] && ([ -z "$UPGRADE_TEST_DISTRO" ] || [[ ! $UPGRADE_TEST_DISTRO =~ $supported_distro_versions ]]); then
-      fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
-      exit 0
+    if [[ ! $TEST_DISTRO_VERSION =~ $supported_distro_versions ]] &&
+       ([ -z "$UPGRADE_TEST_DISTRO" ] ||
+       [[ ! $UPGRADE_TEST_DISTRO =~ $supported_distro_versions ]]); then
+        fake_test_pass "tests_skipped_because_unsupported_distro_$TEST_DISTRO_VERSION" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
+        exit 0
     fi
 
+    # only run provisioner-less on branches it's supported on
+    if [ "$job_name" = "ssi-without-provisioner" ] &&
+       ! git log | grep "Changes to run SSI in Vagrant"; then
+        fake_test_pass "tests_skipped_because_unsupported_no_provisioner" \
+                       "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
+    fi
 }  # end of check_for_autopass()

@@ -18,6 +18,58 @@ echo "Beginning installation and setup..."
 # put some keys on the nodes for easy access by developers
 # and make sure EPEL is enabled
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+if $JENKINS && ${VAGRANT:-false}; then
+    cat <<\"EOF\" > /etc/profile.d/intel_proxy.sh
+http_proxy=\"http://proxy.rr.intel.com:911\"
+https_proxy=\"http://proxy.rr.intel.com:911\"
+no_proxy=\".localdomain,intel.com,*.lotus.hpdd.lab.intel.com,*.iml.intel.com,*.intel.com,10.14.80.*,10.14.81.*,10.14.82.*,10.14.83.*,10.14.80.0/22,$server,jenkins,cobbler,127.0.0.1,localhost\",vm2,vm3,vm4,vm5,vm6,vm7,vm8,vm9
+export http_proxy https_proxy no_proxy
+EOF
+    . /etc/profile.d/intel_proxy.sh
+
+    rm -f /etc/yum.repos.d/*
+    cat <<\"EOF\" > /etc/yum.repos.d/cobbler-config.repo
+[core-0]
+name=core-0
+baseurl=http://cobbler/cobbler/ks_mirror/CentOS-7.5-x86_64
+enabled=1
+gpgcheck=0
+priority=1
+
+
+[updates-centos7.5-x86_64]
+name=updates-centos7.5-x86_64
+baseurl=http://cobbler/cobbler/repo_mirror/updates-centos7.5-x86_64
+enabled=1
+priority=1
+gpgcheck=0
+
+
+[local-toolkit_el7-x86_64]
+name=local-toolkit_el7-x86_64
+baseurl=http://cobbler/cobbler/repo_mirror/local-toolkit_el7-x86_64
+enabled=1
+priority=10
+gpgcheck=0
+
+
+[chef-stable-el7-x86_64]
+name=chef-stable-el7-x86_64
+baseurl=http://cobbler/cobbler/repo_mirror/chef-stable-el7-x86_64
+enabled=1
+priority=1
+gpgcheck=0
+
+
+[addon-epel7-x86_64]
+name=addon-epel7-x86_64
+baseurl=http://cobbler/cobbler/repo_mirror/addon-epel7-x86_64
+enabled=1
+priority=1
+gpgcheck=0
+EOF
+fi
+
 $LOCAL_CLUSTER_SETUP
 
 # disable the toolkit repo

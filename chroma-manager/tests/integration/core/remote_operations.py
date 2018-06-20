@@ -1039,18 +1039,23 @@ class RealRemoteOperations(RemoteOperations):
                                           firewall.remote_remove_port_cmd(
                                               mcast_port, 'udp'))
 
-                rpm_q_result = self._ssh_address(
-                    address, "rpm -q chroma-agent", expected_return_code=None)
-                if rpm_q_result.rc == 0:
-                    self.stop_agents([address])
-                    self._ssh_address(
-                        address,
-                        '''
-                        rm -rf /var/lib/chroma/*;
-                        ''',
-                        expected_return_code=
-                        None  # Keep going if it failed - may be none there.
-                    )
+                # Stop the agent
+                self._ssh_address(
+                    address,
+                    """if ! rpm -q chroma-agent; then
+                         exit 0
+                     fi
+                     if systemctl status chroma-agent; then
+                         if ! systemctl stop chroma-agent; then
+                             echo ${PIPESTATUS[0]}
+                             systemctl status chroma-agent || echo ${PIPESTATUS[0]}
+                             exit 1
+                         fi
+                     else
+                         echo ${PIPESTATUS[0]}
+                         exit 0
+                     fi
+                     rm -rf /var/lib/chroma/* || true""")
             else:
                 logger.info(
                     "%s does not appear to have pacemaker - skipping any removal of targets."
