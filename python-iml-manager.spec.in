@@ -374,7 +374,6 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/iml-plugin-runner.service
 %attr(0644,root,root)%{_unitdir}/iml-power-control.service
-%attr(0644,root,root)%{_unitdir}/iml-realtime.service
 %attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
 %attr(0644,root,root)%{_unitdir}/iml-stats.service
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
