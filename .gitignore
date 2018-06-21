@@ -38,3 +38,4 @@ install_build_deps-stamp
 python-iml-manager.spec
 localenv
 storage_server.repo
+copr-local.mk
