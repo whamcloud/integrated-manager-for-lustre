@@ -147,3 +147,5 @@ chroma_test_env/bin/activate: chroma-manager/requirements.txt
 
 unit_tests: chroma_test_env
 	sh -c '. chroma_test_env/bin/activate; make -C chroma-manager unit_tests'
+
+include include/githooks.mk
