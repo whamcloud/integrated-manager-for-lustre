@@ -1,4 +1,4 @@
-# Intel Manager For Lustre
+# Integrated Manager For Lustre
 
 [![Join the chat at https://gitter.im/intel-hpdd/intel-manager-for-lustre](https://badges.gitter.im/intel-hpdd/intel-manager-for-lustre.svg)](https://gitter.im/intel-hpdd/intel-manager-for-lustre?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.com/intel-hpdd/intel-manager-for-lustre.svg?branch=master)](https://travis-ci.com/intel-hpdd/intel-manager-for-lustre)
@@ -7,4 +7,4 @@ Simple, but powerful, management tools that provide a unified, consistent view o
 
 ## Online Help
 
-https://intel-hpdd.github.io/Online-Help/
+https://whamcloud.github.io/Online-Help/
