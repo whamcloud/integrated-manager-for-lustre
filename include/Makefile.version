@@ -7,10 +7,10 @@ SCM_DESCRIPTION		:= $(shell msg=$$(git log -n 1 --abbrev-commit); if echo "$$msg
 ifeq ($(strip $(SCM_DESCRIPTION)),)
 SCM_DESCRIPTION		:= $(subst -,$(space),$(shell git describe --tags --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*//' -e 's/P[0-9]*//'))
 endif
-ARCHIVE_NAME		:= Intel Enterprise Edition for Lustre Software
+ARCHIVE_NAME		:= Integrated Manager for Lustre Software
 SHORT_ARCHIVE_NAME	:= python2-iml-manager
 ARCHIVE_VERSION		:= $(word 1, $(SCM_DESCRIPTION))
-PRODUCT_NAME		:= Intel Manager for Lustre
+PRODUCT_NAME		:= Integrated Manager for Lustre
 SHORT_PRODUCT_NAME	:= iml
 
 # Stable variable names exported to packaging and code

@@ -77,13 +77,13 @@ class TestAttributes(IMLUnitTestCase):
 
     def test_hostname(self):
         hostname = attributes.Hostname()
-        for value in ('intel.com', '127.0.0.1', 'my-laptop'):
+        for value in ('whamcloud.com', '127.0.0.1', 'my-laptop'):
             hostname.validate(value)
-        for value in ('intel.-com', 'my_laptop', 'x.' * 128, 'x' * 64):
+        for value in ('whamcloud.-com', 'my_laptop', 'x.' * 128, 'x' * 64):
             with self.assertRaises(ValueError):
                 hostname.validate(value)
 
-        self.assertEqual(hostname.cast('host.intel.com'), 'host.intel.com')
+        self.assertEqual(hostname.cast('host.whamcloud.com'), 'host.whamcloud.com')
 
 
 class TestReferenceAttribute(IMLUnitTestCase):

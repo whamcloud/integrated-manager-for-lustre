@@ -111,7 +111,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
         # be set up for fencing again
         self.wait_until_true(lambda: host_can_be_fenced(self.server))
 
-    @unittest.skip('disabled until https://github.com/intel-hpdd/intel-manager-for-lustre/issues/315 is fixed')
+    @unittest.skip('disabled until https://github.com/whamcloud/integrated-manager-for-lustre/issues/315 is fixed')
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     def test_toggled_outlet_does_not_trigger_fencing_update(self):
         def _fencing_job_count():

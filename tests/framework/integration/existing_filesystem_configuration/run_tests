@@ -10,7 +10,7 @@ spacelist_to_commalist() {
 
 TEST_SPECIFIC_CLUSTER_CONFIG=${TEST_SPECIFIC_CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
 XML_RESULTS_FILE=${XML_RESULTS_FILE:-"~/test_report.xml"}
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
 
 eval $(python $CHROMA_DIR/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 

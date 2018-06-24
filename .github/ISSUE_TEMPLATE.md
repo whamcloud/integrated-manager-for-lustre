@@ -14,4 +14,4 @@ What Operating System version?
 
 ### iml-diagnostics
 
-Attach any [`iml-diagnostics`](https://intel-hpdd.github.io/Online-Help/docs/Errors_Troubleshooting_12_0.html#12.2) for nodes relevant to this issue.
+Attach any [`iml-diagnostics`](https://whamcloud.github.io/Online-Help/docs/Errors_Troubleshooting_12_0.html#12.2) for nodes relevant to this issue.
