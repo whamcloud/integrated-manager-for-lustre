@@ -379,10 +379,8 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
-%{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
-%{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/storage_server.repo
@@ -410,5 +408,3 @@ fi
 %{manager_root}/tests/sample_data/*
 %{manager_root}/tests/plugins/*
 %{manager_root}/tests/integration/*
-%{manager_root}/tests/integration/core/clear_ha_el?.sh
-%attr(0755,root,root)%{manager_root}/tests/integration/run_tests

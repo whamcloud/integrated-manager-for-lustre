@@ -15,11 +15,8 @@ include chroma-manager.py
 include chroma-manager.conf.template
 include mime.types
 include agent-bootstrap-script.template
-include chroma_core/fixtures/*
-include chroma_core/bin/*.py
-include chroma_core/bin/storage-daemon
-include chroma_core/bin/chroma-config
-include tests/sample_data/*
+include chroma_core/fixtures/*.json
+include tests/sample_data/*.json
 include tests/integration/run_tests
 include tests/integration/*/*.json
 include tests/integration/core/clear_ha_el?.sh
@@ -27,6 +24,3 @@ include storage_server.repo
 include *.profile
 graft licenses
 graft polymorphic
-global-exclude .*.swp
-global-exclude local_settings.py*
-global-exclude .editorconfig
