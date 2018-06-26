@@ -197,6 +197,7 @@ cp -a chroma-manager.conf.template build/lib
 cp -a mime.types build/lib
 cp -a agent-bootstrap-script.template build/lib
 cp -a *.profile build/lib
+gzip -9 %{SOURCE3}
 
 %install
 %{__python} setup.py -q install --skip-build --root=%{buildroot}
@@ -207,8 +208,8 @@ mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
-mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
-install %{SOURCE3} $RPM_BUILD_ROOT/usr/share/man/man1
+mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
+install %{SOURCE3}.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 %{SOURCE2} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
@@ -222,6 +223,7 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
+mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -255,9 +257,6 @@ rm -rf $RPM_BUILD_ROOT
 PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
-# Create chroma-config MAN Page
-makewhatis
-
 # set worker_processes to auto
 sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
 sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
@@ -265,10 +264,6 @@ sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
 systemctl enable nginx
-
-# Pre-create log files to set permissions
-mkdir -p /var/log/chroma
-chown -R nginx:nginx /var/log/chroma
 
 # Only issue SELinux related commands if SELinux is enabled
 sestatus| grep enabled &> /dev/null
@@ -340,9 +335,6 @@ if [ $1 -lt 1 ]; then
 fi
 
 %postun -n python2-%{pypi_name}
-# Remove chroma-config MAN Page
-rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE3}.gz
-
 if [ $1 -lt 1 ]; then
     for port in 80 443; do
         firewall-cmd --permanent --remove-port=$port/tcp
@@ -362,9 +354,10 @@ fi
 %{_bindir}/chroma-host-discover
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
+%dir %attr(0755,nginx,nginx)/var/log/chroma
 %ghost /etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
-%attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
+%attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0644,root,root)%{_unitdir}/iml-corosync.service
 %attr(0644,root,root)%{_unitdir}/iml-gunicorn.service
