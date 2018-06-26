@@ -1,10 +1,10 @@
 NOTICE REGARDING 
 THIRD PARTY SOFTWARE LICENSES 
-FOR Intel® Manager for Lustre* software Software 
+FOR Integrated Manager for Lustre software Software 
 (the “Software”)
 
 Third party software (e.g. - drivers, utilities, operating system components, etc.) which may be distributed with the Software hereunder will also be subject to the terms and conditions of any third party licenses which may be supplied with such third party software or in the end user documentation and/or as identified below, and installation, use and/or further distribution by You or your licensee will be subject to such third party licenses.  Some third party software and some of the Software components may be subject to open source license provisions, and installation, use and/or further distribution by You or your licensee of such third party software and Software components are subject to the respective open source license under which it is provided.  
 
 Intel expressly disclaims liability of any kind with respect to installation, use or distribution by You of third party software.
 
-The items contained in this directory are licenses for third party software that was used to develop the Software. These licenses are listed due to attribution requirements in these license agreements. For the avoidance of doubt, the Software is solely governed by the terms and conditions of the Intel® Enterprise Edition for Lustre* software End User License Agreement Terms that accompanies the Software.
+The items contained in this directory are licenses for third party software that was used to develop the Software.

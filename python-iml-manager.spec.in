@@ -8,7 +8,7 @@ BuildRequires: systemd
 %{?!package_release: %global package_release @RELEASE@}
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
-%{?dist_version: %global source https://github.com/intel-hpdd/%{pypi_name}/archive/%{dist_version}.tar.gz}
+%{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
 %{?dist_version: %global archive_version %{dist_version}}
 %{?!dist_version: %global source https://files.pythonhosted.org/packages/source/i/%{pypi_name}/%{pypi_name}-%{version}.tar.gz}
 %{?!dist_version: %global archive_version %{version}}
@@ -40,7 +40,7 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch:      noarch
-Vendor: Intel Corporation <iml@intel.com>
+Vendor: Intel Corporation <iml@whamcloud.com>
 BuildRequires: python2-setuptools
 BuildRequires: ed
 

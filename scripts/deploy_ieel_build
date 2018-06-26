@@ -25,19 +25,11 @@ ARCHIVE_NAME="iml-$EE_VERSION.tar.gz"
 
 CHROMA_DIR=.
 CHROMA_USER="admin"
-CHROMA_EMAIL="iml@intel.com"
+CHROMA_EMAIL="iml@whamcloud.com"
 CHROMA_PASS="lustre"
 CHROMA_NTP_SERVER="localhost"
 pdsh -R ssh -l root -S -w "$ALL_NODES" "set -ex
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
-# if this node uses the Intel proxies, make sure the agent and scanner-proxy are doing so
-if [ -f /etc/profile.d/intel_proxy.sh ]; then
-    mkdir -p /etc/systemd/system/chroma-agent.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
-
-    mkdir -p /etc/systemd/system/scanner-proxy.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/scanner-proxy.service.d/override.conf
-fi
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
 yum-config-manager --add-repo http://mirror.centos.org/centos/7/extras/x86_64/
@@ -85,16 +77,3 @@ fi
 
 echo \"Installation complete.  Manager can be reached at https://\$(ip addr ls dev eth0 | grep -Po 'inet \K[\d.]+')/\"
 "
-
-pdsh -R ssh -l root -S -w "$STORAGE_NODES" "set -ex
-# if this node uses the Intel proxies, make sure the agent and scanner-proxy are doing so
-if [ -f /etc/profile.d/intel_proxy.sh ]; then
-    mkdir -p /etc/systemd/system/chroma-agent.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
-
-    mkdir -p /etc/systemd/system/scanner-proxy.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/scanner-proxy.service.d/override.conf
-fi" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi

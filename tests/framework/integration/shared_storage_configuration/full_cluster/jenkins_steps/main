@@ -15,7 +15,7 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/tests/fra
 
 cd $WORKSPACE
 if [ -n "$RELEASE_ARCHIVE" ]; then
-    curl -L -f -O "${RELEASE_ARCHIVE_PATH:-https://github.com/intel-hpdd/intel-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
+    curl -L -f -O "${RELEASE_ARCHIVE_PATH:-https://github.com/whamcloud/integrated-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
 elif $JENKINS; then
     curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 fi

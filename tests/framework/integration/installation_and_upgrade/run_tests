@@ -17,7 +17,7 @@ mkdir -p $PWD/coverage_reports
 
 ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION-current.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
 USE_FENCE_XVM=false
 
 PREVIOUS_INSTALL_DIR=previous_install
@@ -125,22 +125,6 @@ fi
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-# if this node uses the Intel proxies, make sure the agent and scanner-proxy are doing so
-if [ -f /etc/profile.d/intel_proxy.sh ]; then
-    mkdir -p /etc/systemd/system/chroma-agent.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/chroma-agent.service.d/override.conf
-
-    mkdir -p /etc/systemd/system/scanner-proxy.service.d/
-    echo -e \"[Service]\\nEnvironmentFile=-/etc/profile.d/intel_proxy.sh\" > /etc/systemd/system/scanner-proxy.service.d/override.conf
-
-    # IEEL prior to 3.0.0.0 can't set proxies in the chroma-agent environment
-    # so we have to hack that into the repos for (real) RHEL
-    if [ ${IEEL_FROM_VER//./} -lt 3000 -a -f /etc/yum.repos.d/redhat.repo ]; then
-        proxy=\$(sed -ne '/^export http_proxy=/s/.*\"\(.*\)\"\$/\1/p' /etc/profile.d/intel_proxy.sh)
-        [[ \$proxy =~ \/\/([^:]{1,}):{0,1}([[:digit:]]{1,}) ]]
-        subscription-manager config --server.proxy_hostname=\${BASH_REMATCH[1]} --server.proxy_port=\${BASH_REMATCH[2]}
-    fi
-fi
 # let's see what's in yum.conf at this point
 cat /etc/yum.conf
 if grep  ^distroverpkg= /etc/yum.conf; then
@@ -354,8 +338,8 @@ rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 
 if ${UPGRADE_FROM_3:-false}; then
     # the manual bits that need to be done for 3.x to 4.x upgrades
-    # see https://github.com/intel-hpdd/intel-manager-for-lustre/issues/125
-    # updated per https://github.com/intel-hpdd/Online-Help/pull/54
+    # see https://github.com/whamcloud/integrated-manager-for-lustre/issues/125
+    # updated per https://github.com/whamcloud/Online-Help/pull/54
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
     yum -y install pdsh" | dshbak -c
     if [ ${PIPESTATUS[0]} != 0 ]; then
