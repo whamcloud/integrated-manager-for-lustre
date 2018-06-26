@@ -49,14 +49,6 @@ run_pre_commit_hook()
     fi
 }
 
-update_nodejs_version()
-{
-  sudo yum -y erase nodejs;
-  major=$(rpm --eval %rhel)
-  arch=$(rpm --eval %_arch)
-  sudo yum -y install nodejs
-}
-
 pre_build()
 {
     run_repo_maintenance
@@ -64,11 +56,7 @@ pre_build()
     make clean_substs
     # Nuke these tarballs to deal with name changes
     rm -f chroma-bundles/*.tar.gz
-    # remove any previous chroma-externals content
-    rm -rf chroma-externals .git/modules/chroma-externals
     run_pre_commit_hook
-    # we don't currently need this
-    #update_nodejs_version
 }
 
 build()
@@ -84,17 +72,9 @@ create_repository()
     popd
 }
 
-append_docs_to_distribution()
-{
-    if [ $distro = el6 ]; then
-        mv chroma-manager/docs/dist dist/docs
-    fi
-}
-
 post_build()
 {
     create_repository
-    append_docs_to_distribution
 }
 
 pre_build
