@@ -22,8 +22,6 @@ TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 #include ../include/Makefile.version
 include include/python-localsrc.mk
 
-ARCH := $(shell echo $$(uname -m))
-
 # Fixup proxies if needed
 PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
 	export HTTP_PROXY=http://$(HTTP_PROXY); \
@@ -248,8 +246,5 @@ chroma_test_env/bin/activate: chroma-manager/requirements.txt
 	test -d chroma_test_env || virtualenv --no-site-packages chroma_test_env
 	chroma_test_env/bin/pip install -r chroma-manager/requirements.txt
 	touch chroma_test_env/bin/activate
-
-unit_tests: chroma_test_env
-	sh -c '. chroma_test_env/bin/activate; make -C chroma-manager unit_tests'
 
 .PHONY: download substs
