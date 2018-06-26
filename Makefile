@@ -142,29 +142,6 @@ $(COPR_REPO_TARGETS):
 	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
 	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
 
-#rpms: cleandist tarball
-#	echo "jenkins_fold:start:Make Manager RPMS"
-#	rm -rf _topdir
-#	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
-#	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
-#	gzip -c chroma-config.1 > chroma-config.1.gz
-#	cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service _topdir/SOURCES
-#	cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service _topdir/SOURCES
-#	cp iml-settings-populator.service iml-stats.service iml-syslog.service _topdir/SOURCES
-#	cp chroma-host-discover-init.sh logrotate.cfg chroma-config.1.gz _topdir/SOURCES
-#	cp chroma-manager.spec _topdir/SPECS
-#	set -e;                                                \
-#	dist=$$(rpm --eval %dist);                             \
-#	dist=$${dist/.centos/};                                \
-#	rpmbuild --define "_topdir $$(pwd)/_topdir"            \
-#		 --define "version $(PACKAGE_VERSION)"         \
-#		 --define "package_release $(PACKAGE_RELEASE)" \
-#		 --define "%dist $$dist"                       \
-#		 -bb _topdir/SPECS/chroma-manager.spec
-#	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE)$$(rpm --eval %{dist} | sed -e 's/\(\.el[0-9][0-9]*\)\.centos/\1/').$(ARCH).rpm dist/
-#	rm -rf _topdir
-#	echo "jenkins_fold:end:Make Manager RPMS"
-
 install_requirements: requirements.txt
 	echo "jenkins_fold:start:Install Python requirements"
 	pip install --upgrade pip;                              \
