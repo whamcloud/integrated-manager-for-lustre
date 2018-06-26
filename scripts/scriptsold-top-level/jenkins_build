@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# This script should be used instead of configuring build logic in
+# Jenkins job configurations.
+#
+# 2013-03-27, mjmac, first implementation, handles chroma-reviews
+# 2013-06-12, mjmac, scrub chroma-bundles/*.tar.gz before build
+
+set -x # enable xtrace
+set -u # undefined variables are errors
+set -e # errors are fatal
+
+run_repo_maintenance()
+{
+    # This shouldn't cost much to run every time, but if it winds up being
+    # a burden, we could try to randomize it or make it go every N runs.
+    git gc
+}
+
+clean_uncommitted_artifacts()
+{
+    local EXCLUDES=". .git dist include chroma-bundles"
+    for subdir in $(find . -maxdepth 1 -type d); do
+        dirname=$(basename $subdir)
+        if [[ $EXCLUDES == *$dirname* ]]; then continue; fi
+        # hacks
+        if [ $dirname == 'chroma-manager' ]; then
+            # it would be better to move myenv somewhere outside of this
+            # directory
+            local MANAGER_EXCLUDES="chroma-manager/myenv/"
+            for cruft in $(git status --porcelain $dirname | awk '/^(!!|\?\?)/ {print $2}'); do
+                if [[ $MANAGER_EXCLUDES == *$cruft* ]]; then continue; fi
+                rm -fr $cruft
+            done
+
+            # Remove ignored files.
+            git clean -ndX $dirname | awk '{print $3}' | xargs -r rm -rf
+        else
+            git clean -dfx $subdir
+        fi
+    done
+}
+
+run_pre_commit_hook()
+{
+    # only run this on el6 since the el5 builders produce too many failures
+    if [ $distro = el6 ]; then
+        scripts/pre-commit --all-files --exclude myenv
+    fi
+}
+
+update_nodejs_version()
+{
+  sudo yum -y erase nodejs;
+  major=$(rpm --eval %rhel)
+  arch=$(rpm --eval %_arch)
+  sudo yum -y install nodejs
+}
+
+pre_build()
+{
+    run_repo_maintenance
+    clean_uncommitted_artifacts
+    make clean_substs
+    # Nuke these tarballs to deal with name changes
+    rm -f chroma-bundles/*.tar.gz
+    # remove any previous chroma-externals content
+    rm -rf chroma-externals .git/modules/chroma-externals
+    run_pre_commit_hook
+    # we don't currently need this
+    #update_nodejs_version
+}
+
+build()
+{
+    export CACHE=/mnt/builder_cache/
+    make
+}
+
+create_repository()
+{
+    pushd dist
+    createrepo --pretty .
+    popd
+}
+
+append_docs_to_distribution()
+{
+    if [ $distro = el6 ]; then
+        mv chroma-manager/docs/dist dist/docs
+    fi
+}
+
+post_build()
+{
+    create_repository
+    append_docs_to_distribution
+}
+
+pre_build
+build
+post_build

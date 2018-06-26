@@ -1,9 +1,0 @@
-MANIFEST
-_build
-_topdir
-dist
-set_state.prof
-*.crt
-*.pem
-*.stamp
-dev_nginx

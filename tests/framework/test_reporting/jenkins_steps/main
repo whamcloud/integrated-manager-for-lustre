@@ -1,0 +1,85 @@
+#!/bin/bash -ex
+
+# remove any previous chroma-externals content
+rm -rf chroma-externals .git/modules/chroma-externals
+
+# nose has to be installed separately otherwise we get:
+# Download error on https://pypi.python.org/simple/nose/: [Errno 8] _ssl.c:490: EOF occurred in violation of protocol -- Some packages may not be found!
+pip install nose
+pip install jenkinsapi==0.2.28
+
+VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-unit-tests chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
+REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-unit-tests chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
+
+cd $WORKSPACE
+shopt -s expand_aliases
+alias test_aggregation="python chroma_test_env/chroma/tests/framework/test_reporting/aggregate_test_results.py '${JENKINS_URL}' '${BUILD_JOB_NAME}' '${BUILD_JOB_BUILD_NUMBER}' '$VALID_TEST_JOBS' '$REQUIRED_TEST_JOBS'"
+test_results=$(test_aggregation 2>&1) || true
+
+cat test_aggregation.log || true
+echo "Test aggregation script results: $test_results"
+
+if $MEASURE_COVERAGE; then
+    # Combine the coverage reports and output the coverage xml file Jenkin's will be expecting.
+    cp $WORKSPACE/coverage_files/.coverage.* $WORKSPACE/
+    cd $WORKSPACE
+    echo "[paths]
+source =
+    $WORKSPACE/chroma_test_env/chroma/
+    *chroma/
+
+[report]
+include =
+    $WORKSPACE/chroma_test_env/chroma/*
+omit =
+    *junk.py
+    */tests/*
+    *chroma/chroma-manager/example_storage_plugin*
+    *chroma/chroma-manager/benchmark/*
+    *chroma/chroma-manager/chroma_core/migrations/*
+    *chroma/chroma-manager/r3d/migrations/*
+" > .coveragerc
+
+coverage combine
+coverage report -m
+coverage xml --ignore-errors
+fi
+
+if [ "$test_results" = "SUCCESS" ]; then
+    message="Automated Tests Passed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/"
+    verified="+1"
+elif [[ $test_results = "FAILED" ]]; then
+    message="Automated Tests Failed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/"
+    verified='-1'
+elif [[ $test_results == *"MISSING TEST RESULTS"* ]]; then
+    message="Automated Tests Failed. $test_results: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/"
+    verified='-1'
+    fail_aggregation_job=true
+else
+    message="Received neither a SUCCESS nor FAILED response from the test aggregation script. Check console for issues with script: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/consoleFull"
+    verified="-1"
+    fail_aggregation_job=true
+fi
+
+# if this is a reviews job, update the review in Gerrit
+if [[ $JOB_NAME = *-reviews ]]; then
+    gerrit_response="$(set -x; ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified $verified --message \"$message\" $GIT_COMMIT 2>&1)"
+    gerrit_exit_code=${PIPESTATUS[0]}
+    echo "$gerrit_response"
+    echo "Gerrit command exited with $gerrit_exit_code"
+
+    if [ -n "$fail_aggregation_job" ] && $fail_aggregation_job; then
+        exit 1
+    elif [[ $gerrit_response = *error:\ Change\ is\ closed* ]]; then
+      exit 0
+    else
+      exit $gerrit_exit_code
+    fi
+else
+    echo "$message"
+    if [ -n "$fail_aggregation_job" ] && $fail_aggregation_job; then
+        exit 1
+    else
+        exit 0
+    fi
+fi

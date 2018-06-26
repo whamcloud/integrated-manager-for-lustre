@@ -24,12 +24,17 @@ endif
 	python setup.py egg_info
 
 deps: $(subst -,_,$(NAME)).egg-info/SOURCES.txt
-	sed -e 's/^/dist\/python-$(NAME)-$(PACKAGE_VERSION).tar.gz: /' < $< > deps
+	sed -e 's/ /\\ /g' -e 's/^/dist\/$(NAME)-$(PACKAGE_VERSION).tar.gz: /' < $< > deps
 
-dist/$(NAME)-$(PACKAGE_VERSION).tar.gz: Makefile $(MODULE_SUBDIR)/__init__.py
-	echo "jenkins_fold:start:Make Agent Tarball"
+dist/$(NAME)-$(PACKAGE_VERSION).tar.gz: Makefile $(DIST_DEPS) deps
+	echo "jenkins_fold:start:Make Tarball"
 	rm -f MANIFEST
-	python setup.py sdist
+	if ! python setup.py sdist > sdist.out; then       \
+	    echo "python setup.py sdist failed.  stdout:"; \
+	    cat sdist.out;                                 \
+	    exit 1;                                        \
+	fi
+	rm -f sdist.out
 	# TODO - is this really necessary?  time precedence
 	#        of the tarball vs. the product in _topdir/
 	#        should simply require that any older product
@@ -37,7 +42,7 @@ dist/$(NAME)-$(PACKAGE_VERSION).tar.gz: Makefile $(MODULE_SUBDIR)/__init__.py
 	# if we made a new tarball, get rid of all previous
 	# build product
 	rm -rf _topdir
-	echo "jenkins_fold:end:Make Agent Tarball"
+	echo "jenkins_fold:end:Make Tarball"
 
 dist: dist/$(NAME)-$(PACKAGE_VERSION).tar.gz
 
@@ -81,4 +86,4 @@ install_build_deps-stamp:
 include deps
 
 tags: deps
-	ctags --python-kinds=-i -R --exclude=_topdir
+	ctags --python-kinds=-i -R --exclude=_topdir $(TAGS_ARGS)

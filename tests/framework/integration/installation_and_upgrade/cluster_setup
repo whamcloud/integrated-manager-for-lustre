@@ -1,0 +1,97 @@
+#!/bin/bash -ex
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
+
+. $CHROMA_DIR/tests/framework/utils/cluster_setup.sh
+
+# need to remove the chroma repositories configured by the provisioner
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
+if $RHEL; then
+yum-config-manager --enable  rhel-$(rpm --eval %rhel)-server-optional-rpms
+fi
+# for now at least, we need to disable epel before installing the upgrade-from version
+yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
+# and the IML and extras repos
+yum-config-manager --disable $COPR_OWNER-$COPR_PROJECT
+yum-config-manager --disable mirror.centos.org_centos_7_extras_x86_64_
+
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    rm -f /etc/yum.repos.d/autotest.repo
+fi
+yum install -y omping redhat-lsb-core" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# Install and setup integration tests on integration test runner
+if ! $JENKINS; then
+    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
+fi
+scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
+ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -xe
+if $JENKINS; then
+    yum --disablerepo=\* --enablerepo=chroma makecache
+    CMIT=chroma-manager-integration-tests
+else
+    CMIT=/root/${CMIT##*/}
+fi
+
+# set up required repos
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
+EPEL_REPO=\$(repoquery --enablerepo=\*epel\* -q --qf %{repoid} epel-release)
+if [ -n "\$EPEL_REPO" ]; then
+    yum-config-manager --enable \$EPEL_REPO
+else
+    yum -y install epel-release
+fi
+
+if ! $PROXY yum -y install \$CMIT; then
+    $PROXY yum clean all
+    $PROXY yum -y install \$CMIT
+fi
+
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
+fi
+EOF

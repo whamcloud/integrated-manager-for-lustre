@@ -18,9 +18,9 @@ fi
 ed <<"EOF" /etc/mock/default.cfg
 $i
 
-[copr-be.cloud.fedoraproject.org_results_managerforlustre_manager-for-lustre_epel-7-x86_64_]
-name=added from: https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-x86_64/
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-x86_64/
+[copr-be.cloud.fedoraproject.org_results_managerforlustre_manager-for-lustre-devel_epel-7-x86_64_]
+name=added from: https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-x86_64/
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-devel/epel-7-x86_64/
 enabled=1
 .
 wq

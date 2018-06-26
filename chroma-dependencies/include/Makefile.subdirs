@@ -1,8 +1,0 @@
-SUBDIRS ?= $(shell find . -name Makefile -mindepth 2 -maxdepth 2 -exec dirname {} \;)
-
-.PHONY: subdirs $(SUBDIRS)
-
-subdirs: $(SUBDIRS)
-
-$(SUBDIRS):
-	$(MAKE) -C $@
