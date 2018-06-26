@@ -19,7 +19,7 @@ mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
-CHROMA_DIR=${CHROMA_DIR:-"$PWD/intel-manager-for-lustre/"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
 USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")

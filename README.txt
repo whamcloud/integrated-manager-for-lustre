@@ -1,1 +1,1 @@
-This is the Intel® Manager for Lustre* software Monitoring and Adminstration Interface
+This is the Integrated Manager for Lustre software Monitoring and Adminstration Interface

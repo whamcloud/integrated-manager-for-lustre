@@ -229,7 +229,7 @@ install_manager()
     echo -e "Changes since last build:\n$BUILD_META_CHANGES" > $tmp
     scp $tmp root@$IML_NODE:$bundle_dir/ChangeLog.txt
     rm -f $tmp
-    remote_shell $IML_NODE cd $installer_dir\; expect /tmp/install.exp $IML_USERNAME iml-$IML_USERNAME@intel.com $IML_PASSWORD localhost
+    remote_shell $IML_NODE cd $installer_dir\; expect /tmp/install.exp $IML_USERNAME iml-$IML_USERNAME@whamcloud.com $IML_PASSWORD localhost
 }
 
 if [ -z "$BUILDER_USERNAME" -o -z "$BUILDER_PASSWORD" ]; then

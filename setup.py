@@ -16,10 +16,10 @@ setup(
     name = 'iml-manager',
     version = package_version(),
     author = "Intel Corporation",
-    author_email = "iml@intel.com",
+    author_email = "iml@whamcloud.com",
     url = 'https://pypi.python.org/pypi/iml-manager',
     license='MIT',
-    description = 'The Intel® Manager for Lustre* software Monitoring and Administration Interface',
+    description = 'The Integrated Manager for Lustre software Monitoring and Administration Interface',
     long_description = open('README.txt').read(),
     packages = find_packages(exclude=excludes) + [''],
     # include_package_data would be far more convenient, but the top-level

@@ -135,7 +135,7 @@ class RealRemoteOperations(RemoteOperations):
 
             msg = "Error connecting to %s: %s.\n" \
                   "Please add the following to " \
-                  "https://github.com/intel-hpdd/intel-manager-for-lustre/issues/%s\n" \
+                  "https://github.com/whamcloud/integrated-manager-for-lustre/issues/%s\n" \
                   "Performing some diagnostics...\n" \
                   "ping: %s\n" \
                   "ifconfig -a: %s\n" \
