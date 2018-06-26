@@ -1,3 +1,0 @@
-[submodule "chroma-externals"]
-	path = chroma-externals
-	url = ssh://review.whamcloud.com:29418/chroma-externals
