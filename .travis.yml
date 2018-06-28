@@ -48,7 +48,7 @@ jobs:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
   - stage: cd
-    if: (tag IS blank) AND (type NOT IN (push, pull_request))
+    if: (tag IS blank) AND (type NOT IN (push, pull_request)) AND (branch = master)
     env: 'Continuous Deployment'
     script: skip
     before_deploy:
@@ -58,4 +58,4 @@ jobs:
       provider: script
       script: ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
       on:
-        branch: master
+        all_branches: true
