@@ -72,7 +72,7 @@ else ifeq ($(BUILD_METHOD),SCM)
 copr_build iml_copr_build: $(PREREQ)
 	$(ECHO) copr-cli $(COPR_CONFIG) buildmock $(OWNER_PROJECT)       \
 		 --scm-type git                                  \
-		 --scm-url https://github.com/intel-hpdd/$(NAME)
+		 --scm-url https://github.com/whamcloud/$(NAME)
 else
 copr_build iml_copr_build: $(PREREQ)
 	$(ECHO) copr-cli $(COPR_CONFIG) build $(OWNER_PROJECT) $(filter-out \

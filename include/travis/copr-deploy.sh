@@ -20,6 +20,15 @@ build() {
 
 }
 
+build_srpm() {
+    echo 'travis_fold:start:yum'
+    yum -y install epel-release
+    yum -y install rpm-build rpmdevtools copr-cli yum-utils git make python-setuptools
+    echo 'travis_fold:end:yum'
+    cd "${1:-/build}"
+    make DRYRUN=false UNPUBLISHED=true iml_copr_build
+}
+
 # default action to build for backward compatibility
 action=${1:-build}
 
