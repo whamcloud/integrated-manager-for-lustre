@@ -1,3 +1,4 @@
+conditions: v1
 language: python
 python: '2.7'
 sudo: required
@@ -47,3 +48,15 @@ jobs:
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
+  - stage: cd
+    if: (tag IS blank) AND (type NOT IN (push, pull_request))
+    env: 'Continuous Deployment'
+    script: skip
+    before_deploy:
+    - include/travis/copr-deploy.sh prepare
+    deploy:
+      skip_cleanup: true
+      provider: script
+      script: ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
+      on:
+        branch: master
