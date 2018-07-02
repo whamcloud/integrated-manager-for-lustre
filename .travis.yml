@@ -53,7 +53,7 @@ jobs:
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
-  - stages:
-    - test
-    - name: cd
-      if: branch = master
+stages:
+  - test
+  - name: cd
+    if: branch = master
