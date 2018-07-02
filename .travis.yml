@@ -56,4 +56,4 @@ jobs:
 stages:
   - test
   - name: cd
-    if: branch = master
+    if: branch = master AND type = push AND fork = false
