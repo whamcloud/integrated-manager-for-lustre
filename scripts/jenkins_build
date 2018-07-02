@@ -68,7 +68,7 @@ build()
 
 create_repository()
 {
-    pushd dist
+    pushd _topdir/RPMS/noarch/
     createrepo --pretty .
     popd
 }
