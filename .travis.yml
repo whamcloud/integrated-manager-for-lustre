@@ -32,10 +32,6 @@ jobs:
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
       - python manage.py test tests/unit/
   - stage: cd
-    if: |
-      branch = master AND \
-      type = push AND \
-      env(TRAVIS_SECURE_ENV_VARS) = true
     env: Type='Continuous Deployment'
     script:
       - set |grep TRAVIS
@@ -57,3 +53,7 @@ jobs:
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
+  - stages:
+    - test
+    - name: cd
+      if: branch = master
