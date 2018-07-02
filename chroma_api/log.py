@@ -4,6 +4,7 @@
 
 
 from chroma_core.lib.util import normalize_nid
+from chroma_api.utils import DateSerializer
 
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
@@ -60,6 +61,7 @@ class LogResource(ChromaModelResource):
             'tag': ChromaModelResource.ALL_FILTER_STR,
         }
 
+        serializer = DateSerializer()
         authorization = LogAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['datetime', 'fqdn']
