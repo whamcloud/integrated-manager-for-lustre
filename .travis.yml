@@ -32,7 +32,10 @@ jobs:
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
       - python manage.py test tests/unit/
   - stage: cd
-    if: branch = master AND type = push AND fork = false
+    if: |
+      branch = master AND \
+      type = push AND \
+      env(TRAVIS_SECURE_ENV_VARS) = true
     env: 'Continuous Deployment'
     script:
       - set |grep TRAVIS
