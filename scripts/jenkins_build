@@ -63,7 +63,7 @@ pre_build()
 build()
 {
     export CACHE=/mnt/builder_cache/
-    make
+    make rpms
 }
 
 create_repository()
