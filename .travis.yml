@@ -36,7 +36,7 @@ jobs:
       branch = master AND \
       type = push AND \
       env(TRAVIS_SECURE_ENV_VARS) = true
-    env: 'Continuous Deployment'
+    env: Type='Continuous Deployment'
     script:
       - set |grep TRAVIS
       - include/travis/copr-deploy.sh prepare
