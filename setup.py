@@ -5,9 +5,9 @@
 # license that can be found in the LICENSE file.
 
 
-from setuptools import setup, find_packages, findall
+from setuptools import setup, find_packages
 from chroma_manager import package_version
-from re import sub
+
 
 excludes = [
 ]
