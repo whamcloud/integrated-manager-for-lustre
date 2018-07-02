@@ -31,6 +31,12 @@ jobs:
       - export IML_DISABLE_THREADS=1
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
       - python manage.py test tests/unit/
+  - stage: cd
+    if: branch = master AND type = push AND fork = false
+    env: 'Continuous Deployment'
+    script:
+      - include/travis/copr-deploy.sh prepare
+      - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
   - stage: test
     env: Type='behave tests'
     install:
@@ -47,15 +53,3 @@ jobs:
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
-  - stage: cd
-    if: branch !~ ^v\d+\.\d+\.\d+-.+$ AND type NOT IN (push, pull_request)
-    env: 'Continuous Deployment'
-    script: skip
-    before_deploy:
-    - include/travis/copr-deploy.sh prepare
-    deploy:
-      skip_cleanup: true
-      provider: script
-      script: ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
-      on:
-        all_branches: true
