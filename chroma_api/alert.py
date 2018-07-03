@@ -253,6 +253,6 @@ class AlertResource(LongPollingAPI, SeverityResource):
         serializer = DateSerializer()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get']
+        list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'patch', 'put']
         always_return_data = True
