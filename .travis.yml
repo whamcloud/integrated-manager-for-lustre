@@ -32,6 +32,8 @@ jobs:
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
       - python manage.py test tests/unit/
   - stage: cd
+    git:
+      depth: 999999
     env: Type='Continuous Deployment'
     script:
       - set |grep TRAVIS
