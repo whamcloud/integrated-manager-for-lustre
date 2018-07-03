@@ -1,5 +1,3 @@
-from django.utils.unittest import skipIf
-
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
