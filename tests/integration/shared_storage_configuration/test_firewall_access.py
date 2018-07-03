@@ -1,5 +1,4 @@
 from testconfig import config
-from django.utils.unittest import skipIf
 
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase

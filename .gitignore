@@ -9,6 +9,7 @@ set_state.prof
 *.stamp
 dev_nginx
 .idea
+settings.json
 *~
 *.py[co]
 *.swp
