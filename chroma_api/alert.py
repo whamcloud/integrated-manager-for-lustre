@@ -288,7 +288,7 @@ class UpdatesAvailableAlertResource(Resource):
         available = bundle.data.get('available')
 
         try:
-            mh = ManagedHost.objects.get(address=host_address)
+            mh = ManagedHost.objects.get(fqdn=host_address)
         except ManagedHost.DoesNotExist:
             ImmediateHttpResponse(
                 response=self.error_response(
