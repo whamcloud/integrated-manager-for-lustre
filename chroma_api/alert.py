@@ -18,10 +18,12 @@ from tastypie.resources import Resource
 from tastypie import fields
 from tastypie.api import url
 from tastypie import http
+from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.lnet_configuration import LNetOfflineAlert
+from chroma_core.models.host import UpdatesAvailableAlert, ManagedHost
 from chroma_api.chroma_model_resource import ChromaModelResource
 from iml_common.lib import util
 from long_polling_api import LongPollingAPI
@@ -256,3 +258,61 @@ class AlertResource(LongPollingAPI, SeverityResource):
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'patch', 'put']
         always_return_data = True
+
+
+class UpdatesAvailableAlertValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = {}
+
+        if not bundle.data.get('host_address'):
+            errors['host_address'] = 'host_address required'
+
+        if not bundle.data.get('available'):
+            errors['available'] = 'available required'
+
+        return errors
+
+
+class UpdatesAvailableAlertResource(Resource):
+    host_address = fields.CharField()
+    available = fields.BooleanField()
+
+    def obj_create(self, bundle, **kwargs):
+        self.is_valid(bundle)
+
+        if bundle.errors:
+            raise ImmediateHttpResponse(
+                response=self.error_response(bundle.request, bundle.errors))
+
+        host_address = bundle.data.get('host_address')
+        available = bundle.data.get('available')
+
+        try:
+            mh = ManagedHost.objects.get(address=host_address)
+        except ManagedHost.DoesNotExist:
+            ImmediateHttpResponse(
+                response=self.error_response(
+                    bundle.request, {
+                        'host_not_found':
+                        '{} does not coorespond to a known host'.format(host_address)
+                    }))
+
+        UpdatesAvailableAlert.notify(mh, available)
+
+        bundle.obj = {}
+
+        return bundle
+
+    def get_resource_uri(self,
+                         bundle_or_obj=None,
+                         url_name='api_dispatch_list'):
+        return super(UpdatesAvailableAlertResource, self).get_resource_uri(
+            None, url_name)
+
+    class Meta:
+        resource_name = 'updates_available'
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        validation = UpdatesAvailableAlertValidation()
+        list_allowed_methods = ['post']
+        detail_allowed_methods = []
