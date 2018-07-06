@@ -28,6 +28,7 @@ from chroma_core.lib.storage_plugin.query import ResourceQuery
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.dbutils import advisory_lock
 from chroma_core.lib.storage_plugin.api import attributes, relations
+from chroma_core.lib.storage_plugin.device_resources import ZfsPool
 
 from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId, HostsideResource, BaseScannableResource
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
@@ -559,7 +560,8 @@ class ResourceManager(object):
                     ancestors.remove(logicaldrive_id)
                     if len(ancestors) == 1 \
                         and not issubclass(record_class, LogicalDriveSlice) \
-                        and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice):
+                        and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice) \
+                        and not issubclass(record_class, ZfsPool):
                         label = self.get_label(ancestors[0])
                     else:
                         label = self.get_label(logicaldrive_id)

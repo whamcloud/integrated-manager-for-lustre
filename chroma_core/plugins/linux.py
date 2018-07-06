@@ -10,6 +10,7 @@ from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
+from chroma_core.lib.storage_plugin import device_resources
 from chroma_core.models import HaCluster
 from chroma_core.plugins.block_devices import get_devices
 from chroma_core.services import log_register
@@ -39,153 +40,6 @@ class PluginAgentResources(resources.Resource, HostsideResource):
     def get_label(self):
         host = ManagedHost._base_manager.get(pk=self.host_id)
         return "%s" % host
-
-
-class ScsiDevice(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId('serial')
-        label = "SCSI device"
-
-    serial = attributes.String()
-
-    def get_label(self):
-        return self.serial
-
-
-class UnsharedDevice(resources.LogicalDrive):
-    class Meta:
-        identifier = ScopedId('path')
-
-    # Annoying duplication of this from the node, but it really
-    # is the closest thing we have to a real ID.
-    path = attributes.PosixPath()
-
-    def get_label(self):
-        hide_prefixes = ["/dev/disk/by-path/", "/dev/disk/by-id/"]
-        path = self.path
-        for prefix in hide_prefixes:
-            if path.startswith(prefix):
-                path = path[len(prefix):]
-                break
-
-        return path
-
-
-class LinuxDeviceNode(resources.DeviceNode):
-    class Meta:
-        identifier = ScopedId('path')
-
-
-class Partition(resources.LogicalDriveSlice):
-    class Meta:
-        identifier = GlobalId('container', 'number')
-
-    number = attributes.Integer()
-    container = attributes.ResourceReference()
-
-    def get_label(self):
-        return "%s-%s" % (self.container.get_label(), self.number)
-
-
-class MdRaid(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId('uuid')
-
-    uuid = attributes.String()
-
-
-class EMCPower(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId('uuid')
-
-    uuid = attributes.String()
-
-
-class ZfsPool(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId('uuid')
-
-    uuid = attributes.String()
-    name = attributes.String()
-    """ This has to be a class method today because at the point we call it we only has the type not the object"""
-
-    @classmethod
-    def device_type(cls):
-        return "zfs"
-
-    def get_label(self):
-        return self.name
-
-
-class ZfsDataset(ZfsPool):
-    class Meta:
-        identifier = GlobalId('uuid')
-
-    usable_for_lustre = False
-
-
-class ZfsVol(ZfsPool):
-    class Meta:
-        identifier = GlobalId('uuid')
-
-
-class ZfsPartition(Partition):
-    class Meta:
-        identifier = GlobalId('container', 'number')
-
-    usable_for_lustre = False
-
-
-class LocalMount(resources.LogicalDriveOccupier):
-    """Used for marking devices which are already in use, so that
-    we don't offer them for use as Lustre targets."""
-
-    class Meta:
-        identifier = ScopedId('mount_point')
-
-    fstype = attributes.String()
-    mount_point = attributes.String()
-
-
-class LvmGroup(resources.StoragePool):
-    class Meta:
-        identifier = GlobalId('uuid')
-        icon = 'lvm_vg'
-        label = 'Volume group'
-
-    uuid = attributes.Uuid()
-    name = attributes.String()
-    size = attributes.Bytes()
-
-    def get_label(self):
-        return self.name
-
-
-class LvmVolume(resources.LogicalDriveSlice):
-    # Q: Why is this identified by LV UUID and VG UUID rather than just
-    #    LV UUID?  Isn't the LV UUID unique enough?
-    # A: We're matching LVM2's behaviour.  If you e.g. imagine a machine that
-    #    has some VGs and LVs, then if you want to disambiguate them you run
-    #    'vgchange -u' to get a new VG UUID.  However, there is no equivalent
-    #    command to reset LV uuid, because LVM finds two LVs with the same UUID
-    #    in VGs with different UUIDs to be unique enough.
-    class Meta:
-        identifier = GlobalId('uuid', 'vg')
-        icon = 'lvm_lv'
-        label = 'Logical volume'
-
-    vg = attributes.ResourceReference()
-    uuid = attributes.Uuid()
-    name = attributes.String()
-
-    def get_label(self):
-        return "%s-%s" % (self.vg.name, self.name)
-
-    """ This has to be a class method today because at the point we call it we only has the type not the object"""
-
-    @classmethod
-    def device_type(cls):
-        return "lvm_volume"
 
 
 class Linux(Plugin):
@@ -300,7 +154,7 @@ class Linux(Plugin):
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
                     node, created = self.update_or_create(
-                        ScsiDevice,
+                        device_resources.ScsiDevice,
                         serial=serial,
                         size=bdev['size'],
                         filesystem_type=bdev['filesystem_type'])
@@ -326,7 +180,7 @@ class Linux(Plugin):
                 # Serial is set, so look up the ScsiDevice
                 lun_resource = res_by_serial[serial]
                 node, created = self.update_or_create(
-                    LinuxDeviceNode,
+                    device_resources.LinuxDeviceNode,
                     parents=[lun_resource],
                     logical_drive=lun_resource,
                     host_id=host_id,
@@ -336,12 +190,12 @@ class Linux(Plugin):
             else:
                 # Serial is not set, so create an UnsharedDevice
                 device, created = self.update_or_create(
-                    UnsharedDevice,
+                    device_resources.UnsharedDevice,
                     path=bdev['path'],
                     size=bdev['size'],
                     filesystem_type=bdev['filesystem_type'])
                 node, created = self.update_or_create(
-                    LinuxDeviceNode,
+                    device_resources.LinuxDeviceNode,
                     parents=[device],
                     logical_drive=device,
                     host_id=host_id,
@@ -355,13 +209,13 @@ class Linux(Plugin):
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
                 node, created = self.update_or_create(
-                    LinuxDeviceNode, host_id=host_id, path=bdev['path'])
+                    device_resources.LinuxDeviceNode, host_id=host_id, path=bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
                 node, created = self.update_or_create(
-                    LinuxDeviceNode, host_id=host_id, path=bdev['path'])
+                    device_resources.LinuxDeviceNode, host_id=host_id, path=bdev['path'])
             elif bdev['parent']:
                 node, created = self.update_or_create(
-                    LinuxDeviceNode, host_id=host_id, path=bdev['path'])
+                    device_resources.LinuxDeviceNode, host_id=host_id, path=bdev['path'])
             else:
                 continue
 
@@ -370,7 +224,7 @@ class Linux(Plugin):
 
         # Finally remove any of the scsi devs that are no longer present.
         initiate_device_poll |= self.remove_missing_devices(
-            host_id, ScsiDevice, scsi_device_identifiers)
+            host_id, device_resources.ScsiDevice, scsi_device_identifiers)
 
         # Now all the LUNs and device nodes are in, create the links between
         # the DM block devices and their parent entities.
@@ -378,7 +232,7 @@ class Linux(Plugin):
         for vg in devices['vgs'].values():
             # Create VG resource
             vg_resource, created = self.update_or_create(
-                LvmGroup, uuid=vg['uuid'], name=vg['name'], size=vg['size'])
+                device_resources.LvmGroup, uuid=vg['uuid'], name=vg['name'], size=vg['size'])
             vg_uuid_to_resource[vg['uuid']] = vg_resource
 
             # Add PV block devices as parents of VG
@@ -394,7 +248,7 @@ class Linux(Plugin):
 
                 # Make the LV a parent of its device node on this host
                 lv_resource, created = self.update_or_create(
-                    LvmVolume,
+                    device_resources.LvmVolume,
                     parents=[vg_resource],
                     uuid=lv['uuid'],
                     name=lv['name'],
@@ -426,22 +280,22 @@ class Linux(Plugin):
                 mpath_node.logical_drive = mpath_parents[0].logical_drive
                 mpath_node.add_parent(p)
 
-        self._map_drives_to_device_to_node(devices, host_id, 'mds', MdRaid, [],
+        self._map_drives_to_device_to_node(devices, host_id, 'mds', device_resources.MdRaid, [],
                                            reported_device_node_paths)
 
         initiate_device_poll = self._map_drives_to_device_to_node(
-            devices, host_id, 'zfspools', ZfsPool, ['name'],
+            devices, host_id, 'zfspools', device_resources.ZfsPool, ['name'],
             reported_device_node_paths) or initiate_device_poll
 
         initiate_device_poll = self._map_drives_to_device_to_node(
-            devices, host_id, 'zfsdatasets', ZfsDataset, ['name'],
+            devices, host_id, 'zfsdatasets', device_resources.ZfsDataset, ['name'],
             reported_device_node_paths) or initiate_device_poll
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             if fstype != 'lustre':
                 bdev_resource = self.major_minor_to_node_resource[bdev]
                 self.update_or_create(
-                    LocalMount,
+                    device_resources.LocalMount,
                     parents=[bdev_resource],
                     mount_point=mntpnt,
                     fstype=fstype)
@@ -459,9 +313,9 @@ class Linux(Plugin):
 
             partition, created = self.update_or_create(
                 # ZfsPartitions should be differentiated as they are not usable for lustre
-                ZfsPartition
+                device_resources.ZfsPartition
                 if bdev.get('is_zfs_reserved') or bdev['filesystem_type'] == 'zfs_member'
-                else Partition,
+                else device_resources.Partition,
                 parents=[parent_resource],
                 container=parent_resource.logical_drive,
                 number=bdev['partition_number'],
@@ -473,10 +327,10 @@ class Linux(Plugin):
 
         # Finally remove any of the partitions that are no longer present.
         initiate_device_poll |= self.remove_missing_devices(
-            host_id, Partition, partition_identifiers)
+            host_id, device_resources.Partition, partition_identifiers)
 
         initiate_device_poll |= self.remove_missing_devices(
-            host_id, ZfsPartition, partition_identifiers)
+            host_id, device_resources.ZfsPartition, partition_identifiers)
 
         initiate_device_poll |= self.remove_missing_devicenodes(
             reported_device_node_paths)
@@ -525,7 +379,7 @@ class Linux(Plugin):
                 klass, **node_attributes)
 
             node_res, _ = self.update_or_create(
-                LinuxDeviceNode,
+                device_resources.LinuxDeviceNode,
                 parents=[device_res],
                 logical_drive=device_res,
                 host_id=host_id,
@@ -583,7 +437,7 @@ class Linux(Plugin):
 
         resources_changed = False
 
-        for resource_node in self.find_by_attr(LinuxDeviceNode):
+        for resource_node in self.find_by_attr(device_resources.LinuxDeviceNode):
             if resource_node.path not in reported_paths:
                 self.remove(resource_node)
                 resources_changed |= True
