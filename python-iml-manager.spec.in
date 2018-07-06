@@ -279,9 +279,6 @@ if [ $(echo $?) == '0' ]; then
     # This is required because of bad behaviour in python's 'uuid'
     # module (see HYD-1475)
     setsebool -P httpd_tmp_exec 1 2>/dev/null
-
-    # This is required for nginx to serve HTTP_API_PORT
-    semanage port -a -t http_port_t -p tcp 8001
 else
     echo "SELinux is disabled!"
 fi
@@ -311,9 +308,15 @@ for profile in $(ls /usr/share/chroma-manager/*.profile); do
     chroma-config profile register "$profile"
 done 
 
+if [ $1 -eq 1 ]; then
+    echo "Thank you for installing IML. To complete your installation, please"
+    echo "run \"chroma-config setup\""
+fi
 
-echo "Thank you for installing Chroma.  To complete your installation, please"
-echo "run \"chroma-config setup\""
+if [ $1 -gt 1 ]; then
+    echo "Thank you for updating IML. To complete your upgrade, please"
+    echo "run \"chroma-config setup\""
+fi
 
 %preun -n python2-%{pypi_name}
 %systemd_preun iml-manager.target
@@ -390,7 +393,7 @@ fi
 %exclude %{manager_root}/tests
 %doc licenses/*
 
-%files  -n python2-%{pypi_name}-libs
+%files -n python2-%{pypi_name}-libs
 %{python_sitelib}/*.egg-info/*
 
 %files -f cli.files -n python2-%{pypi_name}-cli
