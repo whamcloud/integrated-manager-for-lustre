@@ -1,5 +1,10 @@
 #!/bin/bash -ex
 
+if [ -n "$JENKINS_URL" ]; then
+    JOB_NAME=${JOB_NAME%%/*}
+    export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
+fi
+
 make substs
 . tests/framework/utils/defaults.sh
 . tests/framework/utils/selective_auto_pass.sh
