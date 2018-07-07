@@ -550,16 +550,21 @@ class ResourceManager(object):
         logicaldrive_id_handled = set()
 
         with Volume.delayed as volumes:
-            for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
+            for _, logicaldrive_id in node_to_logicaldrive_id.items():
                 if logicaldrive_id not in logicaldrive_id_to_volume and logicaldrive_id not in logicaldrive_id_handled:
                     # If this logicaldrive has one and only one ancestor which is
                     # also a logicaldrive, then inherit the label from that ancestor
                     ancestors = self._record_find_ancestors(logicaldrive_id, LogicalDrive)
                     record_class = self._class_index.get(logicaldrive_id)
                     ancestors.remove(logicaldrive_id)
+
+                    is_zfs = callable(getattr(
+                        record_class, 'device_type', None)) and record_class.device_type() == 'zfs'
+
                     if len(ancestors) == 1 \
-                        and not issubclass(record_class, LogicalDriveSlice) \
-                        and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice):
+                            and not issubclass(record_class, LogicalDriveSlice) \
+                            and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice) \
+                            and not is_zfs:
                         label = self.get_label(ancestors[0])
                     else:
                         label = self.get_label(logicaldrive_id)
