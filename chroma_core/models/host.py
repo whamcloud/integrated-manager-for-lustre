@@ -690,17 +690,13 @@ class InstallPackagesStep(Step):
         return "Installing packages on %s" % kwargs['host']
 
     def run(self, kwargs):
-        from chroma_core.models import package
-
         host = kwargs['host']
 
-        package_report = self.invoke_agent_expect_result(host,
-                                                         'install_packages',
-                                                         {'repos': kwargs['bundles'],
-                                                          'packages': kwargs['packages']})
+        self.invoke_agent_expect_result(host,
+                                        'install_packages',
+                                        {'repos': kwargs['bundles'],
+                                         'packages': kwargs['packages']})
 
-        updates_available = package.update(host, package_report)
-        UpdatesAvailableAlert.notify(host, updates_available)
 
 
 class InstallHostPackagesJob(StateChangeJob):
@@ -1058,7 +1054,6 @@ class DeleteHostStep(Step):
     database = True
 
     def run(self, kwargs):
-        from chroma_core.models import package
         from chroma_core.services.http_agent import HttpAgentRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
@@ -1089,8 +1084,9 @@ class DeleteHostStep(Step):
         # this code will execute)
         AgentRpc.remove(host.fqdn)
 
-        # Remove PackageAvailability and PackageInstallation records for this host
-        package.update(host, {})
+        # Lower any updates available alert for the host
+        UpdatesAvailableAlert.notify(host, False)
+
 
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
@@ -1410,19 +1406,16 @@ class UpdatePackagesStep(RebootIfNeededStep):
     database = True
 
     def run(self, kwargs):
-        from chroma_core.models import package
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         host = kwargs['host']
 
         # install_packages will add any packages not existing that are specified within the profile
         # as well as upgrading/downgrading packages to the version specified in the bundles
-        package_report = self.invoke_agent_expect_result(host,
-                                                         'install_packages',
-                                                         {'repos': kwargs['bundles'],
-                                                          'packages': kwargs['packages']})
-
-        package.update(host, package_report)
+        self.invoke_agent_expect_result(host,
+                                        'install_packages',
+                                        {'repos': kwargs['bundles'],
+                                         'packages': kwargs['packages']})
 
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below

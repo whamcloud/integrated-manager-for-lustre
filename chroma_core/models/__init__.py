@@ -30,7 +30,6 @@ from stats import *
 from ha_cluster import *
 from power_control import *
 from bundle import *
-from package import *
 from copytool import *
 from client_mount import *
 from lnet_configuration import *
