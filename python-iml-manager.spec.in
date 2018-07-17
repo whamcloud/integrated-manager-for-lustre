@@ -88,6 +88,7 @@ Requires:       iml-view-server
 Requires:       iml-socket-worker
 Requires:       createrepo
 Requires:       python2-toolz
+Requires:       iml-update-handler < 2
 Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes:      httpd

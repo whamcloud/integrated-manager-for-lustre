@@ -12,6 +12,7 @@ Requires=iml-stats.service
 Requires=iml-syslog.service
 Requires=iml-view-server.service
 Requires=iml-settings-populator.service
+Requires=iml-update-handler.service
 Requires=nginx.service
 Requires=rabbitmq-server.service
 Requires=device-aggregator.socket
