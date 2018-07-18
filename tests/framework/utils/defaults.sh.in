@@ -71,7 +71,7 @@ set_defaults() {
                 echo
                 echo "At test run start, env was:"
                 cat /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
-            } | mail -s "TEI-3576" brian.murrell@intel.com
+            } | mail -s "TEI-3576" iml@whamcloud.com
         fi
 
         # now set it to a sane value

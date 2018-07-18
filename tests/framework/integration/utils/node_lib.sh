@@ -107,7 +107,7 @@ wait_for_nodes() {
         # gives the DHCP server another chance to try
         if [ $((SECONDS-start)) -gt "$TIMEOUT" ]; then
             if ${BOOT_FAIL_NOTIFY:-false}; then
-                mail -s "failed nodes boot on $HOSTNAME" brian.murrell@intel.com <<EOF
+                mail -s "failed nodes boot on $HOSTNAME" iml@intel.com <<EOF
 Nodes for cluster ${CLUSTER_NUM:-0} failed to come up the first time
 on $HOSTNAME after waiting $TIMEOUT for them."
 EOF

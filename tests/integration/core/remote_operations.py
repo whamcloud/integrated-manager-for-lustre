@@ -158,7 +158,7 @@ class RealRemoteOperations(RemoteOperations):
                 stdin=subprocess.PIPE,
                 stdout=DEVNULL,
                 stderr=DEVNULL)
-            p.communicate(input=b'To: brian.murrell@intel.com\n'
+            p.communicate(input=b'To: iml@whamcloud.com\n'
                           'Subject: GH#%s\n\n' % issue_num + msg)
             p.wait()
             DEVNULL.close()
