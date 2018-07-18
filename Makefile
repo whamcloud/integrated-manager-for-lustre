@@ -189,7 +189,7 @@ create_cluster:
 	hostname="$${HOSTNAME%%.*}";                                              \
 	(echo "# VAGRANT START";                                                  \
 	 vagrant ssh-config |                                                     \
-	 sed -e "/^Host/s/\(vm.*\)/\1 $$hostname\1 $$hostname\1.$$domainname /g"; \
+	 sed -e "/^Host/s/\(vm.*\)/\1 $$hostname\1 $$hostname\1.$$domainname /g; s/^  User vagrant/  User root/g"; \
 	 echo "# VAGRANT END") >> ~/.ssh/config
 	# need to have the ssh key that the VMs will use to reach back
 	# for virsh commands in .ssh/authorized_keys
