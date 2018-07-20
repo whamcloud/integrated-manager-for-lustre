@@ -260,10 +260,6 @@ rm -rf $RPM_BUILD_ROOT
 PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
     $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
-# set worker_processes to auto
-sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
-sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
-
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
 systemctl enable nginx
@@ -333,12 +329,6 @@ fi
 %systemd_preun iml-stats.service
 %systemd_preun iml-syslog.service
 %systemd_preun iml-view-server.service
-
-if [ $1 -lt 1 ]; then
-    #reset worker processes
-    sed -i '/^worker_processes auto;/d' /etc/nginx/nginx.conf
-    sed -i '/^#worker_processes /s/^#//' /etc/nginx/nginx.conf
-fi
 
 %postun -n python2-%{pypi_name}
 if [ $1 -lt 1 ]; then
