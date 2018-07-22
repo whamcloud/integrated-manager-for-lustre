@@ -163,22 +163,24 @@ class CommandError(Exception):
 
 
 class CommandLine(object):
-    def try_shell(self, cmdline, mystdout = subprocess.PIPE,
-                  mystderr = subprocess.PIPE, stdin_text = None):
-        rc, out, err = self.shell(cmdline, mystdout, mystderr, stdin_text)
+    def try_shell(self, cmdline, mystdout=subprocess.PIPE,
+                  mystderr=subprocess.PIPE, stdin_text=None, shell=False):
+        rc, out, err = self.shell(
+            cmdline, mystdout, mystderr, stdin_text, shell=shell)
 
         if rc != 0:
             raise CommandError(cmdline, rc, out, err)
         else:
             return rc, out, err
 
-    def shell(self, cmdline, mystdout = subprocess.PIPE,
-              mystderr = subprocess.PIPE, stdin_text = None):
+    def shell(self, cmdline, mystdout=subprocess.PIPE,
+              mystderr=subprocess.PIPE, stdin_text=None, shell=False):
         if stdin_text is not None:
             stdin = subprocess.PIPE
         else:
             stdin = None
-        p = subprocess.Popen(cmdline, stdout = mystdout, stderr = mystderr, stdin = stdin)
+        p = subprocess.Popen(cmdline, stdout=mystdout,
+                             stderr=mystderr, stdin=stdin, shell=shell)
         if stdin_text is not None:
             p.stdin.write(stdin_text)
         out, err = p.communicate()
