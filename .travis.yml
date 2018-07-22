@@ -14,12 +14,6 @@ addons:
 jobs:
   include:
   - stage: test
-    env: Type='virus scan'
-    script:
-      - sudo apt-get install clamav -y
-      - sudo freshclam
-      - clamscan --quiet -r ./
-  - stage: test
     env: Type='unit tests'
     install:
       - pip install -r requirements.txt
