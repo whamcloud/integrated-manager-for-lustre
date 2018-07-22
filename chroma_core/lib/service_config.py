@@ -194,10 +194,12 @@ class ServiceConfig(CommandLine):
                                                                                    error))
             raise RuntimeError("Failure when writing ntp config: %s" % error)
 
-        error = firewall_control.add_rule("123", "udp", "ntpd")
-        if error:
-            log.error("firewall command failed:\n%s" % error)
-            raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
+        if ServiceControl.create('firewalld').running:
+            error = firewall_control.add_rule("123", "udp", "ntpd")
+        
+            if error:
+                log.error("firewall command failed:\n%s" % error)
+                raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
 
         log.info("Restarting ntp")
         ntp_service = ServiceControl.create("ntpd")
@@ -573,7 +575,8 @@ class ServiceConfig(CommandLine):
     def _register_profiles(self):
         for x in glob.glob('/usr/share/chroma-manager/*.profile'):
             print "Registering profile: {}".format(x)
-            register_profile(x)
+            with open(x) as f:
+                register_profile(f)
 
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
