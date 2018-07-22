@@ -348,9 +348,6 @@ class ServiceConfig(CommandLine):
         gigabytes_free = stats.free / self.bytes_in_gigabytes
 
         if gigabytes_free < required_space_gigabytes:
-            log.error('Insufficient space for postgres database. %sGB available, %sGB required' %
-                      (gigabytes_free, required_space_gigabytes))
-
             error_msg = 'Insufficient space for postgres database in path directory %s. %sGB available, %sGB required ' \
                         % (
                             db_storage_path, gigabytes_free, required_space_gigabytes)
