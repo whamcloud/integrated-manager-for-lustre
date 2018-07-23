@@ -257,54 +257,6 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post -n python2-%{pypi_name}
-PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
-    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
-
-# Start nginx which should present a helpful setup
-# page if the user visits it before configuring Chroma fully
-systemctl enable nginx
-
-# Only issue SELinux related commands if SELinux is enabled
-sestatus| grep enabled &> /dev/null
-if [ $(echo $?) == '0' ]; then
-    echo "SELinux is enabled!"
-
-    # This is required for opening connections between
-    # nginx and rabbitmq-server
-    setsebool -P httpd_can_network_connect 1 2>/dev/null
-
-    # This is required because of bad behaviour in python's 'uuid'
-    # module (see HYD-1475)
-    setsebool -P httpd_tmp_exec 1 2>/dev/null
-else
-    echo "SELinux is disabled!"
-fi
-
-
-if [ $(systemctl is-active firewalld) == "active" ]; then
-    for port in 80 443; do
-        firewall-cmd --permanent --add-port=$port/tcp
-        firewall-cmd --add-port=$port/tcp
-    done
-fi
-
-# Until we get rid of bundles, we need a fake external bundle
-mkdir -p /var/lib/chroma/repo/external/7/
-cat <<EOF > /var/lib/chroma/repo/external/7/meta
-{"description": "fake bundle as a placeholder for externally available packages", "distro_version": "7", "filename": "", "version": "0.0.0", "distro": "el7", "name": "external"}
-EOF
-# TODO: do we really want to skip the DB space check here?
-# perhaps the behaviour of --no-dbspace-check should change
-# do warn about space even though we are ignoring it so that
-# the user is at least informed about the choice being made
-# (for them in this case)
-chroma-config dbsetup --no-dbspace-check
-chroma-config bundle register /var/lib/chroma/repo/external/7
-for profile in $(ls /usr/share/chroma-manager/*.profile); do
-    echo "Registering profile: $profile"
-    chroma-config profile register "$profile"
-done 
-
 if [ $1 -eq 1 ]; then
     echo "Thank you for installing IML. To complete your installation, please"
     echo "run \"chroma-config setup\""

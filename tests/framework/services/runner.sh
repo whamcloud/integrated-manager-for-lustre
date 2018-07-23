@@ -66,7 +66,7 @@ cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/syst
 pip install -r requirements.txt
 
 cd /integrated-manager-for-lustre
-PYTHONPATH=. python ./scripts/production_nginx.py chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
+PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
 mkdir /var/log/chroma

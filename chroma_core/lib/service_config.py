@@ -12,6 +12,7 @@ import xmlrpclib
 import time
 import os
 import json
+import glob
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -193,10 +194,12 @@ class ServiceConfig(CommandLine):
                                                                                    error))
             raise RuntimeError("Failure when writing ntp config: %s" % error)
 
-        error = firewall_control.add_rule("123", "udp", "ntpd")
-        if error:
-            log.error("firewall command failed:\n%s" % error)
-            raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
+        if ServiceControl.create('firewalld').running:
+            error = firewall_control.add_rule("123", "udp", "ntpd")
+        
+            if error:
+                log.error("firewall command failed:\n%s" % error)
+                raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
 
         log.info("Restarting ntp")
         ntp_service = ServiceControl.create("ntpd")
@@ -345,9 +348,6 @@ class ServiceConfig(CommandLine):
         gigabytes_free = stats.free / self.bytes_in_gigabytes
 
         if gigabytes_free < required_space_gigabytes:
-            log.error('Insufficient space for postgres database. %sGB available, %sGB required' %
-                      (gigabytes_free, required_space_gigabytes))
-
             error_msg = 'Insufficient space for postgres database in path directory %s. %sGB available, %sGB required ' \
                         % (
                             db_storage_path, gigabytes_free, required_space_gigabytes)
@@ -518,13 +518,77 @@ class ServiceConfig(CommandLine):
 
         return
 
+    def _configure_selinux(self):
+        try:
+            self.try_shell(['sestatus | grep enabled'], shell=True)
+        except CommandError:
+            return
+        
+        # This is required for opening connections between
+        # nginx and rabbitmq-server
+        self.try_shell(['setsebool -P httpd_can_network_connect 1'], shell=True)
+        
+        # This is required because of bad behaviour in python's 'uuid'
+        # module (see HYD-1475)
+        self.try_shell(['setsebool -P httpd_tmp_exec 1'], shell=True)
+
+    def _configure_firewall(self):
+        if ServiceControl.create('firewalld').running:
+            for port in [80, 443]:
+                self.try_shell(['firewall-cmd', '--permanent', '--add-port={}'.format(port)])
+                self.try_shell(['firewall-cmd', '--add-port={}'.format(port)])
+
+    def set_nginx_config(self):
+        project_dir = os.path.dirname(os.path.realpath(settings.__file__))
+        conf_template = os.path.join(project_dir, 'chroma-manager.conf.template')
+
+        nginx_settings = [
+            'APP_PATH', 'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
+            'HTTP_AGENT_PORT', 'HTTP_API_PORT', 'REALTIME_PORT', 'VIEW_SERVER_PORT',
+            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT'
+        ]
+
+        with open(conf_template, "r") as f:
+            config = f.read()
+            for setting in nginx_settings:
+                config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
+
+            with open('/etc/nginx/conf.d/chroma-manager.conf', 'w') as f2:
+                f2.write(config)
+
+    def _create_fake_bundle(self):
+        EXTERNAL_BUNDLE_DIR = '/var/lib/chroma/repo/external/7/'
+        
+        if not os.path.exists(EXTERNAL_BUNDLE_DIR):
+            os.makedirs(EXTERNAL_BUNDLE_DIR)
+
+        FAKE_BUNDLE = '{"description": "fake bundle as a placeholder for externally available packages", "distro_version": "7", "filename": "", "version": "0.0.0", "distro": "el7", "name": "external"}'
+
+        with open(os.path.join(EXTERNAL_BUNDLE_DIR, 'meta'), 'w') as f:
+            f.write(FAKE_BUNDLE)
+
+        bundle('register', EXTERNAL_BUNDLE_DIR)
+
+    def _register_profiles(self):
+        for x in glob.glob('/usr/share/chroma-manager/*.profile'):
+            print "Registering profile: {}".format(x)
+            with open(x) as f:
+                register_profile(f)
+
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
 
+        self._configure_selinux()
+        self._configure_firewall()
+        self.set_nginx_config()
+
         error = self._setup_database(check_db_space)
         if check_db_space and error:
             return [error]
+
+        self._create_fake_bundle()
+        self._register_profiles()
 
         self._populate_database(username, password)
 
