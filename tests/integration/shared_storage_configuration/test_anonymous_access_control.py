@@ -14,7 +14,7 @@ class TestAnonymousAccessControl(ChromaIntegrationTestCase):
         end_points_to_ignore = ['/api/help/',
                                 '/api/test_host/',
                                 '/api/system_status/',
-                                'api/updates_available',
+                                '/api/updates_available/',
                                 '/api/session/']
 
         end_points = self.get_json_by_uri("/api/", args={'limit': 0})
