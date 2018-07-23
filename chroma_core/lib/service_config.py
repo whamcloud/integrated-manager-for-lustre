@@ -50,6 +50,8 @@ log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
 
+IS_DOCKER = os.path.exists('/.dockerenv')
+
 
 class ServiceConfig(CommandLine):
     REQUIRED_DB_SPACE_GB = 100
@@ -143,7 +145,8 @@ class ServiceConfig(CommandLine):
 
         from south.models import MigrationHistory
         applied_migrations = MigrationHistory.objects.all().values('app_name', 'migration')
-        applied_migrations = [(mh['app_name'], mh['migration']) for mh in applied_migrations]
+        applied_migrations = [(mh['app_name'], mh['migration'])
+                              for mh in applied_migrations]
 
         from south import migration
         for app_migrations in list(migration.all_migrations()):
@@ -175,12 +178,14 @@ class ServiceConfig(CommandLine):
         passing it as a parameter to the get_configured_server method call
         """
         ntp = NTPConfig(logger=log)
-        existing_server = ntp.get_configured_server(markers=['# Added by chroma-manager\n'])
+        existing_server = ntp.get_configured_server(
+            markers=['# Added by chroma-manager\n'])
 
         if not server:
             if existing_server:
                 server = existing_server
-                log.info("Using existing (chroma configured) ntp server: %s" % existing_server)
+                log.info(
+                    "Using existing (chroma configured) ntp server: %s" % existing_server)
             else:
                 # Only if you haven't already set it
                 server = self.get_input(msg="NTP Server", default='localhost')
@@ -196,10 +201,11 @@ class ServiceConfig(CommandLine):
 
         if ServiceControl.create('firewalld').running:
             error = firewall_control.add_rule("123", "udp", "ntpd")
-        
+
             if error:
                 log.error("firewall command failed:\n%s" % error)
-                raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
+                raise RuntimeError(
+                    "Failure when opening port in firewall for ntpd: %s" % error)
 
         log.info("Restarting ntp")
         ntp_service = ServiceControl.create("ntpd")
@@ -241,16 +247,19 @@ class ServiceConfig(CommandLine):
         self.try_shell(sudo + ["rabbitmqctl", "start_app"])
 
         log.info("Creating RabbitMQ user...")
-        self.try_shell(sudo + ["rabbitmqctl", "add_user", settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD])
+        self.try_shell(sudo + ["rabbitmqctl", "add_user",
+                               settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD])
 
         log.info("Creating RabbitMQ vhost...")
-        self.try_shell(sudo + ["rabbitmqctl", "add_vhost", settings.AMQP_BROKER_VHOST])
+        self.try_shell(
+            sudo + ["rabbitmqctl", "add_vhost", settings.AMQP_BROKER_VHOST])
 
         self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", settings.AMQP_BROKER_VHOST,
                                settings.AMQP_BROKER_USER, ".*", ".*", ".*"])
 
         # Enable use of the management plugin if its available, else this tag is just ignored.
-        self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_user_tags",
+                               settings.AMQP_BROKER_USER, "management"])
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
@@ -342,7 +351,8 @@ class ServiceConfig(CommandLine):
         return self.PathStats(total, used, free_space)
 
     def _check_db_space(self, required_space_gigabytes):
-        rc, out, err = self.try_shell(["su", "postgres", "-c", "psql -c 'SHOW data_directory;'"])
+        rc, out, err = self.try_shell(
+            ["su", "postgres", "-c", "psql -c 'SHOW data_directory;'"])
         db_storage_path = out.split()[2]
         stats = self._path_space(db_storage_path)
         gigabytes_free = stats.free / self.bytes_in_gigabytes
@@ -366,7 +376,8 @@ class ServiceConfig(CommandLine):
         tries = 0
         while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
             if tries >= 4:
-                raise RuntimeError("Timed out waiting for PostgreSQL service to start")
+                raise RuntimeError(
+                    "Timed out waiting for PostgreSQL service to start")
             tries += 1
             time.sleep(1)
 
@@ -380,8 +391,9 @@ class ServiceConfig(CommandLine):
 
             # Enumerate existing roles
             _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select "
-                                                                      "rolname from pg_roles;'"])
-            roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
+                                              "rolname from pg_roles;'"])
+            roles = [line.strip()
+                     for line in roles_str.split("\n") if line.strip()]
 
             # Create database['USER'] role if not found
             if not database['USER'] in roles:
@@ -455,7 +467,8 @@ class ServiceConfig(CommandLine):
                 continue
             valid_username = True
 
-        password = self.get_pass(msg="Password", empty_allowed=False, confirm_msg="Confirm password")
+        password = self.get_pass(
+            msg="Password", empty_allowed=False, confirm_msg="Confirm password")
 
         valid_email = False
         while not valid_email:
@@ -484,7 +497,8 @@ class ServiceConfig(CommandLine):
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
 
-            error = self._setup_pgsql(databases['default'], check_db_space)
+            if not IS_DOCKER:
+                error = self._setup_pgsql(databases['default'], check_db_space)
         else:
             log.info("DB already accessible")
 
@@ -493,7 +507,7 @@ class ServiceConfig(CommandLine):
 
         self._syncdb()
 
-    def _populate_database (self, username, password):
+    def _populate_database(self, username, password):
         if not self._users_exist():
             if not username:
                 username, email, password = self._user_account_prompt()
@@ -511,7 +525,8 @@ class ServiceConfig(CommandLine):
             User.objects.get(username=API_USERNAME)
             log.info("API user already created")
         except User.DoesNotExist:
-            api_user = User.objects.create_superuser(API_USERNAME, "", User.objects.make_random_password())
+            api_user = User.objects.create_superuser(
+                API_USERNAME, "", User.objects.make_random_password())
             api_user.groups.add(Group.objects.get(name='superusers'))
             ApiKey.objects.get_or_create(user=api_user)
             log.info("API user created")
@@ -523,11 +538,12 @@ class ServiceConfig(CommandLine):
             self.try_shell(['sestatus | grep enabled'], shell=True)
         except CommandError:
             return
-        
+
         # This is required for opening connections between
         # nginx and rabbitmq-server
-        self.try_shell(['setsebool -P httpd_can_network_connect 1'], shell=True)
-        
+        self.try_shell(
+            ['setsebool -P httpd_can_network_connect 1'], shell=True)
+
         # This is required because of bad behaviour in python's 'uuid'
         # module (see HYD-1475)
         self.try_shell(['setsebool -P httpd_tmp_exec 1'], shell=True)
@@ -535,12 +551,15 @@ class ServiceConfig(CommandLine):
     def _configure_firewall(self):
         if ServiceControl.create('firewalld').running:
             for port in [80, 443]:
-                self.try_shell(['firewall-cmd', '--permanent', '--add-port={}/tcp'.format(port)])
-                self.try_shell(['firewall-cmd', '--add-port={}/tcp'.format(port)])
+                self.try_shell(['firewall-cmd', '--permanent',
+                                '--add-port={}/tcp'.format(port)])
+                self.try_shell(
+                    ['firewall-cmd', '--add-port={}/tcp'.format(port)])
 
     def set_nginx_config(self):
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
-        conf_template = os.path.join(project_dir, 'chroma-manager.conf.template')
+        conf_template = os.path.join(
+            project_dir, 'chroma-manager.conf.template')
 
         nginx_settings = [
             'APP_PATH', 'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
@@ -551,14 +570,15 @@ class ServiceConfig(CommandLine):
         with open(conf_template, "r") as f:
             config = f.read()
             for setting in nginx_settings:
-                config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
+                config = config.replace(
+                    "{{%s}}" % setting, str(getattr(settings, setting)))
 
             with open('/etc/nginx/conf.d/chroma-manager.conf', 'w') as f2:
                 f2.write(config)
 
     def _create_fake_bundle(self):
         EXTERNAL_BUNDLE_DIR = '/var/lib/chroma/repo/external/7/'
-        
+
         if not os.path.exists(EXTERNAL_BUNDLE_DIR):
             os.makedirs(EXTERNAL_BUNDLE_DIR)
 
@@ -621,7 +641,8 @@ class ServiceConfig(CommandLine):
         services = {}
         for service_name in interesting_services:
             controller = ServiceControl.create(service_name)
-            services[service_name] = {'enabled': controller.enabled, 'running': controller.running}
+            services[service_name] = {
+                'enabled': controller.enabled, 'running': controller.running}
 
         return services
 
@@ -636,8 +657,12 @@ class ServiceConfig(CommandLine):
 
         # Check services are active
         interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
-            'postgresql', 'rabbitmq-server'
+            'rabbitmq-server'
         ]
+
+        if not IS_DOCKER:
+            interesting_services += ['postgresql']
+
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -655,7 +680,8 @@ class ServiceConfig(CommandLine):
     def _write_local_settings(databases):
         # Build a local_settings file
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
-        local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
+        local_settings = os.path.join(
+            project_dir, settings.LOCAL_SETTINGS_FILE)
         local_settings_str = ""
 
         # Usefully, a JSON dict looks a lot like python
@@ -678,7 +704,8 @@ def bundle(operation, path=None):
             raise RuntimeError("Could not read bundle metadata from %s" %
                                meta_path)
 
-        log.debug("Loaded bundle meta for %s from %s" % (meta['name'], meta_path))
+        log.debug("Loaded bundle meta for %s from %s" %
+                  (meta['name'], meta_path))
 
         # Bundle version is optional, defaults to "0.0.0"
         version = meta.get('version', "0.0.0")
@@ -701,7 +728,8 @@ def bundle(operation, path=None):
             # doesn't exist anyway, so just exit silently
             return
     else:
-        raise RuntimeError("Received unknown bundle operation '%s'" % operation)
+        raise RuntimeError(
+            "Received unknown bundle operation '%s'" % operation)
 
 
 def register_profile(profile_file):
@@ -726,7 +754,8 @@ def register_profile(profile_file):
     try:
         data = json.load(profile_file)
     except ValueError, e:
-        raise RuntimeError("Profile %s is malformed: %s" % (profile_file.name, e.message))
+        raise RuntimeError("Profile %s is malformed: %s" %
+                           (profile_file.name, e.message))
 
     log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
 
@@ -749,7 +778,8 @@ def register_profile(profile_file):
                                                               ", ".join(missing_bundles)))
         sys.exit(-1)
 
-    calculated_profile_fields = set(['packages', 'name', 'bundles', 'validation'])
+    calculated_profile_fields = set(
+        ['packages', 'name', 'bundles', 'validation'])
     regular_profile_fields = set(data.keys()) - calculated_profile_fields
 
     try:
@@ -776,7 +806,8 @@ def register_profile(profile_file):
 
     profile.serverprofilevalidation_set.all().delete()
     for validation in data['validation']:
-        profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
+        profile.serverprofilevalidation_set.add(
+            ServerProfileValidation(**validation))
 
 
 def delete_profile(name):
@@ -866,7 +897,8 @@ def chroma_config():
             usage()
 
         log.info("Starting setup...\n")
-        errors = service_config.setup(username, password, ntpserver, check_db_space)
+        errors = service_config.setup(
+            username, password, ntpserver, check_db_space)
         if errors:
             print_errors(errors)
             sys.exit(-1)
@@ -880,7 +912,7 @@ def chroma_config():
         else:
             check_db_space = True
 
-        error = service_config._setup_database(check_db_space)
+        service_config._setup_database(check_db_space)
     elif command == 'validate':
         errors = service_config.validate()
         print_errors(errors)
