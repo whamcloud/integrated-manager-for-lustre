@@ -535,8 +535,8 @@ class ServiceConfig(CommandLine):
     def _configure_firewall(self):
         if ServiceControl.create('firewalld').running:
             for port in [80, 443]:
-                self.try_shell(['firewall-cmd', '--permanent', '--add-port={}'.format(port)])
-                self.try_shell(['firewall-cmd', '--add-port={}'.format(port)])
+                self.try_shell(['firewall-cmd', '--permanent', '--add-port={}/tcp'.format(port)])
+                self.try_shell(['firewall-cmd', '--add-port={}/tcp'.format(port)])
 
     def set_nginx_config(self):
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
