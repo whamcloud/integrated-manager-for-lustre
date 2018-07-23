@@ -1,6 +1,6 @@
 [Unit]
 Description=IML Settings Populator
-Requires=postgresql.service
+Wants=postgresql.service
 After=postgresql.service
 
 [Service]

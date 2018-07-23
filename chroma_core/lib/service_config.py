@@ -50,6 +50,7 @@ log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
 
+IS_DOCKER = os.path.exists('/.dockerenv')
 
 class ServiceConfig(CommandLine):
     REQUIRED_DB_SPACE_GB = 100
@@ -305,16 +306,16 @@ class ServiceConfig(CommandLine):
                 raise RuntimeError(error)
 
     def _init_pgsql(self, database):
-        rc, out, err = self.shell(["service", "postgresql", "initdb"])
-        if rc != 0:
-            if 'is not empty' not in out:
-                log.error("Failed to initialize postgresql service")
-                log.error("stdout:\n%s" % out)
-                log.error("stderr:\n%s" % err)
-                raise CommandError("service postgresql initdb", rc, out, err)
-            return
-        # Only mess with auth if we've freshly initialized the db
-        self._config_pgsql_auth(database)
+            rc, out, err = self.shell(["service", "postgresql", "initdb"])
+            if rc != 0:
+                if 'is not empty' not in out:
+                    log.error("Failed to initialize postgresql service")
+                    log.error("stdout:\n%s" % out)
+                    log.error("stderr:\n%s" % err)
+                    raise CommandError("service postgresql initdb", rc, out, err)
+                return
+            # Only mess with auth if we've freshly initialized the db
+            self._config_pgsql_auth(database)
 
     @staticmethod
     def _config_pgsql_auth(database):
@@ -355,44 +356,44 @@ class ServiceConfig(CommandLine):
             return error_msg
 
     def _setup_pgsql(self, database, check_db_space):
-        log.info("Setting up PostgreSQL service...")
+            log.info("Setting up PostgreSQL service...")
 
-        self._init_pgsql(database)
+            self._init_pgsql(database)
 
-        postgresql_service = ServiceControl.create("postgresql")
-        postgresql_service.restart()
-        postgresql_service.enable()
+            postgresql_service = ServiceControl.create("postgresql")
+            postgresql_service.restart()
+            postgresql_service.enable()
 
-        tries = 0
-        while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
-            if tries >= 4:
-                raise RuntimeError("Timed out waiting for PostgreSQL service to start")
-            tries += 1
-            time.sleep(1)
+            tries = 0
+            while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
+                if tries >= 4:
+                    raise RuntimeError("Timed out waiting for PostgreSQL service to start")
+                tries += 1
+                time.sleep(1)
 
-        error = self._check_db_space(self.REQUIRED_DB_SPACE_GB)
+            error = self._check_db_space(self.REQUIRED_DB_SPACE_GB)
 
-        if check_db_space and error:
-            return error
+            if check_db_space and error:
+                return error
 
-        if not self._db_accessible():
-            log.info("Creating database owner '%s'...\n" % database['USER'])
+            if not self._db_accessible():
+                log.info("Creating database owner '%s'...\n" % database['USER'])
 
-            # Enumerate existing roles
-            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select "
-                                                                      "rolname from pg_roles;'"])
-            roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
+                # Enumerate existing roles
+                _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select "
+                                                                        "rolname from pg_roles;'"])
+                roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
 
-            # Create database['USER'] role if not found
-            if not database['USER'] in roles:
-                self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER "
-                                                        "CREATEDB NOCREATEROLE INHERIT LOGIN;'" %
-                                                        database['USER']])
+                # Create database['USER'] role if not found
+                if not database['USER'] in roles:
+                    self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER "
+                                                            "CREATEDB NOCREATEROLE INHERIT LOGIN;'" %
+                                                            database['USER']])
 
-            log.info("Creating database '%s'...\n" % database['NAME'])
-            self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'],
-                                                                            database['NAME'])])
-        return None
+                log.info("Creating database '%s'...\n" % database['NAME'])
+                self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'],
+                                                                                database['NAME'])])
+            return None
 
     @staticmethod
     def get_input(msg, empty_allowed=True, password=False, default=""):
@@ -484,7 +485,8 @@ class ServiceConfig(CommandLine):
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
 
-            error = self._setup_pgsql(databases['default'], check_db_space)
+            if not IS_DOCKER:
+                error = self._setup_pgsql(databases['default'], check_db_space)
         else:
             log.info("DB already accessible")
 
@@ -636,8 +638,12 @@ class ServiceConfig(CommandLine):
 
         # Check services are active
         interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
-            'postgresql', 'rabbitmq-server'
+            'rabbitmq-server'
         ]
+
+        if not IS_DOCKER:
+            interesting_services += ['postgresql']
+
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -880,7 +886,7 @@ def chroma_config():
         else:
             check_db_space = True
 
-        error = service_config._setup_database(check_db_space)
+        service_config._setup_database(check_db_space)
     elif command == 'validate':
         errors = service_config.validate()
         print_errors(errors)
