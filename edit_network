@@ -2,7 +2,7 @@
 
 exec ed -s $1 <<EOF
 /<mac address=/a
-  <domain name='vms.local' localOnly='yes'/>
+  <domain name='trevis.whamcloud.com' localOnly='no'/>
 .
 wq
 EOF

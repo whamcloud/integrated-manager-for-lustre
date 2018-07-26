@@ -2,8 +2,9 @@ if [ -n "$JENKINS_URL" ]; then
     export JENKINS=true
 else
     export JENKINS=false
-    export MAKE_TARGET="$1"
 fi
+
+export MAKE_TARGET="$1"
 
 [ -r localenv ] && . localenv
 
@@ -52,7 +53,7 @@ set_defaults() {
     export BUILD_VERSION="$(make -s -f $d/include/Makefile.version .build_version)"
     export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-*$IEEL_VERSION-$BUILD_VERSION.el7.noarch.rpm"
 
-    if $JENKINS; then
+    if $JENKINS && ! ${VAGRANT_PROVISION:-false}; then
         export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
     fi
 
@@ -63,7 +64,7 @@ set_defaults() {
     fi
 
     if [ "$MEASURE_COVERAGE" != "true" -a "$MEASURE_COVERAGE" != "false" ]; then
-        if $JENKINS; then
+        if $JENKINS && ! ${VAGRANT:-false}; then
             {
                 echo "Whoa!  We hit TEI-3576."
                 echo
@@ -71,7 +72,7 @@ set_defaults() {
                 echo
                 echo "At test run start, env was:"
                 cat /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
-            } | mail -s "TEI-3576" brian.murrell@intel.com
+            } | mail -s "TEI-3576" iml@whamcloud.com
         fi
 
         # now set it to a sane value
@@ -79,7 +80,7 @@ set_defaults() {
     fi
     rm -f /tmp/env-"$JOB_NAME"-"$BUILD_NUMBER"
 
-    if $JENKINS; then
+    if $JENKINS && ! ${VAGRANT:-false}; then
         JOB_NAME=${JOB_NAME%%/*}
         export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
         export BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
@@ -101,8 +102,6 @@ set_defaults() {
             export JENKINS_DISTRO="el6.4"
         fi
     else
-        export WORKSPACE=$PWD/workspace
-        mkdir -p $WORKSPACE
         export TEST_DISTRO_NAME=${TEST_DISTRO_NAME:-"el"}
         export JENKINS_DISTRO="el7"
         export WORKSPACE="$PWD"
@@ -132,7 +131,7 @@ set_defaults() {
         BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
     elif [ -n "$LUSTRE_VERSION" ]; then
         # To use a GA release of Lustre:
-        BASE_URL="https://downloads.hpdd.intel.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"
+        BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"
     else
         echo "I don't know which Lustre you want to use.  Bailing."
         exit 1

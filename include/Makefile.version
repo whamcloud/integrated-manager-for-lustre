@@ -45,4 +45,4 @@ endif
 	@echo "${SHORT_ARCHIVE_NAME}"
 
 .build_version:
-	@echo "$(SCM_COMMIT_NUMBER)"."$(subst $(space),.,$(wordlist 2, 10, $(SCM_DESCRIPTION)))" | sed -e 's/..$$//'
+	@echo "$(SCM_COMMIT_NUMBER)"."$(subst $(space),.,$(wordlist 2, 10, $(SCM_DESCRIPTION)))"

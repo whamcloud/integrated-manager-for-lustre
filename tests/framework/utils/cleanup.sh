@@ -39,7 +39,7 @@ cleanup() {
 
     echo "exit trap done" >&2
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
-        cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
+        cat $tmpfile | mail -s "job aborted" iml@whamcloud.com
         #rm $tmpfile
     fi
 }
