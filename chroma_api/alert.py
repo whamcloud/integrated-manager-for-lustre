@@ -267,7 +267,7 @@ class UpdatesAvailableAlertValidation(Validation):
         if not bundle.data.get('host_address'):
             errors['host_address'] = 'host_address required'
 
-        if not bundle.data.get('available'):
+        if bundle.data.get('available') is None:
             errors['available'] = 'available required'
 
         return errors
