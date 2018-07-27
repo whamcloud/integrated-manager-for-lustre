@@ -8,22 +8,29 @@ if ENV['JENKINS'] == 'true'
   fqdn = Socket.gethostname
   dot = fqdn.index('.')
   hostname = fqdn[0..dot - 1]
-  domain = fqdn[dot + 1..-1]
-  mach_num = hostname[hostname.index("-") + 1..-1]
+  mach_num = hostname[hostname.index('-') + 1..-1]
   cluster_num = 0
-  if cluster_num == 0
-    cluster_num_s = ""
-  else
-    cluster_num_s = cluster_num
-  end
+
+  cluster_num_s = if cluster_num.zero?
+                    ''
+                  else
+                    cluster_num
+                  end
 else
-    ci_cluster = false
-    hostname = ""
-    cluster_num_s = ""
+  ci_cluster = false
+  hostname = ''
+  cluster_num_s = ''
 end
 
+# Vagrant removed the atlas.hashicorp.com to vagrantcloud.com
+# redirect. The value of DEFAULT_SERVER_URL in Vagrant versions
+# less than 1.9.3 is atlas.hashicorp.com. This breaks the fetching
+# and updating of boxes as they are now stored in
+# vagrantcloud.com instead of atlas.hashicorp.com.
+# https://github.com/hashicorp/vagrant/issues/9442
+Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 
-Vagrant.configure("2") do |config|
+Vagrant.configure('2') do |config|
 
     # Use box from Manager For Lustre project - this differs from the
     # "official" CentOS base box by using a SATA controller instead of IDE.
