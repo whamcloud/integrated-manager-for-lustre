@@ -1,5 +1,10 @@
 #!/bin/bash -ex
 
+if [ -n "$JENKINS_URL" ]; then
+    JOB_NAME=${JOB_NAME%%/*}
+    export JOB_NAME=${JOB_NAME:?"Need to set JOB_NAME"}
+fi
+
 make substs
 . tests/framework/utils/defaults.sh
 . tests/framework/utils/selective_auto_pass.sh
@@ -16,8 +21,6 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/tests/fra
 cd $WORKSPACE
 if [ -n "$RELEASE_ARCHIVE" ]; then
     curl -L -f -O "${RELEASE_ARCHIVE_PATH:-https://github.com/whamcloud/integrated-manager-for-lustre/releases/download}/$RELEASE_ARCHIVE"
-elif $JENKINS; then
-    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
 fi
 
 got_aborted=false
