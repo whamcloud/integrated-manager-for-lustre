@@ -167,7 +167,7 @@ destroy_cluster: Vagrantfile
 	if rpm -q vagrant-libvirt ||                                         \
 	   rpm -q sclo-vagrant1-vagrant-libvirt; then                        \
 	    export LIBVIRT_DEFAULT_URI=qemu:///system;                       \
-	    for net in intel-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
+	    for net in integrated-manager-for-lustre{0,1,2,3} vagrant-libvirt; do \
 	        virsh net-destroy $$net || true;                             \
 	        virsh net-undefine $$net || true;                            \
 	    done;                                                            \
@@ -273,8 +273,8 @@ ssi_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.
 upgrade_tests:
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
 
-efs_tests:
-	pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf; systemctl disable firewalld; systemctl stop firewalld"
+efs_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+	# pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf; systemctl disable firewalld; systemctl stop firewalld"
 	tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 chroma_test_env: chroma_test_env/bin/activate
