@@ -17,5 +17,5 @@ setup(
     packages = find_packages(exclude=excludes),
     license = 'Proprietary',
     description = 'An example storage plugin',
-    long_description = "This the example storage plugin by Intel Corporation",
+    long_description = "This the example storage plugin by whamCloud",
 )

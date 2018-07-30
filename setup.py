@@ -15,7 +15,7 @@ excludes = [
 setup(
     name = 'iml-manager',
     version = package_version(),
-    author = "Intel Corporation",
+    author = "whamCloud",
     author_email = "iml@whamcloud.com",
     url = 'https://pypi.python.org/pypi/iml-manager',
     license='MIT',
