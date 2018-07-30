@@ -98,14 +98,6 @@ cd /tmp
 yum -y install \$(ls $ARCHIVE_NAME)
 expect install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}
 
-# Execute the create_installer script and distribute the install procedure to the storage nodes
-./create_installer zfs
-./create_installer ldiskfs
-if ! pdcp -l root -R ssh -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) lustre-zfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz lustre-ldiskfs-${TEST_DISTRO_NAME}${TEST_DISTRO_VERSION%%.*}-installer.tar.gz $INSTALLER_PATH; then
-    echo "Failed to copy installer files"
-    exit 1
-fi
-
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     cat /var/log/chroma/install.log
