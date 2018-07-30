@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
-# Copyright (c) 2017 Intel Corporation. All rights reserved.
+# Copyright (c) 2018 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
@@ -15,7 +15,7 @@ excludes = [
 setup(
     name = 'iml-manager',
     version = package_version(),
-    author = "Intel Corporation",
+    author = "whamCloud",
     author_email = "iml@whamcloud.com",
     url = 'https://pypi.python.org/pypi/iml-manager',
     license='MIT',
