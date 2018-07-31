@@ -34,6 +34,7 @@
       "host": "@VMHOST@",
       "address": "@HOSTNAME@vm@CLUSTER@2@DOMAINNAME@",
       "ip_address": "@VM2_IPADDRESS@",
+      "lnet_address": "@VM2_LNETADDRESS@",
       "distro": "el7.5"
     }
   ],
@@ -141,6 +142,7 @@
       "device_type": "linux",
       "address": "@HOSTNAME@vm@CLUSTER@5@DOMAINNAME@",
       "ip_address": "@VM5_IPADDRESS@",
+      "lnet_address": "@VM5_LNETADDRESS@",
       "distro": "el7.5"
     },
     {
@@ -164,6 +166,7 @@
       "device_type": "linux",
       "address": "@HOSTNAME@vm@CLUSTER@6@DOMAINNAME@",
       "ip_address": "@VM6_IPADDRESS@",
+      "lnet_address": "@VM6_LNETADDRESS@",
       "distro": "el7.5"
     },
     {
@@ -187,6 +190,7 @@
       "device_type": "linux",
       "address": "@HOSTNAME@vm@CLUSTER@7@DOMAINNAME@",
       "ip_address": "@VM7_IPADDRESS@",
+      "lnet_address": "@VM7_LNETADDRESS@",
       "distro": "el7.5"
     },
     {
@@ -210,6 +214,7 @@
       "device_type": "linux",
       "address": "@HOSTNAME@vm@CLUSTER@8@DOMAINNAME@",
       "ip_address": "@VM8_IPADDRESS@",
+      "lnet_address": "@VM8_LNETADDRESS@",
       "distro": "el7.5"
     }
   ],

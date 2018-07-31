@@ -274,7 +274,6 @@ upgrade_tests:
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
 
 efs_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
-	# pdsh -R ssh -l root -S -w vm[5-9] "echo \"options lnet networks=\\\"tcp(eth1)\\\"\" > /etc/modprobe.d/iml_lnet_module_parameters.conf; systemctl disable firewalld; systemctl stop firewalld"
 	tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 chroma_test_env: chroma_test_env/bin/activate

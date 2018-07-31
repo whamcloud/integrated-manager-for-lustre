@@ -163,15 +163,15 @@ class CreateLustreFilesystem(UtilityTestCase):
         try:
             mgs_nids = [
                 self.get_lustre_server_by_name(
-                    self.mgt['primary_server'])['ip_address']
+                    self.mgt['primary_server'])['lnet_address']
             ]
 
             if 'secondary_server' in self.mgt:
                 mgs_nids.append(
                     self.get_lustre_server_by_name(
-                        self.mgt['secondary_server'])['ip_address'])
+                        self.mgt['secondary_server'])['lnet_address'])
         except:
-            raise RuntimeError("Could not get 'ip_address' for %s" %
+            raise RuntimeError("Could not get 'lnet_address' for %s" %
                                self.mgt['primary_server'])
 
         for index, mdt in enumerate(self.mdts):

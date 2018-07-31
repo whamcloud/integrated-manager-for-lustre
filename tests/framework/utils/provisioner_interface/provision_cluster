@@ -104,12 +104,17 @@ else
             -e "s/@HOST_IP_ADDRESS@/192.168.121.1/g" \
             -e "s/@VM2_IPADDRESS@/10.73.10.32/g"     \
             -e "s/@VM3_IPADDRESS@/10.73.10.10/g"     \
-            -e "s/@VM4_IPADDRESS@/10.73.10.8/g"     \
+            -e "s/@VM4_IPADDRESS@/10.73.10.8/g"      \
             -e "s/@VM5_IPADDRESS@/10.73.10.21/g"     \
             -e "s/@VM6_IPADDRESS@/10.73.10.22/g"     \
             -e "s/@VM7_IPADDRESS@/10.73.10.23/g"     \
             -e "s/@VM8_IPADDRESS@/10.73.10.24/g"     \
             -e "s/@VM9_IPADDRESS@/10.73.10.39/g"     \
+            -e "s/@VM2_IPADDRESS@/10.73.20.32/g"     \
+            -e "s/@VM5_LNETADDRESS@/10.73.20.21/g"   \
+            -e "s/@VM6_LNETADDRESS@/10.73.20.22/g"   \
+            -e "s/@VM7_LNETADDRESS@/10.73.20.23/g"   \
+            -e "s/@VM8_LNETADDRESS@/10.73.20.24/g"   \
             < "$CHROMA_DIR"/provisioner_output-vagrant-"${MAKE_TARGET%_tests}".json.in \
             > provisioner_output.json
     fi
