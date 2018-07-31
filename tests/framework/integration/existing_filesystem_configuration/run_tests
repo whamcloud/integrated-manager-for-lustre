@@ -14,7 +14,7 @@ CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
 
 eval $(python $CHROMA_DIR/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 TESTS=${TESTS:-"tests/integration/existing_filesystem_configuration/"}
 
 trap "set +e; collect_reports" EXIT
