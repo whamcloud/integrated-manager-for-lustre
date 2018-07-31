@@ -154,12 +154,6 @@ fi
 $PROXY yum -y install python-setuptools python2-coverage
 yum -y install kernel-devel-[0-9]\*_lustre lustre-ldiskfs
 
-modprobe lnet
-lnetctl lnet configure
-lnetctl net add --net tcp --if eth1
-lnetctl net show --net tcp > /etc/lnet.conf
-systemctl enable lnet.service
-
 # Make sure the firewall is not in the way
 if firewall-cmd --state; then
     firewall-cmd --add-port=988/tcp

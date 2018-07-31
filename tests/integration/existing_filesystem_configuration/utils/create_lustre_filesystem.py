@@ -103,7 +103,8 @@ class CreateLustreFilesystem(UtilityTestCase):
 
             self.remote_command(
                 server['address'],
-                'modprobe lnet; lctl network up; modprobe lustre')
+                'modprobe lnet; lnetctl lnet configure; lnetctl net add --net tcp --if eth1; lnetctl net show --net tcp > /etc/lnet.conf; systemctl enable lnet.service;')
+
 
         # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
