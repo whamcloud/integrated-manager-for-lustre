@@ -77,15 +77,18 @@ class CreateLustreFilesystem(UtilityTestCase):
             #             break
             # This loop gives a really bad distribution, but we only use a few servers so it achieves what we need today.
             for target in config['filesystem']['targets'].values():
-                target['secondary_server'] = next(
-                    server['nodename'] for server in config['lustre_servers']
+                secondary_server = next(
+                    server for server in config['lustre_servers']
                     if server['nodename'] != target['primary_server'])
+
+                target['secondary_server'] = secondary_server['nodename']
+                target['secondary_lnet_address'] = secondary_server['lnet_address']
         else:
             config['test_ha'] = False  # Deals is is_lvm = True
 
             for target in config['filesystem']['targets'].values():
                 for key in [
-                        'mount_server', 'secondary_server', 'failover_mode'
+                        'mount_server', 'secondary_server', 'failover_mode', 'secondary_lnet_address'
                 ]:
                     if key in target:
                         del target[key]
@@ -203,7 +206,7 @@ class CreateLustreFilesystem(UtilityTestCase):
 
     def get_targets_by_kind(self, kind):
         return [
-            v for k, v in config['filesystem']['targets'].iteritems()
+            v for _, v in config['filesystem']['targets'].iteritems()
             if v['kind'] == kind
         ]
 

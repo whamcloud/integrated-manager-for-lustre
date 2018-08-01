@@ -45,9 +45,9 @@ class TestFileSystem(object):
     def _failover_parameter(self, targets):
         if 'secondary_server' in targets:
             if targets.get('failover_mode', 'failnode') == 'failnode':
-                return '--failnode %s ' % targets['secondary_server']
+                return '--failnode %s ' % targets['secondary_lnet_address']
             else:
-                return '--servicenode %s --servicenode %s' % (targets['primary_server'], targets['secondary_server'])
+                return '--servicenode %s --servicenode %s' % (targets['lnet_address'], targets['secondary_lnet_address'])
         else:
             return ''
 
