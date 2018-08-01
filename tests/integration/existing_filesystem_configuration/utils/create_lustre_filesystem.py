@@ -103,7 +103,17 @@ class CreateLustreFilesystem(UtilityTestCase):
 
             self.remote_command(
                 server['address'],
-                'modprobe lnet; lnetctl lnet configure; lnetctl net add --net tcp0 --if eth2; lnetctl net show --net tcp > /etc/lnet.conf; systemctl enable lnet.service;')
+                """
+                modprobe lnet
+                lnetctl lnet configure
+
+                if [[ $(lnetctl net show --net tcp0 | wc -c) -eq 0 ]]; then
+                    lnetctl net add --net tcp0 --if eth2
+                    lnetctl net show --net tcp > /etc/lnet.conf
+                    systemctl enable lnet.service
+                fi
+                """
+                )
 
 
         # Wipe the devices to make sure they are clean only after
