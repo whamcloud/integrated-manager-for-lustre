@@ -63,8 +63,9 @@ class SystemStatus(object):
         return result
 
     def get_rabbitmq(self):
-        # NB 55672 is RabbitMQ 2.x specific, changes for RabbitMQ 3.x 15672
-        url = "http://%s:%s@localhost:15672/api/queues/%s/" % (settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD, settings.AMQP_BROKER_VHOST)
+        url = "http://{}:{}@{}:15672/api/queues/{}/".format(
+            settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD, settings.AMQP_BROKER_HOST, settings.AMQP_BROKER_VHOST)
+
         try:
             response = requests.get(url, auth = HTTPBasicAuth(settings.AMQP_BROKER_USER, settings.AMQP_BROKER_PASSWORD), proxies = {'http': None})
         except (socket.error, requests.exceptions.ConnectionError), e:
