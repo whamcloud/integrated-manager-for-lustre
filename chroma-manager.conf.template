@@ -10,7 +10,35 @@ server {
 
     proxy_read_timeout 330s;
 
-    include {{APP_PATH}}/mime.types;
+    types {
+        text/html html htm;
+        text/css css;
+        text/xml xml rss;
+        image/gif gif;
+        image/jpeg jpeg jpg;
+        application/javascript js;
+        application/json json map
+        text/plain txt;
+        text/x-component htc;
+        image/png png;
+        image/x-icon ico;
+        application/x-shockwave-flash swf
+        application/x-makeself run;
+        application/x-pilot prc pdb;
+        application/x-rar-compressed rar;
+        application/x-redhat-package-manager rpm;
+        application/x-tcl tcl tk;
+        application/x-x509-ca-cert der pem crt;
+        application/x-xpinstall xpi;
+        application/zip zip;
+        application/octet-stream deb;
+        application/octet-stream bin exe dll;
+        application/octet-stream dmg;
+        application/octet-stream eot;
+        application/octet-stream iso img;
+        application/octet-stream msi msp msm;
+        application/font-woff woff;
+    }
 
     ssl_certificate {{SSL_PATH}}/manager.crt;
     ssl_certificate_key {{SSL_PATH}}/manager.pem;
@@ -197,7 +225,7 @@ server {
     }
 
     location /iml-srcmap-reverse {
-        proxy_pass http://unix:/var/run/iml-srcmap-reverse.sock;
+        proxy_pass {{SRCMAP_REVERSE_PROXY_PASS}};
     }
 
     location /iml-device-aggregator {
@@ -213,7 +241,7 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Http-Host      $http_host;
-        proxy_pass http://unix:/var/run/device-aggregator.sock;
+        proxy_pass {{DEVICE_AGGREGATOR_PROXY_PASS}};
     }
 
     location /iml_has_package_updates {
@@ -229,7 +257,7 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Http-Host      $http_host;
-        proxy_pass http://unix:/var/run/iml-update-handler.sock;
+        proxy_pass {{UPDATE_HANDLER_PROXY_PASS}};
     }
 }
 
@@ -237,6 +265,6 @@ server {
     listen 127.0.0.1:{{DEVICE_AGGREGATOR_PORT}};
 
     location /device-aggregator {
-        proxy_pass http://unix:/var/run/device-aggregator.sock;
+        proxy_pass {{DEVICE_AGGREGATOR_PROXY_PASS}};
     }
 }
