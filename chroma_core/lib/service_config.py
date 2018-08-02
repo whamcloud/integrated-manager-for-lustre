@@ -566,9 +566,10 @@ class ServiceConfig(CommandLine):
             project_dir, 'chroma-manager.conf.template')
 
         nginx_settings = [
-            'APP_PATH', 'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
+            'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
             'HTTP_AGENT_PORT', 'HTTP_API_PORT', 'REALTIME_PORT', 'VIEW_SERVER_PORT',
-            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT'
+            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT', 'UPDATE_HANDLER_PROXY_PASS', 
+            'DEVICE_AGGREGATOR_PROXY_PASS', 'SRCMAP_REVERSE_PROXY_PASS'
         ]
 
         with open(conf_template, "r") as f:

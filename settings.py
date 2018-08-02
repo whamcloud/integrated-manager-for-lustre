@@ -37,6 +37,12 @@ SSL_PATH = '/var/lib/chroma'
 
 DEVICE_AGGREGATOR_PORT = 8008
 
+UPDATE_HANDLER_PROXY_PASS = 'http://unix:/var/run/iml-update-handler.sock'
+
+DEVICE_AGGREGATOR_PROXY_PASS = 'http://unix:/var/run/device-aggregator.sock'
+
+SRCMAP_REVERSE_PROXY_PASS = 'http://unix:/var/run/iml-srcmap-reverse.sock'
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
