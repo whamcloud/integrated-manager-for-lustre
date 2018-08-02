@@ -313,6 +313,10 @@ class ServiceConfig(CommandLine):
                 log.error(error)
                 raise RuntimeError(error)
 
+    def _mask_units(self):
+        log.info("Masking units")
+        self.try_shell(["systemctl", "mask", "rabbitmq-server.service", "postgresql.service"])
+
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
         if rc != 0:
@@ -613,9 +617,15 @@ class ServiceConfig(CommandLine):
         self._populate_database(username, password)
 
         self._setup_ntp(ntp_server)
-        self._setup_rabbitmq_service()
-        self._setup_rabbitmq_credentials()
         self._setup_crypto()
+
+        if not IS_DOCKER:
+            self._setup_rabbitmq_service()
+            self._setup_rabbitmq_credentials()
+
+        if IS_DOCKER:
+            self._mask_units()
+
         self._enable_services()
         self._start_services()
 
@@ -656,12 +666,10 @@ class ServiceConfig(CommandLine):
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
-            'rabbitmq-server'
-        ]
+        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES
 
         if not IS_DOCKER:
-            interesting_services += ['postgresql']
+            interesting_services += ['postgresql', 'rabbitmq-server']
 
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
