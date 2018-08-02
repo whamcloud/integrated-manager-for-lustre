@@ -20,7 +20,7 @@ else
     # test_setup_zfs_targets_for_test() hackery is included
     TESTS="tests/integration/shared_storage_configuration/test_aaa_zfs_setup.py:TestConfigureZfsTargets.test_setup_zfs_targets_for_test $TESTS"
 fi
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 
 trap "set +e; collect_reports" EXIT
 
