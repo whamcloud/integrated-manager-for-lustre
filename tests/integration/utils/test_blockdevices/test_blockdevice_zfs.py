@@ -71,8 +71,8 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def install_packages_commands(self):
         installer_path = config.get('installer_path', '/tmp')
         return [
-            "flock -x /var/lock/lustre_installer_lock -c 'rpm -q zfs || (cd %s && tar zxf lustre-zfs-%s-installer.tar.gz && cd lustre-zfs && ./install > /tmp/zfs_installer.stdout)'"
-            % (installer_path, "el" + platform.dist()[1][0:1]), "modprobe zfs"
+            "flock -x /var/lock/lustre_installer_lock -c 'rpm -q zfs || (yum -y install kernel-devel-[0-9]\*_lustre lustre-zfs > /tmp/zfs_installer.stdout)'",
+            "modprobe zfs"
         ]
 
     @property

@@ -1,0 +1,248 @@
+{
+  "reset": true,
+  "lustre_devices": [
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 0
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 1
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 2
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 3
+    },
+    {
+      "backend_filesystem": "ldiskfs",
+      "path_index": 4
+    }
+  ],
+  "success": true,
+  "lustre_clients": [
+    {
+      "nodename": "@HOSTNAME@vm@CLUSTER@2",
+      "device_paths": [],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@2",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@2@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@2",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@2",
+      "host": "@VMHOST@",
+      "address": "@HOSTNAME@vm@CLUSTER@2@DOMAINNAME@",
+      "ip_address": "@VM2_IPADDRESS@",
+      "lnet_address": "@VM2_LNETADDRESS@",
+      "distro": "el7.5"
+    }
+  ],
+  "provision": true,
+  "repos": {
+    "chroma": {
+      "build_number": 511,
+      "build_job": "manager-for-lustre"
+    }
+  },
+  "hosts": {
+    "@VMHOST@": {
+      "cluster_num": @CLUSTER_NUM@,
+      "nodename": "@VMHOST@@DOMAINNAME@",
+      "ip_address": "@HOST_IP_ADDRESS@",
+      "fqdn": "@VMHOST@@DOMAINNAME@",
+      "address": "@VMHOST@@DOMAINNAME@"
+    }
+  },
+  "failover_is_configured": false,
+  "filesystem": {
+    "name": "efs",
+    "targets": {
+      "efs-OSTorMDT0003": {
+        "index": 3,
+        "kind": "OSTorMDT",
+        "mount_path": "/mnt/ostORmdt3",
+        "mount_server": "secondary_server",
+        "failover_mode": "failnode",
+        "primary_server": "hydra-2-efs-oss2"
+      },
+      "efs-OST0002": {
+        "index": 2,
+        "kind": "OST",
+        "mount_path": "/mnt/ost2",
+        "mount_server": "primary_server",
+        "failover_mode": "failnode",
+        "primary_server": "hydra-2-efs-oss2"
+      },
+      "efs-OST0000": {
+        "index": 0,
+        "kind": "OST",
+        "mount_path": "/mnt/ost0",
+        "mount_server": "primary_server",
+        "failover_mode": "servicenode",
+        "primary_server": "hydra-2-efs-oss1"
+      },
+      "efs-OST0001": {
+        "index": 1,
+        "kind": "OST",
+        "mount_path": "/mnt/ost1",
+        "mount_server": "secondary_server",
+        "failover_mode": "servicenode",
+        "primary_server": "hydra-2-efs-oss1"
+      },
+      "efs-MDT0000": {
+        "index": 0,
+        "kind": "MDT",
+        "mount_path": "/mnt/mdt",
+        "primary_server": "hydra-2-efs-mgs-mds"
+      },
+      "MGS": {
+        "index": 0,
+        "kind": "MGT",
+        "mount_path": "/mnt/mdt",
+        "primary_server": "hydra-2-efs-mgs-mds"
+      }
+    }
+  },
+  "test_runners": [
+    {
+      "nodename": "@HOSTNAME@vm@CLUSTER@4",
+      "device_paths": [],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@4",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@4@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@4",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@4",
+      "host": "@VMHOST@",
+      "address": "@HOSTNAME@vm@CLUSTER@4@DOMAINNAME@",
+      "ip_address": "@VM4_IPADDRESS@",
+      "distro": "el7.5"
+    }
+  ],
+  "managed": false,
+  "lustre_servers": [
+    {
+      "firewall_enabled": false,
+      "nodename": "@HOSTNAME@vm@CLUSTER@5",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@5",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@5@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@5",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@5",
+      "host": "@VMHOST@",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "device_type": "linux",
+      "address": "@HOSTNAME@vm@CLUSTER@5@DOMAINNAME@",
+      "ip_address": "@VM5_IPADDRESS@",
+      "lnet_address": "@VM5_LNETADDRESS@",
+      "distro": "el7.5"
+    },
+    {
+      "firewall_enabled": false,
+      "nodename": "@HOSTNAME@vm@CLUSTER@6",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@6",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@6@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@6",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@6",
+      "host": "@VMHOST@",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "device_type": "linux",
+      "address": "@HOSTNAME@vm@CLUSTER@6@DOMAINNAME@",
+      "ip_address": "@VM6_IPADDRESS@",
+      "lnet_address": "@VM6_LNETADDRESS@",
+      "distro": "el7.5"
+    },
+    {
+      "firewall_enabled": false,
+      "nodename": "@HOSTNAME@vm@CLUSTER@7",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@7",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@7@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@7",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@7",
+      "host": "@VMHOST@",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "device_type": "linux",
+      "address": "@HOSTNAME@vm@CLUSTER@7@DOMAINNAME@",
+      "ip_address": "@VM7_IPADDRESS@",
+      "lnet_address": "@VM7_LNETADDRESS@",
+      "distro": "el7.5"
+    },
+    {
+      "firewall_enabled": false,
+      "nodename": "@HOSTNAME@vm@CLUSTER@8",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target1",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target2",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target3",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target4",
+        "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_target5"
+      ],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@8",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@8@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@8",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@8",
+      "host": "@VMHOST@",
+      "selinux_enabled": false,
+      "root_password": "vagrant",
+      "device_type": "linux",
+      "address": "@HOSTNAME@vm@CLUSTER@8@DOMAINNAME@",
+      "ip_address": "@VM8_IPADDRESS@",
+      "lnet_address": "@VM8_LNETADDRESS@",
+      "distro": "el7.5"
+    }
+  ],
+  "test_ha": true,
+  "chroma_managers": [
+    {
+      "server_http_url": "https://@HOSTNAME@vm@CLUSTER@3@DOMAINNAME@/",
+      "firewall_enabled": true,
+      "users": [
+        {
+          "username": "admin",
+          "password": "lustre",
+          "super": true,
+          "email": "nobody@example.com"
+        }
+      ],
+      "nodename": "@HOSTNAME@vm@CLUSTER@3",
+      "device_paths": [],
+      "repos": ["chroma"],
+      "destroy_command": "virsh destroy @HOSTNAME@vm@CLUSTER@3",
+      "fqdn": "@HOSTNAME@vm@CLUSTER@3@DOMAINNAME@",
+      "start_command": "virsh start @HOSTNAME@vm@CLUSTER@3",
+      "status_command": "virsh domstate @HOSTNAME@vm@CLUSTER@3",
+      "host": "@VMHOST@",
+      "selinux_enabled": true,
+      "address": "@HOSTNAME@vm@CLUSTER@3@DOMAINNAME@",
+      "ip_address": "@VM3_IPADDRESS@",
+      "distro": "el7.5"
+    }
+  ]
+}

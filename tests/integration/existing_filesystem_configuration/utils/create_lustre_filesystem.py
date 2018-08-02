@@ -77,15 +77,18 @@ class CreateLustreFilesystem(UtilityTestCase):
             #             break
             # This loop gives a really bad distribution, but we only use a few servers so it achieves what we need today.
             for target in config['filesystem']['targets'].values():
-                target['secondary_server'] = next(
-                    server['nodename'] for server in config['lustre_servers']
+                secondary_server = next(
+                    server for server in config['lustre_servers']
                     if server['nodename'] != target['primary_server'])
+
+                target['secondary_server'] = secondary_server['nodename']
+                target['secondary_lnet_address'] = secondary_server['lnet_address']
         else:
             config['test_ha'] = False  # Deals is is_lvm = True
 
             for target in config['filesystem']['targets'].values():
                 for key in [
-                        'mount_server', 'secondary_server', 'failover_mode'
+                        'mount_server', 'secondary_server', 'failover_mode', 'secondary_lnet_address'
                 ]:
                     if key in target:
                         del target[key]
@@ -103,7 +106,18 @@ class CreateLustreFilesystem(UtilityTestCase):
 
             self.remote_command(
                 server['address'],
-                'modprobe lnet; lctl network up; modprobe lustre')
+                """
+                modprobe lnet
+                lnetctl lnet configure
+
+                if [[ $(lnetctl net show --net tcp0 | wc -c) -eq 0 ]]; then
+                    lnetctl net add --net tcp0 --if eth2
+                    lnetctl net show --net tcp > /etc/lnet.conf
+                    systemctl enable lnet.service
+                fi
+                """
+                )
+
 
         # Wipe the devices to make sure they are clean only after
         # all of the per server cleanup has been done. Otherwise some of the
@@ -163,15 +177,15 @@ class CreateLustreFilesystem(UtilityTestCase):
         try:
             mgs_nids = [
                 self.get_lustre_server_by_name(
-                    self.mgt['primary_server'])['ip_address']
+                    self.mgt['primary_server'])['lnet_address']
             ]
 
             if 'secondary_server' in self.mgt:
                 mgs_nids.append(
                     self.get_lustre_server_by_name(
-                        self.mgt['secondary_server'])['ip_address'])
+                        self.mgt['secondary_server'])['lnet_address'])
         except:
-            raise RuntimeError("Could not get 'ip_address' for %s" %
+            raise RuntimeError("Could not get 'lnet_address' for %s" %
                                self.mgt['primary_server'])
 
         for index, mdt in enumerate(self.mdts):
@@ -192,7 +206,7 @@ class CreateLustreFilesystem(UtilityTestCase):
 
     def get_targets_by_kind(self, kind):
         return [
-            v for k, v in config['filesystem']['targets'].iteritems()
+            v for _, v in config['filesystem']['targets'].iteritems()
             if v['kind'] == kind
         ]
 

@@ -7,21 +7,15 @@ make substs
 
 set_defaults false
 check_for_autopass
-if ! $JENKINS; then
-    CHROMA_DIR="$PWD"
-fi
+
+CHROMA_DIR="$PWD"
+
 export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"$CHROMA_DIR/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json"}
 
-if $JENKINS; then
-    cd $WORKSPACE
-    # Copy a fingerprinted file so we can link together the projects in jenkins.
-
-    curl -f -k -O "$JOB_URL/$ARCHIVE_NAME"
-fi
+cd $WORKSPACE
 
 got_aborted=false
 # Gather logs from nodes and release the cluster at exit
-
 trap "set +e; cleanup" EXIT
 
 trap "set -x
@@ -49,11 +43,6 @@ for dne in false true; do
         fi
 
         for device_type in ${device_types_to_test[@]}; do
-            if [ $TEST_DISTRO_VERSION == "7.2" ] && [ $device_type == "linux" ] && ! $test_ha; then
-                echo "Skipping linux with no HA on el7.2 until it can be fixed"
-                continue
-            fi
-
             echo "Beginning automated ${device_type} run..."
 
             export TEST_SPECIFIC_CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}_dne_is_${dne}.json
