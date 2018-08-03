@@ -270,7 +270,10 @@ class ServiceConfig(CommandLine):
         # The server_cert attribute is created on read
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ['iml-manager.target', 'nginx']
+    CONTROLLED_SERVICES = ['iml-manager.target']
+
+    if not IS_DOCKER:
+        CONTROLLED_SERVICES += ['nginx']
 
     MANAGER_SERVICES = [
         'iml-corosync.service', 'iml-gunicorn.service',
@@ -315,7 +318,7 @@ class ServiceConfig(CommandLine):
 
     def _mask_units(self):
         log.info("Masking units")
-        self.try_shell(["systemctl", "mask", "rabbitmq-server.service", "postgresql.service"])
+        self.try_shell(["systemctl", "mask", "rabbitmq-server.service", "postgresql.service", "nginx"])
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -567,7 +570,7 @@ class ServiceConfig(CommandLine):
 
         nginx_settings = [
             'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
-            'HTTP_AGENT_PORT', 'HTTP_API_PORT', 'REALTIME_PORT', 'VIEW_SERVER_PORT',
+            'HTTP_AGENT_PROXY_PASS', 'HTTP_API_PROXY_PASS', 'REALTIME_PROXY_PASS', 'VIEW_SERVER_PROXY_PASS',
             'SSL_PATH', 'DEVICE_AGGREGATOR_PORT', 'UPDATE_HANDLER_PROXY_PASS', 
             'DEVICE_AGGREGATOR_PROXY_PASS', 'SRCMAP_REVERSE_PROXY_PASS'
         ]
@@ -606,7 +609,9 @@ class ServiceConfig(CommandLine):
 
         self._configure_selinux()
         self._configure_firewall()
-        self.set_nginx_config()
+
+        if not IS_DOCKER:
+            self.set_nginx_config()
 
         error = self._setup_database(check_db_space)
         if check_db_space and error:

@@ -119,7 +119,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{VIEW_SERVER_PORT}}/ui;
+        proxy_pass {{VIEW_SERVER_PROXY_PASS}}/ui;
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
 
@@ -131,14 +131,14 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_API_PORT}}/api;
+        proxy_pass {{HTTP_API_PROXY_PASS}}/api;
     }
 
     location /socket.io {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{REALTIME_PORT}}/socket.io;
+        proxy_pass {{REALTIME_PROXY_PASS}}/socket.io;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -149,14 +149,14 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/register;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/register;
     }
 
     location /agent/setup {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/setup;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/setup;
     }
 
     location /agent/reregister {
@@ -171,7 +171,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/reregister;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/reregister;
     }
 
     location /agent/message {
@@ -189,7 +189,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/message;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/message;
     }
 
     location /agent/copytool_event {
@@ -204,7 +204,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/copytool_event;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/copytool_event;
     }
 
     location /repo/ {
