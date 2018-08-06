@@ -10,6 +10,13 @@ server {
 
     proxy_read_timeout 330s;
 
+    map $status $loggable {
+        ~^[23]  0;
+        default 1;
+    }
+
+    access_log /var/log/nginx/access.log combined if=$loggable;
+
     types {
         text/html html htm;
         text/css css;
