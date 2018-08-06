@@ -279,9 +279,15 @@ class ServiceConfig(CommandLine):
         'iml-corosync.service', 'iml-gunicorn.service',
         'iml-http-agent.service', 'iml-job-scheduler.service',
         'iml-lustre-audit.service', 'iml-plugin-runner.service',
-        'iml-power-control.service', 'iml-realtime.service',
-        'iml-stats.service', 'iml-syslog.service', 'iml-view-server.service'
+        'iml-power-control.service', 'iml-stats.service', 
+        'iml-syslog.service',
     ]
+
+    if not IS_DOCKER:
+        MANAGER_SERVICES += [
+            'iml-view-server.service',
+            'iml-realtime.service'
+        ]
 
     def _enable_services(self):
         log.info("Enabling daemons")
