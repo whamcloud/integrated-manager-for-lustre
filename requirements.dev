@@ -1,9 +1,3 @@
-# these are the python dependencies only needed by dev
-#
-# if the dependency you want to add is something that will be needed by
-# chroma-manager at runtime it needs to be added to the chroma-depenencies/
-# build system.  For more details, see:
-# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements
 behave>=1.1.0
 django-extensions
 django-nose==1.2

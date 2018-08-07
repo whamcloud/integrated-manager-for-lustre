@@ -279,12 +279,13 @@ class ServiceConfig(CommandLine):
         'iml-corosync.service', 'iml-gunicorn.service',
         'iml-http-agent.service', 'iml-job-scheduler.service',
         'iml-lustre-audit.service', 'iml-plugin-runner.service',
-        'iml-power-control.service', 'iml-stats.service', 
+        'iml-power-control.service',
     ]
 
     if not IS_DOCKER:
         MANAGER_SERVICES += [
             'iml-syslog.service',
+            'iml-stats.service',
             'iml-view-server.service',
             'iml-realtime.service'
         ]
@@ -324,7 +325,8 @@ class ServiceConfig(CommandLine):
 
     def _mask_units(self):
         log.info("Masking units")
-        self.try_shell(["systemctl", "mask", "rabbitmq-server.service", "postgresql.service", "nginx"])
+        self.try_shell(["systemctl", "mask", "rabbitmq-server.service",
+                        "postgresql.service", "nginx", "iml-stats.service", "iml-syslog.service"])
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
