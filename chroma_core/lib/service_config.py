@@ -280,11 +280,11 @@ class ServiceConfig(CommandLine):
         'iml-http-agent.service', 'iml-job-scheduler.service',
         'iml-lustre-audit.service', 'iml-plugin-runner.service',
         'iml-power-control.service', 'iml-stats.service', 
-        'iml-syslog.service',
     ]
 
     if not IS_DOCKER:
         MANAGER_SERVICES += [
+            'iml-syslog.service',
             'iml-view-server.service',
             'iml-realtime.service'
         ]

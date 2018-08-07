@@ -23,11 +23,11 @@ REPO_PATH = '/var/lib/chroma/repo'
 
 HTTP_FRONTEND_PORT = 80
 
-HTTPS_FRONTEND_PORT = 443
+HTTPS_FRONTEND_PORT = os.getenv('HTTPS_FRONTEND_PORT', 443)
 
 HTTP_AGENT_PORT = 8002
 
-PROXY_HOST = '127.0.0.1'
+PROXY_HOST = os.getenv('PROXY_HOST', '127.0.0.1')
 
 HTTP_AGENT_PROXY_PASS = 'http://{}:{}'.format(PROXY_HOST, HTTP_AGENT_PORT)
 
@@ -63,10 +63,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'chroma',                 # Or path to database file if using sqlite3.
-        'USER': 'chroma',                  # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'USER': 'chroma',                 # Not used with sqlite3.
+        'PASSWORD': '',                   # Not used with sqlite3.
+        'HOST': os.getenv('DB_HOST', ''), # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': os.getenv('DB_PORT', ''), # Set to empty string for default. Not used with sqlite3.
         'OPTIONS': {}
     }
 }
@@ -149,7 +149,7 @@ TEMPLATE_DIRS = (
 AMQP_BROKER_USER = "chroma"
 AMQP_BROKER_PASSWORD = "chroma123"
 AMQP_BROKER_VHOST = "chromavhost"
-AMQP_BROKER_HOST = "localhost"
+AMQP_BROKER_HOST = os.getenv("AMQP_BROKER_HOST", "localhost")
 
 BROKER_URL = "amqp://%s:%s@%s:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_HOST, AMQP_BROKER_VHOST)
 
@@ -227,7 +227,7 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 # Argument to mkfs.ext4 '-J' option
 JOURNAL_SIZE = "2048"
 
-LOG_PATH = "/var/log/chroma"
+LOG_PATH = os.getenv("LOG_PATH", "/var/log/chroma")
 
 CRYPTO_FOLDER = "/var/lib/chroma"
 
@@ -306,9 +306,11 @@ DBLOG_LW = 1000000
 # In development, where to serve repos from
 DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settings'].__file__)), 'repo')
 
+SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
+
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
-SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
+SERVER_HTTP_URL = "https://%s:%s/" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
 
 LOCAL_DEVICE_AGGREGATOR_URL = "http://127.0.0.1:{}/device-aggregator".format(DEVICE_AGGREGATOR_PORT)
 
