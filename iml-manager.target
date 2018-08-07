@@ -1,4 +1,5 @@
 [Unit]
+Requires=iml-settings-populator.service
 Description=IML Manager Target
 Requires=iml-corosync.service
 Requires=iml-gunicorn.service
@@ -8,8 +9,7 @@ Requires=iml-lustre-audit.service
 Requires=iml-plugin-runner.service
 Requires=iml-power-control.service
 Requires=iml-stats.service
-Requires=iml-syslog.service
-Requires=iml-settings-populator.service
+Wants=iml-syslog.service
 Wants=iml-realtime.service
 Wants=iml-view-server.service
 Wants=iml-update-handler.socket
