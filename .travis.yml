@@ -30,7 +30,6 @@ jobs:
       depth: 999999
     env: Type='Continuous Deployment'
     script:
-      - set |grep TRAVIS
       - include/travis/copr-deploy.sh prepare
       - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
   - stage: test
