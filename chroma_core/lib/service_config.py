@@ -595,18 +595,16 @@ class ServiceConfig(CommandLine):
             with open(x) as f:
                 register_profile(f)
 
-    def container_setup(self, username, password, check_db_space):
-        error = self._setup_database(check_db_space)
-        if check_db_space and error:
-            return [error]
-
+    def container_setup(self, username, password):
+        self._syncdb()
         self._create_fake_bundle()
         self._register_profiles()
 
         self._populate_database(username, password)
-        self._syncdb()
 
         self._setup_crypto()
+
+        self.try_shell(['python ./manage.py print-settings > /var/lib/chroma/iml-settings.conf'], shell=True)
 
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
@@ -921,10 +919,12 @@ def chroma_config():
             log.error("Usage: container-setup [username password]")
             sys.exit(-1)
 
-        if len(sys.argv) == 4:
+        if len(sys.argv) == 2:
+            username = None
+            password = None
+        elif len(sys.argv) == 4:
             username = sys.argv[2]
             password = sys.argv[3]
-
         else:
             usage()
  

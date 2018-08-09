@@ -18,4 +18,4 @@ COPY --from=imlteam/online-help /root /usr/lib/iml-manager/iml-online-help
 COPY --from=imlteam/old-gui /root /usr/lib/node_modules/@iml/old-gui
 COPY --from=imlteam/socket-worker /root /usr/lib/node_modules/@iml/socket-worker/targetdir
 
-CMD dockerize -template /etc/nginx/conf.d/iml.template:/etc/nginx/conf.d/default.conf -stderr /var/log/nginx/error.log -wait file:///var/lib/chroma/iml-settings.conf nginx
+CMD dockerize -template /etc/nginx/conf.d/iml.template:/etc/nginx/conf.d/default.conf -stdout /var/log/nginx/access.log -stderr /var/log/nginx/error.log -wait file:///var/lib/chroma/iml-settings.conf nginx
