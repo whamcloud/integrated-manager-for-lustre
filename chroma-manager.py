@@ -6,6 +6,8 @@
 import os
 import sys
 
+USE_CONSOLE = 'USE_CONSOLE' in os.environ
+
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
@@ -22,8 +24,8 @@ bind = "{}:{}".format(settings.PROXY_HOST, settings.HTTP_API_PORT)
 
 pidfile = settings.GUNICORN_PID_PATH
 
-errorlog = os.path.join(settings.LOG_PATH, 'gunicorn-error.log')
-accesslog = os.path.join(settings.LOG_PATH, 'gunicorn-access.log')
+errorlog = '-' if USE_CONSOLE else os.path.join(settings.LOG_PATH, 'gunicorn-error.log')
+accesslog = None
 
 timeout = settings.LONG_POLL_TIMEOUT_SECONDS + 10
 
@@ -32,5 +34,9 @@ application = get_wsgi_application()
 
 
 def on_starting(server):
-    from chroma_core.services.log import log_set_filename
-    log_set_filename('http.log')
+    from chroma_core.services.log import log_set_filename, log_enable_stdout
+
+    if USE_CONSOLE:
+        log_enable_stdout()
+    else:
+        log_set_filename('http.log')

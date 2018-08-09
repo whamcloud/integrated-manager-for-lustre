@@ -50,8 +50,6 @@ log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
 
-IS_DOCKER = os.path.exists('/.dockerenv')
-
 
 class ServiceConfig(CommandLine):
     REQUIRED_DB_SPACE_GB = 100
@@ -270,23 +268,17 @@ class ServiceConfig(CommandLine):
         # The server_cert attribute is created on read
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ['iml-manager.target']
+    CONTROLLED_SERVICES = ['iml-manager.target', 'nginx']
 
-    if not IS_DOCKER:
-        CONTROLLED_SERVICES += ['nginx']
-
-    MANAGER_SERVICES = []
-
-    if not IS_DOCKER:
-        MANAGER_SERVICES = [
-            'iml-corosync.service', 'iml-gunicorn.service',
-            'iml-http-agent.service', 'iml-job-scheduler.service',
-            'iml-lustre-audit.service', 'iml-plugin-runner.service',
-            'iml-power-control.service', 'iml-syslog.service',
-            'iml-stats.service', 'iml-view-server.service',
-            'iml-realtime.service', 'device-aggregator.socket', 
-            'iml-srcmap-reverse.socket'
-        ]
+    MANAGER_SERVICES = [
+        'iml-corosync.service', 'iml-gunicorn.service',
+        'iml-http-agent.service', 'iml-job-scheduler.service',
+        'iml-lustre-audit.service', 'iml-plugin-runner.service',
+        'iml-power-control.service', 'iml-syslog.service',
+        'iml-stats.service', 'iml-view-server.service',
+        'iml-realtime.service', 'device-aggregator.socket', 
+        'iml-srcmap-reverse.socket'
+    ]
 
     def _enable_services(self):
         log.info("Enabling daemons")
@@ -320,17 +312,6 @@ class ServiceConfig(CommandLine):
             if error:
                 log.error(error)
                 raise RuntimeError(error)
-
-    def _mask_units(self):
-        log.info("Masking units")
-        self.try_shell(["systemctl", "mask", "rabbitmq-server.service",
-                        "postgresql.service", "nginx",
-                        'iml-corosync.service', 'iml-gunicorn.service',
-                        'iml-http-agent.service', 'iml-job-scheduler.service',
-                        'iml-lustre-audit.service', 'iml-plugin-runner.service',
-                        'iml-power-control.service', 'iml-syslog.service',
-                        'iml-stats.service', 'iml-view-server.service',
-                        'iml-realtime.service', 'device-aggregator.socket', 'iml-srcmap-reverse.socket'])
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -516,8 +497,7 @@ class ServiceConfig(CommandLine):
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
 
-            if not IS_DOCKER:
-                error = self._setup_pgsql(databases['default'], check_db_space)
+            error = self._setup_pgsql(databases['default'], check_db_space)
         else:
             log.info("DB already accessible")
 
@@ -615,6 +595,19 @@ class ServiceConfig(CommandLine):
             with open(x) as f:
                 register_profile(f)
 
+    def container_setup(self, username, password, check_db_space):
+        error = self._setup_database(check_db_space)
+        if check_db_space and error:
+            return [error]
+
+        self._create_fake_bundle()
+        self._register_profiles()
+
+        self._populate_database(username, password)
+        self._syncdb()
+
+        self._setup_crypto()
+
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
@@ -622,8 +615,7 @@ class ServiceConfig(CommandLine):
         self._configure_selinux()
         self._configure_firewall()
 
-        if not IS_DOCKER:
-            self.set_nginx_config()
+        self.set_nginx_config()
 
         error = self._setup_database(check_db_space)
         if check_db_space and error:
@@ -637,12 +629,8 @@ class ServiceConfig(CommandLine):
         self._setup_ntp(ntp_server)
         self._setup_crypto()
 
-        if not IS_DOCKER:
-            self._setup_rabbitmq_service()
-            self._setup_rabbitmq_credentials()
-
-        if IS_DOCKER:
-            self._mask_units()
+        self._setup_rabbitmq_service()
+        self._setup_rabbitmq_credentials()
 
         self._enable_services()
         self._start_services()
@@ -684,10 +672,7 @@ class ServiceConfig(CommandLine):
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES
-
-        if not IS_DOCKER:
-            interesting_services += ['postgresql', 'rabbitmq-server']
+        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ['postgresql', 'rabbitmq-server']
 
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
@@ -930,6 +915,27 @@ def chroma_config():
             sys.exit(-1)
         else:
             log.info("\nSetup complete.")
+            sys.exit(0)
+    elif command == 'container-setup': 
+        def usage():
+            log.error("Usage: container-setup [username password]")
+            sys.exit(-1)
+
+        if len(sys.argv) == 4:
+            username = sys.argv[2]
+            password = sys.argv[3]
+
+        else:
+            usage()
+ 
+        log.info("Starting container setup...\n")
+        errors = service_config.container_setup(username, password)
+
+        if errors: 
+            print_errors(errors) 
+            sys.exit(-1) 
+        else: 
+            log.info("\nContainer setup complete.") 
             sys.exit(0)
     elif command == 'dbsetup':
         if '--no-dbspace-check' in sys.argv:

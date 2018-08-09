@@ -1,4 +1,4 @@
-FROM imlteam/manager-service-base
+FROM imlteam/manager-service-base:extract-nginx
 
 COPY wait-for-settings.sh /usr/local/bin/
 ENTRYPOINT [ "wait-for-settings.sh" ]
