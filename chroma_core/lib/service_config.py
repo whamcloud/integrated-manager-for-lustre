@@ -284,7 +284,8 @@ class ServiceConfig(CommandLine):
             'iml-lustre-audit.service', 'iml-plugin-runner.service',
             'iml-power-control.service', 'iml-syslog.service',
             'iml-stats.service', 'iml-view-server.service',
-            'iml-realtime.service', 'device-aggregator.socket'
+            'iml-realtime.service', 'device-aggregator.socket', 
+            'iml-srcmap-reverse.socket'
         ]
 
     def _enable_services(self):
@@ -329,7 +330,7 @@ class ServiceConfig(CommandLine):
                         'iml-lustre-audit.service', 'iml-plugin-runner.service',
                         'iml-power-control.service', 'iml-syslog.service',
                         'iml-stats.service', 'iml-view-server.service',
-                        'iml-realtime.service', 'device-aggregator.socket'])
+                        'iml-realtime.service', 'device-aggregator.socket', 'iml-srcmap-reverse.socket'])
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
