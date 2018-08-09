@@ -52,7 +52,7 @@ class Crypto(CommandLine):
         Get the path to the authority certificate, or self-sign the authority key to generate one
         """
         if not os.path.exists(self.AUTHORITY_CERT_FILE):
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", self.authority_key])
+            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-sha256", "-subj", "/C=AA/ST=AA/L=Location/O=Org/CN=x_local_authority", "-key", self.authority_key])
             rc, out, err = self.try_shell(["openssl", "x509", "-req", "-sha256", "-days", self.CERTIFICATE_DAYS, "-signkey", self.authority_key, "-out", self.AUTHORITY_CERT_FILE], stdin_text = csr)
 
         return self.AUTHORITY_CERT_FILE
