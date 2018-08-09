@@ -1,4 +1,4 @@
-FROM base
+FROM imlteam/manager-service-base
 
 COPY wait-for-settings.sh /usr/local/bin/
 ENTRYPOINT [ "wait-for-settings.sh" ]
