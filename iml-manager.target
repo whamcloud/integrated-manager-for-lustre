@@ -1,13 +1,13 @@
 [Unit]
 Requires=iml-settings-populator.service
 Description=IML Manager Target
-Requires=iml-corosync.service
-Requires=iml-gunicorn.service
-Requires=iml-http-agent.service
-Requires=iml-job-scheduler.service
-Requires=iml-lustre-audit.service
-Requires=iml-plugin-runner.service
-Requires=iml-power-control.service
+Wants=iml-corosync.service
+Wants=iml-gunicorn.service
+Wants=iml-http-agent.service
+Wants=iml-job-scheduler.service
+Wants=iml-lustre-audit.service
+Wants=iml-plugin-runner.service
+Wants=iml-power-control.service
 Wants=iml-stats.service
 Wants=iml-syslog.service
 Wants=iml-realtime.service

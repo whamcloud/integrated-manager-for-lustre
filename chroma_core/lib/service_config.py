@@ -275,19 +275,16 @@ class ServiceConfig(CommandLine):
     if not IS_DOCKER:
         CONTROLLED_SERVICES += ['nginx']
 
-    MANAGER_SERVICES = [
-        'iml-corosync.service', 'iml-gunicorn.service',
-        'iml-http-agent.service', 'iml-job-scheduler.service',
-        'iml-lustre-audit.service', 'iml-plugin-runner.service',
-        'iml-power-control.service',
-    ]
+    MANAGER_SERVICES = []
 
     if not IS_DOCKER:
-        MANAGER_SERVICES += [
-            'iml-syslog.service',
-            'iml-stats.service',
-            'iml-view-server.service',
-            'iml-realtime.service'
+        MANAGER_SERVICES = [
+            'iml-corosync.service', 'iml-gunicorn.service',
+            'iml-http-agent.service', 'iml-job-scheduler.service',
+            'iml-lustre-audit.service', 'iml-plugin-runner.service',
+            'iml-power-control.service', 'iml-syslog.service',
+            'iml-stats.service', 'iml-view-server.service',
+            'iml-realtime.service', 'device-aggregator.socket'
         ]
 
     def _enable_services(self):
@@ -326,7 +323,13 @@ class ServiceConfig(CommandLine):
     def _mask_units(self):
         log.info("Masking units")
         self.try_shell(["systemctl", "mask", "rabbitmq-server.service",
-                        "postgresql.service", "nginx", "iml-stats.service", "iml-syslog.service"])
+                        "postgresql.service", "nginx",
+                        'iml-corosync.service', 'iml-gunicorn.service',
+                        'iml-http-agent.service', 'iml-job-scheduler.service',
+                        'iml-lustre-audit.service', 'iml-plugin-runner.service',
+                        'iml-power-control.service', 'iml-syslog.service',
+                        'iml-stats.service', 'iml-view-server.service',
+                        'iml-realtime.service', 'device-aggregator.socket'])
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -579,7 +582,7 @@ class ServiceConfig(CommandLine):
         nginx_settings = [
             'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
             'HTTP_AGENT_PROXY_PASS', 'HTTP_API_PROXY_PASS', 'REALTIME_PROXY_PASS', 'VIEW_SERVER_PROXY_PASS',
-            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT', 'UPDATE_HANDLER_PROXY_PASS', 
+            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT', 'UPDATE_HANDLER_PROXY_PASS',
             'DEVICE_AGGREGATOR_PROXY_PASS', 'SRCMAP_REVERSE_PROXY_PASS'
         ]
 
