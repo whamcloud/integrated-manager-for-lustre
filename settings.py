@@ -163,11 +163,10 @@ INSTALLED_APPS = (
     'tastypie',
     'chroma_core',
     'chroma_api',
-    'chroma_help',
-    'benchmark'
+    'chroma_help'
 )
 
-OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose']
+OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose', 'benchmark']
 for app in OPTIONAL_APPS:
     import imp
     try:
