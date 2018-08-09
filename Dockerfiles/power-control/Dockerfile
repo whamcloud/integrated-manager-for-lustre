@@ -1,5 +1,4 @@
 FROM base
-COPY . .
 
 COPY wait-for-settings.sh /usr/local/bin/
 ENTRYPOINT [ "wait-for-settings.sh" ]

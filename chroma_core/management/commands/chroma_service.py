@@ -36,6 +36,7 @@ class Command(BaseCommand):
         make_option('--gevent', action = 'store_true', dest = 'gevent', default = False),
         make_option('--lightweight-rpc', action = 'store_true', dest = 'lightweight_rpc', default = False),
         make_option('--verbose', action = 'store_true', dest = 'verbose', default = False),
+        make_option('--console', action = 'store_true', dest= 'console', default = False),
         make_option('--name', dest = 'name', default = 'chroma_service'),
         make_option('--daemon', dest = 'daemon', action = 'store_true', default = None),
         make_option('--trace', dest = 'trace', action = 'store_true', default = None),
@@ -76,6 +77,11 @@ class Command(BaseCommand):
         if options['verbose']:
             log_enable_stdout()
 
+        if options['console']:
+            log_enable_stdout()
+        else:
+            log_set_filename("%s.log" % options['name'])
+
         if options['gevent']:
             from gevent.monkey import patch_all
             patch_all(thread = True)
@@ -115,8 +121,6 @@ class Command(BaseCommand):
 
         if not options['lightweight_rpc']:
             RpcClientFactory.initialize_threads()
-
-        log_set_filename("%s.log" % options['name'])
 
         # Respond to Ctrl+C
         stopped = threading.Event()
