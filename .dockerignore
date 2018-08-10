@@ -2,8 +2,6 @@
 benchmark
 example_storage_plugin_package
 tests
-*.repo
-*.repo.in
 Vagrantfile
 vagrant-virsh
 requirements.dev

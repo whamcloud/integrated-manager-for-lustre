@@ -116,7 +116,7 @@ class Command(BaseCommand):
 
         from chroma_core.lib.service_config import ServiceConfig
         if not ServiceConfig().configured():
-            sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
+            sys.stderr.write("IML is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 
         if not options['lightweight_rpc']:
@@ -129,7 +129,7 @@ class Command(BaseCommand):
         setup_complete = threading.Event()
 
         def signal_handler(*args, **kwargs):
-            """Params undefined because gevent vs. threading pass
+        """Params undefined because gevent vs. threading pass
             different things to handler
 
             """
