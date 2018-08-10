@@ -311,7 +311,7 @@ SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s/" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
 
-LOCAL_DEVICE_AGGREGATOR_URL = "http://127.0.0.1:{}/device-aggregator".format(DEVICE_AGGREGATOR_PORT)
+DEVICE_AGGREGATOR_URL = "http://{}:{}/device-aggregator".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
 
 # Supported power control agents
 SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh', 'fence_vbox']

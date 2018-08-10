@@ -15,7 +15,7 @@ log.setLevel(DEBUG)
 def _fetch_aggregator():
     import requests
 
-    resp = requests.get(settings.LOCAL_DEVICE_AGGREGATOR_URL)
+    resp = requests.get(settings.DEVICE_AGGREGATOR_URL)
     payload = resp.text
 
     return json.loads(payload)
