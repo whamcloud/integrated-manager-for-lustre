@@ -8,3 +8,7 @@ Vagrantfile
 vagrant-virsh
 requirements.dev
 *.service
+*.dockerfile
+logrotate.cfg
+licenses
+Makefile
