@@ -67,6 +67,7 @@ pip install -r requirements.txt
 pip install -r requirements.test
 
 cd /integrated-manager-for-lustre
+echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
 PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
