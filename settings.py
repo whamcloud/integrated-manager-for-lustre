@@ -14,7 +14,7 @@ SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 if sys.version_info < (2, 6, 5):
     raise EnvironmentError("Python >= 2.6.5 is required")
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 APP_PATH = '/usr/share/chroma-manager'

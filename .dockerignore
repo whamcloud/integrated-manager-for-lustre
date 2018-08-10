@@ -9,4 +9,3 @@ requirements.dev
 *.dockerfile
 logrotate.cfg
 licenses
-Makefile

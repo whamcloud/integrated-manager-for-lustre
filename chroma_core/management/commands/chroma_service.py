@@ -128,11 +128,11 @@ class Command(BaseCommand):
         # Ensure that threads are .start()ed before we possibly try to .join() them
         setup_complete = threading.Event()
 
+        """
+           Params undefined because gevent vs. threading pass
+           different things to handler
+        """
         def signal_handler(*args, **kwargs):
-        """Params undefined because gevent vs. threading pass
-            different things to handler
-
-            """
             if not setup_complete.is_set():
                 log.warning("Terminated during setup, exiting hard")
                 os._exit(0)

@@ -109,7 +109,7 @@ subjectAltName = DNS:%s
 
     def get_common_name(self, csr_string):
         rc, out, err = self.try_shell(['openssl', 'req', '-noout', '-subject'], stdin_text = csr_string)
-        return re.search("/CN=([^/]+)", out).group(1).strip()
+        return re.search("/?CN\s?=\s?([^/]+)", out).group(1).strip()
 
     def sign(self, csr_string):
         self.log.info("Signing")
