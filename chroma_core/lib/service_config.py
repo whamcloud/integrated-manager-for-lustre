@@ -31,6 +31,7 @@ from django.core.exceptions import ValidationError
 
 from tastypie.models import ApiKey
 
+from kombu.connection import BrokerConnection
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
@@ -163,7 +164,7 @@ class ServiceConfig(CommandLine):
     def configured(self):
         """Return True if the system has been configured far enough to present
         a user interface"""
-        return self._db_current() and self._users_exist()
+        return self._db_current() and self._users_exist() and self._rabbit_configured()
 
     def _setup_ntp(self, server):
         """
@@ -214,6 +215,16 @@ class ServiceConfig(CommandLine):
             raise RuntimeError(error)
 
         ntp_service.enable()
+
+    def _rabbit_configured(self):
+        # Data message should be forwarded to AMQP
+        try:
+            connected = False
+            with BrokerConnection(settings.BROKER_URL) as conn:
+                c = conn.connect()
+                return c.connected
+        except socket.error:
+            return False
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
