@@ -219,7 +219,6 @@ class ServiceConfig(CommandLine):
     def _rabbit_configured(self):
         # Data message should be forwarded to AMQP
         try:
-            connected = False
             with BrokerConnection(settings.BROKER_URL) as conn:
                 c = conn.connect()
                 return c.connected
