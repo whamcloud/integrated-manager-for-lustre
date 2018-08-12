@@ -65,9 +65,7 @@ cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-pow
 cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
-
-cd /integrated-manager-for-lustre
-echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
+echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
 PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
