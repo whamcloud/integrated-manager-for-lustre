@@ -10,4 +10,4 @@ import sys
 sys.path.append(os.path.abspath('../..'))
 from docs.conf_common import *
 
-project = u'Intel® Manager for Lustre* software Scheduler Plugin API'
+project = u'Integrated Manager for Lustre software Scheduler Plugin API'

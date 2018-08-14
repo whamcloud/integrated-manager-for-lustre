@@ -169,5 +169,5 @@ html_theme_path = ["../"]
 
 rst_epilog = u"""
 .. include:: <isonum.txt>
-.. |iml| replace:: Intel® Manager for Lustre* software
+.. |iml| replace:: Integrated Manager for Lustre software
 """

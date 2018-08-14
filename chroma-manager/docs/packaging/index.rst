@@ -1,15 +1,15 @@
 
-Packaging Guide for Intel® Manager for Lustre* software
+Packaging Guide for Integrated Manager for Lustre software
 =======================================================
 
 Introduction
 ------------
 
-Intel® Manager for Lustre* software is delivered as a single unified installer file, including
+Integrated Manager for Lustre software is delivered as a single unified installer file, including
 both the central management component and the packages deployed to storage servers.  Because
 storage servers sometimes requires additional packages (such as drivers) or customized packages 
 (such as custom Lustre builds), a mechanism is included whereby these packages can be included
-in an Intel® Manager for Lustre software installation.
+in an Integrated Manager for Lustre software installation.
 
 Bundles
 -------
@@ -39,14 +39,14 @@ The format of the ``meta`` file is as follows:
       "description": "Acme Corporation networking drivers"
     }
 
-The ``name`` attribute serves as a unique identifier for a bundle within an Intel® Manager for Lustre
+The ``name`` attribute serves as a unique identifier for a bundle within an Integrated Manager for Lustre
 installation.  It is wise to include the name of your organization in this string to reduce
 the likelihood of name collisions.
 
 The ``version`` attribute is provided to allow identification of a bundle by version.
 
 The 'description' attribute is a human-readable description of the bundle.  This may be visible
-to system administrators of the Intel® Manager for Lustre installation, so it should be something
+to system administrators of the Integrated Manager for Lustre installation, so it should be something
 meaningful to that audience.
 
 Creating a Bundle
@@ -64,7 +64,7 @@ Creating a Bundle
 
 .. warning::
    Do not create bundles with the same name as the built-in bundles, as these will be overwritten
-   by updates to Intel® Manager for Lustre* software
+   by updates to Integrated Manager for Lustre software
 
 Installing a Bundle
 -------------------

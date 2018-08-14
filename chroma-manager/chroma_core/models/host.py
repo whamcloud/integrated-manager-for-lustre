@@ -1251,12 +1251,12 @@ class ForceRemoveHostJob(AdvertisedJob):
     def get_confirmation(cls, instance):
         return """WARNING This command is destructive. This command should only be performed
 when the Remove command has been unsuccessful. This command will remove this server from the
-Intel® Manager for Lustre configuration, but Intel® Manager for Lustre software will not be removed
+Integrated Manager for Lustre configuration, but Integrated Manager for Lustre software will not be removed
 from this server.  All targets that depend on this server will also be removed without any attempt to
-unconfigure them. To completely remove the Intel® Manager for Lustre software from this server
+unconfigure them. To completely remove the Integrated Manager for Lustre software from this server
 (allowing it to be added to another Lustre file system) you must first contact technical support.
 You should only perform this command if this server is permanently unavailable, or has never been
-successfully deployed using Intel® Manager for Lustre software."""
+successfully deployed using Integrated Manager for Lustre software."""
 
 
 class RebootHostJob(AdvertisedJob):

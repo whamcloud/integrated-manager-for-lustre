@@ -16,8 +16,8 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
-Vendor: Intel Corporation <hpdd-info@intel.com>
-Url: http://lustre.intel.com/
+Vendor: whamCloud <iml@whamcloud.com>
+Url: http://whamcloud.com/
 BuildRequires: python-setuptools
 Requires: ntp
 Requires: python-argparse
@@ -41,7 +41,7 @@ Requires: dnf
 Requires: dnf-command(repoquery)
 
 %description
-This is the Intel Manager for Lustre monitoring and adminstration agent
+This is the Integrated Manager for Lustre monitoring and adminstration agent
 
 %package management
 Summary: Management functionality layer.
@@ -74,7 +74,7 @@ Requires: fence-agents-virsh
 %endif
 
 %description management
-This package layers on management capabilities for Intel Manager for Lustre Agent.
+This package layers on management capabilities for Integrated Manager for Lustre Agent.
 
 %package devel
 Summary: Contains stripped .py files

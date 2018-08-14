@@ -20,18 +20,19 @@ while not project_dir:
 
 sys.path.append(project_dir)
 
-agent_dir = os.path.join(*(list(os.path.split(project_dir)[0:-1]) + ['chroma-agent']))
+agent_dir = os.path.join(
+    *(list(os.path.split(project_dir)[0:-1]) + ['chroma-agent']))
 sys.path.append(agent_dir)
 
 from docs.conf_common import *
 
-project = u'Intel® Manager for Lustre* software Internals'
+project = u'Integrated Manager for Lustre software Internals'
 master_doc = 'index'
 
 graphviz_dot_args = [
-        "-Gfontname=Arial bold", "-Gfontsize=10", "-Gshape=box", "-Gpenwidth=0.5", "-Gfontweight=bold",
-        "-Nfontname=Arial", "-Nfontsize=10", "-Nshape=box", "-Nstyle=rounded", "-Npenwidth=1.2", "-Ncolor=lightblue",
-        "-Efontname=Arial", "-Efontsize=8", "-Epenwidth=0.5"
+    "-Gfontname=Arial bold", "-Gfontsize=10", "-Gshape=box", "-Gpenwidth=0.5", "-Gfontweight=bold",
+    "-Nfontname=Arial", "-Nfontsize=10", "-Nshape=box", "-Nstyle=rounded", "-Npenwidth=1.2", "-Ncolor=lightblue",
+    "-Efontname=Arial", "-Efontsize=8", "-Epenwidth=0.5"
 ]
 
 extensions.append('sphinx.ext.viewcode')

@@ -1,5 +1,5 @@
 
-Storage Plugin Developer's Guide for Intel® Manager for Lustre* software
+Storage Plugin Developer's Guide for Integrated Manager for Lustre software
 ========================================================================
 
 Introduction

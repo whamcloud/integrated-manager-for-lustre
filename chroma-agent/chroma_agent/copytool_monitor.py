@@ -274,7 +274,7 @@ class GetCopytoolAction(Action):
 
 
 def main():
-    parser = ArgumentParser(description="Intel® Manager for Lustre* software Copytool Monitor")
+    parser = ArgumentParser(description="Integrated Manager for Lustre software Copytool Monitor")
     parser.add_argument("copytool_id", action=GetCopytoolAction)
     args = parser.parse_args()
 

@@ -24,11 +24,12 @@ from chroma_agent.lib.agent_teardown_functions import agent_daemon_teardown_func
 
 # Disable insecure requests warning
 # So we don't break our syslog handler.
-# This (disabled) warning is expected due to our use of 
+# This (disabled) warning is expected due to our use of
 # self-signed certificates when we communicate between
 # the agent and manager.
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 class ServerProperties(object):
     @property
@@ -50,7 +51,7 @@ class ServerProperties(object):
 def main():
     """handle unexpected exceptions"""
     parser = argparse.ArgumentParser(
-        description="Intel® Manager for Lustre* software Agent")
+        description="Integrated Manager for Lustre software Agent")
 
     parser.add_argument("--publish-zconf", action="store_true")
     args = parser.parse_args()
