@@ -276,7 +276,6 @@ if [ -d %{_localstatedir}/lib/rpm-state/%{name}/ ]; then
 fi
 
 %triggerun -n python2-%{pypi_name} -- chroma-manager
-echo "Moving old IML state"
 mkdir -p %{_localstatedir}/lib/rpm-state/%{name}/
 cp -r /var/lib/chroma/* %{_localstatedir}/lib/rpm-state/%{name}/
 
