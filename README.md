@@ -1,4 +1,4 @@
-# Intel Manager For Lustre
+# Integrated Manager for Lustre
 
 [![Join the chat at https://gitter.im/intel-hpdd/intel-manager-for-lustre](https://badges.gitter.im/intel-hpdd/intel-manager-for-lustre.svg)](https://gitter.im/intel-hpdd/intel-manager-for-lustre?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 

@@ -29,7 +29,7 @@ import readline
 assert readline
 import argparse
 
-PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
+PRODUCT_NAME = "Integrated Manager for Lustre software"
 ARCHIVE_SUFFIX = ".tar.gz"
 
 # Although we will install everything, use this package as the 'it' when asking
@@ -348,7 +348,7 @@ def _create_manager_repo():
     log.debug("Temporary yum config at %s" % manager_repo_file.name)
     repo_text = """
 # Temporary file
-# Created by Intel(R) Manager for Lustre* software upgrade script
+# Created by Integrated Manager for Lustre software upgrade script
 [chroma-manager]
 name=chroma-manager
 baseurl=file://{manager_repo_dir}
@@ -368,7 +368,7 @@ def _install_or_upgrade_packages(upgrade):
 
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()
-        log.info("{action} Intel(R) Manager for Lustre*".format(action="Upgrading" \
+        log.info("{action} Integrated Manager for Lustre".format(action="Upgrading" \
                                                                 if upgrade \
                                                                 else "Installing"))
         p = subprocess.Popen(["yum", "-y", "--enablerepo=chroma-manager",

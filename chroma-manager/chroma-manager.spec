@@ -7,7 +7,7 @@
 %{?!manager_root: %define manager_root /usr/share/chroma-manager}
 
 
-Summary: The Intel Manager for Lustre Monitoring and Administration Interface
+Summary: The Integrated Manager for Lustre Monitoring and Administration Interface
 Name: %{name}
 Version: %{version}
 Release: %{package_release}%{?dist}
@@ -20,8 +20,8 @@ License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
-Vendor: Intel Corporation <hpdd-info@intel.com>
-Url: http://lustre.intel.com/
+Vendor: whamCloud <iml@whamcloud.com>
+Url: http://whamcloud.com/
 BuildRequires: python-setuptools
 BuildRequires: ed
 Requires: python-setuptools
@@ -114,7 +114,7 @@ Requires: nginx >= 1:1.11.6
 %endif
 
 %description
-This is the Intel Manager for Lustre Monitoring and Administration Interface
+This is the Integrated Manager for Lustre Monitoring and Administration Interface
 
 %package libs
 Summary: Common libraries for Chroma Server
@@ -132,12 +132,12 @@ This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
 
 %package integration-tests
-Summary: Intel Manager for Lustre Integration Tests
+Summary: Integrated Manager for Lustre Integration Tests
 Group: Development/Tools
 Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.3
 Requires: Django >= 1.4, Django < 1.5
 %description integration-tests
-This package contains the Intel Manager for Lustre integration tests and scripts and is intended
+This package contains the Integrated Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
 
 %package devel

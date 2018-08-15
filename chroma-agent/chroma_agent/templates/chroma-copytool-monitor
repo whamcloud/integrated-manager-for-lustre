@@ -10,7 +10,7 @@
 
 COPYTOOL_ID="{{ id }}"
 
-SVC_NAME="Intel Manager For Lustre Copytool Monitor"
+SVC_NAME="Integrated Manager for Lustre Copytool Monitor"
 PID_FILE=/var/run/chroma-copytool-monitor-${COPYTOOL_ID}.pid
 DAEMON_BIN=/usr/sbin/chroma-copytool-monitor
 

@@ -1,4 +1,4 @@
-# Autoconfigured by Intel Manager for Lustre
+# Autoconfigured by Integrated Manager for Lustre
 DEVICE="{{ device }}"
 BOOTPROTO="STATIC"
 HWADDR="{{ mac_address }}"

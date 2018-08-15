@@ -23,7 +23,7 @@ ALL_NODES="$IML_NODE $SERVERS $CLIENTS"
 IML_USERNAME=${IML_USERNAME:-"admin"}
 IML_PASSWORD=${IML_PASSWORD:-"lustre"}
 
-BUILDER_URL=https://jenkins.lotus.hpdd.lab.intel.com:8080
+BUILDER_URL=https://build.whamcloud.com
 BUILD_JOB=${BUILD_JOB:-chroma-blessed}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}

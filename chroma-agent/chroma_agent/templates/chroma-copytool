@@ -12,7 +12,7 @@ COPYTOOL_ID="{{ id }}"
 DAEMON_BIN="{{ ct_path }}"
 COPYTOOL_ARGUMENTS="{{ ct_arguments }}"
 
-SVC_NAME="Intel Manager For Lustre Copytool"
+SVC_NAME="Integrated Manager for Lustre Copytool"
 PID_FILE=/var/run/copytool-${COPYTOOL_ID}.pid
 
 start() {

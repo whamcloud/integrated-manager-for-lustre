@@ -17,7 +17,7 @@ applications.
 The API is based on the `REST <http://en.wikipedia.org/wiki/Representational_state_transfer>`_
 style, and uses `JSON <http://en.wikipedia.org/wiki/JSON>`_ serialization.  Some of the
 resources exposed in the API correspond to functionality within the Lustre file system, while
-others refer to functionality specific to the Intel Manager for Lustre software.
+others refer to functionality specific to the Integrated Manager for Lustre software.
 
 This document consists of a series of sections explaining how to use the API, followed
 by an `Example client`_, and a detailed `API Reference`_ describing all
@@ -27,7 +27,7 @@ Prerequisites
 ~~~~~~~~~~~~~
 
 * Familiarity with managing Lustre using the manager server web interface provided 
-  with the Intel Manager for Lustre software.
+  with the Integrated Manager for Lustre software.
 * Familiarity with HTTP, including the meanings and conventions around the 
   methods (e.g. GET, POST, DELETE) and status codes (e.g. 404, 200).
 * Competence in using a suitable high level programming language to write your
@@ -43,7 +43,7 @@ Terminology
 The terminology used in this document differs somewhat from that used when administering a 
 Lustre file system manually. This document avoids referring to a host as an object storage server (OSS), 
 metdata server (MDS), or management server (MGS) because, in a Lustre file system created using the 
-Intel Manager for Lustre software, a host can serve targets of any of these types.
+Integrated Manager for Lustre software, a host can serve targets of any of these types.
  
 Lustre-specific terms used in this API include:
 

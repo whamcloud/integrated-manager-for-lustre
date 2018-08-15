@@ -1,5 +1,5 @@
 
-Scheduler Plugin Developer's Guide for Intel® Manager for Lustre* software
+Scheduler Plugin Developer's Guide for Integrated Manager for Lustre software
 ==========================================================================
 
 Introduction

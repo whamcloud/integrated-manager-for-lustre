@@ -20,10 +20,11 @@ while not project_dir:
 
 sys.path.append(project_dir)
 
-agent_dir = os.path.join(*(list(os.path.split(project_dir)[0:-1]) + ['chroma-agent']))
+agent_dir = os.path.join(
+    *(list(os.path.split(project_dir)[0:-1]) + ['chroma-agent']))
 sys.path.append(agent_dir)
 
 from docs.conf_common import *
 
-project = u'Intel® Manager for Lustre* software REST API'
+project = u'Integrated Manager for Lustre software REST API'
 master_doc = 'index'
