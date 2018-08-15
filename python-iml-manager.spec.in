@@ -269,15 +269,15 @@ if [ $1 -gt 1 ]; then
 fi
 
 %posttrans -n python2-%{pypi_name}
-
 if [ -d %{_localstatedir}/lib/rpm-state/%{name}/ ]; then
-    cp %{_localstatedir}/lib/rpm-state/%{name}/ /var/lib/chroma
-    rm -f %{_localstatedir}/lib/rpm-state/%{name}/
+    mkdir -p /var/lib/chroma/
+    cp -rf %{_localstatedir}/lib/rpm-state/%{name}/* /var/lib/chroma/
+    rm -rf %{_localstatedir}/lib/rpm-state/%{name}/
 fi
 
-%triggerun -- chroma-manager
-cp /var/lib/chroma/authority.{pem,srl} %{_localstatedir}/lib/rpm-state/%{name}/
-cp /var/lib/chroma/manager.{crt,pem} %{_localstatedir}/lib/rpm-state/%{name}/
+%triggerun -n python2-%{pypi_name} -- chroma-manager
+mkdir -p %{_localstatedir}/lib/rpm-state/%{name}/
+cp -r /var/lib/chroma/* %{_localstatedir}/lib/rpm-state/%{name}/
 
 %preun -n python2-%{pypi_name}
 %systemd_preun iml-manager.target
