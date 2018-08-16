@@ -10,23 +10,11 @@ RUN apk update && apk upgrade && \
     && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && cat /tmp/chroma-manager.conf.template \
-        | sed -E '/proxy_read_timeout.+;/a\\n    resolver 127.0.0.11 ipv6=off valid=5s;\n\    resolver_timeout 5s;' \
-        | sed -E 's/proxy_pass \{\{VIEW_SERVER_PROXY_PASS\}\}\/ui;/set $proxy_upstream \{\{VIEW_SERVER_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_API_PROXY_PASS\}\}\/api;/set $proxy_upstream \{\{HTTP_API_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{REALTIME_PROXY_PASS\}\}\/socket\.io;/set $proxy_upstream \{\{REALTIME_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/register;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/setup;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/reregister;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/message;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/copytool_event;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{SRCMAP_REVERSE_PROXY_PASS\}\};/set $proxy_upstream \{\{SRCMAP_REVERSE_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \
-        | sed -E '/location \/iml-device-aggregator \{/{N;N;N;N;s/$/\n        client_body_buffer_size 1m;\n\        client_max_body_size 8m;\n/}' \ 
-        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $proxy_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{UPDATE_HANDLER_PROXY_PASS\}\};/set $proxy_upstream \{\{UPDATE_HANDLER_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $proxy_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \ 
         | sed -E "s/\{\{(.*)}}/\{\{ \.Env\.\1 }}/g" \
+        | sed -E 's/proxy_pass \{\{ \.Env\.(.*) }}.*;/set $proxy_upstream \{\{ \.Env\.\1 }};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/g' \
+        | sed -E '/proxy_read_timeout.+;/a\\n    resolver 127.0.0.11 ipv6=off valid=5s;\n\    resolver_timeout 5s;' \
+        | sed -E '/location \/iml-device-aggregator \{/{N;N;N;N;s/$/\n        client_body_buffer_size 1m;\n\        client_max_body_size 8m;\n/}' \ 
         > /etc/nginx/conf.d/iml.template \
-    && cat /etc/nginx/conf.d/iml.template \
     && rm -rf /tmp/chroma-manager.conf.template \
     && apk del sed gettext
 
