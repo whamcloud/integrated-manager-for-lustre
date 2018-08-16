@@ -128,7 +128,6 @@ base_tables = [
     "logmessage", "lustreclientmount", "managedfilesystem", "managedhost",
     "managedhost_ha_cluster_peers", "managedtarget", "managedtargetmount",
     "networkinterface", "ntpconfiguration", "pacemakerconfiguration",
-    "package", "packageavailability", "packageinstallation", "packageversion",
     "powercontroldevice", "powercontroldeviceoutlet", "powercontroltype",
     "registrationtoken", "serverprofile", "serverprofile_bundles",
     "serverprofilepackage", "serverprofilevalidation", "simplehistostorebin",
