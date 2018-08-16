@@ -5,6 +5,7 @@ collect_reports() {
     echo "Collecting reports..."
 
     scp root@$TEST_RUNNER:~/test_report*.xml "$PWD/test_reports/"
+
     find $PWD/test_reports/*.xml -type f -exec sed -i "s/skip\=/skipped\=/g" {} \;
 
     if $MEASURE_COVERAGE; then
