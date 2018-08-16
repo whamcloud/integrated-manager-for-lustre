@@ -36,6 +36,7 @@ class Command(BaseCommand):
         make_option('--gevent', action = 'store_true', dest = 'gevent', default = False),
         make_option('--lightweight-rpc', action = 'store_true', dest = 'lightweight_rpc', default = False),
         make_option('--verbose', action = 'store_true', dest = 'verbose', default = False),
+        make_option('--console', action = 'store_true', dest= 'console', default = False),
         make_option('--name', dest = 'name', default = 'chroma_service'),
         make_option('--daemon', dest = 'daemon', action = 'store_true', default = None),
         make_option('--trace', dest = 'trace', action = 'store_true', default = None),
@@ -76,6 +77,11 @@ class Command(BaseCommand):
         if options['verbose']:
             log_enable_stdout()
 
+        if options['console']:
+            log_enable_stdout()
+        else:
+            log_set_filename("%s.log" % options['name'])
+
         if options['gevent']:
             from gevent.monkey import patch_all
             patch_all(thread = True)
@@ -110,13 +116,11 @@ class Command(BaseCommand):
 
         from chroma_core.lib.service_config import ServiceConfig
         if not ServiceConfig().configured():
-            sys.stderr.write("Chroma is not configured, please run chroma-config setup first\n")
+            sys.stderr.write("IML is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 
         if not options['lightweight_rpc']:
             RpcClientFactory.initialize_threads()
-
-        log_set_filename("%s.log" % options['name'])
 
         # Respond to Ctrl+C
         stopped = threading.Event()
@@ -124,11 +128,11 @@ class Command(BaseCommand):
         # Ensure that threads are .start()ed before we possibly try to .join() them
         setup_complete = threading.Event()
 
+        """
+           Params undefined because gevent vs. threading pass
+           different things to handler
+        """
         def signal_handler(*args, **kwargs):
-            """Params undefined because gevent vs. threading pass
-            different things to handler
-
-            """
             if not setup_complete.is_set():
                 log.warning("Terminated during setup, exiting hard")
                 os._exit(0)

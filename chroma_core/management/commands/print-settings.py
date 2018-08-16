@@ -26,9 +26,7 @@ class Command(BaseCommand):
         SOURCE_MAP_PATH = next(iter(source_map_paths), None)
 
         xs = map(lambda (x, y): "{0}={1}".format(x, y), [
-            ("LOG_PATH", settings.LOG_PATH),
             ("REALTIME_PORT", settings.REALTIME_PORT),
-            ("SERVER_HTTP_URL", settings.SERVER_HTTP_URL),
             ("ALLOW_ANONYMOUS_READ", json.dumps(
                 settings.ALLOW_ANONYMOUS_READ)),
             ("BUILD", settings.BUILD),
