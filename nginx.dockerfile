@@ -11,19 +11,19 @@ RUN apk update && apk upgrade && \
     && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && cat /tmp/chroma-manager.conf.template \
         | sed -E '/proxy_read_timeout.+;/a\\n    resolver 127.0.0.11 ipv6=off valid=5s;\n\    resolver_timeout 5s;' \
-        | sed -E 's/proxy_pass \{\{VIEW_SERVER_PROXY_PASS\}\}\/ui;/set $ui_upstream \{\{VIEW_SERVER_PROXY_PASS\}\};\n\        proxy_pass $ui_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_API_PROXY_PASS\}\}\/api;/set $api_upstream \{\{HTTP_API_PROXY_PASS\}\};\n\        proxy_pass $api_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{REALTIME_PROXY_PASS\}\}\/socket\.io;/set $socket_upstream \{\{REALTIME_PROXY_PASS\}\};\n\        proxy_pass $socket_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/register;/set $register_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $register_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/setup;/set $setup_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $setup_upstream$uri$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/reregister;/set $reregister_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $reregister_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/message;/set $message_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $message_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/copytool_event;/set $copytool_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $copytool_upstream$uri$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{SRCMAP_REVERSE_PROXY_PASS\}\};/set $srcmap_upstream \{\{SRCMAP_REVERSE_PROXY_PASS\}\};\n\        proxy_pass $srcmap_upstream$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{VIEW_SERVER_PROXY_PASS\}\}\/ui;/set $proxy_upstream \{\{VIEW_SERVER_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{HTTP_API_PROXY_PASS\}\}\/api;/set $proxy_upstream \{\{HTTP_API_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{REALTIME_PROXY_PASS\}\}\/socket\.io;/set $proxy_upstream \{\{REALTIME_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/register;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/setup;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/reregister;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
+        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/message;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
+        | sed -E 's/proxy_pass \{\{HTTP_AGENT_PROXY_PASS\}\}\/agent\/copytool_event;/set $proxy_upstream \{\{HTTP_AGENT_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$uri$is_args$query_string;/' \ 
+        | sed -E 's/proxy_pass \{\{SRCMAP_REVERSE_PROXY_PASS\}\};/set $proxy_upstream \{\{SRCMAP_REVERSE_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \
         | sed -E '/location \/iml-device-aggregator \{/{N;N;N;N;s/$/\n        client_body_buffer_size 1m;\n\        client_max_body_size 8m;\n/}' \ 
-        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $device_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $device_upstream$is_args$query_string;/' \
-        | sed -E 's/proxy_pass \{\{UPDATE_HANDLER_PROXY_PASS\}\};/set $updates_upstream \{\{UPDATE_HANDLER_PROXY_PASS\}\};\n\        proxy_pass $updates_upstream$is_args$query_string;/' \ 
-        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $device_aggregator_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $device_aggregator_upstream$is_args$query_string;/' \ 
+        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $proxy_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \
+        | sed -E 's/proxy_pass \{\{UPDATE_HANDLER_PROXY_PASS\}\};/set $proxy_upstream \{\{UPDATE_HANDLER_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \ 
+        | sed -E 's/proxy_pass \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};/set $proxy_upstream \{\{DEVICE_AGGREGATOR_PROXY_PASS\}\};\n\        proxy_pass $proxy_upstream$is_args$query_string;/' \ 
         | sed -E "s/\{\{(.*)}}/\{\{ \.Env\.\1 }}/g" \
         > /etc/nginx/conf.d/iml.template \
     && cat /etc/nginx/conf.d/iml.template \
