@@ -1,0 +1,9 @@
+behave>=1.1.0
+coverage==3.5.2
+django-nose==1.2
+fudge
+https://bitbucket.org/jordilin/alerta/downloads/log4tailer-3.0.9.tar.gz
+pexpect
+mock==1.0.1
+nose==1.2.1
+nose-testconfig==0.8
