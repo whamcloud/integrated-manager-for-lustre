@@ -309,7 +309,7 @@ SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
 
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
-SERVER_HTTP_URL = "https://%s:%s/" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
+SERVER_HTTP_URL = "https://%s:%s" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
 
 DEVICE_AGGREGATOR_URL = os.getenv(
     "DEVICE_AGGREGATOR_URL", "http://{}:{}/device-aggregator".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT))
