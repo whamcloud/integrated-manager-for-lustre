@@ -523,6 +523,9 @@ class ServiceConfig(CommandLine):
         else:
             log.info("User accounts already created")
 
+        self._create_api_user()
+
+    def _create_api_user(self):
         API_USERNAME = "api"
 
         try:
@@ -534,8 +537,6 @@ class ServiceConfig(CommandLine):
             api_user.groups.add(Group.objects.get(name='superusers'))
             ApiKey.objects.get_or_create(user=api_user)
             log.info("API user created")
-
-        return
 
     def _configure_selinux(self):
         try:
@@ -599,6 +600,15 @@ class ServiceConfig(CommandLine):
             print "Registering profile: {}".format(x)
             with open(x) as f:
                 register_profile(f)
+
+    def docker_setup(self, check_db_space):
+        error = self._setup_database(check_db_space)
+        if check_db_space and error:
+            return [error]
+
+        self._create_api_user()
+
+        self._setup_crypto()
 
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
@@ -913,6 +923,21 @@ def chroma_config():
             sys.exit(-1)
         else:
             log.info("\nSetup complete.")
+            sys.exit(0)
+    elif command == 'docker-setup':
+        if '--no-dbspace-check' in sys.argv:
+            check_db_space = False
+            sys.argv.remove('--no-dbspace-check')
+        else:
+            check_db_space = True
+
+        log.info("Starting docker setup...\n")
+        errors = service_config.docker_setup(check_db_space)
+        if errors:
+            print_errors(errors)
+            sys.exit(-1)
+        else:
+            log.info("\nDocker setup complete.")
             sys.exit(0)
     elif command == 'dbsetup':
         if '--no-dbspace-check' in sys.argv:
