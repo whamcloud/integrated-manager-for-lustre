@@ -18,6 +18,7 @@ from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
 from iml_common.lib.date_time import IMLDateTime
+from iml_common.lib.package_version_info import VersionInfo
 from chroma_core.services.stats import StatsQueue
 
 
@@ -44,6 +45,7 @@ class UpdateScan(object):
     @transaction.commit_on_success
     def audit_host(self):
         self.update_properties(self.host_data.get('properties'))
+        self.update_packages(self.host_data.get('packages'))
         self.update_resource_locations()
         self.update_target_mounts()
         self.update_client_mounts()
@@ -64,6 +66,73 @@ class UpdateScan(object):
             # use the job scheduler to update, but only as necessary
             if self.host.properties != properties:
                 job_scheduler_notify.notify(self.host, self.started_at, {'properties': properties})
+
+    # Compatibility with pre-4.1 IML upgrades
+    def update_packages(self, package_report):
+        if not package_report:
+            # Packages is allowed to be None
+            # (means is not the initial message, or there was a problem talking to RPM or yum)
+            return
+
+        # An update is required if:
+        #  * A package is installed on the storage server for which there is a more recent version
+        #    available on the manager
+        #  or
+        #  * A package is available on the manager, and specified in the server's profile's list of
+        #    packages, but is not installed on the storage server.
+
+        def _version_info_list(package_data):
+            return [VersionInfo(*package) for package in package_data]
+
+        def _updates_available(installed_versions, available_versions):
+            # versions are of form (EPOCH, VERSION, RELEASE, ARCH)
+
+            # Map of arch to highest installed version
+            max_installed_version = {}
+
+            for installed_info in installed_versions:
+                max_inst = max_installed_version.get(installed_info.arch, None)
+                if max_inst is None or installed_info > max_inst:
+                    max_installed_version[installed_info.arch] = installed_info
+
+            for available_info in available_versions:
+                max_inst = max_installed_version.get(available_info.arch, None)
+                if max_inst is not None and available_info > max_inst:
+                    log.debug("Update available: %s > %s" % (available_info, max_inst))
+                    return True
+
+            return False
+
+        updates = False
+
+        repos = package_report.keys();
+        for package in self.host.server_profile.serverprofilepackage_set.all():
+            package_data = {}
+            for repo in repos:
+                try:
+                    package_data = package_report[repo][package.package_name]
+                except KeyError:
+                    continue
+                break
+
+            if not package_data:
+                log.warning("Required Package %s not available for %s" % (
+                    package.package_name, self.host))
+                continue
+
+            if not package_data['installed']:
+                log.info("Update available (not installed): %s on %s" % (package.package_name, self.host))
+                updates = True
+                break
+
+            if _updates_available(_version_info_list(package_data['installed']),
+                                    _version_info_list(package_data['available'])):
+                log.info("Update needed: %s on %s" % (package.package_name, self.host))
+                updates = True
+                break
+
+        log.info("update_packages(%s): updates=%s" % (self.host, updates))
+        job_scheduler_notify.notify(self.host, self.started_at, {'needs_update': updates})
 
     def update_client_mounts(self):
         # Client mount audit comes in via metrics due to the way the
