@@ -9,3 +9,4 @@ requirements.dev
 *.dockerfile
 logrotate.cfg
 licenses
+docker-compose.yml
