@@ -25,6 +25,7 @@ class Command(BaseCommand):
             '/usr/share/iml-manager/iml-gui/main*.map')
         SOURCE_MAP_PATH = next(iter(source_map_paths), None)
 
+        DB = settings.DATABASES.get("default")
         xs = map(lambda (x, y): "{0}={1}".format(x, y), [
             ("REALTIME_PORT", settings.REALTIME_PORT),
             ("ALLOW_ANONYMOUS_READ", json.dumps(
@@ -39,6 +40,8 @@ class Command(BaseCommand):
             ("API_USER", API_USER),
             ("API_KEY", API_KEY),
             ("SOURCE_MAP_PATH", SOURCE_MAP_PATH),
+            ("DB_HOST", DB.get("HOST")), ("DB_NAME", DB.get("NAME")),
+            ("DB_USER", DB.get("USER")), ("DB_PASSWORD", DB.get("PASSWORD"))
         ])
 
         print '\n'.join(xs)
