@@ -138,6 +138,9 @@ services:
     image: "imlteam/manager-corosync"
     restart: on-failure
     hostname: "corosync"
+    build:
+      context: .
+      dockerfile: ./corosync.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -155,6 +158,9 @@ services:
     image: "imlteam/manager-gunicorn"
     restart: on-failure
     hostname: "gunicorn"
+    build:
+      context: .
+      dockerfile: ./gunicorn.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -174,6 +180,9 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
+    build:
+      context: .
+      dockerfile: ./http-agent.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -189,6 +198,9 @@ services:
     image: "imlteam/manager-job-scheduler"
     restart: on-failure
     hostname: "job-scheduler"
+    build:
+      context: .
+      dockerfile: ./job-scheduler.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -206,6 +218,9 @@ services:
     image: "imlteam/manager-lustre-audit"
     restart: on-failure
     hostname: "lustre-audit"
+    build:
+      context: .
+      dockerfile: ./lustre-audit.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -223,6 +238,9 @@ services:
     image: "imlteam/manager-plugin-runner"
     restart: on-failure
     hostname: "plugin-runner"
+    build:
+      context: .
+      dockerfile: ./plugin-runner.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -242,6 +260,9 @@ services:
     image: "imlteam/manager-power-control"
     restart: on-failure
     hostname: "power-control"
+    build:
+      context: .
+      dockerfile: ./power-control.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -259,6 +280,9 @@ services:
     image: "imlteam/manager-stats"
     restart: on-failure
     hostname: "stats"
+    build:
+      context: .
+      dockerfile: ./stats.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -276,6 +300,9 @@ services:
     image: "imlteam/manager-syslog"
     restart: on-failure
     hostname: "syslog"
+    build:
+      context: .
+      dockerfile: ./syslog.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -293,6 +320,9 @@ services:
   setup:
     image: "imlteam/manager-setup"
     command: ["tail", "-f", "/dev/null"]
+    build:
+      context: .
+      dockerfile: ./setup.dockerfile
     volumes:
       - "manager-config:/var/lib/chroma"
     deploy:

@@ -14,7 +14,7 @@ addons:
 jobs:
   include:
   - stage: test
-    env: Type='unit tests'
+    name: "Unit Tests"
     install:
       - pip install -r requirements.txt
       - pip install -r requirements.test
@@ -30,12 +30,24 @@ jobs:
   - stage: cd
     git:
       depth: 999999
-    env: Type='Continuous Deployment'
+    name: "Continuous Deployment (Copr)"
     script:
       - include/travis/copr-deploy.sh prepare
       - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
+  - stage: cd
+    git:
+      depth: 999999
+    name: "Continuous Deployment (Docker)"
+    script:
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker build --rm -t imlteam/manager-service-base -f base.dockerfile .
+      - docker push imlteam/manager-service-base
+      - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile .
+      - docker push imlteam/manager-nginx
+      - docker-compose build
+      - docker-compose push
   - stage: test
-    env: Type='behave tests'
+    name: "Behave tests"
     install:
       - pip install -r requirements.txt
       - pip install -r requirements.test
@@ -47,7 +59,7 @@ jobs:
       - export IML_DISABLE_THREADS=1
       - behave --format plain tests/feature/cli/features
   - stage: test
-    env: Type='service tests'
+    name: "Service tests"
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
