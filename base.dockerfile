@@ -1,7 +1,7 @@
 FROM centos as builder
 WORKDIR /build
 COPY . .
-RUN yum install -y rpmdevtools make \
+RUN yum install -y rpmdevtools make git \
   && make storage_server.repo
 
 FROM python:2.7
