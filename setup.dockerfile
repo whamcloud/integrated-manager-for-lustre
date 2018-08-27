@@ -1,2 +1,2 @@
-FROM imlteam/manager-service-base:extract-nginx
+FROM imlteam/manager-service-base
 RUN python setup.py install
