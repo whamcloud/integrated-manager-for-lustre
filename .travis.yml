@@ -39,6 +39,10 @@ jobs:
       depth: 999999
     name: "Continuous Deployment (Docker)"
     script:
+      - sudo rm /usr/local/bin/docker-compose
+      - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+      - chmod +x docker-compose
+      - sudo mv docker-compose /usr/local/bin
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - docker build --rm -t imlteam/manager-service-base -f base.dockerfile .
       - docker push imlteam/manager-service-base
