@@ -90,6 +90,10 @@ services:
         delay: 5s
         window: 5s
     environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=chroma
+      - DB_USER=chroma
       - REALTIME_PORT=8888
       - SERVER_HTTP_URL=https://nginx:7443/
       - LOG_PATH=.
