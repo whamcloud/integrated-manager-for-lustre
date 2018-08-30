@@ -273,6 +273,8 @@ if [ -d %{_localstatedir}/lib/rpm-state/%{name}/ ]; then
     mkdir -p /var/lib/chroma/
     cp -rf %{_localstatedir}/lib/rpm-state/%{name}/* /var/lib/chroma/
     rm -rf %{_localstatedir}/lib/rpm-state/%{name}/
+    rm -rf /var/lib/chroma/repo/iml-agent
+    chroma-config bundle delete /var/lib/chroma/repo/iml-agent/7
 fi
 
 %triggerun -n python2-%{pypi_name} -- chroma-manager
