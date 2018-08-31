@@ -200,17 +200,20 @@ class Linux(Plugin):
     def teardown(self):
         log.debug("Linux.teardown")
 
-    def agent_session_continue(self, host_id, _):
+    def agent_session_continue(self, host_id, data):
         # The agent plugin sends us another full report when it thinks something has changed
-        self.agent_session_start(host_id, None, initial_scan=False)
+        self.agent_session_start(host_id, data, initial_scan=False)
 
-    def agent_session_start(self, host_id, _, initial_scan=True):
-        # devices = data
+    def agent_session_start(self, host_id, data, initial_scan=True):
         initiate_device_poll = False
         reported_device_node_paths = []
 
         fqdn = ManagedHost.objects.get(id=host_id).fqdn
         devices = get_devices(fqdn)
+
+        # use info from IML 4.0
+        if not devices and data:
+            devices = data
 
         for expected_item in [
                 'vgs', 'lvs', 'zfspools', 'zfsdatasets', 'devs', 'local_fs',
