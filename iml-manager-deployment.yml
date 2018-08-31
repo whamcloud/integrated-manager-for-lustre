@@ -1,0 +1,356 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iml-postgres-deployment
+  labels:
+    app: iml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: iml-postgres
+  template:
+    metadata:
+      name: iml-postgres
+      labels:
+        app: iml
+        run: iml-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:9.3
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: chroma
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iml-rabbit-deployment
+  labels:
+    app: iml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: iml-rabbit
+  template:
+    metadata:
+      name: iml-rabbit
+      labels:
+        app: iml
+        run: iml-rabbit
+    spec:
+      containers:
+        - name: rabbit
+          image: "rabbitmq:3.6-management"
+          ports:
+            - containerPort: 5672
+            - containerPort: 15671
+            - containerPort: 15672
+          env: 
+            - name: RABBITMQ_DEFAULT_USER
+              value: chroma
+            - name: RABBITMQ_DEFAULT_PASS
+              value: chroma123
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: chromavhost
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iml-manager-deployment
+  labels:
+    app: iml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: iml-manager
+  template:
+    metadata:
+      name: iml-manager
+      labels:
+        env: iml
+        run: iml-manager
+    spec:
+      initContainers:
+        - name: postgres-check
+          image: postgres:9.3
+          command: ['sh', '-c', 
+            'until psql -h "iml-postgres" -U "chroma" -c "\q"; 
+            do echo waiting for database; sleep 2; done;']
+        - name: rabbit-check
+          image: "appropriate/curl"
+          command: ['sh', '-c', 
+            'until curl --fail http://chroma:chroma123@iml-rabbit:15672/api/aliveness-test/chromavhost/; 
+            do echo waiting for rabbit; sleep 2; done;']
+        - name: static-copy
+          image: "imlteam/manager-nginx"
+          command: ['sh', '-c', 'cp -r /usr/lib/iml-manager/* /static-config1/ && cp -r /usr/lib/node_modules/@iml/* /static-config2/ && echo ls -l /static{1,2}']
+          volumeMounts:
+            - name: static-config1
+              mountPath: /static-config1
+            - name: static-config2
+              mountPath: /static-config2
+        - name: iml-setup
+          image: imlteam/manager-setup
+          command: ['sh', '-c', 'chroma-config container-setup admin lustre']
+          env:
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+      containers:
+        - name: nginx
+          imagePullPolicy: Never
+          image: "imlteam/manager-nginx:test"
+          ports:
+            - containerPort: 7443
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: SSL_PATH
+              value: '/var/lib/chroma'
+            - name: VIEW_SERVER_PROXY_PASS
+              value: http://127.0.0.1:8889
+            - name: HTTP_API_PROXY_PASS
+              value: http://127.0.0.1:8001
+            - name: REALTIME_PROXY_PASS
+              value: http://127.0.0.1:8888
+            - name: HTTP_AGENT_PROXY_PASS
+              value: http://127.0.0.1:8002
+            - name: DEVICE_AGGREGATOR_PORT
+              value: '8008'
+            - name: REPO_PATH
+              value: /var/lib/chroma/repo
+            - name: SRCMAP_REVERSE_PROXY_PASS
+              value: http://127.0.0.1:8082
+            - name: DEVICE_AGGREGATOR_PROXY_PASS
+              value: http://127.0.0.1:8083
+            - name: UPDATE_HANDLER_PROXY_PASS
+              value: http://127.0.0.1:8080
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+              readOnly: true
+        - name: realtime
+          image: "imlteam/realtime"
+          env:
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: DB_NAME
+              value: chroma
+            - name: DB_USER
+              value: chroma
+            - name: REALTIME_PORT
+              value: '8888'
+            - name: SERVER_HTTP_URL
+              value: https://127.0.0.1:7443/
+        - name: update-handler
+          image: "imlteam/iml-update-check"
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+          env:
+            - name: IML_CA_PATH
+              value: /var/lib/chroma/authority.crt
+        - name: srcmap-reverse
+          image: "imlteam/srcmap-reverse"
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: SOURCE_MAP_PATH
+              value: /usr/lib/iml-manager/iml-gui/main.*.js.map
+            - name: SRCMAP_REVERSE_PORT
+              value: '8082'
+          volumeMounts:
+            - name: static-config1
+              mountPath: /usr/lib/iml-manager/
+        - name: view-server
+          image: "imlteam/view-server"
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+            - name: static-config1
+              readOnly: true
+              mountPath: /usr/lib/iml-manager
+            - name: static-config2
+              readOnly: true
+              mountPath: /usr/lib/node_modules/@iml
+        - name: device-aggregator
+          image: "imlteam/device-aggregator"
+          env:
+            - name: AGGREGATOR_PORT
+              value: '8083'
+        - name: corosync
+          image: "imlteam/manager-corosync"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: gunicorn
+          image: "imlteam/manager-gunicorn"
+          env:
+            - name: USE_CONSOLE
+              value: '1'
+            - name: PROXY_HOST
+              value: 127.0.0.1
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+        - name: http-agent
+          image: "imlteam/manager-http-agent"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: job-scheduler
+          image: "imlteam/manager-job-scheduler"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: lustre-audit
+          image: "imlteam/manager-lustre-audit"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: plugin-runner
+          image: "imlteam/manager-plugin-runner"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+            - name: DEVICE_AGGREGATOR_URL
+              value: http://127.0.0.1:8083
+            - name: LOG_PATH
+              value: .
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: power-control
+          image: "imlteam/manager-power-control"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: stats
+          image: "imlteam/manager-stats"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+        - name: syslog
+          image: "imlteam/manager-syslog"
+          env:
+            - name: HTTPS_FRONTEND_PORT
+              value: '7443'
+            - name: DB_HOST
+              value: iml-postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: AMQP_BROKER_HOST
+              value: iml-rabbit
+            - name: SERVER_FQDN
+              value: 127.0.0.1
+            - name: LOG_PATH
+              value: .
+          volumeMounts:
+            - name: manager-config
+              mountPath: /var/lib/chroma
+      volumes:
+        - name: manager-config
+          emptyDir: {}
+        - name: static-config1
+          emptyDir: {}
+        - name: static-config2
+          emptyDir: {}

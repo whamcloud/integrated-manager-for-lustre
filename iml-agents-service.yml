@@ -1,0 +1,9 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: iml-agents
+spec:
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 443
