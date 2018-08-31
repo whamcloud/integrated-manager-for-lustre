@@ -19,7 +19,7 @@ services:
       retries: 5
       start_period: 10s
   rabbit:
-    image: "rabbitmq:3.6"
+    image: "rabbitmq:3.6-management"
     hostname: "rabbit"
     deploy:
       restart_policy:
@@ -37,9 +37,8 @@ services:
       interval: 5s
       retries: 5
       start_period: 10s
-    volumes:
-      - /etc/rabbitmq/
-      - /var/lib/rabbitmq/
+    ports:
+      - "15672:15672"
   nginx:
     image: "imlteam/manager-nginx"
     restart: "on-failure"
@@ -82,7 +81,7 @@ services:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   realtime:
     image: "imlteam/realtime"
-    restart: "on-failure"
+    restart: always
     hostname: "realtime"
     deploy:
       restart_policy:

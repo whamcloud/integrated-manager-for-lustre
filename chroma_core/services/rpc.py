@@ -30,6 +30,7 @@ import kombu.pools
 from kombu.common import maybe_declare
 from kombu.mixins import ConsumerMixin
 from kombu.messaging import Queue, Producer
+from kombu.entity import TRANSIENT_DELIVERY_MODE
 
 from chroma_core.services.log import log_register
 from chroma_core.services import _amqp_connection, _amqp_exchange
@@ -160,9 +161,21 @@ class RunOneRpc(threading.Thread):
                 django.db.connection.close()
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
+            def errback(exc, _):
+                log.info('RabbitMQ rpc got a temporary error. May retry. Error: %r', exc, exc_info=1)
+
+            retry_policy = {
+                'max_retries': 10,
+                'errback': errback
+            }
+
+            connection.ensure_connection(**retry_policy) 
+
             with Producer(connection) as producer:
-                maybe_declare(_amqp_exchange(), producer.channel)
-                producer.publish(result, serializer="json", routing_key=self.body['response_routing_key'], delivery_mode = 1, immedate = True, mandatory = True)
+
+                maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
+                producer.publish(result, serializer="json", routing_key=self.body['response_routing_key'],
+                                 delivery_mode=TRANSIENT_DELIVERY_MODE, retry=True, retry_policy=retry_policy, immedate=True, mandatory=True)
 
 
 class RpcServer(ConsumerMixin):
@@ -349,9 +362,19 @@ class RpcClient(object):
         """
         log.debug("send %s" % request['request_id'])
         request['response_routing_key'] = self._response_routing_key
+
+        def errback(exc, _):
+                log.info('RabbitMQ rpc got a temporary error. May retry. Error: %r', exc, exc_info=1)
+
+        retry_policy = {
+            'max_retries': 10,
+            'errback': errback
+        }
+
         with Producer(connection) as producer:
-            maybe_declare(_amqp_exchange(), producer.channel)
-            producer.publish(request, serializer="json", routing_key=self._request_routing_key, delivery_mode = 1)
+            maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
+            producer.publish(request, serializer="json", routing_key=self._request_routing_key,
+                             delivery_mode=TRANSIENT_DELIVERY_MODE, retry=True, retry_policy=retry_policy)
 
     def call(self, request, rpc_timeout = RESPONSE_TIMEOUT):
         request_id = request['request_id']
