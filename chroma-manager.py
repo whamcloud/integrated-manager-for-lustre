@@ -22,7 +22,7 @@ sys.path.insert(0, SITE_ROOT)
 # Always remember, there is such a thing as too many workers.
 # After a point your worker processes will start thrashing system resources decreasing the throughput of the entire system.
 import multiprocessing
-workers = max(multiprocessing.cpu_count() * 2 + 1, 8)
+workers = min(multiprocessing.cpu_count() * 2 + 1, 8)
 
 worker_class = 'gevent'
 
