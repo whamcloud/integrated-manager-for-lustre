@@ -54,9 +54,9 @@ Requires: python2-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Requires: iml-supervisor-status
-Requires: iml-gui
+Requires: iml-gui >= 6.3.3
 Requires: iml-srcmap-reverse
-Requires: iml-online-help
+Requires: iml-online-help >= 2.5.1
 Requires: createrepo
 Requires: python2-toolz
 Conflicts: chroma-agent
