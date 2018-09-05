@@ -7,3 +7,4 @@ pexpect
 mock==1.0.1
 nose==1.2.1
 nose-testconfig==0.8
+pep8==1.0.1
