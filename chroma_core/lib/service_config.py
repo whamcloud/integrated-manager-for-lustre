@@ -308,7 +308,13 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             controller = ServiceControl.create(service)
 
-            error = controller.start()
+            if controller.running:
+                if service.endswith('.target'):
+                    error = False
+                else:
+                    error = controller.reload()
+            else:
+                error = controller.start()
             if error:
                 log.error(error)
                 raise RuntimeError(error)
