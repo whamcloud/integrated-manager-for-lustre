@@ -508,7 +508,7 @@ class RealRemoteOperations(RemoteOperations):
                 xml.tostring(configuration))
 
             primatives = configuration.findall(
-                './configuration/resources/primitive')
+                './configuration/resources//primitive')
             self._test_case.assertTrue(
                 has_primitive(primatives, filesystem_name),
                 xml.tostring(configuration))
