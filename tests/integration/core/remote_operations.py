@@ -490,10 +490,10 @@ class RealRemoteOperations(RemoteOperations):
             for p in items:
                 if p.attrib['id'].startswith("%s-" % fs_name) and \
                    p.attrib['class'] == "ocf" and \
-                   ((p.attrib['provider'] in ["chroma", "heartbeat"]) and \
-                    p.attrib['type'] == "ZFS") or \
-                   (p.attrib['provider'] == "lustre" and \
-                    p.attrib['type'] == "Lustre"):
+                   ((p.attrib['provider'] in ["chroma", "heartbeat"] and \
+                     p.attrib['type'] == "ZFS") or \
+                    (p.attrib['provider'] == "lustre" and \
+                     p.attrib['type'] == "Lustre")):
                     return True
             return False
 
