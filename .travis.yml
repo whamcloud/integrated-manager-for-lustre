@@ -14,9 +14,21 @@ addons:
 jobs:
   include:
   - stage: test
-    env: Type='unit tests'
+    name: "Docker build Test"
+    script:
+      - sudo rm /usr/local/bin/docker-compose
+      - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+      - chmod +x docker-compose
+      - sudo mv docker-compose /usr/local/bin
+      - cd docker
+      - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
+      - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
+      - docker-compose build
+  - stage: test
+    name: "Unit Tests"
     install:
       - pip install -r requirements.txt
+      - pip install -r requirements.test
     before_script:
       - psql -c "CREATE USER chroma;" -U postgres
       - psql -c "ALTER USER chroma CREATEDB;" -U postgres
@@ -24,19 +36,13 @@ jobs:
     script:
       - export IML_DISABLE_THREADS=1
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
+      - echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
       - python manage.py test tests/unit/
-  - stage: cd
-    git:
-      depth: 999999
-    env: Type='Continuous Deployment'
-    script:
-      - set |grep TRAVIS
-      - include/travis/copr-deploy.sh prepare
-      - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
   - stage: test
-    env: Type='behave tests'
+    name: "Behave tests"
     install:
       - pip install -r requirements.txt
+      - pip install -r requirements.test
     before_script:
       - psql -c "CREATE USER chroma;" -U postgres
       - psql -c "ALTER USER chroma CREATEDB;" -U postgres
@@ -45,10 +51,34 @@ jobs:
       - export IML_DISABLE_THREADS=1
       - behave --format plain tests/feature/cli/features
   - stage: test
-    env: Type='service tests'
+    name: "Service tests"
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
+  - stage: cd
+    git:
+      depth: 999999
+    name: "Continuous Deployment (Copr)"
+    script:
+      - include/travis/copr-deploy.sh prepare
+      - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
+  - stage: cd
+    git:
+      depth: 999999
+    name: "Continuous Deployment (Docker)"
+    script:
+      - sudo rm /usr/local/bin/docker-compose
+      - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+      - chmod +x docker-compose
+      - sudo mv docker-compose /usr/local/bin
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - cd docker
+      - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
+      - docker push imlteam/manager-service-base
+      - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
+      - docker push imlteam/manager-nginx
+      - docker-compose build
+      - docker-compose push
 stages:
   - test
   - name: cd

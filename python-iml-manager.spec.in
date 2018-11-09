@@ -78,7 +78,7 @@ Requires:       policycoreutils-python
 Requires:       python2-gevent >= 1.0.1
 Requires:       system-config-firewall-base
 Requires:       nodejs >= 1:6.9.4-2
-Requires:       iml-gui
+Requires:       iml-gui >= 6.4.0
 Requires:       iml-old-gui
 Requires:       iml-srcmap-reverse
 Requires:       iml-online-help
@@ -91,6 +91,8 @@ Requires:       python2-toolz
 Requires:       iml-update-handler < 2
 Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
+Obsoletes:      chroma-manager
+Provides:       chroma-manager
 Obsoletes:      httpd
 Obsoletes:      mod_proxy_wstunnel
 Obsoletes:      mod_wsgi
@@ -144,6 +146,8 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 Summary:        Common libraries for Chroma Server
 Group:          System/Libraries
 Requires:       python2-iml-common1.4
+Obsoletes:      chroma-manager-libs
+Provides:       chroma-manager-libs
 
 %description -n     python2-%{pypi_name}-libs
 This package contains libraries for Chroma CLI and Chroma Server.
@@ -152,6 +156,8 @@ This package contains libraries for Chroma CLI and Chroma Server.
 Summary: Command-Line Interface for Chroma Server
 Group: System/Utility
 Requires: python2-iml-manager-libs = %{version}-%{release} python-argparse python-requests >= 2.6.0 python-tablib python-prettytable
+Obsoletes: chroma-manager-cli
+Provides: chroma-manager-cli
 
 %description -n     python2-%{pypi_name}-cli
 This package contains the Chroma CLI which can be used on a Chroma server
@@ -165,14 +171,6 @@ Requires: Django >= 1.4, Django < 1.5
 %description -n     python2-%{pypi_name}-integration-tests
 This package contains the Integrated Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
-
-%package -n     python2-%{pypi_name}-devel
-Summary: Contains stripped .py files
-Group: Development
-Requires: %{name} = %{version}-%{release}
-
-%description -n     python2-%{pypi_name}-devel
-This package contains the .py files stripped out of the production build.
 
 %pre
 for port in 80 443; do
@@ -196,7 +194,6 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 cp -a chroma-manager.py build/lib
 cp -a storage_server.repo build/lib
 cp -a chroma-manager.conf.template build/lib
-cp -a mime.types build/lib
 cp -a agent-bootstrap-script.template build/lib
 cp -a *.profile build/lib
 gzip -9 %{SOURCE3}
@@ -258,14 +255,31 @@ rm -rf $RPM_BUILD_ROOT
 
 %post -n python2-%{pypi_name}
 if [ $1 -eq 1 ]; then
+    systemctl enable nginx
+
     echo "Thank you for installing IML. To complete your installation, please"
     echo "run \"chroma-config setup\""
 fi
 
 if [ $1 -gt 1 ]; then
+    systemctl reload nginx
+
     echo "Thank you for updating IML. To complete your upgrade, please"
     echo "run \"chroma-config setup\""
 fi
+
+%posttrans -n python2-%{pypi_name}
+if [ -d %{_localstatedir}/lib/rpm-state/%{name}/ ]; then
+    mkdir -p /var/lib/chroma/
+    cp -rf %{_localstatedir}/lib/rpm-state/%{name}/* /var/lib/chroma/
+    rm -rf %{_localstatedir}/lib/rpm-state/%{name}/
+    rm -rf /var/lib/chroma/repo/iml-agent
+    chroma-config bundle delete /var/lib/chroma/repo/iml-agent/7
+fi
+
+%triggerun -n python2-%{pypi_name} -- chroma-manager
+mkdir -p %{_localstatedir}/lib/rpm-state/%{name}/
+cp -r /var/lib/chroma/* %{_localstatedir}/lib/rpm-state/%{name}/
 
 %preun -n python2-%{pypi_name}
 %systemd_preun iml-manager.target
@@ -322,7 +336,6 @@ fi
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
-%{manager_root}/mime.types
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/storage_server.repo

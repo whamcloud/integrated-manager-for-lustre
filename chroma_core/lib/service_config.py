@@ -31,6 +31,7 @@ from django.core.exceptions import ValidationError
 
 from tastypie.models import ApiKey
 
+from kombu.connection import BrokerConnection
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
@@ -49,8 +50,6 @@ except TypeError:
 log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
-
-IS_DOCKER = os.path.exists('/.dockerenv')
 
 
 class ServiceConfig(CommandLine):
@@ -165,7 +164,7 @@ class ServiceConfig(CommandLine):
     def configured(self):
         """Return True if the system has been configured far enough to present
         a user interface"""
-        return self._db_current() and self._users_exist()
+        return self._db_current() and self._users_exist() and self._rabbit_configured()
 
     def _setup_ntp(self, server):
         """
@@ -216,6 +215,15 @@ class ServiceConfig(CommandLine):
             raise RuntimeError(error)
 
         ntp_service.enable()
+
+    def _rabbit_configured(self):
+        # Data message should be forwarded to AMQP
+        try:
+            with BrokerConnection(settings.BROKER_URL) as conn:
+                c = conn.connect()
+                return c.connected
+        except socket.error:
+            return False
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
@@ -276,8 +284,10 @@ class ServiceConfig(CommandLine):
         'iml-corosync.service', 'iml-gunicorn.service',
         'iml-http-agent.service', 'iml-job-scheduler.service',
         'iml-lustre-audit.service', 'iml-plugin-runner.service',
-        'iml-power-control.service', 'iml-realtime.service',
-        'iml-stats.service', 'iml-syslog.service', 'iml-view-server.service'
+        'iml-power-control.service', 'iml-syslog.service',
+        'iml-stats.service', 'iml-view-server.service',
+        'iml-realtime.service', 'device-aggregator.socket', 
+        'iml-srcmap-reverse.socket'
     ]
 
     def _enable_services(self):
@@ -298,7 +308,13 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             controller = ServiceControl.create(service)
 
-            error = controller.start()
+            if controller.running:
+                if service.endswith('.target'):
+                    error = False
+                else:
+                    error = controller.reload()
+            else:
+                error = controller.start()
             if error:
                 log.error(error)
                 raise RuntimeError(error)
@@ -497,8 +513,7 @@ class ServiceConfig(CommandLine):
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
 
-            if not IS_DOCKER:
-                error = self._setup_pgsql(databases['default'], check_db_space)
+            error = self._setup_pgsql(databases['default'], check_db_space)
         else:
             log.info("DB already accessible")
 
@@ -562,9 +577,10 @@ class ServiceConfig(CommandLine):
             project_dir, 'chroma-manager.conf.template')
 
         nginx_settings = [
-            'APP_PATH', 'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
-            'HTTP_AGENT_PORT', 'HTTP_API_PORT', 'REALTIME_PORT', 'VIEW_SERVER_PORT',
-            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT'
+            'REPO_PATH', 'HTTP_FRONTEND_PORT', 'HTTPS_FRONTEND_PORT',
+            'HTTP_AGENT_PROXY_PASS', 'HTTP_API_PROXY_PASS', 'REALTIME_PROXY_PASS', 'VIEW_SERVER_PROXY_PASS',
+            'SSL_PATH', 'DEVICE_AGGREGATOR_PORT', 'UPDATE_HANDLER_PROXY_PASS',
+            'DEVICE_AGGREGATOR_PROXY_PASS', 'SRCMAP_REVERSE_PROXY_PASS'
         ]
 
         with open(conf_template, "r") as f:
@@ -595,12 +611,24 @@ class ServiceConfig(CommandLine):
             with open(x) as f:
                 register_profile(f)
 
+    def container_setup(self, username, password):
+        self._syncdb()
+        self._create_fake_bundle()
+        self._register_profiles()
+
+        self._populate_database(username, password)
+
+        self._setup_crypto()
+
+        self.try_shell(['python ./manage.py print-settings > /var/lib/chroma/iml-settings.conf'], shell=True)
+
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
 
         self._configure_selinux()
         self._configure_firewall()
+
         self.set_nginx_config()
 
         error = self._setup_database(check_db_space)
@@ -613,9 +641,11 @@ class ServiceConfig(CommandLine):
         self._populate_database(username, password)
 
         self._setup_ntp(ntp_server)
+        self._setup_crypto()
+
         self._setup_rabbitmq_service()
         self._setup_rabbitmq_credentials()
-        self._setup_crypto()
+
         self._enable_services()
         self._start_services()
 
@@ -656,12 +686,7 @@ class ServiceConfig(CommandLine):
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
-            'rabbitmq-server'
-        ]
-
-        if not IS_DOCKER:
-            interesting_services += ['postgresql']
+        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ['postgresql', 'rabbitmq-server']
 
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
@@ -904,6 +929,29 @@ def chroma_config():
             sys.exit(-1)
         else:
             log.info("\nSetup complete.")
+            sys.exit(0)
+    elif command == 'container-setup': 
+        def usage():
+            log.error("Usage: container-setup [username password]")
+            sys.exit(-1)
+
+        if len(sys.argv) == 2:
+            username = None
+            password = None
+        elif len(sys.argv) == 4:
+            username = sys.argv[2]
+            password = sys.argv[3]
+        else:
+            usage()
+ 
+        log.info("Starting container setup...\n")
+        errors = service_config.container_setup(username, password)
+
+        if errors: 
+            print_errors(errors) 
+            sys.exit(-1) 
+        else: 
+            log.info("\nContainer setup complete.") 
             sys.exit(0)
     elif command == 'dbsetup':
         if '--no-dbspace-check' in sys.argv:

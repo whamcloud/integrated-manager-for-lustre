@@ -488,10 +488,12 @@ class RealRemoteOperations(RemoteOperations):
 
         def has_primitive(items, fs_name):
             for p in items:
-                if p.attrib['class'] == "ocf" and \
-                   p.attrib['provider'] == "chroma" and \
-                   p.attrib['type'] == "Target" and \
-                   p.attrib['id'].startswith("%s-" % fs_name):
+                if p.attrib['id'].startswith("%s-" % fs_name) and \
+                   p.attrib['class'] == "ocf" and \
+                   ((p.attrib['provider'] in ["chroma", "heartbeat"] and \
+                     p.attrib['type'] == "ZFS") or \
+                    (p.attrib['provider'] == "lustre" and \
+                     p.attrib['type'] == "Lustre")):
                     return True
             return False
 
@@ -506,7 +508,7 @@ class RealRemoteOperations(RemoteOperations):
                 xml.tostring(configuration))
 
             primatives = configuration.findall(
-                './configuration/resources/primitive')
+                './configuration/resources//primitive')
             self._test_case.assertTrue(
                 has_primitive(primatives, filesystem_name),
                 xml.tostring(configuration))
@@ -859,7 +861,7 @@ class RealRemoteOperations(RemoteOperations):
         crm_resources = result.stdout.split('\n')
         targets = []
         for r in crm_resources:
-            if not re.search('chroma:Target', r):
+            if not re.search('lustre:Lustre', r):
                 continue
 
             target = r.split()[0]

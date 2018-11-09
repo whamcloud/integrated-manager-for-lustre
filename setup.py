@@ -30,7 +30,7 @@ setup(
     package_data={
         '': [
             ".chroma-manager.py", ".storage_server.repo",
-            ".chroma-manager.conf.template", ".mime.types"
+            ".chroma-manager.conf.template",
         ],
         'chroma_core': ["fixtures/default_power_types.json"],
         'polymorphic': ["COPYING"],

@@ -69,7 +69,8 @@ class TestHaClusterVolumes(ChromaHaTestCase):
         cluster_1_host = clusters[1]['peers'][0]
         test_volume = [v for v in self.get_list("/api/volume/")
                        if len(v['volume_nodes']) > 1 and
-                          v['status'] == "configured-ha"][0]
+                       v['usable_for_lustre'] == True and
+                       v['status'] == "configured-ha"][0]
         payload = {'id': test_volume['id'], 'nodes': []}
         for vn in test_volume['volume_nodes']:
             if str(vn['host_id']) == str(cluster_0_host['id']):

@@ -16,6 +16,10 @@
     "external": [
       "python2-iml-agent-management",
       "kernel-devel-lustre",
+      "pcs",
+      "fence-agents",
+      "fence-agents-virsh",
+      "lustre-resource-agents",
       "lustre-ldiskfs-zfs"
     ]
   },

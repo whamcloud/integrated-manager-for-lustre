@@ -1,0 +1,12 @@
+.github
+benchmark
+example_storage_plugin_package
+tests
+Vagrantfile
+vagrant-virsh
+requirements.dev
+*.service
+*.dockerfile
+logrotate.cfg
+licenses
+docker-compose.yml

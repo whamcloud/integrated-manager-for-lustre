@@ -1,0 +1,41 @@
+version: "3.7"
+services:
+  postgres:
+    restart: on-failure
+  rabbit:
+    restart: on-failure
+  nginx:
+    restart: on-failure
+  update-handler:
+    restart: on-failure
+  realtime:
+    restart: on-failure
+  srcmap-reverse:
+    restart: on-failure
+  view-server:
+    restart: on-failure
+  device-aggregator:
+    restart: on-failure
+  corosync:
+    restart: on-failure
+  gunicorn:
+    restart: on-failure
+  http-agent:
+    restart: on-failure
+  job-scheduler:
+    restart: on-failure
+  lustre-audit:
+    restart: on-failure
+  plugin-runner:
+    restart: on-failure
+  power-control:
+    restart: on-failure
+  stats:
+    restart: on-failure
+  syslog:
+    restart: on-failure
+  setup:
+    restart: on-failure
+secrets:
+  iml_pw:
+    file: /tmp/iml_pw

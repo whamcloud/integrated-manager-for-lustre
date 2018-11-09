@@ -14,7 +14,7 @@ SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 if sys.version_info < (2, 6, 5):
     raise EnvironmentError("Python >= 2.6.5 is required")
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 APP_PATH = '/usr/share/chroma-manager'
@@ -23,19 +23,35 @@ REPO_PATH = '/var/lib/chroma/repo'
 
 HTTP_FRONTEND_PORT = 80
 
-HTTPS_FRONTEND_PORT = 443
+HTTPS_FRONTEND_PORT = os.getenv('HTTPS_FRONTEND_PORT', 443)
 
 HTTP_AGENT_PORT = 8002
 
+PROXY_HOST = os.getenv('PROXY_HOST', '127.0.0.1')
+
+HTTP_AGENT_PROXY_PASS = 'http://{}:{}'.format(PROXY_HOST, HTTP_AGENT_PORT)
+
 HTTP_API_PORT = 8001
+
+HTTP_API_PROXY_PASS = 'http://{}:{}'.format(PROXY_HOST, HTTP_API_PORT)
 
 REALTIME_PORT = 8888
 
+REALTIME_PROXY_PASS = 'http://{}:{}'.format(PROXY_HOST, REALTIME_PORT)
+
 VIEW_SERVER_PORT = 8889
+
+VIEW_SERVER_PROXY_PASS = 'http://{}:{}'.format(PROXY_HOST, VIEW_SERVER_PORT)
 
 SSL_PATH = '/var/lib/chroma'
 
 DEVICE_AGGREGATOR_PORT = 8008
+
+UPDATE_HANDLER_PROXY_PASS = 'http://unix:/var/run/iml-update-handler.sock'
+
+DEVICE_AGGREGATOR_PROXY_PASS = 'http://unix:/var/run/device-aggregator.sock'
+
+SRCMAP_REVERSE_PROXY_PASS = 'http://unix:/var/run/iml-srcmap-reverse.sock'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -47,10 +63,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',  # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'chroma',                 # Or path to database file if using sqlite3.
-        'USER': 'chroma',                  # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'USER': 'chroma',                 # Not used with sqlite3.
+        'PASSWORD': '',                   # Not used with sqlite3.
+        'HOST': os.getenv('DB_HOST', ''), # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': os.getenv('DB_PORT', ''), # Set to empty string for default. Not used with sqlite3.
         'OPTIONS': {}
     }
 }
@@ -133,8 +149,9 @@ TEMPLATE_DIRS = (
 AMQP_BROKER_USER = "chroma"
 AMQP_BROKER_PASSWORD = "chroma123"
 AMQP_BROKER_VHOST = "chromavhost"
+AMQP_BROKER_HOST = os.getenv("AMQP_BROKER_HOST", "localhost")
 
-BROKER_URL = "amqp://%s:%s@localhost:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_VHOST)
+BROKER_URL = "amqp://%s:%s@%s:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_HOST, AMQP_BROKER_VHOST)
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -146,11 +163,10 @@ INSTALLED_APPS = (
     'tastypie',
     'chroma_core',
     'chroma_api',
-    'chroma_help',
-    'benchmark'
+    'chroma_help'
 )
 
-OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose']
+OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose', 'benchmark']
 for app in OPTIONAL_APPS:
     import imp
     try:
@@ -210,7 +226,7 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 # Argument to mkfs.ext4 '-J' option
 JOURNAL_SIZE = "2048"
 
-LOG_PATH = "/var/log/chroma"
+LOG_PATH = os.getenv("LOG_PATH", "/var/log/chroma")
 
 CRYPTO_FOLDER = "/var/lib/chroma"
 
@@ -289,11 +305,14 @@ DBLOG_LW = 1000000
 # In development, where to serve repos from
 DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settings'].__file__)), 'repo')
 
+SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
+
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
-SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
+SERVER_HTTP_URL = "https://%s:%s" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
 
-LOCAL_DEVICE_AGGREGATOR_URL = "http://127.0.0.1:{}/device-aggregator".format(DEVICE_AGGREGATOR_PORT)
+DEVICE_AGGREGATOR_URL = os.getenv(
+    "DEVICE_AGGREGATOR_URL", "http://{}:{}/device-aggregator".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT))
 
 # Supported power control agents
 SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh', 'fence_vbox']
