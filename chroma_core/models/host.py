@@ -1430,6 +1430,10 @@ class UpdatePackagesStep(RebootIfNeededStep):
             # and not running,
             self.invoke_agent(kwargs['host'], 'start_pacemaker')
 
+class UpdateProfileStep(RebootIfNeededStep):
+    def run(self, kwargs):
+        self.invoke_agent(kwargs['host'], 'set_profile',
+                          {'profile_json', json.dumps(kwargs['profile'].as_dict)})
 
 class UpdateYumFileStep(RebootIfNeededStep):
     def run(self, kwargs):
@@ -1483,6 +1487,8 @@ proxy=_none_
                 (UpdatePackagesStep, {'host': self.host,
                                       'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name') if b['bundle_name'] != "external"],
                                       'packages': list(self.host.server_profile.packages)}),
+                (UpdateProfileStep, {'host': self.host,
+                                     'profile': self.host.server_profile }),
                 (RebootIfNeededStep, {'host': self.host,
                                       'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})]
 
