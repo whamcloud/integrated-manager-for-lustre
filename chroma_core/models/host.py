@@ -1431,6 +1431,9 @@ class UpdatePackagesStep(RebootIfNeededStep):
             self.invoke_agent(kwargs['host'], 'start_pacemaker')
 
 class UpdateProfileStep(RebootIfNeededStep):
+    '''
+    Update profile definition on node.
+    '''
     def run(self, kwargs):
         self.invoke_agent(kwargs['host'], 'set_profile',
                           {'profile_json', json.dumps(kwargs['profile'].as_dict)})
