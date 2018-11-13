@@ -72,6 +72,7 @@ class ServerProfile(models.Model):
 
         for field in self._meta.fields:
             result[field.name] = getattr(self, field.name)
+        result['packages'] = list(self.packages)
 
         return result
 
