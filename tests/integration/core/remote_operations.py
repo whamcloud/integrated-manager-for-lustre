@@ -974,89 +974,49 @@ class RealRemoteOperations(RemoteOperations):
             address = server['address']
 
             if self.is_worker(server):
-                logger.info("%s is configured as a worker -- skipping." %
-                            server['address'])
+                logger.info("{} is configured as a worker -- skipping.".format(address))
                 continue
 
-            if self.has_pacemaker(server):
-                firewall = RemoteFirewallControl.create(
-                    address, self._ssh_address_no_check)
-
-                if config.get('pacemaker_hard_reset', False):
-                    clear_ha_script_file = os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)),
-                        "clear_ha_el%s.sh" % re.search(
-                            '\d', server['distro']).group(0))
-
-                    with open(clear_ha_script_file, 'r') as clear_ha_script:
-                        result = self._ssh_address(
-                            address, "ring1_iface=%s\n%s" %
-                            (server['corosync_config']['ring1_iface'],
-                             clear_ha_script.read()))
-                        logger.info(
-                            "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
-                            % (server['nodename'], result.rc, result.stdout,
-                               result.stderr))
-
-                        if result.rc != 0:
-                            logger.info(
-                                "clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
-                                % (server['nodename'], result.rc,
-                                   result.stdout, result.stderr))
-                            raise RuntimeError(
-                                "Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
-                                % (server, result.rc, result.stdout,
-                                   result.stderr))
-
-                    self._ssh_address(address,
-                                      firewall.remote_add_port_cmd(22, 'tcp'))
-                    self._ssh_address(address,
-                                      firewall.remote_add_port_cmd(988, 'tcp'))
-
-                    self.unmount_lustre_targets(server)
-                else:
-                    crm_targets = self.get_pacemaker_targets(server)
-
-                    # Stop targets and delete targets
-                    for target in crm_targets:
-                        self._ssh_address(
-                            address,
-                            'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped'
-                            % target)
-                    for target in crm_targets:
-                        self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                        self._ssh_address(address,
-                                          'pcs resource delete %s' % target)
-                        self._ssh_address(address,
-                                          'crm_resource -C -r %s' % target)
-
-                    # Verify no more targets
-                    self._test_case.wait_until_true(
-                        lambda: not self.get_pacemaker_targets(server))
-
-                    # remove firewall rules previously added for corosync
-                    mcast_port = self.get_corosync_port(server['fqdn'])
-                    if mcast_port:
-                        self._ssh_address(address,
-                                          firewall.remote_remove_port_cmd(
-                                              mcast_port, 'udp'))
-
-                rpm_q_result = self._ssh_address(
-                    address, "rpm -q chroma-agent", expected_return_code=None)
-                if rpm_q_result.rc == 0:
-                    self.stop_agents([address])
-                    self._ssh_address(
-                        address,
-                        '''
-                        rm -rf /var/lib/chroma/*;
-                        ''',
-                        expected_return_code=
-                        None  # Keep going if it failed - may be none there.
-                    )
-            else:
+            if not self.has_pacemaker(server):
                 logger.info(
-                    "%s does not appear to have pacemaker - skipping any removal of targets."
-                    % address)
+                    "{} does not appear to have pacemaker - skipping any removal of targets.".format(address))
+                continue
+
+            firewall = RemoteFirewallControl.create(
+                address, self._ssh_address_no_check)
+
+
+            clear_ha_script_file = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "clear_ha_el7.sh")
+
+            with open(clear_ha_script_file, 'r') as clear_ha_script:
+                result = self._ssh_address(
+                    address, "ring1_iface=%s\n%s" %
+                    (server['corosync_config']['ring1_iface'],
+                        clear_ha_script.read()))
+                logger.info(
+                    "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
+                    % (server['nodename'], result.rc, result.stdout,
+                        result.stderr))
+
+                if result.rc != 0:
+                    logger.info(
+                        "clear_ha script on %s failed with exit code %s.  stdout:\n%s\nstderr:\n%s"
+                        % (server['nodename'], result.rc,
+                            result.stdout, result.stderr))
+                    raise RuntimeError(
+                        "Failed clear_ha script on '%s'!\nrc: %s\nstdout: %s\nstderr: %s"
+                        % (server, result.rc, result.stdout,
+                            result.stderr))
+
+            self._ssh_address(address,
+                                firewall.remote_add_port_cmd(22, 'tcp'))
+            self._ssh_address(address,
+                                firewall.remote_add_port_cmd(988, 'tcp'))
+
+            self.unmount_lustre_targets(server)
+
 
     def clear_lnet_config(self, server_list):
         """
