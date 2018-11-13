@@ -1,8 +1,10 @@
 #!/bin/bash
 
 set -e
-pcs cluster stop --all
 
+if pcs status ; then
+    pcs cluster stop --all
+fi
 
 # figure it out for ourselves if we can
 # otherwise the caller needs to have set it
