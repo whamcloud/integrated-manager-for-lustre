@@ -1015,8 +1015,6 @@ class RealRemoteOperations(RemoteOperations):
             self._ssh_address(address,
                                 firewall.remote_add_port_cmd(988, 'tcp'))
 
-            self.unmount_lustre_targets(server)
-
 
     def clear_lnet_config(self, server_list):
         """
