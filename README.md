@@ -7,7 +7,7 @@ Simple, but powerful, management tools that provide a unified, consistent view o
 
 ## IML Intro Video
 
-[![IML Intro Video](media/iml_overview_title_and_play.png)](https://vimeo.com/user91737155/review/300826941/0f2d85591e)
+[![IML Intro Video](media/iml_overview_title_and_play.png)](https://vimeo.com/300826941)
 
 ## Online Help
 
