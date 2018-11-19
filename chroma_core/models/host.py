@@ -1434,9 +1434,11 @@ class UpdateProfileStep(RebootIfNeededStep):
     '''
     Update profile definition on node.
     '''
+    database = True
+
     def run(self, kwargs):
         self.invoke_agent(kwargs['host'], 'set_profile',
-                          {'profile_json', json.dumps(kwargs['profile'].as_dict)})
+                          {'profile_json': json.dumps(kwargs['profile'].as_dict)})
 
 class UpdateYumFileStep(RebootIfNeededStep):
     def run(self, kwargs):
