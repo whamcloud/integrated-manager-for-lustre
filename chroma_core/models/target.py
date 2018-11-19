@@ -858,7 +858,7 @@ class MountOrImportStep(Step):
             # in the case that the volume node is missing, attempt to import target volume
             self.invoke_agent_expect_result(kwargs['host'],
                                             'import_target',
-                                            {'device_type': ('linux' if device_type == 'ext4' else device_type),
+                                            {'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type),
                                              'path': kwargs['target'].volume.label,
                                              'pacemaker_ha_operation': False})
         else:
@@ -1102,7 +1102,7 @@ class StartTargetJob(StateChangeJob):
                                                      self.target.best_available_host(),
                                                      False)),
                 (UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
+                                            'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type)}),
                 (MountOrImportStep,
                  MountOrImportStep.create_parameters(self.target,
                                                      self.target.best_available_host(),
@@ -1145,7 +1145,7 @@ class StopTargetJob(StateChangeJob):
         # Update MTMs before attempting to stop/unmount
         device_type = self.target.volume.filesystem_type
         return [(UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type == 'ext4' else device_type)}),
+                                            'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type)}),
                 (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
