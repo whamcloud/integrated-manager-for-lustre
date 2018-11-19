@@ -1,9 +1,10 @@
 #!/bin/bash
 
 set -e
-systemctl stop pcsd pacemaker corosync
-systemctl disable pcsd pacemaker corosync
 
+if pcs status ; then
+    pcs cluster stop --all
+fi
 
 # figure it out for ourselves if we can
 # otherwise the caller needs to have set it
@@ -12,6 +13,9 @@ if [ -f /etc/corosync/corosync.conf ]; then
 fi
 
 ifconfig "$ring1_iface" 0.0.0.0 down
+
+pcs cluster destroy
+systemctl disable --now pcsd pacemaker corosync
 
 rm -f /etc/sysconfig/network-scripts/ifcfg-"$ring1_iface"
 rm -f /etc/corosync/corosync.conf
