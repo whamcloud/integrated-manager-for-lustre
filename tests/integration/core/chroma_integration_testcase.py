@@ -248,7 +248,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         # Setup pacemaker debugging
         self.execute_simultaneous_commands(
-            ['echo PCMK_debug=pengine,cib,stonith-ng >> /etc/sysconfig/pacemker',
+            ['echo PCMK_debug=pengine,cib,stonith-ng >> /etc/sysconfig/pacemaker',
              'systemctl try-restart pacemaker'],
             [x['fqdn'] for x in new_hosts],
             'Set pacemaker debug for test',
