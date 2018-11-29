@@ -1,14 +1,3 @@
-[ngompa-dnf-el7]
-name=Copr repo for dnf-el7 owned by ngompa
-baseurl=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/epel-7-$basearch/
-type=rpm-md
-skip_if_unavailable=True
-gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/ngompa/dnf-el7/pubkey.gpg
-repo_gpgcheck=0
-enabled=1
-enabled_metadata=1
-
 [lustre]
 name=Lustre Server
 baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.5/el7/server/
