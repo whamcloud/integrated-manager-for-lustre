@@ -25,6 +25,12 @@ class TestCorosync(ChromaIntegrationTestCase):
 
         self.server_configs.extend(self.add_hosts([server['address'] for server in self.TEST_SERVERS[len(self.server_configs):len(self.server_configs) + n_hosts]]))
 
+        def iml_says_pacemakers_running():
+            xs = self.get_list("/api/pacemaker_configuration/")
+            return all([x['state'] == 'started' for x in xs])
+
+        self.wait_until_true(iml_says_pacemakers_running)
+
     # Check that hosts status is updated
     def _host_on_off_line(self, index, online):
         corosync_configuration = self.get_list("/api/corosync_configuration/",
