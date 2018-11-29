@@ -245,6 +245,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Verify the new hosts are now in the database and in the correct state
         new_hosts = self.get_hosts(addresses)
         self.assertEqual(len(new_hosts), len(addresses), new_hosts)
+
+        # Setup pacemaker debugging
+        self.execute_simultaneous_commands(
+            ['echo PCMK_debug=pengine,cib,stonith-ng >> /etc/sysconfig/pacemaker',
+             'systemctl try-restart pacemaker'],
+            [x['fqdn'] for x in new_hosts],
+            'Set pacemaker debug for test',
+            expected_return_code=None)
+
         for host in new_hosts:
             # Deal with pre-3.0 versions.
             if host['state'] in ['lnet_up', 'lnet_down', 'lnet_unloaded']:
