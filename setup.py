@@ -20,7 +20,7 @@ setup(
     url = 'https://pypi.python.org/pypi/iml-manager',
     license='MIT',
     description = 'The Integrated Manager for Lustre software Monitoring and Administration Interface',
-    long_description = open('README.txt').read(),
+    long_description = 'This is the Integrated Manager for Lustre software Monitoring and Adminstration Interface',
     packages = find_packages(exclude=excludes) + [''],
     # include_package_data would be far more convenient, but the top-level
     # package confuses setuptools. As a ridiculous hackaround, we'll game
