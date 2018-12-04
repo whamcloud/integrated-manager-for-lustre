@@ -715,6 +715,8 @@ class RealRemoteOperations(RemoteOperations):
         """
         Wait for the stonithed server to come back online
         """
+        import xml.etree.ElementTree as xml
+
         boot_server = self._fqdn_to_server_config(boot_fqdn)
         monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(
             monitor_fqdn)
@@ -728,27 +730,37 @@ class RealRemoteOperations(RemoteOperations):
             if self.host_contactable(boot_server['address']):
                 # If we have a peer to check then fall through to that, else
                 # drop out here
-                if monitor_server:
-                    # Verify other host knows it is no longer offline
-                    result = self._ssh_address(monitor_server['address'],
-                                               "crm_mon -1")
-                    node_status = result.stdout
-
-                    logger.info("Response running crm_mon -1 on %s:  %s" %
-                                (hostname, node_status))
-                    err = result.stderr
-                    if err:
-                        logger.error("    result.stderr:  %s" % err)
-                    if re.search('Online: \[.* %s .*\]' % hostname,
-                                 node_status):
-                        break
-                else:
-                    # No monitor server, take SSH offline-ness as evidence for being booted
+                if not monitor_server:
                     break
+
+                # Verify other host knows it is no longer offline
+                result = self._ssh_address(monitor_server['address'], "crm_mon -X")
+
+                logger.info("Response running crm_mon -1 on %s:\n%s", hostname, result.stdout)
+                err = result.stderr
+                if err:
+                    logger.error("    result.stderr:  "+err)
+
+                tree = xml.fromstring(result.stdout)
+                node = tree.find('.//node[@name="{}"]'.format(hostname))
+
+                self._test_case.assertIsNotNone(node, "Host %s not defined in crm_mon" % hostname)
+
+                # Wait for host to be online
+                if node.get('online') == 'true':
+                    resources = tree.findall('.//resource[@status]')
+                    # Done if all resources are started or no resources
+                    if not resources or not next((res for res in resources
+                                                  if res.get('status') != 'Started' and
+                                                  res.get('active') == 'true' and
+                                                  res.get('failed') == 'false'),
+                                                 False):
+                        break
+
             else:
                 if restart and running_time > UNATTENDED_BOOT_TIMEOUT and \
                    not restart_attempted:
-                    logger.info("attempting to restart %s" % boot_fqdn)
+                    logger.info("attempting to restart %s", boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
                         boot_server['status_command'],
@@ -756,8 +768,7 @@ class RealRemoteOperations(RemoteOperations):
                             'virsh_as_root', True))
                     node_status = result.stdout
                     if re.search('running', node_status):
-                        logger.info("%s seems to be running, but unresponsive"
-                                    % boot_fqdn)
+                        logger.info("%s seems to be running, but unresponsive", boot_fqdn)
                         self.kill_server(boot_fqdn)
                     self.start_server(boot_fqdn)
                     restart_attempted = True
