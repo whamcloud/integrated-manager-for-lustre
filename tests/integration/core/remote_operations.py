@@ -747,7 +747,7 @@ class RealRemoteOperations(RemoteOperations):
                 self._test_case.assertIsNotNone(node, "Host %s not defined in crm_mon" % hostname)
 
                 # Wait for host to be online
-                if node.get('online') == 'true':
+                if node.get('online') == 'true' and node.get('pending') == 'false':
                     resources = tree.findall('.//resource[@status]')
                     # Done if all resources are started or no resources
                     if not resources or not next((res for res in resources
