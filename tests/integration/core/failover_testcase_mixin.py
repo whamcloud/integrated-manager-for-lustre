@@ -47,6 +47,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         self.remote_operations.await_server_boot(primary_host['fqdn'], secondary_host['fqdn'])
 
         # Verify did not auto-failback
+        self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
     def chroma_controlled_failover(self, primary_host, secondary_host, filesystem_id, volumes_expected_hosts_in_normal_state, volumes_expected_hosts_in_failover_state):
