@@ -1,12 +1,12 @@
 [lustre]
 name=Lustre Server
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.5/el7/server/
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.6/el7/server/
 enabled=1
 gpgcheck=0
 
 [lustre-client]
 name=Lustre Client
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.5/el7/client/
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.6/el7/client/
 enabled=1
 gpgcheck=0
 
