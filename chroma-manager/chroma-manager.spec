@@ -56,7 +56,7 @@ Requires: nodejs >= 1:6.9.4-2
 Requires: iml-supervisor-status
 Requires: iml-gui >= 6.3.3
 Requires: iml-srcmap-reverse
-Requires: iml-online-help >= 2.5.1
+Requires: iml-online-help >= 2.5.2
 Requires: createrepo
 Requires: python2-toolz
 Conflicts: chroma-agent
