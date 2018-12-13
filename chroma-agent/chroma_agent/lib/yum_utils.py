@@ -42,13 +42,13 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
         cmd = ['dnf', 'update', '--allowerasing', '-y', '--exclude', 'kernel-debug'] + \
                repo_arg + list(packages)
     elif action == 'requires':
-        cmd = ['dnf', 'repoquery', '--requires'] + repo_arg + list(packages)
+        cmd = ['dnf', 'repoquery', '--requires', '--quiet'] + repo_arg + list(packages)
     elif action == 'query':
-        cmd = ['dnf', 'repoquery', '--available'] + repo_arg + list(packages)
+        cmd = ['dnf', 'repoquery', '--available', '--quiet'] + repo_arg + list(packages)
     elif action == 'repoquery':
-        cmd = ['dnf', 'repoquery', '--available'] + repo_arg + ['--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
+        cmd = ['dnf', 'repoquery', '--available', '--quiet'] + repo_arg + ['--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
     elif action == 'check-update':
-        cmd = ['dnf', 'repoquery', '--queryformat=%{name} %{version}-%{release}.'
+        cmd = ['dnf', 'repoquery', '--quiet' '--queryformat=%{name} %{version}-%{release}.'
                '%{arch} %{repoid}', '--upgrades'] + repo_arg + \
             list(packages)
     else:
