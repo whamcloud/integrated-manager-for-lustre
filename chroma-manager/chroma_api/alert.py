@@ -4,7 +4,7 @@
 
 
 from collections import defaultdict
-from chroma_api.utils import SeverityResource
+from chroma_api.utils import SeverityResource, DateSerializer
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState
@@ -250,6 +250,7 @@ class AlertResource(LongPollingAPI, SeverityResource):
                      'record_type': SeverityResource.ALL_FILTER_ENUMERATION}
 
         ordering = ['begin', 'end', 'active']
+        serializer = DateSerializer()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
