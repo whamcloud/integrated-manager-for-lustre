@@ -48,7 +48,7 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     elif action == 'repoquery':
         cmd = ['dnf', 'repoquery', '--available', '--quiet'] + repo_arg + ['--queryformat=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}']
     elif action == 'check-update':
-        cmd = ['dnf', 'repoquery', '--quiet' '--queryformat=%{name} %{version}-%{release}.'
+        cmd = ['dnf', 'repoquery', '--quiet', '--queryformat=%{name} %{version}-%{release}.'
                '%{arch} %{repoid}', '--upgrades'] + repo_arg + \
             list(packages)
     else:
