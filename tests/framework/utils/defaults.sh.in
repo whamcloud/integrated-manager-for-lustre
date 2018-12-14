@@ -22,9 +22,9 @@ set_distro_vars() {
             else
                 export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.4"}
             fi
-            export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.5"}
+            export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.6"}
         else
-            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.5"}
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.6"}
         fi
     else
        if ${upgrade_test}; then
@@ -121,7 +121,7 @@ set_defaults() {
     # or to build a Lustre Review job:
     #LUSTRE_REVIEW_BUILD="56451"
     # or build a GA release
-    LUSTRE_VERSION=2.10.5
+    LUSTRE_VERSION=2.10.6
 
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         JENKINS_JOB="lustre-reviews"
