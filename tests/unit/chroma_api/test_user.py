@@ -24,6 +24,7 @@ class TestUserResource(ChromaApiTestCase):
 
         muggle = User.objects.create_user("muggle", "", "muggle123")
         muggle.groups.add(Group.objects.get(name="filesystem_users"))
+
         muggle_data = self.deserialize(self.api_client.get("/api/user/%s/" % muggle.id))
         muggle_data["new_password1"] = "newpwd"
         muggle_data["new_password2"] = "newpwd"

@@ -115,7 +115,7 @@ class CommandPlan(object):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         for job in jobs:
             for dependency in self._dep_cache.get(job).all():
@@ -129,7 +129,7 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks)
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 job.save()
 
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))

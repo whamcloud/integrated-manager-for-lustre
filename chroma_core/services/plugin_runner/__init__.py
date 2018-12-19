@@ -31,7 +31,7 @@ class AgentPluginHandlerCollection(object):
         for handler in self.handlers.values():
             handler.remove_host_resources(host_id)
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def rebalance_host_volumes(self, host_id):
         from chroma_core.models import Volume
 

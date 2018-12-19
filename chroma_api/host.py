@@ -260,7 +260,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
         ``Meta.always_return_data = True``.
         """
         deserialized = self.deserialize(
-            request, request.raw_post_data, format=request.META.get("CONTENT_TYPE", "application/json")
+            request, request.body, format=request.META.get("CONTENT_TYPE", "application/json")
         )
         deserialized = self.alter_deserialized_list_data(request, deserialized)
 

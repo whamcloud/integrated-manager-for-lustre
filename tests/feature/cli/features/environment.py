@@ -60,10 +60,7 @@ def patch_test_host_contact_task(context, result_attrs={}):
 
 
 def before_all(context):
-    settings = chroma_settings()
-    from django.core.management import setup_environ
-
-    setup_environ(settings)
+    chroma_settings()
 
     ### Take a TestRunner hostage.
     # Use django_nose's runner so that we can take advantage of REUSE_DB=1.

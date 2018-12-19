@@ -79,7 +79,7 @@ def database_changed(sender, **kwargs):
     if table_name.startswith("chroma_core"):  # We are only interested in our tables, not the django ones.
         using = kwargs.pop("using", DEFAULT_DB_ALIAS)
 
-        if transaction.is_managed(using) is False:  # Not a managed transaction so the change has occurred
+        if transaction.get_autocommit(using):  # autocommit is on, so the change has occurred
             log.debug("Propagating tablechange for %s" % table_name)
             _propagate_table_change([table_name])
         else:  # This is a transaction and until it commits it has not happened

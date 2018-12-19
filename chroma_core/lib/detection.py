@@ -42,7 +42,7 @@ class DetectScan(object):
 
         # Must be run in a transaction to avoid leaving invalid things
         # in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         self.all_hosts_data = all_hosts_data
 

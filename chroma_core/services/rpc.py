@@ -24,7 +24,6 @@ import os
 import time
 import jsonschema
 
-from django.db import transaction
 import kombu
 import kombu.pools
 from kombu.common import maybe_declare
@@ -574,13 +573,6 @@ class ServiceRpcInterface(object):
     class for RPC.  In your subclass, define the `methods` class attribute with a list
     of RPC-callable attributes.
 
-    Note on database transactions: calling an RPC will commit any outstanding transaction, for two reasons:
-
-    - Anything set in the caller should be visible to the callee
-    - To prevent deadlocks, we must make sure the caller is not locking
-      anything that the callee may also lock.
-
-
     If you have a class `foo` and you want to expose some methods to the world:
 
     ::
@@ -620,9 +612,6 @@ class ServiceRpcInterface(object):
             raise AttributeError(name)
 
     def _call(self, fn_name, *args, **kwargs):
-        with transaction.commit_manually():
-            transaction.commit()
-
         # If the caller specified rcp_timeout then fetch it from the args and remove.
         rpc_timeout = kwargs.pop("rpc_timeout", RESPONSE_TIMEOUT)
 

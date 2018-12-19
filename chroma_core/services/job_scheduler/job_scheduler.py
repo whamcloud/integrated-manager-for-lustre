@@ -177,20 +177,13 @@ class JobProgress(threading.Thread, Queue.Queue):
         fn = getattr(self, "_%s" % msg[0])
         # Commit after each message to ensure the next message handler
         # doesn't see a stale transaction
-        with transaction.commit_on_success():
+        with transaction.atomic():
             fn(*msg[1], **msg[2])
 
     def stop(self):
         self._stopping.set()
 
     def complete_job(self, job_id, errored):
-        if django.db.connection.connection and django.db.connection.connection != DISABLED_CONNECTION:
-            log.info("Job %d: open DB connection during completion" % job_id)
-            # Ensure that any changes made by this thread are visible to other threads before
-            # we ask job_scheduler to advance
-            with transaction.commit_manually():
-                transaction.commit()
-
         self.put(("complete_job", (job_id, errored), {}))
 
     def __getattr__(self, name):
@@ -207,33 +200,33 @@ class JobProgress(threading.Thread, Queue.Queue):
         self._job_scheduler.advance()
 
     def _start_step(self, job_id, **kwargs):
-        with transaction.commit_on_success():
+        with transaction.atomic():
             result = StepResult(job_id=job_id, **kwargs)
             result.save()
         self._job_to_result[job_id] = result
 
     def _log(self, job_id, log_string):
         result = self._job_to_result[job_id]
-        with transaction.commit_on_success():
+        with transaction.atomic():
             result.log += log_string
             result.save()
 
     def _console(self, job_id, log_string):
         result = self._job_to_result[job_id]
-        with transaction.commit_on_success():
+        with transaction.atomic():
             result.console += log_string
             result.save()
 
     def _step_failure(self, job_id, backtrace):
         result = self._job_to_result[job_id]
-        with transaction.commit_on_success():
+        with transaction.atomic():
             result.state = "failed"
             result.backtrace = backtrace
             result.save()
 
     def _step_success(self, job_id, step_result):
         result = self._job_to_result[job_id]
-        with transaction.commit_on_success():
+        with transaction.atomic():
             result.state = "success"
             result.result = json.dumps(step_result)
             result.save()
@@ -749,13 +742,13 @@ class JobScheduler(object):
 
     def set_state(self, object_ids, message, run):
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = self.CommandPlan.command_set_state(object_ids, message)
             if run:
                 self.progress.advance()
         return command.id
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def advance(self):
         with self._lock:
             self._run_next()
@@ -830,7 +823,7 @@ class JobScheduler(object):
         # and apply any fix_states
         self._completion_hooks(instance, updated_attrs=update_attrs.keys())
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
             notification_time = IMLDateTime.parse(time_serialized)
@@ -838,7 +831,7 @@ class JobScheduler(object):
 
             self._run_next()
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def run_jobs(self, job_dicts, message):
         with self._lock:
             result = self.CommandPlan.command_run_jobs(job_dicts, message)
@@ -880,7 +873,7 @@ class JobScheduler(object):
 
         return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def cancel_job(self, job_id):
         cancelled_thread = None
 
@@ -928,7 +921,7 @@ class JobScheduler(object):
 
         job = self._job_collection.get(job_id)
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 if not errored and not cancelled:
                     try:
                         job.on_success()
@@ -978,13 +971,13 @@ class JobScheduler(object):
 
                 self._complete_job(job, errored, cancelled)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._drain_notification_buffer()
                 self._run_next()
 
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs(
                     [
                         {
@@ -1001,7 +994,7 @@ class JobScheduler(object):
 
     def update_corosync_configuration(self, corosync_configuration_id, mcast_port, network_interface_ids):
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 # For now we only support 1 or 2 network configurations, jobs aren't so helpful at supporting lists
                 corosync_configuration = CorosyncConfiguration.objects.get(id=corosync_configuration_id)
 
@@ -1071,7 +1064,7 @@ class JobScheduler(object):
         with self._lock:
             from django.db import transaction
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem)
                 mount.mountpoint = mountpoint
                 mount.save()
@@ -1093,7 +1086,7 @@ class JobScheduler(object):
             filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data["filesystem"]))
             copytool_data["filesystem"] = filesystem
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 copytool = Copytool.objects.create(**copytool_data)
 
             # Add the copytool after the transaction commits
@@ -1107,7 +1100,7 @@ class JobScheduler(object):
         with self._lock:
             copytool.client_mount = mount
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 copytool.save()
 
             ObjectCache.update(copytool)
@@ -1122,7 +1115,7 @@ class JobScheduler(object):
             copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
             log.debug("Registering copytool %s with uuid %s" % (copytool, uuid))
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 copytool.register(uuid)
 
             ObjectCache.update(copytool)
@@ -1136,7 +1129,7 @@ class JobScheduler(object):
             copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
             log.debug("Unregistering copytool %s" % copytool)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 copytool.unregister()
 
             ObjectCache.update(copytool)
@@ -1169,7 +1162,7 @@ class JobScheduler(object):
             else:
                 mgt_id = mgt_data["id"]
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 mgs = ManagedMgs.objects.get(id=mgt_id)
                 fs = ManagedFilesystem(mgs=mgs, name=fs_data["name"])
                 fs.save()
@@ -1177,7 +1170,7 @@ class JobScheduler(object):
             # Now that the creation has committed, update ObjectCache
             ObjectCache.add(ManagedFilesystem, fs)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 chroma_core.lib.conf_param.set_conf_params(fs, fs_data["conf_params"])
 
                 mdts = []
@@ -1211,7 +1204,7 @@ class JobScheduler(object):
             for mount in mounts:
                 ObjectCache.add(ManagedTargetMount, mount)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, "available")],
                     "Creating filesystem %s" % fs_data["name"],
@@ -1237,7 +1230,7 @@ class JobScheduler(object):
                 else:
                     raise NotImplementedError(target_class)
 
-                with transaction.commit_on_success():
+                with transaction.atomic():
                     target, target_mounts = target_class.create_for_volume(
                         target_data["volume_id"], reformat=target_data.get("reformat", False), **create_kwargs
                     )
@@ -1253,7 +1246,7 @@ class JobScheduler(object):
             else:
                 command_description = "Creating %s targets" % len(targets)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = self.CommandPlan.command_set_state(
                     [
                         (ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, "mounted")
@@ -1320,7 +1313,7 @@ class JobScheduler(object):
                 else:
                     install_method = ManagedHost.INSTALL_SSHSKY
 
-                with transaction.commit_on_success():
+                with transaction.atomic():
                     server_profile = ServerProfile.objects.get(name=profile)
                     host = ManagedHost.objects.create(
                         state="undeployed",
@@ -1337,7 +1330,7 @@ class JobScheduler(object):
                 ObjectCache.add(LNetConfiguration, lnet_configuration)
                 ObjectCache.add(ManagedHost, host)
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = self.CommandPlan.command_set_state(
                     [
                         (
@@ -1370,7 +1363,7 @@ class JobScheduler(object):
         """
 
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 server_profile = ServerProfile.objects.get(pk=server_profile_id)
                 host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
 
@@ -1395,7 +1388,7 @@ class JobScheduler(object):
         server_profile = ServerProfile.objects.get(pk=server_profile_id)
 
         with self._lock:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 try:
                     # If there is already a host record (SSH-assisted host addition) then
                     # update it
@@ -1421,7 +1414,7 @@ class JobScheduler(object):
                     ObjectCache.add(LNetConfiguration, lnet_configuration)
                     ObjectCache.add(ManagedHost, host)
 
-                    with transaction.commit_on_success():
+                    with transaction.atomic():
                         command = self.CommandPlan.command_set_state(
                             [
                                 (
@@ -1639,7 +1632,7 @@ class JobScheduler(object):
                     )
                 )
 
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 command = Command.objects.create(message="Configuring NIDS for hosts")
                 self.CommandPlan.add_jobs(jobs, command)
 
@@ -1667,7 +1660,7 @@ class JobScheduler(object):
                     TriggerPluginUpdatesJob(host_ids=json.dumps(host_ids), plugin_names_json=json.dumps(plugin_names))
                 ]
 
-                with transaction.commit_on_success():
+                with transaction.atomic():
                     command = Command.objects.create(
                         message="%s triggering updates from agents"
                         % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn

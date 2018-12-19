@@ -25,31 +25,31 @@ CHARFIELD_MAX_LENGTH = 1024
 class DeletableDowncastableManager(DowncastManager):
     """Filters results to return only not-deleted records"""
 
-    def get_query_set(self):
-        return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted=True)
+    def get_queryset(self):
+        return super(DeletableDowncastableManager, self).get_queryset().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
-        return super(DeletableDowncastableManager, self).get_query_set()
+        return super(DeletableDowncastableManager, self).get_queryset()
 
 
 class DeletableManager(models.Manager):
     """Filters results to return only not-deleted records"""
 
-    def get_query_set(self):
-        return super(DeletableManager, self).get_query_set().filter(not_deleted=True)
+    def get_queryset(self):
+        return super(DeletableManager, self).get_queryset().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
-        return super(DeletableManager, self).get_query_set()
+        return super(DeletableManager, self).get_queryset()
 
 
 def _make_deletable(metaclass, dct):
     def mark_deleted(self):
-        # If this is not within a managed transaction we must use commit_on_success to ensure that the object is
+        # If this is not within a managed transaction we must use atomic to ensure that the object is
         # only marked deleted if the updates to alerts also succeed
-        if transaction.is_managed():
+        if not transaction.get_autocommit():
             self._mark_deleted()
         else:
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 self._mark_deleted()
 
     def _mark_deleted(self):

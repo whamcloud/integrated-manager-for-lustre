@@ -53,6 +53,8 @@ DEVICE_AGGREGATOR_PROXY_PASS = "http://unix:/var/run/device-aggregator.sock"
 
 SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
 
+ALLOWED_HOSTS = ["*"]
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
@@ -136,6 +138,8 @@ TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + ("dj
 
 ROOT_URLCONF = "urls"
 
+ROOT_URLCONF = "urls"
+
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
@@ -177,12 +181,12 @@ if "django_nose" in INSTALLED_APPS:
     NOSE_ARGS = ["--logging-filter=-south"]
 
 MIDDLEWARE_CLASSES = (
-    "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "middleware.TastypieTransactionMiddleware",
 )
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

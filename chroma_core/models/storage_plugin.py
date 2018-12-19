@@ -27,7 +27,7 @@ class StoragePluginRecord(models.Model):
     """Reference to a module defining a BaseStoragePlugin subclass"""
 
     module_name = models.CharField(max_length=MAX_NAME_LENGTH)
-    internal = models.BooleanField()
+    internal = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("module_name",)
@@ -40,7 +40,7 @@ class StorageResourceClass(models.Model):
 
     storage_plugin = models.ForeignKey(StoragePluginRecord, on_delete=models.PROTECT)
     class_name = models.CharField(max_length=MAX_NAME_LENGTH)
-    user_creatable = models.BooleanField()
+    user_creatable = models.BooleanField(default=False)
 
     def __str__(self):
         return "%s/%s" % (self.storage_plugin.module_name, self.class_name)
@@ -250,7 +250,7 @@ class StorageResourceStatistic(models.Model):
                 bin_vals = dp["value"]
                 from django.db import transaction
 
-                with transaction.commit_on_success():
+                with transaction.atomic():
                     time = SimpleHistoStoreTime.objects.create(time=ts, storage_resource_statistic=self)
                     for i in range(0, len(stat_properties.bins)):
                         SimpleHistoStoreBin.objects.create(bin_idx=i, value=bin_vals[i], histo_store_time=time)

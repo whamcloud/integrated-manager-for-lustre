@@ -105,8 +105,9 @@ class ManagedTarget(StatefulObject):
     )
 
     reformat = models.BooleanField(
+        default=False,
         help_text="Only used during formatting, indicates that when formatting this target \
-        any existing filesystem on the Volume should be overwritten"
+        any existing filesystem on the Volume should be overwritten",
     )
 
     @property
@@ -573,7 +574,7 @@ class TargetRecoveryInfo(models.Model):
         ordering = ["id"]
 
     @staticmethod
-    @transaction.commit_on_success
+    @transaction.atomic
     def update(target, recovery_status):
         TargetRecoveryInfo.objects.filter(target=target).delete()
         instance = TargetRecoveryInfo.objects.create(target=target, recovery_status=json.dumps(recovery_status))
@@ -1315,7 +1316,7 @@ class PreFormatComplete(Step):
 
     def run(self, kwargs):
         job_log.info("%s passed pre-format check, allowing subsequent reformats" % kwargs["target"])
-        with transaction.commit_on_success():
+        with transaction.atomic():
             kwargs["target"].reformat = True
             kwargs["target"].save()
 
@@ -1744,7 +1745,7 @@ class ManagedTargetMount(models.Model):
     host = models.ForeignKey("ManagedHost")
     mount_point = models.CharField(max_length=512, null=True, blank=True)
     volume_node = models.ForeignKey("VolumeNode")
-    primary = models.BooleanField()
+    primary = models.BooleanField(default=False)
     target = models.ForeignKey("ManagedTarget")
 
     def save(self, force_insert=False, force_update=False, using=None):

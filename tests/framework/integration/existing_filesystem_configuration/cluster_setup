@@ -68,9 +68,9 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install pdsh on storage nodes
+# Install pdsh and lvm2 on storage nodes
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-yum -y install pdsh" | dshbak -c
+yum -y install pdsh lvm2" | dshbak -c
 
 # Install and setup manager
 if $JENKINS; then
@@ -97,6 +97,11 @@ mv /tmp/chroma_support.repo /etc/yum.repos.d/
 cd /tmp
 yum -y install \$(ls $ARCHIVE_NAME)
 expect install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}
+
+ # Enable rabbitmq management plugin for additional debug
+ rabbitmq-plugins enable rabbitmq_management
+ systemctl restart rabbitmq-server.service
+ chroma-config restart
 
 # override /usr/share/chroma-manager/storage_server.repo
 if [ -f /tmp/storage_server.repo.in ]; then

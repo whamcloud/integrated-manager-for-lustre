@@ -11,7 +11,6 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.alert import AlertSubscription
 from chroma_core.models.utils import STR_TO_SEVERITY
-from chroma_api.urls import api
 
 from tastypie.utils import trailing_slash
 from tastypie.resources import Resource
@@ -206,6 +205,8 @@ class AlertResource(LongPollingAPI, SeverityResource):
         return http.HttpNoContent()
 
     def dehydrate_alert_item(self, bundle):
+        from chroma_api.urls import api
+
         return api.get_resource_uri(bundle.obj.alert_item)
 
     def dehydrate_alert_item_str(self, bundle):

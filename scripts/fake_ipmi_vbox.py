@@ -80,10 +80,6 @@ if __name__ == "__main__":
     PowerControlDevice.objects.get_or_create(
         device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw
     )
-    try:
-        transaction.commit()
-    except transaction.TransactionManagementError:
-        pass
 
     print(
         """

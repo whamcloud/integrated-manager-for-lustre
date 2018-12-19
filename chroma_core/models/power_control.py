@@ -409,12 +409,6 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
         super(PowerControlDeviceOutlet, self).save(*args, **kwargs)
 
-        # Need to force a commit here to ensure that the updated outlet
-        # configuration is available to other threads (e.g. fence reconfig).
-        from django.db import transaction
-
-        transaction.commit()
-
         reconfigure = {"reconfigure_fencing": True}
         previous = old_self.host if old_self else None
         for host in self._hosts_for_fence_reconfiguration(self.host, previous):

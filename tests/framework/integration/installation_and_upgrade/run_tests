@@ -301,13 +301,6 @@ if [ \$existing_IML_version = \$upgraded_IML_version ]; then
     exit 1
 fi
 
-if [[ $TEST_DISTRO_VERSION =~ 6.* ]]; then
-    # install cman here to test that the fence-agents-iml package is being a
-    # duck-like replacement for fence-agents since cman depends on
-    # fence-agents
-    yum -y install cman
-fi
-
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 LOG_LEVEL = logging.DEBUG

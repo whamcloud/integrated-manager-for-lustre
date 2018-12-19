@@ -27,9 +27,7 @@ class TestEnableLongPolling(IMLUnitTestCase):
             "chroma_core.lib.long_polling.enable_long_polling._propagate_table_change", self.mock_propagate_table_change
         ).start()
 
-        self.is_managed = True
         self.mock_transaction = mock.MagicMock()
-        self.mock_transaction.is_enabled = lambda using: self.is_managed
         mock.patch("chroma_core.lib.long_polling.enable_long_polling.transaction", self.mock_transaction).start()
 
         self.mock_sender = mock.MagicMock()
@@ -58,14 +56,14 @@ class TestEnableLongPolling(IMLUnitTestCase):
 
         enable_long_polling.transaction = mock.MagicMock()
         enable_long_polling.transaction.connections = defaultdict(lambda: _commit_rollback())
-        self.is_managed = True
-        enable_long_polling.transaction.is_managed = lambda using: self.is_managed
+        self.using_autocommit = True
+        enable_long_polling.transaction.get_autocommit = lambda using: self.using_autocommit
 
         self.addCleanup(mock.patch.stopall)
 
     def test_unmanaged_changes_propagate(self):
         """Unmanged changes should propagate immediately"""
-        self.is_managed = False
+        self.using_autocommit = True
 
         enable_long_polling.database_changed(self.mock_sender)
 
@@ -73,6 +71,8 @@ class TestEnableLongPolling(IMLUnitTestCase):
 
     def test_managed_changes_batch(self):
         """Managed changes should propagate on commit"""
+        self.using_autocommit = False
+
         original_transaction_commit = {}
 
         for test_connection_name in self.test_connection_names:
@@ -136,6 +136,8 @@ class TestEnableLongPolling(IMLUnitTestCase):
 
     def test_managed_changes_rollback(self):
         """Managed changes should not propagate on rollback"""
+        self.using_autocommit = False
+
         original_transaction_rollback = {}
 
         for test_connection_name in self.test_connection_names:

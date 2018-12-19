@@ -351,7 +351,7 @@ def validate_token(key, credits=1):
     :return 2-tuple (<http response if error, else None>, <registration token if valid, else None>)
     """
     try:
-        with transaction.commit_on_success():
+        with transaction.atomic():
             token = RegistrationToken.objects.get(secret=key)
             if not token.credits:
                 log.warning("Attempt to register with exhausted token %s" % key)
@@ -484,7 +484,7 @@ def register(request, key):
         )
         return HttpResponse(status=400, content="")
 
-    with transaction.commit_on_success():
+    with transaction.atomic():
         # Isolate transaction to avoid locking ManagedHost table, this
         # is just a friendly pre-check and will be enforced again inside
         # job_scheduler.create_host
@@ -523,7 +523,7 @@ def register(request, key):
         server_profile_id=server_profile.pk,
     )
 
-    with transaction.commit_on_success():
+    with transaction.atomic():
         ClientCertificate.objects.create(host=host, serial=certificate_serial)
 
     # TODO: document this return format
