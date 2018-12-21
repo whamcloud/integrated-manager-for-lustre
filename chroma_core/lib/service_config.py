@@ -13,6 +13,7 @@ import time
 import os
 import json
 import glob
+import shutil
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -623,8 +624,9 @@ class ServiceConfig(CommandLine):
         # Many iml docker containers depend on the iml-settings file and its contents. However, redirecting the settings output
         # into /var/lib/chroma/iml-settings.conf is not sufficient as the > operator is not atomic (the file will be created without content). 
         # The mv command is atomic, thus the contents will be created in a temp file and then moved into /var/lib/chroma/iml-settings.conf.
-        self.try_shell(['python ./manage.py print-settings > /tmp/temp-settings.conf'], shell=True)
-        self.try_shell(['mv /tmp/temp-settings.conf /var/lib/chroma/iml-settings.conf'], shell=True)
+        f = open("/tmp/temp-settings.conf", "w")
+        self.try_shell(['python', './manage.py', 'print-settings'], mystdout=f)
+        shutil.move("/tmp/temp-settings.conf", "/var/lib/chroma/iml-settings.conf")
 
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
