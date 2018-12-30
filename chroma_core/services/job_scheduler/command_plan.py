@@ -129,8 +129,7 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks)
-            with transaction.atomic():
-                job.save()
+            job.save()
 
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
 
