@@ -3,7 +3,7 @@ anyjson==0.3.3
 Django==1.6.11
 django-extensions
 django-picklefield==0.1.9
-django-tastypie==0.9.16
+django-tastypie==0.12.2
 https://github.com/weholt/massiviu/archive/master.tar.gz
 gevent==1.3
 greenlet==0.4.14

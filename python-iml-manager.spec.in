@@ -59,6 +59,8 @@ Requires:       python-uuid
 Requires:       python-paramiko
 Requires:       python2-kombu >= 3.0.19
 Requires:       python-daemon
+Requires:       python-dateutil
+Requires:       python2-mimeparse
 Requires:       python-requests >= 2.6.0
 Requires:       python-networkx
 Requires:       python2-httpagentparser
@@ -70,7 +72,7 @@ Requires:       rabbitmq-server
 Requires:       ntp
 Requires:       Django >= 1.6, Django < 1.7
 Requires:       Django-south >= 0.7.4
-Requires:       django-tastypie = 0.9.16
+Requires:       python2-django-tastypie = 0.12.2
 Requires:       django-picklefield
 Requires:       python2-iml-manager-cli = %{version}-%{release}
 Requires:       iml_sos_plugin

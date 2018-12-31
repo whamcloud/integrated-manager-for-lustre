@@ -9,6 +9,6 @@ exclude = '''
   | _build
   | build
   | dist
-  | migrations
+  | south_migrations
 )/
 '''
