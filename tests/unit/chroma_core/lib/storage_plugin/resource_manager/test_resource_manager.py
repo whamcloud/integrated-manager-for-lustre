@@ -10,42 +10,44 @@ from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 
 
 class ResourceManagerTestCase(IMLUnitTestCase):
-    def setUp(self, plugin_name = 'linux'):
-        plugins_to_load = ['example_plugin',
-                           'linux',
-                           'linux_network',
-                           'subscription_plugin',
-                           'virtual_machine_plugin',
-                           'alert_plugin']
+    def setUp(self, plugin_name="linux"):
+        plugins_to_load = [
+            "example_plugin",
+            "linux",
+            "linux_network",
+            "subscription_plugin",
+            "virtual_machine_plugin",
+            "alert_plugin",
+        ]
 
         assert plugin_name in plugins_to_load
 
         super(ResourceManagerTestCase, self).setUp()
 
-        self.host = self._create_host(fqdn = 'myaddress.mycompany.com',
-                                      nodename = 'myaddress.mycompany.com',
-                                      address = 'myaddress.mycompany.com')
+        self.host = self._create_host(
+            fqdn="myaddress.mycompany.com", nodename="myaddress.mycompany.com", address="myaddress.mycompany.com"
+        )
 
         self.manager = load_plugins(plugins_to_load)
 
-        mock.patch('chroma_core.lib.storage_plugin.manager.storage_plugin_manager', self.manager).start()
+        mock.patch("chroma_core.lib.storage_plugin.manager.storage_plugin_manager", self.manager).start()
 
         self.resource_manager = ResourceManager()
 
         # Mock out the plugin queue otherwise we get all sorts of issues in ci. We really shouldn't
         # need all that ampq stuff just for the unit tests.
-        mock.patch('chroma_core.services.queue.AgentRxQueue').start()
+        mock.patch("chroma_core.services.queue.AgentRxQueue").start()
 
-        self.plugin = AgentPluginHandlerCollection(self.resource_manager).handlers[plugin_name]._create_plugin_instance(self.host)
+        self.plugin = (
+            AgentPluginHandlerCollection(self.resource_manager).handlers[plugin_name]._create_plugin_instance(self.host)
+        )
 
         self.addCleanup(mock.patch.stopall)
 
     def _create_host(self, fqdn, nodename, address):
-        host = ManagedHost.objects.create(fqdn = fqdn,
-                                          nodename = nodename,
-                                          address = address)
+        host = ManagedHost.objects.create(fqdn=fqdn, nodename=nodename, address=address)
 
-        LNetConfiguration.objects.create(host = host, state = 'lnet_down')
+        LNetConfiguration.objects.create(host=host, state="lnet_down")
 
         return host
 
@@ -70,6 +72,7 @@ class ResourceManagerTestCase(IMLUnitTestCase):
 
     def _make_global_resource(self, plugin_name, class_name, attrs):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(plugin_name, class_name)
         resource_record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
         resource = resource_record.to_resource()

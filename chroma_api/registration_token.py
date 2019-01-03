@@ -22,10 +22,11 @@ class TokenAuthorization(DjangoAuthorization):
     """
     Only allow filesystem_administrators and higher access to registration tokens
     """
+
     def read_list(self, object_list, bundle):
         request = bundle.request
 
-        if request.user.groups.filter(name__in = ['filesystem_administrators', 'superusers']).exists():
+        if request.user.groups.filter(name__in=["filesystem_administrators", "superusers"]).exists():
             return object_list
         else:
             return object_list.none()
@@ -33,7 +34,7 @@ class TokenAuthorization(DjangoAuthorization):
     def read_detail(self, object_list, bundle):
         request = bundle.request
 
-        if request.user.groups.filter(name__in = ['filesystem_administrators', 'superusers']).exists():
+        if request.user.groups.filter(name__in=["filesystem_administrators", "superusers"]).exists():
             return True
         else:
             raise Unauthorized("You are not allowed to access that resource.")
@@ -44,17 +45,18 @@ class RegistrationTokenValidation(Validation):
     Limit which fields are settable during POST and PATCH (because these are
     different sets, setting readonly on the resource fields won't work)
     """
+
     def is_valid(self, bundle, request=None):
         errors = {}
-        if request.method == 'POST':
-            ALLOWED_CREATION_ATTRIBUTES = ['expiry', 'credits', 'profile']
+        if request.method == "POST":
+            ALLOWED_CREATION_ATTRIBUTES = ["expiry", "credits", "profile"]
             for attr in bundle.data.keys():
                 if attr not in ALLOWED_CREATION_ATTRIBUTES:
                     errors[attr] = ["Forbidden during creation"]
-            if not 'profile' in bundle.data or not bundle.data['profile']:
-                errors['profile'] = ["Mandatory"]
+            if not "profile" in bundle.data or not bundle.data["profile"]:
+                errors["profile"] = ["Mandatory"]
         elif request.method == "PATCH":
-            READONLY_ATTRIBUTES = ['secret', 'expiry', 'credits']
+            READONLY_ATTRIBUTES = ["secret", "expiry", "credits"]
             for attr in bundle.data.keys():
                 if attr in READONLY_ATTRIBUTES:
                     if bundle.data[attr] != getattr(bundle.obj, attr):
@@ -73,28 +75,33 @@ class RegistrationTokenResource(CustomModelResource):
     PATCHs may only be passed 'cancelled'
     """
 
-    profile = ToOneField(ServerProfileResource, 'profile', null=False,
-                         help_text="Server profile to be used when setting up servers using this token")
+    profile = ToOneField(
+        ServerProfileResource,
+        "profile",
+        null=False,
+        help_text="Server profile to be used when setting up servers using this token",
+    )
 
     register_command = CharField(help_text="Command line to run on a storage server to register it using this token")
 
     def dehydrate_register_command(self, bundle):
-        server_profile = ServerProfileResource().get_via_uri(bundle.data['profile'], bundle.request)
+        server_profile = ServerProfileResource().get_via_uri(bundle.data["profile"], bundle.request)
 
-        return 'curl -k %sagent/setup/%s/%s | python' % (settings.SERVER_HTTP_URL, bundle.obj.secret, '?profile_name=%s' % server_profile.name)
+        return "curl -k %sagent/setup/%s/%s | python" % (
+            settings.SERVER_HTTP_URL,
+            bundle.obj.secret,
+            "?profile_name=%s" % server_profile.name,
+        )
 
     class Meta:
         object_class = RegistrationToken
         authentication = AnonymousAuthentication()
         authorization = TokenAuthorization()
         serializer = DateSerializer()
-        list_allowed_methods = ['get', 'post']
-        detail_allowed_methods = ['patch', 'get']
-        fields = ['id', 'secret', 'expiry', 'credits', 'cancelled', 'profile', 'register_command']
-        resource_name = 'registration_token'
-        queryset = RegistrationToken.objects.filter(
-            cancelled = False,
-            expiry__gt = IMLDateTime.utcnow(),
-            credits__gt = 0)
+        list_allowed_methods = ["get", "post"]
+        detail_allowed_methods = ["patch", "get"]
+        fields = ["id", "secret", "expiry", "credits", "cancelled", "profile", "register_command"]
+        resource_name = "registration_token"
+        queryset = RegistrationToken.objects.filter(cancelled=False, expiry__gt=IMLDateTime.utcnow(), credits__gt=0)
         validation = RegistrationTokenValidation()
         always_return_data = True

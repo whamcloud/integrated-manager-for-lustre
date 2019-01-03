@@ -5,6 +5,7 @@
 
 from tastypie.fields import RelatedField
 
+
 def dehydrate_related(self, bundle, related_resource, for_list=True):
     """
     Based on the ``full_resource``, returns either the endpoint or the data
@@ -20,7 +21,7 @@ def dehydrate_related(self, bundle, related_resource, for_list=True):
     dehydrate_flag_value = bundle.request.GET.get(dehydrate_flag_name, should_dehydrate_full_resource)
 
     # Now normalize it to actually be a boolean.
-    dehydrate = dehydrate_flag_value not in [False, 'false', 'False', 0, '0', None]
+    dehydrate = dehydrate_flag_value not in [False, "false", "False", 0, "0", None]
 
     if not dehydrate:
         # Be a good netizen.
@@ -28,9 +29,7 @@ def dehydrate_related(self, bundle, related_resource, for_list=True):
 
     # ZOMG extra data and big payloads.
     bundle = related_resource.build_bundle(
-        obj=related_resource.instance,
-        request=bundle.request,
-        objects_saved=bundle.objects_saved
+        obj=related_resource.instance, request=bundle.request, objects_saved=bundle.objects_saved
     )
 
     # We have to be careful of recursive expansions caused by users flags, so remove flag

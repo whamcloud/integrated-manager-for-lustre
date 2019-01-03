@@ -8,4 +8,5 @@ provided for use by BaseStoragePlugin subclasses"""
 
 
 from chroma_core.services import log_register
-storage_plugin_log = log_register('storage_plugin')
+
+storage_plugin_log = log_register("storage_plugin")

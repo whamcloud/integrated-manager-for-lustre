@@ -1,4 +1,3 @@
-
 from django.contrib.contenttypes.models import ContentType
 
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
@@ -15,14 +14,12 @@ class TestCommand(IMLUnitTestCase):
 
         for cancelled in [False, True]:
             for errored in [False, True]:
-                command = self.make_command(complete=False, message='test %s:%s' % (cancelled, errored))
+                command = self.make_command(complete=False, message="test %s:%s" % (cancelled, errored))
 
                 self.assertEqual(command.complete, False)
-                self.assertEqual(command.message, 'test %s:%s' % (cancelled, errored))
-                self.assertEqual(len(CommandRunningAlert.objects.filter(alert_item_id=command.id,
-                                                                        active=False)), 0)
-                self.assertEqual(len(CommandRunningAlert.objects.filter(alert_item_id=command.id,
-                                                                        active=True)), 1)
+                self.assertEqual(command.message, "test %s:%s" % (cancelled, errored))
+                self.assertEqual(len(CommandRunningAlert.objects.filter(alert_item_id=command.id, active=False)), 0)
+                self.assertEqual(len(CommandRunningAlert.objects.filter(alert_item_id=command.id, active=True)), 1)
 
                 command.completed(errored, cancelled)
 
@@ -37,15 +34,22 @@ class TestCommand(IMLUnitTestCase):
                 else:
                     expected_alert_class = CommandSuccessfulAlert
 
-                self.assertEqual(len(expected_alert_class.objects.filter(alert_item_id=command.id,
-                                                                         active=True)), 0)
+                self.assertEqual(len(expected_alert_class.objects.filter(alert_item_id=command.id, active=True)), 0)
 
-                self.assertEqual(len(expected_alert_class.objects.filter(alert_item_id=command.id,
-                                                                         active=None)), 1)
+                self.assertEqual(len(expected_alert_class.objects.filter(alert_item_id=command.id, active=None)), 1)
 
-                command_alerts = AlertState.objects.filter(alert_item_id=command.id,
-                                                           alert_item_type=ContentType.objects.get_for_model(command))
+                command_alerts = AlertState.objects.filter(
+                    alert_item_id=command.id, alert_item_type=ContentType.objects.get_for_model(command)
+                )
 
                 # We should 1 CommandAlert for that command.
-                self.assertEqual(len([command_alert for command_alert in command_alerts if type(command_alert) in command.command_alert_types]),
-                                 1)
+                self.assertEqual(
+                    len(
+                        [
+                            command_alert
+                            for command_alert in command_alerts
+                            if type(command_alert) in command.command_alert_types
+                        ]
+                    ),
+                    1,
+                )

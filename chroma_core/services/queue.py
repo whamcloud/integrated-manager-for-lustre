@@ -13,7 +13,7 @@ from chroma_core.services import _amqp_connection
 from chroma_core.services.log import log_register
 
 
-log = log_register('queue')
+log = log_register("queue")
 
 
 class ServiceQueue(object):
@@ -34,18 +34,21 @@ class ServiceQueue(object):
         AcmeQueue().put({'foo': 'bar'})
 
     """
+
     name = None
 
     def put(self, body):
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.name, serializer = 'json',
-                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
+            q = conn.SimpleQueue(
+                self.name, serializer="json", exchange_opts={"durable": False}, queue_opts={"durable": False}
+            )
             q.put(body)
 
     def purge(self):
         with _amqp_connection() as conn:
-            purged = conn.SimpleQueue(self.name,
-                                      exchange_opts={'durable': False}, queue_opts={'durable': False}).consumer.purge()
+            purged = conn.SimpleQueue(
+                self.name, exchange_opts={"durable": False}, queue_opts={"durable": False}
+            ).consumer.purge()
             log.info("Purged %s messages from '%s' queue" % (purged, self.name))
 
     def __init__(self):
@@ -57,14 +60,16 @@ class ServiceQueue(object):
 
     def serve(self, callback):
         from Queue import Empty as QueueEmpty
+
         with _amqp_connection() as conn:
-            q = conn.SimpleQueue(self.name, serializer = 'json',
-                                 exchange_opts={'durable': False}, queue_opts={'durable': False})
+            q = conn.SimpleQueue(
+                self.name, serializer="json", exchange_opts={"durable": False}, queue_opts={"durable": False}
+            )
             # FIXME: it would be preferable to avoid waking up so often: really what is wanted
             # here is to sleep on messages or a stop event.
             while not self._stopping.is_set():
                 try:
-                    message = q.get(timeout = 1)
+                    message = q.get(timeout=1)
                     message.ack()
                     message = message.decode()
                     callback(message)
@@ -74,8 +79,8 @@ class ServiceQueue(object):
 
 class AgentRxQueue(ServiceQueue):
     def __route_message(self, message):
-        if message['type'] == 'DATA' and self.__data_callback:
-            self.__data_callback(message['fqdn'], message['body'])
+        if message["type"] == "DATA" and self.__data_callback:
+            self.__data_callback(message["fqdn"], message["body"])
         elif self.__session_callback:
             self.__session_callback(message)
         else:
@@ -89,7 +94,7 @@ class AgentRxQueue(ServiceQueue):
         super(AgentRxQueue, self).__init__()
         self.name = "agent_%s_rx" % plugin
 
-    def serve(self, data_callback = None, session_callback = None):
+    def serve(self, data_callback=None, session_callback=None):
         """Data callback will receive only DATA mesages, being passed the fqdn and the body (i.e.
         the object returned by a device plugin).  Session callback will receive all messages,
         including the outer envelope.
@@ -98,7 +103,7 @@ class AgentRxQueue(ServiceQueue):
         set session_callback.
         """
         if data_callback is None and session_callback is None:
-            raise AssertionError('Set at least one callback')
+            raise AssertionError("Set at least one callback")
 
         self.__data_callback = data_callback
         self.__session_callback = session_callback

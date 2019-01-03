@@ -1,10 +1,8 @@
-
 import logging
 from django.utils.unittest import skipIf
 
 from testconfig import config
-from tests.integration.core.chroma_integration_testcase import (
-    ChromaIntegrationTestCase)
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from iml_common.lib.name_value_list import NameValueList
 
 log = logging.getLogger(__name__)
@@ -32,32 +30,30 @@ class TestSshAuth(ChromaIntegrationTestCase):
         @rtype: tests.utils.http_requests.HttpResponse
         @return: A HttpResponse.
         """
-        server_config_1 = config['lustre_servers'][0]
+        server_config_1 = config["lustre_servers"][0]
 
-        body = {
-            'address': server_config_1['address']
-        }
+        body = {"address": server_config_1["address"]}
 
         if callable(extra_params):
             extra_params = extra_params(server_config_1)
 
         body.update(extra_params)
 
-        response = self.chroma_manager.post('/api/test_host/', body=body)
+        response = self.chroma_manager.post("/api/test_host/", body=body)
 
         self.assertEqual(response.successful, True, response.text)
-        command_id = response.json['id']
+        command_id = response.json["id"]
 
         self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
 
         results = []
 
-        for job in response.json['jobs']:
+        for job in response.json["jobs"]:
             response = self.chroma_manager.get(job)
             self.assertEqual(response.successful, True, response.text)
 
-            for item in response.json['step_results'].items():
-                results.append(NameValueList(item[1]['status']))
+            for item in response.json["step_results"].items():
+                results.append(NameValueList(item[1]["status"]))
 
         # We have a result for each host, but as we have posted 1 host then 1 result
         self.assertEqual(len(results), 1)
@@ -73,27 +69,30 @@ class TestSshAuth(ChromaIntegrationTestCase):
 
         result = self._post_to_test_host({})
 
-        self.assertTrue(result['auth'])
+        self.assertTrue(result["auth"])
 
     def test_root_password(self):
         """Passing a root password with effect a root/pw based auth"""
 
-        result = self._post_to_test_host(lambda server_config: {'root_pw': server_config['root_password']})
+        result = self._post_to_test_host(lambda server_config: {"root_pw": server_config["root_password"]})
 
-        self.assertTrue(result['auth'])
+        self.assertTrue(result["auth"])
 
     def test_entered_private_key(self):
         """Test user can submit a private key to authenticate"""
 
-        result = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY FROM_CONFIG"})
+        result = self._post_to_test_host({"private_key": "REPLACE_WITH_PRIVATE_KEY FROM_CONFIG"})
 
-        self.assertTrue(result['auth'])
+        self.assertTrue(result["auth"])
 
     def test_entered_private_key_with_passphrase(self):
         """Test user can submit an enc private key and passphrase to auth"""
 
-        result = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
-                                            'private_key_passphrase': "REPLACE_WITH_PRIVATE_KEY "
-                                                                      "PASSPHRASE_FROM_CONFIG"})
+        result = self._post_to_test_host(
+            {
+                "private_key": "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
+                "private_key_passphrase": "REPLACE_WITH_PRIVATE_KEY " "PASSPHRASE_FROM_CONFIG",
+            }
+        )
 
-        self.assertTrue(result['auth'])
+        self.assertTrue(result["auth"])

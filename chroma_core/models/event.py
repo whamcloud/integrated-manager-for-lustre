@@ -8,17 +8,21 @@ from chroma_core.models.sparse_model import VariantGenericForeignKey, VariantDes
 
 
 class LearnEvent(AlertStateBase):
-    variant_fields = [VariantDescriptor('learned_item_id', int, None, None, 0),
-                      VariantDescriptor('learned_item_type',
-                                        int,
-                                        None,
-                                        lambda self_, value: self_.set_variant('learned_item_type', int, value.id),
-                                        None)]
+    variant_fields = [
+        VariantDescriptor("learned_item_id", int, None, None, 0),
+        VariantDescriptor(
+            "learned_item_type",
+            int,
+            None,
+            lambda self_, value: self_.set_variant("learned_item_type", int, value.id),
+            None,
+        ),
+    ]
 
-    learned_item = VariantGenericForeignKey('learned_item_type', 'learned_item_id')
+    learned_item = VariantGenericForeignKey("learned_item_type", "learned_item_id")
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     @staticmethod
@@ -27,6 +31,7 @@ class LearnEvent(AlertStateBase):
 
     def alert_message(self):
         from chroma_core.models import ManagedTarget, ManagedFilesystem, ManagedTargetMount
+
         if isinstance(self.learned_item, ManagedTargetMount):
             return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
         elif isinstance(self.learned_item, ManagedTarget):
@@ -39,15 +44,19 @@ class LearnEvent(AlertStateBase):
 
 class AlertEvent(AlertStateBase):
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
-    variant_fields = [VariantDescriptor('message_str', str, None, None, ''),
-                      VariantDescriptor('alert',
-                                        AlertState,
-                                        lambda self_: AlertState.objects.get(id=self_.get_variant('alert_id', None, int)),
-                                        lambda self_, value: self_.set_variant('alert_id', int, value.id),
-                                        None)]
+    variant_fields = [
+        VariantDescriptor("message_str", str, None, None, ""),
+        VariantDescriptor(
+            "alert",
+            AlertState,
+            lambda self_: AlertState.objects.get(id=self_.get_variant("alert_id", None, int)),
+            lambda self_, value: self_.set_variant("alert_id", int, value.id),
+            None,
+        ),
+    ]
 
     @staticmethod
     def type_name():
@@ -58,10 +67,10 @@ class AlertEvent(AlertStateBase):
 
 
 class SyslogEvent(AlertStateBase):
-    variant_fields = [VariantDescriptor('message_str', str, None, None, '')]
+    variant_fields = [VariantDescriptor("message_str", str, None, None, "")]
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     @staticmethod
@@ -74,10 +83,10 @@ class SyslogEvent(AlertStateBase):
 
 class ClientConnectEvent(AlertStateBase):
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
-    variant_fields = [VariantDescriptor('message_str', str, None, None, '')]
+    variant_fields = [VariantDescriptor("message_str", str, None, None, "")]
 
     def alert_message(self):
         return self.message_str

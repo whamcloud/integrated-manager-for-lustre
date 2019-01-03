@@ -8,9 +8,9 @@ from django.db import models
 
 
 class ClientCertificate(models.Model):
-    host = models.ForeignKey('ManagedHost')
-    serial = models.CharField(max_length = 16)
-    revoked = models.BooleanField(default = False)
+    host = models.ForeignKey("ManagedHost")
+    serial = models.CharField(max_length=16)
+    revoked = models.BooleanField(default=False)
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"

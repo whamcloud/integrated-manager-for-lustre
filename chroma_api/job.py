@@ -28,44 +28,45 @@ class StateLockResource(Resource):
 
     def dehydrate_locked_item_content_type_id(self, bundle):
         locked_item = bundle.obj.locked_item
-        if hasattr(locked_item, 'content_type'):
+        if hasattr(locked_item, "content_type"):
             return locked_item.content_type.id
         else:
             return ContentType.objects.get_for_model(locked_item)
 
     def dehydrate_locked_item_uri(self, bundle):
         from chroma_api.urls import api
+
         locked_item = bundle.obj.locked_item
-        if hasattr(locked_item, 'content_type'):
+        if hasattr(locked_item, "content_type"):
             locked_item = locked_item.downcast()
 
         return api.get_resource_uri(locked_item)
 
     class Meta:
         object_class = StateLock
-        resource_name = 'state_lock'
+        resource_name = "state_lock"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
 
 
 class JobValidation(Validation):
-    def is_valid(self, bundle, request = None):
+    def is_valid(self, bundle, request=None):
         errors = {}
         try:
-            job = Job.objects.get(pk = bundle.data['id']).downcast()
+            job = Job.objects.get(pk=bundle.data["id"]).downcast()
         except KeyError:
-            errors['id'] = "Attribute mandatory"
+            errors["id"] = "Attribute mandatory"
         except Job.DoesNotExist:
-            errors['id'] = "Job with id %s not found" % bundle.data['id']
+            errors["id"] = "Job with id %s not found" % bundle.data["id"]
         else:
             try:
-                new_state = bundle.data['state']
+                new_state = bundle.data["state"]
             except KeyError:
-                errors['state'] = "Attribute mandatory"
+                errors["state"] = "Attribute mandatory"
             else:
-                valid_states = ['cancelled', job.state]
+                valid_states = ["cancelled", job.state]
                 if not new_state in valid_states:
-                    errors['state'] = "Must be one of %s" % valid_states
+                    errors["state"] = "Must be one of %s" % valid_states
 
         return errors
 
@@ -98,34 +99,47 @@ class JobResource(ChromaModelResource):
     which can be compared with API-readable objects which have such attributes.
     """
 
-    description = fields.CharField(help_text = "Human readable string around\
-            one sentence long describing what the job is doing")
-    wait_for = fields.ListField('wait_for', null = True,
-            help_text = "List of other jobs which must complete before this job can run")
-    read_locks = fields.ListField(null = True,
-            help_text = "List of objects which must stay in the required state while\
-            this job runs")
-    write_locks = fields.ListField(null = True,
-            help_text = "List of objects which must be in a certain state for\
-            this job to run, and may be modified by this job while it runs.")
-    commands = fields.ToManyField('chroma_api.command.CommandResource',
-            lambda bundle: bundle.obj.command_set.all(), null = True,
-            help_text = "Commands which require this job to complete\
-            sucessfully in order to succeed themselves")
-    steps = fields.ToManyField('chroma_api.step.StepResource',
-            lambda bundle: bundle.obj.stepresult_set.all(), null = True,
-            help_text = "Steps executed within this job")
-    step_results = fields.DictField(help_text = "List of step results")
-    class_name = fields.CharField(help_text = "Internal class name of job")
+    description = fields.CharField(
+        help_text="Human readable string around\
+            one sentence long describing what the job is doing"
+    )
+    wait_for = fields.ListField(
+        "wait_for", null=True, help_text="List of other jobs which must complete before this job can run"
+    )
+    read_locks = fields.ListField(
+        null=True,
+        help_text="List of objects which must stay in the required state while\
+            this job runs",
+    )
+    write_locks = fields.ListField(
+        null=True,
+        help_text="List of objects which must be in a certain state for\
+            this job to run, and may be modified by this job while it runs.",
+    )
+    commands = fields.ToManyField(
+        "chroma_api.command.CommandResource",
+        lambda bundle: bundle.obj.command_set.all(),
+        null=True,
+        help_text="Commands which require this job to complete\
+            sucessfully in order to succeed themselves",
+    )
+    steps = fields.ToManyField(
+        "chroma_api.step.StepResource",
+        lambda bundle: bundle.obj.stepresult_set.all(),
+        null=True,
+        help_text="Steps executed within this job",
+    )
+    step_results = fields.DictField(help_text="List of step results")
+    class_name = fields.CharField(help_text="Internal class name of job")
 
     available_transitions = fields.DictField()
 
     def _dehydrate_locks(self, bundle, write):
         if bundle.obj.locks_json:
             locks = json.loads(bundle.obj.locks_json)
-            locks = [StateLock.from_dict(bundle.obj, lock) for lock in locks if lock['write'] == write]
+            locks = [StateLock.from_dict(bundle.obj, lock) for lock in locks if lock["write"] == write]
             slr = StateLockResource()
-            return [slr.full_dehydrate(slr.build_bundle(obj = l)).data for l in locks]
+            return [slr.full_dehydrate(slr.build_bundle(obj=l)).data for l in locks]
         else:
             return []
 
@@ -137,26 +151,28 @@ class JobResource(ChromaModelResource):
             return [JobResource().get_resource_uri(Job.objects.get(pk=i)) for i in wait_fors]
 
     def dehydrate_read_locks(self, bundle):
-        return self._dehydrate_locks(bundle, write = False)
+        return self._dehydrate_locks(bundle, write=False)
 
     def dehydrate_write_locks(self, bundle):
-        return self._dehydrate_locks(bundle, write = True)
+        return self._dehydrate_locks(bundle, write=True)
 
     def dehydrate_class_name(self, bundle):
         return bundle.obj.content_type.model_class().__name__
 
     def dehydrate_available_transitions(self, bundle):
         job = bundle.obj.downcast()
-        if job.state == 'complete' or not job.cancellable:
+        if job.state == "complete" or not job.cancellable:
             return []
         elif job.cancellable:
-            return [{'state': 'cancelled', 'label': 'Cancel'}]
+            return [{"state": "cancelled", "label": "Cancel"}]
 
     def dehydrate_step_results(self, bundle):
         result = {}
 
         for step_result in bundle.obj.stepresult_set.all():
-            result[StepResource().get_resource_uri(step_result)] = json.loads(step_result.result) if step_result.result else None
+            result[StepResource().get_resource_uri(step_result)] = (
+                json.loads(step_result.result) if step_result.result else None
+            )
         return result
 
     def dehydrate_description(self, bundle):
@@ -164,25 +180,25 @@ class JobResource(ChromaModelResource):
 
     class Meta:
         queryset = Job.objects.all()
-        resource_name = 'job'
+        resource_name = "job"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['task_id', 'locks_json', 'wait_for_json']
-        ordering = ['created_at']
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get', 'put']
-        filtering = {'id': ['exact', 'in'], 'state': ['exact', 'in']}
+        excludes = ["task_id", "locks_json", "wait_for_json"]
+        ordering = ["created_at"]
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get", "put"]
+        filtering = {"id": ["exact", "in"], "state": ["exact", "in"]}
         always_return_data = True
         validation = JobValidation()
 
     @validate
     def obj_update(self, bundle, **kwargs):
-        job = Job.objects.get(pk = kwargs['pk'])
-        new_state = bundle.data['state']
+        job = Job.objects.get(pk=kwargs["pk"])
+        new_state = bundle.data["state"]
 
-        if new_state == 'cancelled':
+        if new_state == "cancelled":
             JobSchedulerClient.cancel_job(job.pk)
-            Job.objects.get(pk = kwargs['pk'])
+            Job.objects.get(pk=kwargs["pk"])
 
         bundle.obj = job
         return bundle

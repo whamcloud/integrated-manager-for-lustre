@@ -17,11 +17,11 @@ from iml_common.lib.date_time import IMLDateTime
 import settings
 
 
-log = log_register('systemd_journal')
+log = log_register("systemd_journal")
 
 
 class Service(ChromaService):
-    PLUGIN_NAME = 'systemd_journal'
+    PLUGIN_NAME = "systemd_journal"
 
     def __init__(self):
         super(Service, self).__init__()
@@ -44,14 +44,14 @@ class Service(ChromaService):
             trans_size = min(MAX_ROWS_PER_TRANSACTION, remove_num_entries)
             with transaction.commit_on_success():
                 while remove_num_entries > 0:
-                    removed_entries = LogMessage.objects.all().order_by('id')[0:trans_size]
+                    removed_entries = LogMessage.objects.all().order_by("id")[0:trans_size]
                     self.log.debug("writing %s batch of entries" % trans_size)
                     try:
                         f = open(overflow_filename, "a")
                         for line in removed_entries:
                             f.write("%s\n" % line.__str__())
-                        LogMessage.objects.filter(id__lte = removed_entries[-1].id).delete()
-                    except Exception, e:
+                        LogMessage.objects.filter(id__lte=removed_entries[-1].id).delete()
+                    except Exception as e:
                         self.log.error("error opening/writing/closing the db_log: %s" % e)
                     finally:
                         f.close()
@@ -69,27 +69,29 @@ class Service(ChromaService):
     def on_data(self, fqdn, body):
         with transaction.commit_on_success():
             with LogMessage.delayed as log_messages:
-                for msg in body['log_lines']:
+                for msg in body["log_lines"]:
                     try:
-                        log_messages.insert(dict(
-                            fqdn = fqdn,
-                            message = msg['message'],
-                            severity = msg['severity'],
-                            facility = msg['facility'],
-                            tag = msg['source'],
-                            datetime = IMLDateTime.parse(msg['datetime']).as_datetime,
-                            message_class = LogMessage.get_message_class(msg['message'])
-                        ))
+                        log_messages.insert(
+                            dict(
+                                fqdn=fqdn,
+                                message=msg["message"],
+                                severity=msg["severity"],
+                                facility=msg["facility"],
+                                tag=msg["source"],
+                                datetime=IMLDateTime.parse(msg["datetime"]).as_datetime,
+                                message_class=LogMessage.get_message_class(msg["message"]),
+                            )
+                        )
                         self._table_size += 1
 
                         self._parser.parse(fqdn, msg)
-                    except Exception, e:
+                    except Exception as e:
                         self.log.error("Error %s ingesting systemd-journal entry: %s" % (e, msg))
 
     def run(self):
         super(Service, self).run()
 
-        self._queue.serve(data_callback = self.on_data)
+        self._queue.serve(data_callback=self.on_data)
 
     def stop(self):
         super(Service, self).stop()

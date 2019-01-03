@@ -8,14 +8,14 @@ version = 1
 
 class TestScannableResource(BaseStorageResource, BaseScannableResource):
     class Meta:
-        identifier = GlobalId('name')
+        identifier = GlobalId("name")
 
     name = attributes.String()
 
 
 class TestResource(BaseStorageResource):
     class Meta:
-        identifier = GlobalId('name')
+        identifier = GlobalId("name")
 
     name = attributes.String()
     thing_count = statistics.Counter()

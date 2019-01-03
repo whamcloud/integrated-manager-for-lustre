@@ -19,8 +19,9 @@ class DepCache(object):
         else:
             return obj.get_deps()
 
-    def get(self, obj, state = None):
+    def get(self, obj, state=None):
         from chroma_core.models import StatefulObject
+
         if state == None and isinstance(obj, StatefulObject):
             state = obj.state
 

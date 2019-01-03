@@ -12,8 +12,6 @@ class VerifyClusterNotConfigured(ChromaIntegrationTestCase):
 
     def test_cluster_not_configured(self):
         """Verifying the cluster has no managed targets."""
-        for chroma_manager_config in config['chroma_managers']:
-            chroma_manager = HttpRequests(
-                server_http_url=chroma_manager_config['server_http_url']
-            )
+        for chroma_manager_config in config["chroma_managers"]:
+            chroma_manager = HttpRequests(server_http_url=chroma_manager_config["server_http_url"])
             self.assertDatabaseClear(chroma_manager)

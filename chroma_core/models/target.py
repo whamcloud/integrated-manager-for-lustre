@@ -35,7 +35,8 @@ class NotAFileSystemMember(Exception):
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as
        MDT, OST or Client"""
-    filesystem = models.ForeignKey('ManagedFilesystem')
+
+    filesystem = models.ForeignKey("ManagedFilesystem")
     index = models.IntegerField()
 
     # Use of abstract base classes to avoid django bug #12002
@@ -70,28 +71,43 @@ def select_description(stateful_object, descriptions):
 
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
-    name = models.CharField(max_length=64, null=True, blank=True,
-                            help_text="Lustre target name, e.g. 'testfs-OST0001'.  May be null\
-                            if the target has not yet been registered.")
+    name = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="Lustre target name, e.g. 'testfs-OST0001'.  May be null\
+                            if the target has not yet been registered.",
+    )
 
-    uuid = models.CharField(max_length=64, null=True, blank=True,
-                            help_text="UUID of the target's internal file system.  May be null\
-                            if the target has not yet been formatted")
+    uuid = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="UUID of the target's internal file system.  May be null\
+                            if the target has not yet been formatted",
+    )
 
-    ha_label = models.CharField(max_length=64, null=True, blank=True,
-                                help_text="Label used for HA layer; human readable but unique")
+    ha_label = models.CharField(
+        max_length=64, null=True, blank=True, help_text="Label used for HA layer; human readable but unique"
+    )
 
-    volume = models.ForeignKey('Volume')
+    volume = models.ForeignKey("Volume")
 
     inode_size = models.IntegerField(null=True, blank=True, help_text="Size in bytes per inode")
-    bytes_per_inode = models.IntegerField(null=True, blank=True, help_text="Constant used during formatting to "
-                                                                           "determine inode count by dividing the volume size by ``bytes_per_inode``")
-    inode_count = models.BigIntegerField(null=True, blank=True, help_text="The number of inodes in this target's"
-                                                                          "backing store")
+    bytes_per_inode = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Constant used during formatting to "
+        "determine inode count by dividing the volume size by ``bytes_per_inode``",
+    )
+    inode_count = models.BigIntegerField(
+        null=True, blank=True, help_text="The number of inodes in this target's" "backing store"
+    )
 
     reformat = models.BooleanField(
         help_text="Only used during formatting, indicates that when formatting this target \
-        any existing filesystem on the Volume should be overwritten")
+        any existing filesystem on the Volume should be overwritten"
+    )
 
     @property
     def full_volume(self):
@@ -108,32 +124,41 @@ class ManagedTarget(StatefulObject):
         that have no resource records to go with them.
         """
 
-        return Volume._base_manager.all().select_related(
-            'storage_resource',
-            'storage_resource__resource_class',
-            'storage_resource__resource_class__storage_plugin'
-        ).prefetch_related('volumenode_set', 'volumenode_set__host').get(pk=self.volume.pk)
+        return (
+            Volume._base_manager.all()
+            .select_related(
+                "storage_resource",
+                "storage_resource__resource_class",
+                "storage_resource__resource_class__storage_plugin",
+            )
+            .prefetch_related("volumenode_set", "volumenode_set__host")
+            .get(pk=self.volume.pk)
+        )
 
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
         try:
-            started_on = ObjectCache.get_one(ManagedHost,
-                                             lambda mh: (mh.nodename == nodename) or (mh.fqdn == nodename))
+            started_on = ObjectCache.get_one(ManagedHost, lambda mh: (mh.nodename == nodename) or (mh.fqdn == nodename))
         except ManagedHost.DoesNotExist:
             raise RuntimeError(
-                "Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
+                "Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename)
+            )
 
         try:
             job_log.debug("Started %s on %s" % (self.ha_label, started_on))
-            target_mount = ObjectCache.get_one(ManagedTargetMount,
-                                               lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id)
+            target_mount = ObjectCache.get_one(
+                ManagedTargetMount, lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id
+            )
             self.active_mount = target_mount
         except ManagedTargetMount.DoesNotExist:
-            job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this self" % (
-            self, self.id, started_on, started_on.pk))
+            job_log.error(
+                "Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this self"
+                % (self, self.id, started_on, started_on.pk)
+            )
             raise RuntimeError(
-                "Target %s reported as running on %s, but it is not configured there" % (self, started_on))
+                "Target %s reported as running on %s, but it is not configured there" % (self, started_on)
+            )
 
     def get_param(self, key):
         params = self.targetparam_set.filter(key=key)
@@ -147,7 +172,7 @@ class ManagedTarget(StatefulObject):
         for secondary_mount in self.managedtargetmount_set.filter(primary=False):
             host = secondary_mount.host
             failhost_nids = host.lnet_configuration.get_nids()
-            assert (len(failhost_nids) != 0)
+            assert len(failhost_nids) != 0
             fail_nids.extend(failhost_nids)
         return fail_nids
 
@@ -181,7 +206,7 @@ class ManagedTarget(StatefulObject):
         return self.name
 
     def __str__(self):
-        return self.name or ''
+        return self.name or ""
 
     def best_available_host(self):
         """
@@ -202,29 +227,30 @@ class ManagedTarget(StatefulObject):
     # removed: this target no longer exists in real life
     # forgotten: Equivalent of 'removed' for immutable_state targets
     # Additional states needed for 'deactivated'?
-    states = ['unformatted', 'formatted', 'registered', 'unmounted', 'mounted', 'removed', 'forgotten']
-    initial_state = 'unformatted'
-    active_mount = models.ForeignKey('ManagedTargetMount', blank=True, null=True)
+    states = ["unformatted", "formatted", "registered", "unmounted", "mounted", "removed", "forgotten"]
+    initial_state = "unformatted"
+    active_mount = models.ForeignKey("ManagedTargetMount", blank=True, null=True)
 
     def set_state(self, state, intentional=False):
         job_log.debug("mt.set_state %s %s" % (state, intentional))
         super(ManagedTarget, self).set_state(state, intentional)
         if intentional:
-            TargetOfflineAlert.notify_warning(self, self.state == 'unmounted')
+            TargetOfflineAlert.notify_warning(self, self.state == "unmounted")
         else:
-            TargetOfflineAlert.notify(self, self.state == 'unmounted')
+            TargetOfflineAlert.notify(self, self.state == "unmounted")
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_deps(self, state=None):
         from chroma_core.models import ManagedFilesystem
+
         if not state:
             state = self.state
 
         deps = []
-        if state == 'mounted' and self.active_mount and not self.immutable_state:
+        if state == "mounted" and self.active_mount and not self.immutable_state:
             from chroma_core.models import LNetConfiguration
 
             # Depend on the active mount's host having LNet up, so that if
@@ -233,51 +259,64 @@ class ManagedTarget(StatefulObject):
             host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
 
             lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
-            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
+            deps.append(DependOn(lnet_configuration, "lnet_up", fix_state="unmounted"))
 
             pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration, host.pacemaker_configuration.id)
-            deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
+            deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
 
-        if issubclass(self.downcast_class, FilesystemMember) and state not in ['removed', 'forgotten']:
+        if issubclass(self.downcast_class, FilesystemMember) and state not in ["removed", "forgotten"]:
             # Make sure I follow if filesystem goes to 'removed'
             # or 'forgotten'
             # FIXME: should get filesystem membership from objectcache
             filesystem_id = self.downcast().filesystem_id
             filesystem = ObjectCache.get_by_id(ManagedFilesystem, filesystem_id)
-            deps.append(DependOn(filesystem, 'available',
-                                 acceptable_states=filesystem.not_states(['forgotten', 'removed']),
-                                 fix_state=lambda s: s))
+            deps.append(
+                DependOn(
+                    filesystem,
+                    "available",
+                    acceptable_states=filesystem.not_states(["forgotten", "removed"]),
+                    fix_state=lambda s: s,
+                )
+            )
 
-        if state not in ['removed', 'forgotten']:
+        if state not in ["removed", "forgotten"]:
             from chroma_core.models import LNetConfiguration
 
             target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
             for tm in target_mounts:
                 host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
-                fix_state = 'forgotten' if self.immutable_state else 'removed'
+                fix_state = "forgotten" if self.immutable_state else "removed"
 
                 lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
                 deps.append(
-                    DependOn(lnet_configuration, 'lnet_up', unacceptable_states=['unconfigured'], fix_state=fix_state))
+                    DependOn(lnet_configuration, "lnet_up", unacceptable_states=["unconfigured"], fix_state=fix_state)
+                )
 
                 if host.pacemaker_configuration:
-                    pacemaker_configuration = ObjectCache.get_by_id(PacemakerConfiguration,
-                                                                    host.pacemaker_configuration.id)
-                    deps.append(DependOn(pacemaker_configuration, 'started', unacceptable_states=['unconfigured'],
-                                         fix_state=fix_state))
+                    pacemaker_configuration = ObjectCache.get_by_id(
+                        PacemakerConfiguration, host.pacemaker_configuration.id
+                    )
+                    deps.append(
+                        DependOn(
+                            pacemaker_configuration,
+                            "started",
+                            unacceptable_states=["unconfigured"],
+                            fix_state=fix_state,
+                        )
+                    )
 
         return DependAll(deps)
 
     reverse_deps = {
-        'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
-        'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
-        'LNetConfiguration': lambda lc: ObjectCache.host_targets(lc.host.id),
-        'PacemakerConfiguration': lambda pc: ObjectCache.host_targets(pc.host.id),
-        'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id),
-        'Copytool': lambda ct: ObjectCache.client_mount_copytools(ct.id)
+        "ManagedTargetMount": lambda mtm: ObjectCache.mtm_targets(mtm.id),
+        "ManagedHost": lambda mh: ObjectCache.host_targets(mh.id),
+        "LNetConfiguration": lambda lc: ObjectCache.host_targets(lc.host.id),
+        "PacemakerConfiguration": lambda pc: ObjectCache.host_targets(pc.host.id),
+        "ManagedFilesystem": lambda mfs: ObjectCache.fs_targets(mfs.id),
+        "Copytool": lambda ct: ObjectCache.client_mount_copytools(ct.id),
     }
 
     @classmethod
@@ -295,8 +334,10 @@ class ManagedTarget(StatefulObject):
 
         host = primary_volume_node.host
         corosync_configuration = host.corosync_configuration
-        stonith_not_enabled = len(
-            StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id)) > 0
+        stonith_not_enabled = (
+            len(StonithNotEnabledAlert.filter_by_item_id(corosync_configuration.__class__, corosync_configuration.id))
+            > 0
+        )
 
         if stonith_not_enabled:
             raise RuntimeError("Stonith not enabled for host %s, cannot create target" % host.fqdn)
@@ -337,7 +378,8 @@ class ManagedTarget(StatefulObject):
                 target=target,
                 host=volume_node.host,
                 mount_point=target.default_mount_point,
-                primary=volume_node.primary)
+                primary=volume_node.primary,
+            )
             mount.save()
             target_mounts.append(mount)
 
@@ -354,19 +396,20 @@ class ManagedTarget(StatefulObject):
 
     @classmethod
     def managed_target_of_type(cls, target_type):
-        '''
+        """
         :param target_type:  is a string describing the target required, generally ost, mdt or mgt
         :return: Returns a klass of the type required by looking through the subclasses
-        '''
+        """
         try:
             # Hack I need to work out with Joe.
-            if target_type == 'mgt':
-                target_type = 'mgs'
+            if target_type == "mgt":
+                target_type = "mgs"
 
             target_type = target_type.lower()
 
             subtype = next(
-                klass for klass in util.all_subclasses(ManagedTarget) if target_type == klass().target_type())
+                klass for klass in util.all_subclasses(ManagedTarget) if target_type == klass().target_type()
+            )
 
             return subtype
         except StopIteration:
@@ -374,9 +417,9 @@ class ManagedTarget(StatefulObject):
 
     @property
     def filesystem_member(self):
-        '''
+        """
         :return: True if the TargetType is a file system member, generally OST or MDT.
-        '''
+        """
         return issubclass(type(self), FilesystemMember)
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
@@ -388,8 +431,8 @@ class ManagedTarget(StatefulObject):
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_available_states(self, begin_state):
         # Exclude the transition to 'removed' in favour of being removed when our FS is
@@ -397,14 +440,14 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedOst, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(['forgotten']))
+            available_states = list(set(available_states) - set(["forgotten"]))
             return available_states
 
     def target_type(self):
         return "ost"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
-        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == 'ldiskfs'):
+        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == "ldiskfs"):
             mkfs_options.append("-J size=%s" % settings.JOURNAL_SIZE)
 
         # HYD-1089 should supercede these settings
@@ -416,8 +459,8 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
 
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_available_states(self, begin_state):
         # Exclude the transition to 'removed' in favour of being removed when our FS is
@@ -425,7 +468,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(['removed', 'forgotten']))
+            available_states = list(set(available_states) - set(["removed", "forgotten"]))
 
             return available_states
 
@@ -433,7 +476,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
         return "mdt"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
-        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == 'ldiskfs'):
+        if (settings.JOURNAL_SIZE is not None) and (filesystemtype == "ldiskfs"):
             mkfs_options += ["-J size=%s" % settings.JOURNAL_SIZE]
 
         # HYD-1089 should supercede these settings
@@ -450,20 +493,20 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
     def get_available_states(self, begin_state):
         if self.immutable_state:
             if self.managedfilesystem_set.count() == 0:
-                return ['forgotten']
+                return ["forgotten"]
             else:
                 return []
         else:
             available_states = super(ManagedMgs, self).get_available_states(begin_state)
 
             # Exclude the transition to 'forgotten' because immutable_state is False
-            available_states = list(set(available_states) - set(['forgotten']))
+            available_states = list(set(available_states) - set(["forgotten"]))
 
             # Only advertise removal if the FS has already gone away
             if self.managedfilesystem_set.count() > 0:
-                available_states = list(set(available_states) - set(['removed']))
-                if 'removed' in available_states:
-                    available_states.remove('removed')
+                available_states = list(set(available_states) - set(["removed"]))
+                if "removed" in available_states:
+                    available_states.remove("removed")
 
             return available_states
 
@@ -472,8 +515,8 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         return cls.objects.get(managedtargetmount__host=host)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def nids(self):
         """Returns a tuple of per-host NID strings tuples"""
@@ -483,7 +526,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         # first --mgsnode argument as the NID to connect to for target registration,
         # and if that is the secondary NID then bad things happen during first
         # filesystem start.
-        for target_mount in self.managedtargetmount_set.all().order_by('-primary'):
+        for target_mount in self.managedtargetmount_set.all().order_by("-primary"):
             host = target_mount.host
             host_nids.append(tuple(host.lnet_configuration.get_nids()))
 
@@ -497,8 +540,9 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         :param params: is a list of unsaved ConfParam objects"""
         version = None
         from django.db.models import F
+
         if new:
-            ManagedMgs.objects.filter(pk=self.id).update(conf_param_version=F('conf_param_version') + 1)
+            ManagedMgs.objects.filter(pk=self.id).update(conf_param_version=F("conf_param_version") + 1)
         version = ManagedMgs.objects.get(pk=self.id).conf_param_version
         for p in params:
             p.version = version
@@ -518,28 +562,27 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 class TargetRecoveryInfo(models.Model):
     """Record of what we learn from /proc/fs/lustre/*/*/recovery_status
        for a running target"""
+
     #: JSON-encoded dict parsed from /proc
     recovery_status = models.TextField()
 
-    target = models.ForeignKey('chroma_core.ManagedTarget')
+    target = models.ForeignKey("chroma_core.ManagedTarget")
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @staticmethod
     @transaction.commit_on_success
     def update(target, recovery_status):
         TargetRecoveryInfo.objects.filter(target=target).delete()
-        instance = TargetRecoveryInfo.objects.create(
-            target=target,
-            recovery_status=json.dumps(recovery_status))
+        instance = TargetRecoveryInfo.objects.create(target=target, recovery_status=json.dumps(recovery_status))
         return instance.is_recovering(recovery_status)
 
     def is_recovering(self, data=None):
         if not data:
             data = json.loads(self.recovery_status)
-        return ("status" in data and data["status"] == "RECOVERING")
+        return "status" in data and data["status"] == "RECOVERING"
 
     # def recovery_status_str(self):
     #    data = json.loads(self.recovery_status)
@@ -554,53 +597,66 @@ class TargetRecoveryInfo(models.Model):
 def _delete_target(target):
     if issubclass(target.downcast_class, ManagedMgs):
         from chroma_core.models.filesystem import ManagedFilesystem
+
         assert ManagedFilesystem.objects.filter(mgs=target).count() == 0
     target.mark_deleted()
     job_log.debug("_delete_target: %s %s" % (target, id(target)))
 
 
 class RemoveConfiguredTargetJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unmounted', 'removed')
-    stateful_object = 'target'
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "unmounted", "removed")
+    stateful_object = "target"
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
 
     @classmethod
     def long_description(cls, stateful_object):
-        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
-                                                    ManagedMdt: help_text["remove_mdt"],
-                                                    ManagedMgs: help_text["remove_mgt"]})
+        return select_description(
+            stateful_object,
+            {
+                ManagedOst: help_text["remove_ost"],
+                ManagedMdt: help_text["remove_mdt"],
+                ManagedMgs: help_text["remove_mgt"],
+            },
+        )
 
     def get_requires_confirmation(self):
         return True
 
     def get_confirmation_string(self):
-        return select_description(self.target, {ManagedOst: help_text["remove_ost"],
-                                                ManagedMdt: help_text["remove_mdt"],
-                                                ManagedMgs: help_text["remove_mgt"]})
+        return select_description(
+            self.target,
+            {
+                ManagedOst: help_text["remove_ost"],
+                ManagedMdt: help_text["remove_mdt"],
+                ManagedMgs: help_text["remove_mgt"],
+            },
+        )
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def description(self):
-        return help_text['remove_target_XXXX_from_filesystem'] % self.target
+        return help_text["remove_target_XXXX_from_filesystem"] % self.target
 
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
         steps = []
-        for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
-            steps.append((RemoveTargetFromPacemakerConfigStep, {
-                'target_mount': target_mount,
-                'target': target_mount.target,
-                'host': target_mount.host
-            }))
-        for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
-            steps.append((UnconfigureTargetStoreStep, {
-                'target_mount': target_mount,
-                'target': target_mount.target,
-                'host': target_mount.host
-            }))
+        for target_mount in self.target.managedtargetmount_set.all().order_by("primary"):
+            steps.append(
+                (
+                    RemoveTargetFromPacemakerConfigStep,
+                    {"target_mount": target_mount, "target": target_mount.target, "host": target_mount.host},
+                )
+            )
+        for target_mount in self.target.managedtargetmount_set.all().order_by("primary"):
+            steps.append(
+                (
+                    UnconfigureTargetStoreStep,
+                    {"target_mount": target_mount, "target": target_mount.target, "host": target_mount.host},
+                )
+            )
         return steps
 
     def on_success(self):
@@ -612,29 +668,40 @@ class RemoveConfiguredTargetJob(StateChangeJob):
 # remove this target from the MGS
 class RemoveTargetJob(StateChangeJob):
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unformatted', 'formatted', 'registered'],
-                                                      'removed')
-    stateful_object = 'target'
+    state_transition = StateChangeJob.StateTransition(
+        ManagedTarget, ["unformatted", "formatted", "registered"], "removed"
+    )
+    stateful_object = "target"
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
 
     @classmethod
     def long_description(cls, stateful_object):
-        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
-                                                    ManagedMdt: help_text["remove_mdt"],
-                                                    ManagedMgs: help_text["remove_mgt"]})
+        return select_description(
+            stateful_object,
+            {
+                ManagedOst: help_text["remove_ost"],
+                ManagedMdt: help_text["remove_mdt"],
+                ManagedMgs: help_text["remove_mgt"],
+            },
+        )
 
     def description(self):
-        return help_text['remove_target_XXXX_from_filesystem'] % self.target
+        return help_text["remove_target_XXXX_from_filesystem"] % self.target
 
     def get_confirmation_string(self):
-        if self.target.state == 'registered':
-            return select_description(self.target, {ManagedOst: help_text["remove_ost"],
-                                                    ManagedMdt: help_text["remove_mdt"],
-                                                    ManagedMgs: help_text["remove_mgt"]})
+        if self.target.state == "registered":
+            return select_description(
+                self.target,
+                {
+                    ManagedOst: help_text["remove_ost"],
+                    ManagedMdt: help_text["remove_mdt"],
+                    ManagedMgs: help_text["remove_mgt"],
+                },
+            )
 
         else:
             return None
@@ -650,14 +717,19 @@ class RemoveTargetJob(StateChangeJob):
 
 class ForgetTargetJob(StateChangeJob):
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
-                                                    ManagedMdt: help_text["remove_mdt"],
-                                                    ManagedMgs: help_text["remove_mgt"]})
+        return select_description(
+            stateful_object,
+            {
+                ManagedOst: help_text["remove_ost"],
+                ManagedMdt: help_text["remove_mdt"],
+                ManagedMgs: help_text["remove_mgt"],
+            },
+        )
 
     def description(self):
         return "Forget unmanaged target %s" % self.target
@@ -670,8 +742,8 @@ class ForgetTargetJob(StateChangeJob):
 
         super(ForgetTargetJob, self).on_success()
 
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
-    stateful_object = 'target'
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, ["unmounted", "mounted"], "forgotten")
+    stateful_object = "target"
     state_verb = "Forget"
     target = models.ForeignKey(ManagedTarget)
 
@@ -680,32 +752,40 @@ class RegisterTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
 
-        result = self.invoke_agent(kwargs['primary_host'], "register_target",
-                                   {'device_path': kwargs['device_path'],
-                                    'mount_point': kwargs['mount_point'],
-                                    'backfstype': kwargs['backfstype']})
+        result = self.invoke_agent(
+            kwargs["primary_host"],
+            "register_target",
+            {
+                "device_path": kwargs["device_path"],
+                "mount_point": kwargs["mount_point"],
+                "backfstype": kwargs["backfstype"],
+            },
+        )
 
-        if not result['label'] == target.name:
+        if not result["label"] == target.name:
             # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
             # pass --index to mkfs.lustre, so our name should match what is set after registration
             raise RuntimeError(
-                "Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
-        job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (
-        target.id, target.name, target.ha_label))
+                "Registration returned unexpected target name '%s' (expected '%s')" % (result["label"], target.name)
+            )
+        job_log.debug(
+            "Registration complete, updating target %d with name=%s, ha_label=%s"
+            % (target.id, target.name, target.ha_label)
+        )
 
 
 class GenerateHaLabelStep(Step):
     idempotent = True
 
     def sanitize_name(self, name):
-        FILTER_REGEX = r'^\d|^-|^\.|[(){}[\].:@$%&/+,;\s]+'
-        sanitized_name = re.sub(FILTER_REGEX, '_', name)
+        FILTER_REGEX = r"^\d|^-|^\.|[(){}[\].:@$%&/+,;\s]+"
+        sanitized_name = re.sub(FILTER_REGEX, "_", name)
         return "%s_%s" % (sanitized_name, uuid.uuid4().hex[:6])
 
     def run(self, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
         target.ha_label = self.sanitize_name(target.name)
         job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
@@ -714,92 +794,100 @@ class OpenLustreFirewallStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'],
-                                        'open_firewall',
-                                        {'port': 988,
-                                         'address': None,
-                                         'proto': "tcp",
-                                         'description': 'lustre',
-                                         'persist': True})
+        self.invoke_agent_expect_result(
+            kwargs["host"],
+            "open_firewall",
+            {"port": 988, "address": None, "proto": "tcp", "description": "lustre", "persist": True},
+        )
 
     @classmethod
     def describe(cls, kwargs):
-        return help_text['opening_lustre_firewall_port'] % kwargs['host']
+        return help_text["opening_lustre_firewall_port"] % kwargs["host"]
 
 
 class ConfigureTargetStoreStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        target_mount = kwargs['target_mount']
-        volume_node = kwargs['volume_node']
-        host = kwargs['host']
-        backfstype = kwargs['backfstype']
-        device_type = kwargs['device_type']
+        target = kwargs["target"]
+        target_mount = kwargs["target_mount"]
+        volume_node = kwargs["volume_node"]
+        host = kwargs["host"]
+        backfstype = kwargs["backfstype"]
+        device_type = kwargs["device_type"]
 
-        assert (volume_node is not None)
+        assert volume_node is not None
 
-        self.invoke_agent(host, "configure_target_store", {
-            'device': volume_node.path,
-            'uuid': target.uuid,
-            'mount_point': target_mount.mount_point,
-            'backfstype': backfstype,
-            'device_type': device_type})
+        self.invoke_agent(
+            host,
+            "configure_target_store",
+            {
+                "device": volume_node.path,
+                "uuid": target.uuid,
+                "mount_point": target_mount.mount_point,
+                "backfstype": backfstype,
+                "device_type": device_type,
+            },
+        )
 
 
 class UnconfigureTargetStoreStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        host = kwargs['host']
+        target = kwargs["target"]
+        host = kwargs["host"]
 
-        self.invoke_agent(host, "unconfigure_target_store", {
-            'uuid': target.uuid})
+        self.invoke_agent(host, "unconfigure_target_store", {"uuid": target.uuid})
 
 
 class AddTargetToPacemakerConfigStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        target_mount = kwargs['target_mount']
-        volume_node = kwargs['volume_node']
-        host = kwargs['host']
+        target = kwargs["target"]
+        target_mount = kwargs["target_mount"]
+        volume_node = kwargs["volume_node"]
+        host = kwargs["host"]
 
-        assert (volume_node is not None)
+        assert volume_node is not None
 
-        self.invoke_agent_expect_result(host, "configure_target_ha", {
-            'device': volume_node.path,
-            'ha_label': target.ha_label,
-            'uuid': target.uuid,
-            'primary': target_mount.primary,
-            'mount_point': target_mount.mount_point})
+        self.invoke_agent_expect_result(
+            host,
+            "configure_target_ha",
+            {
+                "device": volume_node.path,
+                "ha_label": target.ha_label,
+                "uuid": target.uuid,
+                "primary": target_mount.primary,
+                "mount_point": target_mount.mount_point,
+            },
+        )
 
     @classmethod
     def describe(cls, kwargs):
-        return help_text['add_target_to_pacemaker_config'] % kwargs['target']
+        return help_text["add_target_to_pacemaker_config"] % kwargs["target"]
 
 
 class RemoveTargetFromPacemakerConfigStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        target_mount = kwargs['target_mount']
+        target = kwargs["target"]
+        target_mount = kwargs["target_mount"]
 
-        self.invoke_agent_expect_result(kwargs['host'], "unconfigure_target_ha",
-                                        {'ha_label': target.ha_label,
-                                         'uuid': target.uuid,
-                                         'primary': target_mount.primary})
+        self.invoke_agent_expect_result(
+            kwargs["host"],
+            "unconfigure_target_ha",
+            {"ha_label": target.ha_label, "uuid": target.uuid, "primary": target_mount.primary},
+        )
 
     @classmethod
     def describe(cls, kwargs):
-        return help_text['remove_target_from_pacemaker_config'] % kwargs['target']
+        return help_text["remove_target_from_pacemaker_config"] % kwargs["target"]
 
 
-TargetVolumeInfo = namedtuple('TargetVolumeInfo', ['host', 'path', 'device_type'])
+TargetVolumeInfo = namedtuple("TargetVolumeInfo", ["host", "path", "device_type"])
 
 
 class MountOrImportStep(Step):
@@ -831,10 +919,9 @@ class MountOrImportStep(Step):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
 
         try:
-            self.invoke_agent_expect_result(volume_node.host,
-                                            'export_target',
-                                            {'device_type': volume_node.device_type,
-                                             'path': volume_node.path})
+            self.invoke_agent_expect_result(
+                volume_node.host, "export_target", {"device_type": volume_node.device_type, "path": volume_node.path}
+            )
         except AgentException as e:
             # TODO: When landing this on b4_0 for future code we will add a new exception AgentContactException to
             # deal with this case properly
@@ -844,43 +931,50 @@ class MountOrImportStep(Step):
     def run(self, kwargs):
         threads = []
 
-        for inactive_volume_node in kwargs['inactive_volume_nodes']:
-            thread = util.ExceptionThrowingThread(target=self.inactivate_volume_node,
-                                                  args=(inactive_volume_node,))
+        for inactive_volume_node in kwargs["inactive_volume_nodes"]:
+            thread = util.ExceptionThrowingThread(target=self.inactivate_volume_node, args=(inactive_volume_node,))
             thread.start()
             threads.append(thread)
 
         # This will raise an exception if any of the threads raise an exception
         util.ExceptionThrowingThread.wait_for_threads(threads)
 
-        if kwargs['active_volume_node'] is None:
-            device_type = kwargs['target'].volume.filesystem_type
+        if kwargs["active_volume_node"] is None:
+            device_type = kwargs["target"].volume.filesystem_type
             # in the case that the volume node is missing, attempt to import target volume
-            self.invoke_agent_expect_result(kwargs['host'],
-                                            'import_target',
-                                            {'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type),
-                                             'path': kwargs['target'].volume.label,
-                                             'pacemaker_ha_operation': False})
+            self.invoke_agent_expect_result(
+                kwargs["host"],
+                "import_target",
+                {
+                    "device_type": ("linux" if device_type in ["ext4", "mpath_member", ""] else device_type),
+                    "path": kwargs["target"].volume.label,
+                    "pacemaker_ha_operation": False,
+                },
+            )
         else:
-            self.invoke_agent_expect_result(kwargs['active_volume_node'].host,
-                                            'import_target',
-                                            {'device_type': kwargs['active_volume_node'].device_type,
-                                             'path': kwargs['active_volume_node'].path,
-                                             'pacemaker_ha_operation': False})
+            self.invoke_agent_expect_result(
+                kwargs["active_volume_node"].host,
+                "import_target",
+                {
+                    "device_type": kwargs["active_volume_node"].device_type,
+                    "path": kwargs["active_volume_node"].path,
+                    "pacemaker_ha_operation": False,
+                },
+            )
 
-        if kwargs['start_target'] is True:
-            result = self.invoke_agent_expect_result(kwargs['host'],
-                                                     "start_target",
-                                                     {'ha_label': kwargs['target'].ha_label})
+        if kwargs["start_target"] is True:
+            result = self.invoke_agent_expect_result(
+                kwargs["host"], "start_target", {"ha_label": kwargs["target"].ha_label}
+            )
 
-            kwargs['target'].update_active_mount(result)
+            kwargs["target"].update_active_mount(result)
 
     @classmethod
     def describe(cls, kwargs):
-        if kwargs['start_target'] is True:
-            return help_text['mounting_target_on_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+        if kwargs["start_target"] is True:
+            return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
         else:
-            return help_text['moving_target_to_node'] % (kwargs['target'], kwargs['active_volume_node'].host)
+            return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
 
     @classmethod
     def create_parameters(cls, target, host, start_target):
@@ -892,15 +986,17 @@ class MountOrImportStep(Step):
         :param start_target: True means the target is started False means it is just imported.
         :return:
         """
-        assert (host is not None)
+        assert host is not None
 
         inactive_volume_nodes = []
         active_volume_node = None
 
         for volume_node in target.volume.volumenode_set.all():
-            target_volume_info = TargetVolumeInfo(volume_node.host,
-                                                  volume_node.path,
-                                                  volume_node.volume.storage_resource.to_resource_class().device_type())
+            target_volume_info = TargetVolumeInfo(
+                volume_node.host,
+                volume_node.path,
+                volume_node.volume.storage_resource.to_resource_class().device_type(),
+            )
 
             if host == volume_node.host:
                 active_volume_node = target_volume_info
@@ -909,26 +1005,28 @@ class MountOrImportStep(Step):
 
         job_log.info("create_parameters: host: '%s' active_volume_node: '%s'" % (host, active_volume_node))
 
-        return {'target': target,
-                'host': host,
-                'inactive_volume_nodes': inactive_volume_nodes,
-                'active_volume_node': active_volume_node,
-                'start_target': start_target}
+        return {
+            "target": target,
+            "host": host,
+            "inactive_volume_nodes": inactive_volume_nodes,
+            "active_volume_node": active_volume_node,
+            "start_target": start_target,
+        }
 
 
 class ConfigureTargetJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'registered', 'unmounted')
-    stateful_object = 'target'
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "registered", "unmounted")
+    stateful_object = "target"
     state_verb = "Configure mount points"
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['configure_target']
+        return help_text["configure_target"]
 
     def description(self):
         return "Configure %s mount points" % self.target
@@ -936,58 +1034,73 @@ class ConfigureTargetJob(StateChangeJob):
     def get_steps(self):
         steps = []
 
-        target_mounts = list(self.target.managedtargetmount_set.all().order_by('-primary'))
+        target_mounts = list(self.target.managedtargetmount_set.all().order_by("-primary"))
 
         for target_mount in target_mounts:
-            steps.append((OpenLustreFirewallStep, {'host': target_mount.host}))
+            steps.append((OpenLustreFirewallStep, {"host": target_mount.host}))
 
         for target_mount in target_mounts:
             device_type = target_mount.volume_node.volume.storage_resource.to_resource_class().device_type()
             # retrieve the preferred fs type for this block device type to be used as backfstype for target
             backfstype = BlockDevice(device_type, target_mount.volume_node.path).preferred_fstype
 
-            steps.append((ConfigureTargetStoreStep, {'host': target_mount.host,
-                                                     'target': target_mount.target,
-                                                     'target_mount': target_mount,
-                                                     'backfstype': backfstype,
-                                                     'volume_node': target_mount.volume_node,
-                                                     'device_type': target_mount.target.volume.storage_resource.to_resource_class().device_type()}))
+            steps.append(
+                (
+                    ConfigureTargetStoreStep,
+                    {
+                        "host": target_mount.host,
+                        "target": target_mount.target,
+                        "target_mount": target_mount,
+                        "backfstype": backfstype,
+                        "volume_node": target_mount.volume_node,
+                        "device_type": target_mount.target.volume.storage_resource.to_resource_class().device_type(),
+                    },
+                )
+            )
 
         for target_mount in target_mounts:
-            steps.append((AddTargetToPacemakerConfigStep, {'host': target_mount.host,
-                                                           'target': target_mount.target,
-                                                           'target_mount': target_mount,
-                                                           'volume_node': target_mount.volume_node}))
+            steps.append(
+                (
+                    AddTargetToPacemakerConfigStep,
+                    {
+                        "host": target_mount.host,
+                        "target": target_mount.target,
+                        "target_mount": target_mount,
+                        "volume_node": target_mount.volume_node,
+                    },
+                )
+            )
 
         return steps
 
     def get_deps(self):
         deps = []
 
-        prim_mtm = ObjectCache.get_one(ManagedTargetMount,
-                                       lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
-        deps.append(DependOn(prim_mtm.host.lnet_configuration, 'lnet_up'))
+        prim_mtm = ObjectCache.get_one(
+            ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id
+        )
+        deps.append(DependOn(prim_mtm.host.lnet_configuration, "lnet_up"))
 
-        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            deps.append(DependOn(target_mount.host.pacemaker_configuration, 'started'))
+        for target_mount in self.target.managedtargetmount_set.all().order_by("-primary"):
+            deps.append(DependOn(target_mount.host.pacemaker_configuration, "started"))
 
         return DependAll(deps)
 
 
 class RegisterTargetJob(StateChangeJob):
     # FIXME: this really isn't ManagedTarget, it's FilesystemMember+ManagedTarget
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'formatted', 'registered')
-    stateful_object = 'target'
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "formatted", "registered")
+    stateful_object = "target"
     state_verb = "Register"
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['register_target']
+        return help_text["register_target"]
 
     def description(self):
         return "Register %s" % self.target
@@ -1013,24 +1126,29 @@ class RegisterTargetJob(StateChangeJob):
             if not mgs.active_mount == mgs.managedtargetmount_set.get(primary=True):
                 raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
-            steps = [(RegisterTargetStep, {
-                'primary_host': primary_mount.host,
-                'target': self.target,
-                'device_path': path,
-                'mount_point': primary_mount.mount_point,
-                'backfstype': backfstype
-            })]
+            steps = [
+                (
+                    RegisterTargetStep,
+                    {
+                        "primary_host": primary_mount.host,
+                        "target": self.target,
+                        "device_path": path,
+                        "mount_point": primary_mount.mount_point,
+                        "backfstype": backfstype,
+                    },
+                )
+            ]
         else:
             raise NotImplementedError(target_class)
 
-        steps.append((GenerateHaLabelStep, {'target': self.target}))
+        steps.append((GenerateHaLabelStep, {"target": self.target}))
 
         return steps
 
     def get_deps(self):
         deps = []
 
-        deps.append(DependOn(ObjectCache.target_primary_server(self.target).lnet_configuration, 'lnet_up'))
+        deps.append(DependOn(ObjectCache.target_primary_server(self.target).lnet_configuration, "lnet_up"))
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should cache filesystem associaton in objectcache
@@ -1041,8 +1159,11 @@ class RegisterTargetJob(StateChangeJob):
         if issubclass(self.target.downcast_class, ManagedOst):
             # FIXME: spurious downcast, should cache filesystem associaton in objectcache
             filesystem_id = self.target.downcast().filesystem_id
-            mdts = ObjectCache.get(ManagedTarget, lambda target: issubclass(target.downcast_class,
-                                                                            ManagedMdt) and target.downcast().filesystem_id == filesystem_id)
+            mdts = ObjectCache.get(
+                ManagedTarget,
+                lambda target: issubclass(target.downcast_class, ManagedMdt)
+                and target.downcast().filesystem_id == filesystem_id,
+            )
 
             for mdt in mdts:
                 deps.append(DependOn(mdt, "mounted"))
@@ -1057,24 +1178,30 @@ class MountStep(Step):
     were present at the time of Pickling are present at the time of unPickling. Migrating the Pickles
     would be very difficult.
     """
+
     pass
 
 
 class StartTargetJob(StateChangeJob):
-    stateful_object = 'target'
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unmounted', 'mounted')
+    stateful_object = "target"
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "unmounted", "mounted")
     state_verb = "Start"
     target = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return select_description(stateful_object, {ManagedOst: help_text["start_ost"],
-                                                    ManagedMgs: help_text["start_mgt"],
-                                                    ManagedMdt: help_text["start_mdt"]})
+        return select_description(
+            stateful_object,
+            {
+                ManagedOst: help_text["start_ost"],
+                ManagedMgs: help_text["start_mgt"],
+                ManagedMdt: help_text["start_mdt"],
+            },
+        )
 
     def description(self):
         return "Start target %s" % self.target
@@ -1087,41 +1214,49 @@ class StartTargetJob(StateChangeJob):
             from chroma_core.models import LNetConfiguration
 
             lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == target_mount.host_id)
-            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
+            deps.append(DependOn(lnet_configuration, "lnet_up", fix_state="unmounted"))
 
-            pacemaker_configuration = ObjectCache.get_one(PacemakerConfiguration,
-                                                          lambda pm: pm.host_id == target_mount.host_id)
-            deps.append(DependOn(pacemaker_configuration, 'started', fix_state='unmounted'))
+            pacemaker_configuration = ObjectCache.get_one(
+                PacemakerConfiguration, lambda pm: pm.host_id == target_mount.host_id
+            )
+            deps.append(DependOn(pacemaker_configuration, "started", fix_state="unmounted"))
 
         return DependAny(deps)
 
     def get_steps(self):
         device_type = self.target.volume.filesystem_type
-        return [(MountOrImportStep,
-                 MountOrImportStep.create_parameters(self.target,
-                                                     self.target.best_available_host(),
-                                                     False)),
-                (UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type)}),
-                (MountOrImportStep,
-                 MountOrImportStep.create_parameters(self.target,
-                                                     self.target.best_available_host(),
-                                                     True))]
+        return [
+            (
+                MountOrImportStep,
+                MountOrImportStep.create_parameters(self.target, self.target.best_available_host(), False),
+            ),
+            (
+                UpdateManagedTargetMount,
+                {
+                    "target": self.target,
+                    "device_type": ("linux" if device_type in ["ext4", "mpath_member", ""] else device_type),
+                },
+            ),
+            (
+                MountOrImportStep,
+                MountOrImportStep.create_parameters(self.target, self.target.best_available_host(), True),
+            ),
+        ]
 
 
 class UnmountStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
 
-        self.invoke_agent_expect_result(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
+        self.invoke_agent_expect_result(kwargs["host"], "stop_target", {"ha_label": target.ha_label})
         target.active_mount = None
 
 
 class StopTargetJob(StateChangeJob):
-    stateful_object = 'target'
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'mounted', 'unmounted')
+    stateful_object = "target"
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "mounted", "unmounted")
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
 
@@ -1129,14 +1264,15 @@ class StopTargetJob(StateChangeJob):
         return True
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return select_description(stateful_object, {ManagedOst: help_text["stop_ost"],
-                                                    ManagedMgs: help_text["stop_mgt"],
-                                                    ManagedMdt: help_text["stop_mdt"]})
+        return select_description(
+            stateful_object,
+            {ManagedOst: help_text["stop_ost"], ManagedMgs: help_text["stop_mgt"], ManagedMdt: help_text["stop_mdt"]},
+        )
 
     def description(self):
         return "Stop target %s" % self.target
@@ -1144,19 +1280,27 @@ class StopTargetJob(StateChangeJob):
     def get_steps(self):
         # Update MTMs before attempting to stop/unmount
         device_type = self.target.volume.filesystem_type
-        return [(UpdateManagedTargetMount, {'target': self.target,
-                                            'device_type': ('linux' if device_type in ['ext4', 'mpath_member', ''] else device_type)}),
-                (UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
+        return [
+            (
+                UpdateManagedTargetMount,
+                {
+                    "target": self.target,
+                    "device_type": ("linux" if device_type in ["ext4", "mpath_member", ""] else device_type),
+                },
+            ),
+            (UnmountStep, {"target": self.target, "host": self.target.best_available_host()}),
+        ]
 
 
 class PreFormatCheck(Step):
     @classmethod
     def describe(cls, kwargs):
-        return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
+        return "Prepare for format %s:%s" % (kwargs["host"], kwargs["path"])
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'], "check_block_device", {'path': kwargs['path'],
-                                                                               'device_type': kwargs['device_type']})
+        self.invoke_agent_expect_result(
+            kwargs["host"], "check_block_device", {"path": kwargs["path"], "device_type": kwargs["device_type"]}
+        )
 
 
 class PreFormatComplete(Step):
@@ -1166,84 +1310,89 @@ class PreFormatComplete(Step):
     ops in the check to hold a DB connection (would limit
     parallelism).
     """
+
     database = True
 
     def run(self, kwargs):
-        job_log.info("%s passed pre-format check, allowing subsequent reformats" % kwargs['target'])
+        job_log.info("%s passed pre-format check, allowing subsequent reformats" % kwargs["target"])
         with transaction.commit_on_success():
-            kwargs['target'].reformat = True
-            kwargs['target'].save()
+            kwargs["target"].reformat = True
+            kwargs["target"].save()
 
 
 class MkfsStep(Step):
     database = True
 
     def _mkfs_args(self, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
 
         mkfs_args = {}
 
-        mkfs_args['target_types'] = target.downcast().target_type()
-        mkfs_args['target_name'] = target.name
+        mkfs_args["target_types"] = target.downcast().target_type()
+        mkfs_args["target_name"] = target.name
 
         if issubclass(target.downcast_class, FilesystemMember):
-            mkfs_args['fsname'] = target.downcast().filesystem.name
-            mkfs_args['mgsnode'] = kwargs['mgs_nids']
+            mkfs_args["fsname"] = target.downcast().filesystem.name
+            mkfs_args["mgsnode"] = kwargs["mgs_nids"]
 
-        if kwargs['reformat']:
-            mkfs_args['reformat'] = True
+        if kwargs["reformat"]:
+            mkfs_args["reformat"] = True
 
-        if kwargs['failover_nids']:
-            mkfs_args['failnode'] = kwargs['failover_nids']
+        if kwargs["failover_nids"]:
+            mkfs_args["failnode"] = kwargs["failover_nids"]
 
-        mkfs_args['device'] = kwargs['device_path']
+        mkfs_args["device"] = kwargs["device_path"]
         if issubclass(target.downcast_class, FilesystemMember):
-            mkfs_args['index'] = target.downcast().index
+            mkfs_args["index"] = target.downcast().index
 
-        mkfs_args["device_type"] = kwargs['device_type']
-        mkfs_args["backfstype"] = kwargs['backfstype']
+        mkfs_args["device_type"] = kwargs["device_type"]
+        mkfs_args["backfstype"] = kwargs["backfstype"]
 
-        if len(kwargs['mkfsoptions']) > 0:
-            mkfs_args['mkfsoptions'] = " ".join(kwargs['mkfsoptions'])
+        if len(kwargs["mkfsoptions"]) > 0:
+            mkfs_args["mkfsoptions"] = " ".join(kwargs["mkfsoptions"])
 
         return mkfs_args
 
     @classmethod
     def describe(cls, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
         target_mount = target.managedtargetmount_set.get(primary=True)
         return "Format %s on %s" % (target, target_mount.host)
 
     def run(self, kwargs):
-        target = kwargs['target']
+        target = kwargs["target"]
 
         args = self._mkfs_args(kwargs)
-        result = self.invoke_agent(kwargs['primary_host'], "format_target", args)
+        result = self.invoke_agent(kwargs["primary_host"], "format_target", args)
 
-        if not (result['filesystem_type'] in FileSystem.all_supported_filesystems()):
-            raise RuntimeError("Unexpected filesystem type '%s'" % result['filesystem_type'])
+        if not (result["filesystem_type"] in FileSystem.all_supported_filesystems()):
+            raise RuntimeError("Unexpected filesystem type '%s'" % result["filesystem_type"])
 
-        target.uuid = result['uuid']
+        target.uuid = result["uuid"]
 
-        if result['filesystem_type'] != 'zfs':
-            target.volume.filesystem_type = result['filesystem_type']
+        if result["filesystem_type"] != "zfs":
+            target.volume.filesystem_type = result["filesystem_type"]
 
-            if result['inode_count'] is not None:
+            if result["inode_count"] is not None:
                 # Check that inode_size was applied correctly
                 if target.inode_size:
-                    if target.inode_size != result['inode_size']:
-                        raise RuntimeError("Failed for format target with inode size %s, actual inode size %s" % (
-                            target.inode_size, result['inode_size']))
+                    if target.inode_size != result["inode_size"]:
+                        raise RuntimeError(
+                            "Failed for format target with inode size %s, actual inode size %s"
+                            % (target.inode_size, result["inode_size"])
+                        )
 
                 # Check that inode_count was applied correctly
                 if target.inode_count:
-                    if target.inode_count != result['inode_count']:
-                        raise RuntimeError("Failed for format target with inode count %s, actual inode count %s" % (
-                            target.inode_count, result['inode_count']))
+                    if target.inode_count != result["inode_count"]:
+                        raise RuntimeError(
+                            "Failed for format target with inode count %s, actual inode count %s"
+                            % (target.inode_count, result["inode_count"])
+                        )
 
                 # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
-                target.inode_count = result['inode_count']
-                target.inode_size = result['inode_size']
+                target.inode_count = result["inode_count"]
+                target.inode_size = result["inode_size"]
 
             target.volume.save()
 
@@ -1256,15 +1405,16 @@ class UpdateManagedTargetMount(Step):
     manage target mounts and managed targets to reflect changes during
     MkfsStep and device mounting/unmounting.
     """
+
     database = True
 
     @classmethod
     def describe(cls, kwargs):
-        return "Update managed target mounts for target %s" % kwargs['target']
+        return "Update managed target mounts for target %s" % kwargs["target"]
 
     def run(self, kwargs):
-        target = kwargs['target']
-        device_type = kwargs['device_type']
+        target = kwargs["target"]
+        device_type = kwargs["device_type"]
         job_log.info("Updating mtm volume_nodes for target %s" % target)
 
         for mtm in target.managedtargetmount_set.all():
@@ -1273,22 +1423,21 @@ class UpdateManagedTargetMount(Step):
 
             # represent underlying zpool as blockdevice if path is zfs dataset
             # todo: move this constraint into BlockDeviceZfs class
-            block_device = BlockDevice(device_type,
-                                       current_volume_node.path.split('/')[0]
-                                       if device_type == 'zfs'
-                                       else current_volume_node.path)
+            block_device = BlockDevice(
+                device_type,
+                current_volume_node.path.split("/")[0] if device_type == "zfs" else current_volume_node.path,
+            )
 
             filesystem = FileSystem(block_device.preferred_fstype, block_device.device_path)
-            job_log.info("Looking for volume_nodes for host %s , path %s" % (host,
-                                                                             filesystem.mount_path(target.name)))
+            job_log.info("Looking for volume_nodes for host %s , path %s" % (host, filesystem.mount_path(target.name)))
             job_log.info("Current volume_nodes for host %s = %s" % (host, VolumeNode.objects.filter(host=host)))
 
-            mtm.volume_node = util.wait_for_result(lambda: VolumeNode.objects.get(host=host,
-                                                                                  path=filesystem.mount_path(
-                                                                                      target.name)),
-                                                   logger=job_log,
-                                                   timeout=60 * 60,
-                                                   expected_exception_classes=[VolumeNode.DoesNotExist])
+            mtm.volume_node = util.wait_for_result(
+                lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
+                logger=job_log,
+                timeout=60 * 60,
+                expected_exception_classes=[VolumeNode.DoesNotExist],
+            )
 
             mtm.volume_node.primary = current_volume_node.primary
             mtm.volume_node.save()
@@ -1300,19 +1449,19 @@ class UpdateManagedTargetMount(Step):
 
 
 class FormatTargetJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(ManagedTarget, 'unformatted', 'formatted')
+    state_transition = StateChangeJob.StateTransition(ManagedTarget, "unformatted", "formatted")
     target = models.ForeignKey(ManagedTarget)
-    stateful_object = 'target'
-    state_verb = 'Format'
+    stateful_object = "target"
+    state_verb = "Format"
     cancellable = False
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['format_target']
+        return help_text["format_target"]
 
     def description(self):
         return "Format %s" % self.target
@@ -1327,7 +1476,7 @@ class FormatTargetJob(StateChangeJob):
             hosts.add(tm.host)
 
         for host in hosts:
-            deps.append(DependOn(host.lnet_configuration, 'lnet_up'))
+            deps.append(DependOn(host.lnet_configuration, "lnet_up"))
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1340,7 +1489,7 @@ class FormatTargetJob(StateChangeJob):
                 mgs_hosts.add(tm.host)
 
             for host in mgs_hosts:
-                deps.append(DependOn(host.lnet_configuration, 'lnet_up'))
+                deps.append(DependOn(host.lnet_configuration, "lnet_up"))
 
         return DependAll(deps)
 
@@ -1356,18 +1505,24 @@ class FormatTargetJob(StateChangeJob):
 
         device_type = self.target.volume.storage_resource.to_resource_class().device_type()
 
-        steps = [(MountOrImportStep,
-                  MountOrImportStep.create_parameters(self.target,
-                                                      primary_mount.host,
-                                                      False))]
+        steps = [(MountOrImportStep, MountOrImportStep.create_parameters(self.target, primary_mount.host, False))]
 
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume
             # so before proceeding, check that it is indeed unoccupied
-            steps.extend([(PreFormatCheck, {'host': primary_mount.host,
-                                            'path': primary_mount.volume_node.path,
-                                            'device_type': device_type}),
-                          (PreFormatComplete, {'target': self.target})])
+            steps.extend(
+                [
+                    (
+                        PreFormatCheck,
+                        {
+                            "host": primary_mount.host,
+                            "path": primary_mount.volume_node.path,
+                            "device_type": device_type,
+                        },
+                    ),
+                    (PreFormatComplete, {"target": self.target}),
+                ]
+            )
 
         # This line is key, because it causes the volume property to be filled so it can be access by the step
         self.target.volume
@@ -1379,16 +1534,25 @@ class FormatTargetJob(StateChangeJob):
 
         mkfsoptions = self.target.downcast().mkfs_override_options(block_device.preferred_fstype, mkfsoptions)
 
-        steps.extend([(MkfsStep, {'primary_host': primary_mount.host,
-                                  'target': self.target,
-                                  'device_path': primary_mount.volume_node.path,
-                                  'failover_nids': self.target.get_failover_nids(),
-                                  'mgs_nids': mgs_nids,
-                                  'reformat': self.target.reformat,
-                                  'device_type': device_type,
-                                  'backfstype': block_device.preferred_fstype,
-                                  'mkfsoptions': mkfsoptions}),
-                      (UpdateManagedTargetMount, {'target': self.target, 'device_type': device_type})])
+        steps.extend(
+            [
+                (
+                    MkfsStep,
+                    {
+                        "primary_host": primary_mount.host,
+                        "target": self.target,
+                        "device_path": primary_mount.volume_node.path,
+                        "failover_nids": self.target.get_failover_nids(),
+                        "mgs_nids": mgs_nids,
+                        "reformat": self.target.reformat,
+                        "device_type": device_type,
+                        "backfstype": block_device.preferred_fstype,
+                        "mkfsoptions": mkfsoptions,
+                    },
+                ),
+                (UpdateManagedTargetMount, {"target": self.target, "device_type": device_type}),
+            ]
+        )
 
         return steps
 
@@ -1402,10 +1566,7 @@ class FormatTargetJob(StateChangeJob):
         # Take a write lock on mtm objects related to this target
         for mtm in self.target.managedtargetmount_set.all():
             job_log.debug("Creating StateLock on %s/%s" % (mtm.__class__, mtm.id))
-            locks.append(StateLock(
-                job=self,
-                locked_item=mtm,
-                write=True))
+            locks.append(StateLock(job=self, locked_item=mtm, write=True))
 
         return locks
 
@@ -1415,19 +1576,19 @@ class MigrateTargetJob(AdvertisedJob):
 
     requires_confirmation = True
 
-    classes = ['ManagedTarget']
+    classes = ["ManagedTarget"]
 
     class Meta:
         abstract = True
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['migrate_target']
+        return help_text["migrate_target"]
 
     @classmethod
     def get_args(cls, target):
-        return {'target_id': target.id}
+        return {"target_id": target.id}
 
     @classmethod
     def can_run(cls, instance):
@@ -1436,13 +1597,9 @@ class MigrateTargetJob(AdvertisedJob):
     def create_locks(self):
         locks = super(MigrateTargetJob, self).create_locks()
 
-        locks.append(StateLock(
-            job=self,
-            locked_item=self.target,
-            begin_state='mounted',
-            end_state='mounted',
-            write=True
-        ))
+        locks.append(
+            StateLock(job=self, locked_item=self.target, begin_state="mounted", end_state="mounted", write=True)
+        )
 
         return locks
 
@@ -1451,52 +1608,63 @@ class FailbackTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        self.invoke_agent_expect_result(kwargs['host'], "failback_target", {'ha_label': kwargs['target'].ha_label})
-        target.active_mount = kwargs['primary_mount']
+        target = kwargs["target"]
+        self.invoke_agent_expect_result(kwargs["host"], "failback_target", {"ha_label": kwargs["target"].ha_label})
+        target.active_mount = kwargs["primary_mount"]
 
 
 class FailbackTargetJob(MigrateTargetJob):
     verb = "Failback"
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def can_run(cls, instance):
         if instance.immutable_state:
             return False
 
-        return len(instance.failover_hosts) > 0 and \
-               instance.active_host is not None and \
-               instance.primary_host != instance.active_host
+        return (
+            len(instance.failover_hosts) > 0
+            and instance.active_host is not None
+            and instance.primary_host != instance.active_host
+        )
         # HYD-1238: once we have a valid online/offline piece of info for each host,
         # reinstate the condition
         # instance.primary_host.is_available()
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['failback_target']
+        return help_text["failback_target"]
 
     def description(self):
         return FailbackTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll([DependOn(self.target, 'mounted'),
-                          DependOn(self.target.primary_host.lnet_configuration, 'lnet_up'),
-                          DependOn(self.target.primary_host.pacemaker_configuration, 'started')])
+        return DependAll(
+            [
+                DependOn(self.target, "mounted"),
+                DependOn(self.target.primary_host.lnet_configuration, "lnet_up"),
+                DependOn(self.target.primary_host.pacemaker_configuration, "started"),
+            ]
+        )
 
     def on_success(self):
         # Persist the update to active_target_mount
         self.target.save()
 
     def get_steps(self):
-        return [(FailbackTargetStep, {
-            'target': self.target,
-            'host': self.target.primary_host,
-            'primary_mount': self.target.managedtargetmount_set.get(primary=True)
-        })]
+        return [
+            (
+                FailbackTargetStep,
+                {
+                    "target": self.target,
+                    "host": self.target.primary_host,
+                    "primary_mount": self.target.managedtargetmount_set.get(primary=True),
+                },
+            )
+        ]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -1507,25 +1675,24 @@ class FailoverTargetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        target = kwargs['target']
-        self.invoke_agent_expect_result(kwargs['host'], "failover_target", {'ha_label': kwargs['target'].ha_label})
-        target.active_mount = kwargs['secondary_mount']
+        target = kwargs["target"]
+        self.invoke_agent_expect_result(kwargs["host"], "failover_target", {"ha_label": kwargs["target"].ha_label})
+        target.active_mount = kwargs["secondary_mount"]
 
 
 class FailoverTargetJob(MigrateTargetJob):
     verb = "Failover"
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def can_run(cls, instance):
         if instance.immutable_state:
             return False
 
-        return len(instance.failover_hosts) > 0 and \
-               instance.primary_host == instance.active_host
+        return len(instance.failover_hosts) > 0 and instance.primary_host == instance.active_host
 
     # HYD-1238: once we have a valid online/offline piece of info for each host,
     # reinstate the condition
@@ -1533,26 +1700,35 @@ class FailoverTargetJob(MigrateTargetJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['failover_target']
+        return help_text["failover_target"]
 
     def description(self):
         return FailoverTargetJob.long_description(None)
 
     def get_deps(self):
-        return DependAll([DependOn(self.target, 'mounted'),
-                          DependOn(self.target.failover_hosts[0].lnet_configuration, 'lnet_up'),
-                          DependOn(self.target.failover_hosts[0].pacemaker_configuration, 'started')])
+        return DependAll(
+            [
+                DependOn(self.target, "mounted"),
+                DependOn(self.target.failover_hosts[0].lnet_configuration, "lnet_up"),
+                DependOn(self.target.failover_hosts[0].pacemaker_configuration, "started"),
+            ]
+        )
 
     def on_success(self):
         # Persist the update to active_target_mount
         self.target.save()
 
     def get_steps(self):
-        return [(FailoverTargetStep, {
-            'target': self.target,
-            'host': self.target.failover_hosts[0],
-            'secondary_mount': self.target.managedtargetmount_set.get(primary=False)
-        })]
+        return [
+            (
+                FailoverTargetStep,
+                {
+                    "target": self.target,
+                    "host": self.target.failover_hosts[0],
+                    "secondary_mount": self.target.managedtargetmount_set.get(primary=False),
+                },
+            )
+        ]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -1561,33 +1737,38 @@ class FailoverTargetJob(MigrateTargetJob):
 
 class ManagedTargetMount(models.Model):
     """Associate a particular Lustre target with a device node on a host"""
+
     __metaclass__ = DeletableMetaclass
 
     # FIXME: both VolumeNode and TargetMount refer to the host
-    host = models.ForeignKey('ManagedHost')
+    host = models.ForeignKey("ManagedHost")
     mount_point = models.CharField(max_length=512, null=True, blank=True)
-    volume_node = models.ForeignKey('VolumeNode')
+    volume_node = models.ForeignKey("VolumeNode")
     primary = models.BooleanField()
-    target = models.ForeignKey('ManagedTarget')
+    target = models.ForeignKey("ManagedTarget")
 
     def save(self, force_insert=False, force_update=False, using=None):
         # If primary is true, then target must be unique
         if self.primary:
             from django.db.models import Q
+
             other_primaries = ManagedTargetMount.objects.filter(~Q(id=self.id), target=self.target, primary=True)
             if other_primaries.count() > 0:
                 from django.core.exceptions import ValidationError
+
                 raise ValidationError("Cannot have multiple primary mounts for target %s" % self.target)
 
         # If this is an MGS, there may not be another MGS on
         # this host
         if issubclass(self.target.downcast_class, ManagedMgs):
             from django.db.models import Q
-            other_mgs_mountables_local = ManagedTargetMount.objects.filter(~Q(id=self.id),
-                                                                           target__in=ManagedMgs.objects.all(),
-                                                                           host=self.host).count()
+
+            other_mgs_mountables_local = ManagedTargetMount.objects.filter(
+                ~Q(id=self.id), target__in=ManagedMgs.objects.all(), host=self.host
+            ).count()
             if other_mgs_mountables_local > 0:
                 from django.core.exceptions import ValidationError
+
                 raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
 
         return super(ManagedTargetMount, self).save(force_insert, force_update, using)
@@ -1596,8 +1777,8 @@ class ManagedTargetMount(models.Model):
         return self.volume_node.path
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def __str__(self):
         if self.primary:
@@ -1619,7 +1800,7 @@ class TargetOfflineAlert(AlertStateBase):
         return "Target %s offline" % (self.alert_item)
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def end_event(self):
@@ -1627,7 +1808,8 @@ class TargetOfflineAlert(AlertStateBase):
             message_str="%s started" % self.alert_item,
             alert_item=self.alert_item.primary_host,
             alert=self,
-            severity=logging.INFO)
+            severity=logging.INFO,
+        )
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
@@ -1642,7 +1824,7 @@ class TargetFailoverAlert(AlertStateBase):
         return "Target %s running on secondary server" % self.alert_item
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def end_event(self):
@@ -1650,7 +1832,8 @@ class TargetFailoverAlert(AlertStateBase):
             message_str="%s failover unmounted" % self.alert_item,
             alert_item=self.alert_item.primary_host,
             alert=self,
-            severity=logging.INFO)
+            severity=logging.INFO,
+        )
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
@@ -1666,7 +1849,7 @@ class TargetRecoveryAlert(AlertStateBase):
         return "Target %s in recovery" % self.alert_item
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def end_event(self):
@@ -1674,7 +1857,8 @@ class TargetRecoveryAlert(AlertStateBase):
             message_str="Target '%s' completed recovery" % self.alert_item,
             alert_item=self.alert_item.primary_host,
             alert=self,
-            severity=logging.INFO)
+            severity=logging.INFO,
+        )
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)

@@ -19,8 +19,11 @@ from chroma_core.models.storage_plugin import StorageResourceAttributeReference
 class String(BaseResourceAttribute):
     """A unicode string.  A maximum length may optionally be specified in the
     constructor using the ``max_length`` keyword argument"""
-    def __init__(self, max_length = None, *args, **kwargs):
-        assert (type(max_length) is int) or (max_length is None), "max_length is not an integer or None: %s" % max_length
+
+    def __init__(self, max_length=None, *args, **kwargs):
+        assert (type(max_length) is int) or (max_length is None), (
+            "max_length is not an integer or None: %s" % max_length
+        )
 
         self.max_length = max_length
         super(String, self).__init__(*args, **kwargs)
@@ -42,8 +45,9 @@ class Password(String):
             return rot13(password)
 
         Password(encrypt_fn)"""
+
     def __init__(self, encrypt_fn, *args, **kwargs):
-        assert hasattr(encrypt_fn, '__call__'), "encrypt_fn must be callable: %s" % encrypt_fn
+        assert hasattr(encrypt_fn, "__call__"), "encrypt_fn must be callable: %s" % encrypt_fn
 
         self.encrypt_fn = encrypt_fn
         super(Password, self).__init__(*args, **kwargs)
@@ -63,7 +67,8 @@ class Boolean(BaseResourceAttribute):
 class Integer(BaseResourceAttribute):
     """An integer.  This may optionally be bounded by setting the inclusive
     ``min_val`` and/or ``max_val`` keyword arguments to the constructor."""
-    def __init__(self, min_val = None, max_val = None, *args, **kwargs):
+
+    def __init__(self, min_val=None, max_val=None, *args, **kwargs):
         self.min_val = self.cast(min_val)
         self.max_val = self.cast(max_val)
         super(Integer, self).__init__(*args, **kwargs)
@@ -88,8 +93,10 @@ class Bytes(Integer):
     """An exact size in bytes.  This will be formatted with appropriate units
     and rounding when presented to the user, and should be used in preference to
     storing values in kilobytes/megabytes, etc., wherever possible."""
+
     def to_markup(self, value):
         from chroma_core.lib.util import sizeof_fmt
+
         return sizeof_fmt(int(value))
 
 
@@ -105,6 +112,7 @@ class Enum(BaseResourceAttribute):
 
     Assigning any value not in those options will fail validation.  When presented to the user,
     this will appear as a dropdown box of available options."""
+
     def __init__(self, *args, **kwargs):
         self.options = args
 
@@ -129,6 +137,7 @@ class Uuid(BaseResourceAttribute):
        resource.wwn = "b44f7d8ea40d4b96b2412ab462b4c1c1"  # valid
        resource.wwn = "other"  # invalid
     """
+
     def validate(self, value):
         stripped = value.replace("-", "")
         if not len(stripped) == 32:
@@ -137,15 +146,17 @@ class Uuid(BaseResourceAttribute):
 
 class PosixPath(BaseResourceAttribute):
     """A POSIX filesystem path, e.g. /tmp/myfile.txt"""
+
     pass
 
 
 class Hostname(BaseResourceAttribute):
     """A DNS hostname or an IP address, e.g. mycompany.com, 192.168.0.67"""
-    pattern = re.compile('(?!-)[a-zA-Z\d-]{1,63}(?<!-)$')
+
+    pattern = re.compile("(?!-)[a-zA-Z\d-]{1,63}(?<!-)$")
 
     def validate(self, value):
-        if len(value) > 255 or not all(map(self.pattern.match, value.split('.'))):
+        if len(value) > 255 or not all(map(self.pattern.match, value.split("."))):
             raise ValueError("'%s' is not a valid hostname" % value)
 
 
@@ -169,19 +180,22 @@ class ResourceReference(BaseResourceAttribute):
 
     def to_markup(self, value):
         from chroma_core.models import StorageResourceRecord
+
         if value is None:
             return ""
 
-        record = StorageResourceRecord.objects.get(pk = value._handle)
+        record = StorageResourceRecord.objects.get(pk=value._handle)
         if record.alias:
             name = record.alias
         else:
             name = value.get_label()
 
         from django.utils.html import conditional_escape
+
         name = conditional_escape(name)
 
         from django.utils.safestring import mark_safe
+
         return mark_safe("%s" % name)
 
     def validate(self, value):

@@ -20,7 +20,7 @@ class CommandRunningAlert(AlertStateBase):
     default_severity = logging.INFO
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def alert_message(self):
@@ -39,7 +39,7 @@ class CommandSuccessfulAlert(AlertStateBase):
     default_severity = logging.INFO
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def alert_message(self):
@@ -58,7 +58,7 @@ class CommandCancelledAlert(AlertStateBase):
     default_severity = logging.ERROR
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def alert_message(self):
@@ -69,7 +69,7 @@ class CommandErroredAlert(AlertStateBase):
     default_severity = logging.ERROR
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
     def alert_message(self):
@@ -79,22 +79,30 @@ class CommandErroredAlert(AlertStateBase):
 class Command(models.Model):
     command_alert_types = [CommandRunningAlert, CommandSuccessfulAlert, CommandCancelledAlert, CommandErroredAlert]
 
-    jobs = models.ManyToManyField('Job')
+    jobs = models.ManyToManyField("Job")
 
-    complete = models.BooleanField(default = False,
-        help_text = "True if all jobs have completed, or no jobs were needed to \
-                     satisfy the command")
-    errored = models.BooleanField(default = False,
-        help_text = "True if one or more of the command's jobs failed, or if \
-        there was an error scheduling jobs for this command")
-    cancelled = models.BooleanField(default = False,
-            help_text = "True if one or more of the command's jobs completed\
+    complete = models.BooleanField(
+        default=False,
+        help_text="True if all jobs have completed, or no jobs were needed to \
+                     satisfy the command",
+    )
+    errored = models.BooleanField(
+        default=False,
+        help_text="True if one or more of the command's jobs failed, or if \
+        there was an error scheduling jobs for this command",
+    )
+    cancelled = models.BooleanField(
+        default=False,
+        help_text="True if one or more of the command's jobs completed\
             with its cancelled attribute set to True, or if this command\
-            was cancelled by the user")
-    message = models.CharField(max_length = 512,
-            help_text = "Human readable string about one sentence long describing\
-            the action being done by the command")
-    created_at = models.DateTimeField(auto_now_add = True)
+            was cancelled by the user",
+    )
+    message = models.CharField(
+        max_length=512,
+        help_text="Human readable string about one sentence long describing\
+            the action being done by the command",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, force_insert=False, force_update=False, using=None):
         """
@@ -117,10 +125,15 @@ class Command(models.Model):
         # which could be of a number of types. CommandRunningAlert, CommandSuccessfulAlert, CommandCancelledAlert
         # or CommandErroredAlert so fetch those filter and be sure we have 1 or 0 alerts.
         try:
-            potential_command_alerts = AlertState.objects.filter(alert_item_id=self.id,
-                                                                 alert_item_type=ContentType.objects.get_for_model(self))
+            potential_command_alerts = AlertState.objects.filter(
+                alert_item_id=self.id, alert_item_type=ContentType.objects.get_for_model(self)
+            )
             # We should have tests for the case of more than one and if we find more than 1 then lets not make the users life a misery but take the first one.
-            command_alert = next(potential_command_alert for potential_command_alert in potential_command_alerts if type(potential_command_alert) in self.command_alert_types)
+            command_alert = next(
+                potential_command_alert
+                for potential_command_alert in potential_command_alerts
+                if type(potential_command_alert) in self.command_alert_types
+            )
         except StopIteration:
             command_alert = CommandRunningAlert.notify(self, True)
 
@@ -142,7 +155,7 @@ class Command(models.Model):
             command_alert.__class__.notify(self, False)
 
     @classmethod
-    def set_state(cls, objects, message = None, **kwargs):
+    def set_state(cls, objects, message=None, **kwargs):
         """The states argument must be a collection of 2-tuples
         of (<StatefulObject instance>, state)"""
 
@@ -160,13 +173,17 @@ class Command(models.Model):
                     new_state = state
                     route = object.get_route(old_state, new_state)
                     from chroma_core.services.job_scheduler.command_plan import Transition
+
                     job = Transition(object, route[-2], route[-1]).to_job()
                     message = job.description()
 
-                object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
+                object_ids = [
+                    (ContentType.objects.get_for_model(object).natural_key(), object.id, state)
+                    for object, state in objects
+                ]
                 try:
                     command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
-                except RpcError, e:
+                except RpcError as e:
                     job_log.error("Failed to set object state: " + traceback.format_exc())
                     # FIXME: Would be better to have a generalized mechanism
                     # for reconstituting remote exceptions, as this sort of thing
@@ -176,7 +193,7 @@ class Command(models.Model):
                     else:
                         raise
 
-                return Command.objects.get(pk = command_id)
+                return Command.objects.get(pk=command_id)
 
         return None
 
@@ -196,5 +213,5 @@ class Command(models.Model):
         return "<Command %s: '%s'>" % (self.id, self.message)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]

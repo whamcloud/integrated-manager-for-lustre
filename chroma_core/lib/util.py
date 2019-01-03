@@ -29,14 +29,14 @@ def time_str(dt):
 
 def sizeof_fmt(num):
     # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size/1094933#1094933
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'EB', 'ZB', 'YB']:
+    for x in ["bytes", "KB", "MB", "GB", "TB", "EB", "ZB", "YB"]:
         if num < 1024.0:
             return "%3.1f%s" % (num, x)
         num /= 1024.0
 
 
 def sizeof_fmt_detailed(num):
-    for x in ['', 'kB', 'MB', 'GB', 'TB', 'EB', 'ZB', 'YB']:
+    for x in ["", "kB", "MB", "GB", "TB", "EB", "ZB", "YB"]:
         if num < 1024.0 * 1024.0:
             return "%3.1f%s" % (num, x)
         num /= 1024.0
@@ -60,15 +60,12 @@ class timeit(object):
 
                 print_args = False
                 if print_args:
-                    self.logger.debug('Ran %r (%s, %r) in %2.2fs' %
-                            (method.__name__,
-                             ", ".join(["%s" % (a,) for a in args]),
-                             kw,
-                             te - ts))
+                    self.logger.debug(
+                        "Ran %r (%s, %r) in %2.2fs"
+                        % (method.__name__, ", ".join(["%s" % (a,) for a in args]), kw, te - ts)
+                    )
                 else:
-                    self.logger.debug('Ran %r in %2.2fs' %
-                            (method.__name__,
-                             te - ts))
+                    self.logger.debug("Ran %r in %2.2fs" % (method.__name__, te - ts))
                 return result
             else:
                 return method(*args, **kw)
@@ -78,19 +75,20 @@ class timeit(object):
 
 class dbperf(object):
     enabled = False
-    logger = logging.getLogger('dbperf')
+    logger = logging.getLogger("dbperf")
 
-    def __init__(self, label = ""):
+    def __init__(self, label=""):
         # Avoid importing this at module scope in order
         # to co-habit with chroma_settings()
         from django.db import connection
+
         self.connection = connection
 
         self.label = label
         self.logger.disabled = not self.enabled
         if self.enabled and not len(self.logger.handlers):
             self.logger.setLevel(logging.DEBUG)
-            self.logger.addHandler(logging.FileHandler('dbperf.log'))
+            self.logger.addHandler(logging.FileHandler("dbperf.log"))
 
     def __enter__(self):
         if settings.DEBUG:
@@ -108,9 +106,9 @@ class dbperf(object):
         q = self.q_final - self.q_initial
 
         if q:
-            logfile = open("%s.log" % self.label, 'w')
-            for query in self.connection.queries[self.q_initial:]:
-                logfile.write("(%s) %s\n" % (query['time'], query['sql']))
+            logfile = open("%s.log" % self.label, "w")
+            for query in self.connection.queries[self.q_initial :]:
+                logfile.write("(%s) %s\n" % (query["time"], query["sql"]))
             logfile.close()
 
         if q:
@@ -145,6 +143,7 @@ def chroma_settings():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
     import settings
+
     return settings
 
 
@@ -159,28 +158,29 @@ class CommandError(Exception):
         return """Command failed: %s
     return code %s
     stdout: %s
-    stderr: %s""" % (self.cmd, self.rc, self.stdout, self.stderr)
+    stderr: %s""" % (
+            self.cmd,
+            self.rc,
+            self.stdout,
+            self.stderr,
+        )
 
 
 class CommandLine(object):
-    def try_shell(self, cmdline, mystdout=subprocess.PIPE,
-                  mystderr=subprocess.PIPE, stdin_text=None, shell=False):
-        rc, out, err = self.shell(
-            cmdline, mystdout, mystderr, stdin_text, shell=shell)
+    def try_shell(self, cmdline, mystdout=subprocess.PIPE, mystderr=subprocess.PIPE, stdin_text=None, shell=False):
+        rc, out, err = self.shell(cmdline, mystdout, mystderr, stdin_text, shell=shell)
 
         if rc != 0:
             raise CommandError(cmdline, rc, out, err)
         else:
             return rc, out, err
 
-    def shell(self, cmdline, mystdout=subprocess.PIPE,
-              mystderr=subprocess.PIPE, stdin_text=None, shell=False):
+    def shell(self, cmdline, mystdout=subprocess.PIPE, mystderr=subprocess.PIPE, stdin_text=None, shell=False):
         if stdin_text is not None:
             stdin = subprocess.PIPE
         else:
             stdin = None
-        p = subprocess.Popen(cmdline, stdout=mystdout,
-                             stderr=mystderr, stdin=stdin, shell=shell)
+        p = subprocess.Popen(cmdline, stdout=mystdout, stderr=mystderr, stdin=stdin, shell=shell)
         if stdin_text is not None:
             p.stdin.write(stdin_text)
         out, err = p.communicate()
@@ -203,6 +203,6 @@ def normalize_nid(string):
     # remove _ from nids (i.e. @tcp_0 -> @tcp0
     i = string.find("_")
     if i > -1:
-        string = string[:i] + string[i + 1:]
+        string = string[:i] + string[i + 1 :]
 
     return string

@@ -10,14 +10,16 @@ from chroma_core.lib import metrics
 from chroma_core.models.stats import Series, Stats, timestamp
 
 
-fields = ('size', 'Gauge', 0, 1000), ('bandwith', 'Counter', 0, 100), ('speed', 'Derive', -100, 100)
+fields = ("size", "Gauge", 0, 1000), ("bandwith", "Counter", 0, 100), ("speed", "Derive", -100, 100)
 epoch = datetime.fromtimestamp(0, utc)
 
 
 def gen_series(sample, rows):
     "Generate sample timestamps and randomized data."
     for index in xrange(rows):
-        yield (index * sample), dict((field[0], {'type': field[1], 'value': random.randint(*field[2:])}) for field in fields)
+        yield (index * sample), dict(
+            (field[0], {"type": field[1], "value": random.randint(*field[2:])}) for field in fields
+        )
 
 
 class TestSeries(IMLUnitTestCase):
@@ -26,7 +28,7 @@ class TestSeries(IMLUnitTestCase):
     def setUp(self):
         super(TestSeries, self).setUp()
 
-        self.obj = User.objects.create(username='test', email='test@test.test')
+        self.obj = User.objects.create(username="test", email="test@test.test")
         self.store = metrics.MetricStore(self.obj)
 
     def tearDown(self):
@@ -58,7 +60,7 @@ class TestSeries(IMLUnitTestCase):
         data = stats[dt]
         self.assertEqual(dt, epoch)
         for name, type, start, stop in fields:
-            if type == 'Gauge':
+            if type == "Gauge":
                 self.assertGreaterEqual(data[name], start)
                 self.assertLessEqual(data[name], stop)
             else:
@@ -70,10 +72,10 @@ class TestSeries(IMLUnitTestCase):
         self.assertEqual(timestamp(dt), 10)
         for name, type, start, stop in fields:
             delta = (stop - start) / 10.0
-            if type == 'Gauge':
+            if type == "Gauge":
                 self.assertGreaterEqual(data[name], start)
                 self.assertLessEqual(data[name], stop)
-            elif type == 'Counter':
+            elif type == "Counter":
                 self.assertGreaterEqual(data[name], 0.0)
                 self.assertLessEqual(data[name], delta)
             else:

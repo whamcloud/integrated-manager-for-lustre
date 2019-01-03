@@ -55,6 +55,13 @@ jobs:
     script:
       - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
       - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
+  - stage: test
+    name: "Format Check"
+    python: "3.6"
+    install:
+        - pip install black
+    script:
+        - black --check ./
   - stage: cd
     git:
       depth: 999999

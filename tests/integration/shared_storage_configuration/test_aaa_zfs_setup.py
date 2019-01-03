@@ -25,22 +25,19 @@ class TestConfigureZfsTargets(ChromaIntegrationTestCase):
             return
 
         # We add the hosts to cause ZFS to be installed.
-        self.add_hosts([server['address'] for server in self.config_servers])
+        self.add_hosts([server["address"] for server in self.config_servers])
 
         # Replace the name with the new name on each server,
         # replace this way to ensure the order is not changed
-        for server in config['lustre_servers']:
+        for server in config["lustre_servers"]:
             # Make copy of the original
             # to use when creating/recreating
             # the zpools or for anything
             # else that needs original device.
-            server['orig_device_paths'] = server['device_paths'][:]
+            server["orig_device_paths"] = server["device_paths"][:]
 
-            for lustre_device in config['lustre_devices']:
-                if lustre_device['backend_filesystem'] == 'zfs':
-                    zfs_device = TestBlockDevice(
-                        'zfs',
-                        server['device_paths'][lustre_device['path_index']])
+            for lustre_device in config["lustre_devices"]:
+                if lustre_device["backend_filesystem"] == "zfs":
+                    zfs_device = TestBlockDevice("zfs", server["device_paths"][lustre_device["path_index"]])
 
-                    server['device_paths'][lustre_device[
-                        'path_index']] = zfs_device.device_path
+                    server["device_paths"][lustre_device["path_index"]] = zfs_device.device_path

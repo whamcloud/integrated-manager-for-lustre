@@ -27,19 +27,19 @@ class NetworkInterfaceResource(ChromaModelResource):
     """
     NetworkInterface information.
     """
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=False)
-    nid = fields.ToOneField('chroma_api.nid.NidResource', 'nid', full=True, null=True)
+
+    host = fields.ToOneField("chroma_api.host.HostResource", "host", full=False)
+    nid = fields.ToOneField("chroma_api.nid.NidResource", "nid", full=True, null=True)
     lnd_types = fields.ListField()
 
     class Meta:
-        queryset = NetworkInterface.objects.select_related('host', 'nid').all()
+        queryset = NetworkInterface.objects.select_related("host", "nid").all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        resource_name = 'network_interface'
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
-        filtering = {'host': ALL_WITH_RELATIONS,
-                     'id': ['exact']}
+        resource_name = "network_interface"
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]
+        filtering = {"host": ALL_WITH_RELATIONS, "id": ["exact"]}
 
     def dehydrate_lnd_types(self, bundle):
         return bundle.obj.lnd_types

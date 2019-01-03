@@ -5,12 +5,13 @@ import threading
 import time
 
 
-chroma_logger = logging.getLogger('test')
+chroma_logger = logging.getLogger("test")
 chroma_logger.setLevel(logging.DEBUG)
 
 
 try:
     import nose
+
     nose_installed = True
 except ImportError:
     nose_installed = False
@@ -27,7 +28,7 @@ if nose_installed:
             self.stream.writeln(self._exc_info_to_string(err, test))
             chroma_logger.error(self._exc_info_to_string(err, test))
         elif self.dots:
-            self.stream.write('E')
+            self.stream.write("E")
             self.stream.flush()
 
     def monkeyPatchedAddFailure(self, test, err):
@@ -37,7 +38,7 @@ if nose_installed:
             self.stream.writeln(self._exc_info_to_string(err, test))
             chroma_logger.error(self._exc_info_to_string(err, test))
         elif self.dots:
-            self.stream.write('F')
+            self.stream.write("F")
             self.stream.flush()
 
     nose.result.TextTestResult.chroma_logger = chroma_logger
@@ -86,7 +87,10 @@ if nose_installed:
         chroma_logger.info("Ending tests with these threads running: '%s'" % threading.enumerate())
         hanging_threads = get_hanging_threads()
         if hanging_threads:
-            sys.stderr.write("\n********************\n\nTERMINATING TEST RUN - NOT ALL THREADS STOPPED AT END OF TESTS: '%s'\n\n********************\n" % hanging_threads)
+            sys.stderr.write(
+                "\n********************\n\nTERMINATING TEST RUN - NOT ALL THREADS STOPPED AT END OF TESTS: '%s'\n\n********************\n"
+                % hanging_threads
+            )
             os._exit(1)
 
         return result

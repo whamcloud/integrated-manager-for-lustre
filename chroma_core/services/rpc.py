@@ -37,24 +37,24 @@ from chroma_core.services import _amqp_connection, _amqp_exchange
 
 
 REQUEST_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'request_id': {'type': 'string', 'required': True},
-        'method': {'type': 'string', 'required': True},
-        'args': {'type': 'array', 'required': True},
-        'kwargs': {'type': 'object', 'required': True},
-        'response_routing_key': {'type': 'string', 'required': True},
-    }
+    "type": "object",
+    "properties": {
+        "request_id": {"type": "string", "required": True},
+        "method": {"type": "string", "required": True},
+        "args": {"type": "array", "required": True},
+        "kwargs": {"type": "object", "required": True},
+        "response_routing_key": {"type": "string", "required": True},
+    },
 }
 
 
 RESPONSE_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'exception': {'type': ['string', 'null'], 'required': True},
-        'result': {'required': True},
-        'request_id': {'type': 'string', 'required': True}
-    }
+    "type": "object",
+    "properties": {
+        "exception": {"type": ["string", "null"], "required": True},
+        "result": {"required": True},
+        "request_id": {"type": "string", "required": True},
+    },
 }
 
 RESPONSE_TIMEOUT = 300
@@ -73,7 +73,7 @@ tx_connections = None
 rx_connections = None
 lw_connections = None
 
-log = log_register('rpc')
+log = log_register("rpc")
 
 
 class RpcError(Exception):
@@ -81,7 +81,7 @@ class RpcError(Exception):
         super(Exception, self).__init__(description)
         self.description = description
         self.remote_exception_type = exception_type
-        self.traceback = kwargs.get('traceback')
+        self.traceback = kwargs.get("traceback")
 
     def __str__(self):
         return "RpcError: %s" % self.description
@@ -107,7 +107,7 @@ class RunOneRpc(threading.Thread):
 
     def run(self):
         # We do not throttle rpcs that do not hit the database.
-        rpc_throttle = self.body['method'] not in ['wait_table_change']
+        rpc_throttle = self.body["method"] not in ["wait_table_change"]
 
         try:
             if rpc_throttle:
@@ -115,39 +115,45 @@ class RunOneRpc(threading.Thread):
                     rpc_complete_event = threading.Event()
                     RunOneRpc._throttled_locks.append(rpc_complete_event)
                     log.info("_throttled_locks: '%s'" % RunOneRpc._throttled_locks)
-                    log.info("Throttled rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
+                    log.info(
+                        "Throttled rpc to %s throttled rpcs=%s" % (self.body["method"], len(RunOneRpc._throttled_locks))
+                    )
                     rpc_complete_event.wait()
-                    log.info("Released rpc to %s throttled rpcs=%s" % (self.body['method'], len(RunOneRpc._throttled_locks)))
+                    log.info(
+                        "Released rpc to %s throttled rpcs=%s" % (self.body["method"], len(RunOneRpc._throttled_locks))
+                    )
 
                 RunOneRpc._outstanding += 1
 
             result = {
-                'result': self.rpc._local_call(self.body['method'], *self.body['args'], **self.body['kwargs']),
-                'request_id': self.body['request_id'],
-                'exception': None
+                "result": self.rpc._local_call(self.body["method"], *self.body["args"], **self.body["kwargs"]),
+                "request_id": self.body["request_id"],
+                "exception": None,
             }
-        except Exception, e:
+        except Exception as e:
             import sys
             import traceback
+
             exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            backtrace = "\n".join(traceback.format_exception(*(exc_info or sys.exc_info())))
 
             # Utility to generate human readable errors
             def translate_error(err):
                 from socket import error as socket_error
+
                 if type(err) == socket_error:
                     return "Cannot reach server"
 
                 return str(err)
 
             result = {
-                'request_id': self.body['request_id'],
-                'result': None,
-                'exception': translate_error(e),
-                'exception_type': type(e).__name__,
-                'traceback': backtrace
+                "request_id": self.body["request_id"],
+                "result": None,
+                "exception": translate_error(e),
+                "exception_type": type(e).__name__,
+                "traceback": backtrace,
             }
-            log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
+            log.error("RunOneRpc: exception calling %s: %s" % (self.body["method"], backtrace))
         finally:
             try:
                 if rpc_throttle:
@@ -161,25 +167,31 @@ class RunOneRpc(threading.Thread):
                 django.db.connection.close()
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
+
             def errback(exc, _):
-                log.info('RabbitMQ rpc got a temporary error. May retry. Error: %r', exc, exc_info=1)
+                log.info("RabbitMQ rpc got a temporary error. May retry. Error: %r", exc, exc_info=1)
 
-            retry_policy = {
-                'max_retries': 10,
-                'errback': errback
-            }
+            retry_policy = {"max_retries": 10, "errback": errback}
 
-            connection.ensure_connection(**retry_policy) 
+            connection.ensure_connection(**retry_policy)
 
             with Producer(connection) as producer:
 
                 maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
-                producer.publish(result, serializer="json", routing_key=self.body['response_routing_key'],
-                                 delivery_mode=TRANSIENT_DELIVERY_MODE, retry=True, retry_policy=retry_policy, immedate=True, mandatory=True)
+                producer.publish(
+                    result,
+                    serializer="json",
+                    routing_key=self.body["response_routing_key"],
+                    delivery_mode=TRANSIENT_DELIVERY_MODE,
+                    retry=True,
+                    retry_policy=retry_policy,
+                    immedate=True,
+                    mandatory=True,
+                )
 
 
 class RpcServer(ConsumerMixin):
-    def __init__(self, rpc, connection, service_name, serialize = False):
+    def __init__(self, rpc, connection, service_name, serialize=False):
         """
         :param rpc: A ServiceRpcInterface instance
         :param serialize: If True, then process RPCs one after another in a single thread
@@ -191,12 +203,19 @@ class RpcServer(ConsumerMixin):
         self.connection = connection
         self.queue_name = service_name
         self.request_routing_key = "%s.requests" % self.queue_name
-        self._response_conn_pool = kombu.pools.Connections(limit = RESPONSE_CONN_LIMIT)
+        self._response_conn_pool = kombu.pools.Connections(limit=RESPONSE_CONN_LIMIT)
 
     def get_consumers(self, Consumer, channel):
-        return [Consumer(
-            queues=[Queue(self.request_routing_key, _amqp_exchange(), routing_key=self.request_routing_key, durable=False)],
-            callbacks=[self.process_task])]
+        return [
+            Consumer(
+                queues=[
+                    Queue(
+                        self.request_routing_key, _amqp_exchange(), routing_key=self.request_routing_key, durable=False
+                    )
+                ],
+                callbacks=[self.process_task],
+            )
+        ]
 
     def process_task(self, body, message):
         message.ack()
@@ -217,6 +236,7 @@ class RpcServer(ConsumerMixin):
 class ResponseWaitState(object):
     """State kept by for each outstanding RPC -- the response handler
     must first populate result, then set the `complete` event."""
+
     def __init__(self, rpc_timeout):
         self.complete = threading.Event()
         self.timeout = False
@@ -228,6 +248,7 @@ class RpcClientResponseHandler(threading.Thread):
     """Handle responses for a particular named RPC service.
 
     """
+
     def __init__(self, response_routing_key):
         super(RpcClientResponseHandler, self).__init__()
         self._stopping = False
@@ -287,29 +308,34 @@ class RpcClientResponseHandler(threading.Thread):
                 log.debug("Malformed response: %s" % e)
             else:
                 try:
-                    state = self._response_states[body['request_id']]
+                    state = self._response_states[body["request_id"]]
                 except KeyError:
-                    log.debug("Unknown request ID %s" % body['request_id'])
+                    log.debug("Unknown request ID %s" % body["request_id"])
                 else:
                     state.result = body
                     state.complete.set()
             finally:
                 message.ack()
 
-        with rx_connections[_amqp_connection()].acquire(block = True) as connection:
+        with rx_connections[_amqp_connection()].acquire(block=True) as connection:
             # Prepare the response queue
             with connection.Consumer(
-                queues = [kombu.messaging.Queue(self._response_routing_key,
-                          _amqp_exchange(),
-                          routing_key=self._response_routing_key,
-                          auto_delete = True,
-                          durable = False)],
-                    callbacks = [callback]):
+                queues=[
+                    kombu.messaging.Queue(
+                        self._response_routing_key,
+                        _amqp_exchange(),
+                        routing_key=self._response_routing_key,
+                        auto_delete=True,
+                        durable=False,
+                    )
+                ],
+                callbacks=[callback],
+            ):
 
                 self._started.set()
                 while not self._stopping:
                     try:
-                        connection.drain_events(timeout = 1)
+                        connection.drain_events(timeout=1)
                     except socket.timeout:
                         pass
                     except IOError as e:
@@ -333,7 +359,8 @@ class RpcClient(object):
     that this process calls into.
 
     """
-    def __init__(self, service_name, lightweight = False):
+
+    def __init__(self, service_name, lightweight=False):
         self._service_name = service_name
         self._request_routing_key = "%s.requests" % self._service_name
         self._lightweight = lightweight
@@ -360,33 +387,40 @@ class RpcClient(object):
         :param request: JSON serializable dict
 
         """
-        log.debug("send %s" % request['request_id'])
-        request['response_routing_key'] = self._response_routing_key
+        log.debug("send %s" % request["request_id"])
+        request["response_routing_key"] = self._response_routing_key
 
         def errback(exc, _):
-                log.info('RabbitMQ rpc got a temporary error. May retry. Error: %r', exc, exc_info=1)
+            log.info("RabbitMQ rpc got a temporary error. May retry. Error: %r", exc, exc_info=1)
 
-        retry_policy = {
-            'max_retries': 10,
-            'errback': errback
-        }
+        retry_policy = {"max_retries": 10, "errback": errback}
 
         with Producer(connection) as producer:
             maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
-            producer.publish(request, serializer="json", routing_key=self._request_routing_key,
-                             delivery_mode=TRANSIENT_DELIVERY_MODE, retry=True, retry_policy=retry_policy)
+            producer.publish(
+                request,
+                serializer="json",
+                routing_key=self._request_routing_key,
+                delivery_mode=TRANSIENT_DELIVERY_MODE,
+                retry=True,
+                retry_policy=retry_policy,
+            )
 
-    def call(self, request, rpc_timeout = RESPONSE_TIMEOUT):
-        request_id = request['request_id']
+    def call(self, request, rpc_timeout=RESPONSE_TIMEOUT):
+        request_id = request["request_id"]
 
         if not self._lightweight:
             self.response_thread.start_wait(request_id, rpc_timeout)
-            with tx_connections[_amqp_connection()].acquire(block = True) as connection:
+            with tx_connections[_amqp_connection()].acquire(block=True) as connection:
                 self._send(connection, request)
             return self.response_thread.complete_wait(request_id)
         else:
             self._response_routing_key = "%s.responses_%s_%s_%s" % (
-                self._service_name, os.uname()[1], os.getpid(), request_id)
+                self._service_name,
+                os.uname()[1],
+                os.getpid(),
+                request_id,
+            )
             self._complete = False
 
             def callback(body, message):
@@ -401,20 +435,26 @@ class RpcClient(object):
                 finally:
                     message.ack()
 
-            with lw_connections[_amqp_connection()].acquire(block = True) as connection:
+            with lw_connections[_amqp_connection()].acquire(block=True) as connection:
                 with connection.Consumer(
-                    queues = [kombu.messaging.Queue(self._response_routing_key,
-                              _amqp_exchange(),
-                              routing_key=self._response_routing_key,
-                              auto_delete = True, durable = False)],
-                        callbacks = [callback]):
+                    queues=[
+                        kombu.messaging.Queue(
+                            self._response_routing_key,
+                            _amqp_exchange(),
+                            routing_key=self._response_routing_key,
+                            auto_delete=True,
+                            durable=False,
+                        )
+                    ],
+                    callbacks=[callback],
+                ):
 
                     self._send(connection, request)
 
                     timeout_at = time.time() + rpc_timeout
                     while not self._complete:
                         try:
-                            connection.drain_events(timeout = 1)
+                            connection.drain_events(timeout=1)
                         except socket.timeout:
                             pass
                         except IOError as e:
@@ -480,8 +520,8 @@ class RpcClientFactory(object):
 
         global tx_connections
         global rx_connections
-        tx_connections = kombu.pools.Connections(limit = 10)
-        rx_connections = kombu.pools.Connections(limit = 20)
+        tx_connections = kombu.pools.Connections(limit=10)
+        rx_connections = kombu.pools.Connections(limit=20)
 
     @classmethod
     def shutdown_threads(cls):
@@ -511,9 +551,9 @@ class RpcClientFactory(object):
             if not cls._lightweight_initialized:
                 # connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
                 global lw_connections
-                lw_connections = kombu.pools.Connections(limit = LIGHTWEIGHT_CONNECTIONS_LIMIT)
+                lw_connections = kombu.pools.Connections(limit=LIGHTWEIGHT_CONNECTIONS_LIMIT)
                 cls._lightweight_initialized = True
-            return RpcClient(queue_name, lightweight = True)
+            return RpcClient(queue_name, lightweight=True)
         else:
             with cls._factory_lock:
                 if not cls._available:
@@ -563,7 +603,7 @@ class ServiceRpcInterface(object):
 
     """
 
-    def __init__(self, wrapped = None):
+    def __init__(self, wrapped=None):
         self.worker = None
         self.wrapped = wrapped
 
@@ -584,14 +624,10 @@ class ServiceRpcInterface(object):
             transaction.commit()
 
         # If the caller specified rcp_timeout then fetch it from the args and remove.
-        rpc_timeout = kwargs.pop('rpc_timeout', RESPONSE_TIMEOUT)
+        rpc_timeout = kwargs.pop("rpc_timeout", RESPONSE_TIMEOUT)
 
         request_id = uuid.uuid4().__str__()
-        request = {
-            'method': fn_name,
-            'args': args,
-            'kwargs': kwargs,
-            'request_id': request_id}
+        request = {"method": fn_name, "args": args, "kwargs": kwargs, "request_id": request_id}
 
         log.debug("Starting rpc: %s, id: %s " % (fn_name, request_id))
         log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
@@ -600,9 +636,12 @@ class ServiceRpcInterface(object):
 
         result = rpc_client.call(request, rpc_timeout)
 
-        if result['exception']:
-            log.error("ServiceRpcInterface._call: exception %s: %s \ttraceback: %s" % (result['exception'], result['exception_type'], result.get('traceback')))
-            raise RpcError(result['exception'], result.get('exception_type'), traceback=result.get('traceback'))
+        if result["exception"]:
+            log.error(
+                "ServiceRpcInterface._call: exception %s: %s \ttraceback: %s"
+                % (result["exception"], result["exception_type"], result.get("traceback"))
+            )
+            raise RpcError(result["exception"], result.get("exception_type"), traceback=result.get("traceback"))
         else:
             # NB: 'result' can be very large, and almost cripple the various logs where
             # rpcs are run: http.log, job_scheduler.log, etc.
@@ -620,11 +659,11 @@ class ServiceRpcInterface(object):
 
             log.debug("Completed rpc: %s, id: %s, result: %s" % (fn_name, request_id, result_str))
 
-            return result['result']
+            return result["result"]
 
     def _local_call(self, fn_name, *args, **kwargs):
         log.debug("_local_call: %s %s %s" % (fn_name, args, kwargs))
-        assert (fn_name in self.methods)
+        assert fn_name in self.methods
         fn = getattr(self.wrapped, fn_name)
         return fn(*args, **kwargs)
 

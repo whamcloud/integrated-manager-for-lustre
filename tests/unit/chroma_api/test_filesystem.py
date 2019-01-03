@@ -10,7 +10,7 @@ class TestFilesystemResource(ChromaApiTestCase):
     def setUp(self):
         super(TestFilesystemResource, self).setUp()
 
-        self.host = synthetic_host('myserver')
+        self.host = synthetic_host("myserver")
 
     def test_spider(self):
         self.spider_api()
@@ -19,77 +19,65 @@ class TestFilesystemResource(ChromaApiTestCase):
 
     def test_HYD1483(self):
         """Test that adding a second MGS to a host emits a useful error."""
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name="MGS")
         mgt.save()
 
         new_mgt_volume = synthetic_volume_full(self.host)
         mdt_volume = synthetic_volume_full(self.host)
         ost_volume = synthetic_volume_full(self.host)
 
-        response = self.api_client.post("/api/filesystem/",
-             data = {
-                'name': 'testfs',
-                'mgt': {'volume_id': new_mgt_volume.id},
-                'mdts': [{
-                    'volume_id': mdt_volume.id,
-                    'conf_params': {}
-                }],
-                'osts': [{
-                    'volume_id': ost_volume.id,
-                    'conf_params': {}
-                }],
-                'conf_params': {}
-            })
+        response = self.api_client.post(
+            "/api/filesystem/",
+            data={
+                "name": "testfs",
+                "mgt": {"volume_id": new_mgt_volume.id},
+                "mdts": [{"volume_id": mdt_volume.id, "conf_params": {}}],
+                "osts": [{"volume_id": ost_volume.id, "conf_params": {}}],
+                "conf_params": {},
+            },
+        )
         self.assertHttpBadRequest(response)
 
         errors = self.deserialize(response)
-        self.assertIn('only one MGS is allowed per server', errors['mgt']['volume_id'][0])
+        self.assertIn("only one MGS is allowed per server", errors["mgt"]["volume_id"][0])
 
     def test_HYD424(self):
         """Test that filesystems can't be created using unmanaged MGSs"""
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name="MGS")
         mgt.immutable_state = True
         mgt.save()
 
         # Shouldn't offer the MGS for FS creation
-        response = self.api_client.get("/api/target/", data = {'kind': 'MGT', 'limit': 0, 'immutable_state': False})
+        response = self.api_client.get("/api/target/", data={"kind": "MGT", "limit": 0, "immutable_state": False})
         self.assertHttpOK(response)
-        mgts = self.deserialize(response)['objects']
+        mgts = self.deserialize(response)["objects"]
         self.assertEqual(len(mgts), 0)
 
         mdt_volume = synthetic_volume_full(self.host)
         ost_volume = synthetic_volume_full(self.host)
 
         # Shouldn't accept the MGS for FS creation
-        response = self.api_client.post("/api/filesystem/",
-             data = {
-                'name': 'testfs',
-                'mgt': {'id': mgt.id},
-                'mdts': [{
-                    'volume_id': mdt_volume.id,
-                    'conf_params': {}
-                }],
-                'osts': [{
-                    'volume_id': ost_volume.id,
-                    'conf_params': {}
-                }],
-                'conf_params': {}
-            })
+        response = self.api_client.post(
+            "/api/filesystem/",
+            data={
+                "name": "testfs",
+                "mgt": {"id": mgt.id},
+                "mdts": [{"volume_id": mdt_volume.id, "conf_params": {}}],
+                "osts": [{"volume_id": ost_volume.id, "conf_params": {}}],
+                "conf_params": {},
+            },
+        )
         self.assertHttpBadRequest(response)
 
         errors = self.deserialize(response)
-        self.assertDictEqual(errors, {
-            'mgt': {'id': ['MGT is unmanaged']},
-            'mdts': {},
-            'osts': {},
-         })
+        self.assertDictEqual(errors, {"mgt": {"id": ["MGT is unmanaged"]}, "mdts": {}, "osts": {}})
 
     def test_set_state_partial(self):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""
         self.create_simple_filesystem(self.host)
         fs_uri = "/api/filesystem/%s/" % self.fs.id
         with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
-            self.api_set_state_partial(fs_uri, 'stopped')
+            self.api_set_state_partial(fs_uri, "stopped")
             Command.set_state.assert_called_once()
 
     def test_set_state_full(self):
@@ -97,5 +85,5 @@ class TestFilesystemResource(ChromaApiTestCase):
         self.create_simple_filesystem(self.host)
         fs_uri = "/api/filesystem/%s/" % self.fs.id
         with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
-            self.api_set_state_full(fs_uri, 'stopped')
+            self.api_set_state_full(fs_uri, "stopped")
             Command.set_state.assert_called_once()

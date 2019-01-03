@@ -9,7 +9,7 @@ from django.db import transaction
 import logging
 import re
 
-syslog_events_log = log_register('syslog_events')
+syslog_events_log = log_register("syslog_events")
 
 _re_cache = {}
 
@@ -37,6 +37,7 @@ def _plain_find_one_in_many(haystack, needles):
         if haystack.find(n) != -1:
             return n
 
+
 # use the plain version for now
 # in the future, we can switch to REs or a combination
 find_one_in_many = _plain_find_one_in_many
@@ -45,7 +46,7 @@ find_one_in_many = _plain_find_one_in_many
 def _get_word_after(string, after):
     s = string.find(after) + len(after)
     l = string[s:].find(" ")
-    return string[s:s + l]
+    return string[s : s + l]
 
 
 #
@@ -53,8 +54,7 @@ def _get_word_after(string, after):
 #
 # LustreError: 122-1: Can't start acceptor on port 988: port already in use
 def port_used_handler(message, host):
-    SyslogEvent.register_event(severity = logging.ERROR, alert_item = host,
-                               message_str = "Lustre port already being used")
+    SyslogEvent.register_event(severity=logging.ERROR, alert_item=host, message_str="Lustre port already being used")
 
 
 #
@@ -75,11 +75,12 @@ def client_connection_handler(message, host):
     # and of course the target
     target_end = message.find(": connection from") - 1
     target_start = message[:target_end].rfind(" ") + 1
-    msg = "client %s from %s connected to target %s" % \
-        (message[uuid_start:uuid_start + uuid_len],
-         message[nid_start:nid_start + nid_len],
-         message[target_start:target_end])
-    lustre_pid = message[9:9 + message[9:].find(":")]
+    msg = "client %s from %s connected to target %s" % (
+        message[uuid_start : uuid_start + uuid_len],
+        message[nid_start : nid_start + nid_len],
+        message[target_start:target_end],
+    )
+    lustre_pid = message[9 : 9 + message[9:].find(":")]
 
     ClientConnectEvent.register_event(severity=sev, alert_item=host, message_str=msg, lustre_pid=lustre_pid)
 
@@ -92,13 +93,12 @@ def server_security_flavor_handler(message, host):
     # get the flavour out of the string
     flavour_start = message.rfind(" ") + 1
     flavour = message[flavour_start:]
-    lustre_pid = message[9:9 + message[9:].find(":")]
+    lustre_pid = message[9 : 9 + message[9:].find(":")]
 
     # Associate this with a previous client connect event if possible
     try:
-        event = ClientConnectEvent.objects.filter(lustre_pid=lustre_pid).order_by('-id')[0]
-        event.message_str = "%s with security flavor %s" % \
-                            (event.message_str, flavour)
+        event = ClientConnectEvent.objects.filter(lustre_pid=lustre_pid).order_by("-id")[0]
+        event.message_str = "%s with security flavor %s" % (event.message_str, flavour)
         event.save()
     except IndexError:
         pass
@@ -112,7 +112,7 @@ def server_security_flavor_handler(message, host):
 def admin_client_eviction_handler(message, host):
     uuid = _get_word_after(message, "evicting ")
     msg = "client %s evicted by the administrator" % uuid
-    lustre_pid = message[9:9 + message[9:].find(":")]
+    lustre_pid = message[9 : 9 + message[9:].find(":")]
     ClientConnectEvent.register_event(severity=logging.WARNING, alert_item=host, message_str=msg, lustre_pid=lustre_pid)
 
 
@@ -123,7 +123,7 @@ def admin_client_eviction_handler(message, host):
 def client_eviction_handler(message, host):
     s = message.find("### ") + 4
     l = message[s:].find(": evicting client at ")
-    reason = message[s:s + l]
+    reason = message[s : s + l]
     client = _get_word_after(message, ": evicting client at ")
     msg = "client %s evicted: %s" % (client, reason)
     lustre_pid = _get_word_after(message, "pid: ")
@@ -131,13 +131,14 @@ def client_eviction_handler(message, host):
 
 
 class LogMessageParser(object):
-    selectors = {"Can't start acceptor on port": port_used_handler,
-                 "Can't create socket:": port_used_handler,
-                 ": connection from ": client_connection_handler,
-                 ": select flavor ": server_security_flavor_handler,
-                 ": obd_export_evict_by_uuid()": admin_client_eviction_handler,
-                 ": evicting client at ": client_eviction_handler,
-                }
+    selectors = {
+        "Can't start acceptor on port": port_used_handler,
+        "Can't create socket:": port_used_handler,
+        ": connection from ": client_connection_handler,
+        ": select flavor ": server_security_flavor_handler,
+        ": obd_export_evict_by_uuid()": admin_client_eviction_handler,
+        ": evicting client at ": client_eviction_handler,
+    }
 
     def __init__(self):
         self._hosts = {}
@@ -148,14 +149,14 @@ class LogMessageParser(object):
             return self._hosts[fqdn]
         except KeyError:
             try:
-                host = ManagedHost.objects.get(fqdn = fqdn)
+                host = ManagedHost.objects.get(fqdn=fqdn)
                 self._hosts[fqdn] = host
                 return host
             except ManagedHost.DoesNotExist:
                 return None
 
     def parse(self, fqdn, message):
-        hit = find_one_in_many(message['message'], self.selectors.keys())
+        hit = find_one_in_many(message["message"], self.selectors.keys())
         if hit:
             h = self.get_host(fqdn)
             if h is None:
@@ -164,9 +165,11 @@ class LogMessageParser(object):
             fn = self.selectors[hit]
             with transaction.commit_manually():
                 try:
-                    fn(message['message'], h)
-                except Exception, e:
-                    syslog_events_log.error("Failed to parse log line '%s' using handler %s: %s" % (message['message'], fn, e))
+                    fn(message["message"], h)
+                except Exception as e:
+                    syslog_events_log.error(
+                        "Failed to parse log line '%s' using handler %s: %s" % (message["message"], fn, e)
+                    )
                     transaction.rollback()
                 else:
                     transaction.commit()

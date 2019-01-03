@@ -1,5 +1,3 @@
-
-
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import threading
 
@@ -8,10 +6,7 @@ class HttpListener(threading.Thread):
     def __init__(self, port):
         super(HttpListener, self).__init__()
 
-        self._server = HTTPServer(
-            ('127.0.0.1', port),
-            HttpListenerHandler
-        )
+        self._server = HTTPServer(("127.0.0.1", port), HttpListenerHandler)
         self._server.listener = self
         self.requests = []
 
@@ -49,7 +44,7 @@ class HttpListenerHandler(BaseHTTPRequestHandler):
         self.accept_and_log()
 
     def do_POST(self):
-        length = int(self.headers.getheader('content-length'))
+        length = int(self.headers.getheader("content-length"))
         self.post_data = self.rfile.read(length)
 
         self.accept_and_log()

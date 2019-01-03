@@ -6,11 +6,12 @@
 class DisabledConnection(object):
     class DisabledConnectionUsed(Exception):
         def __init__(self):
-            super(DisabledConnection.DisabledConnectionUsed, self).__init__("Attempted to use database from a step which does not have database=True")
+            super(DisabledConnection.DisabledConnectionUsed, self).__init__(
+                "Attempted to use database from a step which does not have database=True"
+            )
 
     def __getattr__(self, item):
         raise DisabledConnection.DisabledConnectionUsed()
 
+
 DISABLED_CONNECTION = DisabledConnection()
-
-

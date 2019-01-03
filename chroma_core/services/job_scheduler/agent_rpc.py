@@ -1,4 +1,3 @@
-
 # Copyright (c) 2018 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
@@ -40,32 +39,22 @@ class ActionInFlight(object):
 
     def get_request(self):
         return {
-            'fqdn': self.fqdn,
-            'type': 'DATA',
-            'plugin': AgentRpcMessenger.PLUGIN_NAME,
-            'session_id': self.session_id,
-            'session_seq': None,
-            'body': {
-                'type': 'ACTION_START',
-                'id': self.id,
-                'action': self.action,
-                'args': self.args
-            }
+            "fqdn": self.fqdn,
+            "type": "DATA",
+            "plugin": AgentRpcMessenger.PLUGIN_NAME,
+            "session_id": self.session_id,
+            "session_seq": None,
+            "body": {"type": "ACTION_START", "id": self.id, "action": self.action, "args": self.args},
         }
 
     def get_cancellation(self):
         return {
-            'fqdn': self.fqdn,
-            'type': 'DATA',
-            'plugin': AgentRpcMessenger.PLUGIN_NAME,
-            'session_id': self.session_id,
-            'session_seq': None,
-            'body': {
-                'type': 'ACTION_CANCEL',
-                'id': self.id,
-                'action': None,
-                'args': None
-            }
+            "fqdn": self.fqdn,
+            "type": "DATA",
+            "plugin": AgentRpcMessenger.PLUGIN_NAME,
+            "session_id": self.session_id,
+            "session_seq": None,
+            "body": {"type": "ACTION_CANCEL", "id": self.id, "action": None, "args": None},
         }
 
 
@@ -78,11 +67,11 @@ class AgentRpcMessenger(object):
 
     # The name of the device plugin on the agent with which
     # this module will communicate
-    PLUGIN_NAME = 'action_runner'
+    PLUGIN_NAME = "action_runner"
 
     # A bit rubbish, but a tag so callers can know the failure was because the server could not be contacted.
     # Improve with a different Exception one day.
-    COULD_NOT_CONTACT_TAG = 'Could not contact server'
+    COULD_NOT_CONTACT_TAG = "Could not contact server"
 
     # If no action_runner session is present when trying to run
     # an action, wait this long for one to show up
@@ -112,7 +101,7 @@ class AgentRpcMessenger(object):
             # already the case.
             log.warning("Unable to reset %s sessions" % AgentRpcMessenger.PLUGIN_NAME)
 
-        self._action_runner_rx_queue.serve(session_callback = self.on_rx)
+        self._action_runner_rx_queue.serve(session_callback=self.on_rx)
         log.info("AgentRpcMessenger.complete")
 
     def stop(self):
@@ -149,8 +138,10 @@ class AgentRpcMessenger(object):
 
         for rpc in old_rpcs.values():
             if new_session_id:
-                log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s) because %s" % (
-                    rpc.id, new_session_id, old_session_id, message))
+                log.warning(
+                    "AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s) because %s"
+                    % (rpc.id, new_session_id, old_session_id, message)
+                )
                 rpc.session_id = new_session_id
                 self._resend(rpc)
             else:
@@ -197,49 +188,52 @@ class AgentRpcMessenger(object):
     def on_rx(self, message):
         with self._lock:
             log.debug("on_rx: %s" % message)
-            session_id = message['session_id']
-            fqdn = message['fqdn']
+            session_id = message["session_id"]
+            fqdn = message["fqdn"]
             log.info("AgentRpcMessenger.on_rx: %s/%s" % (fqdn, session_id))
 
-            if message['type'] == 'SESSION_CREATE':
+            if message["type"] == "SESSION_CREATE":
                 if fqdn in self._sessions:
                     old_session_id = self._sessions[fqdn]
                     self._abort_session(fqdn, "new session created", old_session_id, session_id)
                 else:
                     self._sessions[fqdn] = session_id
-            elif message['type'] == 'SESSION_TERMINATE':
+            elif message["type"] == "SESSION_TERMINATE":
                 # An agent has timed out or restarted, we're being told its session is now dead
-                if message['fqdn'] in self._sessions:
-                    self._abort_session(fqdn, "session terminated", message['session_id'])
-            elif message['type'] == 'SESSION_TERMINATE_ALL':
+                if message["fqdn"] in self._sessions:
+                    self._abort_session(fqdn, "session terminated", message["session_id"])
+            elif message["type"] == "SESSION_TERMINATE_ALL":
                 # The http_agent service has restarted, all sessions are now over
                 for fqdn, session in self._sessions.items():
                     self._abort_session(fqdn, "all sessions terminated", session)
             else:
-                rpc_response = message['body']
-                if rpc_response['type'] != 'ACTION_COMPLETE':
-                    log.error("Unexpected type '%s'" % rpc_response['type'])
+                rpc_response = message["body"]
+                if rpc_response["type"] != "ACTION_COMPLETE":
+                    log.error("Unexpected type '%s'" % rpc_response["type"])
                     return
 
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
-                    log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
+                    log.info(
+                        "AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)"
+                        % (fqdn, self._sessions[fqdn], session_id)
+                    )
                     self._abort_session(fqdn, "session cancelled", self._sessions[fqdn])
                     HttpAgentRpc().reset_session(fqdn, AgentRpcMessenger.PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
                     try:
-                        rpc = self._session_rpcs[session_id][rpc_response['id']]
+                        rpc = self._session_rpcs[session_id][rpc_response["id"]]
                     except KeyError:
-                        if rpc_response['id'] in self._cancelled_rpcs:
-                            log.debug("Response received from a cancelled RPC (id: %s)", rpc_response['id'])
+                        if rpc_response["id"] in self._cancelled_rpcs:
+                            log.debug("Response received from a cancelled RPC (id: %s)", rpc_response["id"])
                         else:
-                            log.error("Response received from UNKNOWN RPC of (id: %s)", rpc_response['id'])
+                            log.error("Response received from UNKNOWN RPC of (id: %s)", rpc_response["id"])
                     else:
-                        del self._session_rpcs[session_id][rpc_response['id']]
-                        rpc.exception = rpc_response['exception']
-                        rpc.result = rpc_response['result']
-                        rpc.subprocesses = rpc_response['subprocesses']
+                        del self._session_rpcs[session_id][rpc_response["id"]]
+                        rpc.exception = rpc_response["exception"]
+                        rpc.result = rpc_response["result"]
+                        rpc.subprocesses = rpc_response["subprocesses"]
                         log.info("AgentRpcMessenger.on_rx: completing rpc %s" % rpc.id)
                         rpc.complete.set()
                 else:
@@ -257,8 +251,13 @@ class AgentRpcMessenger(object):
 
         if not self.await_session(fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT):
             log.error("No %s session for %s after %s seconds" % (AgentRpcMessenger.PLUGIN_NAME, fqdn, wait_count))
-            raise AgentException(fqdn, action, args, "%s %s no session after %s seconds" %
-                                 (self.COULD_NOT_CONTACT_TAG, fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT))
+            raise AgentException(
+                fqdn,
+                action,
+                args,
+                "%s %s no session after %s seconds"
+                % (self.COULD_NOT_CONTACT_TAG, fqdn, AgentRpcMessenger.SESSION_WAIT_TIMEOUT),
+            )
 
         with self._lock:
             try:
@@ -298,13 +297,13 @@ class AgentRpcMessenger(object):
                 self._cancelled_rpcs.append(rpc.id)
                 raise AgentCancellation()
             else:
-                rpc.complete.wait(timeout = 1.0)
+                rpc.complete.wait(timeout=1.0)
                 if rpc.complete.is_set():
                     break
 
         log.info("AgentRpcMessenger._complete: completed wait for rpc %s" % rpc.id)
         if rpc.exception:
-            raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception, subprocesses = rpc.subprocesses)
+            raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception, subprocesses=rpc.subprocesses)
         else:
             return rpc.result
 
@@ -314,12 +313,12 @@ class AgentRpcMessenger(object):
         return self._complete(rpc, cancel_event), rpc
 
     def await_session(self, fqdn, timeout):
-        '''
+        """
         Wait for the agent to connect back to the manager and hence be ready to accept commands
         :param fqdn: fqdn of the agent we are waiting for
         :param timeout: how long to wait before quiting.
         :return: timeout remaining 0=failed, !0 is pass and useful for debug.
-        '''
+        """
         while self.get_session_id(fqdn) == None and timeout > 0:
             # Allow a short wait for a session to show up, for example
             # when running setup actions on a host we've just added its
@@ -336,6 +335,7 @@ class AgentRpc(object):
     This class exists to provide one-per-process initialization of
     AgentRpcMessenger
     """
+
     thread = None
     _messenger = None
 
@@ -378,7 +378,7 @@ class AgentCancellation(Exception):
 
 
 class AgentException(Exception):
-    def __init__(self, fqdn, action, params, backtrace, subprocesses = []):
+    def __init__(self, fqdn, action, params, backtrace, subprocesses=[]):
         self.fqdn = fqdn
         self.action = action
         self.params = params
@@ -391,7 +391,12 @@ Host: %s
 Action: %s
 Arguments: %s
 Exception: %s
-""" % (self.fqdn, self.action, self.params, self.backtrace)
+""" % (
+            self.fqdn,
+            self.action,
+            self.params,
+            self.backtrace,
+        )
 
 
 class AgentSsh(object):
@@ -399,7 +404,8 @@ class AgentSsh(object):
     This class can run agent actions over SSH (as opposed to the usual
     way of running actions over reverse-HTTPS).
     """
-    def __init__(self, address, log = None, console_callback = None, timeout = None):
+
+    def __init__(self, address, log=None, console_callback=None, timeout=None):
         DEFAULT_TIMEOUT = 60
         if timeout:
             self.timeout = timeout
@@ -414,9 +420,10 @@ class AgentSsh(object):
             self.log = log
         else:
             import logging
+
             self.log = logging.getLogger(None)
 
-    DEFAULT_USERNAME = 'root'
+    DEFAULT_USERNAME = "root"
 
     def console_append(self, chunk):
         if self.console_callback:
@@ -448,9 +455,7 @@ class AgentSsh(object):
                 #  optionally encrypted
                 pkey_filelike = StringIO(pkey)
                 if pkey_pw:
-                    pkey_paramiko = paramiko.RSAKey.from_private_key(
-                        pkey_filelike,
-                        pkey_pw)
+                    pkey_paramiko = paramiko.RSAKey.from_private_key(pkey_filelike, pkey_pw)
                 else:
                     pkey_paramiko = paramiko.RSAKey.from_private_key(pkey_filelike)
                 args.update({"pkey": pkey_paramiko})
@@ -463,6 +468,7 @@ class AgentSsh(object):
 
     def ssh(self, command, auth_args=None):
         import paramiko
+
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -474,8 +480,7 @@ class AgentSsh(object):
 
         user, hostname, port = self.ssh_params()
 
-        args = {"username": user,
-                "timeout": SOCKET_TIMEOUT}
+        args = {"username": user, "timeout": SOCKET_TIMEOUT}
 
         if auth_args is not None:
             args.update(auth_args)
@@ -491,22 +496,22 @@ class AgentSsh(object):
             ssh_config.parse(open(config_path))
 
             host_config = ssh_config.lookup(self.address)
-            hostname = host_config['hostname']
+            hostname = host_config["hostname"]
 
-            if 'user' in host_config:
-                args['username'] = host_config['user']
-                if args['username'] != 'root':
-                    command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
+            if "user" in host_config:
+                args["username"] = host_config["user"]
+                if args["username"] != "root":
+                    command = 'sudo sh -c "{}"'.format(command.replace('"', '\\"'))
                     log.info("Wrapped command: '%s'" % command)
 
-            if 'identityfile' in host_config:
+            if "identityfile" in host_config:
                 log.info("host_config: %s" % host_config)
 
-                args['key_filename'] = host_config['identityfile'][0]
+                args["key_filename"] = host_config["identityfile"][0]
 
                 # Work around paramiko issue 157, failure to parse quoted values
                 # (vagrant always quotes IdentityFile)
-                args['key_filename'] = args['key_filename'].strip("\"")
+                args["key_filename"] = args["key_filename"].strip('"')
 
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).
@@ -545,8 +550,8 @@ class AgentSsh(object):
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
 
-    def invoke(self, action, args = {}, auth_args=None):
-        args_str = " ".join(["--%s=\"%s\"" % (k, v) for (k, v) in args.items()])
+    def invoke(self, action, args={}, auth_args=None):
+        args_str = " ".join(['--%s="%s"' % (k, v) for (k, v) in args.items()])
         cmdline = "chroma-agent %s %s" % (action, args_str)
         self.log.debug("%s.invoke: %s" % (self.__class__.__name__, cmdline))
         log.debug("%s.invoke: %s" % (self.__class__.__name__, cmdline))
@@ -560,13 +565,15 @@ class AgentSsh(object):
                 raise AgentException(self.address, action, args, "Malformed JSON: %s" % out)
 
             try:
-                if data['success']:
-                    return data['result']
+                if data["success"]:
+                    return data["result"]
                 else:
-                    backtrace = data['backtrace']
-                    self.log.error("Agent returned exception from host %s running '%s': %s" % (self.address, cmdline, backtrace))
+                    backtrace = data["backtrace"]
+                    self.log.error(
+                        "Agent returned exception from host %s running '%s': %s" % (self.address, cmdline, backtrace)
+                    )
                     raise AgentException(self.address, action, args, backtrace)
-            except KeyError, e:
+            except KeyError as e:
                 raise AgentException(self.address, action, args, "Malformed output (%s) from agent: '%s'" % (e, out))
 
         else:

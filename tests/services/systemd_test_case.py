@@ -1,5 +1,3 @@
-
-
 import logging
 import socket
 import subprocess
@@ -26,9 +24,9 @@ class SystemdTestCase(TestCase):
 
     SERVICES = []
     PORTS = {  # service ports to wait on binding
-        'iml-http-agent': [settings.HTTP_AGENT_PORT],
-        'nginx': [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
-        'iml-view-server': [settings.VIEW_SERVER_PORT]
+        "iml-http-agent": [settings.HTTP_AGENT_PORT],
+        "nginx": [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
+        "iml-view-server": [settings.VIEW_SERVER_PORT],
     }
     TIMEOUT = 5  # default timeout to wait for services to start
 
@@ -36,7 +34,7 @@ class SystemdTestCase(TestCase):
         log.info("Waiting for port %s..." % port)
         for _ in util.wait(self.TIMEOUT):
             try:
-                return socket.socket().connect(('localhost', port))
+                return socket.socket().connect(("localhost", port))
             except socket.error:
                 pass
         raise
@@ -83,14 +81,17 @@ class SystemdTestCase(TestCase):
         self.assertTrue(response.ok, "%s: %s" % (response.status_code, response.content))
 
     def assertExitedCleanly(self, program_name):
-        info = shell.Shell.try_run(['systemctl', 'show', program_name, '-p', 'ExecMainStatus']).strip()
+        info = shell.Shell.try_run(["systemctl", "show", program_name, "-p", "ExecMainStatus"]).strip()
         self.assertEqual(info, "ExecMainStatus=0", "{0} (detail: {1})".format(program_name, info))
 
     def tail_log(self, log_name):
         with open(log_name) as log_file:
-            log_tail = ''.join(log_file.readlines()[-20:])
+            log_tail = "".join(log_file.readlines()[-20:])
         return """
 Tail for %s:
 ------------------------------
 %s
-""" % (log_name, log_tail)
+""" % (
+            log_name,
+            log_tail,
+        )

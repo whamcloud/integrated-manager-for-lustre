@@ -9,4 +9,4 @@ from chroma_api.related_field import RelatedField
 
 assert RelatedField  # silence pyflakes
 
-api_log = log_register('django.request.tastypie')
+api_log = log_register("django.request.tastypie")

@@ -25,14 +25,17 @@ class VolumeNodeResource(ChromaModelResource):
     This resource is used by the CLI
     """
 
-    volume_id = fields.IntegerField(attribute = 'volume_id',
-                                    help_text = "id of the volume that this node belongs to")
-    host_id = fields.IntegerField(help_text = "id of the host that this\
-            device node is on")
-    host_label = fields.CharField(help_text = "label attribute of the \
+    volume_id = fields.IntegerField(attribute="volume_id", help_text="id of the volume that this node belongs to")
+    host_id = fields.IntegerField(
+        help_text="id of the host that this\
+            device node is on"
+    )
+    host_label = fields.CharField(
+        help_text="label attribute of the \
             host that this device node is on, as a convenience \
-            for presentation")
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host')
+            for presentation"
+    )
+    host = fields.ToOneField("chroma_api.host.HostResource", "host")
 
     def dehydrate_host_id(self, bundle):
         return bundle.obj.host.id
@@ -42,10 +45,10 @@ class VolumeNodeResource(ChromaModelResource):
 
     class Meta:
         queryset = VolumeNode.objects.all().select_related("host")
-        resource_name = 'volume_node'
+        resource_name = "volume_node"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted']
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
-        filtering = {'host': ['exact'], 'path': ['exact']}
+        excludes = ["not_deleted"]
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]
+        filtering = {"host": ["exact"], "path": ["exact"]}

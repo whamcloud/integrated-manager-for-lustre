@@ -24,8 +24,10 @@ def filter_class_ids():
     """
     from psycopg2 import OperationalError
     from django.db.utils import DatabaseError
+
     try:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         return storage_plugin_manager.resource_class_id_to_class.keys()
     except (OperationalError, DatabaseError):
         # OperationalError if the DB server can't be contacted
@@ -41,50 +43,68 @@ class StorageResourceClassResource(ChromaModelResource):
     . The name of the storage resource class (``class_name`` attribute)
     is unique within the plugin.
     """
-    plugin_name = fields.CharField(attribute='storage_plugin__module_name')
-    plugin_internal = fields.BooleanField(attribute='storage_plugin__internal')
-    label = fields.CharField(help_text = "A unique human-readable name for the resource class, including"
-                                         "the plugin name.  e.g. \"TestPlugin-ResourceOne\"")
-    columns = fields.ListField(help_text = "List of resource attributes to be used when presenting resource in tabular form")
-    fields = fields.DictField(help_text = "List of resource attributes which should be presented in an input form")
+
+    plugin_name = fields.CharField(attribute="storage_plugin__module_name")
+    plugin_internal = fields.BooleanField(attribute="storage_plugin__internal")
+    label = fields.CharField(
+        help_text="A unique human-readable name for the resource class, including"
+        'the plugin name.  e.g. "TestPlugin-ResourceOne"'
+    )
+    columns = fields.ListField(
+        help_text="List of resource attributes to be used when presenting resource in tabular form"
+    )
+    fields = fields.DictField(help_text="List of resource attributes which should be presented in an input form")
 
     def dehydrate_columns(self, bundle):
         properties = bundle.obj.get_class().get_all_attribute_properties()
-        return [{'name': name, 'label': props.get_label(name)} for (name, props) in properties if not isinstance(props, attributes.Password)]
+        return [
+            {"name": name, "label": props.get_label(name)}
+            for (name, props) in properties
+            if not isinstance(props, attributes.Password)
+        ]
 
     def dehydrate_fields(self, bundle):
         resource_klass = bundle.obj.get_class()
 
         fields = []
         for name, attr in resource_klass.get_all_attribute_properties():
-            fields.append({
-                'label': attr.get_label(name),
-                'name': name,
-                'optional': attr.optional,
-                'user_read_only': attr.user_read_only,
-                'class': attr.__class__.__name__})
+            fields.append(
+                {
+                    "label": attr.get_label(name),
+                    "name": name,
+                    "optional": attr.optional,
+                    "user_read_only": attr.user_read_only,
+                    "class": attr.__class__.__name__,
+                }
+            )
         return fields
 
     def dehydrate_label(self, bundle):
         return "%s-%s" % (bundle.obj.storage_plugin.module_name, bundle.obj.class_name)
 
     class Meta:
-        queryset = StorageResourceClass.objects.filter(
-                id__in = filter_class_ids())
-        resource_name = 'storage_resource_class'
+        queryset = StorageResourceClass.objects.filter(id__in=filter_class_ids())
+        resource_name = "storage_resource_class"
         filtering = {
-            'plugin_name': ['exact'],
-            'class_name': ['exact'],
-            'user_creatable': ['exact'],
-            'plugin_internal': ['exact']}
+            "plugin_name": ["exact"],
+            "class_name": ["exact"],
+            "user_creatable": ["exact"],
+            "plugin_internal": ["exact"],
+        }
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
-        ordering = ['class_name']
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]
+        ordering = ["class_name"]
 
     def prepend_urls(self):
         from django.conf.urls.defaults import url
+
         return [
-            url(r"^(?P<resource_name>%s)/(?P<storage_plugin__module_name>\w+)/(?P<class_name>\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_detail'), name="dispatch_detail"),
-]
+            url(
+                r"^(?P<resource_name>%s)/(?P<storage_plugin__module_name>\w+)/(?P<class_name>\w+)/$"
+                % self._meta.resource_name,
+                self.wrap_view("dispatch_detail"),
+                name="dispatch_detail",
+            )
+        ]

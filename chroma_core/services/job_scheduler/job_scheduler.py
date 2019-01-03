@@ -57,7 +57,7 @@ from chroma_help.help import help_text
 import chroma_core.lib.conf_param
 from chroma_core.lib.long_polling import long_polling
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 
 class NotificationBuffer(object):
@@ -65,6 +65,7 @@ class NotificationBuffer(object):
     Provides a simple buffer for notifications which would otherwise be
     dropped due to lock contention on the notified item.
     """
+
     def __init__(self):
         self._lock = threading.Lock()
         self._notifications = defaultdict(Queue.Queue)
@@ -80,7 +81,7 @@ class NotificationBuffer(object):
 
     def clear_notifications_for_key(self, key):
         with self._lock:
-            del(self._notifications[key])
+            del (self._notifications[key])
 
     def drain_notifications_for_key(self, key):
         """
@@ -90,7 +91,7 @@ class NotificationBuffer(object):
         with self._lock:
             while not self._notifications[key].empty():
                 notifications.append(self._notifications[key].get())
-            del(self._notifications[key])
+            del (self._notifications[key])
 
         # For multiple notifications affecting the same set of attributes, drop all but the latest
         seen_attr_tuples = set()
@@ -165,7 +166,7 @@ class JobProgress(threading.Thread, Queue.Queue):
     def run(self):
         while not self._stopping.is_set():
             try:
-                self._handle(self.get(block = True, timeout = 1))
+                self._handle(self.get(block=True, timeout=1))
             except Queue.Empty:
                 pass
 
@@ -190,10 +191,10 @@ class JobProgress(threading.Thread, Queue.Queue):
             with transaction.commit_manually():
                 transaction.commit()
 
-        self.put(('complete_job', (job_id, errored), {}))
+        self.put(("complete_job", (job_id, errored), {}))
 
     def __getattr__(self, name):
-        if not name.startswith('_'):
+        if not name.startswith("_"):
             # Throw an exception if there isn't an underscored method to
             # handle this
             self.__getattr__("_%s" % name)
@@ -226,14 +227,14 @@ class JobProgress(threading.Thread, Queue.Queue):
     def _step_failure(self, job_id, backtrace):
         result = self._job_to_result[job_id]
         with transaction.commit_on_success():
-            result.state = 'failed'
+            result.state = "failed"
             result.backtrace = backtrace
             result.save()
 
     def _step_success(self, job_id, step_result):
         result = self._job_to_result[job_id]
         with transaction.commit_on_success():
-            result.state = 'success'
+            result.state = "success"
             result.result = json.dumps(step_result)
             result.save()
 
@@ -289,20 +290,19 @@ class RunJobThread(threading.Thread):
             klass, args = self.steps[step_index]
 
             # Do not persist any sensitive arguments (prefixed with __)
-            clean_args = dict([(k, v) for k, v in args.items() if not k.startswith('__')])
+            clean_args = dict([(k, v) for k, v in args.items() if not k.startswith("__")])
 
             self._job_progress.start_step(
-                self.job.id,
-                step_klass=klass,
-                args=clean_args,
-                step_index=step_index,
-                step_count=len(self.steps))
+                self.job.id, step_klass=klass, args=clean_args, step_index=step_index, step_count=len(self.steps)
+            )
 
-            step = klass(self.job,
-                         args,
-                         lambda l: self._job_progress.log(self.job.id, l),
-                         lambda c: self._job_progress.console(self.job.id, c),
-                         self._cancel)
+            step = klass(
+                self.job,
+                args,
+                lambda l: self._job_progress.log(self.job.id, l),
+                lambda c: self._job_progress.console(self.job.id, c),
+                self._cancel,
+            )
 
             try:
                 if step.database:
@@ -317,20 +317,20 @@ class RunJobThread(threading.Thread):
                 log.debug("Job %d step %d successful result %s" % (self.job.id, step_index, result))
 
                 self._job_progress.step_success(self.job.id, result)
-            except AgentException, e:
+            except AgentException as e:
                 log.error("Job %d step %d encountered an agent error: %s" % (self.job.id, step_index, e.backtrace))
 
                 # Don't bother storing the backtrace to invoke_agent, the interesting part
                 # is the backtrace inside the AgentException
                 self._job_progress.step_failure(self.job.id, e.backtrace)
-                self._job_progress.complete_job(self.job.id, errored = True)
+                self._job_progress.complete_job(self.job.id, errored=True)
                 return
-            except Exception, e:
+            except Exception as e:
                 backtrace = traceback.format_exc()
                 log.error("Job %d step %d encountered an error: %s:%s" % (self.job.id, step_index, e, backtrace))
 
                 self._job_progress.step_failure(self.job.id, backtrace)
-                self._job_progress.complete_job(self.job.id, errored = True)
+                self._job_progress.complete_job(self.job.id, errored=True)
                 return
             finally:
                 if step.database:
@@ -345,7 +345,7 @@ class RunJobThread(threading.Thread):
 
         log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
 
-        self._job_progress.complete_job(self.job.id, errored = False)
+        self._job_progress.complete_job(self.job.id, errored=False)
 
 
 class JobCollection(object):
@@ -353,11 +353,7 @@ class JobCollection(object):
         self.flush()
 
     def flush(self):
-        self._state_jobs = {
-            'pending': {},
-            'tasked': {},
-            'complete': {}
-        }
+        self._state_jobs = {"pending": {}, "tasked": {}, "complete": {}}
         self._jobs = {}
         self._commands = {}
 
@@ -386,7 +382,7 @@ class JobCollection(object):
     def update(self, job, new_state, **kwargs):
         initial_state = job.state
 
-        Job.objects.filter(id = job.id).update(state = new_state, **kwargs)
+        Job.objects.filter(id=job.id).update(state=new_state, **kwargs)
         job.state = new_state
         for attr, val in kwargs.items():
             setattr(job, attr, val)
@@ -402,14 +398,17 @@ class JobCollection(object):
         """
         Update any commands which relate to this job (complete the command if all its jobs are complete)
         """
-        if job.state == 'complete':
+        if job.state == "complete":
             for command_id in self._job_to_commands[job.id]:
                 jobs = [self._jobs[job_id] for job_id in self._command_to_jobs[command_id]]
-                if set([j.state for j in jobs]) == set(['complete']) or len(jobs) == 0:
+                if set([j.state for j in jobs]) == set(["complete"]) or len(jobs) == 0:
                     # Mark the command as complete
                     errored = True in [j.errored for j in jobs]
                     cancelled = True in [j.cancelled for j in jobs]
-                    log.debug("Completing command %s (%s, %s) as a result of completing job %s" % (command_id, errored, cancelled, job.id))
+                    log.debug(
+                        "Completing command %s (%s, %s) as a result of completing job %s"
+                        % (command_id, errored, cancelled, job.id)
+                    )
                     if errored or cancelled:
                         for job in jobs:
                             log.debug("Command %s job %s: %s %s" % (command_id, job.id, job.errored, job.cancelled))
@@ -422,14 +421,14 @@ class JobCollection(object):
             job.state = new_state
             self._state_jobs[job.state][job.id] = job
 
-        Job.objects.filter(id__in = [j.id for j in jobs]).update(state = new_state)
+        Job.objects.filter(id__in=[j.id for j in jobs]).update(state=new_state)
 
     @property
     def ready_jobs(self):
         result = []
-        for job in self._state_jobs['pending'].values():
+        for job in self._state_jobs["pending"].values():
             wait_for_ids = json.loads(job.wait_for_json)
-            complete_job_ids = [j.id for j in self._state_jobs['complete'].values()]
+            complete_job_ids = [j.id for j in self._state_jobs["complete"].values()]
             if not set(wait_for_ids) - set(complete_job_ids):
                 result.append(job)
 
@@ -443,11 +442,11 @@ class JobCollection(object):
 
     @property
     def pending_jobs(self):
-        return self._state_jobs['pending'].values()
+        return self._state_jobs["pending"].values()
 
     @property
     def tasked_jobs(self):
-        return self._state_jobs['tasked'].values()
+        return self._state_jobs["tasked"].values()
 
 
 class JobScheduler(object):
@@ -490,10 +489,10 @@ class JobScheduler(object):
     def _run_next(self):
         ready_jobs = self._job_collection.ready_jobs
 
-        log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            len(ready_jobs),
-            len(self._job_collection.pending_jobs),
-            len(self._job_collection.tasked_jobs)))
+        log.info(
+            "run_next: %d runnable jobs of (%d pending, %d tasked)"
+            % (len(ready_jobs), len(self._job_collection.pending_jobs), len(self._job_collection.tasked_jobs))
+        )
 
         dep_cache = DepCache()
         ok_jobs, cancel_jobs = self._check_jobs(ready_jobs, dep_cache)
@@ -501,7 +500,7 @@ class JobScheduler(object):
         for job in cancel_jobs:
             self._complete_job(job, False, True)
 
-        self._job_collection.update_many(ok_jobs, 'tasked')
+        self._job_collection.update_many(ok_jobs, "tasked")
         for job in ok_jobs:
             self._spawn_job(job)
 
@@ -520,8 +519,10 @@ class JobScheduler(object):
             except Exception:
                 # Catchall exception handler to ensure progression even if Job
                 # subclasses have bugs in their get_deps etc.
-                log.error("Job %s: exception in dependency check: %s" % (job.id,
-                                                                         '\n'.join(traceback.format_exception(*(sys.exc_info())))))
+                log.error(
+                    "Job %s: exception in dependency check: %s"
+                    % (job.id, "\n".join(traceback.format_exception(*(sys.exc_info()))))
+                )
                 cancel_jobs.append(job)
             else:
                 if not deps_satisfied:
@@ -550,9 +551,9 @@ class JobScheduler(object):
             self._run_threads[job.id] = thread
 
             thread.start()
-            log.debug('_spawn_job: %s threads in flight' % len(self._run_threads))
+            log.debug("_spawn_job: %s threads in flight" % len(self._run_threads))
         else:
-            log.debug('_spawn_job: No steps for %s, completing' % job.pk)
+            log.debug("_spawn_job: No steps for %s, completing" % job.pk)
             # No steps: skip straight to completion
             self.progress.complete_job(job.id, False)
 
@@ -562,13 +563,12 @@ class JobScheduler(object):
         except KeyError:
             pass
 
-        log.debug('_complete_job: %s threads in flight' % len(self._run_threads))
+        log.debug("_complete_job: %s threads in flight" % len(self._run_threads))
 
-        log.info("Job %s completing (errored=%s, cancelled=%s)" %
-                 (job.id, errored, cancelled))
+        log.info("Job %s completing (errored=%s, cancelled=%s)" % (job.id, errored, cancelled))
 
         try:
-            command = Command.objects.filter(jobs = job, complete = False)[0]
+            command = Command.objects.filter(jobs=job, complete=False)[0]
         except IndexError:
             log.warning("Job %s: No incomplete command while completing" % job.pk)
             command = None
@@ -576,7 +576,7 @@ class JobScheduler(object):
         if errored:
             job.on_error()
 
-        self._job_collection.update(job, 'complete', errored = errored, cancelled = cancelled)
+        self._job_collection.update(job, "complete", errored=errored, cancelled=cancelled)
 
         locks = json.loads(job.locks_json)
 
@@ -585,13 +585,15 @@ class JobScheduler(object):
 
         # Check for completion callbacks on anything this job held a writelock on
         for lock in locks:
-            if lock['write']:
+            if lock["write"]:
                 lock = StateLock.from_dict(job, lock)
                 log.debug("Job %s completing, held writelock on %s" % (job.pk, lock.locked_item))
                 try:
                     self._completion_hooks(lock.locked_item, command)
                 except Exception:
-                    log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
+                    log.error(
+                        "Error in completion hooks: %s" % "\n".join(traceback.format_exception(*(sys.exc_info())))
+                    )
 
         # Do this last so that the state of the command reflects both the completion
         # of this job and any new jobs added by completion hooks
@@ -603,17 +605,20 @@ class JobScheduler(object):
     def del_completion_hook(self, deletion):
         self.completion_hooks.remove(deletion)
 
-    def _completion_hooks(self, changed_item, command = None, updated_attrs = []):
+    def _completion_hooks(self, changed_item, command=None, updated_attrs=[]):
         """
         :param command: If set, any created jobs are added
         to this command object.
         """
-        log.debug("_completion_hooks command %s, %s (%s) state=%s" %
-                  (None if command is None else
-                   command.id,
-                   changed_item,
-                   changed_item.__class__,
-                   getattr(changed_item, 'state', 'n/a')))
+        log.debug(
+            "_completion_hooks command %s, %s (%s) state=%s"
+            % (
+                None if command is None else command.id,
+                changed_item,
+                changed_item.__class__,
+                getattr(changed_item, "state", "n/a"),
+            )
+        )
 
         for hook in self.completion_hooks:
             hook(changed_item, command, updated_attrs)
@@ -622,9 +627,9 @@ class JobScheduler(object):
             """Look for jobs of the same type with the same params, either incomplete (don't start the job because
             one is already pending) or complete in the same command (don't start the job because we already tried and failed)"""
             if command:
-                count = klass.objects.filter(~Q(state = 'complete') | Q(command = command), **kwargs).count()
+                count = klass.objects.filter(~Q(state="complete") | Q(command=command), **kwargs).count()
             else:
-                count = klass.objects.filter(~Q(state = 'complete'), **kwargs).count()
+                count = klass.objects.filter(~Q(state="complete"), **kwargs).count()
 
             return bool(count)
 
@@ -639,12 +644,34 @@ class JobScheduler(object):
                 states = set([t.state for t in members])
                 now = django.utils.timezone.now()
 
-                if not filesystem.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'available'}, ['stopped', 'unavailable'])
-                if changed_item.state == 'unmounted' and filesystem.state != 'stopped' and states == set(['unmounted']):
-                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'stopped'}, ['stopped', 'unavailable'])
-                if changed_item.state == 'unmounted' and filesystem.state == 'available' and states != set(['mounted']):
-                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'unavailable'}, ['available'])
+                if (
+                    not filesystem.state == "available"
+                    and changed_item.state in ["mounted", "removed"]
+                    and states == set(["mounted"])
+                ):
+                    self._notify(
+                        ContentType.objects.get_for_model(filesystem).natural_key(),
+                        filesystem.id,
+                        now,
+                        {"state": "available"},
+                        ["stopped", "unavailable"],
+                    )
+                if changed_item.state == "unmounted" and filesystem.state != "stopped" and states == set(["unmounted"]):
+                    self._notify(
+                        ContentType.objects.get_for_model(filesystem).natural_key(),
+                        filesystem.id,
+                        now,
+                        {"state": "stopped"},
+                        ["stopped", "unavailable"],
+                    )
+                if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
+                    self._notify(
+                        ContentType.objects.get_for_model(filesystem).natural_key(),
+                        filesystem.id,
+                        now,
+                        {"state": "unavailable"},
+                        ["available"],
+                    )
 
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
@@ -652,13 +679,13 @@ class JobScheduler(object):
             if not changed_item.not_deleted:
                 return command
 
-            if 'ha_cluster_peers' in updated_attrs:
+            if "ha_cluster_peers" in updated_attrs:
                 try:
                     AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
                 except RpcError:
                     log.error("Host volumes failed to rebalance: " + traceback.format_exc())
 
-            if 'needs_update' in updated_attrs:
+            if "needs_update" in updated_attrs:
                 UpdatesAvailableAlert.notify(changed_item, changed_item.needs_update)
 
         if isinstance(changed_item, ManagedTarget):
@@ -669,22 +696,26 @@ class JobScheduler(object):
                 mgs = changed_item.downcast()
 
             if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not running_or_failed(ApplyConfParams, mgs = mgs.managedtarget_ptr):
-                    job = ApplyConfParams(mgs = mgs.managedtarget_ptr)
+                if not running_or_failed(ApplyConfParams, mgs=mgs.managedtarget_ptr):
+                    job = ApplyConfParams(mgs=mgs.managedtarget_ptr)
                     if DepCache().get(job).satisfied():
                         if not command:
-                            command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
+                            command = Command.objects.create(message="Updating configuration parameters on %s" % mgs)
                         self.CommandPlan.add_jobs([job], command)
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
-            failed_over = changed_item.active_mount is not None and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary = True)
+
+            failed_over = (
+                changed_item.active_mount is not None
+                and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary=True)
+            )
             TargetFailoverAlert.notify(changed_item, failed_over)
 
-        if isinstance(changed_item, PacemakerConfiguration) and 'reconfigure_fencing' in updated_attrs:
-            job = ConfigureHostFencingJob(host = changed_item.host)
+        if isinstance(changed_item, PacemakerConfiguration) and "reconfigure_fencing" in updated_attrs:
+            job = ConfigureHostFencingJob(host=changed_item.host)
             if not command:
-                command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
+                command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
             self.CommandPlan.add_jobs([job], command)
 
     def _drain_notification_buffer(self):
@@ -693,9 +724,12 @@ class JobScheduler(object):
             content_type, object_id = buffer_key
             model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
             try:
-                instance = model_klass.objects.get(pk = object_id).downcast()
+                instance = model_klass.objects.get(pk=object_id).downcast()
             except model_klass.DoesNotExist:
-                log.warning("_drain_notification_buffer: Dropping buffered notifications for not-found object %s/%s" % buffer_key)
+                log.warning(
+                    "_drain_notification_buffer: Dropping buffered notifications for not-found object %s/%s"
+                    % buffer_key
+                )
                 self._notification_buffer.clear_notifications_for_key(buffer_key)
                 continue
 
@@ -705,7 +739,10 @@ class JobScheduler(object):
 
             notifications = self._notification_buffer.drain_notifications_for_key(buffer_key)
 
-            log.info("Replaying %d buffered notifications for %s-%s" % (len(notifications), model_klass.__name__, instance.pk))
+            log.info(
+                "Replaying %d buffered notifications for %s-%s"
+                % (len(notifications), model_klass.__name__, instance.pk)
+            )
             for notification in notifications:
                 log.debug("Replaying buffered notification: %s" % (notification,))
                 self._notify(*notification)
@@ -739,7 +776,7 @@ class JobScheduler(object):
 
         # Drop state-modifying updates if outdated
         modified_at = instance.state_modified_at
-        if 'state' in update_attrs and notification_time <= modified_at:
+        if "state" in update_attrs and notification_time <= modified_at:
             log.info("notify: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
             return
 
@@ -747,7 +784,7 @@ class JobScheduler(object):
         # time a buffered state change notification would be replayed, the
         # state change would probably not make any sense.
         if self._lock_cache.get_by_locked_item(instance):
-            if 'state' in update_attrs:
+            if "state" in update_attrs:
                 return
 
             log.info("_notify: Buffering update to %s because of locks" % instance)
@@ -766,15 +803,20 @@ class JobScheduler(object):
                 log.debug("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
                 continue
 
-            log.info("_notify: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value))
-            if attr == 'state':
+            log.info(
+                "_notify: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value)
+            )
+            if attr == "state":
                 # If setting the special 'state' attribute then maybe schedule some jobs
                 instance.set_state(value)
             else:
                 # If setting a normal attribute just write it straight away
                 setattr(instance, attr, value)
                 instance.save()
-                log.info("_notify: Set %s=%s on %s (%s-%s) and saved" % (attr, value, instance, model_klass.__name__, instance.id))
+                log.info(
+                    "_notify: Set %s=%s on %s (%s-%s) and saved"
+                    % (attr, value, instance, model_klass.__name__, instance.id)
+                )
 
         instance.save()
 
@@ -786,7 +828,7 @@ class JobScheduler(object):
 
         # FIXME: should check the new state against reverse dependencies
         # and apply any fix_states
-        self._completion_hooks(instance, updated_attrs = update_attrs.keys())
+        self._completion_hooks(instance, updated_attrs=update_attrs.keys())
 
     @transaction.commit_on_success
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
@@ -832,7 +874,9 @@ class JobScheduler(object):
         # so reference to remove warnings.
         Corosync2Configuration
 
-        stateful_object = ObjectCache.get_by_id(getattr(sys.modules[__name__], stateful_object_class), stateful_object_id)
+        stateful_object = ObjectCache.get_by_id(
+            getattr(sys.modules[__name__], stateful_object_class), stateful_object_id
+        )
 
         return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
 
@@ -847,21 +891,21 @@ class JobScheduler(object):
                 # Job has been cleaned out of collection, therefore is complete
                 # However, to avoid being too trusting, let's retrieve it and
                 # let the following check for completeness happen
-                job = Job.objects.get(pk = job_id)
+                job = Job.objects.get(pk=job_id)
 
             log.info("cancel_job: Cancelling job %s (%s)" % (job.id, job.state))
-            if job.state == 'complete':
+            if job.state == "complete":
                 return
-            elif job.state == 'tasked':
+            elif job.state == "tasked":
                 try:
                     cancelled_thread = self._run_threads[job_id]
                     cancelled_thread.cancel()
                 except KeyError:
                     pass
-                self._job_collection.update(job, 'complete', cancelled = True)
+                self._job_collection.update(job, "complete", cancelled=True)
                 self._job_collection.update_commands(job)
-            elif job.state == 'pending':
-                self._job_collection.update(job, 'complete', cancelled = True)
+            elif job.state == "pending":
+                self._job_collection.update(job, "complete", cancelled=True)
                 self._job_collection.update_commands(job)
             self._lock_cache.remove_job(job)
 
@@ -873,7 +917,7 @@ class JobScheduler(object):
             # So that anything waiting on this job can be cancelled too
             self.progress.advance()
 
-    def complete_job(self, job_id, errored = False, cancelled = False):
+    def complete_job(self, job_id, errored=False, cancelled=False):
         # TODO: document the rules here: jobs may only modify objects that they
         # have taken out a writelock on, and they may only modify instances obtained
         # via ObjectCache, or via their stateful_object attribute.  Jobs may not
@@ -896,31 +940,38 @@ class JobScheduler(object):
                 # Freshen cached information about anything that this job held a writelock on
                 for lock in self._lock_cache.get_by_job(job):
                     if lock.write:
-                        if hasattr(lock.locked_item, 'not_deleted'):
-                            log.info("Job %d: locked_item %s %s %s %s" % (
-                                job.id,
-                                id(lock.locked_item),
-                                lock.locked_item.__class__,
-                                isinstance(lock.locked_item, DeletableStatefulObject),
-                                lock.locked_item.not_deleted
-                            ))
-                        if hasattr(lock.locked_item, 'not_deleted') and lock.locked_item.not_deleted is None:
-                            log.debug("Job %d: purging %s/%s" %
-                                      (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                        if hasattr(lock.locked_item, "not_deleted"):
+                            log.info(
+                                "Job %d: locked_item %s %s %s %s"
+                                % (
+                                    job.id,
+                                    id(lock.locked_item),
+                                    lock.locked_item.__class__,
+                                    isinstance(lock.locked_item, DeletableStatefulObject),
+                                    lock.locked_item.not_deleted,
+                                )
+                            )
+                        if hasattr(lock.locked_item, "not_deleted") and lock.locked_item.not_deleted is None:
+                            log.debug(
+                                "Job %d: purging %s/%s" % (job.id, lock.locked_item.__class__, lock.locked_item.id)
+                            )
                             ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
                         else:
-                            log.debug("Job %d: updating write-locked %s/%s" %
-                                      (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                            log.debug(
+                                "Job %d: updating write-locked %s/%s"
+                                % (job.id, lock.locked_item.__class__, lock.locked_item.id)
+                            )
 
                             # Ensure that any notifications prior to release of the writelock are not
                             # applied
-                            if hasattr(lock.locked_item, 'state_modified_at'):
+                            if hasattr(lock.locked_item, "state_modified_at"):
                                 lock.locked_item.__class__.objects.filter(pk=lock.locked_item.pk).update(
-                                    state_modified_at=django.utils.timezone.now())
+                                    state_modified_at=django.utils.timezone.now()
+                                )
 
                             ObjectCache.update(lock.locked_item)
 
-                if job.state != 'tasked':
+                if job.state != "tasked":
                     # This happens if a Job is cancelled while it's calling this
                     log.info("Job %s has state %s in complete_job" % (job.id, job.state))
                     return
@@ -934,12 +985,15 @@ class JobScheduler(object):
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         with self._lock:
             with transaction.commit_on_success():
-                command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs([{"class_name": "TestHostConnectionJob",
-                                                                                                 "args": {"address": address,
-                                                                                                          "root_pw": root_pw,
-                                                                                                          "pkey": pkey,
-                                                                                                          "pkey_pw": pkey_pw}}],
-                                                                                               help_text["validating_host"] % address)
+                command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs(
+                    [
+                        {
+                            "class_name": "TestHostConnectionJob",
+                            "args": {"address": address, "root_pw": root_pw, "pkey": pkey, "pkey_pw": pkey_pw},
+                        }
+                    ],
+                    help_text["validating_host"] % address,
+                )
 
         self.progress.advance()
 
@@ -952,17 +1006,28 @@ class JobScheduler(object):
                 corosync_configuration = CorosyncConfiguration.objects.get(id=corosync_configuration_id)
 
                 assert len(network_interface_ids) == 1 or len(network_interface_ids) == 2
-                network_interface_0 = NetworkInterface.objects.get(id = network_interface_ids[0])
-                network_interface_1 = None if len(network_interface_ids) == 1 else NetworkInterface.objects.get(id = network_interface_ids[1])
+                network_interface_0 = NetworkInterface.objects.get(id=network_interface_ids[0])
+                network_interface_1 = (
+                    None
+                    if len(network_interface_ids) == 1
+                    else NetworkInterface.objects.get(id=network_interface_ids[1])
+                )
 
                 command_id = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs_preserve_states(
-                    [{"class_name": corosync_configuration.configure_job_name,
-                      "args": {"corosync_configuration": corosync_configuration,
-                               "mcast_port": mcast_port,
-                               "network_interface_0": network_interface_0,
-                               "network_interface_1": network_interface_1}}],
+                    [
+                        {
+                            "class_name": corosync_configuration.configure_job_name,
+                            "args": {
+                                "corosync_configuration": corosync_configuration,
+                                "mcast_port": mcast_port,
+                                "network_interface_0": network_interface_0,
+                                "network_interface_1": network_interface_1,
+                            },
+                        }
+                    ],
                     [corosync_configuration, corosync_configuration.host.pacemaker_configuration],
-                    "Update Corosync Configuration on host %s" % corosync_configuration.host.fqdn)
+                    "Update Corosync Configuration on host %s" % corosync_configuration.host.fqdn,
+                )
 
         self.progress.advance()
 
@@ -971,21 +1036,23 @@ class JobScheduler(object):
     @classmethod
     def order_targets(cls, targets_data):
         "Return sorted sequence of target_data dicts, such that sequential MDTs/OSTs will be distributed across hosts."
-        volumes_ids = map(operator.itemgetter('volume_id'), targets_data)
-        host_ids = dict(VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list('volume_id', 'host_id'))
+        volumes_ids = map(operator.itemgetter("volume_id"), targets_data)
+        host_ids = dict(
+            VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list("volume_id", "host_id")
+        )
 
         def key(td):
-            return host_ids[int(td['volume_id'])]
+            return host_ids[int(td["volume_id"])]
 
         for host_id, target_group in itertools.groupby(sorted(targets_data, key=key), key=key):
             for index, target_data in enumerate(target_group):
-                target_data['index'] = index
+                target_data["index"] = index
 
-        sorted_list = sorted(targets_data, key=operator.itemgetter('index'))
+        sorted_list = sorted(targets_data, key=operator.itemgetter("index"))
 
         # Finally an MDT entry is marked as root in the rest API to signify that this should be MDT0 so
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
-        return sorted(sorted_list, key=lambda entry: entry.get('root', False), reverse=True)
+        return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
     def create_client_mount(self, host_id, filesystem_id, mountpoint):
         # RPC-callable
@@ -1003,10 +1070,9 @@ class JobScheduler(object):
 
         with self._lock:
             from django.db import transaction
+
             with transaction.commit_on_success():
-                mount, created = LustreClientMount.objects.get_or_create(
-                    host = host,
-                    filesystem = filesystem)
+                mount, created = LustreClientMount.objects.get_or_create(host=host, filesystem=filesystem)
                 mount.mountpoint = mountpoint
                 mount.save()
 
@@ -1019,12 +1085,13 @@ class JobScheduler(object):
 
     def create_copytool(self, copytool_data):
         from django.db import transaction
+
         log.debug("Creating copytool from: %s" % copytool_data)
         with self._lock:
-            host = ObjectCache.get_by_id(ManagedHost, int(copytool_data['host']))
-            copytool_data['host'] = host
-            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data['filesystem']))
-            copytool_data['filesystem'] = filesystem
+            host = ObjectCache.get_by_id(ManagedHost, int(copytool_data["host"]))
+            copytool_data["host"] = host
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data["filesystem"]))
+            copytool_data["filesystem"] = filesystem
 
             with transaction.commit_on_success():
                 copytool = Copytool.objects.create(**copytool_data)
@@ -1034,7 +1101,7 @@ class JobScheduler(object):
 
         log.debug("Created copytool: %s" % copytool)
 
-        mount = self._create_client_mount(host, filesystem, copytool_data['mountpoint'])
+        mount = self._create_client_mount(host, filesystem, copytool_data["mountpoint"])
 
         # Make the association between the copytool and client mount
         with self._lock:
@@ -1050,6 +1117,7 @@ class JobScheduler(object):
 
     def register_copytool(self, copytool_id, uuid):
         from django.db import transaction
+
         with self._lock:
             copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
             log.debug("Registering copytool %s with uuid %s" % (copytool, uuid))
@@ -1081,7 +1149,7 @@ class JobScheduler(object):
 
         def _target_kwargs(attrs):
             result = {}
-            for attr in ['inode_count', 'inode_size', 'bytes_per_inode']:
+            for attr in ["inode_count", "inode_size", "bytes_per_inode"]:
                 try:
                     result[attr] = attrs[attr]
                 except KeyError:
@@ -1090,43 +1158,51 @@ class JobScheduler(object):
 
         with self._lock:
             mounts = []
-            mgt_data = fs_data['mgt']
-            if 'volume_id' in mgt_data:
-                mgt, mgt_mounts = ManagedMgs.create_for_volume(mgt_data['volume_id'], reformat=mgt_data.get('reformat', False), **_target_kwargs(mgt_data))
+            mgt_data = fs_data["mgt"]
+            if "volume_id" in mgt_data:
+                mgt, mgt_mounts = ManagedMgs.create_for_volume(
+                    mgt_data["volume_id"], reformat=mgt_data.get("reformat", False), **_target_kwargs(mgt_data)
+                )
                 mounts.extend(mgt_mounts)
                 ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
                 mgt_id = mgt.pk
             else:
-                mgt_id = mgt_data['id']
+                mgt_id = mgt_data["id"]
 
             with transaction.commit_on_success():
-                mgs = ManagedMgs.objects.get(id = mgt_id)
-                fs = ManagedFilesystem(mgs=mgs, name = fs_data['name'])
+                mgs = ManagedMgs.objects.get(id=mgt_id)
+                fs = ManagedFilesystem(mgs=mgs, name=fs_data["name"])
                 fs.save()
 
             # Now that the creation has committed, update ObjectCache
             ObjectCache.add(ManagedFilesystem, fs)
 
             with transaction.commit_on_success():
-                chroma_core.lib.conf_param.set_conf_params(fs, fs_data['conf_params'])
+                chroma_core.lib.conf_param.set_conf_params(fs, fs_data["conf_params"])
 
                 mdts = []
-                for mdt_data in self.order_targets(fs_data['mdts']):
-                    mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'],
-                                                                   reformat=mdt_data.get('reformat', False),
-                                                                   filesystem = fs, **_target_kwargs(mdt_data))
+                for mdt_data in self.order_targets(fs_data["mdts"]):
+                    mdt, mdt_mounts = ManagedMdt.create_for_volume(
+                        mdt_data["volume_id"],
+                        reformat=mdt_data.get("reformat", False),
+                        filesystem=fs,
+                        **_target_kwargs(mdt_data)
+                    )
                     mdts.append(mdt)
                     mounts.extend(mdt_mounts)
-                    chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
+                    chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data["conf_params"])
 
                 osts = []
-                for ost_data in self.order_targets(fs_data['osts']):
-                    ost, ost_mounts = ManagedOst.create_for_volume(ost_data['volume_id'],
-                                                                   reformat=ost_data.get('reformat', False),
-                                                                   filesystem=fs, **_target_kwargs(ost_data))
+                for ost_data in self.order_targets(fs_data["osts"]):
+                    ost, ost_mounts = ManagedOst.create_for_volume(
+                        ost_data["volume_id"],
+                        reformat=ost_data.get("reformat", False),
+                        filesystem=fs,
+                        **_target_kwargs(ost_data)
+                    )
                     osts.append(ost)
                     mounts.extend(ost_mounts)
-                    chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
+                    chroma_core.lib.conf_param.set_conf_params(ost, ost_data["conf_params"])
 
             for ost in osts:
                 ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
@@ -1137,8 +1213,9 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = self.CommandPlan.command_set_state(
-                    [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, 'available')],
-                    "Creating filesystem %s" % fs_data['name'])
+                    [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, "available")],
+                    "Creating filesystem %s" % fs_data["name"],
+                )
 
         self.progress.advance()
 
@@ -1151,10 +1228,10 @@ class JobScheduler(object):
         targets = []
         with self._lock:
             for target_data in self.order_targets(targets_data):
-                target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
+                target_class = ContentType.objects.get_by_natural_key(*(target_data["content_type"])).model_class()
                 if target_class().filesystem_member:
-                    fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
-                    create_kwargs = {'filesystem': fs}
+                    fs = ManagedFilesystem.objects.get(id=target_data["filesystem_id"])
+                    create_kwargs = {"filesystem": fs}
                 elif target_class == ManagedMgs:
                     create_kwargs = {}
                 else:
@@ -1162,7 +1239,8 @@ class JobScheduler(object):
 
                 with transaction.commit_on_success():
                     target, target_mounts = target_class.create_for_volume(
-                        target_data['volume_id'], reformat=target_data.get('reformat', False), **create_kwargs)
+                        target_data["volume_id"], reformat=target_data.get("reformat", False), **create_kwargs
+                    )
 
                 ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
                 for mount in target_mounts:
@@ -1177,8 +1255,12 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = self.CommandPlan.command_set_state(
-                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, 'mounted') for x in targets],
-                    command_description)
+                    [
+                        (ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, "mounted")
+                        for x in targets
+                    ],
+                    command_description,
+                )
 
         self.progress.advance()
 
@@ -1204,17 +1286,20 @@ class JobScheduler(object):
             try:
                 host = ObjectCache.get_one(ManagedHost, lambda host: host.address == address)
 
-                assert host.state == 'undeployed'               # assert the fact this is undeployed being setup
+                assert host.state == "undeployed"  # assert the fact this is undeployed being setup
             except ManagedHost.DoesNotExist:
-                fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
-                agent_ssh = AgentSsh(address, timeout = 5)
+                fqdn_nodename_command = (
+                    'python -c "import os; print os.uname()[1] ; import socket ; print socket.getfqdn();"'
+                )
+                agent_ssh = AgentSsh(address, timeout=5)
                 auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
                 tries = 1
                 fqdn = None
                 while tries < 31:
                     rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
-                    log.info("%setting FQDN for '%s': %s" %
-                             ("G" if tries < 2 else "Try #%s g" % tries, address, stdout))
+                    log.info(
+                        "%setting FQDN for '%s': %s" % ("G" if tries < 2 else "Try #%s g" % tries, address, stdout)
+                    )
                     try:
                         nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
                         break
@@ -1236,14 +1321,16 @@ class JobScheduler(object):
                     install_method = ManagedHost.INSTALL_SSHSKY
 
                 with transaction.commit_on_success():
-                    server_profile = ServerProfile.objects.get(name = profile)
-                    host = ManagedHost.objects.create(state = 'undeployed',
-                                                      address = address,
-                                                      nodename = nodename,
-                                                      fqdn = fqdn,
-                                                      immutable_state = not server_profile.managed,
-                                                      server_profile = server_profile,
-                                                      install_method = install_method)
+                    server_profile = ServerProfile.objects.get(name=profile)
+                    host = ManagedHost.objects.create(
+                        state="undeployed",
+                        address=address,
+                        nodename=nodename,
+                        fqdn=fqdn,
+                        immutable_state=not server_profile.managed,
+                        server_profile=server_profile,
+                        install_method=install_method,
+                    )
 
                     lnet_configuration = LNetConfiguration.objects.create(host=host)
 
@@ -1252,16 +1339,21 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = self.CommandPlan.command_set_state(
-                    [(ContentType.objects.get_for_model(host).natural_key(), host.id, host.server_profile.initial_state)],
-                    help_text["deploying_host"] % host)
+                    [
+                        (
+                            ContentType.objects.get_for_model(host).natural_key(),
+                            host.id,
+                            host.server_profile.initial_state,
+                        )
+                    ],
+                    help_text["deploying_host"] % host,
+                )
 
             # Tag the in-memory SSH auth information onto this DeployHostJob instance
             for job_id in self._job_collection._command_to_jobs[command.id]:
                 job = self._job_collection.get(job_id)
                 if isinstance(job, DeployHostJob):
-                    job.auth_args = {"root_pw": root_pw,
-                                     "pkey": pkey,
-                                     "pkey_pw": pkey_pw}
+                    job.auth_args = {"root_pw": root_pw, "pkey": pkey, "pkey_pw": pkey_pw}
                     break
 
         self.progress.advance()
@@ -1269,13 +1361,13 @@ class JobScheduler(object):
         return host.id, command.id
 
     def set_host_profile(self, host_id, server_profile_id):
-        '''
+        """
         Set the profile for the given host to the given profile.
 
         :param host_id:
         :param server_profile_id:
         :return: Command for the host job or None if no commands were created.
-        '''
+        """
 
         with self._lock:
             with transaction.commit_on_success():
@@ -1285,8 +1377,9 @@ class JobScheduler(object):
                 commands_required = host.set_profile(server_profile_id)
 
                 if commands_required:
-                    command = self.CommandPlan.command_run_jobs(commands_required,
-                                                                help_text['change_host_profile'] % (host.fqdn, server_profile.ui_name))
+                    command = self.CommandPlan.command_run_jobs(
+                        commands_required, help_text["change_host_profile"] % (host.fqdn, server_profile.ui_name)
+                    )
                 else:
                     command = None
 
@@ -1306,11 +1399,11 @@ class JobScheduler(object):
                 try:
                     # If there is already a host record (SSH-assisted host addition) then
                     # update it
-                    host = ManagedHost.objects.get(fqdn=fqdn, state='undeployed')
+                    host = ManagedHost.objects.get(fqdn=fqdn, state="undeployed")
                     # host.fqdn = fqdn
                     # host.nodename = nodename
                     # host.save()
-                    job = DeployHostJob.objects.filter(~Q(state='complete'), managed_host=host)
+                    job = DeployHostJob.objects.filter(~Q(state="complete"), managed_host=host)
                     command = Command.objects.filter(jobs=job)[0]
 
                 except ManagedHost.DoesNotExist:
@@ -1321,7 +1414,8 @@ class JobScheduler(object):
                         immutable_state=not server_profile.managed,
                         address=address,
                         server_profile=server_profile,
-                        install_method = ManagedHost.INSTALL_MANUAL)
+                        install_method=ManagedHost.INSTALL_MANUAL,
+                    )
                     lnet_configuration = LNetConfiguration.objects.create(host=host)
 
                     ObjectCache.add(LNetConfiguration, lnet_configuration)
@@ -1329,8 +1423,15 @@ class JobScheduler(object):
 
                     with transaction.commit_on_success():
                         command = self.CommandPlan.command_set_state(
-                            [(ContentType.objects.get_for_model(host).natural_key(), host.id, server_profile.initial_state)],
-                            help_text["deploying_host"] % host)
+                            [
+                                (
+                                    ContentType.objects.get_for_model(host).natural_key(),
+                                    host.id,
+                                    server_profile.initial_state,
+                                )
+                            ],
+                            help_text["deploying_host"] % host,
+                        )
 
         self.progress.advance()
 
@@ -1417,24 +1518,26 @@ class JobScheduler(object):
         from_state = stateful_object.state
         transitions = []
         for to_state in raw_transitions:
-                # Fetch the last job in a list of jobs that will transition this object from from_state to to_state
-                job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
+            # Fetch the last job in a list of jobs that will transition this object from from_state to to_state
+            job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
 
-                # Now check that that job can run on this instance of the stateful object. In truth this needs to be expanded
-                # to make sure every job in the route can be run, but that is a bigger step beyond the scope here. And generally
-                # the situation is that it's the final step that is the decider.
-                # NB: a None verb means its an internal transition that shouldn't be advertised
-                if job_class.state_verb and job_class.can_run(stateful_object):
-                    log.debug("Adding verb: %s, for job_class: %s" % (job_class.state_verb, job_class))
-                    transitions.append({
-                        'state': to_state,
-                        'verb': job_class.state_verb,
-                        'long_description': job_class.long_description(stateful_object),
-                        'display_group': job_class.display_group,
-                        'display_order': job_class.display_order
-                    })
-                else:
-                    log.debug("Skipping verb for %s on object %s" % (job_class, stateful_object))
+            # Now check that that job can run on this instance of the stateful object. In truth this needs to be expanded
+            # to make sure every job in the route can be run, but that is a bigger step beyond the scope here. And generally
+            # the situation is that it's the final step that is the decider.
+            # NB: a None verb means its an internal transition that shouldn't be advertised
+            if job_class.state_verb and job_class.can_run(stateful_object):
+                log.debug("Adding verb: %s, for job_class: %s" % (job_class.state_verb, job_class))
+                transitions.append(
+                    {
+                        "state": to_state,
+                        "verb": job_class.state_verb,
+                        "long_description": job_class.long_description(stateful_object),
+                        "display_group": job_class.display_group,
+                        "display_order": job_class.display_order,
+                    }
+                )
+            else:
+                log.debug("Skipping verb for %s on object %s" % (job_class, stateful_object))
 
         return transitions
 
@@ -1445,20 +1548,21 @@ class JobScheduler(object):
         for job_class in all_subclasses(AdvertisedJob):
             if not job_class.plural:
                 for class_name in job_class.classes:
-                    ct = ContentType.objects.get_by_natural_key(
-                        'chroma_core', class_name.lower())
+                    ct = ContentType.objects.get_by_natural_key("chroma_core", class_name.lower())
                     klass = ct.model_class()
                     if isinstance(stateful_object, klass):
                         if job_class.can_run(stateful_object):
-                            available_jobs.append({
-                                'verb': job_class.verb,
-                                'long_description': job_class.long_description(stateful_object),
-                                'display_group': job_class.display_group,
-                                'display_order': job_class.display_order,
-                                'confirmation': job_class.get_confirmation(
-                                    stateful_object),
-                                'class_name': job_class.__name__,
-                                'args': job_class.get_args(stateful_object)})
+                            available_jobs.append(
+                                {
+                                    "verb": job_class.verb,
+                                    "long_description": job_class.long_description(stateful_object),
+                                    "display_group": job_class.display_group,
+                                    "display_order": job_class.display_order,
+                                    "confirmation": job_class.get_confirmation(stateful_object),
+                                    "class_name": job_class.__name__,
+                                    "args": job_class.get_args(stateful_object),
+                                }
+                            )
         return available_jobs
 
     def available_jobs(self, object_list):
@@ -1498,13 +1602,12 @@ class JobScheduler(object):
             return jobs
 
     def get_locks(self, obj_key, obj_id):
-        locks = {'read': [],
-                 'write': []}
+        locks = {"read": [], "write": []}
 
         try:
             object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
-            locks['read'] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
-            locks['write'] = list(set([x.job.id for x in self._lock_cache.write_by_item[object]]))
+            locks["read"] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
+            locks["write"] = list(set([x.job.id for x in self._lock_cache.write_by_item[object]]))
         except ObjectDoesNotExist:
             pass
 
@@ -1515,25 +1618,29 @@ class JobScheduler(object):
         # this is all in here for now, but as we move to dynamic lnet it will probably get it's own file.
         with self._lock:
             lnet_configurations = set()
-            lnet_nid_data = defaultdict(lambda: {'nid_updates': {}, 'nid_deletes': {}})
+            lnet_nid_data = defaultdict(lambda: {"nid_updates": {}, "nid_deletes": {}})
 
             for nid_data in nid_list:
-                network_interface = NetworkInterface.objects.get(id = nid_data['network_interface'])
-                lnet_configuration = LNetConfiguration.objects.get(host = network_interface.host_id)
+                network_interface = NetworkInterface.objects.get(id=nid_data["network_interface"])
+                lnet_configuration = LNetConfiguration.objects.get(host=network_interface.host_id)
                 lnet_configurations.add(lnet_configuration)
 
-                if str(nid_data['lnd_network']) == '-1':
-                    lnet_nid_data[lnet_configuration]['nid_deletes'][network_interface.id] = nid_data
+                if str(nid_data["lnd_network"]) == "-1":
+                    lnet_nid_data[lnet_configuration]["nid_deletes"][network_interface.id] = nid_data
                 else:
-                    lnet_nid_data[lnet_configuration]['nid_updates'][network_interface.id] = nid_data
+                    lnet_nid_data[lnet_configuration]["nid_updates"][network_interface.id] = nid_data
 
             jobs = []
             for lnet_configuration in lnet_configurations:
-                jobs.append(ConfigureLNetJob(lnet_configuration = lnet_configuration,
-                                             config_changes = json.dumps(lnet_nid_data[lnet_configuration])))
+                jobs.append(
+                    ConfigureLNetJob(
+                        lnet_configuration=lnet_configuration,
+                        config_changes=json.dumps(lnet_nid_data[lnet_configuration]),
+                    )
+                )
 
             with transaction.commit_on_success():
-                command = Command.objects.create(message = "Configuring NIDS for hosts")
+                command = Command.objects.create(message="Configuring NIDS for hosts")
                 self.CommandPlan.add_jobs(jobs, command)
 
         self.progress.advance()
@@ -1556,11 +1663,15 @@ class JobScheduler(object):
 
         if host_ids:
             with self._lock:
-                jobs = [TriggerPluginUpdatesJob(host_ids=json.dumps(host_ids),
-                                                plugin_names_json=json.dumps(plugin_names))]
+                jobs = [
+                    TriggerPluginUpdatesJob(host_ids=json.dumps(host_ids), plugin_names_json=json.dumps(plugin_names))
+                ]
 
                 with transaction.commit_on_success():
-                    command = Command.objects.create(message="%s triggering updates from agents" % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn)
+                    command = Command.objects.create(
+                        message="%s triggering updates from agents"
+                        % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn
+                    )
                     self.CommandPlan.add_jobs(jobs, command)
 
             self.progress.advance()
@@ -1578,12 +1689,12 @@ class JobScheduler(object):
             # The correct way is to change the state of the LNetConfiguration so we probably need to make
             # that a stateful object, but that is for lnet mk2 I think
             for lnet_configuration_data in lnet_configuration_list:
-                host = ManagedHost.objects.get(id = lnet_configuration_data["host_id"])
+                host = ManagedHost.objects.get(id=lnet_configuration_data["host_id"])
                 current_lnet_configuration = LNetConfiguration.objects.get(host=host)
 
                 # Now should we just do it, or only do it when it changes?
-                if (current_lnet_configuration.state != lnet_configuration_data['state']):
-                    host_states.append((host, lnet_configuration_data['state']))
+                if current_lnet_configuration.state != lnet_configuration_data["state"]:
+                    host_states.append((host, lnet_configuration_data["state"]))
 
         command = Command.set_state(host_states)
 

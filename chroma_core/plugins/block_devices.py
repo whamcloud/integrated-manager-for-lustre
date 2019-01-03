@@ -8,7 +8,7 @@ from logging import DEBUG
 import settings
 from chroma_core.services import log_register
 
-log = log_register('plugin_runner')
+log = log_register("plugin_runner")
 log.setLevel(DEBUG)
 
 
@@ -26,7 +26,9 @@ def get_devices(fqdn):
         _data = _fetch_aggregator()
         return _data[fqdn]
     except Exception as e:
-        log.error("iml-device-aggregator is not providing expected data, ensure "
-                  "iml-device-scanner package is installed and relevant "
-                  "services are running on storage servers (%s)" % e)
+        log.error(
+            "iml-device-aggregator is not providing expected data, ensure "
+            "iml-device-scanner package is installed and relevant "
+            "services are running on storage servers (%s)" % e
+        )
         return {}

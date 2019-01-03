@@ -15,8 +15,8 @@ Plugins should also document the available metadata fields.
 import importlib
 from chroma_core.services import log_register
 
-FIELDS = 'id',
-log = log_register('metrics')
+FIELDS = ("id",)
+log = log_register("metrics")
 
 
 def fetch(ids):
@@ -25,7 +25,7 @@ def fetch(ids):
     Plugins are responsible for any caching necessary for performance.
     """
     for id in ids:
-        yield {'id': id}
+        yield {"id": id}
 
 
 def metadata(jobid_var, field, job_ids):
@@ -34,11 +34,11 @@ def metadata(jobid_var, field, job_ids):
     """
     job_ids = set(job_ids)
     try:
-        module = importlib.import_module('.' + jobid_var.lower(), __package__)
+        module = importlib.import_module("." + jobid_var.lower(), __package__)
     except ImportError:
         log.warn("Scheduler module %s not found", jobid_var)
         return {}
-    if hasattr(module, 'FIELDS') and field not in module.FIELDS:
+    if hasattr(module, "FIELDS") and field not in module.FIELDS:
         log.warn("Scheduler module %s doesn't support field %s", jobid_var, field)
-    values = getattr(module, 'fetch')(job_ids)
+    values = getattr(module, "fetch")(job_ids)
     return dict((job_id, value[field]) for job_id, value in zip(job_ids, values) if field in value)

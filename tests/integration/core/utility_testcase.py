@@ -12,16 +12,16 @@ from testconfig import config
 
 from tests.integration.core.constants import TEST_TIMEOUT
 
-logger = logging.getLogger('test')
+logger = logging.getLogger("test")
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(os.path.join(config.get('log_dir', '/var/log/'), 'chroma_test.log'))
+handler = logging.FileHandler(os.path.join(config.get("log_dir", "/var/log/"), "chroma_test.log"))
 handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # paramiko.transport logger spams nose log collection so we're quieting it down
-paramiko_logger = logging.getLogger('paramiko.transport')
+paramiko_logger = logging.getLogger("paramiko.transport")
 paramiko_logger.setLevel(logging.WARN)
 
 
@@ -63,13 +63,16 @@ class UtilityTestCase(TestCase):
     help_fetched_list = []
 
     def setUp(self):
-        self.maxDiff = None                  # By default show the complete diff on errors.
+        self.maxDiff = None  # By default show the complete diff on errors.
 
     def execute_commands(self, commands, target, debug_message, expected_return_code=0):
         stdout = []
         for command in commands:
             result = self.remote_command(target, command, expected_return_code=expected_return_code)
-            logger.info("%s command %s exit_status %s \noutput:\n %s \nstderr:\n %s" % (debug_message, command, result.exit_status, result.stdout, result.stderr))
+            logger.info(
+                "%s command %s exit_status %s \noutput:\n %s \nstderr:\n %s"
+                % (debug_message, command, result.exit_status, result.stdout, result.stderr)
+            )
 
             stdout.append(result.stdout)
 
@@ -78,11 +81,10 @@ class UtilityTestCase(TestCase):
     def execute_simultaneous_commands(self, commands, targets, debug_message, expected_return_code=0):
         threads = []
         for target in targets:
-            command_thread = ExceptionThread(target=self.execute_commands,
-                                             args=(commands,
-                                                   target,
-                                                   '%s: %s' % (target, debug_message),
-                                                   expected_return_code))
+            command_thread = ExceptionThread(
+                target=self.execute_commands,
+                args=(commands, target, "%s: %s" % (target, debug_message), expected_return_code),
+            )
             command_thread.start()
             threads.append(command_thread)
 
@@ -101,7 +103,7 @@ class UtilityTestCase(TestCase):
         logger.debug("remote_command[%s]: %s" % (server, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(server, **{'username': 'root'})
+        ssh.connect(server, **{"username": "root"})
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
@@ -115,17 +117,19 @@ class UtilityTestCase(TestCase):
         # commands failed unexpectedly
         channel.exec_command("exec 0<&-; set -e; %s" % command)
         exit_status = channel.recv_exit_status()
-        stdout = channel.makefile('rb').read()
-        stderr = channel.makefile_stderr('rb').read()
+        stdout = channel.makefile("rb").read()
+        stderr = channel.makefile_stderr("rb").read()
         if expected_return_code is not None:
             self.assertEqual(exit_status, expected_return_code, stderr)
         return RemoteCommandResult(exit_status, stdout, stderr)
 
-    def wait_until_true(self, lambda_expression, error_message='', timeout=TEST_TIMEOUT):
+    def wait_until_true(self, lambda_expression, error_message="", timeout=TEST_TIMEOUT):
         """Evaluates lambda_expression once/1s until True or hits timeout."""
-        assert hasattr(lambda_expression, '__call__'), 'lambda_expression is not callable: %s' % type(lambda_expression)
-        assert hasattr(error_message, '__call__') or type(error_message) is str, 'error_message is not callable and not a str: %s' % type(error_message)
-        assert type(timeout) == int, 'timeout is not an int: %s' % type(timeout)
+        assert hasattr(lambda_expression, "__call__"), "lambda_expression is not callable: %s" % type(lambda_expression)
+        assert (
+            hasattr(error_message, "__call__") or type(error_message) is str
+        ), "error_message is not callable and not a str: %s" % type(error_message)
+        assert type(timeout) == int, "timeout is not an int: %s" % type(timeout)
 
         running_time = 0
         lambda_result = None
@@ -139,12 +143,14 @@ class UtilityTestCase(TestCase):
                 wait_time = min(1, wait_time * 10)
                 running_time += wait_time
 
-        if hasattr(error_message, '__call__'):
+        if hasattr(error_message, "__call__"):
             error_message = error_message()
 
-        self.assertLess(running_time,
-                        timeout,
-                        'Timed out waiting for %s\nError Message %s' % (inspect.getsource(lambda_expression), error_message))
+        self.assertLess(
+            running_time,
+            timeout,
+            "Timed out waiting for %s\nError Message %s" % (inspect.getsource(lambda_expression), error_message),
+        )
 
     def wait_for_items_length(self, fetch_items, length, timeout=TEST_TIMEOUT):
         """
@@ -152,7 +158,9 @@ class UtilityTestCase(TestCase):
         """
         items = fetch_items()
         while timeout and length != len(items):
-            logger.debug("%s evaluated to %s expecting list size of %s items" % (inspect.getsource(fetch_items), items, length))
+            logger.debug(
+                "%s evaluated to %s expecting list size of %s items" % (inspect.getsource(fetch_items), items, length)
+            )
             time.sleep(1)
             timeout -= 1
             items = fetch_items()
@@ -168,23 +176,25 @@ class UtilityTestCase(TestCase):
         while running_time < timeout:
             try:
                 lambda_expression()
-            except AssertionError, e:
+            except AssertionError as e:
                 assertion = e
                 logger.debug("%s tripped assertion: %s" % (inspect.getsource(lambda_expression), e))
             else:
                 break
             time.sleep(1)
             running_time += 1
-        self.assertLess(running_time,
-                        timeout,
-                        "Timed out waiting for %s\nAssertion %s" % (inspect.getsource(lambda_expression), assertion))
+        self.assertLess(
+            running_time,
+            timeout,
+            "Timed out waiting for %s\nAssertion %s" % (inspect.getsource(lambda_expression), assertion),
+        )
 
     def get_host_config(self, nodename):
         """
         Get the entry for a lustre server from the cluster config.
         """
-        for host in config['lustre_servers']:
-            if host['nodename'] == nodename:
+        for host in config["lustre_servers"]:
+            if host["nodename"] == nodename:
                 return host
 
     def _fetch_help(self, assert_test, tell_who, message=None, callback=lambda: True, timeout=1800):
@@ -221,19 +231,22 @@ class UtilityTestCase(TestCase):
 
             self.help_fetched_list.append(assert_test)
 
-            key_file = '/tmp/waiting_help'
+            key_file = "/tmp/waiting_help"
 
             if message is None:
                 message = str(exception)
-            elif hasattr(message, '__call__'):
+            elif hasattr(message, "__call__"):
                 message = message()
 
             # First create the file, errors in here do destroy the original, but will be reported by the test framework
             fd = os.open(key_file, os.O_RDWR | os.O_CREAT)
-            os.write(fd, "To: %s\nSubject: %s\n\n%s\n\nTest Runner %s" %
-                     (', '.join(tell_who), message, message, socket.gethostname()))
+            os.write(
+                fd,
+                "To: %s\nSubject: %s\n\n%s\n\nTest Runner %s"
+                % (", ".join(tell_who), message, message, socket.gethostname()),
+            )
             os.lseek(fd, 0, os.SEEK_SET)
-            subprocess.call(['sendmail'] + ['-t'], stdin=fd)
+            subprocess.call(["sendmail"] + ["-t"], stdin=fd)
             os.close(fd)
 
             while timeout > 0 and os.path.isfile(key_file):

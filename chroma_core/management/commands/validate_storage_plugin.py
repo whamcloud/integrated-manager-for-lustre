@@ -16,7 +16,7 @@ class Command(BaseCommand):
     def execute(self, *args, **kwargs):
         filename = args[0]
         if not os.path.exists(filename):
-            raise CommandError('File not found %s' % filename)
+            raise CommandError("File not found %s" % filename)
         filename = os.path.abspath(filename)
 
         parts = filename.strip(os.path.sep).split(os.path.sep)
@@ -31,18 +31,19 @@ class Command(BaseCommand):
         if not module_dir in sys.path:
             sys.path.append(module_dir)
 
-        settings.INSTALLED_STORAGE_PLUGINS = ['linux']
+        settings.INSTALLED_STORAGE_PLUGINS = ["linux"]
         from chroma_core.lib.storage_plugin.manager import StoragePluginManager
+
         manager = StoragePluginManager()
 
-        print "Validating plugin '%s'..." % module_name
+        print("Validating plugin '%s'..." % module_name)
         errors = manager.validate_plugin(module_name)
         if errors:
-            print "Validation errors:"
+            print("Validation errors:")
             for e in errors:
-                print "  %s" % e
+                print("  %s" % e)
         else:
-            print "OK"
+            print("OK")
 
         # Returning does nothing when run normally, but is useful for testing
         return errors

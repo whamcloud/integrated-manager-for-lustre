@@ -44,10 +44,11 @@ class WrappedAll(object):
         return self
 
     def all(self):
-        return self.bundle.obj.volumenode_set.all().select_related('host')
+        return self.bundle.obj.volumenode_set.all().select_related("host")
 
     def __bool__(self):
         return True
+
     __nonzero__ = __bool__  # for python 2 and 3 compatibility
 
 
@@ -80,25 +81,33 @@ class VolumeResource(ChromaModelResource):
     only identify one node as primary.
     """
 
-    status = fields.CharField(help_text = "A string representing the "
-                                          "high-availability configuration "
-                                          "status of the volume.")
+    status = fields.CharField(
+        help_text="A string representing the " "high-availability configuration " "status of the volume."
+    )
 
-    kind = fields.CharField(help_text = "A human readable noun representing "
-                                        "thetype of storage, e.g. 'Linux "
-                                        "partition', 'LVM LV', 'iSCSI LUN'")
+    kind = fields.CharField(
+        help_text="A human readable noun representing "
+        "thetype of storage, e.g. 'Linux "
+        "partition', 'LVM LV', 'iSCSI LUN'"
+    )
 
     # See notes above about how hacking the attribute saves 1 query / volume
     volume_nodes = fields.ToManyField(
         "chroma_api.volume_node.VolumeNodeResource",
-        WrappedAll(), null = True, full = True,
-        help_text = "Device nodes which point to this volume")
+        WrappedAll(),
+        null=True,
+        full=True,
+        help_text="Device nodes which point to this volume",
+    )
 
     storage_resource = fields.ToOneField(
         "chroma_api.storage_resource.StorageResourceResource",
-        'storage_resource', null = True, blank = True, full = False,
-        help_text = "The `storage_resource` corresponding to the "
-                    "device which this Volume represents")
+        "storage_resource",
+        null=True,
+        blank=True,
+        full=False,
+        help_text="The `storage_resource` corresponding to the " "device which this Volume represents",
+    )
 
     def dehydrate_kind(self, bundle):
         #  Kind comes from the related storage_resource.
@@ -113,49 +122,52 @@ class VolumeResource(ChromaModelResource):
         This might only be a marginal speed up.
         """
 
-        for vol_bndl in data['objects']:
-            volumenode_count = len(vol_bndl.data['volume_nodes'])
+        for vol_bndl in data["objects"]:
+            volumenode_count = len(vol_bndl.data["volume_nodes"])
             primary_count = 0
             failover_count = 0
-            for vol_node_bndl in vol_bndl.data['volume_nodes']:
-                primary = vol_node_bndl.data['primary']
-                use = vol_node_bndl.data['use']
+            for vol_node_bndl in vol_bndl.data["volume_nodes"]:
+                primary = vol_node_bndl.data["primary"]
+                use = vol_node_bndl.data["use"]
                 # True == 1, False = 0
                 primary_count += int(primary)
                 failover_count += int(not primary and use)
-            vol_bndl.data['status'] = Volume.ha_status_label(
-                            volumenode_count, primary_count, failover_count)
+            vol_bndl.data["status"] = Volume.ha_status_label(volumenode_count, primary_count, failover_count)
 
         return data
 
     class Meta:
         #  Join in these three models to dehydrate_kind without big penalties
-        queryset = Volume.objects.all().select_related('storage_resource',
-            'storage_resource__resource_class',
-            'storage_resource__resource_class__storage_plugin'
-        ).prefetch_related('volumenode_set', 'volumenode_set__host')
-        resource_name = 'volume'
+        queryset = (
+            Volume.objects.all()
+            .select_related(
+                "storage_resource",
+                "storage_resource__resource_class",
+                "storage_resource__resource_class__storage_plugin",
+            )
+            .prefetch_related("volumenode_set", "volumenode_set__host")
+        )
+        resource_name = "volume"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted']
-        ordering = ['label', 'size']
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get', 'put']
+        excludes = ["not_deleted"]
+        ordering = ["label", "size"]
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get", "put"]
         always_return_data = True
 
-        filtering = {'id': ['exact'],
-                     'label': ['exact', 'endswith']}
+        filtering = {"id": ["exact"], "label": ["exact", "endswith"]}
 
-    def apply_filters(self, request, filters = None):
+    def apply_filters(self, request, filters=None):
         objects = super(VolumeResource, self).apply_filters(request, filters)
 
         try:
-            category = request.GET['category']
-            if not category in ['unused', 'usable', None]:
-                raise ImmediateHttpResponse(response = HttpBadRequest())
-            if category == 'unused':
+            category = request.GET["category"]
+            if not category in ["unused", "usable", None]:
+                raise ImmediateHttpResponse(response=HttpBadRequest())
+            if category == "unused":
                 objects = Volume.get_unused_luns(objects)
-            elif category == 'usable':
+            elif category == "usable":
                 objects = Volume.get_usable_luns(objects)
         except KeyError:
             # Not filtering on category
@@ -163,24 +175,30 @@ class VolumeResource(ChromaModelResource):
 
         try:
             try:
-                objects = objects.filter(Q(volumenode__primary=request.GET['primary']) &
-                                         Q(volumenode__host__id=request.GET['host_id']) &
-                                         Q(volumenode__not_deleted=True)).distinct()
+                objects = objects.filter(
+                    Q(volumenode__primary=request.GET["primary"])
+                    & Q(volumenode__host__id=request.GET["host_id"])
+                    & Q(volumenode__not_deleted=True)
+                ).distinct()
             except KeyError:
                 # Not filtering on primary, try just host_id
-                objects = objects.filter(Q(volumenode__host__id=request.GET['host_id']) &
-                                         Q(volumenode__not_deleted=True)).distinct()
+                objects = objects.filter(
+                    Q(volumenode__host__id=request.GET["host_id"]) & Q(volumenode__not_deleted=True)
+                ).distinct()
         except KeyError:
             # Not filtering on host_id
             pass
 
         try:
             try:
-                fs = ManagedFilesystem.objects.get(pk=request.GET['filesystem_id'])
+                fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])
             except ManagedFilesystem.DoesNotExist:
-                objects = objects.filter(id=-1)                       # No filesystem so we want to produce an empty list.
+                objects = objects.filter(id=-1)  # No filesystem so we want to produce an empty list.
             else:
-                objects = objects.filter((Q(managedtarget__managedmdt__filesystem=fs) | Q(managedtarget__managedost__filesystem=fs)) | Q(managedtarget__id=fs.mgs.id))
+                objects = objects.filter(
+                    (Q(managedtarget__managedmdt__filesystem=fs) | Q(managedtarget__managedost__filesystem=fs))
+                    | Q(managedtarget__id=fs.mgs.id)
+                )
         except KeyError:
             # Not filtering on filesystem_id
             pass
@@ -198,24 +216,31 @@ class VolumeResource(ChromaModelResource):
         # Check that we're not trying to modify a Volume that is in
         # used by a target
         try:
-            Volume.get_unused_luns(Volume.objects).get(id = volume['id'])
+            Volume.get_unused_luns(Volume.objects).get(id=volume["id"])
         except Volume.DoesNotExist:
-            raise AssertionError("Volume %s is in use!" % volume['id'])
+            raise AssertionError("Volume %s is in use!" % volume["id"])
 
-        lun = get_object_or_404(Volume, id = volume['id'])
-        node_ids = [node['id'] for node in volume['nodes']]
-        host_ids = set(lun.volumenode_set.filter(id__in=node_ids).values_list('host_id', flat=True))
+        lun = get_object_or_404(Volume, id=volume["id"])
+        node_ids = [node["id"] for node in volume["nodes"]]
+        host_ids = set(lun.volumenode_set.filter(id__in=node_ids).values_list("host_id", flat=True))
 
         # Sanity-check the primary/failover relationships and save if OK
         if not any(host_ids.issubset(host.id for host in cluster.peers) for cluster in HaCluster.all_clusters()):
-            error_msg = "Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s:%s\n" % (lun.id, lun.label)
-            error_msg += "\nVolume Node Hosts %s\n" % ", ".join([str(host) for host in ManagedHost.objects.filter(id__in = host_ids)])
-            error_msg += "\nKnown HA Clusters %s\n" % ", ".join(["(%s)" % ", ".join([str(host) for host in cluster.peers]) for cluster in HaCluster.all_clusters()])
+            error_msg = "Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s:%s\n" % (
+                lun.id,
+                lun.label,
+            )
+            error_msg += "\nVolume Node Hosts %s\n" % ", ".join(
+                [str(host) for host in ManagedHost.objects.filter(id__in=host_ids)]
+            )
+            error_msg += "\nKnown HA Clusters %s\n" % ", ".join(
+                ["(%s)" % ", ".join([str(host) for host in cluster.peers]) for cluster in HaCluster.all_clusters()]
+            )
 
-            raise ImmediateHttpResponse(response = HttpBadRequest(error_msg))
+            raise ImmediateHttpResponse(response=HttpBadRequest(error_msg))
         # Apply use,primary values from the request
-        for node in volume['nodes']:
-            lun.volumenode_set.filter(id=node['id']).update(primary=node['primary'], use=node['use'])
+        for node in volume["nodes"]:
+            lun.volumenode_set.filter(id=node["id"]).update(primary=node["primary"], use=node["use"])
 
         # Clear use, primary on any nodes not in this request
         lun.volumenode_set.exclude(id__in=node_ids).update(primary=False, use=False)

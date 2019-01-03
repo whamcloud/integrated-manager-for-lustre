@@ -14,6 +14,7 @@ from optparse import make_option
 # PIDLockFile was split out of daemon into it's own package in daemon-1.6
 try:
     from daemon.pidlockfile import PIDLockFile
+
     assert PIDLockFile  # Silence Pyflakes
 except ImportError:
     from lockfile.pidlockfile import PIDLockFile
@@ -26,26 +27,26 @@ from iml_common.lib.date_time import IMLDateTime
 import chroma_core.services.log
 
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 
 class Command(BaseCommand):
     requires_model_validation = False
     help = """Run a single ChromaService in a new plugin."""
     option_list = BaseCommand.option_list + (
-        make_option('--gevent', action = 'store_true', dest = 'gevent', default = False),
-        make_option('--lightweight-rpc', action = 'store_true', dest = 'lightweight_rpc', default = False),
-        make_option('--verbose', action = 'store_true', dest = 'verbose', default = False),
-        make_option('--console', action = 'store_true', dest= 'console', default = False),
-        make_option('--name', dest = 'name', default = 'chroma_service'),
-        make_option('--daemon', dest = 'daemon', action = 'store_true', default = None),
-        make_option('--trace', dest = 'trace', action = 'store_true', default = None),
-        make_option('--pid-file', dest = 'pid-file', default = None),
+        make_option("--gevent", action="store_true", dest="gevent", default=False),
+        make_option("--lightweight-rpc", action="store_true", dest="lightweight_rpc", default=False),
+        make_option("--verbose", action="store_true", dest="verbose", default=False),
+        make_option("--console", action="store_true", dest="console", default=False),
+        make_option("--name", dest="name", default="chroma_service"),
+        make_option("--daemon", dest="daemon", action="store_true", default=None),
+        make_option("--trace", dest="trace", action="store_true", default=None),
+        make_option("--pid-file", dest="pid-file", default=None),
     )
 
     def execute(self, *args, **options):
-        if options['daemon']:
-            pid_file = options['pid-file']
+        if options["daemon"]:
+            pid_file = options["pid-file"]
             if os.path.exists(pid_file + ".lock") or os.path.exists(pid_file):
                 try:
                     pid = int(open(pid_file).read())
@@ -54,54 +55,59 @@ class Command(BaseCommand):
                     # Not running, delete stale PID file
                     sys.stderr.write("Removing stale PID file\n")
                     import errno
+
                     try:
                         os.remove(pid_file)
-                    except OSError, e:
+                    except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise e
                     try:
                         os.remove(pid_file + ".lock")
-                    except OSError, e:
+                    except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise e
                 else:
                     # Running, we should refuse to run
                     raise RuntimeError("Daemon is already running (PID %s)" % pid)
 
-            with DaemonContext(pidfile = PIDLockFile(pid_file)):
+            with DaemonContext(pidfile=PIDLockFile(pid_file)):
                 self._execute_inner(*args, **options)
         else:
             self._execute_inner(*args, **options)
 
     def _execute_inner(self, *args, **options):
-        if options['verbose']:
+        if options["verbose"]:
             log_enable_stdout()
 
-        if options['console']:
+        if options["console"]:
             log_enable_stdout()
         else:
-            log_set_filename("%s.log" % options['name'])
+            log_set_filename("%s.log" % options["name"])
 
-        if options['gevent']:
+        if options["gevent"]:
             from gevent.monkey import patch_all
-            patch_all(thread = True)
+
+            patch_all(thread=True)
             # Gevent's implementation of select removes 'poll'
             import subprocess
+
             subprocess._has_poll = False
 
             import django.db
+
             django.db.connections._connections = threading.local()
 
-        if options['trace']:
+        if options["trace"]:
+
             class Trace(object):
                 def __init__(self):
-                    self.tracefile = open('trace.log', 'w', buffering = 0)
+                    self.tracefile = open("trace.log", "w", buffering=0)
                     self.tracefile.write("Started at %s: %s %s\n" % (IMLDateTime.utcnow(), args, options))
 
                 def __call__(self, frame, event, arg):
                     if event == "line":
                         try:
-                            pyfile = frame.f_globals['__file__'].strip('co')
+                            pyfile = frame.f_globals["__file__"].strip("co")
                             line = linecache.getline(pyfile, frame.f_lineno)
                         except KeyError:
                             pass
@@ -115,11 +121,12 @@ class Command(BaseCommand):
             sys.settrace(chroma_core.services.log.trace)
 
         from chroma_core.lib.service_config import ServiceConfig
+
         if not ServiceConfig().configured():
             sys.stderr.write("IML is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 
-        if not options['lightweight_rpc']:
+        if not options["lightweight_rpc"]:
             RpcClientFactory.initialize_threads()
 
         # Respond to Ctrl+C
@@ -132,12 +139,13 @@ class Command(BaseCommand):
            Params undefined because gevent vs. threading pass
            different things to handler
         """
+
         def signal_handler(*args, **kwargs):
             if not setup_complete.is_set():
                 log.warning("Terminated during setup, exiting hard")
                 os._exit(0)
 
-            if not options['lightweight_rpc']:
+            if not options["lightweight_rpc"]:
                 RpcClientFactory.shutdown_threads()
 
             for service_thread in service_mains:
@@ -150,8 +158,9 @@ class Command(BaseCommand):
 
             stopped.set()
 
-        if options['gevent']:
+        if options["gevent"]:
             import gevent
+
             gevent.signal(signal.SIGINT, signal_handler)
             gevent.signal(signal.SIGTERM, signal_handler)
         else:
@@ -164,11 +173,11 @@ class Command(BaseCommand):
 
             # Load the module
             mod = __import__(module_path)
-            components = module_path.split('.')
+            components = module_path.split(".")
             for comp in components[1:]:
                 mod = getattr(mod, comp)
 
-            service = getattr(mod, 'Service')()
+            service = getattr(mod, "Service")()
             service.log = log_register(service.name)
 
             service_thread = ServiceThread(service)
@@ -183,7 +192,7 @@ class Command(BaseCommand):
             # any timeout here, but a pure wait() breaks ctrl-c.
             stopped.wait(10)
 
-        if len(threading.enumerate()) > 1 and not options['gevent']:
+        if len(threading.enumerate()) > 1 and not options["gevent"]:
             log.error("Rogue thread still running, exiting hard")
             log.error([t.name for t in threading.enumerate()])
             os._exit(-1)

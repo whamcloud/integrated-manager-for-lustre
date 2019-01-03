@@ -20,24 +20,27 @@ class TestHostResource(ChromaApiTestCase):
     def setUp(self):
         super(TestHostResource, self).setUp()
 
-        MockAgentRpc.mock_servers = {'foo': {
-            'fqdn': 'foo.mycompany.com',
-            'nodename': 'test01.foo.mycompany.com',
-            'nids': [Nid.Nid("192.168.0.19", "tcp", 0)]
-        },
-                                     'bar': {
-            'fqdn': 'bar.mycompany.com',
-            'nodename': 'test01.bar.mycompany.com',
-            'nids': [Nid.Nid("192.168.0.91", "tcp", 0)]
-        }}
+        MockAgentRpc.mock_servers = {
+            "foo": {
+                "fqdn": "foo.mycompany.com",
+                "nodename": "test01.foo.mycompany.com",
+                "nids": [Nid.Nid("192.168.0.19", "tcp", 0)],
+            },
+            "bar": {
+                "fqdn": "bar.mycompany.com",
+                "nodename": "test01.bar.mycompany.com",
+                "nids": [Nid.Nid("192.168.0.91", "tcp", 0)],
+            },
+        }
 
     @create_host_ssh_patch
     def test_creation_single(self):
         host_count = 0
 
         for key in MockAgentRpc.mock_servers:
-            response = self.api_client.post(self.RESOURCE_PATH, data={'address': key,
-                                                                      'server_profile': '/api/server_profile/test_profile/'})
+            response = self.api_client.post(
+                self.RESOURCE_PATH, data={"address": key, "server_profile": "/api/server_profile/test_profile/"}
+            )
             host_count += 1
             self.assertHttpAccepted(response)
             self.assertEqual(ManagedHost.objects.count(), host_count)
@@ -46,90 +49,121 @@ class TestHostResource(ChromaApiTestCase):
         self.test_creation_single()
 
         for host in ManagedHost.objects.all():
-            response = self.api_client.put('%s%s/' % (self.RESOURCE_PATH, host.id), data={'state': host.state})
-            self.assertHttpNoContent(response)      # No content because there is no state change.
+            response = self.api_client.put("%s%s/" % (self.RESOURCE_PATH, host.id), data={"state": host.state})
+            self.assertHttpNoContent(response)  # No content because there is no state change.
 
     def test_update_single_fail(self):
         self.test_creation_single()
 
         for host in ManagedHost.objects.all():
-            response = self.api_client.put('%s%s/' % (self.RESOURCE_PATH, host.id), data={})
-            self.assertHttpBadRequest(response)      # No content because there is not state change.
-            self.assertTrue('State data not present' in response.content)
+            response = self.api_client.put("%s%s/" % (self.RESOURCE_PATH, host.id), data={})
+            self.assertHttpBadRequest(response)  # No content because there is not state change.
+            self.assertTrue("State data not present" in response.content)
 
     @create_host_ssh_patch
     def test_creation_bulk(self):
-        response = self.api_client.post(self.RESOURCE_PATH, data={'objects': [{'address': host_name,
-                                                                               'server_profile': '/api/server_profile/test_profile/'} for host_name in MockAgentRpc.mock_servers]})
+        response = self.api_client.post(
+            self.RESOURCE_PATH,
+            data={
+                "objects": [
+                    {"address": host_name, "server_profile": "/api/server_profile/test_profile/"}
+                    for host_name in MockAgentRpc.mock_servers
+                ]
+            },
+        )
         self.assertHttpAccepted(response)
         self.assertEqual(ManagedHost.objects.count(), len(MockAgentRpc.mock_servers))
 
         content = json.loads(response.content)
 
-        self.assertEqual(len(content['objects']), len(MockAgentRpc.mock_servers))
+        self.assertEqual(len(content["objects"]), len(MockAgentRpc.mock_servers))
 
-        for object in content['objects']:
-            self.assertEqual(object['error'], None)
-            self.assertEqual(object['traceback'], None)
-            self.assertEqual(object['command_and_host'].keys(), ['host', 'command'])
+        for object in content["objects"]:
+            self.assertEqual(object["error"], None)
+            self.assertEqual(object["traceback"], None)
+            self.assertEqual(object["command_and_host"].keys(), ["host", "command"])
 
     def test_update_bulk(self):
         self.test_creation_bulk()
 
         for host in ManagedHost.objects.all():
-            host.state = 'undeployed'
+            host.state = "undeployed"
             host.save()
 
         with create_host_ssh_patch:
-            response = self.api_client.put(self.RESOURCE_PATH, data={'objects': [{'address': host.address,
-                                                                                  'server_profile': '/api/server_profile/test_profile/'} for host in ManagedHost.objects.all()]})
+            response = self.api_client.put(
+                self.RESOURCE_PATH,
+                data={
+                    "objects": [
+                        {"address": host.address, "server_profile": "/api/server_profile/test_profile/"}
+                        for host in ManagedHost.objects.all()
+                    ]
+                },
+            )
 
         self.assertHttpAccepted(response)
         self.assertEqual(ManagedHost.objects.count(), len(MockAgentRpc.mock_servers))
 
         content = json.loads(response.content)
 
-        self.assertEqual(len(content['objects']), len(MockAgentRpc.mock_servers))
+        self.assertEqual(len(content["objects"]), len(MockAgentRpc.mock_servers))
 
-        for object in content['objects']:
-            self.assertEqual(object['error'], None)
-            self.assertEqual(object['traceback'], None)
-            self.assertEqual(object['command_and_host'].keys(), ['host', 'command'])
+        for object in content["objects"]:
+            self.assertEqual(object["error"], None)
+            self.assertEqual(object["traceback"], None)
+            self.assertEqual(object["command_and_host"].keys(), ["host", "command"])
 
     def create_host_ssh_fail_patch(self, address, server_profile, root_pw=None, pkey=None, pkey_pw=None):
         raise Exception("Host create failed for address %s" % address)
 
     def test_creation_fail(self):
-        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh', self.create_host_ssh_fail_patch):
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh",
+            self.create_host_ssh_fail_patch,
+        ):
 
-            response = self.api_client.post(self.RESOURCE_PATH, data={"objects": [{'address': host_name,
-                                                                                   'server_profile': '/api/server_profile/test_profile/'} for host_name in MockAgentRpc.mock_servers]})
+            response = self.api_client.post(
+                self.RESOURCE_PATH,
+                data={
+                    "objects": [
+                        {"address": host_name, "server_profile": "/api/server_profile/test_profile/"}
+                        for host_name in MockAgentRpc.mock_servers
+                    ]
+                },
+            )
             self.assertHttpBadRequest(response)
             self.assertEqual(ManagedHost.objects.count(), 0)
 
             content = json.loads(response.content)
 
-            self.assertEqual(len(content['objects']), len(MockAgentRpc.mock_servers))
+            self.assertEqual(len(content["objects"]), len(MockAgentRpc.mock_servers))
 
-            for index, object in enumerate(content['objects']):
-                self.assertEqual(object['error'], "Host create failed for address %s" % MockAgentRpc.mock_servers.keys()[index])
-                self.assertNotEqual(object['traceback'], [None])
-                self.assertEqual(object['command_and_host'], None)
+            for index, object in enumerate(content["objects"]):
+                self.assertEqual(
+                    object["error"], "Host create failed for address %s" % MockAgentRpc.mock_servers.keys()[index]
+                )
+                self.assertNotEqual(object["traceback"], [None])
+                self.assertEqual(object["command_and_host"], None)
 
     @create_host_ssh_patch
     def test_creation_different_profile(self):
-        test_sp = ServerProfile(name='test', ui_name='test UI',
-                                ui_description='a test description',
-                                managed=False,
-                                worker=False,
-                                ntp=False,
-                                corosync=False,
-                                corosync2=False,
-                                initial_state="monitored")
+        test_sp = ServerProfile(
+            name="test",
+            ui_name="test UI",
+            ui_description="a test description",
+            managed=False,
+            worker=False,
+            ntp=False,
+            corosync=False,
+            corosync2=False,
+            initial_state="monitored",
+        )
         test_sp.save()
-        test_sp.bundles.add(Bundle.objects.get(bundle_name='agent'))
+        test_sp.bundles.add(Bundle.objects.get(bundle_name="agent"))
 
-        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo', 'server_profile': '/api/server_profile/test/'})
+        response = self.api_client.post(
+            self.RESOURCE_PATH, data={"address": "foo", "server_profile": "/api/server_profile/test/"}
+        )
         self.assertHttpAccepted(response)
         self.assertEqual(ManagedHost.objects.count(), 1)
 
@@ -144,58 +178,75 @@ class TestHostResource(ChromaApiTestCase):
         def test_host_contact(*args, **kwargs):
             return Command.objects.create(message="No-op", complete=True)
 
-        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock(side_effect = test_host_contact)) as thc:
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact",
+            mock.Mock(side_effect=test_host_contact),
+        ) as thc:
             # Test a single post.
             for key in MockAgentRpc.mock_servers:
-                response = self.api_client.post('/api/test_host/', data={'address': key,
-                                                                         'private_key_passphrase': 'Tom',
-                                                                         'private_key': 'and',
-                                                                         'root_password': 'jerry'})
+                response = self.api_client.post(
+                    "/api/test_host/",
+                    data={
+                        "address": key,
+                        "private_key_passphrase": "Tom",
+                        "private_key": "and",
+                        "root_password": "jerry",
+                    },
+                )
                 self.assertHttpAccepted(response)
                 content = json.loads(response.content)
-                self.assertEqual(content['complete'], True)
+                self.assertEqual(content["complete"], True)
 
-                thc.assert_called_once_with(address = key,
-                                            pkey_pw = 'Tom',
-                                            pkey = 'and',
-                                            root_pw = 'jerry')
+                thc.assert_called_once_with(address=key, pkey_pw="Tom", pkey="and", root_pw="jerry")
                 thc.reset_mock()
 
             ManagedHost.objects.all().delete()
 
             # Test a batch post.
-            response = self.api_client.post('/api/test_host/', data={'objects': [{'address': 'foo',
-                                                                                  'private_key_passphrase': 'Tom',
-                                                                                  'private_key': 'and',
-                                                                                  'root_password': 'Jerry'},
-                                                                                 {'address': 'bar',
-                                                                                  'private_key_passphrase': 'Bill',
-                                                                                  'private_key': 'and',
-                                                                                  'root_password': 'Ben'}]})
+            response = self.api_client.post(
+                "/api/test_host/",
+                data={
+                    "objects": [
+                        {
+                            "address": "foo",
+                            "private_key_passphrase": "Tom",
+                            "private_key": "and",
+                            "root_password": "Jerry",
+                        },
+                        {
+                            "address": "bar",
+                            "private_key_passphrase": "Bill",
+                            "private_key": "and",
+                            "root_password": "Ben",
+                        },
+                    ]
+                },
+            )
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
             self.assertEqual(len(content), 1)
 
-            thc.assert_has_calls([mock.call(address = 'foo',
-                                            pkey_pw = 'Tom',
-                                            pkey = 'and',
-                                            root_pw = 'Jerry'),
-                                  mock.call(address = 'bar',
-                                            pkey_pw = 'Bill',
-                                            pkey = 'and',
-                                            root_pw = 'Ben')])
+            thc.assert_has_calls(
+                [
+                    mock.call(address="foo", pkey_pw="Tom", pkey="and", root_pw="Jerry"),
+                    mock.call(address="bar", pkey_pw="Bill", pkey="and", root_pw="Ben"),
+                ]
+            )
 
     def test_host_validation_single(self):
         def mock_test_host_contact(address, root_pw, pkey, pkey_pw):
             return Command.objects.create(message="Mock Test Host Contact", complete=True)
 
-        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock(side_effect = mock_test_host_contact)) as thc:
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact",
+            mock.Mock(side_effect=mock_test_host_contact),
+        ) as thc:
             # Test a single post.
             for address in MockAgentRpc.mock_servers:
-                response = self.api_client.post('/api/test_host/', data={'address': address})
+                response = self.api_client.post("/api/test_host/", data={"address": address})
                 self.assertHttpAccepted(response)
                 content = json.loads(response.content)
-                self.assertEqual(content['complete'], True)
+                self.assertEqual(content["complete"], True)
 
             self.assertEqual(thc.call_count, len(MockAgentRpc.mock_servers))
 
@@ -203,164 +254,193 @@ class TestHostResource(ChromaApiTestCase):
         def mock_test_host_contact(address, root_pw, pkey, pkey_pw):
             return Command.objects.create(message="Mock Test Host Contact", complete=True)
 
-        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock(side_effect = mock_test_host_contact)) as thc:
-            response = self.api_client.post('/api/test_host/', data={'objects': [{'address': [address]} for address in MockAgentRpc.mock_servers]})
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact",
+            mock.Mock(side_effect=mock_test_host_contact),
+        ) as thc:
+            response = self.api_client.post(
+                "/api/test_host/", data={"objects": [{"address": [address]} for address in MockAgentRpc.mock_servers]}
+            )
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
 
-            self.assertEqual(len(content['objects']), len(MockAgentRpc.mock_servers))
+            self.assertEqual(len(content["objects"]), len(MockAgentRpc.mock_servers))
             self.assertEqual(thc.call_count, len(MockAgentRpc.mock_servers))
 
-            for object in content['objects']:
-                self.assertEqual(object['error'], None)
-                self.assertEqual(object['traceback'], None)
-                self.assertEqual(object['command']['complete'], True)
+            for object in content["objects"]:
+                self.assertEqual(object["error"], None)
+                self.assertEqual(object["traceback"], None)
+                self.assertEqual(object["command"]["complete"], True)
 
     @create_host_ssh_patch
     def _create_hosts_and_validation_profiles(self, validations):
-        profile = ServerProfile(name='test_profile_2',
-                                ui_name='Not Test Profile',
-                                ui_description='Not Test Profile',
-                                managed=False,
-                                worker=False,
-                                corosync=False,
-                                corosync2=False,
-                                ntp=False,
-                                user_selectable=False,
-                                initial_state="monitored")
+        profile = ServerProfile(
+            name="test_profile_2",
+            ui_name="Not Test Profile",
+            ui_description="Not Test Profile",
+            managed=False,
+            worker=False,
+            corosync=False,
+            corosync2=False,
+            ntp=False,
+            user_selectable=False,
+            initial_state="monitored",
+        )
         profile.save()
-        profile.bundles.add(Bundle.objects.get(bundle_name='agent'))
+        profile.bundles.add(Bundle.objects.get(bundle_name="agent"))
 
         for profile in ServerProfile.objects.all():
             for validation in validations:
                 profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
 
-        response = self.api_client.post(self.RESOURCE_PATH, data={'objects': [{'address': host_name,
-                                                                               'server_profile': '/api/server_profile/test_profile_2/'} for host_name in MockAgentRpc.mock_servers]})
+        response = self.api_client.post(
+            self.RESOURCE_PATH,
+            data={
+                "objects": [
+                    {"address": host_name, "server_profile": "/api/server_profile/test_profile_2/"}
+                    for host_name in MockAgentRpc.mock_servers
+                ]
+            },
+        )
 
         self.assertHttpAccepted(response)
         content = json.loads(response.content)
 
-        self.assertEqual(len(content['objects']), len(MockAgentRpc.mock_servers))
+        self.assertEqual(len(content["objects"]), len(MockAgentRpc.mock_servers))
 
-        for object in content['objects']:
-            self.assertEqual(object['error'], None)
-            self.assertEqual(object['traceback'], None)
-            self.assertEqual(object['command_and_host'].keys(), ['host', 'command'])
+        for object in content["objects"]:
+            self.assertEqual(object["error"], None)
+            self.assertEqual(object["traceback"], None)
+            self.assertEqual(object["command_and_host"].keys(), ["host", "command"])
 
         hosts = ManagedHost.objects.all()
-        self.assertEqual(hosts[0].server_profile.name, 'test_profile_2')
+        self.assertEqual(hosts[0].server_profile.name, "test_profile_2")
 
         return hosts
 
     def test_profile_validation(self):
-        validations = [{u'test': u'variable1 == 1', u'description': u'variable1 should equal 1'},
-                       {u'test': u'variable2 == 2', u'description': u'variable2 should equal 2'}]
+        validations = [
+            {u"test": u"variable1 == 1", u"description": u"variable1 should equal 1"},
+            {u"test": u"variable2 == 2", u"description": u"variable2 should equal 2"},
+        ]
 
         hosts = self._create_hosts_and_validation_profiles(validations)
 
         # Check we no properties, both should fail.
         for validation in validations:
-            validation['pass'] = False
-            validation['error'] = 'Result unavailable while host agent starts'
+            validation["pass"] = False
+            validation["error"] = "Result unavailable while host agent starts"
 
-        response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
+        response = self.api_client.get("/api/host_profile/{0}/".format(hosts[0].id))
         content = json.loads(response.content)
         self.assertHttpOK(response)
-        test_profile_validations = content['profiles']['test_profile']
+        test_profile_validations = content["profiles"]["test_profile"]
         test_profile_validations.sort()
         validations.sort()
         self.assertEqual(test_profile_validations, validations)
 
         # Test host info correct.
-        self.assertEqual(content['host'], hosts[0].id)
-        self.assertEqual(content['address'], hosts[0].address)
-        self.assertEqual(content['resource_uri'], '/api/host_profile/{0}/'.format(hosts[0].id))
+        self.assertEqual(content["host"], hosts[0].id)
+        self.assertEqual(content["address"], hosts[0].address)
+        self.assertEqual(content["resource_uri"], "/api/host_profile/{0}/".format(hosts[0].id))
 
         # Now set the first property = variable1 = 1
         for host in hosts:
-            host.properties = json.dumps({'variable1': 1})
+            host.properties = json.dumps({"variable1": 1})
             host.save()
 
         # And change the validation.
-        self.assertEqual(validations[0]['test'], 'variable1 == 1')
-        validations[0]['pass'] = True
-        validations[0]['error'] = ''
-        validations[1]['error'] = 'Unrecognised variable "variable2"'
+        self.assertEqual(validations[0]["test"], "variable1 == 1")
+        validations[0]["pass"] = True
+        validations[0]["error"] = ""
+        validations[1]["error"] = 'Unrecognised variable "variable2"'
 
-        response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
+        response = self.api_client.get("/api/host_profile/{0}/".format(hosts[0].id))
         self.assertHttpOK(response)
-        test_profile_validations = json.loads(response.content)['profiles']['test_profile']
+        test_profile_validations = json.loads(response.content)["profiles"]["test_profile"]
         test_profile_validations.sort()
         validations.sort()
 
         self.assertEqual(test_profile_validations, validations)
 
-        for data in ({}, {'id__in': [hosts[0].id, 0]}):
-            response = self.api_client.get('/api/host_profile/?', data=data)
+        for data in ({}, {"id__in": [hosts[0].id, 0]}):
+            response = self.api_client.get("/api/host_profile/?", data=data)
             self.assertHttpOK(response)
-            objects = json.loads(response.content)['objects']
+            objects = json.loads(response.content)["objects"]
 
             host_index = 0
 
             for object in objects:
-                for validation in object['host_profiles']['profiles'].values():
+                for validation in object["host_profiles"]["profiles"].values():
                     validation.sort()
                 validations.sort()
 
-                self.assertEqual(object, {'error': None,
-                                          'traceback': None,
-                                          'host_profiles': {'profiles': {'test_profile': validations,
-                                                                         'test_profile_2': validations},
-                                                            'profiles_valid': True,
-                                                            'host': hosts[host_index].id,
-                                                            'address': hosts[host_index].address,
-                                                            'resource_uri': '/api/host_profile/%s/' % hosts[host_index].id}})
+                self.assertEqual(
+                    object,
+                    {
+                        "error": None,
+                        "traceback": None,
+                        "host_profiles": {
+                            "profiles": {"test_profile": validations, "test_profile_2": validations},
+                            "profiles_valid": True,
+                            "host": hosts[host_index].id,
+                            "address": hosts[host_index].address,
+                            "resource_uri": "/api/host_profile/%s/" % hosts[host_index].id,
+                        },
+                    },
+                )
                 host_index += 1
 
         def _mock_jsc_set_host_profile(host_id, server_profile_id):
-            ManagedHost.objects.filter(id = host_id).update(server_profile = server_profile_id)
+            ManagedHost.objects.filter(id=host_id).update(server_profile=server_profile_id)
 
-            return self.make_command(complete=False, created_at=None, errored=True, message='test')
+            return self.make_command(complete=False, created_at=None, errored=True, message="test")
 
-        def _mock_command_set_state(objects, message = None, **kwargs):
+        def _mock_command_set_state(objects, message=None, **kwargs):
             for object, state in objects:
-                object.__class__.objects.filter(id = object.id).update(state = state)
+                object.__class__.objects.filter(id=object.id).update(state=state)
 
-            return self.make_command(complete=False, created_at=None, errored=True, message='test')
+            return self.make_command(complete=False, created_at=None, errored=True, message="test")
 
         # Place the host into the unconfigured state, this is typical of where it will be at this point.
-        ManagedHost.objects.filter(id = hosts[0].id).update(state = 'unconfigured')
+        ManagedHost.objects.filter(id=hosts[0].id).update(state="unconfigured")
 
-        with contextlib.nested(mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.set_host_profile",
-                                          new = mock.Mock(side_effect = _mock_jsc_set_host_profile)),
-                               mock.patch("chroma_core.models.Command.set_state",
-                                          new = mock.Mock(side_effect = _mock_command_set_state))) as (shp, ccs):
+        with contextlib.nested(
+            mock.patch(
+                "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.set_host_profile",
+                new=mock.Mock(side_effect=_mock_jsc_set_host_profile),
+            ),
+            mock.patch("chroma_core.models.Command.set_state", new=mock.Mock(side_effect=_mock_command_set_state)),
+        ) as (shp, ccs):
 
-            response = self.api_client.put('/api/host_profile/{0}/'.format(hosts[0].id), data={'profile': 'test_profile'})
+            response = self.api_client.put(
+                "/api/host_profile/{0}/".format(hosts[0].id), data={"profile": "test_profile"}
+            )
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
             self.assertEqual(len(content), 2)
-            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
+            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, "test_profile")
             shp.assert_called_once_with(hosts[0].id, u"test_profile")
-            ccs.assert_called_once_with([(hosts[0], u'managed')])
+            ccs.assert_called_once_with([(hosts[0], u"managed")])
 
             shp.reset_mock()
             ccs.reset_mock()
 
             # Reset the profile and state
-            ManagedHost.objects.filter(id = hosts[0].id).update(state = 'unconfigured', server_profile = 'test_profile_2')
+            ManagedHost.objects.filter(id=hosts[0].id).update(state="unconfigured", server_profile="test_profile_2")
 
-            response = self.api_client.post('/api/host_profile/', data={'objects': [{'host': host.id, 'profile': 'test_profile'} for host in hosts]})
+            response = self.api_client.post(
+                "/api/host_profile/", data={"objects": [{"host": host.id, "profile": "test_profile"} for host in hosts]}
+            )
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
 
             # host[0] needs profile and state changed so 2 commands
             # host[1] is already in the correct state so just needs the profile changed 1 command
-            self.assertEqual(len(content['objects'][0]['commands']), 2)
-            self.assertEqual(len(content['objects'][1]['commands']), 1)
-            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
-            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
+            self.assertEqual(len(content["objects"][0]["commands"]), 2)
+            self.assertEqual(len(content["objects"][1]["commands"]), 1)
+            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, "test_profile")
+            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, "test_profile")
             self.assertEqual(shp.call_count, 2)
             self.assertEqual(ccs.call_count, 1)
 
@@ -368,15 +448,17 @@ class TestHostResource(ChromaApiTestCase):
             ccs.reset_mock()
 
             # If we do it once more we should have no effect because the profile is already set.
-            response = self.api_client.post('/api/host_profile/', data={'objects': [{'host': host.id, 'profile': 'test_profile'} for host in hosts]})
+            response = self.api_client.post(
+                "/api/host_profile/", data={"objects": [{"host": host.id, "profile": "test_profile"} for host in hosts]}
+            )
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
 
             # No commands run on either host
-            self.assertEqual(len(content['objects'][0]['commands']), 0)
-            self.assertEqual(len(content['objects'][1]['commands']), 0)
-            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
-            self.assertEqual(ManagedHost.objects.get(id=hosts[1].id).server_profile.name, 'test_profile')
+            self.assertEqual(len(content["objects"][0]["commands"]), 0)
+            self.assertEqual(len(content["objects"][1]["commands"]), 0)
+            self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, "test_profile")
+            self.assertEqual(ManagedHost.objects.get(id=hosts[1].id).server_profile.name, "test_profile")
             self.assertEqual(shp.called, False)
             self.assertEqual(ccs.called, False)
 
@@ -384,41 +466,41 @@ class TestHostResource(ChromaApiTestCase):
         hosts = self._create_hosts_and_validation_profiles([])
 
         # Check we can filter results and select a host
-        response = self.api_client.get('/api/host_profile/{0}/'.format(hosts[0].id))
+        response = self.api_client.get("/api/host_profile/{0}/".format(hosts[0].id))
         self.assertHttpOK(response)
-        profiles = json.loads(response.content)['profiles']
+        profiles = json.loads(response.content)["profiles"]
         self.assertEqual(len(profiles), len(ServerProfile.objects.all()))
-        response = self.api_client.get('/api/host_profile/{0}/?server_profile__name=test_profile_2'.format(hosts[0].id))
+        response = self.api_client.get("/api/host_profile/{0}/?server_profile__name=test_profile_2".format(hosts[0].id))
         self.assertHttpOK(response)
-        profiles = json.loads(response.content)['profiles']
+        profiles = json.loads(response.content)["profiles"]
         self.assertEqual(len(profiles), 1)
 
         # Check we can filter results when fetching a list.
-        response = self.api_client.get('/api/host_profile/')
+        response = self.api_client.get("/api/host_profile/")
         self.assertHttpOK(response)
         content = json.loads(response.content)
-        for object in content['objects']:
-            self.assertEqual(len(object['host_profiles']['profiles']), len(ServerProfile.objects.all()))
-        response = self.api_client.get('/api/host_profile/?server_profile__name=test_profile_2')
+        for object in content["objects"]:
+            self.assertEqual(len(object["host_profiles"]["profiles"]), len(ServerProfile.objects.all()))
+        response = self.api_client.get("/api/host_profile/?server_profile__name=test_profile_2")
         self.assertHttpOK(response)
         content = json.loads(response.content)
-        for object in content['objects']:
-            self.assertEqual(len(object['host_profiles']['profiles']), 1)
+        for object in content["objects"]:
+            self.assertEqual(len(object["host_profiles"]["profiles"]), 1)
 
     @create_targets_patch
     def test_select_by_filesystem(self):
         """Test selecting host by filesystem with valid and invalid filesystem ids."""
-        self.create_simple_filesystem(synthetic_host('myserver'))
+        self.create_simple_filesystem(synthetic_host("myserver"))
 
-        response = self.api_client.get('/api/host/', data={'filesystem_id': self.fs.id})
+        response = self.api_client.get("/api/host/", data={"filesystem_id": self.fs.id})
         self.assertHttpOK(response)
         content = json.loads(response.content)
-        self.assertEqual(1, len(content['objects']))
+        self.assertEqual(1, len(content["objects"]))
 
-        response = self.api_client.get('/api/host/', data={'filesystem_id': -1000})
+        response = self.api_client.get("/api/host/", data={"filesystem_id": -1000})
         self.assertHttpOK(response)
         content = json.loads(response.content)
-        self.assertEqual(0, len(content['objects']))
+        self.assertEqual(0, len(content["objects"]))
 
 
 sample_private_key = """-----BEGIN RSA PRIVATE KEY-----
@@ -453,30 +535,35 @@ class TestCreateHostAPI(ChromaApiTestCase):
     """Test HostResource and TestHostResource passing through SSH auth
     arguments in the expected form to JobSchedulerClient.
     """
-    def __init__(self, method, username='admin', **kwargs):
+
+    def __init__(self, method, username="admin", **kwargs):
         ChromaApiTestCase.__init__(self, method, username=username, **kwargs)
 
     def setUp(self):
         super(TestCreateHostAPI, self).setUp()
 
         # Body for a POST to either host or test_host
-        self.input_data = {"address": 'myaddress',
-                           "auth_type": 'existing_keys_choice',
-                           "server_profile": api.get_resource_uri(ServerProfile.objects.get()),
-                           "root_password": 'secret_pw',
-                           "private_key": sample_private_key,
-                           "private_key_passphrase": 'secret_key_pw'}
+        self.input_data = {
+            "address": "myaddress",
+            "auth_type": "existing_keys_choice",
+            "server_profile": api.get_resource_uri(ServerProfile.objects.get()),
+            "root_password": "secret_pw",
+            "private_key": sample_private_key,
+            "private_key_passphrase": "secret_key_pw",
+        }
 
     def tearDown(self):
         super(TestCreateHostAPI, self).tearDown()
 
     def _create_host(self):
-        ManagedHost.objects.create(state = 'undeployed',
-                                   address = 'myaddress',
-                                   nodename = 'myaddress',
-                                   fqdn = 'myaddress',
-                                   immutable_state = False,
-                                   install_method = ManagedHost.INSTALL_MANUAL)
+        ManagedHost.objects.create(
+            state="undeployed",
+            address="myaddress",
+            nodename="myaddress",
+            fqdn="myaddress",
+            immutable_state=False,
+            install_method=ManagedHost.INSTALL_MANUAL,
+        )
 
     def test_host_contact_ssh_auth_accept_not_present_no_check(self):
         self._test_host_contact_ssh_auth(True)
@@ -505,9 +592,13 @@ class TestCreateHostAPI(ChromaApiTestCase):
 
     def _test_host_contact_ssh_auth(self, accept):
         """Test POST to /api/test_host/ results in jobschedulerclient call."""
-        with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()) as thc:
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()
+        ) as thc:
+
             def test_host_contact(*args, **kwargs):
                 return Command.objects.create(message="No-op", complete=True)
+
             thc.side_effect = test_host_contact
 
             api_resp = self.api_client.post("/api/test_host/", data=self.input_data)
@@ -515,32 +606,43 @@ class TestCreateHostAPI(ChromaApiTestCase):
             if accept:
                 self.assertHttpAccepted(api_resp)
 
-                thc.assert_called_once_with(**{"address": 'myaddress',
-                                               "root_pw": 'secret_pw',
-                                               "pkey": sample_private_key,
-                                               "pkey_pw": 'secret_key_pw'})
+                thc.assert_called_once_with(
+                    **{
+                        "address": "myaddress",
+                        "root_pw": "secret_pw",
+                        "pkey": sample_private_key,
+                        "pkey_pw": "secret_key_pw",
+                    }
+                )
             else:
                 self.assertHttpBadRequest(api_resp)
 
-                self.assertEqual(thc.call_count, 0, "test_host_contact called %s != 0 for failing case" % thc.call_count)
+                self.assertEqual(
+                    thc.call_count, 0, "test_host_contact called %s != 0 for failing case" % thc.call_count
+                )
 
         # Create object so that on the second time round we check the false case.
 
     def test_create_host_api_ssh_auth(self):
         """Test POST to /api/host/ results in jobschedulerclient call."""
 
-        with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh", mock.Mock()) as chs:
+        with mock.patch(
+            "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh", mock.Mock()
+        ) as chs:
             # Got to return something here for API to dehydrate its response
             def create_host_ssh(*args, **kwargs):
-                return synthetic_host(kwargs['address']), Command.objects.create()
+                return synthetic_host(kwargs["address"]), Command.objects.create()
+
             chs.side_effect = create_host_ssh
 
             response = self.api_client.post("/api/host/", data=self.input_data)
             self.assertHttpAccepted(response)
             job_scheduler_client.JobSchedulerClient.create_host_ssh.assert_called_once_with(
-                **{"address": 'myaddress',
-                   "server_profile": ServerProfile.objects.get().name,
-                   "root_pw": 'secret_pw',
-                   "pkey": sample_private_key,
-                   "pkey_pw": 'secret_key_pw'}
+                **{
+                    "address": "myaddress",
+                    "server_profile": ServerProfile.objects.get().name,
+                    "root_pw": "secret_pw",
+                    "pkey": sample_private_key,
+                    "pkey_pw": "secret_key_pw",
+                }
             )

@@ -5,7 +5,7 @@
 
 class AlertCondition(object):
     def __init__(self, *args, **kwargs):
-        self._id = kwargs.pop('id', None)
+        self._id = kwargs.pop("id", None)
 
     def id(self):
         raise NotImplementedError()

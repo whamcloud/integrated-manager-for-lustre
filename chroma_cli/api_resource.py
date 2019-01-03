@@ -43,6 +43,7 @@ class ApiResource(object):
     # http://stackoverflow.com/a/1094933/204920
     def fmt_bytes(self, bytes):
         import math
+
         if bytes is None or math.isnan(float(bytes)):
             return "NaN"
         bytes = float(bytes)
@@ -55,6 +56,7 @@ class ApiResource(object):
 
     def fmt_num(self, num):
         import math
+
         if num is None or math.isnan(float(num)):
             return "NaN"
         num = float(num)
@@ -67,8 +69,8 @@ class ApiResource(object):
 
     def pretty_time(self, in_time):
         from iml_common.lib.date_time import IMLDateTime, FixedOffset, LocalOffset
-        local_midnight = IMLDateTime.now().replace(hour=0, minute=0,
-                                                   second=0, microsecond=0)
+
+        local_midnight = IMLDateTime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         in_time = in_time.replace(tzinfo=FixedOffset(0))
         out_time = in_time.astimezone(LocalOffset)
         if out_time < local_midnight:
@@ -88,17 +90,17 @@ class Host(ApiResource):
         super(Host, self).__init__(*args, **kwargs)
         # FIXME: Figure out bad interaction between role as a resource
         # field and as a filter.
-        #self.list_columns.extend(["fqdn", "role", "state", "nids", "last_contact"])
-        self.list_columns += 'fqdn', 'state', 'nids'
+        # self.list_columns.extend(["fqdn", "role", "state", "nids", "last_contact"])
+        self.list_columns += "fqdn", "state", "nids"
 
     def nids(self):
-        return ",".join(self.all_attributes['nids'])
+        return ",".join(self.all_attributes["nids"])
 
 
 class LnetConfiguration(ApiResource):
     def __init__(self, *args, **kwargs):
         super(LnetConfiguration, self).__init__(*args, **kwargs)
-        self.list_columns.extend(['host__fqdn'])
+        self.list_columns.extend(["host__fqdn"])
 
 
 class Target(ApiResource):
@@ -108,9 +110,8 @@ class Target(ApiResource):
 
     def primary_path(self):
         try:
-            primary_node = [vn for vn in self.volume['volume_nodes']
-                                        if vn['primary']][0]
-            return "%s:%s" % (primary_node['host_label'], primary_node['path'])
+            primary_node = [vn for vn in self.volume["volume_nodes"] if vn["primary"]][0]
+            return "%s:%s" % (primary_node["host_label"], primary_node["path"])
         except IndexError:
             return "Unknown"
 
@@ -147,18 +148,18 @@ class Volume(ApiResource):
         return " ".join(self.label.split())
 
     def size(self):
-        return self.fmt_bytes(self.all_attributes['size'])
+        return self.fmt_bytes(self.all_attributes["size"])
 
     def primary(self):
         for node in self.volume_nodes:
-            if node['primary']:
-                return ":".join([node['host_label'], node['path']])
+            if node["primary"]:
+                return ":".join([node["host_label"], node["path"]])
 
     def failover(self):
         failover_nodes = []
         for node in self.volume_nodes:
-            if not node['primary']:
-                failover_nodes.append(":".join([node['host_label'], node['path']]))
+            if not node["primary"]:
+                failover_nodes.append(":".join([node["host_label"], node["path"]]))
         return ";".join(failover_nodes)
 
 

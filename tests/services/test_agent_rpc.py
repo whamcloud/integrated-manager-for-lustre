@@ -1,5 +1,5 @@
-
 from chroma_core.lib.util import chroma_settings
+
 settings = chroma_settings()
 
 import time
@@ -32,31 +32,32 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
     service because that is where AgentRpc lives, but is not intended to test the other
     functionality in JobScheduler.
     """
-    SERVICES = ['iml-http-agent', 'iml-job-scheduler']
+
+    SERVICES = ["iml-http-agent", "iml-job-scheduler"]
     PLUGIN = AgentRpcMessenger.PLUGIN_NAME
 
     def __init__(self, *args, **kwargs):
         SystemdTestCase.__init__(self, *args, **kwargs)
         AgentHttpClient.__init__(self)
 
-    def _open_sessions(self, expect_initial = True, expect_reopen = False):
+    def _open_sessions(self, expect_initial=True, expect_reopen=False):
         message = {
-            'fqdn': self.CLIENT_NAME,
-            'type': 'SESSION_CREATE_REQUEST',
-            'plugin': self.PLUGIN,
-            'session_id': None,
-            'session_seq': None,
-            'body': None
+            "fqdn": self.CLIENT_NAME,
+            "type": "SESSION_CREATE_REQUEST",
+            "plugin": self.PLUGIN,
+            "session_id": None,
+            "session_seq": None,
+            "body": None,
         }
 
         # On the first connection from a host that this http_agent hasn't seen before, http_agent sends a TERMINATE_ALL
         # In that case, send a session-less DATA request expecting a TERMINATE
         # In addition to flushing the TERMINATE_ALL, this gives the job_scheduler time to reset all sessions
         if expect_initial:
-            response = self._post([dict(message, type='DATA')])
+            response = self._post([dict(message, type="DATA")])
             self.assertResponseOk(response)
             messages = self._receive_messages(2)
-            self.assertEqual([m['type'] for m in messages], ['SESSION_TERMINATE_ALL', 'SESSION_TERMINATE'])
+            self.assertEqual([m["type"] for m in messages], ["SESSION_TERMINATE_ALL", "SESSION_TERMINATE"])
 
         # Send a session create request on the RX channel
         response = self._post([message])
@@ -64,38 +65,39 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
 
         # Read from the TX channel
         create_response, = self._receive_messages()
-        self.assertEqual(create_response['type'], 'SESSION_CREATE_RESPONSE')
-        self.assertEqual(create_response['plugin'], self.PLUGIN)
-        self.assertEqual(create_response['session_seq'], None)
-        self.assertEqual(create_response['body'], None)
-        return create_response['session_id']
+        self.assertEqual(create_response["type"], "SESSION_CREATE_RESPONSE")
+        self.assertEqual(create_response["plugin"], self.PLUGIN)
+        self.assertEqual(create_response["session_seq"], None)
+        self.assertEqual(create_response["body"], None)
+        return create_response["session_id"]
 
     def setUp(self):
-        if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
-            if not ServerProfile.objects.filter(name = 'TestAgentRpcProfile').count():
+        if not ManagedHost.objects.filter(fqdn=self.CLIENT_NAME).count():
+            if not ServerProfile.objects.filter(name="TestAgentRpcProfile").count():
                 server_profile = ServerProfile.objects.create(
-                        name = 'TestAgentRpcProfile',
-                        ui_name = 'Profile created to TestAgentRpc can work',
-                        managed = True,
-                        worker = False,
-                        ntp = True,
-                        corosync = True,
-                        corosync2 = False)
+                    name="TestAgentRpcProfile",
+                    ui_name="Profile created to TestAgentRpc can work",
+                    managed=True,
+                    worker=False,
+                    ntp=True,
+                    corosync=True,
+                    corosync2=False,
+                )
             else:
-                server_profile = ServerProfile.objects.get(name = 'TestAgentRpcProfile')
+                server_profile = ServerProfile.objects.get(name="TestAgentRpcProfile")
 
             self.host = ManagedHost.objects.create(
-                fqdn = self.CLIENT_NAME,
-                nodename = self.CLIENT_NAME,
-                address = self.CLIENT_NAME,
-                state = 'lnet_down',
-                state_modified_at = IMLDateTime.utcnow(),
-                server_profile = server_profile
+                fqdn=self.CLIENT_NAME,
+                nodename=self.CLIENT_NAME,
+                address=self.CLIENT_NAME,
+                state="lnet_down",
+                state_modified_at=IMLDateTime.utcnow(),
+                server_profile=server_profile,
             )
-            LNetConfiguration.objects.create(host = self.host, state = 'lnet_down')
-            ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)
+            LNetConfiguration.objects.create(host=self.host, state="lnet_down")
+            ClientCertificate.objects.create(host=self.host, serial=self.CLIENT_CERT_SERIAL)
         else:
-            self.host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
+            self.host = ManagedHost.objects.get(fqdn=self.CLIENT_NAME)
 
         super(TestAgentRpc, self).setUp()
 
@@ -104,7 +106,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         try:
             with transaction.commit_manually():
                 transaction.commit()
-            host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
+            host = ManagedHost.objects.get(fqdn=self.CLIENT_NAME)
             for host_contact_alert in HostContactAlert.filter_by_item(host):
                 AlertEmail.objects.filter(alerts__in=[host_contact_alert]).delete()
                 host_contact_alert.delete()
@@ -119,24 +121,26 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         """
 
         self._open_sessions()
-        self.restart('iml-job-scheduler')
+        self.restart("iml-job-scheduler")
 
         # Allow the message to filter through
         time.sleep(RABBITMQ_GRACE_PERIOD)
 
         # Agent should see a termination (this will prompt it to request a new session)
         response_message = self._receive_messages(1)[0]
-        self.assertEqual(response_message['type'], 'SESSION_TERMINATE')
-        self.assertEqual(response_message['plugin'], self.PLUGIN)
-        self.assertEqual(response_message['session_seq'], None)
-        self.assertEqual(response_message['session_id'], None)
-        self.assertEqual(response_message['body'], None)
+        self.assertEqual(response_message["type"], "SESSION_TERMINATE")
+        self.assertEqual(response_message["plugin"], self.PLUGIN)
+        self.assertEqual(response_message["session_seq"], None)
+        self.assertEqual(response_message["session_id"], None)
+        self.assertEqual(response_message["body"], None)
 
-    ActionsRequested = namedtuple('ActionsRequested', ['command_id', 'actions'])
+    ActionsRequested = namedtuple("ActionsRequested", ["command_id", "actions"])
 
-    def _request_action(self, state = 'lnet_up'):
+    def _request_action(self, state="lnet_up"):
         # Start a job which should generate an action
-        command_id = JobSchedulerClient.command_set_state([(self.host.lnet_configuration.content_type.natural_key(), self.host.lnet_configuration.id, state)], "Test")
+        command_id = JobSchedulerClient.command_set_state(
+            [(self.host.lnet_configuration.content_type.natural_key(), self.host.lnet_configuration.id, state)], "Test"
+        )
         command = self._get_command(command_id)
         self.assertEqual(len(command.jobs.all()), 1)
         self.last_action = time.time()
@@ -145,10 +149,10 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         # place and asserts when it doesn't know what to do.
         # This is basically describing the messages that we expect to receive when a command is sent.
         # We can then receive and validate each message as it arrives.
-        if state == 'lnet_up':
-            actions = ['start_lnet', 'device_plugin']    # It will do start_lnet, followed by 1 request for data.
-        elif state == 'lnet_down':
-            actions = ['stop_lnet', 'device_plugin']     # It will do stop_lnet, followed by 1 request for data.
+        if state == "lnet_up":
+            actions = ["start_lnet", "device_plugin"]  # It will do start_lnet, followed by 1 request for data.
+        elif state == "lnet_down":
+            actions = ["stop_lnet", "device_plugin"]  # It will do stop_lnet, followed by 1 request for data.
         else:
             raise AssertionError("Unknown state '%s' requested for _request_action" % state)
 
@@ -158,41 +162,41 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         # Listen and wait for the action
         action_rpc_request, = self._receive_messages()
         msg = "elapsed {0}".format(time.time() - self.last_action)
-        self.assertEqual(action_rpc_request['type'], 'DATA', msg)
-        self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
-        self.assertEqual(action_rpc_request['session_seq'], None)
-        self.assertEqual(action_rpc_request['session_id'], session_id)
-        if (action_rpc_request['body']['action'] != action):
+        self.assertEqual(action_rpc_request["type"], "DATA", msg)
+        self.assertEqual(action_rpc_request["plugin"], self.PLUGIN)
+        self.assertEqual(action_rpc_request["session_seq"], None)
+        self.assertEqual(action_rpc_request["session_id"], session_id)
+        if action_rpc_request["body"]["action"] != action:
             pass
-        self.assertEqual(action_rpc_request['body']['action'], action)
+        self.assertEqual(action_rpc_request["body"]["action"], action)
 
-        return action_rpc_request['body']
+        return action_rpc_request["body"]
 
     def _handle_action_respond(self, session_id, rpc_request_body):
         # Send it a success response
         message = {
-            'fqdn': self.CLIENT_NAME,
-            'type': 'DATA',
-            'plugin': self.PLUGIN,
-            'session_id': session_id,
-            'session_seq': 1,
-            'body': {
-                'type': 'ACTION_COMPLETE',
-                'id': rpc_request_body['id'],
-                'exception': None,
-                'result': None,
-                'subprocesses': []
-            }
+            "fqdn": self.CLIENT_NAME,
+            "type": "DATA",
+            "plugin": self.PLUGIN,
+            "session_id": session_id,
+            "session_seq": 1,
+            "body": {
+                "type": "ACTION_COMPLETE",
+                "id": rpc_request_body["id"],
+                "exception": None,
+                "result": None,
+                "subprocesses": [],
+            },
         }
 
         # Now we are going to simulate some alternative replys, this are simple and hardcoded but
         # but we do have an assert for cases we don't understand and this is not trying to be a simulator
-        action = rpc_request_body['action']
-        if (action in ['start_lnet', 'stop_lnet']):
+        action = rpc_request_body["action"]
+        if action in ["start_lnet", "stop_lnet"]:
             pass
-        elif (action == 'device_plugin'):
-            assert(rpc_request_body['args']['plugin'] in ['linux_network', 'linux'])
-            message['body']['exception'] = "No data provided by test scripts - this is intentional"
+        elif action == "device_plugin":
+            assert rpc_request_body["args"]["plugin"] in ["linux_network", "linux"]
+            message["body"]["exception"] = "No data provided by test scripts - this is intentional"
         else:
             raise AssertionError("_handle_action_respond can't respond to %s" % action)
 
@@ -209,7 +213,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
     def _get_command(self, command_id):
         with transaction.commit_manually():
             transaction.commit()
-        return Command.objects.get(pk = command_id)
+        return Command.objects.get(pk=command_id)
 
     def _wait_for_command(self, command_id, timeout):
         """Wait for at least timeout"""
@@ -224,7 +228,10 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
                 break
 
         if command.complete:
-            raise AssertionError("Command didn't complete after %s seconds but did after %s seconds" % (timeout, RABBITMQ_LONGWAIT_PERIOD))
+            raise AssertionError(
+                "Command didn't complete after %s seconds but did after %s seconds"
+                % (timeout, RABBITMQ_LONGWAIT_PERIOD)
+            )
         else:
             raise AssertionError("Command didn't complete even after %s seconds" % RABBITMQ_LONGWAIT_PERIOD)
 
@@ -279,13 +286,13 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         first_request_action = self._request_action()
 
         # Create another job which will be enqueued
-        queued_request_action = self._request_action('lnet_down')
+        queued_request_action = self._request_action("lnet_down")
 
         # Start 'running' the action
         self._handle_action_receive(agent_session_id, first_request_action.actions[0])
 
         # Clean stop
-        self.stop('iml-job-scheduler')
+        self.stop("iml-job-scheduler")
 
         # Running command should have its AgentRpc errored
         running_command = self._get_command(first_request_action.command_id)
@@ -299,15 +306,15 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self.assertFalse(enqueued_command.errored)
 
         # Start it up again
-        self.start('iml-job-scheduler')
+        self.start("iml-job-scheduler")
 
         # It should have the http_agent service cancel its sessions
         response_message = self._receive_messages(1)[0]
-        self.assertEqual(response_message['type'], 'SESSION_TERMINATE')
-        self.assertEqual(response_message['plugin'], self.PLUGIN)
-        self.assertEqual(response_message['session_seq'], None)
-        self.assertEqual(response_message['session_id'], None)
-        self.assertEqual(response_message['body'], None)
+        self.assertEqual(response_message["type"], "SESSION_TERMINATE")
+        self.assertEqual(response_message["plugin"], self.PLUGIN)
+        self.assertEqual(response_message["session_seq"], None)
+        self.assertEqual(response_message["session_id"], None)
+        self.assertEqual(response_message["body"], None)
 
     def test_restart_http_agent_while_in_flight(self):
         """While and agent rpc is in flight, restart the http_agent service, check that the command is errored"""
@@ -319,15 +326,15 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Clean stop
-        self.restart('iml-http-agent')
+        self.restart("iml-http-agent")
 
         # The agent should be told to terminate all
         response_message = self._receive_messages(1)[0]
-        self.assertEqual(response_message['type'], 'SESSION_TERMINATE_ALL')
-        self.assertEqual(response_message['plugin'], None)
-        self.assertEqual(response_message['session_seq'], None)
-        self.assertEqual(response_message['session_id'], None)
-        self.assertEqual(response_message['body'], None)
+        self.assertEqual(response_message["type"], "SESSION_TERMINATE_ALL")
+        self.assertEqual(response_message["plugin"], None)
+        self.assertEqual(response_message["session_seq"], None)
+        self.assertEqual(response_message["session_id"], None)
+        self.assertEqual(response_message["body"], None)
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
@@ -346,7 +353,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Simulate an agent restart
-        self._open_sessions(expect_initial = False, expect_reopen = True)
+        self._open_sessions(expect_initial=False, expect_reopen=True)
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
@@ -414,13 +421,8 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         # A cancellation for the agent rpc should have been sent to the agent
         cancellation_message = self._receive_messages(1)[0]
         self.assertDictEqual(
-            cancellation_message['body'],
-            {
-                'type': 'ACTION_CANCEL',
-                'id': rpc_request['id'],
-                'action': None,
-                'args': None
-            }
+            cancellation_message["body"],
+            {"type": "ACTION_CANCEL", "id": rpc_request["id"], "action": None, "args": None},
         )
 
     def test_HYD_2389(self):

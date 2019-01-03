@@ -20,12 +20,13 @@ class GroupResource(ChromaModelResource):
     to factory-configured profiles, so this resource
     is read-only.
     """
+
     class Meta:
         authentication = AnonymousAuthentication()
         authorization = ReadOnlyAuthorization()
         queryset = Group.objects.all()
-        filtering = {'name': ['exact', 'iexact']}
-        ordering = ['name']
+        filtering = {"name": ["exact", "iexact"]}
+        ordering = ["name"]
 
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]

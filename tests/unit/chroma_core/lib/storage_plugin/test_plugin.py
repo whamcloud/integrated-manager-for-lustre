@@ -13,21 +13,21 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 class TestLocalResource(resources.ScannableResource):
     class Meta:
-        identifier = identifiers.ScopedId('name')
+        identifier = identifiers.ScopedId("name")
 
     name = attributes.String()
 
 
 class TestGlobalResource(resources.ScannableResource):
     class Meta:
-        identifier = identifiers.GlobalId('name')
+        identifier = identifiers.GlobalId("name")
 
     name = attributes.String()
 
 
 class TestResourceExtraInfo(resources.ScannableResource):
     class Meta:
-        identifier = identifiers.GlobalId('name')
+        identifier = identifiers.GlobalId("name")
 
     name = attributes.String()
     extra_info = attributes.String()
@@ -35,17 +35,14 @@ class TestResourceExtraInfo(resources.ScannableResource):
 
 class TestResourceStatistic(resources.ScannableResource):
     class Meta:
-        identifier = identifiers.GlobalId('name')
+        identifier = identifiers.GlobalId("name")
 
     name = attributes.String()
     extra_info = attributes.String()
 
 
 class TestPlugin(Plugin):
-    _resource_classes = [TestGlobalResource,
-                         TestLocalResource,
-                         TestResourceExtraInfo,
-                         TestResourceStatistic]
+    _resource_classes = [TestGlobalResource, TestLocalResource, TestResourceExtraInfo, TestResourceStatistic]
 
     def __init__(self, *args, **kwargs):
         self.initial_scan_called = False
@@ -72,15 +69,22 @@ class TestCallbacks(IMLUnitTestCase):
         super(TestCallbacks, self).setUp()
 
         import chroma_core.lib.storage_plugin.manager
+
         self.orig_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = (
+            chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        )
 
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager._load_plugin(sys.modules[__name__], 'test_mod', TestPlugin)
+
+        storage_plugin_manager._load_plugin(sys.modules[__name__], "test_mod", TestPlugin)
 
         from chroma_core.models import StorageResourceRecord
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('test_mod', 'TestGlobalResource')
-        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'name': 'test1'})
+
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+            "test_mod", "TestGlobalResource"
+        )
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {"name": "test1"})
 
         from chroma_core.lib.storage_plugin.query import ResourceQuery
 
@@ -88,12 +92,15 @@ class TestCallbacks(IMLUnitTestCase):
         self.scannable_resource = ResourceQuery().get_resource(scannable_record)
         self.scannable_global_id = scannable_record.pk
 
-        self.resource_manager = mock.Mock(_sessions = {})
+        self.resource_manager = mock.Mock(_sessions={})
         self.plugin = TestPlugin(self.resource_manager, self.scannable_global_id)
-        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(self.plugin, self.scannable_global_id, 0)
+        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(
+            self.plugin, self.scannable_global_id, 0
+        )
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
+
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.orig_manager
 
     def test_initial(self):
@@ -117,20 +124,26 @@ class TestCallbacks(IMLUnitTestCase):
 
 
 class TestAddRemove(IMLUnitTestCase):
-
     def setUp(self):
         super(TestAddRemove, self).setUp()
 
         import chroma_core.lib.storage_plugin.manager
+
         self.orig_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = (
+            chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        )
 
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        storage_plugin_manager._load_plugin(sys.modules[__name__], 'test_mod', TestPlugin)
+
+        storage_plugin_manager._load_plugin(sys.modules[__name__], "test_mod", TestPlugin)
 
         from chroma_core.models import StorageResourceRecord
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('test_mod', 'TestGlobalResource')
-        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'name': 'test1'})
+
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+            "test_mod", "TestGlobalResource"
+        )
+        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {"name": "test1"})
 
         from chroma_core.lib.storage_plugin.query import ResourceQuery
 
@@ -140,12 +153,13 @@ class TestAddRemove(IMLUnitTestCase):
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
+
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.orig_manager
 
     def _report_resource(self, resource_to_report):
         def _report_a_resource(self, root_resource):
             if resource_to_report is not None:
-                self.resource1, _ = self.update_or_create(resource_to_report, name='resource')
+                self.resource1, _ = self.update_or_create(resource_to_report, name="resource")
 
         return _report_a_resource
 
@@ -157,9 +171,11 @@ class TestAddRemove(IMLUnitTestCase):
         return _remove_a_resource
 
     def _create_mocked_resource_and_plugin(self):
-        self.resource_manager = mock.Mock(_sessions = {})
+        self.resource_manager = mock.Mock(_sessions={})
         self.plugin = TestPlugin(self.resource_manager, self.scannable_global_id)
-        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(self.plugin, self.scannable_global_id, 0)
+        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(
+            self.plugin, self.scannable_global_id, 0
+        )
 
     def test_initial_resources(self):
 
@@ -171,10 +187,11 @@ class TestAddRemove(IMLUnitTestCase):
         # Should pass the scannable resource and the one we created to session_open
         self.plugin.do_initial_scan()
         self.resource_manager.session_open.assert_called_once_with(
-                self.plugin,
-                self.plugin._scannable_id,
-                [self.plugin._root_resource, self.plugin.resource1],
-                self.plugin._update_period)
+            self.plugin,
+            self.plugin._scannable_id,
+            [self.plugin._root_resource, self.plugin.resource1],
+            self.plugin._update_period,
+        )
 
         # Session reporting 0 resource in initial_scan
         self._create_mocked_resource_and_plugin()
@@ -184,10 +201,8 @@ class TestAddRemove(IMLUnitTestCase):
 
         # Should just report back the scannable resource to session_open
         self.resource_manager.session_open.assert_called_once_with(
-                self.plugin,
-                self.plugin._scannable_id,
-                [self.plugin._root_resource],
-                self.plugin._update_period)
+            self.plugin, self.plugin._scannable_id, [self.plugin._root_resource], self.plugin._update_period
+        )
 
     def test_update_add(self):
         self._create_mocked_resource_and_plugin()
@@ -199,7 +214,9 @@ class TestAddRemove(IMLUnitTestCase):
 
         # Check that doing an update_or_create calls session_add_resources
         self.plugin.do_periodic_update()
-        self.resource_manager.session_add_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
+        self.resource_manager.session_add_resources.assert_called_once_with(
+            self.plugin._scannable_id, [self.plugin.resource1]
+        )
 
         self.resource_manager.session_add_resources.reset_mock()
 
@@ -214,12 +231,16 @@ class TestAddRemove(IMLUnitTestCase):
         self.plugin.update_scan = types.MethodType(self._report_resource(TestGlobalResource), self.plugin)
 
         self.plugin.do_periodic_update()
-        self.resource_manager.session_add_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
+        self.resource_manager.session_add_resources.assert_called_once_with(
+            self.plugin._scannable_id, [self.plugin.resource1]
+        )
 
         self.plugin.update_scan = types.MethodType(self._remove_resource(self.plugin.resource1), self.plugin)
 
         self.plugin.do_periodic_update()
-        self.resource_manager.session_remove_global_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
+        self.resource_manager.session_remove_global_resources.assert_called_once_with(
+            self.plugin._scannable_id, [self.plugin.resource1]
+        )
 
     def test_update_remove_local(self):
         self._create_mocked_resource_and_plugin()
@@ -228,12 +249,16 @@ class TestAddRemove(IMLUnitTestCase):
         self.plugin.update_scan = types.MethodType(self._report_resource(TestLocalResource), self.plugin)
 
         self.plugin.do_periodic_update()
-        self.resource_manager.session_add_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
+        self.resource_manager.session_add_resources.assert_called_once_with(
+            self.plugin._scannable_id, [self.plugin.resource1]
+        )
 
         self.plugin.update_scan = types.MethodType(self._remove_resource(self.plugin.resource1), self.plugin)
 
         self.plugin.do_periodic_update()
-        self.resource_manager.session_remove_local_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
+        self.resource_manager.session_remove_local_resources.assert_called_once_with(
+            self.plugin._scannable_id, [self.plugin.resource1]
+        )
 
     def test_update_modify_parents(self):
         self._create_mocked_resource_and_plugin()
@@ -241,29 +266,32 @@ class TestAddRemove(IMLUnitTestCase):
 
         # Insert two resources, both having no parents
         def report_unrelated(self, root_resource):
-            self.resource1, created = self.update_or_create(TestLocalResource, name = 'test1')
-            self.resource2, created = self.update_or_create(TestLocalResource, name = 'test2')
-            self.resource3, created = self.update_or_create(TestLocalResource, name = 'test3')
+            self.resource1, created = self.update_or_create(TestLocalResource, name="test1")
+            self.resource2, created = self.update_or_create(TestLocalResource, name="test2")
+            self.resource3, created = self.update_or_create(TestLocalResource, name="test3")
+
         self.plugin.update_scan = types.MethodType(report_unrelated, self.plugin)
         self.plugin.do_periodic_update()
 
         # Create a parent relationship between them
         def add_parents(self, root_resource):
             self.resource1.add_parent(self.resource2)
+
         self.plugin.update_scan = types.MethodType(add_parents, self.plugin)
         self.plugin.do_periodic_update()
-        self.resource_manager.session_resource_add_parent.assert_called_once_with(self.plugin._scannable_id,
-                                                               self.plugin.resource1._handle,
-                                                               self.plugin.resource2._handle)
+        self.resource_manager.session_resource_add_parent.assert_called_once_with(
+            self.plugin._scannable_id, self.plugin.resource1._handle, self.plugin.resource2._handle
+        )
 
         # Remove the relationship
         def remove_parents(self, root_resource):
             self.resource1.remove_parent(self.resource2)
+
         self.plugin.update_scan = types.MethodType(remove_parents, self.plugin)
         self.plugin.do_periodic_update()
-        self.resource_manager.session_resource_remove_parent.assert_called_once_with(self.plugin._scannable_id,
-                                                                  self.plugin.resource1._handle,
-                                                                  self.plugin.resource2._handle)
+        self.resource_manager.session_resource_remove_parent.assert_called_once_with(
+            self.plugin._scannable_id, self.plugin.resource1._handle, self.plugin.resource2._handle
+        )
 
     def test_update_modify_attributes(self):
         self._create_mocked_resource_and_plugin()
@@ -271,18 +299,20 @@ class TestAddRemove(IMLUnitTestCase):
 
         # Insert two resources, both having no parents
         def report1(self, root_resource):
-            self.resource, created = self.update_or_create(TestResourceExtraInfo, name = 'test1', extra_info = 'foo')
+            self.resource, created = self.update_or_create(TestResourceExtraInfo, name="test1", extra_info="foo")
+
         self.plugin.update_scan = types.MethodType(report1, self.plugin)
         self.plugin.do_periodic_update()
 
         # Modify the extra_info attribute
         def modify(self, root_resource):
-            self.resource.extra_info = 'bar'
+            self.resource.extra_info = "bar"
+
         self.plugin.update_scan = types.MethodType(modify, self.plugin)
         self.plugin.do_periodic_update()
-        self.resource_manager.session_update_resource.assert_called_once_with(self.plugin._scannable_id,
-                                                           self.plugin.resource._handle,
-                                                           {'extra_info': 'bar'})
+        self.resource_manager.session_update_resource.assert_called_once_with(
+            self.plugin._scannable_id, self.plugin.resource._handle, {"extra_info": "bar"}
+        )
 
     def test_update_statistics(self):
         pass

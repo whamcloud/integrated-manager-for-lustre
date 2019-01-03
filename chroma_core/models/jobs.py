@@ -23,6 +23,7 @@ class SchedulingError(Exception):
     """An operation could not be fulfilled either because the transition
     change requested would leave the system in an invalid state, or because
     the transition has requirements which cannot be met"""
+
     pass
 
 
@@ -30,10 +31,10 @@ class StatefulObject(models.Model):
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
         abstract = True
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
 
     state_modified_at = models.DateTimeField()
-    state = models.CharField(max_length = MAX_STATE_STRING)
+    state = models.CharField(max_length=MAX_STATE_STRING)
     immutable_state = models.BooleanField(default=False)
     states = None
     initial_state = None
@@ -52,8 +53,10 @@ class StatefulObject(models.Model):
         if not self.state_modified_at:
             self.state_modified_at = now()
 
-    def set_state(self, state, intentional = False):
-        job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s) %s" % (self, self.state, state, intentional, id(self)))
+    def set_state(self, state, intentional=False):
+        job_log.info(
+            "StatefulObject.set_state %s %s->%s (intentional=%s) %s" % (self, self.state, state, intentional, id(self))
+        )
         self.state = state
         self.state_modified_at = now()
 
@@ -63,7 +66,7 @@ class StatefulObject(models.Model):
     def not_states(self, states):
         return list(set(self.states) - set(states))
 
-    def get_deps(self, state = None):
+    def get_deps(self, state=None):
         """Return static dependencies, e.g. a targetmount in state
            mounted has a dependency on a host in state lnet_started but
            can get rid of it by moving to state unmounted"""
@@ -81,13 +84,13 @@ class StatefulObject(models.Model):
         # class in order to find out what jobs are applicable to me.
         # However if a child wants to actually have its own jobs it can do this by defining its own class method
         # route_map
-        assert(issubclass(klass, StatefulObject))
+        assert issubclass(klass, StatefulObject)
 
-        if StatefulObject in klass.__bases__ or 'route_map' in klass.__dict__:
+        if StatefulObject in klass.__bases__ or "route_map" in klass.__dict__:
             return klass
         else:
             for b in klass.__bases__:
-                if hasattr(b, '_meta') and b._meta.abstract:
+                if hasattr(b, "_meta") and b._meta.abstract:
                     continue
                 if issubclass(b, StatefulObject):
                     return StatefulObject.so_root(b)
@@ -105,8 +108,11 @@ class StatefulObject(models.Model):
 
         cls_ = StatefulObject.so_root(cls)
 
-        transition_classes = [s for s in all_subclasses(StateChangeJob) if ((s.state_transition is not None) and
-                                                                            (s.state_transition.class_ == cls_))]
+        transition_classes = [
+            s
+            for s in all_subclasses(StateChangeJob)
+            if ((s.state_transition is not None) and (s.state_transition.class_ == cls_))
+        ]
         transition_options = defaultdict(list)
         job_class_map = {}
         for c in transition_classes:
@@ -191,7 +197,9 @@ class StatefulObject(models.Model):
             return []
         else:
             if not begin_state in self.states:
-                raise SchedulingError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
+                raise SchedulingError(
+                    "%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states)
+                )
 
             if self.transition_map is None:
                 self.__class__._build_maps()
@@ -205,10 +213,7 @@ class StatefulObject(models.Model):
         """
 
         job_cls = self.get_job_class(begin_state, end_state, last_job_in_route=True)
-        return {
-            "state_verb": job_cls.state_verb,
-            "long_description": job_cls.get_long_description(self),
-        }
+        return {"state_verb": job_cls.state_verb, "long_description": job_cls.get_long_description(self)}
 
     def get_job_class(self, begin_state, end_state, last_job_in_route=False):
         """Get the Job class that can be used to move any appropriate StatefulObject from begin_state to end_state
@@ -234,12 +239,13 @@ class StatefulObject(models.Model):
 
         # Cache mapping a class to a list of functions for getting
         # dependents of an instance of that class.
-        if not hasattr(StatefulObject, 'reverse_deps_map'):
+        if not hasattr(StatefulObject, "reverse_deps_map"):
             reverse_deps_map = defaultdict(list)
             for klass in all_subclasses(StatefulObject):
                 for class_name, lookup_fn in klass.reverse_deps.items():
                     import chroma_core.models
-                    #FIXME: looking up class this way eliminates our ability to move
+
+                    # FIXME: looking up class this way eliminates our ability to move
                     # StatefulObject definitions out into other modules
                     so_class = getattr(chroma_core.models, class_name)
                     reverse_deps_map[so_class].append(lookup_fn)
@@ -248,6 +254,7 @@ class StatefulObject(models.Model):
         klass = StatefulObject.so_root(self.__class__)
 
         from itertools import chain
+
         lookup_fns = StatefulObject.reverse_deps_map[klass]
         querysets = set(chain(*[fn(self) for fn in lookup_fns]))
 
@@ -263,16 +270,17 @@ class StatefulObject(models.Model):
 class DeletableStatefulObject(StatefulObject):
     """Use this class to create your own downcastable classes if you need to override 'save', because
     using the metaclass directly will override your own save method"""
+
     __metaclass__ = DeletableDowncastableMetaclass
 
     class Meta:
         abstract = True
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
 
 class StateLock(object):
-    def __init__(self, job, locked_item, write, begin_state = None, end_state = None):
+    def __init__(self, job, locked_item, write, begin_state=None, end_state=None):
         self.job = job
         self.locked_item = locked_item
         self.write = write
@@ -289,19 +297,22 @@ class StateLock(object):
             return "Job %s writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
     def to_dict(self):
-        d = dict([(k, getattr(self, k)) for k in ['write', 'begin_state', 'end_state']])
-        d['locked_item_id'] = self.locked_item.id
-        d['locked_item_type_id'] = ContentType.objects.get_for_model(self.locked_item).id
+        d = dict([(k, getattr(self, k)) for k in ["write", "begin_state", "end_state"]])
+        d["locked_item_id"] = self.locked_item.id
+        d["locked_item_type_id"] = ContentType.objects.get_for_model(self.locked_item).id
         return d
 
     @classmethod
     def from_dict(cls, job, d):
         return StateLock(
-            locked_item = ContentType.objects.get_for_id(d['locked_item_type_id']).model_class()._base_manager.get(pk = d['locked_item_id']),
-            job = job,
-            write = d['write'],
-            begin_state = d['begin_state'],
-            end_state = d['end_state'])
+            locked_item=ContentType.objects.get_for_id(d["locked_item_type_id"])
+            .model_class()
+            ._base_manager.get(pk=d["locked_item_id"]),
+            job=job,
+            write=d["write"],
+            begin_state=d["begin_state"],
+            end_state=d["end_state"],
+        )
 
 
 class Job(models.Model):
@@ -317,18 +328,23 @@ class Job(models.Model):
 
     __metaclass__ = DowncastMetaclass
 
-    states = ('pending', 'tasked', 'complete')
-    state = models.CharField(max_length = 16, default = 'pending',
-                             help_text = "One of %s" % (states,))
+    states = ("pending", "tasked", "complete")
+    state = models.CharField(max_length=16, default="pending", help_text="One of %s" % (states,))
 
-    errored = models.BooleanField(default = False, help_text = "True if the job has completed\
-            with an error")
-    cancelled = models.BooleanField(default = False, help_text = "True if the job has completed\
+    errored = models.BooleanField(
+        default=False,
+        help_text="True if the job has completed\
+            with an error",
+    )
+    cancelled = models.BooleanField(
+        default=False,
+        help_text="True if the job has completed\
             as a result of a user cancelling it, or if it never started because of a failed\
-            dependency")
+            dependency",
+    )
 
-    modified_at = models.DateTimeField(auto_now = True)
-    created_at = models.DateTimeField(auto_now_add = True)
+    modified_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
@@ -338,7 +354,7 @@ class Job(models.Model):
         raise NotImplementedError("long_description needs to be implemented for each job.")
 
     # Job subclasses can provide one of these group values to assert the job group assignment
-    JOB_GROUPS = namedtuple('GROUPS', 'COMMON, INFREQUENT, RARE, EMERGENCY, LAST_RESORT, DEFAULT')(1, 2, 3, 4, 5, 1000)
+    JOB_GROUPS = namedtuple("GROUPS", "COMMON, INFREQUENT, RARE, EMERGENCY, LAST_RESORT, DEFAULT")(1, 2, 3, 4, 5, 1000)
 
     # The UX may display Jobs grouped.  Exactly how this happens is not defined in the backend.  But, you can control
     # the relative group of a job by specificing a 'group' attribute and assigning it to a choice from the GROUP
@@ -368,8 +384,8 @@ class Job(models.Model):
     cancellable = True
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def create_locks(self):
         return []
@@ -400,15 +416,18 @@ class Job(models.Model):
             dependents = stateful_object.get_dependent_objects()
             for dependent in dependents:
                 for dependent_dependency in dep_cache.get(dependent).all():
-                    if dependent_dependency.stateful_object == stateful_object \
-                            and not new_state in dependent_dependency.acceptable_states:
+                    if (
+                        dependent_dependency.stateful_object == stateful_object
+                        and not new_state in dependent_dependency.acceptable_states
+                    ):
                         dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
 
             return DependAll(
-                    DependAll(dependent_deps),
-                    dep_cache.get(self),
-                    dep_cache.get(stateful_object, new_state),
-                    DependOn(stateful_object, self.old_state))
+                DependAll(dependent_deps),
+                dep_cache.get(self),
+                dep_cache.get(stateful_object, new_state),
+                DependOn(stateful_object, self.old_state),
+            )
         else:
             return dep_cache.get(self)
 
@@ -420,7 +439,9 @@ class Job(models.Model):
         job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
         for d in self.all_deps(dep_cache).all():
             satisfied = d.satisfied()
-            job_log.debug("  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, satisfied))
+            job_log.debug(
+                "  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, satisfied)
+            )
         return result
 
     def description(self):
@@ -444,7 +465,7 @@ class Job(models.Model):
         if self.id:
             id = self.id
         else:
-            id = 'unsaved'
+            id = "unsaved"
         try:
             return "%s (Job %s)" % (self.description(), id)
         except NotImplementedError:
@@ -455,9 +476,9 @@ class StateChangeJob(Job):
     """Subclasses must define a class attribute 'stateful_object'
        identifying another attribute which returns a StatefulObject"""
 
-    old_state = models.CharField(max_length = MAX_STATE_STRING)
+    old_state = models.CharField(max_length=MAX_STATE_STRING)
 
-    StateTransition = namedtuple('StateTransition', ['class_', 'old_state', 'new_state'])
+    StateTransition = namedtuple("StateTransition", ["class_", "old_state", "new_state"])
     state_transition = None
 
     # Name of an attribute which is a ForeignKey to a StatefulObject
@@ -483,18 +504,19 @@ class StateChangeJob(Job):
     def on_success(self):
         obj = self.get_stateful_object()
         new_state = self.state_transition.new_state
-        obj.set_state(new_state, intentional = True)
+        obj.set_state(new_state, intentional=True)
         obj.save()
         job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
-        if hasattr(obj, 'not_deleted'):
+        if hasattr(obj, "not_deleted"):
             job_log.debug("Job %d: %s" % (self.id, id(obj)))
             job_log.info("Job %d: not_deleted=%s" % (self.id, obj.not_deleted))
 
 
 class NullStateChangeJob(StateChangeJob):
-    '''
+    """
     A null state change job is one which the state changes but no actions take place.
-    '''
+    """
+
     state_transition = StateChangeJob.StateTransition(None, None, None)
     stateful_object = "target_object"
     _long_description = ""
@@ -513,6 +535,7 @@ class NullStateChangeJob(StateChangeJob):
 
 class AdvertisedJob(Job):
     """A job which is offered for execution in relation to particular objects"""
+
     class Meta:
         abstract = True
 

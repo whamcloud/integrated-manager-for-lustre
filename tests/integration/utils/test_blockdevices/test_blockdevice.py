@@ -24,9 +24,11 @@ class TestBlockDevice(object):
 
     def __new__(cls, device_type, device):
         try:
-            subtype = next(klass for klass in TestBlockDevice.__subclasses__() if device_type in klass._supported_device_types)
+            subtype = next(
+                klass for klass in TestBlockDevice.__subclasses__() if device_type in klass._supported_device_types
+            )
 
-            if (cls != subtype):
+            if cls != subtype:
                 return subtype.__new__(subtype, device_type, device)
             else:
                 return super(TestBlockDevice, cls).__new__(cls)
@@ -52,10 +54,7 @@ class TestBlockDevice(object):
 
     @property
     def wipe_device_commands(self):
-        return [
-            'wipefs -a {}'.format(self._device_path),
-            'udevadm settle'
-        ]
+        return ["wipefs -a {}".format(self._device_path), "udevadm settle"]
 
     @property
     def create_device_commands(self):

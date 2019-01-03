@@ -7,4 +7,4 @@ from chroma_core.services.rpc import ServiceRpcInterface
 
 
 class ScanDaemonRpcInterface(ServiceRpcInterface):
-    methods = ['remove_resource', 'modify_resource']
+    methods = ["remove_resource", "modify_resource"]

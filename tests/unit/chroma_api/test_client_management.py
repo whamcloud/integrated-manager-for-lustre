@@ -12,24 +12,21 @@ class LustreClientMountTests(ChromaApiTestCase):
     def setUp(self):
         super(LustreClientMountTests, self).setUp()
 
-        self.host = synthetic_host(address = 'foo')
+        self.host = synthetic_host(address="foo")
         self.create_simple_filesystem(self.host)
 
-    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify', new = mock.Mock())
-    @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)
-    @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new = mock.Mock())
-    @mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(return_value = agent_result_ok))
+    @mock.patch("chroma_core.services.job_scheduler.job_scheduler_notify.notify", new=mock.Mock())
+    @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new=mock.Mock(), create=True)
+    @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
+    @mock.patch("chroma_core.lib.job.Step.invoke_agent", new=mock.Mock(return_value=agent_result_ok))
     @remove_host_resources_patch
     def test_removed_host_deletes_mount(self):
-        mount = LustreClientMount.objects.create(host = self.host,
-                                                 filesystem = self.fs,
-                                                 mountpoint = '/mnt/testfs')
+        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs, mountpoint="/mnt/testfs")
 
         # Make sure it was created and that we can see it via API
-        self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         mount.id)
+        self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)["id"], mount.id)
 
-        job = RemoveHostJob(host = self.host)
+        job = RemoveHostJob(host=self.host)
 
         # March through the job steps
         for step_klass, args in job.get_steps():
@@ -39,19 +36,16 @@ class LustreClientMountTests(ChromaApiTestCase):
         with self.assertRaises(AssertionError):
             self.api_get("/api/client_mount/%s/" % mount.id)
 
-    @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)
-    @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new = mock.Mock())
+    @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new=mock.Mock(), create=True)
+    @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
     @remove_host_resources_patch
     def test_force_removed_host_deletes_mount(self):
-        mount = LustreClientMount.objects.create(host = self.host,
-                                                 filesystem = self.fs,
-                                                 mountpoint = '/mnt/testfs')
+        mount = LustreClientMount.objects.create(host=self.host, filesystem=self.fs, mountpoint="/mnt/testfs")
 
         # Make sure it was created and that we can see it via API
-        self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)['id'],
-                         mount.id)
+        self.assertEqual(self.api_get("/api/client_mount/%s/" % mount.id)["id"], mount.id)
 
-        job = ForceRemoveHostJob(host = self.host)
+        job = ForceRemoveHostJob(host=self.host)
 
         # March through the job steps
         for step_klass, args in job.get_steps():

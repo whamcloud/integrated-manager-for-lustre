@@ -1,5 +1,3 @@
-
-
 from testconfig import config
 from django.utils.unittest import skipIf
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
@@ -14,10 +12,10 @@ class TestHostid(ChromaIntegrationTestCase):
 
         Reference HYD-5037 and LU-7134
         """
-        hostid_path = '/etc/hostid'
-        address = self.TEST_SERVERS[0]['address']
+        hostid_path = "/etc/hostid"
+        address = self.TEST_SERVERS[0]["address"]
 
-        self.remote_operations._ssh_address(address, 'rm -rf %s' % hostid_path, expected_return_code=None)
+        self.remote_operations._ssh_address(address, "rm -rf %s" % hostid_path, expected_return_code=None)
 
         # Verify hostid is not present before host is set up
         self.assertFalse(self.remote_operations.file_exists(address, hostid_path))

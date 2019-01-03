@@ -20,50 +20,50 @@ from chroma_core.lib.job import job_log
 class AlertStateBase(SparseModel):
     class Meta:
         abstract = True
-        unique_together = ('alert_item_type', 'alert_item_id', 'alert_type', 'active')
-        ordering = ['id']
-        app_label = 'chroma_core'
+        unique_together = ("alert_item_type", "alert_item_id", "alert_type", "active")
+        ordering = ["id"]
+        app_label = "chroma_core"
 
-    table_name = 'chroma_core_alertstate'
+    table_name = "chroma_core_alertstate"
     """Records a period of time during which a particular
        issue affected a particular element of the system"""
     alert_item_type = models.ForeignKey(ContentType, null=True)
     alert_item_id = models.PositiveIntegerField(null=True)
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
-    alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
+    alert_item = GenericForeignKey("alert_item_type", "alert_item_id")
 
-    alert_type = models.CharField(max_length = 128)
+    alert_type = models.CharField(max_length=128)
 
-    begin = models.DateTimeField(help_text = "Time at which the alert started",
-                                 default=timezone.now)
-    end = models.DateTimeField(help_text = "Time at which the alert was resolved\
+    begin = models.DateTimeField(help_text="Time at which the alert started", default=timezone.now)
+    end = models.DateTimeField(
+        help_text="Time at which the alert was resolved\
             if active is false, else time that the alert was last checked (e.g.\
             time when we last checked an offline target was still not offline)",
-                               null=True)
+        null=True,
+    )
 
-    _message = models.TextField(db_column='message',
-                                null=True,
-                                help_text='Message associated with the Alert. Created at Alert creation time')
+    _message = models.TextField(
+        db_column="message", null=True, help_text="Message associated with the Alert. Created at Alert creation time"
+    )
 
     # Note: use True and None instead of True and False so that
     # unique-together constraint only applied to active alerts
     active = models.NullBooleanField()
 
     # whether a user has manually dismissed alert
-    dismissed = models.BooleanField(default=False,
-                                    help_text = "True denotes that the user "
-                                                "has acknowledged this alert.")
+    dismissed = models.BooleanField(
+        default=False, help_text="True denotes that the user " "has acknowledged this alert."
+    )
 
-    severity = models.IntegerField(default=logging.INFO,
-                                   help_text = ("String indicating the "
-                                                "severity of the alert, "
-                                                "one of %s") %
-                                        STR_TO_SEVERITY.keys())
+    severity = models.IntegerField(
+        default=logging.INFO,
+        help_text=("String indicating the " "severity of the alert, " "one of %s") % STR_TO_SEVERITY.keys(),
+    )
 
     # This is only used by one event ClientConnectEvent but it is critical and so needs to be searchable etc
     # for that reason it can't use the variant
-    lustre_pid = models.IntegerField(null = True)
+    lustre_pid = models.IntegerField(null=True)
 
     # Subclasses set this, used as a default in .notify()
     default_severity = logging.INFO
@@ -72,7 +72,7 @@ class AlertStateBase(SparseModel):
     # This can obviously be overridden by any particular event but gives us a like for behaviour.
     @property
     def require_mail_alert(self):
-        return "Alert\'>" in str(type(self))
+        return "Alert'>" in str(type(self))
 
     def get_active_bool(self):
         return bool(self.active)
@@ -87,16 +87,19 @@ class AlertStateBase(SparseModel):
 
     def to_dict(self):
         from chroma_core.lib.util import time_str
-        return {'alert_severity': 'alert',  # FIXME: Still need to figure out weather to pass enum or display string.
-                'alert_item': str(self.alert_item),
-                'alert_message': self.message(),
-                'message': self.message(),
-                'active': bool(self.active),
-                'begin': time_str(self.begin),
-                'end': time_str(self.end) if self.end is not None else time_str(self.begin),
-                'id': self.id,
-                'alert_item_id': self.alert_item_id,
-                'alert_item_content_type_id': self.alert_item_type_id}
+
+        return {
+            "alert_severity": "alert",  # FIXME: Still need to figure out weather to pass enum or display string.
+            "alert_item": str(self.alert_item),
+            "alert_message": self.message(),
+            "message": self.message(),
+            "active": bool(self.active),
+            "begin": time_str(self.begin),
+            "end": time_str(self.end) if self.end is not None else time_str(self.begin),
+            "id": self.id,
+            "alert_item_id": self.alert_item_id,
+            "alert_item_content_type_id": self.alert_item_type_id,
+        }
 
     @property
     def affected_objects(self):
@@ -138,23 +141,25 @@ class AlertStateBase(SparseModel):
 
     @classmethod
     def filter_by_item(cls, item):
-        if hasattr(item, 'content_type'):
+        if hasattr(item, "content_type"):
             # A DowncastMetaclass object
-            return cls.objects.filter(active = True,
-                    alert_item_id = item.id,
-                    alert_item_type = item.content_type)
+            return cls.objects.filter(active=True, alert_item_id=item.id, alert_item_type=item.content_type)
         else:
-            return cls.objects.filter(active = True,
-                    alert_item_id = item.pk,
-                    alert_item_type__model = item.__class__.__name__.lower(),
-                    alert_item_type__app_label = item.__class__._meta.app_label)
+            return cls.objects.filter(
+                active=True,
+                alert_item_id=item.pk,
+                alert_item_type__model=item.__class__.__name__.lower(),
+                alert_item_type__app_label=item.__class__._meta.app_label,
+            )
 
     @classmethod
     def filter_by_item_id(cls, item_class, item_id):
-        return cls.objects.filter(active = True,
-                alert_item_id = item_id,
-                alert_item_type__model = item_class.__name__.lower(),
-                alert_item_type__app_label = item_class._meta.app_label)
+        return cls.objects.filter(
+            active=True,
+            alert_item_id=item_id,
+            alert_item_type__model=item_class.__name__.lower(),
+            alert_item_type__app_label=item_class._meta.app_label,
+        )
 
     @classmethod
     def notify(cls, alert_item, active, **kwargs):
@@ -166,13 +171,12 @@ class AlertStateBase(SparseModel):
     def notify_warning(cls, alert_item, active, **kwargs):
         """Notify an alert in at most the WARNING severity level"""
 
-        kwargs['attrs_to_save'] = {'severity': min(
-            cls.default_severity, logging.WARNING)}
+        kwargs["attrs_to_save"] = {"severity": min(cls.default_severity, logging.WARNING)}
         return cls._notify(alert_item, active, **kwargs)
 
     @classmethod
     def _notify(cls, alert_item, active, **kwargs):
-        if hasattr(alert_item, 'content_type'):
+        if hasattr(alert_item, "content_type"):
             alert_item = alert_item.downcast()
 
         if active:
@@ -184,7 +188,7 @@ class AlertStateBase(SparseModel):
     def _get_attrs_to_save(cls, kwargs):
         # Prepare data to be saved with alert, but not effect the filter_by_item() below
         # e.g. Only one alert type per alert item can be active, so we don't need to filter on severity.
-        attrs_to_save = kwargs.pop('attrs_to_save', {})
+        attrs_to_save = kwargs.pop("attrs_to_save", {})
 
         # Add any properties to the attrs_to_save that are not db fields, we can't search on
         # non db fields after all. Some alerts have custom fields and they will be searched out here.
@@ -197,7 +201,7 @@ class AlertStateBase(SparseModel):
 
     @classmethod
     def high(cls, alert_item, **kwargs):
-        if hasattr(alert_item, 'not_deleted') and alert_item.not_deleted != True:
+        if hasattr(alert_item, "not_deleted") and alert_item.not_deleted != True:
             return None
 
         attrs_to_save = cls._get_attrs_to_save(kwargs)
@@ -207,24 +211,25 @@ class AlertStateBase(SparseModel):
         except cls.DoesNotExist:
             kwargs.update(attrs_to_save)
 
-            if not 'alert_type' in kwargs:
-                kwargs['alert_type'] = cls.__name__
-            if not 'severity' in kwargs:
-                kwargs['severity'] = cls.default_severity
+            if not "alert_type" in kwargs:
+                kwargs["alert_type"] = cls.__name__
+            if not "severity" in kwargs:
+                kwargs["severity"] = cls.default_severity
 
-            alert_state = cls(active = True,
-                              dismissed = False,  # Users dismiss, not the software
-                              alert_item = alert_item,
-                              **kwargs)
+            alert_state = cls(
+                active=True, dismissed=False, alert_item=alert_item, **kwargs  # Users dismiss, not the software
+            )
             try:
                 alert_state._message = alert_state.alert_message()
                 alert_state.save()
-                job_log.info("AlertState: Raised %s on %s "
-                             "at severity %s" % (cls,
-                                                 alert_state.alert_item,
-                                                 alert_state.severity))
-            except IntegrityError, e:
-                job_log.warning("AlertState: IntegrityError %s saving %s : %s : %s" % (e, cls.__name__, alert_item, kwargs))
+                job_log.info(
+                    "AlertState: Raised %s on %s "
+                    "at severity %s" % (cls, alert_state.alert_item, alert_state.severity)
+                )
+            except IntegrityError as e:
+                job_log.warning(
+                    "AlertState: IntegrityError %s saving %s : %s : %s" % (e, cls.__name__, alert_item, kwargs)
+                )
                 # Handle colliding inserts: drop out here, no need to update
                 # the .end of the existing record as we are logically concurrent
                 # with the creator.
@@ -234,7 +239,7 @@ class AlertStateBase(SparseModel):
     @classmethod
     def low(cls, alert_item, **kwargs):
         # The caller may provide an end_time rather than wanting now()
-        end_time = kwargs.pop('end_time', timezone.now())
+        end_time = kwargs.pop("end_time", timezone.now())
 
         # currently, no attrs are saved when an attr is lowered, so just filter them out of kwargs
         cls._get_attrs_to_save(kwargs)
@@ -250,10 +255,12 @@ class AlertStateBase(SparseModel):
             # the end can reasonably have a different message.
             end_event = alert_state.end_event()
             if end_event:
-                end_event.register_event(end_event.alert_item,
-                                         severity=end_event.severity,
-                                         message_str=end_event.message_str,
-                                         alert=end_event.alert)
+                end_event.register_event(
+                    end_event.alert_item,
+                    severity=end_event.severity,
+                    message_str=end_event.message_str,
+                    alert=end_event.alert,
+                )
         except cls.DoesNotExist:
             alert_state = None
 
@@ -296,19 +303,20 @@ class AlertState(AlertStateBase):
     is_sparse_base = True
 
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
         db_table = AlertStateBase.table_name
 
 
 class AlertSubscription(models.Model):
     """Represents a user's election to be notified of specific alert classes"""
-    user = models.ForeignKey(User, related_name='alert_subscriptions')
+
+    user = models.ForeignKey(User, related_name="alert_subscriptions")
     alert_type = models.ForeignKey(ContentType)
     # TODO: alert thresholds?
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @property
     def alert_type_name(self):
@@ -319,16 +327,17 @@ class AlertSubscription(models.Model):
         name = self.alert_type.name
 
         # Turn bobs big alert into BobsBigAlert
-        return ''.join(["%s%s" % (element[0].upper(), element[1:].lower()) for element in name.split(' ')])
+        return "".join(["%s%s" % (element[0].upper(), element[1:].lower()) for element in name.split(" ")])
 
 
 class AlertEmail(models.Model):
     """Record of which alerts an email has been emitted for"""
+
     alerts = models.ManyToManyField(AlertState)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def __str__(self):
         str = ""

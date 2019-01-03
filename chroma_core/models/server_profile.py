@@ -14,50 +14,31 @@ class ServerProfile(models.Model):
     Server profiles specify a set of configuration options to be applied to a storage server,
     in particular which bundles and packages are installed.
     """
-    name = models.CharField(
-        primary_key=True,
-        max_length = 50,
-        help_text = "String, unique name")
-    ui_name = models.CharField(
-        max_length = 50,
-        help_text = "String, human readable name")
-    ui_description = models.TextField(help_text = "Description of the server profile")
-    managed = models.BooleanField(
-        help_text = "Boolean, True if the host will be managed"
-    )
-    worker = models.BooleanField(
-        help_text = "Boolean, True if the host is available to be used as a Lustre worker node"
-    )
-    bundles = models.ManyToManyField(
-        Bundle,
-        help_text = "The bundles specified by this profile"
-    )
+
+    name = models.CharField(primary_key=True, max_length=50, help_text="String, unique name")
+    ui_name = models.CharField(max_length=50, help_text="String, human readable name")
+    ui_description = models.TextField(help_text="Description of the server profile")
+    managed = models.BooleanField(help_text="Boolean, True if the host will be managed")
+    worker = models.BooleanField(help_text="Boolean, True if the host is available to be used as a Lustre worker node")
+    bundles = models.ManyToManyField(Bundle, help_text="The bundles specified by this profile")
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
-    ntp = models.BooleanField(
-        help_text = "Boolean, True if the host will manage ntp"
-    )
-    corosync = models.BooleanField(
-        help_text = "Boolean, True if the host will manage corosync"
-    )
-    corosync2 = models.BooleanField(
-        help_text = "Boolean, True if the host will manage corosync2"
-    )
-    pacemaker = models.BooleanField(
-        help_text = "Boolean, True if the host will manage pacemaker"
-    )
+    ntp = models.BooleanField(help_text="Boolean, True if the host will manage ntp")
+    corosync = models.BooleanField(help_text="Boolean, True if the host will manage corosync")
+    corosync2 = models.BooleanField(help_text="Boolean, True if the host will manage corosync2")
+    pacemaker = models.BooleanField(help_text="Boolean, True if the host will manage pacemaker")
 
     @property
     def packages(self):
         """
         Convenience for obtaining an iterable of package names from the ServerProfilePackage model
         """
-        for package in self.serverprofilepackage_set.all().values('package_name'):
-            yield package['package_name']
+        for package in self.serverprofilepackage_set.all().values("package_name"):
+            yield package["package_name"]
 
-    default = models.BooleanField(default=False,
-                                  help_text="If True, this profile is presented as the default when adding"
-                                            "storage servers")
+    default = models.BooleanField(
+        default=False, help_text="If True, this profile is presented as the default when adding" "storage servers"
+    )
 
     @property
     def id(self):
@@ -72,7 +53,7 @@ class ServerProfile(models.Model):
 
         for field in self._meta.fields:
             result[field.name] = getattr(self, field.name)
-        result['packages'] = list(self.packages)
+        result["packages"] = list(self.packages)
 
         return result
 
@@ -86,8 +67,8 @@ class ServerProfile(models.Model):
         super(ServerProfile, self).save(*args, **kwargs)
 
     class Meta:
-        app_label = 'chroma_core'
-        unique_together = (('name',))
+        app_label = "chroma_core"
+        unique_together = ("name",)
 
 
 class ServerProfilePackage(models.Model):
@@ -97,9 +78,10 @@ class ServerProfilePackage(models.Model):
     Each server profile has a set of ServerProfilePackage records identifying
     which packages should be installed on servers using this profile.
     """
+
     class Meta:
-        app_label = 'chroma_core'
-        unique_together = ('bundle', 'server_profile', 'package_name')
+        app_label = "chroma_core"
+        unique_together = ("bundle", "server_profile", "package_name")
 
     bundle = models.ForeignKey(Bundle)
     server_profile = models.ForeignKey(ServerProfile)
@@ -119,8 +101,9 @@ class ServerProfileValidation(models.Model):
     test is the python expression that must evaluate to true for the profile to be valid
     description is the user information that can be viewed in the GUI
     """
+
     class Meta:
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
 
     server_profile = models.ForeignKey(ServerProfile)
     test = models.CharField(max_length=256)

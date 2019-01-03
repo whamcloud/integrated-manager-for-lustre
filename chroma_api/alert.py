@@ -37,14 +37,15 @@ class AlertSubscriptionValidation(Validation):
         # but we should probably protect against non-superusers changing
         # other users' subscriptions. That's a dirty prank.
         import re
+
         try:
-            match = re.search(r'/(\d+)/?$', bundle.data['user'])
+            match = re.search(r"/(\d+)/?$", bundle.data["user"])
             bundle_user_id = match.group(1)
             if not "superusers" in [g.name for g in request.user.groups.all()]:
                 if "%s" % bundle_user_id != "%s" % request.user.id:
-                    errors['user'].append("Only superusers may change other users' subscriptions.")
+                    errors["user"].append("Only superusers may change other users' subscriptions.")
         except (KeyError, AttributeError):
-            errors['user'].append("Missing or malformed user parameter")
+            errors["user"].append("Missing or malformed user parameter")
 
         return errors
 
@@ -63,20 +64,27 @@ class AlertSubscriptionAuthorization(DjangoAuthorization):
             return object_list
         else:
             # Users should only see their own subscriptions
-            return object_list.filter(user = request.user)
+            return object_list.filter(user=request.user)
 
 
 class AlertSubscriptionResource(ChromaModelResource):
-    user = fields.ToOneField("chroma_api.user.UserResource", 'user', help_text="User to which this subscription belongs")
-    alert_type = fields.ToOneField("chroma_api.alert.AlertTypeResource", 'alert_type', help_text="Content-type id for this subscription's alert class", full=True)
+    user = fields.ToOneField(
+        "chroma_api.user.UserResource", "user", help_text="User to which this subscription belongs"
+    )
+    alert_type = fields.ToOneField(
+        "chroma_api.alert.AlertTypeResource",
+        "alert_type",
+        help_text="Content-type id for this subscription's alert class",
+        full=True,
+    )
 
     class Meta:
         resource_name = "alert_subscription"
         queryset = AlertSubscription.objects.all()
         authorization = AlertSubscriptionAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get', 'post', 'patch']
-        detail_allowed_methods = ['get', 'delete', 'put']
+        list_allowed_methods = ["get", "post", "patch"]
+        detail_allowed_methods = ["get", "delete", "put"]
         validation = AlertSubscriptionValidation()
 
 
@@ -85,6 +93,7 @@ class AlertTypeResource(Resource):
     A list of possible alert types.  Use for
     populating alert subscriptions.
     """
+
     id = fields.CharField()
     description = fields.CharField()
 
@@ -94,8 +103,9 @@ class AlertTypeResource(Resource):
     def dehydrate_description(self, bundle):
         def _fixup_alert_name(alert):
             import re
+
             capitalized = str(alert).capitalize()
-            ret = re.sub(r'L net', 'LNet', capitalized)
+            ret = re.sub(r"L net", "LNet", capitalized)
             return ret
 
         return _fixup_alert_name(bundle.obj)
@@ -103,40 +113,35 @@ class AlertTypeResource(Resource):
     def get_resource_uri(self, bundle_or_obj=None):
         from tastypie.bundle import Bundle
 
-        url_name = 'api_dispatch_list'
+        url_name = "api_dispatch_list"
 
         if bundle_or_obj is not None:
-            url_name = 'api_dispatch_detail'
+            url_name = "api_dispatch_detail"
 
-        kwargs = {
-            'resource_name': self._meta.resource_name,
-            'api_name': self._meta.api_name
-        }
+        kwargs = {"resource_name": self._meta.resource_name, "api_name": self._meta.api_name}
 
         if isinstance(bundle_or_obj, Bundle):
-            kwargs['pk'] = bundle_or_obj.obj.id
+            kwargs["pk"] = bundle_or_obj.obj.id
         elif bundle_or_obj is not None:
-            kwargs['pk'] = bundle_or_obj.id
+            kwargs["pk"] = bundle_or_obj.id
 
         return self._build_reverse_url(url_name, kwargs=kwargs)
 
     def get_object_list(self, request):
-        return [ContentType.objects.get_for_model(cls)
-                for cls in AlertStateBase.subclasses()
-                if cls is not AlertState]
+        return [ContentType.objects.get_for_model(cls) for cls in AlertStateBase.subclasses() if cls is not AlertState]
 
     def obj_get_list(self, bundle, **kwargs):
         return self.get_object_list(bundle.request)
 
     def obj_get(self, bundle, **kwargs):
-        return ContentType.objects.get(pk=kwargs['pk'])
+        return ContentType.objects.get(pk=kwargs["pk"])
 
     class Meta:
-        resource_name = 'alert_type'
+        resource_name = "alert_type"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]
 
 
 class AlertResource(LongPollingAPI, SeverityResource):
@@ -146,31 +151,36 @@ class AlertResource(LongPollingAPI, SeverityResource):
     problem) or inactive (indicating this is a historical record of a problem).
     """
 
-    message = fields.CharField(readonly = True,
-        help_text = ("Human readable description "
-                     "of the alert, about one sentence"))
+    message = fields.CharField(
+        readonly=True, help_text=("Human readable description " "of the alert, about one sentence")
+    )
 
-    alert_item = fields.CharField(help_text = "URI of affected item")
+    alert_item = fields.CharField(help_text="URI of affected item")
 
-    affected = fields.ListField(null = True,
-        help_text = ("List of objects which are affected by the alert "
-                     "(e.g. a target alert also affects the file system to "
-                     "which the target belongs)"))
+    affected = fields.ListField(
+        null=True,
+        help_text=(
+            "List of objects which are affected by the alert "
+            "(e.g. a target alert also affects the file system to "
+            "which the target belongs)"
+        ),
+    )
 
-    alert_item_str = fields.CharField(readonly = True,
-        help_text = ("A human readable noun describing the object "
-                     "that is the subject of the alert"))
+    alert_item_str = fields.CharField(
+        readonly=True, help_text=("A human readable noun describing the object " "that is the subject of the alert")
+    )
 
-    record_type = fields.CharField(attribute='record_type',
-                                   help_text="The type of the alert described as a Python classes",
-                                   enumerations=[class_.__name__ for class_ in util.all_subclasses(AlertStateBase)])
+    record_type = fields.CharField(
+        attribute="record_type",
+        help_text="The type of the alert described as a Python classes",
+        enumerations=[class_.__name__ for class_ in util.all_subclasses(AlertStateBase)],
+    )
 
-    severity = fields.CharField(attribute='severity',
-                                help_text = ("String indicating the "
-                                             "severity of the alert, "
-                                             "one of %s") %
-                                            STR_TO_SEVERITY.keys(),
-                                enumerations=STR_TO_SEVERITY.keys())
+    severity = fields.CharField(
+        attribute="severity",
+        help_text=("String indicating the " "severity of the alert, " "one of %s") % STR_TO_SEVERITY.keys(),
+        enumerations=STR_TO_SEVERITY.keys(),
+    )
 
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [AlertState, LNetOfflineAlert]
@@ -180,14 +190,18 @@ class AlertResource(LongPollingAPI, SeverityResource):
 
     def prepend_urls(self):
         return [
-            url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_alert_dismiss_all'),
+            url(
+                r"^(?P<resource_name>%s)/dismiss_all%s$" % (self._meta.resource_name, trailing_slash()),
+                self.wrap_view("dismiss_all"),
+                name="api_alert_dismiss_all",
+            )
         ]
 
     def dismiss_all(self, request, **kwargs):
-        if (request.method != 'PUT') or (not request.user.is_authenticated()):
+        if (request.method != "PUT") or (not request.user.is_authenticated()):
             return http.HttpUnauthorized()
 
-        AlertState.objects.filter(dismissed = False).exclude(active = True, severity__in = [40, 30]).update(dismissed = True)
+        AlertState.objects.filter(dismissed=False).exclude(active=True, severity__in=[40, 30]).update(dismissed=True)
 
         return http.HttpNoContent()
 
@@ -221,42 +235,44 @@ class AlertResource(LongPollingAPI, SeverityResource):
 
         affected_objects.append(alert.alert_item)
 
-        return [api.get_resource_uri(ao)for ao in set(affected_objects)]
+        return [api.get_resource_uri(ao) for ao in set(affected_objects)]
 
-    def build_filters(self, filters = None):
+    def build_filters(self, filters=None):
 
         filters = super(AlertResource, self).build_filters(filters)
 
         # Map False to None and 'active_bool' to 'active'
-        if 'active_bool__exact' in filters:
-            filters['active__exact'] = None if not filters['active_bool__exact'] else True
-            del filters['active_bool__exact']
+        if "active_bool__exact" in filters:
+            filters["active__exact"] = None if not filters["active_bool__exact"] else True
+            del filters["active_bool__exact"]
 
         return filters
 
     class Meta:
-        queryset = AlertState.objects.order_by('-begin')
-        resource_name = 'alert'
+        queryset = AlertState.objects.order_by("-begin")
+        resource_name = "alert"
 
-        filtering = {'begin': SeverityResource.ALL_FILTER_DATE,
-                     'end': SeverityResource.ALL_FILTER_DATE,
-                     'message': SeverityResource.ALL_FILTER_STR,
-                     'active': SeverityResource.ALL_FILTER_BOOL,
-                     'dismissed': SeverityResource.ALL_FILTER_BOOL,
-                     'id': SeverityResource.ALL_FILTER_INT,
-                     'severity': SeverityResource.ALL_FILTER_ENUMERATION,
-                     'created_at': SeverityResource.ALL_FILTER_DATE,
-                     'alert_type': SeverityResource.ALL_FILTER_ENUMERATION,
-                     'alert_item_id': SeverityResource.ALL_FILTER_INT,
-                     'lustre_pid': SeverityResource.ALL_FILTER_INT,
-                     'record_type': SeverityResource.ALL_FILTER_ENUMERATION}
+        filtering = {
+            "begin": SeverityResource.ALL_FILTER_DATE,
+            "end": SeverityResource.ALL_FILTER_DATE,
+            "message": SeverityResource.ALL_FILTER_STR,
+            "active": SeverityResource.ALL_FILTER_BOOL,
+            "dismissed": SeverityResource.ALL_FILTER_BOOL,
+            "id": SeverityResource.ALL_FILTER_INT,
+            "severity": SeverityResource.ALL_FILTER_ENUMERATION,
+            "created_at": SeverityResource.ALL_FILTER_DATE,
+            "alert_type": SeverityResource.ALL_FILTER_ENUMERATION,
+            "alert_item_id": SeverityResource.ALL_FILTER_INT,
+            "lustre_pid": SeverityResource.ALL_FILTER_INT,
+            "record_type": SeverityResource.ALL_FILTER_ENUMERATION,
+        }
 
-        ordering = ['begin', 'end', 'active']
+        ordering = ["begin", "end", "active"]
         serializer = DateSerializer()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get', 'patch', 'put']
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get", "patch", "put"]
         always_return_data = True
 
 
@@ -264,11 +280,11 @@ class UpdatesAvailableAlertValidation(Validation):
     def is_valid(self, bundle, request=None):
         errors = {}
 
-        if not bundle.data.get('host_address'):
-            errors['host_address'] = 'host_address required'
+        if not bundle.data.get("host_address"):
+            errors["host_address"] = "host_address required"
 
-        if bundle.data.get('available') is None:
-            errors['available'] = 'available required'
+        if bundle.data.get("available") is None:
+            errors["available"] = "available required"
 
         return errors
 
@@ -281,21 +297,19 @@ class UpdatesAvailableAlertResource(Resource):
         self.is_valid(bundle)
 
         if bundle.errors:
-            raise ImmediateHttpResponse(
-                response=self.error_response(bundle.request, bundle.errors))
+            raise ImmediateHttpResponse(response=self.error_response(bundle.request, bundle.errors))
 
-        host_address = bundle.data.get('host_address')
-        available = bundle.data.get('available')
+        host_address = bundle.data.get("host_address")
+        available = bundle.data.get("available")
 
         try:
             mh = ManagedHost.objects.get(fqdn=host_address)
         except ManagedHost.DoesNotExist:
             raise ImmediateHttpResponse(
                 response=self.error_response(
-                    bundle.request, {
-                        'host_not_found':
-                        '{} does not coorespond to a known host'.format(host_address)
-                    }))
+                    bundle.request, {"host_not_found": "{} does not coorespond to a known host".format(host_address)}
+                )
+            )
 
         UpdatesAvailableAlert.notify(mh, available)
 
@@ -303,16 +317,13 @@ class UpdatesAvailableAlertResource(Resource):
 
         return bundle
 
-    def get_resource_uri(self,
-                         bundle_or_obj=None,
-                         url_name='api_dispatch_list'):
-        return super(UpdatesAvailableAlertResource, self).get_resource_uri(
-            None, url_name)
+    def get_resource_uri(self, bundle_or_obj=None, url_name="api_dispatch_list"):
+        return super(UpdatesAvailableAlertResource, self).get_resource_uri(None, url_name)
 
     class Meta:
-        resource_name = 'updates_available'
+        resource_name = "updates_available"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = UpdatesAvailableAlertValidation()
-        list_allowed_methods = ['post']
+        list_allowed_methods = ["post"]
         detail_allowed_methods = []

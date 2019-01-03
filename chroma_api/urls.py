@@ -21,7 +21,7 @@ class ChromaApi(Api):
             pass
 
         for resource_name, resource in api._registry.items():
-            resource_klass = getattr(resource._meta, 'object_class', None)
+            resource_klass = getattr(resource._meta, "object_class", None)
             if resource_klass and isinstance(obj, resource_klass):
                 self._cache[obj.__class__] = resource
                 return resource.get_resource_uri(obj)
@@ -29,7 +29,7 @@ class ChromaApi(Api):
         return None
 
 
-api = ChromaApi(api_name='api')
+api = ChromaApi(api_name="api")
 
 import chroma_api.alert
 import chroma_api.log
@@ -99,6 +99,4 @@ api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 
-urlpatterns = patterns('',
-                       (r'^', include(api.urls)),
-                       )
+urlpatterns = patterns("", (r"^", include(api.urls)))

@@ -43,7 +43,7 @@ def tables_changed(timestamp, tables):
 
 def wait_table_change(table_timestamps, tables_list, timeout):
     with operation_lock:
-        last_change_timestamp = int(table_timestamps['max_timestamp'])
+        last_change_timestamp = int(table_timestamps["max_timestamp"])
 
         # First see if the table has already changed, we get rounding errors hence the maths.
         for table in tables_list:
@@ -56,7 +56,7 @@ def wait_table_change(table_timestamps, tables_list, timeout):
         for table in tables_list:
             events[table].append(event)
 
-    db.connection.close()           # We don't want to hog any connections whilst we are waiting.
+    db.connection.close()  # We don't want to hog any connections whilst we are waiting.
 
     event.wait(timeout)
 
@@ -79,6 +79,6 @@ def _table_timestamps(tables_list):
         if timestamps[table] > max_timestamp:
             max_timestamp = timestamps[table]
 
-    table_timestamps['max_timestamp'] = max_timestamp
+    table_timestamps["max_timestamp"] = max_timestamp
 
     return table_timestamps

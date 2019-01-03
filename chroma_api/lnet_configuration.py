@@ -39,19 +39,18 @@ class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
     """
     LNetConfiguration information.
     """
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=True)     # full to support the cli
-    nids = fields.ToManyField('chroma_api.nid.NidResource', 'nid_set', full=False, null=True)
+
+    host = fields.ToOneField("chroma_api.host.HostResource", "host", full=True)  # full to support the cli
+    nids = fields.ToManyField("chroma_api.nid.NidResource", "nid_set", full=False, null=True)
 
     class Meta:
         queryset = LNetConfiguration.objects.all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        resource_name = 'lnet_configuration'
-        list_allowed_methods = ['get', 'put']
-        detail_allowed_methods = ['get', 'put']
-        filtering = {'host': ALL_WITH_RELATIONS,
-                     'id': ['exact'],
-                     'host__fqdn': ['exact', 'startswith']}
+        resource_name = "lnet_configuration"
+        list_allowed_methods = ["get", "put"]
+        detail_allowed_methods = ["get", "put"]
+        filtering = {"host": ALL_WITH_RELATIONS, "id": ["exact"], "host__fqdn": ["exact", "startswith"]}
 
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [LNetConfiguration, ManagedHost, Nid]
@@ -61,25 +60,23 @@ class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
 
     @validate
     def obj_update(self, bundle, **kwargs):
-        if 'pk' in kwargs:
+        if "pk" in kwargs:
             return super(LNetConfigurationResource, self).obj_update(bundle, **kwargs)
 
-        lnet_configurations_data = bundle.data.get('objects', [bundle.data])
+        lnet_configurations_data = bundle.data.get("objects", [bundle.data])
 
         lnet_configuration = []
 
         for lnet_configuration_data in lnet_configurations_data:
-            lnet_configuration.append({"host_id": lnet_configuration_data['host']['id'],
-                                       "state": lnet_configuration_data['state']})
+            lnet_configuration.append(
+                {"host_id": lnet_configuration_data["host"]["id"], "state": lnet_configuration_data["state"]}
+            )
 
         command_id = JobSchedulerClient.update_lnet_configuration(lnet_configuration)
 
         try:
-            command = Command.objects.get(pk = command_id)
+            command = Command.objects.get(pk=command_id)
         except ObjectDoesNotExist:
             command = None
 
-        raise custom_response(self, bundle.request, http.HttpAccepted,
-                              {
-                                  'command': dehydrate_command(command)
-                              })
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})

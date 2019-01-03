@@ -18,24 +18,22 @@ import settings
 
 
 class NTPConfiguration(DeletableStatefulObject):
-    states = ['unconfigured', 'configured']
-    initial_state = 'unconfigured'
+    states = ["unconfigured", "configured"]
+    initial_state = "unconfigured"
 
-    host = models.OneToOneField('ManagedHost', related_name='_ntp_configuration')
+    host = models.OneToOneField("ManagedHost", related_name="_ntp_configuration")
 
     def __str__(self):
         return "%s NTP configuration" % self.host
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_label(self):
         return "ntp configuration"
 
-    reverse_deps = {
-        'ManagedHost': lambda mh: NTPConfiguration.objects.filter(host_id = mh.id),
-    }
+    reverse_deps = {"ManagedHost": lambda mh: NTPConfiguration.objects.filter(host_id=mh.id)}
 
 
 class ConfigureNTPStep(Step):
@@ -47,21 +45,21 @@ class ConfigureNTPStep(Step):
         else:
             ntp_server = socket.getfqdn()
 
-        self.invoke_agent_expect_result(kwargs['ntp_configuration'].host, "configure_ntp", {'ntp_server': ntp_server})
+        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "configure_ntp", {"ntp_server": ntp_server})
 
 
 class ConfigureNTPJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'unconfigured', 'configured')
-    stateful_object = 'ntp_configuration'
+    state_transition = StateChangeJob.StateTransition(NTPConfiguration, "unconfigured", "configured")
+    stateful_object = "ntp_configuration"
     ntp_configuration = models.ForeignKey(NTPConfiguration)
-    state_verb = 'Start Ntp'
+    state_verb = "Start Ntp"
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 30
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -71,18 +69,18 @@ class ConfigureNTPJob(StateChangeJob):
         return "Configure NTP on %s" % self.ntp_configuration.host
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {'ntp_configuration': self.ntp_configuration})]
+        return [(ConfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]
 
     def get_deps(self):
-        '''
+        """
         Before ntp operations are possible some dependencies are need, basically the host must have had its packages installed.
         Maybe we need a packages object, but this routine at least keeps the detail in one place.
 
         Or maybe we need an unacceptable_states lists.
         :return:
-        '''
-        if self.ntp_configuration.host.state in ['unconfigured', 'undeployed']:
-            return DependOn(self.ntp_configuration.host, 'packages_installed')
+        """
+        if self.ntp_configuration.host.state in ["unconfigured", "undeployed"]:
+            return DependOn(self.ntp_configuration.host, "packages_installed")
         else:
             return DependAll()
 
@@ -91,21 +89,21 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['ntp_configuration'].host, "unconfigure_ntp")
+        self.invoke_agent_expect_result(kwargs["ntp_configuration"].host, "unconfigure_ntp")
 
 
 class UnconfigureNTPJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(NTPConfiguration, 'configured', 'unconfigured')
-    stateful_object = 'ntp_configuration'
+    state_transition = StateChangeJob.StateTransition(NTPConfiguration, "configured", "unconfigured")
+    stateful_object = "ntp_configuration"
     ntp_configuration = models.ForeignKey(NTPConfiguration)
-    state_verb = 'Unconfigure NTP'
+    state_verb = "Unconfigure NTP"
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 30
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -115,4 +113,4 @@ class UnconfigureNTPJob(StateChangeJob):
         return "Unconfigure Ntp on %s" % self.ntp_configuration.host
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {'ntp_configuration': self.ntp_configuration})]
+        return [(UnconfigureNTPStep, {"ntp_configuration": self.ntp_configuration})]

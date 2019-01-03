@@ -4,11 +4,12 @@ from tests.unit.chroma_core.lib.storage_plugin.resource_manager.test_resource_ma
 
 class TestSessions(ResourceManagerTestCase):
     def setUp(self):
-        super(TestSessions, self).setUp('example_plugin')
+        super(TestSessions, self).setUp("example_plugin")
 
-        resource_class, resource_class_id = self.manager.get_plugin_resource_class('example_plugin', 'Couplet')
-        record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {
-            'address_1': '192.168.0.1', 'address_2': '192.168.0.2'})
+        resource_class, resource_class_id = self.manager.get_plugin_resource_class("example_plugin", "Couplet")
+        record, created = StorageResourceRecord.get_or_create_root(
+            resource_class, resource_class_id, {"address_1": "192.168.0.1", "address_2": "192.168.0.2"}
+        )
 
         self.scannable_resource_id = record.pk
 

@@ -20,7 +20,10 @@ class TestRebalancePassthrough(IMLUnitTestCase):
 
         # Initialise storage plugin stuff for the benefit of synthetic_volume_full
         import chroma_core.lib.storage_plugin.manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = (
+            chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        )
 
     def test_multiple_volume_nodes(self):
         """

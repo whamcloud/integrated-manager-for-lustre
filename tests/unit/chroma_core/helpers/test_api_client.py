@@ -1,34 +1,33 @@
-
 # HYD-1074
 # This file copied from tastypie
 # https://github.com/toastdriven/django-tastypie.git
 # Commit ID a4a9b4da5bade2cc91087d9febeb1ca6e8578bf6
 # This single file has its own license agreement (below) inherited from the tastypie distribution.
 
-#Copyright (c) 2010, Daniel Lindsley
-#All rights reserved.
+# Copyright (c) 2010, Daniel Lindsley
+# All rights reserved.
 #
-#Redistribution and use in source and binary forms, with or without
-#modification, are permitted provided that the following conditions are met:
-#* Redistributions of source code must retain the above copyright
-#notice, this list of conditions and the following disclaimer.
-#* Redistributions in binary form must reproduce the above copyright
-#notice, this list of conditions and the following disclaimer in the
-#documentation and/or other materials provided with the distribution.
-#* Neither the name of the tastypie nor the
-#names of its contributors may be used to endorse or promote products
-#derived from this software without specific prior written permission.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# * Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+# * Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+# * Neither the name of the tastypie nor the
+# names of its contributors may be used to endorse or promote products
+# derived from this software without specific prior written permission.
 #
-#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-#WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-#DISCLAIMED. IN NO EVENT SHALL tastypie BE LIABLE FOR ANY
-#DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-#LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-#ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-#SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL tastypie BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 from urlparse import urlparse
@@ -56,9 +55,9 @@ class TestApiClient(object):
         Given a short name (such as ``json`` or ``xml``), returns the full content-type
         for it (``application/json`` or ``application/xml`` in this case).
         """
-        return self.serializer.content_types.get(short_format, 'json')
+        return self.serializer.content_types.get(short_format, "json")
 
-    def get(self, uri, format='json', data=None, authentication=None, **kwargs):
+    def get(self, uri, format="json", data=None, authentication=None, **kwargs):
         """
         Performs a simulated ``GET`` request to the provided URI.
 
@@ -79,18 +78,18 @@ class TestApiClient(object):
         for details.
         """
         content_type = self.get_content_type(format)
-        kwargs['HTTP_ACCEPT'] = content_type
+        kwargs["HTTP_ACCEPT"] = content_type
 
         # GET & DELETE are the only times we don't serialize the data.
         if data is not None:
-            kwargs['data'] = data
+            kwargs["data"] = data
 
         if authentication is not None:
-            kwargs['HTTP_AUTHORIZATION'] = authentication
+            kwargs["HTTP_AUTHORIZATION"] = authentication
 
         return self.client.get(uri, **kwargs)
 
-    def post(self, uri, format='json', data=None, authentication=None, **kwargs):
+    def post(self, uri, format="json", data=None, authentication=None, **kwargs):
         """
         Performs a simulated ``POST`` request to the provided URI.
 
@@ -116,17 +115,17 @@ class TestApiClient(object):
         for details.
         """
         content_type = self.get_content_type(format)
-        kwargs['content_type'] = content_type
+        kwargs["content_type"] = content_type
 
         if data is not None:
-            kwargs['data'] = self.serializer.serialize(data, format=content_type)
+            kwargs["data"] = self.serializer.serialize(data, format=content_type)
 
         if authentication is not None:
-            kwargs['HTTP_AUTHORIZATION'] = authentication
+            kwargs["HTTP_AUTHORIZATION"] = authentication
 
         return self.client.post(uri, **kwargs)
 
-    def put(self, uri, format='json', data=None, authentication=None, **kwargs):
+    def put(self, uri, format="json", data=None, authentication=None, **kwargs):
         """
         Performs a simulated ``PUT`` request to the provided URI.
 
@@ -152,17 +151,17 @@ class TestApiClient(object):
         for details.
         """
         content_type = self.get_content_type(format)
-        kwargs['content_type'] = content_type
+        kwargs["content_type"] = content_type
 
         if data is not None:
-            kwargs['data'] = self.serializer.serialize(data, format=content_type)
+            kwargs["data"] = self.serializer.serialize(data, format=content_type)
 
         if authentication is not None:
-            kwargs['HTTP_AUTHORIZATION'] = authentication
+            kwargs["HTTP_AUTHORIZATION"] = authentication
 
         return self.client.put(uri, **kwargs)
 
-    def patch(self, uri, format='json', data=None, authentication=None, **kwargs):
+    def patch(self, uri, format="json", data=None, authentication=None, **kwargs):
         """
         Performs a simulated ``PATCH`` request to the provided URI.
 
@@ -188,28 +187,28 @@ class TestApiClient(object):
         for details.
         """
         content_type = self.get_content_type(format)
-        kwargs['content_type'] = content_type
+        kwargs["content_type"] = content_type
 
         if data is not None:
-            kwargs['data'] = self.serializer.serialize(data, format=content_type)
+            kwargs["data"] = self.serializer.serialize(data, format=content_type)
 
         if authentication is not None:
-            kwargs['HTTP_AUTHORIZATION'] = authentication
+            kwargs["HTTP_AUTHORIZATION"] = authentication
 
         # This hurts because Django doesn't support PATCH natively.
         parsed = urlparse(uri)
         r = {
-            'CONTENT_LENGTH': len(kwargs['data']),
-            'CONTENT_TYPE': content_type,
-            'PATH_INFO': self.client._get_path(parsed),
-            'QUERY_STRING': parsed[4],
-            'REQUEST_METHOD': 'PATCH',
-            'wsgi.input': FakePayload(kwargs['data']),
+            "CONTENT_LENGTH": len(kwargs["data"]),
+            "CONTENT_TYPE": content_type,
+            "PATH_INFO": self.client._get_path(parsed),
+            "QUERY_STRING": parsed[4],
+            "REQUEST_METHOD": "PATCH",
+            "wsgi.input": FakePayload(kwargs["data"]),
         }
         r.update(kwargs)
         return self.client.request(**r)
 
-    def delete(self, uri, format='json', data=None, authentication=None, **kwargs):
+    def delete(self, uri, format="json", data=None, authentication=None, **kwargs):
         """
         Performs a simulated ``DELETE`` request to the provided URI.
 
@@ -230,13 +229,13 @@ class TestApiClient(object):
         for details.
         """
         content_type = self.get_content_type(format)
-        kwargs['content_type'] = content_type
+        kwargs["content_type"] = content_type
 
         # GET & DELETE are the only times we don't serialize the data.
         if data is not None:
-            kwargs['data'] = data
+            kwargs["data"] = data
 
         if authentication is not None:
-            kwargs['HTTP_AUTHORIZATION'] = authentication
+            kwargs["HTTP_AUTHORIZATION"] = authentication
 
         return self.client.delete(uri, **kwargs)

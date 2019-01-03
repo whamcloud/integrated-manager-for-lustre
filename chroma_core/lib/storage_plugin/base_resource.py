@@ -15,7 +15,7 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 class ResourceIdentifier(object):
     def __init__(self, *args):
         args = list(args)
-        assert(len(args) > 0)
+        assert len(args) > 0
         self.id_fields = args
 
 
@@ -25,7 +25,7 @@ class BaseGlobalId(ResourceIdentifier):
 
 class BaseAutoId(BaseGlobalId):
     def __init__(self):
-        super(BaseAutoId, self).__init__('chroma_auto_id')
+        super(BaseAutoId, self).__init__("chroma_auto_id")
 
 
 class BaseScopedId(ResourceIdentifier):
@@ -44,30 +44,30 @@ class ResourceProgrammingError(Exception):
 class StorageResourceMetaclass(type):
     def __new__(mcs, name, bases, dct):
         try:
-            meta = dct['Meta']
-            del dct['Meta']
+            meta = dct["Meta"]
+            del dct["Meta"]
         except KeyError:
-            meta = type('Meta', (object,), {})
+            meta = type("Meta", (object,), {})
 
-        if not hasattr(meta, 'relations'):
+        if not hasattr(meta, "relations"):
             meta.relations = []
-        if not hasattr(meta, 'alert_conditions'):
+        if not hasattr(meta, "alert_conditions"):
             meta.alert_conditions = []
-        if not hasattr(meta, 'alert_classes'):
+        if not hasattr(meta, "alert_classes"):
             meta.alert_classes = {}
-        if not hasattr(meta, 'storage_attributes'):
+        if not hasattr(meta, "storage_attributes"):
             meta.storage_attributes = {}
-        if not hasattr(meta, 'storage_statistics'):
+        if not hasattr(meta, "storage_statistics"):
             meta.storage_statistics = {}
-        if not hasattr(meta, 'charts'):
+        if not hasattr(meta, "charts"):
             meta.charts = []
-        if not hasattr(meta, 'label'):
+        if not hasattr(meta, "label"):
             meta.label = name
 
         meta.orig_relations = list(meta.relations)
 
         for base in bases:
-            if name != 'BaseStorageResource' and issubclass(base, BaseStorageResource):
+            if name != "BaseStorageResource" and issubclass(base, BaseStorageResource):
                 meta.storage_attributes.update(base._meta.storage_attributes)
                 meta.storage_statistics.update(base._meta.storage_statistics)
                 meta.alert_conditions.extend(base._meta.alert_conditions)
@@ -83,10 +83,11 @@ class StorageResourceMetaclass(type):
                 meta.storage_statistics[field_name] = field_obj
                 del dct[field_name]
 
-        if hasattr(meta, 'identifier') and isinstance(meta.identifier, BaseAutoId):
+        if hasattr(meta, "identifier") and isinstance(meta.identifier, BaseAutoId):
             from chroma_core.lib.storage_plugin.api.attributes import String
-            field_obj = String(hidden = True)
-            meta.storage_attributes['chroma_auto_id'] = field_obj
+
+            field_obj = String(hidden=True)
+            meta.storage_attributes["chroma_auto_id"] = field_obj
 
         # Build map to find the AlertCondition which
         # generated a particular alert
@@ -94,12 +95,14 @@ class StorageResourceMetaclass(type):
         for alert_condition in meta.alert_conditions:
             alert_classes = alert_condition.alert_classes()
             if set(alert_classes) & all_alert_classes:
-                raise ResourceProgrammingError(name, "Multiple AlertConditions on the same attribute must be disambiguated with 'id' parameters.")
+                raise ResourceProgrammingError(
+                    name, "Multiple AlertConditions on the same attribute must be disambiguated with 'id' parameters."
+                )
             for alert_class in alert_classes:
                 meta.alert_classes[alert_class] = alert_condition
             all_alert_classes |= set(alert_classes)
 
-        dct['_meta'] = meta
+        dct["_meta"] = meta
 
         return super(StorageResourceMetaclass, mcs).__new__(mcs, name, bases, dct)
 
@@ -107,20 +110,20 @@ class StorageResourceMetaclass(type):
 class BaseStorageResource(object):
     __metaclass__ = StorageResourceMetaclass
 
-    icon = 'default'
+    icon = "default"
 
     def __init__(self, **kwargs):
         self._storage_dict = {}
         self._handle = None
         self._handle_global = None
 
-        self._parents = list(kwargs.pop('parents', []))
+        self._parents = list(kwargs.pop("parents", []))
 
         # Accumulate changes since last call to flush_deltas()
         self._delta_lock = threading.Lock()
         self._delta_attrs = {}
         self._delta_parents = []
-        self._calc_changes_delta = kwargs.pop('calc_changes_delta', lambda: True)
+        self._calc_changes_delta = kwargs.pop("calc_changes_delta", lambda: True)
 
         # Accumulate in between calls to flush_stats()
         self._delta_stats_lock = threading.Lock()
@@ -148,7 +151,7 @@ class BaseStorageResource(object):
     def decode(cls, attr, value):
         return cls._meta.storage_attributes[attr].decode(value)
 
-    def format(self, attr, val = None):
+    def format(self, attr, val=None):
         if not val:
             val = getattr(self, attr)
         return self._meta.storage_attributes[attr].to_markup(val)
@@ -168,10 +171,10 @@ class BaseStorageResource(object):
 
     @classmethod
     def get_charts(cls):
-        charts = [{
-            'title': stat_props.label or name,
-            'series': [name],
-        } for name, stat_props in cls._meta.storage_statistics.items()]
+        charts = [
+            {"title": stat_props.label or name, "series": [name]}
+            for name, stat_props in cls._meta.storage_statistics.items()
+        ]
         return cls._meta.charts or charts
 
     @classmethod
@@ -180,8 +183,7 @@ class BaseStorageResource(object):
 
     def flush_deltas(self):
         with self._delta_lock:
-            deltas = {'attributes': self._delta_attrs,
-                      'parents': self._delta_parents}
+            deltas = {"attributes": self._delta_attrs, "parents": self._delta_parents}
             self._delta_attrs = {}
             self._delta_parents = []
 
@@ -227,9 +229,7 @@ class BaseStorageResource(object):
             stat_obj.validate(value)
 
             with self._delta_stats_lock:
-                self._delta_stats[key].append({
-                            "timestamp": time.time(),
-                            "value": value})
+                self._delta_stats[key].append({"timestamp": time.time(), "value": value})
         else:
             object.__setattr__(self, key, value)
 
@@ -350,9 +350,11 @@ class BaseStorageResource(object):
 
 class BaseScannableResource(object):
     """Used for marking which BaseStorageResource subclasses are for scanning (like couplets, hosts)"""
+
     pass
 
 
 class HostsideResource(object):
     """Resources which are the agent-side equivalent of a BaseScannableResource"""
+
     pass

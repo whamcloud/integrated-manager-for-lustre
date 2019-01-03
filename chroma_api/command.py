@@ -28,10 +28,10 @@ from chroma_api.validation_utils import validate
 class CommandValidation(Validation):
     def is_valid(self, bundle, request=None):
         errors = defaultdict(list)
-        if request.method != 'POST':
+        if request.method != "POST":
             return errors
 
-        mandatory_fields = ['jobs', 'message']
+        mandatory_fields = ["jobs", "message"]
         for f in mandatory_fields:
             if not f in bundle.data or bundle.data[f] is None:
                 errors[f].append("This attribute is mandatory")
@@ -39,17 +39,17 @@ class CommandValidation(Validation):
         if len(errors):
             return errors
 
-        for job in bundle.data['jobs']:
-            if not 'class_name' in job:
-                errors['jobs'].append("job objects must have the `class_name` attribute")
+        for job in bundle.data["jobs"]:
+            if not "class_name" in job:
+                errors["jobs"].append("job objects must have the `class_name` attribute")
                 continue
-            if not 'args' in job:
-                errors['jobs'].append("job objects must have the `args` attribute")
+            if not "args" in job:
+                errors["jobs"].append("job objects must have the `args` attribute")
 
             try:
-                ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower())
+                ContentType.objects.get_by_natural_key("chroma_core", job["class_name"].lower())
             except ContentType.DoesNotExist:
-                errors['jobs'].append("Invalid class_name '%s'" % job['class_name'])
+                errors["jobs"].append("Invalid class_name '%s'" % job["class_name"])
 
         return errors
 
@@ -65,11 +65,13 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
     Typically this is used to poll a command for completion and find out whether it
     succeeded.
     """
-    jobs = fields.ToManyField("chroma_api.job.JobResource", 'jobs',
-                              help_text = "Jobs belonging to this command")
 
-    logs = fields.CharField(help_text = "String.  Concatentation of all user-visible logs from the"
-                            "``job`` objects associated with this command.")
+    jobs = fields.ToManyField("chroma_api.job.JobResource", "jobs", help_text="Jobs belonging to this command")
+
+    logs = fields.CharField(
+        help_text="String.  Concatentation of all user-visible logs from the"
+        "``job`` objects associated with this command."
+    )
 
     # Long polling should return when any of the tables below changes or has changed.
     long_polling_tables = [Command]
@@ -79,19 +81,23 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
 
     def dehydrate_logs(self, bundle):
         command = bundle.obj
-        return "\n".join([stepresult.log for stepresult in StepResult.objects.filter(job__command = command).order_by('modified_at')])
+        return "\n".join(
+            [stepresult.log for stepresult in StepResult.objects.filter(job__command=command).order_by("modified_at")]
+        )
 
     class Meta:
         queryset = Command.objects.all()
-        list_allowed_methods = ['get', 'post']
-        detail_allowed_methods = ['get', 'patch']
-        ordering = ['created_at']
-        filtering = {'complete': ['exact'],
-                     'id': ['exact', 'in'],
-                     'dismissed': ['exact'],
-                     'errored': ['exact'],
-                     'created_at': ['gte', 'lte', 'gt', 'lt'],
-                     'cancelled': ['exact']}
+        list_allowed_methods = ["get", "post"]
+        detail_allowed_methods = ["get", "patch"]
+        ordering = ["created_at"]
+        filtering = {
+            "complete": ["exact"],
+            "id": ["exact", "in"],
+            "dismissed": ["exact"],
+            "errored": ["exact"],
+            "created_at": ["gte", "lte", "gt", "lt"],
+            "cancelled": ["exact"],
+        }
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()
@@ -99,14 +105,18 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
 
     def prepend_urls(self):
         return [
-            url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_command_dismiss_all'),
+            url(
+                r"^(?P<resource_name>%s)/dismiss_all%s$" % (self._meta.resource_name, trailing_slash()),
+                self.wrap_view("dismiss_all"),
+                name="api_command_dismiss_all",
+            )
         ]
 
     def dismiss_all(self, request, **kwargs):
-        if (request.method != 'PUT') or (not request.user.is_authenticated()):
+        if (request.method != "PUT") or (not request.user.is_authenticated()):
             return http.HttpUnauthorized()
 
-        Command.objects.filter(dismissed = False, complete = True).update(dismissed = True)
+        Command.objects.filter(dismissed=False, complete=True).update(dismissed=True)
 
         return http.HttpNoContent()
 
@@ -114,24 +124,23 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
 
-        for job in bundle.data['jobs']:
+        for job in bundle.data["jobs"]:
             # FIXME: HYD-1367: This is a hack to work around the inability of
             # the Job class to handle m2m references properly, serializing hosts
             # to a list of IDs understood by the HostListMixin class
-            if 'hosts' in job['args']:
+            if "hosts" in job["args"]:
                 job_ids = []
-                for uri in job['args']['hosts']:
-                    job_ids.append(HostResource().get_via_uri(
-                        uri, bundle.request).id)
-                del job['args']['hosts']
-                job['args']['host_ids'] = json.dumps(job_ids)
+                for uri in job["args"]["hosts"]:
+                    job_ids.append(HostResource().get_via_uri(uri, bundle.request).id)
+                del job["args"]["hosts"]
+                job["args"]["host_ids"] = json.dumps(job_ids)
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-        try:
-            command_id = JobSchedulerClient.command_run_jobs(bundle.data['jobs'], bundle.data['message'])
-        except SchedulingError, e:
-            raise custom_response(self, request, http.HttpBadRequest,
-                    {'state': e.message})
 
-        bundle.obj = Command.objects.get(pk = command_id)
+        try:
+            command_id = JobSchedulerClient.command_run_jobs(bundle.data["jobs"], bundle.data["message"])
+        except SchedulingError as e:
+            raise custom_response(self, request, http.HttpBadRequest, {"state": e.message})
+
+        bundle.obj = Command.objects.get(pk=command_id)
         return bundle

@@ -21,7 +21,7 @@ class SessionCollection(object):
         with self._lock:
             self._sessions.pop(fqdn, None)
 
-    def get(self, fqdn, plugin, id = None):
+    def get(self, fqdn, plugin, id=None):
         with self._lock:
             session = self._sessions[(fqdn, plugin)]
             if id is not None and session.id != id:
@@ -34,39 +34,45 @@ class SessionCollection(object):
                 old_session = self._sessions[(fqdn, plugin)]
                 log.warning("Destroying session %s/%s/%s to create new one" % (fqdn, plugin, old_session.id))
                 # Send a message upstream to notify that the previous session is over
-                self._queues.receive({
-                    'fqdn': fqdn,
-                    'type': 'SESSION_TERMINATE',
-                    'plugin': plugin,
-                    'session_id': old_session.id,
-                    'session_seq': None,
-                    'body': None
-                })
+                self._queues.receive(
+                    {
+                        "fqdn": fqdn,
+                        "type": "SESSION_TERMINATE",
+                        "plugin": plugin,
+                        "session_id": old_session.id,
+                        "session_seq": None,
+                        "body": None,
+                    }
+                )
 
             session = Session(plugin)
             self._sessions[(fqdn, plugin)] = session
             # Send a message upstream to notify of the new session
-            self._queues.receive({
-                'fqdn': fqdn,
-                'type': 'SESSION_CREATE',
-                'plugin': plugin,
-                'session_id': session.id,
-                'session_seq': None,
-                'body': None
-            })
+            self._queues.receive(
+                {
+                    "fqdn": fqdn,
+                    "type": "SESSION_CREATE",
+                    "plugin": plugin,
+                    "session_id": session.id,
+                    "session_seq": None,
+                    "body": None,
+                }
+            )
             return session
 
     def _reset_session(self, fqdn, plugin, session_id):
         log.warning("Terminating session on request %s/%s/%s" % (fqdn, plugin, session_id))
         del self._sessions[(fqdn, plugin)]
-        self._queues.send({
-            'fqdn': fqdn,
-            'type': 'SESSION_TERMINATE',
-            'plugin': plugin,
-            'session_id': None,
-            'session_seq': None,
-            'body': None
-        })
+        self._queues.send(
+            {
+                "fqdn": fqdn,
+                "type": "SESSION_TERMINATE",
+                "plugin": plugin,
+                "session_id": None,
+                "session_seq": None,
+                "body": None,
+            }
+        )
 
     def reset_session(self, fqdn, plugin, session_id):
         """
@@ -99,14 +105,16 @@ class SessionCollection(object):
             for (fqdn, plugin), session in self._sessions.items():
                 if fqdn == victim_fqdn:
                     log.info("Terminating session %s/%s/%s" % (fqdn, plugin, session.id))
-                    self._queues.receive({
-                        'fqdn': fqdn,
-                        'type': 'SESSION_TERMINATE',
-                        'plugin': plugin,
-                        'session_id': session.id,
-                        'session_seq': None,
-                        'body': None
-                    })
+                    self._queues.receive(
+                        {
+                            "fqdn": fqdn,
+                            "type": "SESSION_TERMINATE",
+                            "plugin": plugin,
+                            "session_id": session.id,
+                            "session_seq": None,
+                            "body": None,
+                        }
+                    )
                     remove_keys.append((fqdn, plugin))
 
             for key in remove_keys:
