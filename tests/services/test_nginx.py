@@ -23,7 +23,6 @@ class TestUi(NginxTestCase):
         """Test passthrough for /ui/ to gunicorn"""
 
         response = requests.get("https://localhost:{}/ui/".format(settings.HTTPS_FRONTEND_PORT), verify=False)
-        print(response.text)
         self.assertEqual(response.status_code, 200)
 
 

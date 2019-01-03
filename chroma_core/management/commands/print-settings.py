@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
         DB = settings.DATABASES.get("default")
         xs = map(
-            lambda x, y: "{0}={1}".format(x, y),
+            lambda (x, y): "{0}={1}".format(x, y),
             [
                 ("REALTIME_PORT", settings.REALTIME_PORT),
                 ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),
