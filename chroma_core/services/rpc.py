@@ -32,7 +32,7 @@ from kombu.messaging import Queue, Producer
 from kombu.entity import TRANSIENT_DELIVERY_MODE
 
 from chroma_core.services.log import log_register
-from chroma_core.services import _amqp_connection, _amqp_exchange
+from chroma_core.services import _amqp_connection, _amqp_exchange, dbutils
 
 
 REQUEST_SCHEMA = {
@@ -355,6 +355,7 @@ class RpcClient(object):
         :param request: JSON serializable dict
 
         """
+        dbutils.exit_if_in_transaction(log)
         log.debug("send %s" % request["request_id"])
         request["response_routing_key"] = self._response_routing_key
 

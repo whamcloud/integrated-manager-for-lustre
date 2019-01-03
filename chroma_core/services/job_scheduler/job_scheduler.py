@@ -17,6 +17,7 @@ from collections import defaultdict
 import Queue
 from copy import deepcopy
 from chroma_core.lib.util import all_subclasses
+from chroma_core.services.dbutils import exit_if_in_transaction
 
 
 from django.contrib.contenttypes.models import ContentType
@@ -174,15 +175,14 @@ class JobProgress(threading.Thread, Queue.Queue):
 
     def _handle(self, msg):
         fn = getattr(self, "_%s" % msg[0])
-        # Commit after each message to ensure the next message handler
-        # doesn't see a stale transaction
-        with transaction.atomic():
-            fn(*msg[1], **msg[2])
+
+        fn(*msg[1], **msg[2])
 
     def stop(self):
         self._stopping.set()
 
     def complete_job(self, job_id, errored):
+        exit_if_in_transaction(log)
         self.put(("complete_job", (job_id, errored), {}))
 
     def __getattr__(self, name):
@@ -190,6 +190,7 @@ class JobProgress(threading.Thread, Queue.Queue):
             # Throw an exception if there isn't an underscored method to
             # handle this
             self.__getattr__("_%s" % name)
+            exit_if_in_transaction(log)
             return lambda *args, **kwargs: self.put(deepcopy((name, args, kwargs)))
 
     def _complete_job(self, job_id, errored):
@@ -747,7 +748,6 @@ class JobScheduler(object):
                 self.progress.advance()
         return command.id
 
-    @transaction.atomic
     def advance(self):
         with self._lock:
             self._run_next()
@@ -789,40 +789,41 @@ class JobScheduler(object):
 
             return
 
-        for attr, value in update_attrs.items():
-            old_value = getattr(instance, attr)
-            if old_value == value:
-                log.debug("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
-                continue
+        with transaction.atomic():
+            for attr, value in update_attrs.items():
+                old_value = getattr(instance, attr)
+                if old_value == value:
+                    log.debug("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
+                    continue
 
-            log.info(
-                "_notify: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value)
-            )
-            if attr == "state":
-                # If setting the special 'state' attribute then maybe schedule some jobs
-                instance.set_state(value)
-            else:
-                # If setting a normal attribute just write it straight away
-                setattr(instance, attr, value)
-                instance.save()
                 log.info(
-                    "_notify: Set %s=%s on %s (%s-%s) and saved"
-                    % (attr, value, instance, model_klass.__name__, instance.id)
+                    "_notify: Updating .%s of item %s (%s) from %s to %s"
+                    % (attr, instance.id, instance, old_value, value)
                 )
+                if attr == "state":
+                    # If setting the special 'state' attribute then maybe schedule some jobs
+                    instance.set_state(value)
+                else:
+                    # If setting a normal attribute just write it straight away
+                    setattr(instance, attr, value)
+                    instance.save()
+                    log.info(
+                        "_notify: Set %s=%s on %s (%s-%s) and saved"
+                        % (attr, value, instance, model_klass.__name__, instance.id)
+                    )
 
-        instance.save()
+            instance.save()
 
-        # Foreign keys: annoyingly, if foo_id was 7, and we assign it to 8, then .foo will still be
-        # the '7' instance, even after a save().  To be safe against any such strangeness, pull a
-        # fresh instance of everything we update (this is safe because earlier we checked that nothing is
-        # locking this object.
-        instance = ObjectCache.update(instance)
+            # Foreign keys: annoyingly, if foo_id was 7, and we assign it to 8, then .foo will still be
+            # the '7' instance, even after a save().  To be safe against any such strangeness, pull a
+            # fresh instance of everything we update (this is safe because earlier we checked that nothing is
+            # locking this object.
+            instance = ObjectCache.update(instance)
 
         # FIXME: should check the new state against reverse dependencies
         # and apply any fix_states
         self._completion_hooks(instance, updated_attrs=update_attrs.keys())
 
-    @transaction.atomic
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
             notification_time = IMLDateTime.parse(time_serialized)
@@ -830,7 +831,6 @@ class JobScheduler(object):
 
             self._run_next()
 
-    @transaction.atomic
     def run_jobs(self, job_dicts, message):
         with self._lock:
             result = self.CommandPlan.command_run_jobs(job_dicts, message)
@@ -970,9 +970,8 @@ class JobScheduler(object):
 
                 self._complete_job(job, errored, cancelled)
 
-            with transaction.atomic():
-                self._drain_notification_buffer()
-                self._run_next()
+            self._drain_notification_buffer()
+            self._run_next()
 
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         with self._lock:

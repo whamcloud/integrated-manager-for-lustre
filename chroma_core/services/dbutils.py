@@ -19,10 +19,13 @@ feature built-in postgresql.
 
 """
 
-
+import os
+import traceback
 from functools import wraps
 from contextlib import contextmanager
 import binascii
+
+from django.db import transaction, close_old_connections
 
 
 def advisory_lock(lock, wait=True):
@@ -72,3 +75,13 @@ def advisory_lock(lock, wait=True):
         return wrapper
 
     return use_advisory_lock
+
+
+def exit_if_in_transaction(log):
+    if transaction.get_connection().in_atomic_block:
+        close_old_connections()
+
+        stack = "".join(traceback.format_stack())
+
+        log.error("Tried to cross a process boundary while in a transaction: {}".format(stack))
+        os._exit(-1)

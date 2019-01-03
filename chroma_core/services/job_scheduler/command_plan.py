@@ -490,11 +490,12 @@ class CommandPlan(object):
             job_instance = job_klass(**job["args"])
             jobs.append(job_instance)
 
-        command = Command.objects.create(message=message)
-        log.debug("command_run_jobs: command %s" % command.id)
-        for job in jobs:
-            log.debug("command_run_jobs:  job %s" % job)
-        self.add_jobs(jobs, command)
+        with transaction.atomic():
+            command = Command.objects.create(message=message)
+            log.debug("command_run_jobs: command %s" % command.id)
+            for job in jobs:
+                log.debug("command_run_jobs:  job %s" % job)
+            self.add_jobs(jobs, command)
 
         return command.id
 

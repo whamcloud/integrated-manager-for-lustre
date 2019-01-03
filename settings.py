@@ -70,6 +70,7 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST", ""),  # Set to empty string for localhost. Not used with sqlite3.
         "PORT": os.getenv("DB_PORT", ""),  # Set to empty string for default. Not used with sqlite3.
         "OPTIONS": {},
+        "ATOMIC_REQUESTS": False,
     }
 }
 

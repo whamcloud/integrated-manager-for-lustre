@@ -113,7 +113,6 @@ class AgentPluginHandler(object):
 
         return self._plugin_klass(self._resource_manager, record.id)
 
-    @transaction.atomic
     def on_message(self, message):
         with self._processing_lock:
             fqdn = message["fqdn"]
