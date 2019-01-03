@@ -23,7 +23,7 @@ def make_plugin_module(version=None, name="test_plugin_name", extra_body=None):
     if extra_body is not None:
         plugin_module_body = "%s\n\n%s" % (plugin_module_body, extra_body)
 
-    exec(plugin_module_body in plugin_module.__dict__)
+    exec(plugin_module_body) in plugin_module.__dict__
 
     #  Simulate imported
     sys.modules[name] = plugin_module
