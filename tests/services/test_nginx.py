@@ -22,7 +22,8 @@ class TestUi(NginxTestCase):
     def test_simple_access(self):
         """Test passthrough for /ui/ to gunicorn"""
 
-        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify=False)
+        response = requests.get("https://localhost:{}/ui/".format(settings.HTTPS_FRONTEND_PORT), verify=False)
+        print(response.text)
         self.assertEqual(response.status_code, 200)
 
 
@@ -53,7 +54,7 @@ class TestInsecureUrls(NginxTestCase):
         """Test passthrough for /api/, /old-gui/"""
 
         response = requests.get(
-            "https://localhost:%s/old-gui/js/router.js" % settings.HTTPS_FRONTEND_PORT, verify=False
+            "https://localhost:{}/old-gui/js/router.js".format(settings.HTTPS_FRONTEND_PORT), verify=False
         )
         self.assertEqual(response.status_code, 200)
 
