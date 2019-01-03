@@ -33,10 +33,7 @@ class ChromaService(object):
         return self.__class__.__module__.split(".")[-1]
 
     def run(self):
-        # Enable long polling.
-        from chroma_core.lib.long_polling import enable_long_polling
-
-        assert enable_long_polling  # Prevent pep8 warning
+        pass
 
     def stop(self):
         pass

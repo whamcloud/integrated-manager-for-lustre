@@ -18,7 +18,6 @@ from chroma_api.utils import custom_response, StatefulModelResource
 from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
-from long_polling_api import LongPollingAPI
 
 log = log_register(__name__)
 
@@ -35,7 +34,7 @@ log = log_register(__name__)
 # Put
 # https://localhost:8000/api/lnet_configuration/
 # https://localhost:8000/api/lnet_configuration/1/
-class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
+class LNetConfigurationResource(StatefulModelResource):
     """
     LNetConfiguration information.
     """
@@ -51,12 +50,6 @@ class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
         list_allowed_methods = ["get", "put"]
         detail_allowed_methods = ["get", "put"]
         filtering = {"host": ALL_WITH_RELATIONS, "id": ["exact"], "host__fqdn": ["exact", "startswith"]}
-
-    # Long polling should return when any of the tables below changes or has changed.
-    long_polling_tables = [LNetConfiguration, ManagedHost, Nid]
-
-    def dispatch(self, request_type, request, **kwargs):
-        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     @validate
     def obj_update(self, bundle, **kwargs):

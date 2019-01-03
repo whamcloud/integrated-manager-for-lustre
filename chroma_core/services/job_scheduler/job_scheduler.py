@@ -55,7 +55,6 @@ from iml_common.lib.date_time import IMLDateTime
 from chroma_help.help import help_text
 
 import chroma_core.lib.conf_param
-from chroma_core.lib.long_polling import long_polling
 
 log = log_register(__name__.split(".")[-1])
 
@@ -1699,9 +1698,3 @@ class JobScheduler(object):
     @property
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
-
-    def tables_changed(self, timestamp, tables):
-        return long_polling.tables_changed(timestamp, tables)
-
-    def wait_table_change(self, last_change_time, tables_list, timeout):
-        return long_polling.wait_table_change(last_change_time, tables_list, timeout)

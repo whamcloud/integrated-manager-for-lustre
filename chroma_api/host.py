@@ -16,7 +16,6 @@ import json
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount, Command
 from chroma_core.models import LNetConfiguration, NetworkInterface
-from long_polling_api import LongPollingAPI
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -164,7 +163,7 @@ class ClientMountResource(ChromaModelResource):
         raise custom_response(self, request, http.HttpAccepted, args)
 
 
-class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation, LongPollingAPI):
+class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation):
     """
     Represents a Lustre server that is being monitored and managed from the manager server.
 
@@ -193,12 +192,6 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation,
     pacemaker_configuration = fields.ToOneField(
         "chroma_api.pacemaker.PacemakerConfigurationResource", "pacemaker_configuration", null=True, full=False
     )
-
-    # Long polling should return when any of the tables below changes or has changed.
-    long_polling_tables = [LNetConfiguration, NetworkInterface, ServerProfile, ManagedFilesystem, ManagedHost]
-
-    def dispatch(self, request_type, request, **kwargs):
-        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(lnet_configuration=bundle.obj.lnet_configuration)]
