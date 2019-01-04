@@ -26,7 +26,6 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.dbutils import advisory_lock
 from chroma_core.lib.storage_plugin.api import attributes, relations
 
 from chroma_core.lib.storage_plugin.base_resource import (
@@ -1065,7 +1064,6 @@ class ResourceManager(object):
                 self._persist_nid_updates(scannable_id, None, None)
                 self._persist_created_hosts(session, scannable_id, resources)
 
-    @advisory_lock(AlertState, wait=False)
     def session_remove_local_resources(self, scannable_id, resources):
         with self._instance_lock:
             session = self._sessions[scannable_id]
@@ -1080,7 +1078,6 @@ class ResourceManager(object):
                         pass
                 self._persist_lun_updates(scannable_id)
 
-    @advisory_lock(AlertState, wait=False)
     def session_remove_global_resources(self, scannable_id, resources):
         with self._instance_lock:
             session = self._sessions[scannable_id]
@@ -1146,7 +1143,6 @@ class ResourceManager(object):
         )
         return alert_state
 
-    @advisory_lock(AlertState, wait=False)
     def _cull_lost_resources(self, session, reported_resources):
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
         assert not transaction.get_autocommit()
