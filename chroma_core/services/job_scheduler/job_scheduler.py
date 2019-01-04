@@ -695,11 +695,12 @@ class JobScheduler(object):
 
             if mgs.conf_param_version != mgs.conf_param_version_applied:
                 if not running_or_failed(ApplyConfParams, mgs=mgs.managedtarget_ptr):
-                    job = ApplyConfParams(mgs=mgs.managedtarget_ptr)
-                    if DepCache().get(job).satisfied():
-                        if not command:
-                            command = Command.objects.create(message="Updating configuration parameters on %s" % mgs)
-                        self.CommandPlan.add_jobs([job], command)
+                    with transaction.atomic():
+                        job = ApplyConfParams(mgs=mgs.managedtarget_ptr)
+                        if DepCache().get(job).satisfied():
+                            if not command:
+                                command = Command.objects.create(message="Updating configuration parameters on %s" % mgs)
+                            self.CommandPlan.add_jobs([job], command)
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
@@ -711,10 +712,11 @@ class JobScheduler(object):
             TargetFailoverAlert.notify(changed_item, failed_over)
 
         if isinstance(changed_item, PacemakerConfiguration) and "reconfigure_fencing" in updated_attrs:
-            job = ConfigureHostFencingJob(host=changed_item.host)
-            if not command:
-                command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
-            self.CommandPlan.add_jobs([job], command)
+            with transaction.atomic():
+                job = ConfigureHostFencingJob(host=changed_item.host)
+                if not command:
+                    command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
+                self.CommandPlan.add_jobs([job], command)
 
     def _drain_notification_buffer(self):
         # Give any buffered notifications a chance to drain out
