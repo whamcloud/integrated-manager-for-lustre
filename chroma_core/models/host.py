@@ -977,8 +977,7 @@ class DetectTargetsStep(Step):
             threads
         )  # This will raise an exception if any of the threads raise an exception
 
-        with transaction.atomic():
-            DetectScan(self).run(host_data)
+        DetectScan(self).run(host_data)
 
 
 class DetectTargetsJob(HostListMixin):
