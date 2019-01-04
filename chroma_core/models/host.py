@@ -967,8 +967,7 @@ class DetectTargetsStep(Step):
                     {"path": volume_node.path, "type": resource.device_type(), "uuid": uuid}
                 )
 
-            with transaction.atomic():
-                self.log("Scanning server %s..." % host)
+            self.log("Scanning server %s..." % host)
 
             thread = ExceptionThrowingThread(target=self.detect_scan, args=(host, host_data, host_target_devices[host]))
             thread.start()
