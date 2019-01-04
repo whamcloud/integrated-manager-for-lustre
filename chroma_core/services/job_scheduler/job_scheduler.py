@@ -190,8 +190,13 @@ class JobProgress(threading.Thread, Queue.Queue):
             # Throw an exception if there isn't an underscored method to
             # handle this
             self.__getattr__("_%s" % name)
-            exit_if_in_transaction(log)
-            return lambda *args, **kwargs: self.put(deepcopy((name, args, kwargs)))
+
+            def getter(*args, **kwargs):
+                exit_if_in_transaction(log)
+                log.debug("putting: {} args: {}, kwargs: {} on the queue".format(name, args, kwargs))
+                self.put(deepcopy((name, args, kwargs)))
+
+            return getter
 
     def _complete_job(self, job_id, errored):
         self._job_scheduler.complete_job(job_id, errored=errored)
