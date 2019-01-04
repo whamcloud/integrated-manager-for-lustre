@@ -193,7 +193,7 @@ class JobProgress(threading.Thread, Queue.Queue):
 
             def getter(*args, **kwargs):
                 exit_if_in_transaction(log)
-                log.debug("putting: {} args: {}, kwargs: {} on the queue".format(name, args, kwargs))
+                log.debug("putting: {} on the queue".format(name))
                 self.put(deepcopy((name, args, kwargs)))
 
             return getter
