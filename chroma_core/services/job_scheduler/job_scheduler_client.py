@@ -22,30 +22,31 @@ log = log_register(__name__)
 
 
 class JobSchedulerRpc(ServiceRpcInterface):
-    methods = ['set_state',
-               'run_jobs',
-               'cancel_job',
-               'create_host_ssh',
-               'test_host_contact',
-               'create_filesystem',
-               'create_client_mount',
-               'create_copytool',
-               'register_copytool',
-               'unregister_copytool',
-               'update_nids',
-               'trigger_plugin_update',
-               'update_lnet_configuration',
-               'create_host',
-               'set_host_profile',
-               'create_targets',
-               'available_transitions',
-               'available_jobs',
-               'get_locks',
-               'update_corosync_configuration',
-               'get_transition_consequences',
-               'tables_changed',
-               'wait_table_change'
-               ]
+    methods = [
+        "set_state",
+        "run_jobs",
+        "cancel_job",
+        "create_host_ssh",
+        "test_host_contact",
+        "create_filesystem",
+        "create_client_mount",
+        "create_copytool",
+        "register_copytool",
+        "unregister_copytool",
+        "update_nids",
+        "trigger_plugin_update",
+        "update_lnet_configuration",
+        "create_host",
+        "set_host_profile",
+        "create_targets",
+        "available_transitions",
+        "available_jobs",
+        "get_locks",
+        "update_corosync_configuration",
+        "get_transition_consequences",
+        "tables_changed",
+        "wait_table_change",
+    ]
 
 
 class JobSchedulerClient(object):
@@ -55,6 +56,7 @@ class JobSchedulerClient(object):
     read-only operations such as querying what operations are possible for a particular object.
 
     """
+
     @classmethod
     def command_run_jobs(cls, job_dicts, message):
         """Create and run some Jobs, within a single Command.
@@ -67,7 +69,7 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().run_jobs(job_dicts, message)
 
     @classmethod
-    def command_set_state(cls, object_ids, message, run = True):
+    def command_set_state(cls, object_ids, message, run=True):
         """Modify the system in whatever way is necessary to reach the state
         specified in `object_ids`.  Creates Jobs under a single Command.  May create
         no Jobs if the system is already in the state, or already scheduled to be
@@ -128,9 +130,9 @@ class JobSchedulerClient(object):
         :param new_state: Hypothetical new value of the 'state' attribute
 
         """
-        return JobSchedulerRpc().get_transition_consequences(stateful_object.__class__.__name__,
-                                                             stateful_object.id,
-                                                             new_state)
+        return JobSchedulerRpc().get_transition_consequences(
+            stateful_object.__class__.__name__, stateful_object.id, new_state
+        )
 
     @classmethod
     def cancel_job(cls, job_id):
@@ -155,13 +157,15 @@ class JobSchedulerClient(object):
     def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
         command_id = JobSchedulerRpc().test_host_contact(address, root_pw, pkey, pkey_pw)
 
-        return Command.objects.get(pk = command_id)
+        return Command.objects.get(pk=command_id)
 
     @classmethod
     def update_corosync_configuration(cls, corosync_configuration_id, mcast_port, network_interface_ids):
-        command_id = JobSchedulerRpc().update_corosync_configuration(corosync_configuration_id, mcast_port, network_interface_ids)
+        command_id = JobSchedulerRpc().update_corosync_configuration(
+            corosync_configuration_id, mcast_port, network_interface_ids
+        )
 
-        return Command.objects.get(pk = command_id)
+        return Command.objects.get(pk=command_id)
 
     @classmethod
     def create_filesystem(cls, fs_data):
@@ -197,10 +201,7 @@ class JobSchedulerClient(object):
         # This can be a long time so we don't want to hang onto any database connection
         db.connection.close()
 
-        return JobSchedulerRpc().wait_table_change(last_timestamp,
-                                                   tables_list,
-                                                   timeout,
-                                                   rpc_timeout=timeout + 5)
+        return JobSchedulerRpc().wait_table_change(last_timestamp, tables_list, timeout, rpc_timeout=timeout + 5)
 
     @classmethod
     def update_lnet_configuration(cls, lnet_configuration_list):
@@ -217,43 +218,41 @@ class JobSchedulerClient(object):
 
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
-        return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
+        return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
 
     @classmethod
     def set_host_profile(cls, host_id, server_profile_id):
-        '''
+        """
         Set the profile for the given host to the given profile, this includes updating the manager view
         and making the appropriate changes to the host.
         :param host_id:
         :param server_profile_id:
         :return: Command for the host job.
-        '''
+        """
         command_id = JobSchedulerRpc().set_host_profile(host_id, server_profile_id)
 
-        return Command.objects.filter(pk = command_id) if command_id else None
+        return Command.objects.filter(pk=command_id) if command_id else None
 
     @classmethod
     def create_targets(cls, targets_data):
         from chroma_core.models import ManagedTarget, Command
 
         target_ids, command_id = JobSchedulerRpc().create_targets(targets_data)
-        return list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk = command_id)
+        return list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk=command_id)
 
     @classmethod
     def create_client_mount(cls, host, filesystem, mountpoint):
         from chroma_core.models import LustreClientMount
 
-        client_mount_id = JobSchedulerRpc().create_client_mount(host.id,
-                                                                filesystem.id,
-                                                                mountpoint)
-        return LustreClientMount.objects.get(id = client_mount_id)
+        client_mount_id = JobSchedulerRpc().create_client_mount(host.id, filesystem.id, mountpoint)
+        return LustreClientMount.objects.get(id=client_mount_id)
 
     @classmethod
     def create_copytool(cls, copytool_data):
         from chroma_core.models import Copytool
 
         copytool_id = JobSchedulerRpc().create_copytool(copytool_data)
-        return Copytool.objects.get(id = copytool_id)
+        return Copytool.objects.get(id=copytool_id)
 
     @classmethod
     def register_copytool(cls, copytool_id, uuid):

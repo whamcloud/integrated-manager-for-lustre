@@ -40,7 +40,7 @@ class HostQueueCollection(object):
             self._host_queues.pop(fqdn, None)
 
     def send(self, message):
-        queues = self.get(message['fqdn'])
+        queues = self.get(message["fqdn"])
         queues.tx.put(message)
 
     def receive(self, message):
@@ -49,6 +49,7 @@ class HostQueueCollection(object):
 
 class HostQueues(object):
     """Both directions of messages for a single host"""
+
     def __init__(self, fqdn):
         self.fqdn = fqdn
         self.rx = Queue.Queue()
@@ -65,14 +66,18 @@ class AmqpRxForwarder(object):
         with _amqp_connection() as conn:
             while not self._stopping.is_set():
                 try:
-                    msg = self._queue_collection.plugin_rx_queue.get(block = True, timeout = 1)
+                    msg = self._queue_collection.plugin_rx_queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     pass
                 else:
-                    plugin_name = msg['plugin']
+                    plugin_name = msg["plugin"]
                     rx_queue_name = "agent_%s_rx" % plugin_name
-                    q = conn.SimpleQueue(rx_queue_name, serializer = 'json',
-                                         exchange_opts={'durable': False}, queue_opts={'durable': False})
+                    q = conn.SimpleQueue(
+                        rx_queue_name,
+                        serializer="json",
+                        exchange_opts={"durable": False},
+                        queue_opts={"durable": False},
+                    )
                     q.put(msg)
 
     def stop(self):
@@ -85,11 +90,10 @@ class AmqpTxForwarder(object):
         self._queue_collection = queue_collection
 
     def on_message(self, message):
-        log.debug("AmqpTxForwarder.on_message: %s/%s/%s %s" % (
-            message['fqdn'],
-            message['plugin'],
-            message['session_id'],
-            message['type']))
+        log.debug(
+            "AmqpTxForwarder.on_message: %s/%s/%s %s"
+            % (message["fqdn"], message["plugin"], message["session_id"], message["type"])
+        )
         self._queue_collection.send(message)
 
     def run(self):

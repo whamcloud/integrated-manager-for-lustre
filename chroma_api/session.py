@@ -20,18 +20,19 @@ from tastypie.validation import Validation
 
 
 class Session:
-    def __init__(self, user = None):
+    def __init__(self, user=None):
         self.user = user
         if settings.ALLOW_ANONYMOUS_READ:
             self.read_enabled = True
         else:
-            self.read_enabled = (user != None)
+            self.read_enabled = user != None
 
 
 class SessionValidation(Validation):
     """
     Validates user credentials
     """
+
     def is_valid(self, bundle, request=None):
         errors = defaultdict(list)
 
@@ -66,13 +67,14 @@ class SessionResource(Resource):
 
     Authenticate a session by using POST to send credentials. Use DELETE to log out from a session.
     """
-    user = fields.ToOneField('chroma_api.user.UserResource', 'user', full = True, null = True,
-                             help_text = "A user object")
+
+    user = fields.ToOneField("chroma_api.user.UserResource", "user", full=True, null=True, help_text="A user object")
     read_enabled = fields.BooleanField(
-        attribute = 'read_enabled',
-        help_text = "If ``true``, the current session is permitted to do GET operations\
+        attribute="read_enabled",
+        help_text="If ``true``, the current session is permitted to do GET operations\
         on other API resources.  Always true for authenticated users, depends on \
-        settings for anonymous users.")
+        settings for anonymous users.",
+    )
 
     class Meta:
         object_class = Session
@@ -85,9 +87,9 @@ class SessionResource(Resource):
         # (and access to DELETE is harmless because it implicitly refers
         # only to the session of the caller)
         authorization = Authorization()
-        list_allowed_methods = ['get', 'post', 'delete']
+        list_allowed_methods = ["get", "post", "delete"]
         detail_allowed_methods = []
-        resource_name = 'session'
+        resource_name = "session"
         validation = SessionValidation()
 
     def get_resource_uri(self, bundle=None, url_name=None):
@@ -97,10 +99,10 @@ class SessionResource(Resource):
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
         """Authenticate a session using username + password authentication"""
-        username = bundle.data['username']
-        password = bundle.data['password']
+        username = bundle.data["username"]
+        password = bundle.data["password"]
 
-        user = auth.authenticate(username = username, password = password)
+        user = auth.authenticate(username=username, password=password)
         if not user or not user.is_active:
             error = {"__all__": "Authentication Failed."}
             resp = self.create_response(request, error, response_class=http.HttpForbidden)
@@ -108,11 +110,11 @@ class SessionResource(Resource):
 
         auth.login(request, user)
 
-    def delete_list(self, request = None, **kwargs):
+    def delete_list(self, request=None, **kwargs):
         """Log out this session"""
         auth.logout(request)
 
-    def get_list(self, request = None, **kwargs):
+    def get_list(self, request=None, **kwargs):
         """Dictionary of session objects (esp. any logged in user).
 
         This method also always includes a session and CSRF cookie,
@@ -122,6 +124,7 @@ class SessionResource(Resource):
         # Calling get_token to ensure outgoing responses
         # get a csrftoken cookie appended by CsrfViewMiddleware
         import django.middleware.csrf
+
         django.middleware.csrf.get_token(request)
 
         # Force a session Set-Cookie in the response
@@ -131,6 +134,6 @@ class SessionResource(Resource):
         if not user.is_authenticated():
             # Anonymous user
             user = None
-        bundle = self.build_bundle(obj = Session(user), request = request)
+        bundle = self.build_bundle(obj=Session(user), request=request)
         bundle = self.full_dehydrate(bundle)
         return self.create_response(request, bundle)

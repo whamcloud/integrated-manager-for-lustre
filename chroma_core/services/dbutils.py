@@ -34,9 +34,9 @@ def advisory_lock(lock, wait=True):
             from django.db import DEFAULT_DB_ALIAS, connections
 
             if wait:
-                function_name = 'pg_advisory_lock'
+                function_name = "pg_advisory_lock"
             else:
-                function_name = 'pg_try_advisory_lock'
+                function_name = "pg_try_advisory_lock"
 
             try:
                 lock_id = lock_id._meta.db_table
@@ -44,9 +44,9 @@ def advisory_lock(lock, wait=True):
                 pass
 
             if isinstance(lock_id, str):
-                lock_id = binascii.crc32(lock_id.encode('utf-8'))
+                lock_id = binascii.crc32(lock_id.encode("utf-8"))
                 if lock_id > 2147483647:
-                    lock_id = -(-(lock_id) & 0xffffffff)
+                    lock_id = -(-(lock_id) & 0xFFFFFFFF)
             elif not isinstance(lock_id, (int, long)):
                 raise ValueError("DB Lock identifier must be a string, a model or an integer")
 
@@ -70,4 +70,5 @@ def advisory_lock(lock, wait=True):
             return result
 
         return wrapper
+
     return use_advisory_lock

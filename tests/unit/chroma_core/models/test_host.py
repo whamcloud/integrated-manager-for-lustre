@@ -16,11 +16,7 @@ class TestHostListMixin(IMLUnitTestCase):
         self.hosts = []
         for i in range(0, 2):
             address = "myserver_%d" % i
-            self.hosts.append(ManagedHost.objects.create(
-                address = address,
-                fqdn = address,
-                nodename = address
-            ))
+            self.hosts.append(ManagedHost.objects.create(address=address, fqdn=address, nodename=address))
 
     def tearDown(self):
         connection.use_debug_cursor = False

@@ -15,7 +15,7 @@ class Command(BaseCommand):
         try:
             import pygraphviz as pgv
         except ImportError:
-            print "This command requires pygraphviz"
+            print("This command requires pygraphviz")
             return
 
         if len(args) == 0:
@@ -32,7 +32,7 @@ class Command(BaseCommand):
                 return res
 
             start_id = int(args[0])
-            start_record = StorageResourceRecord.objects.get(pk = start_id)
+            start_record = StorageResourceRecord.objects.get(pk=start_id)
             iterate(start_record)
         G = pgv.AGraph(directed=True)
         for r in resources:
@@ -42,7 +42,7 @@ class Command(BaseCommand):
             for p in r.get_parents():
                 G.add_edge(r._handle, p._handle)
 
-        G.layout(prog='dot')
-        output_file = 'resources.png'
+        G.layout(prog="dot")
+        output_file = "resources.png"
         G.draw(output_file)
-        print "Wrote graph to %s" % output_file
+        print("Wrote graph to %s" % output_file)

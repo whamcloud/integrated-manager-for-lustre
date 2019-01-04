@@ -30,7 +30,7 @@ class HostState(object):
         self.last_contact = None
         self.fqdn = fqdn
         self._healthy = False
-        self._host = ManagedHost.objects.get(fqdn = self.fqdn)
+        self._host = ManagedHost.objects.get(fqdn=self.fqdn)
 
         self._last_contact = IMLDateTime.utcnow()
         self._boot_time = boot_time
@@ -48,12 +48,10 @@ class HostState(object):
         self.last_contact = IMLDateTime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
             if self._boot_time is not None:
-                HostRebootEvent.register_event(alert_item = self._host,
-                                               boot_time=boot_time,
-                                               severity=logging.WARNING)
+                HostRebootEvent.register_event(alert_item=self._host, boot_time=boot_time, severity=logging.WARNING)
                 log.warning("Server %s rebooted at %s" % (self.fqdn, boot_time))
             self._boot_time = boot_time
-            job_scheduler_notify.notify(self._host, self._boot_time, {'boot_time': boot_time})
+            job_scheduler_notify.notify(self._host, self._boot_time, {"boot_time": boot_time})
 
         require_reset = False
         if client_start_time is not None and client_start_time != self._client_start_time:
@@ -71,7 +69,7 @@ class HostState(object):
     def poll(self):
         if self._healthy:
             time_since_contact = IMLDateTime.utcnow() - self.last_contact
-            if time_since_contact > datetime.timedelta(seconds = self.CONTACT_TIMEOUT):
+            if time_since_contact > datetime.timedelta(seconds=self.CONTACT_TIMEOUT):
                 self.update_health(False)
         return self._healthy
 
@@ -81,16 +79,17 @@ class HostStateCollection(object):
     Store some per-host state, things we will check and update
     without polling/continuously updating the database.
     """
+
     def __init__(self):
         self._hosts = {}
 
-        for mh in ManagedHost.objects.all().values('fqdn', 'boot_time'):
-            self._hosts[mh['fqdn']] = HostState(mh['fqdn'], mh['boot_time'], None)
+        for mh in ManagedHost.objects.all().values("fqdn", "boot_time"):
+            self._hosts[mh["fqdn"]] = HostState(mh["fqdn"], mh["boot_time"], None)
 
     def remove_host(self, fqdn):
         self._hosts.pop(fqdn, None)
 
-    def update(self, fqdn, boot_time = None, client_start_time = None):
+    def update(self, fqdn, boot_time=None, client_start_time=None):
         try:
             state = self._hosts[fqdn]
         except KeyError:

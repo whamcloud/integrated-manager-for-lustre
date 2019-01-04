@@ -15,13 +15,13 @@ def setup_ca(url):
     if os.path.exists(LOCAL_CA_FILE):
         os.unlink(LOCAL_CA_FILE)
 
-    response = requests.get(urljoin(url, "certificate/"), verify = False)
+    response = requests.get(urljoin(url, "certificate/"), verify=False)
     if response.status_code != 200:
         raise RuntimeError("Failed to download CA: %s" % response.status_code)
 
-    open(LOCAL_CA_FILE, 'w').write(response.content)
-    print "dir %s" % os.getcwd()
-    print "Stored chroma CA certificate at %s" % LOCAL_CA_FILE
+    open(LOCAL_CA_FILE, "w").write(response.content)
+    print("dir %s" % os.getcwd())
+    print("Stored chroma CA certificate at %s" % LOCAL_CA_FILE)
 
 
 def list_hosts(url, username, password):
@@ -34,12 +34,12 @@ def list_hosts(url, username, password):
     response = session.get(urljoin(url, "api/session/"))
     if not 200 <= response.status_code < 300:
         raise RuntimeError("Failed to open session")
-    session.headers['X-CSRFToken'] = response.cookies['csrftoken']
-    session.cookies['csrftoken'] = response.cookies['csrftoken']
-    session.cookies['sessionid'] = response.cookies['sessionid']
+    session.headers["X-CSRFToken"] = response.cookies["csrftoken"]
+    session.cookies["csrftoken"] = response.cookies["csrftoken"]
+    session.cookies["sessionid"] = response.cookies["sessionid"]
 
     # Authenticate our session by username and password
-    response = session.post(urljoin(url, "api/session/"), data = json.dumps({'username': username, 'password': password}))
+    response = session.post(urljoin(url, "api/session/"), data=json.dumps({"username": username, "password": password}))
     if not 200 <= response.status_code < 300:
         raise RuntimeError("Failed to authenticate")
 
@@ -49,11 +49,12 @@ def list_hosts(url, username, password):
         raise RuntimeError("Failed to get host list")
     body_data = json.loads(response.text)
     # Print out each host's address
-    return [host['fqdn'] for host in body_data['objects']]
+    return [host["fqdn"] for host in body_data["objects"]]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     url = "https://localhost:8000/"
-    username = 'debug'
-    password = 'password'
+    username = "debug"
+    password = "password"
     setup_ca(url)
-    print list_hosts(url, username, password)
+    print(list_hosts(url, username, password))

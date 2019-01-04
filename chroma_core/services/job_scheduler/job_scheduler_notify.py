@@ -24,10 +24,10 @@ log = log_register(__name__)
 
 
 class NotificationQueue(ServiceQueue):
-    name = 'job_scheduler_notifications'
+    name = "job_scheduler_notifications"
 
 
-def notify(instance, time, update_attrs, from_states = []):
+def notify(instance, time, update_attrs, from_states=[]):
     """Having detected that the state of an object in the database does not
     match information from real life (i.e. chroma-agent), call this to
     request an update to the object.
@@ -63,16 +63,21 @@ def notify(instance, time, update_attrs, from_states = []):
                 encoded_attrs[attr] = value
             else:
                 if isinstance(field, DateTimeField):
-                    assert isinstance(value, datetime.datetime), "Attribute %s of %s must be datetime" % (attr, instance.__class__)
+                    assert isinstance(value, datetime.datetime), "Attribute %s of %s must be datetime" % (
+                        attr,
+                        instance.__class__,
+                    )
                     encoded_attrs[attr] = value.isoformat()
                 else:
                     encoded_attrs[attr] = value
 
         time_serialized = time.isoformat()
-        NotificationQueue().put({
-            'instance_natural_key': ContentType.objects.get_for_model(instance).natural_key(),
-            'instance_id': instance.id,
-            'time': time_serialized,
-            'update_attrs': encoded_attrs,
-            'from_states': from_states
-        })
+        NotificationQueue().put(
+            {
+                "instance_natural_key": ContentType.objects.get_for_model(instance).natural_key(),
+                "instance_id": instance.id,
+                "time": time_serialized,
+                "update_attrs": encoded_attrs,
+                "from_states": from_states,
+            }
+        )

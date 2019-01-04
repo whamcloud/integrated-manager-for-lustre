@@ -8,12 +8,12 @@ import django.db.models
 from chroma_core.services import log_register
 from iml_common.lib.agent_rpc import agent_result
 
-job_log = log_register('job')
+job_log = log_register("job")
 
 
 class Dependable(object):
     def all(self):
-        if hasattr(self, 'objects'):
+        if hasattr(self, "objects"):
             for o in self.objects:
                 for i in o.all():
                     yield i
@@ -21,7 +21,7 @@ class Dependable(object):
             yield self
 
     def debug_list(self):
-        if hasattr(self, 'objects'):
+        if hasattr(self, "objects"):
             result = []
             for o in self.objects:
                 result.append((o.__class__.__name__, o.debug_list()))
@@ -37,12 +37,9 @@ class Dependable(object):
 
 
 class DependOn(Dependable):
-    def __init__(self,
-            stateful_object,
-            preferred_state,
-            acceptable_states = None,
-            unacceptable_states = None,
-            fix_state = None):
+    def __init__(
+        self, stateful_object, preferred_state, acceptable_states=None, unacceptable_states=None, fix_state=None
+    ):
         """preferred_state: what we will try to put the dependency into if
            it is not already in one of acceptable_states.
            fix_state: what we will try to put the depender into if his
@@ -79,23 +76,26 @@ class DependOn(Dependable):
         return "%s %s %s %s" % (self.stateful_object, self.preferred_state, self.acceptable_states, self.fix_state)
 
     def get_stateful_object(self):
-        return self.stateful_object.__class__._base_manager.get(pk = self.stateful_object.pk)
+        return self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
 
     def satisfied(self):
         try:
             depended_object = self.get_stateful_object()
         except:
-            self.stateful_object.__class__._base_manager.get(pk = self.stateful_object.pk)
+            self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
-            job_log.warning("DependOn not satisfied: %s in state %s, not one of %s (preferred %s)" %
-                    (depended_object, depended_object.state, self.acceptable_states, self.preferred_state))
+            job_log.warning(
+                "DependOn not satisfied: %s in state %s, not one of %s (preferred %s)"
+                % (depended_object, depended_object.state, self.acceptable_states, self.preferred_state)
+            )
         return satisfied
 
 
 class MultiDependable(Dependable):
     def __init__(self, *args):
         from collections import Iterable
+
         if len(args) == 1 and isinstance(args[0], Iterable):
             self.objects = args[0]
         else:
@@ -105,6 +105,7 @@ class MultiDependable(Dependable):
 class DependAll(MultiDependable):
     """Stores a list of Dependables, all of which must be in the
        desired state for this dependency to be true"""
+
     def satisfied(self):
         for o in self.objects:
             if not o.satisfied():
@@ -116,6 +117,7 @@ class DependAll(MultiDependable):
 class DependAny(MultiDependable):
     """Stores a list of Dependables, one or more of which must be in the
        desired state for this dependency to be true"""
+
     def satisfied(self):
         if len(self.objects) == 0:
             return True
@@ -166,9 +168,12 @@ class Step(object):
 
     def _log_subprocesses(self, subprocesses):
         for subprocess in subprocesses:
-            self._console_callback("%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr']))
+            self._console_callback(
+                "%s: %s\n%s\n%s\n"
+                % (" ".join(subprocess["args"]), subprocess["rc"], subprocess["stdout"], subprocess["stderr"])
+            )
 
-    def invoke_agent(self, host, command, args = {}):
+    def invoke_agent(self, host, command, args={}):
         """
         Wrapper around AgentRpc.call which provides logging
         """
@@ -184,35 +189,41 @@ class Step(object):
             self._log_subprocesses(e.subprocesses)
             raise
 
-    def invoke_agent_expect_result(self, host, command, args = {}):
+    def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         result = self.invoke_agent(host, command, args)
 
         # This case is to deal with upgrades, once every installation is using the new protocol then we should not allow this.
         # Once everything is 3.0 or later we will also have version information in the wrapper header.
-        if (result == None) or \
-                ((type(result) == dict) and ('error' not in result) and ('result' not in result)):
+        if (result == None) or ((type(result) == dict) and ("error" not in result) and ("result" not in result)):
             job_log.info("Invalid result %s fixed up on called to %s with args %s" % (result, command, args))
 
             # Prior to 3.0 update_packages returned {'update_packages': data} so fix this up. This code is here so that all
             # of the legacy fixups are in one place and can easily be removed.
-            if command == 'install_packages' and 'scan_packages' in result:
-                result = agent_result(result['scan_packages'])
+            if command == "install_packages" and "scan_packages" in result:
+                result = agent_result(result["scan_packages"])
             else:
                 result = agent_result(result)
 
         if type(result) != dict:
-            raise AgentException(host.fqdn, command, args, "Expected a dictionary but got a %s when calling %s" % (type(result), command))
+            raise AgentException(
+                host.fqdn, command, args, "Expected a dictionary but got a %s when calling %s" % (type(result), command)
+            )
 
-        if ('error' not in result) and ('result' not in result):
-            raise AgentException(host.fqdn, command, args, "Expected a dictionary with 'error' or 'result' in keys but got %s when calling %s" % (result, command))
+        if ("error" not in result) and ("result" not in result):
+            raise AgentException(
+                host.fqdn,
+                command,
+                args,
+                "Expected a dictionary with 'error' or 'result' in keys but got %s when calling %s" % (result, command),
+            )
 
-        if 'error' in result:
-            self.log(result['error'])
-            raise AgentException(host.fqdn, command, args, result['error'])
+        if "error" in result:
+            self.log(result["error"])
+            raise AgentException(host.fqdn, command, args, result["error"])
 
-        return result['result']
+        return result["result"]
 
 
 class IdempotentStep(Step):

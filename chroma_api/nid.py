@@ -32,31 +32,49 @@ class NidValidation(ChromaValidation):
     def is_valid(self, bundle, request=None, **kwargs):
         errors = defaultdict(list)
 
-        if request.method != 'POST':
+        if request.method != "POST":
             return errors
 
-        for nids_data in bundle.data.get('objects', [bundle.data]):
-            if 'lnd_network' not in nids_data:
-                errors['lnd_network'] = ["Field lnd_network not present in data"]
+        for nids_data in bundle.data.get("objects", [bundle.data]):
+            if "lnd_network" not in nids_data:
+                errors["lnd_network"] = ["Field lnd_network not present in data"]
 
             if not errors:
-                self.validate_object(nids_data,
-                                     errors,
-                                     {"lnd_network": self.Expectation(True),
-                                      "network_interface": self.Expectation(True),
-                                      "lnd_type": self.Expectation(int(nids_data['lnd_network'] != -1)),
-                                      "resource_uri": self.Expectation(False),
-                                      "lnet_configuration": self.Expectation(False)})
+                self.validate_object(
+                    nids_data,
+                    errors,
+                    {
+                        "lnd_network": self.Expectation(True),
+                        "network_interface": self.Expectation(True),
+                        "lnd_type": self.Expectation(int(nids_data["lnd_network"] != -1)),
+                        "resource_uri": self.Expectation(False),
+                        "lnet_configuration": self.Expectation(False),
+                    },
+                )
 
             if not errors:
-                self.validate_resources([self.URIInfo(nids_data.get('lnet_configuration', None), LNetConfigurationResource),
-                                         self.URIInfo(nids_data['network_interface'], NetworkInterfaceResource)],
-                                         errors, request)
+                self.validate_resources(
+                    [
+                        self.URIInfo(nids_data.get("lnet_configuration", None), LNetConfigurationResource),
+                        self.URIInfo(nids_data["network_interface"], NetworkInterfaceResource),
+                    ],
+                    errors,
+                    request,
+                )
 
             if not errors:
                 # Check the lnd_type passed is valid for the network_interface
-                if ('lnd_type' in nids_data) and (nids_data['lnd_type'] not in NetworkInterfaceResource().get_via_uri(nids_data['network_interface'], request).lnd_types):
-                    errors['lnd_type'].append("lnd_type %s not valid for interface %s" % (nids_data['lnd_type'], NetworkInterfaceResource().get_via_uri(nids_data['network_interface'], request)))
+                if ("lnd_type" in nids_data) and (
+                    nids_data["lnd_type"]
+                    not in NetworkInterfaceResource().get_via_uri(nids_data["network_interface"], request).lnd_types
+                ):
+                    errors["lnd_type"].append(
+                        "lnd_type %s not valid for interface %s"
+                        % (
+                            nids_data["lnd_type"],
+                            NetworkInterfaceResource().get_via_uri(nids_data["network_interface"], request),
+                        )
+                    )
 
         return errors
 
@@ -83,47 +101,47 @@ class NidResource(ChromaModelResource):
     """
     Nid information.
     """
-    network_interface = fields.ToOneField('chroma_api.network_interface.NetworkInterfaceResource', 'network_interface')
-    lnet_configuration = fields.ToOneField('chroma_api.lnet_configuration.LNetConfigurationResource', 'lnet_configuration')
+
+    network_interface = fields.ToOneField("chroma_api.network_interface.NetworkInterfaceResource", "network_interface")
+    lnet_configuration = fields.ToOneField(
+        "chroma_api.lnet_configuration.LNetConfigurationResource", "lnet_configuration"
+    )
 
     class Meta:
-        queryset = Nid.objects.select_related('network_interface', 'lnet_configuration').all()
+        queryset = Nid.objects.select_related("network_interface", "lnet_configuration").all()
 
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = NidValidation()
-        resource_name = 'nid'
-        list_allowed_methods = ['get', 'post', 'delete']
-        detail_allowed_methods = ['get', 'post', 'put', 'delete']
-        filtering = {'network_interface': ALL_WITH_RELATIONS,
-                     'lnet_configuration': ALL_WITH_RELATIONS,
-                     'id': ['exact']}
+        resource_name = "nid"
+        list_allowed_methods = ["get", "post", "delete"]
+        detail_allowed_methods = ["get", "post", "put", "delete"]
+        filtering = {"network_interface": ALL_WITH_RELATIONS, "lnet_configuration": ALL_WITH_RELATIONS, "id": ["exact"]}
 
     @validate
     def obj_create(self, bundle, **kwargs):
         request = bundle.request
 
-        if 'objects' in bundle.data:
-            nids_data = bundle.data['objects']
+        if "objects" in bundle.data:
+            nids_data = bundle.data["objects"]
         else:
             nids_data = [bundle.data]
 
         for nid_data in nids_data:
-            nid_data['network_interface'] = NetworkInterfaceResource().get_via_uri(nid_data['network_interface'], bundle.request).id
+            nid_data["network_interface"] = (
+                NetworkInterfaceResource().get_via_uri(nid_data["network_interface"], bundle.request).id
+            )
 
         command_id = JobSchedulerClient.update_nids(nids_data)
 
         try:
-            command = Command.objects.get(pk = command_id)
+            command = Command.objects.get(pk=command_id)
         except ObjectDoesNotExist:
             command = None
 
-        raise custom_response(self, request, http.HttpAccepted,
-                              {
-                                  'command': dehydrate_command(command)
-                              })
+        raise custom_response(self, request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
-    @validate                        
+    @validate
     def obj_update(self, bundle, **kwargs):
         self.obj_create(bundle, **kwargs)
 
@@ -159,7 +177,7 @@ class NidResource(ChromaModelResource):
         delete_list = []
 
         for nid in obj_list:
-            delete_list.append({'network_interface': nid.network_interface_id, 'lnd_network': -1})
+            delete_list.append({"network_interface": nid.network_interface_id, "lnd_network": -1})
 
-        if (len(delete_list) > 0):
+        if len(delete_list) > 0:
             JobSchedulerClient.update_nids(delete_list)

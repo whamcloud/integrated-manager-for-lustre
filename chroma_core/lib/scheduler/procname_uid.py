@@ -7,10 +7,10 @@
 Shell-based scheduler which records process name and user id.
 """
 
-FIELDS = 'name', 'user'
+FIELDS = "name", "user"
 
 
 def fetch(ids):
     "Generate process names and user ids."
     for id in ids:
-        yield dict(zip(FIELDS, id.rsplit('.', 1)))
+        yield dict(zip(FIELDS, id.rsplit(".", 1)))

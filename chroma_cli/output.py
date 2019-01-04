@@ -14,8 +14,7 @@ class StandardFormatter(object):
 
     def __init__(self, format="human", nowait=False, command_monitor=None):
         if not format in self.__class__.formats():
-            raise RuntimeError("%s not in %s" %
-                               (format, self.__class__.formats()))
+            raise RuntimeError("%s not in %s" % (format, self.__class__.formats()))
         self.format = format
         self.nowait = nowait
         self.command_monitor = command_monitor
@@ -29,7 +28,7 @@ class StandardFormatter(object):
             else:
                 self.show(input)
         except AttributeError:
-            print input
+            print(input)
 
     def show(self, entity):
         self.list([entity])
@@ -37,10 +36,12 @@ class StandardFormatter(object):
     def list(self, entities):
         if self.format == "json":
             from tablib.packages import omnijson as json
-            print json.dumps([e.all_attributes for e in entities])
+
+            print(json.dumps([e.all_attributes for e in entities]))
         elif self.format == "yaml":
             from tablib.packages import yaml
-            print yaml.safe_dump([e.all_attributes for e in entities])
+
+            print(yaml.safe_dump([e.all_attributes for e in entities]))
         else:
             try:
                 header = entities[0].as_header()
@@ -50,37 +51,39 @@ class StandardFormatter(object):
 
                 if self.format == "human":
                     from prettytable import PrettyTable, NONE
+
                     table = PrettyTable(header, hrules=NONE)
                     for row in rows:
                         table.add_row(row)
-                    print table
+                    print(table)
                 else:
                     data = tablib.Dataset(*rows, headers=header)
                     format = getattr(data, self.format)
-                    print format
+                    print(format)
             except IndexError:
-                print "Found 0 results"
+                print("Found 0 results")
 
     def command(self, command):
         try:
-            if 'command' in command.keys():
-                command = command['command']
+            if "command" in command.keys():
+                command = command["command"]
         except AttributeError:
-            print command
+            print(command)
             return
 
         if self.nowait:
-            print command['message']
+            print(command["message"])
         else:
             import sys
+
             monitor = self.command_monitor(command)
             last_len = 0
             while not monitor.completed:
                 jobs = monitor.incomplete_jobs
                 if len(jobs) > 0:
-                    line = "\r%s, waiting on jobs: %s" % (command['message'], jobs)
+                    line = "\r%s, waiting on jobs: %s" % (command["message"], jobs)
                 else:
-                    line = "\r%s, waiting ..." % command['message']
+                    line = "\r%s, waiting ..." % command["message"]
 
                 if len(line) < last_len:
                     sys.stderr.write("\r" + " " * last_len)
@@ -88,7 +91,7 @@ class StandardFormatter(object):
                 last_len = len(line)
 
                 monitor.update()
-            print "\r" + " " * last_len,
-            print "\r%s: %s" % (command['message'], monitor.status)
+            print("\r" + " " * last_len)
+            print("\r%s: %s" % (command["message"], monitor.status))
             if monitor.status != "Finished":
                 raise AbnormalCommandCompletion(command, monitor.status)

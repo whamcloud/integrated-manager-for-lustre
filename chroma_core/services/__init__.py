@@ -30,12 +30,13 @@ class ChromaService(object):
 
     @property
     def name(self):
-        return self.__class__.__module__.split('.')[-1]
+        return self.__class__.__module__.split(".")[-1]
 
     def run(self):
         # Enable long polling.
         from chroma_core.lib.long_polling import enable_long_polling
-        assert enable_long_polling    # Prevent pep8 warning
+
+        assert enable_long_polling  # Prevent pep8 warning
 
     def stop(self):
         pass
@@ -53,7 +54,7 @@ class ServiceThread(threading.Thread):
     def __init__(self, service):
         super(ServiceThread, self).__init__()
         self.service = service
-        self.log = log_register('service_thread')
+        self.log = log_register("service_thread")
         self._started = False
 
     def start(self):
@@ -61,7 +62,7 @@ class ServiceThread(threading.Thread):
         self._started = True
 
     def run(self):
-        if hasattr(self.service, 'name'):
+        if hasattr(self.service, "name"):
             name = self.service.name
         else:
             name = self.service.__class__.__name__
@@ -75,13 +76,15 @@ class ServiceThread(threading.Thread):
             self.service.run()
         except Exception:
             exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+            backtrace = "\n".join(traceback.format_exception(*(exc_info or sys.exc_info())))
             self.log.error("Exception in main loop.  backtrace: %s" % backtrace)
             os._exit(-1)
 
     def stop(self):
         if not self._started:
-            self.log.error("Attempted to stop ServiceThread '%s' before it was started." % self.service.__class__.__name__)
+            self.log.error(
+                "Attempted to stop ServiceThread '%s' before it was started." % self.service.__class__.__name__
+            )
             os._exit(-1)
         else:
             self.service.stop()

@@ -27,7 +27,7 @@ class LockCache(object):
         self.all_by_job = defaultdict(list)
         self.all_by_item = defaultdict(list)
 
-        for job in Job.objects.filter(~Q(state = 'complete')):
+        for job in Job.objects.filter(~Q(state="complete")):
             if job.locks_json:
                 locks = json.loads(job.locks_json)
                 for lock in locks:
@@ -75,10 +75,13 @@ class LockCache(object):
     def get_all(self, locked_item):
         return self.all_by_item[locked_item]
 
-    def get_latest_write(self, locked_item, not_job = None):
+    def get_latest_write(self, locked_item, not_job=None):
         try:
             if not_job != None:
-                return sorted([l for l in self.write_by_item[locked_item] if l.job != not_job], lambda a, b: cmp(a.job.id, b.job.id))[-1]
+                return sorted(
+                    [l for l in self.write_by_item[locked_item] if l.job != not_job],
+                    lambda a, b: cmp(a.job.id, b.job.id),
+                )[-1]
             else:
                 return sorted(self.write_by_item[locked_item], lambda a, b: cmp(a.job.id, b.job.id))[-1]
         except IndexError:
@@ -110,6 +113,7 @@ def lock_change_receiver():
             ...
 
     """
+
     def _decorator(func):
         LockCache.lock_change_receivers.append(func)
         return func

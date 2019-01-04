@@ -18,7 +18,7 @@ def patch(obj, **attrs):
 
 
 @contextlib.contextmanager
-def timed(msg='', threshold=0):
+def timed(msg="", threshold=0):
     "Print elapsed time of a block, if over optional threshold."
     start = time.time()
     try:
@@ -26,4 +26,4 @@ def timed(msg='', threshold=0):
     finally:
         elapsed = time.time() - start
         if elapsed >= threshold:
-            print datetime.timedelta(seconds=elapsed), msg
+            print(datetime.timedelta(seconds=elapsed), msg)

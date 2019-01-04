@@ -31,10 +31,10 @@ _loggers = set()
 _enable_stdout = False
 trace = None
 
-FILE_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
+FILE_FORMAT = "[%(asctime)s: %(levelname)s/%(name)s] %(message)s"
 #  Alternative file format showing files and line numbers
-#FILE_FORMAT = '[%(asctime)s: %(thread)d %(pathname)s:%(lineno)d %(levelname)s/%(name)s] %(message)s'
-STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
+# FILE_FORMAT = '[%(asctime)s: %(thread)d %(pathname)s:%(lineno)d %(levelname)s/%(name)s] %(message)s'
+STDOUT_FORMAT = "[%(asctime)s: %(levelname)s/%(name)s] %(message)s"
 
 
 def _add_file_handler(logger, filename=None, use_formatter=True):
@@ -77,7 +77,7 @@ def log_set_filename(filename):
     # Explicit file creation here so that we don't wait until first message
     # to pick up a permissions problem.
     if not os.path.exists(_log_filename):
-        open(_log_filename, 'a').close()
+        open(_log_filename, "a").close()
 
     for logger in _loggers:
         _add_file_handler(logger)

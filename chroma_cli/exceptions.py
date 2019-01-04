@@ -27,6 +27,7 @@ class TooManyMatches(ApiException):
     """
     Too many matches returned during a fuzzy-id lookup.
     """
+
     def __init__(self, msg=None):
         self.msg = msg
         super(TooManyMatches, self).__init__()
@@ -51,6 +52,7 @@ class BadUserInput(ApiException):
     """
     Generic exception for bad user input detected post-argparse.
     """
+
     pass
 
 
@@ -58,6 +60,7 @@ class BadRequest(ApiException):
     """
     Represents a failed TastyPie validation or other 400-level error.
     """
+
     def __init__(self, value):
         self.error_dict = value
         super(BadRequest, self).__init__()
@@ -84,6 +87,7 @@ class InternalError(ApiException):
     """
     HTTP 500
     """
+
     def __init__(self, backtrace):
         self.backtrace = backtrace
         super(InternalError, self).__init__()
@@ -96,6 +100,7 @@ class NotFound(ApiException):
     """
     HTTP 404
     """
+
     pass
 
 
@@ -103,6 +108,7 @@ class UnauthorizedRequest(ApiException):
     """
     HTTP 401
     """
+
     pass
 
 
@@ -110,6 +116,7 @@ class AuthenticationFailure(ApiException):
     """
     HTTP 401 after trying to authenticate.
     """
+
     def __str__(self):
         return "Authentication failed.  Check username/password."
 
@@ -129,7 +136,10 @@ class InvalidStateChange(ApiException):
         self.available_states = available_states
 
     def __str__(self):
-        return "The requested state (%s) is not one of the available states: %s" % (self.requested_state, ", ".join(self.available_states))
+        return "The requested state (%s) is not one of the available states: %s" % (
+            self.requested_state,
+            ", ".join(self.available_states),
+        )
 
 
 class InvalidJobError(ApiException):
@@ -138,7 +148,10 @@ class InvalidJobError(ApiException):
         self.available_jobs = available_jobs
 
     def __str__(self):
-        return "The requested job (%s) is not one of the available jobs: %s" % (self.requested_job, ", ".join(self.available_jobs))
+        return "The requested job (%s) is not one of the available jobs: %s" % (
+            self.requested_job,
+            ", ".join(self.available_jobs),
+        )
 
 
 class AbnormalCommandCompletion(Exception):
@@ -148,7 +161,7 @@ class AbnormalCommandCompletion(Exception):
         super(AbnormalCommandCompletion, self).__init__()
 
     def __str__(self):
-        return "Command completed with abnormal status: %s (%s)" % (self.status, self.command['message'])
+        return "Command completed with abnormal status: %s (%s)" % (self.status, self.command["message"])
 
 
 class UserConfirmationRequired(ApiException):
@@ -165,7 +178,11 @@ class JobConfirmationRequired(UserConfirmationRequired):
         self.confirmation = confirmation
 
     def __str__(self):
-        return "Running %s on %s requires confirmation of the following:\n%s" % (self.verb, self.subject, fill(self.confirmation, initial_indent="    ", subsequent_indent="  "))
+        return "Running %s on %s requires confirmation of the following:\n%s" % (
+            self.verb,
+            self.subject,
+            fill(self.confirmation, initial_indent="    ", subsequent_indent="  "),
+        )
 
 
 class StateChangeConfirmationRequired(UserConfirmationRequired):
@@ -174,13 +191,16 @@ class StateChangeConfirmationRequired(UserConfirmationRequired):
 
     @property
     def consequences(self):
-        return sorted([j['description'] for j in self.report['dependency_jobs'] + [self.report['transition_job']]])
+        return sorted([j["description"] for j in self.report["dependency_jobs"] + [self.report["transition_job"]]])
 
     def __str__(self):
-        return '''
+        return """
 This action (%s) has the following consequences:
 %s
-''' % (self.report['transition_job']['description'], "\n".join(["  * %s" % c for c in self.consequences]))
+""" % (
+            self.report["transition_job"]["description"],
+            "\n".join(["  * %s" % c for c in self.consequences]),
+        )
 
 
 class ReformatVolumesConfirmationRequired(UserConfirmationRequired):
@@ -190,9 +210,11 @@ class ReformatVolumesConfirmationRequired(UserConfirmationRequired):
         self.volumes = volumes
 
     def __str__(self):
-        return '''
+        return """
 One or more of the selected volumes already contains a filesystem, but may
 not actually be in use. Please check the following list of volumes and
 verify that they are suitable for use as Lustre targets:
 %s
-''' % "\n".join(["  %s" % v for v in self.volumes])
+""" % "\n".join(
+            ["  %s" % v for v in self.volumes]
+        )

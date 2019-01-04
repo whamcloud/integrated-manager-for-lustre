@@ -12,8 +12,8 @@ from chroma_core.models import LNetConfiguration
 
 # This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
-#from chroma_core.lib.storage_plugin.base_resource import HostsideResource
-#from chroma_core.models import ManagedHost
+# from chroma_core.lib.storage_plugin.base_resource import HostsideResource
+# from chroma_core.models import ManagedHost
 
 version = 1
 
@@ -21,19 +21,20 @@ version = 1
 # This is not used anymore it is here purely to satisfy the upgrade requirements of IML.
 class NetworkInterface(resources.Resource):
     class Meta:
-        identifier = ScopedId('name')
-        charts = [{"title": "Bandwidth", "series": ['rx_bytes', 'tx_bytes']}]
+        identifier = ScopedId("name")
+        charts = [{"title": "Bandwidth", "series": ["rx_bytes", "tx_bytes"]}]
 
     name = attributes.String()
-    rx_bytes = statistics.Counter(units = "Bytes/s")
-    tx_bytes = statistics.Counter(units = "Bytes/s")
+    rx_bytes = statistics.Counter(units="Bytes/s")
+    tx_bytes = statistics.Counter(units="Bytes/s")
 
 
 class HostNetworkInterface(resources.NetworkInterface):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
+
     class Meta:
-        identifier = ScopedId('host_id', 'name')
+        identifier = ScopedId("host_id", "name")
 
     name = attributes.String()
     inet4_address = attributes.String()
@@ -41,24 +42,26 @@ class HostNetworkInterface(resources.NetworkInterface):
     type = attributes.String()
     up = attributes.Boolean()
 
-    rx_bytes = statistics.Counter(units = "Bytes/s")
-    tx_bytes = statistics.Counter(units = "Bytes/s")
+    rx_bytes = statistics.Counter(units="Bytes/s")
+    tx_bytes = statistics.Counter(units="Bytes/s")
 
 
 class Nid(resources.LNETInterface):
     class Meta:
-        identifier = ScopedId('host_id', 'name')
+        identifier = ScopedId("host_id", "name")
 
     # Simplified NID representation for those we detect already-configured
-    name = attributes.String()                  # This is only used to scope it.
-    host_id = attributes.Integer()              # Need so we uniquely identify it.
+    name = attributes.String()  # This is only used to scope it.
+    host_id = attributes.Integer()  # Need so we uniquely identify it.
     lnd_network = attributes.Integer()
-    lnd_type = attributes.String(default=lambda storage_dict: 'o2ib' if storage_dict['lnd_network'] == 'o2ib' else 'tcp')
+    lnd_type = attributes.String(
+        default=lambda storage_dict: "o2ib" if storage_dict["lnd_network"] == "o2ib" else "tcp"
+    )
 
 
 class LNetState(resources.LNETModules):
     class Meta:
-        identifier = ScopedId('host_id')
+        identifier = ScopedId("host_id")
 
     # Lnet is pretty simple at the moment just a state
     state = attributes.String()
@@ -67,7 +70,7 @@ class LNetState(resources.LNETModules):
 class LinuxNetwork(Plugin):
     internal = True
 
-    def __init__(self, resource_manager, scannable_id = None):
+    def __init__(self, resource_manager, scannable_id=None):
 
         # For the linux network we want all the info each time until the lnet is not unconfigured. This means we still
         # get given the state changes once we go into 'monitoring' mode.
@@ -83,63 +86,68 @@ class LinuxNetwork(Plugin):
 
     def agent_session_start(self, host_id, devices):
         self._calc_changes_delta = self._calc_changes_delta_next
-        self._calc_changes_delta_next = (LNetConfiguration.objects.get(host_id = self._root_resource.host_id).state != 'unconfigured')
+        self._calc_changes_delta_next = (
+            LNetConfiguration.objects.get(host_id=self._root_resource.host_id).state != "unconfigured"
+        )
 
-        for expected_item in ['interfaces', 'lnet']:
+        for expected_item in ["interfaces", "lnet"]:
             if expected_item not in devices:
                 raise RuntimeError("LinuxNetwork expected but didn't find %s" % expected_item)
 
         inet4_address_to_interface = {}
 
         # Get the existing interfaces, get the reported and then delete those that no longer exist.
-        current_interface_names = set(interface_name for interface_name in devices['interfaces'])
-        existing_interface_names = set(interface.name for interface in self.find_by_attr(HostNetworkInterface, host_id=host_id))
+        current_interface_names = set(interface_name for interface_name in devices["interfaces"])
+        existing_interface_names = set(
+            interface.name for interface in self.find_by_attr(HostNetworkInterface, host_id=host_id)
+        )
 
-        for name in (existing_interface_names - current_interface_names):
-            self.remove_by_attr(HostNetworkInterface,
-                                host_id=host_id,
-                                name=name)
+        for name in existing_interface_names - current_interface_names:
+            self.remove_by_attr(HostNetworkInterface, host_id=host_id, name=name)
 
-        for name, iface in devices['interfaces'].iteritems():
-            iface_resource, created = self.update_or_create(HostNetworkInterface,
-                                                            name = name,
-                                                            inet4_address = iface['inet4_address'],
-                                                            inet4_prefix = iface['inet4_prefix'],
-                                                            host_id = host_id,
-                                                            type = iface['type'],
-                                                            up = iface['up'])
+        for name, iface in devices["interfaces"].iteritems():
+            iface_resource, created = self.update_or_create(
+                HostNetworkInterface,
+                name=name,
+                inet4_address=iface["inet4_address"],
+                inet4_prefix=iface["inet4_prefix"],
+                host_id=host_id,
+                type=iface["type"],
+                up=iface["up"],
+            )
 
-            iface_resource.rx_bytes = iface['rx_bytes']
-            iface_resource.tx_bytes = iface['tx_bytes']
+            iface_resource.rx_bytes = iface["rx_bytes"]
+            iface_resource.tx_bytes = iface["tx_bytes"]
 
             inet4_address_to_interface[iface_resource.name] = iface_resource
 
         # Get the existing nids, get the reported and then delete those that no longer exist.
-        current_nid_names = set(nid_name for nid_name in devices['lnet']['nids'])
+        current_nid_names = set(nid_name for nid_name in devices["lnet"]["nids"])
         existing_nid_names = set(nid.name for nid in self.find_by_attr(Nid, host_id=host_id))
 
-        for name in (existing_nid_names - current_nid_names):
-            self.remove_by_attr(Nid,
-                                host_id=host_id,
-                                name=name)
+        for name in existing_nid_names - current_nid_names:
+            self.remove_by_attr(Nid, host_id=host_id, name=name)
 
-        for name, nid in devices['lnet']['nids'].iteritems():
+        for name, nid in devices["lnet"]["nids"].iteritems():
             parent_interface = inet4_address_to_interface[name]
 
-            assert(name == parent_interface.name)
+            assert name == parent_interface.name
 
-            db_nid, created = self.update_or_create(Nid,
-                                                    parents = [parent_interface],
-                                                    name = name,
-                                                    host_id = host_id,
-                                                    lnd_network = nid['lnd_network'],
-                                                    lnd_type = nid['lnd_type'])
+            db_nid, created = self.update_or_create(
+                Nid,
+                parents=[parent_interface],
+                name=name,
+                host_id=host_id,
+                lnd_network=nid["lnd_network"],
+                lnd_type=nid["lnd_type"],
+            )
 
             if created:
-                self.log.debug("Learned new nid %s:%s@%s%s" % (parent_interface.host_id, parent_interface.inet4_address, nid['lnd_type'], nid['lnd_network']))
+                self.log.debug(
+                    "Learned new nid %s:%s@%s%s"
+                    % (parent_interface.host_id, parent_interface.inet4_address, nid["lnd_type"], nid["lnd_network"])
+                )
 
-        lnet_state, created = self.update_or_create(LNetState,
-                                                    host_id = host_id,
-                                                    state = devices['lnet']['state'])
+        lnet_state, created = self.update_or_create(LNetState, host_id=host_id, state=devices["lnet"]["state"])
         if created:
             self.log.debug("Learned new lnet modules on %s" % host_id)

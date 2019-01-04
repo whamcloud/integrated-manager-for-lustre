@@ -11,6 +11,7 @@ class Command(BaseCommand):
     """
     Add logging setup to the normal runserver command
     """
+
     def handle(self, *args, **kwargs):
-        log_set_filename('runserver.log')
+        log_set_filename("runserver.log")
         super(Command, self).handle(*args, **kwargs)

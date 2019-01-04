@@ -19,27 +19,30 @@ MAX_STATE_STRING = 32
 class StepResult(models.Model):
     job = models.ForeignKey("Job")
     step_klass = PickledObjectField()
-    args = PickledObjectField(help_text = 'Dictionary of arguments to this step')
+    args = PickledObjectField(help_text="Dictionary of arguments to this step")
 
-    step_index = models.IntegerField(help_text = "Zero-based index of this step within the steps of\
-            a job.  If a step is retried, then two steps can have the same index for the same job.")
-    step_count = models.IntegerField(help_text = "Number of steps in this job")
+    step_index = models.IntegerField(
+        help_text="Zero-based index of this step within the steps of\
+            a job.  If a step is retried, then two steps can have the same index for the same job."
+    )
+    step_count = models.IntegerField(help_text="Number of steps in this job")
 
-    log = models.TextField(help_text = "Human readable summary of progress during execution.")
+    log = models.TextField(help_text="Human readable summary of progress during execution.")
 
-    console = models.TextField(help_text = "Combined standard out and standard error from all\
+    console = models.TextField(
+        help_text="Combined standard out and standard error from all\
             subprocesses run while completing this step.  This includes output from successful\
-            as well as unsuccessful commands, and may be very verbose.")
-    backtrace = models.TextField(help_text = "Backtrace of an exception, if one occurred")
+            as well as unsuccessful commands, and may be very verbose."
+    )
+    backtrace = models.TextField(help_text="Backtrace of an exception, if one occurred")
 
     # FIXME: we should have a 'cancelled' state for when a step is running while its job is cancelled
-    state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
+    state = models.CharField(max_length=32, default="incomplete", help_text="One of incomplete, failed, success")
 
-    modified_at = models.DateTimeField(auto_now = True)
-    created_at = models.DateTimeField(auto_now_add = True)
+    modified_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    result = models.TextField(null = True,
-                              help_text = "Arbitrary result data.")
+    result = models.TextField(null=True, help_text="Arbitrary result data.")
 
     _step_types = {}
 
@@ -83,5 +86,5 @@ class StepResult(models.Model):
         return self.step_class.describe(self.args)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]

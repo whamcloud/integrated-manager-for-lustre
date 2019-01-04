@@ -28,9 +28,10 @@ class HelpResource(Resource):
     The response is a dictionary where the key is a configuration parameter name
     and the value is a help string.
     """
+
     class Meta:
         object_class = dict
-        resource_name = 'help'
+        resource_name = "help"
         detail_allowed_methods = []
         list_allowed_methods = []
         authorization = DjangoAuthorization()
@@ -38,8 +39,13 @@ class HelpResource(Resource):
 
     def prepend_urls(self):
         from django.conf.urls import url
+
         return [
-            url(r"^(?P<resource_name>%s)/conf_param/$" % self._meta.resource_name, self.wrap_view('conf_param_help'), name="api_conf_param_help"),
+            url(
+                r"^(?P<resource_name>%s)/conf_param/$" % self._meta.resource_name,
+                self.wrap_view("conf_param_help"),
+                name="api_conf_param_help",
+            )
         ]
 
     def conf_param_help(self, request, **kwargs):
@@ -48,19 +54,17 @@ class HelpResource(Resource):
 
          :param keys: comma separated list of strings
          :param kind: one of 'OST', 'MDT' or 'FS'"""
-        kind = request.GET.get('kind', None)
-        keys = request.GET.get('keys', None)
+        kind = request.GET.get("kind", None)
+        keys = request.GET.get("keys", None)
 
         if kind:
-            klass = {
-                    "OST": ManagedOst,
-                    "MDT": ManagedMdt,
-                    "FS": ManagedFilesystem
-                    }[kind]
+            klass = {"OST": ManagedOst, "MDT": ManagedMdt, "FS": ManagedFilesystem}[kind]
 
             return self.create_response(request, chroma_core.lib.conf_param.get_possible_conf_params(klass))
         elif keys:
             keys = keys.split(",")
-            return self.create_response(request, dict([(key, chroma_core.lib.conf_param.get_conf_param_help(key)) for key in keys]))
+            return self.create_response(
+                request, dict([(key, chroma_core.lib.conf_param.get_conf_param_help(key)) for key in keys])
+            )
         else:
-            return self.create_response(request, {'kind': ["This field is mandatory"]}, response_class = HttpBadRequest)
+            return self.create_response(request, {"kind": ["This field is mandatory"]}, response_class=HttpBadRequest)

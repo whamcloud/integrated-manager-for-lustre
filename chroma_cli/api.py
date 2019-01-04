@@ -9,7 +9,17 @@ import re
 
 from urlparse import urljoin
 
-from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure, ApiConnectionError
+from chroma_cli.exceptions import (
+    InvalidApiResource,
+    UnsupportedFormat,
+    NotFound,
+    TooManyMatches,
+    BadRequest,
+    InternalError,
+    UnauthorizedRequest,
+    AuthenticationFailure,
+    ApiConnectionError,
+)
 
 
 DEFAULT_API_URL = "https://localhost/api/"
@@ -19,10 +29,9 @@ class JsonSerializer(object):
     """
     Simple JSON serializer which implements the important parts of TastyPie's Serializer API.
     """
+
     formats = ["json"]
-    content_types = {
-            'json': "application/json"
-    }
+    content_types = {"json": "application/json"}
     datetime_formatting = "iso-8601"
 
     def __init__(self, formats=None, content_types=None, datetime_formatting=None):
@@ -37,7 +46,7 @@ class JsonSerializer(object):
 
         return json.dumps(bundle, sort_keys=True)
 
-    def deserialize(self, content, format='application/json'):
+    def deserialize(self, content, format="application/json"):
         if format != "application/json":
             raise UnsupportedFormat("Can't deserialize '%s', sorry." % format)
 
@@ -50,9 +59,9 @@ class ChromaSessionClient(object):
         self.api_uri = DEFAULT_API_URL
 
         import requests
+
         self.session = requests.session()
-        self.session.headers = {'Accept': "application/json",
-                                'Content-Type': "application/json"}
+        self.session.headers = {"Accept": "application/json", "Content-Type": "application/json"}
         # FIXME?: Should we be doing CA verification in the CLI?
         self.session.verify = False
 
@@ -66,16 +75,15 @@ class ChromaSessionClient(object):
     def start_session(self):
         r = self.get(self.session_uri)
         if not 200 <= r.status_code < 300:
-            raise RuntimeError("No session (status: %s, text: %s)" %
-                               (r.status_code, r.content))
+            raise RuntimeError("No session (status: %s, text: %s)" % (r.status_code, r.content))
 
-        self.session.headers['X-CSRFToken'] = r.cookies['csrftoken']
-        self.session.cookies['csrftoken'] = r.cookies['csrftoken']
-        self.session.cookies['sessionid'] = r.cookies['sessionid']
+        self.session.headers["X-CSRFToken"] = r.cookies["csrftoken"]
+        self.session.cookies["csrftoken"] = r.cookies["csrftoken"]
+        self.session.cookies["sessionid"] = r.cookies["sessionid"]
 
     def login(self, **credentials):
         if not self.is_authenticated:
-            if 'sessionid' not in self.session.cookies:
+            if "sessionid" not in self.session.cookies:
                 self.start_session()
 
             r = self.post(self.session_uri, data=json.dumps(credentials))
@@ -101,12 +109,11 @@ class ApiClient(object):
             self.serializer = JsonSerializer()
 
     def get_content_type(self, short_format):
-        return self.serializer.content_types.get(short_format,
-                                                 'application/json')
+        return self.serializer.content_types.get(short_format, "application/json")
 
     def get(self, uri, format="json", data=None, authentication=None, **kwargs):
         content_type = self.get_content_type(format)
-        headers = {'Content-Type': content_type, 'Accept': content_type}
+        headers = {"Content-Type": content_type, "Accept": content_type}
 
         if authentication and not self.client.is_authenticated:
             self.client.login(**authentication)
@@ -115,27 +122,25 @@ class ApiClient(object):
 
     def post(self, uri, format="json", data=None, authentication=None, **kwargs):
         content_type = self.get_content_type(format)
-        headers = {'Content-Type': content_type, 'Accept': content_type}
+        headers = {"Content-Type": content_type, "Accept": content_type}
 
         if authentication and not self.client.is_authenticated:
             self.client.login(**authentication)
 
-        return self.client.post(uri, headers=headers,
-                                data=self.serializer.serialize(data))
+        return self.client.post(uri, headers=headers, data=self.serializer.serialize(data))
 
     def put(self, uri, format="json", data=None, authentication=None, **kwargs):
         content_type = self.get_content_type(format)
-        headers = {'Content-Type': content_type, 'Accept': content_type}
+        headers = {"Content-Type": content_type, "Accept": content_type}
 
         if authentication and not self.client.is_authenticated:
             self.client.login(**authentication)
 
-        return self.client.put(uri, headers=headers,
-                               data=self.serializer.serialize(data))
+        return self.client.put(uri, headers=headers, data=self.serializer.serialize(data))
 
     def delete(self, uri, format="json", data=None, authentication=None, **kwargs):
         content_type = self.get_content_type(format)
-        headers = {'Content-Type': content_type, 'Accept': content_type}
+        headers = {"Content-Type": content_type, "Accept": content_type}
 
         if authentication and not self.client.is_authenticated:
             self.client.login(**authentication)
@@ -150,13 +155,13 @@ class CommandMonitor(object):
 
     def update(self, pause=1):
         time.sleep(pause)
-        self.cmd = self.api.endpoints['command'].show(self.cmd['id'])
+        self.cmd = self.api.endpoints["command"].show(self.cmd["id"])
 
     def wait_complete(self):
-        '''
+        """
         Wait for the cmd to actually complete. Upon completion return the command object
         :return: The command object of the completed command.
-        '''
+        """
         while not self.completed:
             self.update()
 
@@ -171,7 +176,7 @@ class CommandMonitor(object):
             (True, False, True): "Failed",
             (False, False, False): "Tasked",
             (False, True, False): "Canceling",
-        }[(self.cmd['complete'], self.cmd['cancelled'], self.cmd['errored'])]
+        }[(self.cmd["complete"], self.cmd["cancelled"], self.cmd["errored"])]
 
     @property
     def completed(self):
@@ -187,9 +192,9 @@ class CommandMonitor(object):
                 return None
 
         incomplete = []
-        for job_id in [_job_id(j_uri) for j_uri in self.cmd['jobs']]:
-            job = self.api.endpoints['job'].show(job_id)
-            if job['state'] != "complete":
+        for job_id in [_job_id(j_uri) for j_uri in self.cmd["jobs"]]:
+            job = self.api.endpoints["job"].show(job_id)
+            if job["state"] != "complete":
                 incomplete.append(int(job_id))
 
         return incomplete
@@ -258,6 +263,7 @@ class ApiHandle(object):
         full_url = urljoin(self.base_url, relative_url)
 
         from requests import ConnectionError
+
         method = getattr(self.api_client, method_name)
         try:
             r = method(full_url, data=data)
@@ -278,17 +284,16 @@ class ApiHandle(object):
             raise UnauthorizedRequest(decoded)
         elif r.status_code == 404:
             try:
-                raise NotFound(decoded['error_message'])
+                raise NotFound(decoded["error_message"])
             except (KeyError, TypeError):
                 raise NotFound("Not found (%s)" % decoded)
         elif r.status_code == 500:
             try:
-                raise InternalError(decoded['traceback'])
+                raise InternalError(decoded["traceback"])
             except KeyError:
                 raise InternalError("Unknown server error: %s" % decoded)
         else:
-            raise RuntimeError("status: %s, text: %s" % (r.status_code,
-                                                         r.content))
+            raise RuntimeError("status: %s, text: %s" % (r.status_code, r.content))
 
 
 class ApiEndpointGenerator(object):
@@ -298,6 +303,7 @@ class ApiEndpointGenerator(object):
 
     Doesn't implement the full dict API, so beware.
     """
+
     def __init__(self, api):
         self.api = api
         self.endpoints = {}
@@ -321,8 +327,7 @@ class ApiEndpointGenerator(object):
     def __getitem__(self, resource_name):
         if resource_name not in self.endpoints:
             if resource_name in self.api.schema:
-                self.endpoints[resource_name] = ApiEndpoint(self.api,
-                                                            resource_name)
+                self.endpoints[resource_name] = ApiEndpoint(self.api, resource_name)
             else:
                 raise InvalidApiResource(resource_name)
 
@@ -336,9 +341,9 @@ class ApiEndpoint(object):
         self.name = name
 
         import chroma_cli.api_resource
+
         try:
-            self.resource_klass = getattr(chroma_cli.api_resource,
-                                          self.resource_klass_name)
+            self.resource_klass = getattr(chroma_cli.api_resource, self.resource_klass_name)
         except AttributeError:
             # generic fallback
             self.resource_klass = chroma_cli.api_resource.ApiResource
@@ -350,27 +355,25 @@ class ApiEndpoint(object):
     @property
     def schema(self):
         if not self.__schema:
-            schema_url = self.api_handle.schema[self.name]['schema']
+            schema_url = self.api_handle.schema[self.name]["schema"]
             self.__schema = self.api_handle.send_and_decode("get", schema_url)
 
         return self.__schema
 
     @property
     def uri(self):
-        return self.api_handle.schema[self.name]['list_endpoint']
+        return self.api_handle.schema[self.name]["list_endpoint"]
 
     @property
     def fields(self):
-        return self.schema['fields']
+        return self.schema["fields"]
 
     def resolve_uri(self, query):
         try:
             # Slight hack here -- relies on the "name" field usually being
             # first in a reverse-sort in order to optimize for the most
             # common query.
-            for field, expressions in (
-                    sorted(self.schema['filtering'].iteritems(),
-                           key=lambda x: x[0], reverse=True)):
+            for field, expressions in sorted(self.schema["filtering"].iteritems(), key=lambda x: x[0], reverse=True):
                 for expression in expressions:
                     filter = "%s__%s" % (field, expression)
 
@@ -381,12 +384,14 @@ class ApiEndpoint(object):
 
                     if len(candidates) > 1:
                         if expression in ["startswith", "endswith"]:
-                            raise TooManyMatches("The query %s/%s matches more than one resource: %s" % (self.name, query, candidates))
+                            raise TooManyMatches(
+                                "The query %s/%s matches more than one resource: %s" % (self.name, query, candidates)
+                            )
                         else:
                             continue
 
                     try:
-                        '''
+                        """
                         We may have search on a filter with a reference such as host__fqdn. In this case the attribute will not exist a so
                         we have to search the nested dictionaries.
                         lc = {
@@ -395,17 +400,17 @@ class ApiEndpoint(object):
                              }
 
                          Will have it's value in candidates[0]['host']['fqdn']
-                        '''
+                        """
                         search_value = candidates[0].all_attributes
 
-                        for sub_field in field.split('__'):
-                            if type(search_value) != dict:      # We didn't get the keys correct so it is a KeyError
+                        for sub_field in field.split("__"):
+                            if type(search_value) != dict:  # We didn't get the keys correct so it is a KeyError
                                 raise KeyError
 
                             search_value = search_value[sub_field]
 
                         if query in str(search_value):
-                            return candidates[0]['resource_uri']
+                            return candidates[0]["resource_uri"]
                     except (IndexError, KeyError):
                         continue
         except KeyError:
@@ -429,7 +434,7 @@ class ApiEndpoint(object):
     def list(self, **data):
         resources = []
         try:
-            for object in self.get_decoded(**data)['objects']:
+            for object in self.get_decoded(**data)["objects"]:
                 resources.append(self.resource_klass(**object))
         except ValueError:
             pass
@@ -443,13 +448,10 @@ class ApiEndpoint(object):
         return self.api_handle.send_and_decode("post", self.uri, data=data)
 
     def delete(self, subject):
-        return self.api_handle.send_and_decode("delete",
-                                               self.resource_uri(subject))
+        return self.api_handle.send_and_decode("delete", self.resource_uri(subject))
 
     def update(self, subject, **data):
-        return self.api_handle.send_and_decode("put",
-                                               self.resource_uri(subject),
-                                               data=data)
+        return self.api_handle.send_and_decode("put", self.resource_uri(subject), data=data)
 
     def get(self, uri=None, **kwargs):
         """

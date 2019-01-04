@@ -8,6 +8,7 @@ import os
 
 try:
     from scm_version import VERSION, PACKAGE_VERSION, IS_RELEASE, BUILD
+
     __version__ = VERSION
     __package_version__ = PACKAGE_VERSION
     __build__ = BUILD
@@ -15,7 +16,7 @@ try:
 except ImportError:
     from pkginfo import UnpackedSDist
 
-    pkg = UnpackedSDist('.')
+    pkg = UnpackedSDist(".")
     __version__ = pkg.version
     __package_version__ = __version__
     __build__ = 1

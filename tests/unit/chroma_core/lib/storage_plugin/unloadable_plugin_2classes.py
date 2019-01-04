@@ -1,4 +1,3 @@
-
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
 version = 1

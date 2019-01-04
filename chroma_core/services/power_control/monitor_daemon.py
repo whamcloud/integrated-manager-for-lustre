@@ -12,7 +12,7 @@ from chroma_core.models import PowerControlDevice, PowerControlDeviceUnavailable
 from settings import DISABLE_POWER_CONTROL_DEVICE_MONITORING
 
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 # time, in seconds, between PDU monitor operations
 MONITORING_INTERVAL = 30
@@ -25,6 +25,7 @@ class PowerDeviceMonitor(threading.Thread):
     As a secondary duty, they handle asynchronous tasks for the manager:
     slowish, fiddly things like querying a PDU's outlet states, etc.
     """
+
     def __init__(self, device, power_control_manager):
         super(PowerDeviceMonitor, self).__init__()
         self.device = device
@@ -40,6 +41,7 @@ class PowerDeviceMonitor(threading.Thread):
             # HYD-1918: Refactor this kludgy mess so that these threads don't
             # get DB access and therefore don't need to clean up.
             import django.db
+
             if django.db.connection.connection:
                 django.db.connection.close()
 
@@ -57,7 +59,7 @@ class PowerDeviceMonitor(threading.Thread):
         except PowerControlDevice.DoesNotExist:
             log.error("Attempted to run %s on %s, but it no longer exists" % (task, self.device))
             self.stop()
-        except Exception, e:
+        except Exception as e:
             log.error("Caught and re-raising exception: %s" % traceback.format_exc())
             raise e
 
@@ -78,7 +80,9 @@ class PowerDeviceMonitor(threading.Thread):
             available = self._manager.check_device_availability(self.device)
             if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
                 PowerControlDeviceUnavailableAlert.notify(self.device, not available)
-            log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
+            log.debug(
+                "Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"]))
+            )
 
     def _run(self):
         log.info("Starting monitor for %s" % self.device)
@@ -93,7 +97,7 @@ class PowerDeviceMonitor(threading.Thread):
                 self._check_monitored_device()
 
             self._interval_ctr += 1
-            self._stopping.wait(timeout = 1)
+            self._stopping.wait(timeout=1)
 
     def stop(self):
         log.info("Stopping monitor for %s" % self.device)
@@ -108,8 +112,7 @@ class PowerMonitorDaemon(object):
         self.device_monitors = {}
 
         for sockaddr, device in self._manager.power_devices.items():
-            self.device_monitors[sockaddr] = PowerDeviceMonitor(device,
-                                                                self._manager)
+            self.device_monitors[sockaddr] = PowerDeviceMonitor(device, self._manager)
 
         log.info("Found %d power devices to monitor" % len(self.device_monitors))
 
@@ -123,8 +126,7 @@ class PowerMonitorDaemon(object):
             # Check for new devices to monitor, or dead threads. A thread
             # may suicide if the manager has enqueued a 'stop' task.
             for sockaddr, device in self._manager.power_devices.items():
-                if (sockaddr in self.device_monitors
-                        and not self.device_monitors[sockaddr].is_alive()):
+                if sockaddr in self.device_monitors and not self.device_monitors[sockaddr].is_alive():
                     log.warn("Monitor for %s:%s died, restarting" % sockaddr)
                 elif not sockaddr in self.device_monitors:
                     log.info("Found new power device: %s:%s" % sockaddr)
@@ -142,7 +144,7 @@ class PowerMonitorDaemon(object):
                     monitor.join()
                     del self.device_monitors[sockaddr]
 
-            self._stopping.wait(timeout = 1)
+            self._stopping.wait(timeout=1)
 
         for monitor in self.device_monitors.values():
             monitor.stop()

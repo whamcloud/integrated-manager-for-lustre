@@ -11,8 +11,7 @@ class HaCluster(object):
     @classmethod
     def all_clusters(cls):
         graph = Graph()
-        for edges in [[(h, p) for p in h.ha_cluster_peers.all()]
-                                    for h in ManagedHost.objects.all()]:
+        for edges in [[(h, p) for p in h.ha_cluster_peers.all()] for h in ManagedHost.objects.all()]:
             graph.add_edges_from(edges)
 
         clusters = []

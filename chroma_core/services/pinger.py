@@ -23,7 +23,7 @@ class PingServer(object):
 
 
 class PingServerRpcInterface(ServiceRpcInterface):
-    methods = ['ping', 'wait']
+    methods = ["ping", "wait"]
 
 
 class Service(ChromaService):

@@ -52,7 +52,7 @@ class TestVolumes(ChromaIntegrationTestCase):
         # Create a file system and then tear down the manager, then verify
         # after tear down that the volumes from the file system no longer
         # appear in the database. Repro of HYD-1143.
-        host_addresses = [h['address'] for h in config['lustre_servers'][:2]]
+        host_addresses = [h["address"] for h in config["lustre_servers"][:2]]
         hosts = self.add_hosts(host_addresses)
         self.configure_power_control(host_addresses)
 
@@ -61,27 +61,24 @@ class TestVolumes(ChromaIntegrationTestCase):
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
         ost_volume = volumes[2]
-        self.set_volume_mounts(mgt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
-        self.set_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(mgt_volume, hosts[0]["id"], hosts[1]["id"])
+        self.set_volume_mounts(mdt_volume, hosts[0]["id"], hosts[1]["id"])
+        self.set_volume_mounts(ost_volume, hosts[1]["id"], hosts[0]["id"])
 
-        self.create_filesystem(hosts,
-                               {'name': 'testfs',
-                                'mgt': {'volume_id': mgt_volume['id']},
-                                'mdts': [{
-                                    'volume_id': mdt_volume['id'],
-                                    'conf_params': {}}],
-                                'osts': [{
-                                    'volume_id': ost_volume['id'],
-                                    'conf_params': {}}],
-                                'conf_params': {}})
+        self.create_filesystem(
+            hosts,
+            {
+                "name": "testfs",
+                "mgt": {"volume_id": mgt_volume["id"]},
+                "mdts": [{"volume_id": mdt_volume["id"], "conf_params": {}}],
+                "osts": [{"volume_id": ost_volume["id"], "conf_params": {}}],
+                "conf_params": {},
+            },
+        )
 
         self.graceful_teardown(self.chroma_manager)
 
-        response = self.chroma_manager.get(
-            '/api/volume/',
-            params = {'limit': 0}
-        )
+        response = self.chroma_manager.get("/api/volume/", params={"limit": 0})
         self.assertTrue(response.successful, response.text)
-        volumes = response.json['objects']
+        volumes = response.json["objects"]
         self.assertEqual(0, len(volumes))

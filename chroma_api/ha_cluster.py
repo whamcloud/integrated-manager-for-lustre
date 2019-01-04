@@ -12,7 +12,7 @@ from chroma_core.models import HaCluster
 
 
 class HaClusterResource(Resource):
-    peers = fields.ListField(attribute = 'peers')
+    peers = fields.ListField(attribute="peers")
 
     def dehydrate_peers(self, bundle):
         hr = HostResource()
@@ -25,9 +25,9 @@ class HaClusterResource(Resource):
         return self.get_object_list(bundle.request)
 
     class Meta:
-        resource_name = 'ha_cluster'
+        resource_name = "ha_cluster"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        list_allowed_methods = ['get']
+        list_allowed_methods = ["get"]
         detail_allowed_methods = []
         include_resource_uri = False

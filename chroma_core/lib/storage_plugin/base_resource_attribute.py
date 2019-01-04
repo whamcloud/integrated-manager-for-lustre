@@ -19,12 +19,7 @@ class BaseResourceAttribute(object):
 
     model_class = StorageResourceAttributeSerialized
 
-    def __init__(self,
-                 optional=False,
-                 label=None,
-                 hidden=False,
-                 user_read_only=False,
-                 default=None):
+    def __init__(self, optional=False, label=None, hidden=False, user_read_only=False, default=None):
         """
         :param optional: If this is True, the attribute may be left unassigned (i.e. null).  Otherwise,
             a non-null value must be provided for all instances.
@@ -87,6 +82,7 @@ class BaseResourceAttribute(object):
 
     def to_markup(self, value):
         from django.utils.html import conditional_escape
+
         return conditional_escape(value)
 
     def cast(self, value):

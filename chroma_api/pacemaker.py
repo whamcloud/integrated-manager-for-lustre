@@ -32,15 +32,14 @@ class PacemakerConfigurationResource(StatefulModelResource, BulkResourceOperatio
     """
     LNetConfiguration information.
     """
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=False)
+
+    host = fields.ToOneField("chroma_api.host.HostResource", "host", full=False)
 
     class Meta:
         queryset = PacemakerConfiguration.objects.all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        resource_name = 'pacemaker_configuration'
-        list_allowed_methods = ['get', 'put']
-        detail_allowed_methods = ['get', 'put']
-        filtering = {'host': ALL_WITH_RELATIONS,
-                     'id': ['exact'],
-                     'host__fqdn': ['exact', 'startswith']}
+        resource_name = "pacemaker_configuration"
+        list_allowed_methods = ["get", "put"]
+        detail_allowed_methods = ["get", "put"]
+        filtering = {"host": ALL_WITH_RELATIONS, "id": ["exact"], "host__fqdn": ["exact", "startswith"]}

@@ -8,14 +8,27 @@ from chroma_api.log import LogResource
 from chroma_api.target import TargetResource
 from chroma_api.volume import VolumeResource
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import LogMessage, ManagedHost, LNetConfiguration, VolumeNode, Volume, ManagedFilesystem, ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst, CorosyncConfiguration
+from chroma_core.models import (
+    LogMessage,
+    ManagedHost,
+    LNetConfiguration,
+    VolumeNode,
+    Volume,
+    ManagedFilesystem,
+    ManagedTarget,
+    ManagedTargetMount,
+    ManagedMgs,
+    ManagedMdt,
+    ManagedOst,
+    CorosyncConfiguration,
+)
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import fake_log_message, synthetic_volume
 
 
-Order1 = namedtuple('Order1', ['query_count'])
-OrderN = namedtuple('OrderN', ['queries_per_object'])
-OrderBad = namedtuple('OrderBad', [])
+Order1 = namedtuple("Order1", ["query_count"])
+OrderN = namedtuple("OrderN", ["queries_per_object"])
+OrderBad = namedtuple("OrderBad", [])
 
 
 # These are tripwires: if you change the chroma_api behaviour such
@@ -49,13 +62,16 @@ class TestQueryScaling(ChromaApiTestCase):
         # Reset storage_plugin_manager (needed because of the DB rollback between tests
         # getting its record of resource classes out of sync with the DB)
         import chroma_core.lib.storage_plugin.manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = (
+            chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        )
 
     def tearDown(self):
         super(TestQueryScaling, self).tearDown()
         connection.use_debug_cursor = False
 
-    def _measure_scaling(self, create_n, measured_resource, scaled_resource = None):
+    def _measure_scaling(self, create_n, measured_resource, scaled_resource=None):
         """
 
         :param create_n: Function to create N of scaled_resource
@@ -73,11 +89,13 @@ class TestQueryScaling(ChromaApiTestCase):
             create_n(n)
             # Queries get reset at the start of a request
             self.assertEqual(scaled_resource._meta.queryset.count(), n)
-            response = self.api_client.get("/api/%s/" % measured_resource._meta.resource_name, data = {'limit': 0})
-            self.assertEqual(response.status_code, 200, "%s:%s" % (response.content, measured_resource._meta.resource_name))
+            response = self.api_client.get("/api/%s/" % measured_resource._meta.resource_name, data={"limit": 0})
+            self.assertEqual(
+                response.status_code, 200, "%s:%s" % (response.content, measured_resource._meta.resource_name)
+            )
             query_count = len(connection.queries)
 
-            self.assertEqual(len(self.deserialize(response)['objects']), measured_resource._meta.queryset.count())
+            self.assertEqual(len(self.deserialize(response)["objects"]), measured_resource._meta.queryset.count())
             query_counts[n] = query_count
 
         # Ignore samples[0], it was just to clear out any setup overhead from first call to API
@@ -125,42 +143,42 @@ class TestQueryScaling(ChromaApiTestCase):
 
     def _create_n_hosts(self, n):
         LNetConfiguration.objects.all().delete()
-        ManagedHost.objects.update(not_deleted = None)
+        ManagedHost.objects.update(not_deleted=None)
 
         for i in range(0, n):
             hostname = "fakehost_%.3d" % i
 
-            host = ManagedHost.objects.create(fqdn = hostname, nodename = hostname, address = hostname)
-            LNetConfiguration.objects.get_or_create(host = host)
+            host = ManagedHost.objects.create(fqdn=hostname, nodename=hostname, address=hostname)
+            LNetConfiguration.objects.get_or_create(host=host)
             CorosyncConfiguration.objects.get_or_create(host=host)
 
     def _create_san_volumes(self, n_servers, n_volumes):
         """SAN-like volume configuration with each volume connected to all servers"""
         self._create_n_hosts(n_servers)
-        VolumeNode.objects.update(not_deleted = None)
-        Volume.objects.update(not_deleted = None)
+        VolumeNode.objects.update(not_deleted=None)
+        Volume.objects.update(not_deleted=None)
 
         for i in range(0, n_volumes):
             volume = synthetic_volume()
             path = "/dev/volume_%s" % volume.id
             for i, host in enumerate(ManagedHost.objects.all()):
-                primary = (i == 0)
-                VolumeNode.objects.create(volume = volume, host = host, path = path, primary = primary)
+                primary = i == 0
+                VolumeNode.objects.create(volume=volume, host=host, path=path, primary=primary)
 
     def _create_n_volumes_host_pairs(self, n_volumes):
         """SCSI-like volume configuration with each volume connected to two servers"""
         self._create_n_hosts(n_volumes / 2)
-        VolumeNode.objects.update(not_deleted = None)
-        Volume.objects.update(not_deleted = None)
+        VolumeNode.objects.update(not_deleted=None)
+        Volume.objects.update(not_deleted=None)
 
         for i in range(0, n_volumes):
             volume = synthetic_volume()
-            host_1 = ManagedHost.objects.get(fqdn = "fakehost_%.3d" % ((i / 2) % (n_volumes / 2)))
-            host_2 = ManagedHost.objects.get(fqdn = "fakehost_%.3d" % ((i / 2 + 1) % (n_volumes / 2)))
+            host_1 = ManagedHost.objects.get(fqdn="fakehost_%.3d" % ((i / 2) % (n_volumes / 2)))
+            host_2 = ManagedHost.objects.get(fqdn="fakehost_%.3d" % ((i / 2 + 1) % (n_volumes / 2)))
             assert host_1 != host_2
             path = "/dev/volume_%s" % volume.id
-            VolumeNode.objects.create(volume = volume, host = host_1, path = path, primary = True)
-            VolumeNode.objects.create(volume = volume, host = host_2, path = path, primary = False)
+            VolumeNode.objects.create(volume=volume, host=host_1, path=path, primary=True)
+            VolumeNode.objects.create(volume=volume, host=host_2, path=path, primary=False)
 
     def test_volumes(self):
         # Creating N volumes with a fixed number of volumes visible to each host
@@ -173,6 +191,7 @@ class TestQueryScaling(ChromaApiTestCase):
 
         def create_n_volumes_fixed_hosts(N):
             self._create_san_volumes(fixed_host_count, N)
+
         fixed_hosts_scaling = self._measure_scaling(create_n_volumes_fixed_hosts, VolumeResource)
         self.assertIsInstance(fixed_hosts_scaling, OrderN)
         self.assertEqual(fixed_hosts_scaling.queries_per_object, QUERIES_PER_VOLUME_HOST)
@@ -180,6 +199,7 @@ class TestQueryScaling(ChromaApiTestCase):
         # Creating N volumes with a proportional number of hosts, with all volumes visible to all hosts
         def create_n_volumes_proportional_hosts(N):
             self._create_san_volumes(N, N)
+
         proportional_hosts_scaling = self._measure_scaling(create_n_volumes_proportional_hosts, VolumeResource)
         self.assertIsInstance(proportional_hosts_scaling, OrderN)
         self.assertEqual(proportional_hosts_scaling.queries_per_object, QUERIES_PER_VOLUME_HOST)
@@ -189,29 +209,37 @@ class TestQueryScaling(ChromaApiTestCase):
 
         def create_n_hosts_fixed_volumes(N):
             self._create_san_volumes(N, fixed_volume_count)
+
         scaling_with_hosts = self._measure_scaling(create_n_hosts_fixed_volumes, VolumeResource, HostResource)
 
         self.assertIsInstance(scaling_with_hosts, Order1)
-        self.assertEqual(scaling_with_hosts.query_count, PAGING_AND_AUTH_QUERIES + QUERIES_PER_VOLUME + (fixed_volume_count * QUERIES_PER_VOLUME_HOST))
+        self.assertEqual(
+            scaling_with_hosts.query_count,
+            PAGING_AND_AUTH_QUERIES + QUERIES_PER_VOLUME + (fixed_volume_count * QUERIES_PER_VOLUME_HOST),
+        )
 
     def _create_filesystem_n_osts(self, n_targets):
         assert n_targets >= 3
-        ManagedFilesystem.objects.update(not_deleted = None)
-        ManagedTarget.objects.update(not_deleted = None)
-        ManagedTargetMount.objects.update(not_deleted = None)
+        ManagedFilesystem.objects.update(not_deleted=None)
+        ManagedTarget.objects.update(not_deleted=None)
+        ManagedTargetMount.objects.update(not_deleted=None)
         self._create_n_volumes_host_pairs(n_targets)
-        assert(ManagedTarget.objects.count() == 0)
+        assert ManagedTarget.objects.count() == 0
 
         fs = None
         for i, volume in enumerate(Volume.objects.all()):
             if i == 0:
                 mgt, mounts = ManagedMgs.create_for_volume(volume.id)
-                fs = ManagedFilesystem.objects.create(name = 'foo', mgs = mgt)
+                fs = ManagedFilesystem.objects.create(name="foo", mgs=mgt)
                 ObjectCache.add(ManagedFilesystem, fs)
             elif i == 1:
-                ObjectCache.add(ManagedTarget, ManagedMdt.create_for_volume(volume.id, filesystem = fs)[0].managedtarget_ptr)
+                ObjectCache.add(
+                    ManagedTarget, ManagedMdt.create_for_volume(volume.id, filesystem=fs)[0].managedtarget_ptr
+                )
             else:
-                ObjectCache.add(ManagedTarget, ManagedOst.create_for_volume(volume.id, filesystem = fs)[0].managedtarget_ptr)
+                ObjectCache.add(
+                    ManagedTarget, ManagedOst.create_for_volume(volume.id, filesystem=fs)[0].managedtarget_ptr
+                )
 
     def test_filesystem_targets(self):
         target_scaling = self._measure_scaling(self._create_filesystem_n_osts, TargetResource, TargetResource)

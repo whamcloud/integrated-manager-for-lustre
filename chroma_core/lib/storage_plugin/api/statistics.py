@@ -26,11 +26,12 @@ class BytesHistogram(BaseStatistic):
                  to represent "this value or higher".
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         e.g. bins=[(0, 256), (257, 512), (513, 2048), (2049, 4096), (4097,)]
         """
-        self.bins = kwargs.pop('bins')
+        self.bins = kwargs.pop("bins")
 
         super(BytesHistogram, self).__init__(*args, **kwargs)
 

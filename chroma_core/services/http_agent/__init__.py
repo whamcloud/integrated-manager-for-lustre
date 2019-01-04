@@ -26,7 +26,7 @@ log = log_register(__name__)
 
 
 class HttpAgentRpc(ServiceRpcInterface):
-    methods = ['reset_session', 'remove_host', 'reset_plugin_sessions']
+    methods = ["reset_session", "remove_host", "reset_plugin_sessions"]
 
 
 # TODO: interesting tests:
@@ -52,10 +52,10 @@ class Service(ChromaService):
         self.hosts.remove_host(fqdn)
 
         with transaction.commit_on_success():
-            for cert in ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False):
+            for cert in ClientCertificate.objects.filter(host__fqdn=fqdn, revoked=False):
                 log.info("Revoking %s:%s" % (fqdn, cert.serial))
                 self.valid_certs.pop(cert.serial, None)
-            ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False).update(revoked = True)
+            ClientCertificate.objects.filter(host__fqdn=fqdn, revoked=False).update(revoked=True)
 
         # TODO: ensure there are no GETs left in progress after this completes
         # TODO: drain plugin_rx_queue so that anything we will send to AMQP has been sent before this returns
@@ -66,7 +66,7 @@ class Service(ChromaService):
         self.queues = HostQueueCollection()
         self.sessions = SessionCollection(self.queues)
         self.hosts = HostStateCollection()
-        self.valid_certs = dict(ClientCertificate.objects.filter(revoked=False).values_list('serial', 'host__fqdn'))
+        self.valid_certs = dict(ClientCertificate.objects.filter(revoked=False).values_list("serial", "host__fqdn"))
 
     def run(self):
         super(Service, self).run()
@@ -90,15 +90,17 @@ class Service(ChromaService):
         # At restart, message receiving services to clear out any
         # existing session state (from a previous instance of this
         # service).
-        for plugin in ['action_runner']:
-            self.queues.receive({
-                'fqdn': None,
-                'type': 'SESSION_TERMINATE_ALL',
-                'plugin': plugin,
-                'session_id': None,
-                'session_seq': None,
-                'body': None
-            })
+        for plugin in ["action_runner"]:
+            self.queues.receive(
+                {
+                    "fqdn": None,
+                    "type": "SESSION_TERMINATE_ALL",
+                    "plugin": plugin,
+                    "session_id": None,
+                    "session_seq": None,
+                    "body": None,
+                }
+            )
 
         # This thread services session management RPCs, so that other
         # services can explicitly request a session reset
@@ -117,7 +119,7 @@ class Service(ChromaService):
 
         # The main thread serves incoming requests to exchanges messages
         # with agents, until it is interrupted (gevent handles signals for us)
-        self.server = wsgi.WSGIServer(('', HTTP_AGENT_PORT), WSGIHandler())
+        self.server = wsgi.WSGIServer(("", HTTP_AGENT_PORT), WSGIHandler())
         self.server.serve_forever()
 
         session_rpc_thread.stop()

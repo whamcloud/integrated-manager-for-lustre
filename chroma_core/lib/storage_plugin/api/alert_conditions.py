@@ -11,7 +11,7 @@ from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
 class BoundCondition(AlertCondition):
     upper = None
 
-    def __init__(self, attribute, error_bound = None, warn_bound = None, info_bound = None, message = None, *args, **kwargs):
+    def __init__(self, attribute, error_bound=None, warn_bound=None, info_bound=None, message=None, *args, **kwargs):
         self.error_bound = error_bound
         self.warn_bound = warn_bound
         self.info_bound = info_bound
@@ -24,7 +24,7 @@ class BoundCondition(AlertCondition):
         bound_sev = [
             (self.error_bound, logging.ERROR),
             (self.warn_bound, logging.WARNING),
-            (self.info_bound, logging.INFO)
+            (self.info_bound, logging.INFO),
         ]
         for bound, sev in bound_sev:
             if bound == None:
@@ -40,7 +40,7 @@ class BoundCondition(AlertCondition):
         bound_sev = [
             (self.error_bound, logging.ERROR),
             (self.warn_bound, logging.WARNING),
-            (self.info_bound, logging.INFO)
+            (self.info_bound, logging.INFO),
         ]
         for bound, sev in bound_sev:
             if bound == None:
@@ -63,6 +63,7 @@ class UpperBoundCondition(BoundCondition):
 
         UpperBoundCondition('temperature', error_bound = 85, message = "Maximum operating temperature exceeded")
     """
+
     upper = True
 
 
@@ -73,6 +74,7 @@ class LowerBoundCondition(BoundCondition):
 
         LowerBoundCondition('rate', error_bound = 10, message = "Rate too low")
     """
+
     upper = False
 
 
@@ -85,7 +87,16 @@ class ValueCondition(AlertCondition):
 
         AttrValAlertCondition('status', error_states = ['FAILED'], message = "Widget failed")"""
 
-    def __init__(self, attribute, error_states = list([]), warn_states = list([]), info_states = list([]), message = None, *args, **kwargs):
+    def __init__(
+        self,
+        attribute,
+        error_states=list([]),
+        warn_states=list([]),
+        info_states=list([]),
+        message=None,
+        *args,
+        **kwargs
+    ):
         self.error_states = error_states
         self.warn_states = warn_states
         self.info_states = info_states
@@ -96,10 +107,10 @@ class ValueCondition(AlertCondition):
     def alert_classes(self):
         result = []
         states_sev = [
-                (self.error_states, logging.ERROR),
-                (self.warn_states, logging.WARNING),
-                (self.info_states, logging.INFO)
-                ]
+            (self.error_states, logging.ERROR),
+            (self.warn_states, logging.WARNING),
+            (self.info_states, logging.INFO),
+        ]
         for states, sev in states_sev:
             if len(states) == 0:
                 continue
@@ -112,10 +123,10 @@ class ValueCondition(AlertCondition):
     def test(self, resource):
         result = []
         states_sev = [
-                (self.error_states, logging.ERROR),
-                (self.warn_states, logging.WARNING),
-                (self.info_states, logging.INFO)
-                ]
+            (self.error_states, logging.ERROR),
+            (self.warn_states, logging.WARNING),
+            (self.info_states, logging.INFO),
+        ]
         for states, sev in states_sev:
             if len(states) == 0:
                 continue

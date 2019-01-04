@@ -12,13 +12,14 @@ log = log_register(__name__)
 
 
 class PowerControlQueue(ServiceQueue):
-    name = 'power_control'
+    name = "power_control"
 
 
 class PowerControlRpc(ServiceRpcInterface):
-    methods = ['register_device',
-               'unregister_device',
-               'reregister_device',
-               'query_device_outlets',
-               'toggle_device_outlets'
-              ]
+    methods = [
+        "register_device",
+        "unregister_device",
+        "reregister_device",
+        "query_device_outlets",
+        "toggle_device_outlets",
+    ]

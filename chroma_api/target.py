@@ -28,9 +28,7 @@ from chroma_api.validation_utils import validate
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
-KIND_TO_KLASS = {"MGT": ManagedMgs,
-            "OST": ManagedOst,
-            "MDT": ManagedMdt}
+KIND_TO_KLASS = {"MGT": ManagedMgs, "OST": ManagedOst, "MDT": ManagedMdt}
 KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
@@ -39,53 +37,61 @@ class TargetValidation(Validation):
     def _validate_post(self, bundle, request):
         errors = defaultdict(list)
 
-        for mandatory_field in ['kind', 'volume_id']:
+        for mandatory_field in ["kind", "volume_id"]:
             if mandatory_field not in bundle.data or bundle.data[mandatory_field] == None:
                 errors[mandatory_field].append("This field is mandatory")
 
         if errors:
             return errors
 
-        volume_id = bundle.data['volume_id']
+        volume_id = bundle.data["volume_id"]
         try:
-            volume = Volume.objects.get(id = volume_id)
+            volume = Volume.objects.get(id=volume_id)
         except Volume.DoesNotExist:
-            errors['volume_id'].append("Volume %s not found" % volume_id)
+            errors["volume_id"].append("Volume %s not found" % volume_id)
         else:
-            if ManagedTarget.objects.filter(volume = volume).count():
-                errors['volume_id'].append("Volume %s in use" % volume_id)
+            if ManagedTarget.objects.filter(volume=volume).count():
+                errors["volume_id"].append("Volume %s in use" % volume_id)
 
-        kind = bundle.data['kind']
+        kind = bundle.data["kind"]
         if not kind in KIND_TO_KLASS:
-            errors['kind'].append("Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys())))
+            errors["kind"].append(
+                "Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys()))
+            )
         else:
             if issubclass(KIND_TO_KLASS[kind], FilesystemMember):
-                if not 'filesystem_id' in bundle.data:
-                    errors['filesystem_id'].append("Mandatory for targets of kind '%s'" % kind)
+                if not "filesystem_id" in bundle.data:
+                    errors["filesystem_id"].append("Mandatory for targets of kind '%s'" % kind)
                 else:
-                    filesystem_id = bundle.data['filesystem_id']
+                    filesystem_id = bundle.data["filesystem_id"]
                     try:
-                        filesystem = ManagedFilesystem.objects.get(id = filesystem_id)
+                        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
                     except ManagedFilesystem.DoesNotExist:
-                        errors['filesystem_id'].append("Filesystem %s not found" % filesystem_id)
+                        errors["filesystem_id"].append("Filesystem %s not found" % filesystem_id)
                     else:
                         if filesystem.immutable_state:
-                            errors['filesystem_id'].append("Filesystem %s is unmanaged" % filesystem.name)
+                            errors["filesystem_id"].append("Filesystem %s is unmanaged" % filesystem.name)
 
             if KIND_TO_KLASS[kind] == ManagedMgs:
-                mgt_volume = Volume.objects.get(id = volume_id)
-                hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]
-                conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
+                mgt_volume = Volume.objects.get(id=volume_id)
+                hosts = [vn.host for vn in VolumeNode.objects.filter(volume=mgt_volume, use=True)]
+                conflicting_mgs_count = ManagedTarget.objects.filter(
+                    ~Q(managedmgs=None), managedtargetmount__host__in=hosts
+                ).count()
                 if conflicting_mgs_count > 0:
-                    errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
+                    errors["mgt"].append(
+                        "Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label
+                    )
 
-                if 'filesystem_id' in bundle.data:
-                    bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGT")
+                if "filesystem_id" in bundle.data:
+                    bundle.data_errors["filesystem_id"].append("Cannot specify filesystem_id when creating MGT")
 
-            if 'conf_params' in bundle.data:
-                conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(KIND_TO_KLASS[kind], bundle.data['conf_params'])
+            if "conf_params" in bundle.data:
+                conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(
+                    KIND_TO_KLASS[kind], bundle.data["conf_params"]
+                )
                 if conf_param_errors:
-                    errors['conf_params'] = conf_param_errors
+                    errors["conf_params"] = conf_param_errors
 
         try:
             errors.update(bundle.data_errors)
@@ -96,29 +102,31 @@ class TargetValidation(Validation):
 
     def _validate_put(self, bundle, request):
         errors = defaultdict(list)
-        if 'conf_params' in bundle.data and bundle.data['conf_params'] is not None:
+        if "conf_params" in bundle.data and bundle.data["conf_params"] is not None:
             try:
-                target_klass = KIND_TO_KLASS[bundle.data['kind']]
+                target_klass = KIND_TO_KLASS[bundle.data["kind"]]
             except KeyError:
-                errors['kind'].append('Must be one of %s' % KIND_TO_KLASS.keys())
+                errors["kind"].append("Must be one of %s" % KIND_TO_KLASS.keys())
             else:
                 try:
-                    target = target_klass.objects.get(pk = bundle.data['id'])
+                    target = target_klass.objects.get(pk=bundle.data["id"])
                 except KeyError:
-                    errors['id'].append('Field is mandatory')
+                    errors["id"].append("Field is mandatory")
                 except target_klass.DoesNotExist:
-                    errors['id'].append('No %s with ID %s found' % (target_klass.__name__, bundle.data['id']))
+                    errors["id"].append("No %s with ID %s found" % (target_klass.__name__, bundle.data["id"]))
                 else:
 
                     if target.immutable_state:
                         # Check that the conf params are unmodified
                         existing_conf_params = chroma_core.lib.conf_param.get_conf_params(target)
-                        if not chroma_core.lib.conf_param.compare(existing_conf_params, bundle.data['conf_params']):
-                            errors['conf_params'].append("Cannot modify conf_params on immutable_state objects")
+                        if not chroma_core.lib.conf_param.compare(existing_conf_params, bundle.data["conf_params"]):
+                            errors["conf_params"].append("Cannot modify conf_params on immutable_state objects")
                     else:
-                        conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(target_klass, bundle.data['conf_params'])
+                        conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(
+                            target_klass, bundle.data["conf_params"]
+                        )
                         if conf_param_errors:
-                            errors['conf_params'] = conf_param_errors
+                            errors["conf_params"] = conf_param_errors
         return errors
 
     def is_valid(self, bundle, request=None):
@@ -151,41 +159,72 @@ class TargetResource(MetricResource, ConfParamResource):
         }
 
     """
-    filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of file systems\
-            belonging to this MGT.  Null for other targets.")
-    filesystem = fields.CharField('chroma_api.filesystem.FilesystemResource', 'filesystem',
-        help_text = "For OSTs and MDTs, the owning file system.  Null for MGTs.", null = True)
-    filesystem_id = fields.IntegerField(help_text = "For OSTs and MDTs, the ``id`` attribute of\
-            the owning file system.  Null for MGTs.", null = True)
-    filesystem_name = fields.CharField(help_text = "For OSTs and MDTs, the ``name`` attribute \
-            of the owning file system.  Null for MGTs.")
 
-    kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
+    filesystems = fields.ListField(
+        null=True,
+        help_text="For MGTs, the list of file systems\
+            belonging to this MGT.  Null for other targets.",
+    )
+    filesystem = fields.CharField(
+        "chroma_api.filesystem.FilesystemResource",
+        "filesystem",
+        help_text="For OSTs and MDTs, the owning file system.  Null for MGTs.",
+        null=True,
+    )
+    filesystem_id = fields.IntegerField(
+        help_text="For OSTs and MDTs, the ``id`` attribute of\
+            the owning file system.  Null for MGTs.",
+        null=True,
+    )
+    filesystem_name = fields.CharField(
+        help_text="For OSTs and MDTs, the ``name`` attribute \
+            of the owning file system.  Null for MGTs."
+    )
 
-    index = fields.IntegerField(help_text = "Index of the target", null = True)
+    kind = fields.CharField(help_text="Type of target, one of %s" % KIND_TO_KLASS.keys())
 
-    volume_name = fields.CharField(attribute = 'volume__label',
-            help_text = "The ``label`` attribute of the volume on which this target exists")
+    index = fields.IntegerField(help_text="Index of the target", null=True)
 
-    primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host', full=False)
-    primary_server_name = fields.CharField(help_text = "Human\
-            readable label for the primary server for this target")
+    volume_name = fields.CharField(
+        attribute="volume__label", help_text="The ``label`` attribute of the volume on which this target exists"
+    )
+
+    primary_server = fields.ToOneField("chroma_api.host.HostResource", "primary_host", full=False)
+    primary_server_name = fields.CharField(
+        help_text="Human\
+            readable label for the primary server for this target"
+    )
     failover_servers = fields.ListField(null=True)
-    failover_server_name = fields.CharField(help_text = "Human\
-            readable label for the secondary server for this target")
+    failover_server_name = fields.CharField(
+        help_text="Human\
+            readable label for the secondary server for this target"
+    )
 
-    active_host_name = fields.CharField(help_text = "Human \
-        readable label for the host on which this target is currently started")
-    active_host = fields.ToOneField('chroma_api.host.HostResource', 'active_host',
-        null = True, help_text = "The server on which this target is currently started, or null if "
-                                 "the target is not currently started")
+    active_host_name = fields.CharField(
+        help_text="Human \
+        readable label for the host on which this target is currently started"
+    )
+    active_host = fields.ToOneField(
+        "chroma_api.host.HostResource",
+        "active_host",
+        null=True,
+        help_text="The server on which this target is currently started, or null if "
+        "the target is not currently started",
+    )
 
-    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'full_volume', full = True, help_text = "\
-                             The volume on which this target is stored.")
+    volume = fields.ToOneField(
+        "chroma_api.volume.VolumeResource",
+        "full_volume",
+        full=True,
+        help_text="\
+                             The volume on which this target is stored.",
+    )
 
     def content_type_id_to_kind(self, id):
-        if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):
-            self.CONTENT_TYPE_ID_TO_KIND = dict([(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()])
+        if not hasattr(self, "CONTENT_TYPE_ID_TO_KIND"):
+            self.CONTENT_TYPE_ID_TO_KIND = dict(
+                [(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()]
+            )
 
         return self.CONTENT_TYPE_ID_TO_KIND[id]
 
@@ -204,35 +243,55 @@ class TargetResource(MetricResource, ConfParamResource):
         # ManagedTarget is a Polymorphic Model which gets related
         # to content_type in the __metaclass__
         queryset = ManagedTarget.objects.select_related(
-            'content_type', 'volume',
-            'volume__storage_resource__resource_class',
-            'volume__storage_resource__resource_class__storage_plugin',
-            'managedost', 'managedmdt', 'managedmgs').prefetch_related(
-            'managedtargetmount_set', 'managedtargetmount_set__host',
-            'managedtargetmount_set__host__lnet_configuration')
-        resource_name = 'target'
-        excludes = ['not_deleted', 'bytes_per_inode', 'reformat']
-        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'host_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
+            "content_type",
+            "volume",
+            "volume__storage_resource__resource_class",
+            "volume__storage_resource__resource_class__storage_plugin",
+            "managedost",
+            "managedmdt",
+            "managedmgs",
+        ).prefetch_related(
+            "managedtargetmount_set", "managedtargetmount_set__host", "managedtargetmount_set__host__lnet_configuration"
+        )
+        resource_name = "target"
+        excludes = ["not_deleted", "bytes_per_inode", "reformat"]
+        filtering = {
+            "kind": ["exact"],
+            "filesystem_id": ["exact"],
+            "host_id": ["exact"],
+            "id": ["exact", "in"],
+            "immutable_state": ["exact"],
+            "name": ["exact"],
+        }
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['volume_name', 'name']
-        list_allowed_methods = ['get', 'post', 'patch']
-        detail_allowed_methods = ['get', 'put', 'delete']
+        ordering = ["volume_name", "name"]
+        list_allowed_methods = ["get", "post", "patch"]
+        detail_allowed_methods = ["get", "put", "delete"]
         validation = TargetValidation()
         always_return_data = True
-        readonly = ['active_host', 'failover_server_name', 'volume_name',
-                    'primary_server_name', 'active_host_name', 'filesystems',
-                    'name', 'uuid', 'primary_server', 'failover_servers',
-                    'active_host_name', 'ha_label', 'filesystem_name',
-                    'filesystem_id']
-
+        readonly = [
+            "active_host",
+            "failover_server_name",
+            "volume_name",
+            "primary_server_name",
+            "active_host_name",
+            "filesystems",
+            "name",
+            "uuid",
+            "primary_server",
+            "failover_servers",
+            "active_host_name",
+            "ha_label",
+            "filesystem_name",
+            "filesystem_id",
+        ]
 
     def dehydrate_filesystems(self, bundle):
         #  Limit this to one db hit per mgs, caching might help
         target = bundle.obj.downcast()
         if type(target) == ManagedMgs:
-            return [{'id': fs.id, 'name': fs.name} for fs in
-                    bundle.obj.managedmgs.managedfilesystem_set.all()]
+            return [{"id": fs.id, "name": fs.name} for fs in bundle.obj.managedmgs.managedfilesystem_set.all()]
         else:
             return None
 
@@ -250,7 +309,7 @@ class TargetResource(MetricResource, ConfParamResource):
     def dehydrate_filesystem_id(self, bundle):
 
         #  The ID is free - no db hit
-        return getattr(bundle.obj.downcast(), 'filesystem_id', None)
+        return getattr(bundle.obj.downcast(), "filesystem_id", None)
 
     def _init_cached_fs(self):
 
@@ -270,7 +329,7 @@ class TargetResource(MetricResource, ConfParamResource):
         #  So this lookup is free accept for initial ManageFilesystem lookup
         managed_target = bundle.obj.downcast()
         if managed_target.filesystem_member:
-            val = getattr(managed_target, 'filesystem_id', None)
+            val = getattr(managed_target, "filesystem_id", None)
             if val not in self._fs_cache:
                 #  Only DB hit in this method.
                 self._fs_cache[val] = managed_target.filesystem
@@ -303,6 +362,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
     def dehydrate_failover_servers(self, bundle):
         from chroma_api.urls import api
+
         return [api.get_resource_uri(host) for host in bundle.obj.failover_hosts]
 
     def dehydrate_failover_server_name(self, bundle):
@@ -320,26 +380,27 @@ class TargetResource(MetricResource, ConfParamResource):
     def dehydrate_active_host_uri(self, bundle):
         if bundle.obj.active_mount:
             from chroma_api.host import HostResource
+
             return HostResource().get_resource_uri(bundle.obj.active_mount.host)
         else:
             return None
 
-    def build_filters(self, filters = None):
+    def build_filters(self, filters=None):
         """Override this to convert a 'kind' argument into a DB field which exists"""
         custom_filters = {}
         for key, val in filters.items():
-            if key == 'kind':
+            if key == "kind":
                 del filters[key]
                 try:
-                    custom_filters['content_type__model'] = KIND_TO_MODEL_NAME[val.upper()]
+                    custom_filters["content_type__model"] = KIND_TO_MODEL_NAME[val.upper()]
                 except KeyError:
                     # Don't want to just pass this because it will
                     # potentially remove all filters and make this a list
                     # operation.
-                    custom_filters['content_type__model'] = None
-            elif key == 'host_id':
+                    custom_filters["content_type__model"] = None
+            elif key == "host_id":
                 del filters[key]
-            elif key == 'filesystem_id':
+            elif key == "filesystem_id":
                 # Remove filesystem_id as we
                 # do a custom query generation for it in apply_filters
                 del filters[key]
@@ -348,27 +409,32 @@ class TargetResource(MetricResource, ConfParamResource):
         filters.update(custom_filters)
         return filters
 
-    def apply_filters(self, request, filters = None):
+    def apply_filters(self, request, filters=None):
         """Override this to build a filesystem filter using Q expressions (not
            possible from build_filters because it only deals with kwargs to filter())"""
         objects = super(TargetResource, self).apply_filters(request, filters)
         try:
             try:
-                fs = ManagedFilesystem.objects.get(pk=request.GET['filesystem_id'])
+                fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])
             except ManagedFilesystem.DoesNotExist:
-                objects = objects.filter(id=-1)                       # No filesystem so we want to produce an empty list.
+                objects = objects.filter(id=-1)  # No filesystem so we want to produce an empty list.
             else:
-                objects = objects.filter((Q(managedmdt__filesystem=fs) | Q(managedost__filesystem=fs)) | Q(id=fs.mgs.id))
+                objects = objects.filter(
+                    (Q(managedmdt__filesystem=fs) | Q(managedost__filesystem=fs)) | Q(id=fs.mgs.id)
+                )
         except KeyError:
             # Not filtering on filesystem_id
             pass
 
         try:
             try:
-                objects = objects.filter(Q(managedtargetmount__primary = request.GET['primary']) & Q(managedtargetmount__host__id = request.GET['host_id']))
+                objects = objects.filter(
+                    Q(managedtargetmount__primary=request.GET["primary"])
+                    & Q(managedtargetmount__host__id=request.GET["host_id"])
+                )
             except KeyError:
                 # Not filtering on primary, try just host_id
-                objects = objects.filter(Q(managedtargetmount__host__id = request.GET['host_id']))
+                objects = objects.filter(Q(managedtargetmount__host__id=request.GET["host_id"]))
         except KeyError:
             # Not filtering on host_id
             pass
@@ -380,34 +446,41 @@ class TargetResource(MetricResource, ConfParamResource):
         Specialization of patch_list to do bulk target creation in a single RPC to job_scheduler (and
         consequently in a single command).
         """
-        deserialized = self.deserialize(request, request.raw_post_data, format=request.META.get('CONTENT_TYPE', 'application/json'))
+        deserialized = self.deserialize(
+            request, request.raw_post_data, format=request.META.get("CONTENT_TYPE", "application/json")
+        )
 
         if "objects" not in deserialized:
             raise BadRequest("Invalid data sent.")
 
-        if len(deserialized["objects"]) and 'put' not in self._meta.detail_allowed_methods:
+        if len(deserialized["objects"]) and "put" not in self._meta.detail_allowed_methods:
             raise ImmediateHttpResponse(response=http.HttpMethodNotAllowed())
 
         # If any of the included targets is not a creation, then
         # skip to a normal PATCH instead of this special case one
-        for target_data in deserialized['objects']:
-            if 'id' in target_data or 'resource_uri' in target_data:
+        for target_data in deserialized["objects"]:
+            if "id" in target_data or "resource_uri" in target_data:
                 super(TargetResource, self).patch_list(request, **kwargs)
 
         # Validate and prepare each target dict for consumption by job_scheduler
-        for target_data in deserialized['objects']:
+        for target_data in deserialized["objects"]:
             data = self.alter_deserialized_detail_data(request, target_data)
             bundle = self.build_bundle(data=dict_strip_unicode_keys(data))
             bundle.request = request
             self.is_valid(bundle)
 
-            target_data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[target_data['kind']]).natural_key()
+            target_data["content_type"] = ContentType.objects.get_for_model(
+                KIND_TO_KLASS[target_data["kind"]]
+            ).natural_key()
 
-        targets, command = JobSchedulerClient.create_targets(deserialized['objects'])
+        targets, command = JobSchedulerClient.create_targets(deserialized["objects"])
 
-        raise custom_response(self, request, http.HttpAccepted,
-                              {'command': dehydrate_command(command),
-                               'targets': [self.get_resource_uri(target) for target in targets]})
+        raise custom_response(
+            self,
+            request,
+            http.HttpAccepted,
+            {"command": dehydrate_command(command), "targets": [self.get_resource_uri(target) for target in targets]},
+        )
 
     @validate
     def obj_create(self, bundle, **kwargs):
@@ -417,13 +490,16 @@ class TargetResource(MetricResource, ConfParamResource):
 
         if bundle.errors:
             raise ImmediateHttpResponse(
-                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name]))
+                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name])
+            )
 
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
-        setattr(bundle, 'data_errors', defaultdict(list))
+        setattr(bundle, "data_errors", defaultdict(list))
 
-        bundle.data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[bundle.data['kind']]).natural_key()
+        bundle.data["content_type"] = ContentType.objects.get_for_model(
+            KIND_TO_KLASS[bundle.data["kind"]]
+        ).natural_key()
 
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
@@ -432,7 +508,13 @@ class TargetResource(MetricResource, ConfParamResource):
 
         targets, command = JobSchedulerClient.create_targets([bundle.data])
 
-        if request.method == 'POST':
-            raise custom_response(self, request, http.HttpAccepted,
-                                  {'command': dehydrate_command(command),
-                                   'target': self.full_dehydrate(self.build_bundle(obj=targets[0])).data})
+        if request.method == "POST":
+            raise custom_response(
+                self,
+                request,
+                http.HttpAccepted,
+                {
+                    "command": dehydrate_command(command),
+                    "target": self.full_dehydrate(self.build_bundle(obj=targets[0])).data,
+                },
+            )

@@ -4,12 +4,22 @@ from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
-from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob, MountLustreFilesystemsJob, UnmountLustreFilesystemsJob
+from chroma_core.models import (
+    FailoverTargetJob,
+    FailbackTargetJob,
+    RebootHostJob,
+    ShutdownHostJob,
+    PoweronHostJob,
+    PoweroffHostJob,
+    PowercycleHostJob,
+    MountLustreFilesystemsJob,
+    UnmountLustreFilesystemsJob,
+)
 from chroma_core.lib.cache import ObjectCache
 
 
 class TestAdvertisedCase(IMLUnitTestCase):
-    normal_host_state = 'managed'
+    normal_host_state = "managed"
 
     def set_managed(self, managed):
         self.host.immutable_state = not managed
@@ -23,16 +33,14 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
     def test_all_advertised_jobs_tested(self):
         import inspect
         from chroma_core.models.jobs import AdvertisedJob
+
         # This just tests that we're testing all advertised jobs. Will fail
         # if someone adds a new AdvertisedJob that isn't covered.
         #
         # Reasonable exceptions are those jobs which can always run,
         # or jobs that are parents for implementing subclasses.
-        EXCEPTIONS = ['ForceRemoveHostJob', 'ForceRemoveCopytoolJob',
-                      'MigrateTargetJob']
-        IMPORTED_JOBS = [x for x in globals().values()
-                         if (inspect.isclass(x)
-                             and issubclass(x, AdvertisedJob))]
+        EXCEPTIONS = ["ForceRemoveHostJob", "ForceRemoveCopytoolJob", "MigrateTargetJob"]
+        IMPORTED_JOBS = [x for x in globals().values() if (inspect.isclass(x) and issubclass(x, AdvertisedJob))]
 
         def _find_children(cls):
             children = []
@@ -43,8 +51,7 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
 
         missing = set()
         for child in _find_children(AdvertisedJob):
-            if (child not in IMPORTED_JOBS
-               and child.__name__ not in EXCEPTIONS):
+            if child not in IMPORTED_JOBS and child.__name__ not in EXCEPTIONS:
                 missing.add(child)
 
         self.assertItemsEqual(missing, set())
@@ -103,7 +110,7 @@ class TestAdvertisedHostJobs(TestAdvertisedCase):
         self.assertTrue(RebootHostJob.can_run(self.host))
 
         # Bad states
-        for state in ['removed', 'undeployed', 'unconfigured']:
+        for state in ["removed", "undeployed", "unconfigured"]:
             self.host.state = state
             self.assertFalse(RebootHostJob.can_run(self.host))
             self.host.state = self.normal_host_state
@@ -123,7 +130,7 @@ class TestAdvertisedHostJobs(TestAdvertisedCase):
         self.assertTrue(ShutdownHostJob.can_run(self.host))
 
         # Bad states
-        for state in ['removed', 'undeployed', 'unconfigured']:
+        for state in ["removed", "undeployed", "unconfigured"]:
             self.host.state = state
             self.assertFalse(ShutdownHostJob.can_run(self.host))
             self.host.state = self.normal_host_state
@@ -146,17 +153,18 @@ class TestAdvertisedPowerJobs(TestAdvertisedCase):
         self.host = mock.Mock()
         self.set_managed(True)
 
-        self.host.outlet_list = [mock.MagicMock(has_power=True),
-                                 mock.MagicMock(has_power=True)]
+        self.host.outlet_list = [mock.MagicMock(has_power=True), mock.MagicMock(has_power=True)]
 
         self.host.outlets = mock.Mock()
 
         def all():
             return self.host.outlet_list
+
         self.host.outlets.all = all
 
         def count():
             return len(self.host.outlet_list)
+
         self.host.outlets.count = count
 
     def test_PoweronHostJob(self):
@@ -261,11 +269,14 @@ class TestAdvertisedPowerJobs(TestAdvertisedCase):
 
 class TestClientManagementJobs(TestAdvertisedCase):
     def load_worker_profile(self):
-        worker_profile = ServerProfile(name='test_worker_profile',
-                                       ui_name='Managed Lustre client',
-                                       ui_description='Client available for IML admin tasks',
-                                       managed=True, worker=True,
-                                       initial_state="managed")
+        worker_profile = ServerProfile(
+            name="test_worker_profile",
+            ui_name="Managed Lustre client",
+            ui_description="Client available for IML admin tasks",
+            managed=True,
+            worker=True,
+            initial_state="managed",
+        )
         worker_profile.save()
         return worker_profile
 
@@ -273,18 +284,18 @@ class TestClientManagementJobs(TestAdvertisedCase):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
         from tests.unit.chroma_core.helpers import synthetic_volume_full
 
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name = "MGS")
-        fs = ManagedFilesystem.objects.create(mgs = mgt, name = 'testfs')
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name="MGS")
+        fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs")
         ObjectCache.add(ManagedFilesystem, fs)
-        ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
-        ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
-        state = 'mounted' if active else 'unmounted'
-        self.mount = LustreClientMount.objects.create(host = self.worker, filesystem = fs, state = state)
+        ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
+        ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
+        state = "mounted" if active else "unmounted"
+        self.mount = LustreClientMount.objects.create(host=self.worker, filesystem=fs, state=state)
 
         ObjectCache.add(LustreClientMount, self.mount)
 
     def toggle_fake_client_state(self):
-        state = 'mounted' if not self.mount.active else 'unmounted'
+        state = "mounted" if not self.mount.active else "unmounted"
         self.mount.state = state
         self.mount.save()
         ObjectCache.update(self.mount)
@@ -307,7 +318,10 @@ class TestClientManagementJobs(TestAdvertisedCase):
         # Django TestCase rolls back the database, so make sure that we
         # also roll back (reset) this singleton.
         import chroma_core.lib.storage_plugin.manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = (
+            chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+        )
 
     def tearDown(self):
         super(TestClientManagementJobs, self).tearDown()
@@ -329,7 +343,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
         self.assertTrue(MountLustreFilesystemsJob.can_run(self.worker))
 
         # Bad states
-        for state in ['removed', 'undeployed', 'unconfigured']:
+        for state in ["removed", "undeployed", "unconfigured"]:
             self.worker.state = state
             self.assertFalse(MountLustreFilesystemsJob.can_run(self.worker))
             self.worker.state = self.normal_host_state
@@ -358,7 +372,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
         self.assertTrue(UnmountLustreFilesystemsJob.can_run(self.worker))
 
         # Bad states
-        for state in ['removed', 'undeployed', 'unconfigured']:
+        for state in ["removed", "undeployed", "unconfigured"]:
             self.worker.state = state
             self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.worker))
             self.worker.state = self.normal_host_state

@@ -14,30 +14,31 @@ from chroma_core.services.corosync import Service as CorosyncService
 
 log = logging.getLogger(__name__)
 
-ONLINE = 'true'
-OFFLINE = 'false'
+ONLINE = "true"
+OFFLINE = "false"
 MOCKED_NOW_VALUE = now()
 
 
 class CorosyncTestCase(IMLUnitTestCase):
-
     def setUp(self):
         super(CorosyncTestCase, self).setUp()
 
         #  The object being tested
         self.corosync_service = CorosyncService()
 
-        mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify', mock.Mock()).start()
-        mock.patch('django.utils.timezone.now', return_value=MOCKED_NOW_VALUE).start()
+        mock.patch("chroma_core.services.job_scheduler.job_scheduler_notify.notify", mock.Mock()).start()
+        mock.patch("django.utils.timezone.now", return_value=MOCKED_NOW_VALUE).start()
 
         self.addCleanup(mock.patch.stopall)
 
-    def get_test_message(self,
-                         utc_iso_date_str="2013-01-11T19:04:07+00:00",
-                         node_status_list=None,
-                         corosync_state='started',
-                         pacemaker_state='started',
-                         stonith_enabled=True):
+    def get_test_message(
+        self,
+        utc_iso_date_str="2013-01-11T19:04:07+00:00",
+        node_status_list=None,
+        corosync_state="started",
+        pacemaker_state="started",
+        stonith_enabled=True,
+    ):
         """Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
@@ -50,31 +51,33 @@ class CorosyncTestCase(IMLUnitTestCase):
 
         #  First whack up some fake node data based on input infos
         nodes = {}
-        if node_status_list is not None and corosync_state == 'started' and pacemaker_state == 'started':
+        if node_status_list is not None and corosync_state == "started" and pacemaker_state == "started":
             for hs in node_status_list:
                 node = hs[0]
                 status = hs[1]  # 'true' or 'false'
                 node_dict = {
                     node.nodename: {
-                        "name": node.nodename, "standby": "false",
+                        "name": node.nodename,
+                        "standby": "false",
                         "standby_onfail": "false",
                         "expected_up": "true",
-                        "is_dc": "true", "shutdown": "false",
-                        "online": status, "pending": "false",
-                        "type": "member", "id": node.nodename,
-                        "resources_running": "0", "unclean": "false"
+                        "is_dc": "true",
+                        "shutdown": "false",
+                        "online": status,
+                        "pending": "false",
+                        "type": "member",
+                        "id": node.nodename,
+                        "resources_running": "0",
+                        "unclean": "false",
                     }
                 }
                 nodes.update(node_dict)
 
         #  Second create the message with the nodes and other envelope data.
-        message = {"crm_info": {"nodes": nodes,
-                                "datetime": utc_iso_date_str,
-                                "options": {
-                                    "stonith_enabled": stonith_enabled
-                                }},
-                   "state": {'pacemaker': pacemaker_state,
-                             'corosync': corosync_state}}
+        message = {
+            "crm_info": {"nodes": nodes, "datetime": utc_iso_date_str, "options": {"stonith_enabled": stonith_enabled}},
+            "state": {"pacemaker": pacemaker_state, "corosync": corosync_state},
+        }
 
         return message
 
@@ -82,18 +85,14 @@ class CorosyncTestCase(IMLUnitTestCase):
         """Create nodes, or reuse ones that are there already."""
 
         fqdn = "%s.%s" % (hostname, domain)
-        host = ManagedHost(address=hostname,
-                           fqdn=fqdn,
-                           nodename=hostname)
+        host = ManagedHost(address=hostname, fqdn=fqdn, nodename=hostname)
 
         if save:
             host.save()
 
-            CorosyncConfiguration(state='started',
-                                  host=host).save()
+            CorosyncConfiguration(state="started", host=host).save()
 
-            PacemakerConfiguration(state='started',
-                                   host=host).save()
+            PacemakerConfiguration(state="started", host=host).save()
 
         return host
 
@@ -120,8 +119,8 @@ class CorosyncTests(CorosyncTestCase):
         """
 
         msg_date = "2013-01-11T19:04:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
 
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
@@ -139,8 +138,8 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Process first msg (see test_first_msg)
         msg_date = "2013-01-11T19:04:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
@@ -163,8 +162,8 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Process first msg on the 8th minute
         msg_date = "2013-01-11T19:04:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, OFFLINE))
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
@@ -203,8 +202,8 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Process first msg (see test_first_msg)
         msg_date = "2013-01-11T19:04:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
@@ -242,8 +241,8 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Process first msg (see test_first_msg)
         msg_date = "2013-01-11T19:06:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, OFFLINE))
 
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
@@ -267,8 +266,8 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Process first msg (see test_first_msg)
         msg_date = "2013-01-11T19:06:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2', save=False)
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2", save=False)
         nodes = ((node1, ONLINE), (node2, OFFLINE))
 
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
@@ -284,13 +283,13 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Initially, corosync is up and returns online for two nodes
         msg_date = "2013-01-11T19:06:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
         self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         #  No nodes, no time.  Simulates messages state when corosync is down
-        self.corosync_service.on_data(node1.fqdn, self.get_test_message('', None))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message("", None))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 0)
@@ -303,31 +302,33 @@ class CorosyncTests(CorosyncTestCase):
 
         #  Initially, corosync is up and returns online for two nodes
         msg_date = "2013-01-11T19:06:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
 
         for node in [node1, node2]:
-            for corosync_state in ['stopped', 'started']:
-                for pacemaker_state in ['stopped', 'started']:
+            for corosync_state in ["stopped", "started"]:
+                for pacemaker_state in ["stopped", "started"]:
                     job_scheduler_notify.notify.reset_mock()
 
-                    self.corosync_service.on_data(node.fqdn, self.get_test_message(msg_date,
-                                                                                   nodes,
-                                                                                   corosync_state=corosync_state))
+                    self.corosync_service.on_data(
+                        node.fqdn, self.get_test_message(msg_date, nodes, corosync_state=corosync_state)
+                    )
 
-                    self.corosync_service.on_data(node.fqdn, self.get_test_message(msg_date,
-                                                                                   nodes,
-                                                                                   corosync_state=corosync_state,
-                                                                                   pacemaker_state=pacemaker_state))
+                    self.corosync_service.on_data(
+                        node.fqdn,
+                        self.get_test_message(
+                            msg_date, nodes, corosync_state=corosync_state, pacemaker_state=pacemaker_state
+                        ),
+                    )
 
-                    job_scheduler_notify.notify.assert_any_call(node.corosync_configuration,
-                                                                MOCKED_NOW_VALUE,
-                                                                {'state': corosync_state})
+                    job_scheduler_notify.notify.assert_any_call(
+                        node.corosync_configuration, MOCKED_NOW_VALUE, {"state": corosync_state}
+                    )
 
-                    job_scheduler_notify.notify.assert_any_call(node.pacemaker_configuration,
-                                                                MOCKED_NOW_VALUE,
-                                                                {'state': pacemaker_state})
+                    job_scheduler_notify.notify.assert_any_call(
+                        node.pacemaker_configuration, MOCKED_NOW_VALUE, {"state": pacemaker_state}
+                    )
 
     def test_stonith_not_enabled(self):
         """Users may set stonith to enabled=False (or may remove the option)
@@ -336,15 +337,11 @@ class CorosyncTests(CorosyncTestCase):
         """
 
         msg_date = "2013-01-11T19:04:07+00:00"
-        node1 = self.make_managed_host('node1')
-        node2 = self.make_managed_host('node2')
+        node1 = self.make_managed_host("node1")
+        node2 = self.make_managed_host("node2")
         nodes = ((node1, ONLINE), (node2, ONLINE))
 
-        self.corosync_service.on_data(
-            node1.fqdn, self.get_test_message(msg_date,
-                                              nodes,
-                                              stonith_enabled=False)
-        )
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes, stonith_enabled=False))
 
         alerts_raised = StonithNotEnabledAlert.objects.count()
         self.assertEqual(alerts_raised, 1)

@@ -31,9 +31,9 @@ class PowerControlTestCase(IMLUnitTestCase):
         self.md_thread = MonitorDaemonThread()
         self.md_thread.start()
 
-        self.fence_type = PowerControlType.objects.create(agent = 'fake_agent',
-                                                          default_username = 'fake',
-                                                          default_password = 'fake')
+        self.fence_type = PowerControlType.objects.create(
+            agent="fake_agent", default_username="fake", default_password="fake"
+        )
 
     def tearDown(self):
         self.md_thread.stop()
@@ -70,39 +70,37 @@ class PowerControlTestCase(IMLUnitTestCase):
         self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
 
 
-@mock.patch('chroma_core.services.power_control.rpc.PowerControlRpc')
+@mock.patch("chroma_core.services.power_control.rpc.PowerControlRpc")
 class PowerMonitoringTests(PowerControlTestCase):
     def test_monitoring_daemon_starts(self, mocked):
-        self.assertIn('MonitorDaemonThread', self.thread_class_names)
+        self.assertIn("MonitorDaemonThread", self.thread_class_names)
 
     def test_monitoring_daemon_stops(self, mocked):
         self.md_thread.stop()
-        self.wait_for_assert(lambda: self.assertNotIn('MonitorDaemonThread', self.thread_class_names))
+        self.wait_for_assert(lambda: self.assertNotIn("MonitorDaemonThread", self.thread_class_names))
 
     def test_pdu_add_remove_spawns_reaps_monitors(self, mocked):
-        self.assertNotIn('PowerDeviceMonitor', self.thread_class_names)
+        self.assertNotIn("PowerDeviceMonitor", self.thread_class_names)
 
-        pdu = PowerControlDevice.objects.create(device_type = self.fence_type,
-                                                address = 'localhost')
+        pdu = PowerControlDevice.objects.create(device_type=self.fence_type, address="localhost")
         # This normally happens via a post_save signal
         self.power_manager.register_device(pdu.id)
-        self.wait_for_assert(lambda: self.assertIn('PowerDeviceMonitor', self.thread_class_names))
+        self.wait_for_assert(lambda: self.assertIn("PowerDeviceMonitor", self.thread_class_names))
 
         pdu.mark_deleted()
         # This normally happens via a post_delete signal
         self.power_manager.unregister_device(pdu.sockaddr)
-        self.wait_for_assert(lambda: self.assertNotIn('PowerDeviceMonitor', self.thread_class_names))
+        self.wait_for_assert(lambda: self.assertNotIn("PowerDeviceMonitor", self.thread_class_names))
 
     def test_pdu_update_respawns_monitors(self, mocked):
-        pdu = PowerControlDevice.objects.create(device_type = self.fence_type,
-                                                address = 'localhost')
+        pdu = PowerControlDevice.objects.create(device_type=self.fence_type, address="localhost")
         # This normally happens via a post_save signal
         self.power_manager.register_device(pdu.id)
-        self.wait_for_assert(lambda: self.assertIn('PowerDeviceMonitor', self.thread_class_names))
+        self.wait_for_assert(lambda: self.assertIn("PowerDeviceMonitor", self.thread_class_names))
 
         start_threads = threading.enumerate()
-        pdu.address = '1.2.3.4'
-        pdu.username = 'bob'
+        pdu.address = "1.2.3.4"
+        pdu.username = "bob"
         pdu.save()
         # This normally happens via a post_save signal
         self.power_manager.reregister_device(pdu.id)
@@ -110,7 +108,7 @@ class PowerMonitoringTests(PowerControlTestCase):
         self.wait_for_assert(lambda: self.assertNotEqual(start_threads, threading.enumerate()))
 
 
-@mock.patch('chroma_core.services.power_control.rpc.PowerControlRpc')
+@mock.patch("chroma_core.services.power_control.rpc.PowerControlRpc")
 class MonitorThreadCase(IMLUnitTestCase):
     device_checks_should_fail = False
 
@@ -123,20 +121,19 @@ class MonitorThreadCase(IMLUnitTestCase):
     def setUp(self):
         super(MonitorThreadCase, self).setUp()
 
-        patcher = mock.patch.object(PowerControlManager, 'check_device_availability', self._check_device_availability)
+        patcher = mock.patch.object(PowerControlManager, "check_device_availability", self._check_device_availability)
         patcher.start()
 
-        patcher = mock.patch.object(PowerControlManager, 'check_bmc_availability', self._check_bmc_availability)
+        patcher = mock.patch.object(PowerControlManager, "check_bmc_availability", self._check_bmc_availability)
         patcher.start()
 
         self.addCleanup(mock.patch.stopall)
 
-    @mock.patch('chroma_core.models.power_control.PowerControlDeviceUnavailableAlert.notify')
+    @mock.patch("chroma_core.models.power_control.PowerControlDeviceUnavailableAlert.notify")
     def test_pdu_monitoring(self, mock_notify, mock_rpc):
         # Grab the first non-IPMI type
-        type = PowerControlType.objects.filter(max_outlets__gt = 0)[0]
-        device = PowerControlDevice.objects.create(device_type = type,
-                                                   address = 'localhost')
+        type = PowerControlType.objects.filter(max_outlets__gt=0)[0]
+        device = PowerControlDevice.objects.create(device_type=type, address="localhost")
         manager = PowerControlManager()
         monitor = PowerDeviceMonitor(device, manager)
 
@@ -149,14 +146,12 @@ class MonitorThreadCase(IMLUnitTestCase):
         monitor._check_monitored_device()
         mock_notify.assert_called_with(device, False)
 
-    @mock.patch('chroma_core.models.power_control.IpmiBmcUnavailableAlert.notify')
+    @mock.patch("chroma_core.models.power_control.IpmiBmcUnavailableAlert.notify")
     def test_bmc_monitoring(self, mock_notify, mock_rpc):
         # Grab an IPMI-ish type
-        type = PowerControlType.objects.filter(max_outlets = 0)[0]
-        device = PowerControlDevice.objects.create(device_type = type,
-                                                   address = 'localhost')
-        bmc = PowerControlDeviceOutlet.objects.create(device = device,
-                                                      identifier = "localhost")
+        type = PowerControlType.objects.filter(max_outlets=0)[0]
+        device = PowerControlDevice.objects.create(device_type=type, address="localhost")
+        bmc = PowerControlDeviceOutlet.objects.create(device=device, identifier="localhost")
         manager = PowerControlManager()
         monitor = PowerDeviceMonitor(device, manager)
 

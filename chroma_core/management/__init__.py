@@ -14,16 +14,16 @@ import settings
 
 
 def setup_groups(app, **kwargs):
-    if app != 'chroma_core':
+    if app != "chroma_core":
         return
 
     if auth.models.Group.objects.count() == 0:
-        print "Creating groups..."
-        auth.models.Group.objects.create(name = "superusers")
-        fsadmin_group = auth.models.Group.objects.create(name = "filesystem_administrators")
+        print("Creating groups...")
+        auth.models.Group.objects.create(name="superusers")
+        fsadmin_group = auth.models.Group.objects.create(name="filesystem_administrators")
 
         def grant_write(group, model):
-            for perm in auth.models.Permission.objects.filter(content_type = ContentType.objects.get_for_model(model)):
+            for perm in auth.models.Permission.objects.filter(content_type=ContentType.objects.get_for_model(model)):
                 group.permissions.add(perm)
 
         def all_subclasses(cls):
@@ -48,25 +48,25 @@ def setup_groups(app, **kwargs):
         for alert_klass in all_subclasses(chroma_core.models.AlertStateBase):
             grant_write(fsadmin_group, alert_klass)
 
-        fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")
+        fsusers_group = auth.models.Group.objects.create(name="filesystem_users")
         # For modifying his own account
         grant_write(fsusers_group, django.contrib.auth.models.User)
 
     if settings.DEBUG and auth.models.User.objects.count() == 0:
-        print "***\n" * 3,
-        print "*** SECURITY WARNING: You are running in DEBUG mode and default users have been created"
-        print "***\n" * 3
+        print("***\n" * 3),
+        print("*** SECURITY WARNING: You are running in DEBUG mode and default users have been created")
+        print("***\n" * 3)
         user = auth.models.User.objects.create_superuser("admin", "admin@debug.co.eh", "lustre")
-        user.groups.add(auth.models.Group.objects.get(name='superusers'))
+        user.groups.add(auth.models.Group.objects.get(name="superusers"))
         user = auth.models.User.objects.create_user("debug", "debug@debug.co.eh", "lustre")
-        user.groups.add(auth.models.Group.objects.get(name='filesystem_administrators'))
+        user.groups.add(auth.models.Group.objects.get(name="filesystem_administrators"))
         user = auth.models.User.objects.create_user("user", "user@debug.co.eh", "lustre")
-        user.groups.add(auth.models.Group.objects.get(name='filesystem_users'))
+        user.groups.add(auth.models.Group.objects.get(name="filesystem_users"))
 
 
-## Ensure that the auto post_syncdb hook is installed
-## before our hook, so that Permission objects will be there
-## by the time we are called.
+# Ensure that the auto post_syncdb hook is installed
+# before our hook, so that Permission objects will be there
+# by the time we are called.
 import django.contrib.auth.management
 
 post_migrate.connect(setup_groups)

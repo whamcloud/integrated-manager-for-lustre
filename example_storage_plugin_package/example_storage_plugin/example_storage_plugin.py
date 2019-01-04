@@ -7,12 +7,12 @@ from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
 from chroma_core.lib.storage_plugin.api.resources import ScannableResource
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-from chroma_core.lib.storage_plugin.api.resources import    Controller, StoragePool, PhysicalDisk, LogicalDrive
+from chroma_core.lib.storage_plugin.api.resources import Controller, StoragePool, PhysicalDisk, LogicalDrive
 
 
 class Resource1(ScannableResource):
     class Meta:
-        identifier = GlobalId('address1', 'address2')
+        identifier = GlobalId("address1", "address2")
 
     address_1 = attributes.Hostname()
     address_2 = attributes.Hostname()
@@ -20,7 +20,7 @@ class Resource1(ScannableResource):
 
 class Resource2(Controller):
     class Meta:
-        identifier = ScopedId('index')
+        identifier = ScopedId("index")
 
     index = attributes.Enum(0, 1)
 
@@ -28,19 +28,19 @@ class Resource2(Controller):
 class Resource3(PhysicalDisk):
     serial_number = attributes.String()
     capacity = attributes.Bytes()
-    temperature = statistics.Gauge(units = 'C')
+    temperature = statistics.Gauge(units="C")
 
     class Meta:
-        identifier = ScopedId('serial_number')
+        identifier = ScopedId("serial_number")
 
 
 class Resource4(StoragePool):
     local_id = attributes.Integer()
-    raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
+    raid_type = attributes.Enum("raid0", "raid1", "raid5", "raid6")
     capacity = attributes.Bytes()
 
     class Meta:
-        identifier = ScopedId('local_id')
+        identifier = ScopedId("local_id")
 
     def get_label(self):
         return self.local_id
@@ -52,7 +52,7 @@ class Resource5(LogicalDrive):
     name = attributes.String()
 
     class Meta:
-        identifier = ScopedId('local_id')
+        identifier = ScopedId("local_id")
 
     def get_label(self):
         return self.name

@@ -23,7 +23,7 @@ def make_plugin_module(version=None, name="test_plugin_name", extra_body=None):
     if extra_body is not None:
         plugin_module_body = "%s\n\n%s" % (plugin_module_body, extra_body)
 
-    exec plugin_module_body in plugin_module.__dict__
+    exec(plugin_module_body) in plugin_module.__dict__
 
     #  Simulate imported
     sys.modules[name] = plugin_module
@@ -85,14 +85,13 @@ class TestValidateApiVersion(IMLUnitTestCase):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
         from chroma_core.lib.storage_plugin.manager import VersionMismatchError
 
-        for c in [1.2, '"version1"', [1, 2, 3], {'version': 1}]:
+        for c in [1.2, '"version1"', [1, 2, 3], {"version": 1}]:
             name, mod = make_plugin_module(version=c)
 
             #  initialize manager to accept only version 1 plugins
             settings.STORAGE_API_VERSION = 1
 
-        self.assertRaises(VersionMismatchError,
-            mgr._validate_api_version, mod)
+        self.assertRaises(VersionMismatchError, mgr._validate_api_version, mod)
 
 
 class TestValidatedModuleLoading(IMLUnitTestCase):
@@ -109,10 +108,10 @@ class TestValidatedModuleLoading(IMLUnitTestCase):
     def _load_plugin(self, name):
         from chroma_core.lib.storage_plugin.manager import StoragePluginManager
 
-        orginal_plugins = sys.modules['settings'].INSTALLED_STORAGE_PLUGINS
-        sys.modules['settings'].INSTALLED_STORAGE_PLUGINS = [name]
+        orginal_plugins = sys.modules["settings"].INSTALLED_STORAGE_PLUGINS
+        sys.modules["settings"].INSTALLED_STORAGE_PLUGINS = [name]
         self.manager = StoragePluginManager()
-        sys.modules['settings'].INSTALLED_STORAGE_PLUGINS = orginal_plugins
+        sys.modules["settings"].INSTALLED_STORAGE_PLUGINS = orginal_plugins
 
     def test_version_matches(self):
         from chroma_core.lib.storage_plugin.manager import VersionMismatchError, VersionNotFoundError
@@ -136,8 +135,7 @@ class TestValidatedModuleLoading(IMLUnitTestCase):
         self._load_plugin(name)
 
         self.assertEqual(name, self.manager.errored_plugins[0][0])
-        self.assertEqual(self.manager.errored_plugins[0][1].__class__,
-            VersionMismatchError)
+        self.assertEqual(self.manager.errored_plugins[0][1].__class__, VersionMismatchError)
 
     def test_version_not_found(self):
         from chroma_core.lib.storage_plugin.manager import VersionNotFoundError
@@ -147,5 +145,4 @@ class TestValidatedModuleLoading(IMLUnitTestCase):
         self._load_plugin(name)
 
         self.assertEqual(name, self.manager.errored_plugins[0][0])
-        self.assertEqual(self.manager.errored_plugins[0][1].__class__,
-            VersionNotFoundError)
+        self.assertEqual(self.manager.errored_plugins[0][1].__class__, VersionNotFoundError)

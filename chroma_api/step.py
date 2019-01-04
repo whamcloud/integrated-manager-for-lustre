@@ -23,23 +23,24 @@ class StepResource(ChromaModelResource):
     Don't load steps for a job unless they're really needed; the console output may be
     large.
     """
+
     class Meta:
         queryset = StepResult.objects.all()
-        resource_name = 'step'
+        resource_name = "step"
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['step_klass']
-        filtering = {'job': ['exact'], 'id': ['exact', 'in']}
-        ordering = ['created_at', 'modified_at']
-        list_allowed_methods = ['get']
-        detail_allowed_methods = ['get']
+        excludes = ["step_klass"]
+        filtering = {"job": ["exact"], "id": ["exact", "in"]}
+        ordering = ["created_at", "modified_at"]
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = ["get"]
 
     description = fields.CharField()
 
     def dehydrate_description(self, bundle):
         return bundle.obj.describe()
 
-    class_name = fields.CharField(help_text = "Name of the class representing this step")
+    class_name = fields.CharField(help_text="Name of the class representing this step")
 
     def dehydrate_class_name(self, bundle):
         return bundle.obj.step_class.__name__

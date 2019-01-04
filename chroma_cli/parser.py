@@ -11,22 +11,21 @@ class _AliasedChoicesPseudoAction(Action):
     def __init__(self, name, aliases, help):
         metavar = dest = name
         if aliases:
-            metavar += ' (%s)' % ', '.join(aliases)
+            metavar += " (%s)" % ", ".join(aliases)
         sup = super(_AliasedChoicesPseudoAction, self)
-        sup.__init__(option_strings=[], dest=dest, help=help,
-                     metavar=metavar)
+        sup.__init__(option_strings=[], dest=dest, help=help, metavar=metavar)
 
 
 def _add_aliased_parser(self, name, **kwargs):
     # set prog from the existing prefix
-    if kwargs.get('prog') is None:
-        kwargs['prog'] = '%s %s' % (self._prog_prefix, name)
+    if kwargs.get("prog") is None:
+        kwargs["prog"] = "%s %s" % (self._prog_prefix, name)
 
-    aliases = kwargs.pop('aliases', ())
+    aliases = kwargs.pop("aliases", ())
 
     # create a pseudo-action to hold the choice help
-    if 'help' in kwargs:
-        help = kwargs.pop('help')
+    if "help" in kwargs:
+        help = kwargs.pop("help")
         choice_action = _AliasedChoicesPseudoAction(name, aliases, help)
         self._choices_actions.append(choice_action)
 
@@ -40,8 +39,10 @@ def _add_aliased_parser(self, name, **kwargs):
 
     return parser
 
+
 # monkey-patch in our hacked add_parser() method
 import argparse
+
 argparse._SubParsersAction.add_parser = _add_aliased_parser
 
 
@@ -66,10 +67,9 @@ class ChromaHelpFormatter(HelpFormatter):
             else:
                 default = action.dest.upper()
                 args_string = self._format_args(action, default)
-                parts.append('%s %s' % (', '.join(action.option_strings),
-                                        args_string))
+                parts.append("%s %s" % (", ".join(action.option_strings), args_string))
 
-            return ', '.join(parts)
+            return ", ".join(parts)
 
 
 class ResettableArgumentParser(ArgumentParser):
@@ -79,8 +79,9 @@ class ResettableArgumentParser(ArgumentParser):
     same parser instance to be re-used multiple times with different
     argument sets.
     """
+
     def __init__(self, *args, **kwargs):
-        kwargs['formatter_class'] = ChromaHelpFormatter
+        kwargs["formatter_class"] = ChromaHelpFormatter
         self._resettable_actions = []
         super(ResettableArgumentParser, self).__init__(*args, **kwargs)
 
@@ -97,7 +98,7 @@ class ResettableArgumentParser(ArgumentParser):
         super(ResettableArgumentParser, self)._remove_action(action)
         action.container._group_actions.remove(action)
         for option_string in action.option_strings:
-            del(self._option_string_actions[option_string])
+            del (self._option_string_actions[option_string])
 
     def clear_resets(self):
         """
@@ -105,7 +106,7 @@ class ResettableArgumentParser(ArgumentParser):
         will be "frozen" into the parser (e.g. global arguments).  Any
         arguments added after this will be removed by a reset().
         """
-        del(self._resettable_actions[0:])
+        del (self._resettable_actions[0:])
 
     def reset(self):
         """

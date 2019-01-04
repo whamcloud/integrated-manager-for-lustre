@@ -9,6 +9,7 @@ import os
 import sys
 import socket
 import getpass
+
 sys.path.insert(0, os.getcwd())
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
@@ -17,20 +18,24 @@ def fatal(msg):
     sys.stderr.write("%s\n" % msg)
     sys.exit(1)
 
+
 try:
     from chroma_core.models import PowerControlType, PowerControlDevice
 except ImportError:
-    fatal("Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma-manager ?")
+    fatal(
+        "Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma-manager ?"
+    )
 try:
     from django.db import transaction
 except ImportError:
     fatal("Can't import django.db! Are you on the IML manager?")
 
-# PowerControlType will register on database saves for IML reasons, this will cause a hang 
-# during the run, so disconnect it. 
+# PowerControlType will register on database saves for IML reasons, this will cause a hang
+# during the run, so disconnect it.
 from django.db.models import signals
 from chroma_core.models import register_power_device
-signals.post_save.disconnect(register_power_device, sender = PowerControlDevice)
+
+signals.post_save.disconnect(register_power_device, sender=PowerControlDevice)
 
 if __name__ == "__main__":
     try:
@@ -40,11 +45,21 @@ if __name__ == "__main__":
 
     ipmi.agent = "fence_vbox"
     ipmi.default_port = 22
-    ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o on -n %(identifier)s"
-    ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o reboot -n %(identifier)s"
-    ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s"
-    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor"
-    ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s"
+    ipmi.poweron_template = (
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o on -n %(identifier)s"
+    )
+    ipmi.powercycle_template = (
+        "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o reboot -n %(identifier)s"
+    )
+    ipmi.poweroff_template = (
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s"
+    )
+    ipmi.monitor_template = (
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor"
+    )
+    ipmi.outlet_query_template = (
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s"
+    )
     ipmi.save()
 
     vm_host = raw_input("Enter the IP Address of your VM Host: ")
@@ -63,17 +78,19 @@ if __name__ == "__main__":
         fatal("Passwords do not match")
 
     PowerControlDevice.objects.get_or_create(
-        device_type=ipmi, address=vm_host, port=22,
-        username=user_name, password=pw)
+        device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw
+    )
     try:
         transaction.commit()
     except transaction.TransactionManagementError:
         pass
 
-    print """
+    print(
+        """
 ********* IMPORTANT: THIS IS AN UNSUPPORTED CONFIGURATION **********
 ************ NOT INTENDED FOR PRODUCTION DEPLOYMENTS!!! *************
 
 The IPMI power control type will now drive a vbox host to emulate power control
 and STONITH.
 """
+    )

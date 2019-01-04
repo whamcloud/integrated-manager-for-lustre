@@ -26,7 +26,7 @@ class RemoteFirewallControl(object):
     # dict of RemoteFirewallControl objects for specific servers,  defaults to empty string which evaluates as False
     controller_instances = {}
 
-    firewall_rule = namedtuple('firewall_rule', ('port', 'protocol'))
+    firewall_rule = namedtuple("firewall_rule", ("port", "protocol"))
 
     def __init__(self, address, remote_access_func):
         self.address = address
@@ -44,7 +44,7 @@ class RemoteFirewallControl(object):
                                    RunResult object
         :return: true if applicable, false if not
         """
-        return remote_access_func(address, 'which %s' % cls.firewall_app_name).rc == 0
+        return remote_access_func(address, "which %s" % cls.firewall_app_name).rc == 0
 
     @classmethod
     def create(cls, address, remote_access_func):
@@ -54,11 +54,12 @@ class RemoteFirewallControl(object):
             try:
                 # return available class with highest priority (positive integer closest to 0)
                 # Note: if identical class_priority values exist in resultant list, either class could be returned
-                required_class = sorted([_cls for _cls in util.all_subclasses(cls)
-                                         if _cls._applicable(address, remote_access_func)],
-                                        key=attrgetter('class_priority'))[0]
+                required_class = sorted(
+                    [_cls for _cls in util.all_subclasses(cls) if _cls._applicable(address, remote_access_func)],
+                    key=attrgetter("class_priority"),
+                )[0]
             except IndexError:
-                raise RuntimeError('Current platform version not applicable')
+                raise RuntimeError("Current platform version not applicable")
 
             cls.controller_instances[address] = required_class(address, remote_access_func)
 
@@ -94,10 +95,10 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
     class_priority = 2
 
     # iptables utility may coexist with firewall-cmd, lokkit is less likely to and therefore test its presence
-    firewall_app_name = 'lokkit'
+    firewall_app_name = "lokkit"
 
     # test firewall command used to identify firewall application running on remote server
-    firewall_list_cmd = 'iptables -L INPUT -nv'
+    firewall_list_cmd = "iptables -L INPUT -nv"
 
     def process_rules(self):
         """
@@ -108,32 +109,33 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            raise RuntimeError('process_rules(): remote shell command failed unexpectedly, is iptables running?')
+            raise RuntimeError("process_rules(): remote shell command failed unexpectedly, is iptables running?")
 
-        lines = result.stdout.split('\n')
+        lines = result.stdout.split("\n")
 
         try:
             # identify the beginning index of the table
-            index = next(lines.index(line) for line in lines if line.startswith('Chain INPUT (policy ACCEPT'))
+            index = next(lines.index(line) for line in lines if line.startswith("Chain INPUT (policy ACCEPT"))
 
         except StopIteration:
-            raise RuntimeError('process_rules(): "%s" command output contains unexpected iptables output' %
-                               self.firewall_list_cmd)
+            raise RuntimeError(
+                'process_rules(): "%s" command output contains unexpected iptables output' % self.firewall_list_cmd
+            )
 
         # as we are reading in a new firewall table content, reset 'rules' member list
         self.rules = []
 
         # specify regex pattern to match all address port rules which we are interested in
-        pattern = ' +ACCEPT +(?P<proto>(all|udp|tcp)) +.*(0.0.0.0\/0 +){2}state NEW (all|udp|tcp) dpt:(?P<port>\d+)'
+        pattern = " +ACCEPT +(?P<proto>(all|udp|tcp)) +.*(0.0.0.0\/0 +){2}state NEW (all|udp|tcp) dpt:(?P<port>\d+)"
 
         # process all rules within the input chain table until any 'REJECT' rules as we can't reliably
         # assume 'ACCEPT' rules after a 'REJECT' rule will behave as we expect without further analysis
-        while lines[index].strip() != '' and lines[index].split()[1] != 'REJECT':
+        while lines[index].strip() != "" and lines[index].split()[1] != "REJECT":
             match = re.search(pattern, lines[index])
 
             if match:
                 # Note: because we are uncertain about the command used to obtain the input string, assume persist=False
-                self.rules.append(self.firewall_rule(match.group('port'), match.group('proto')))
+                self.rules.append(self.firewall_rule(match.group("port"), match.group("proto")))
             index += 1
 
         return None
@@ -141,7 +143,7 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
     @staticmethod
     def remote_add_port_cmd(port, proto):
         """ return string representation of bash command to add port on a remote firewall """
-        return 'lokkit --port=%s:%s --update' % (port, proto)
+        return "lokkit --port=%s:%s --update" % (port, proto)
 
     @staticmethod
     def remote_remove_port_cmd(port, proto):
@@ -150,16 +152,14 @@ class RemoteFirewallControlIpTables(RemoteFirewallControl):
         removed in iptables, although this is effective immediately, save configuration so removed rule is not
         reinstated on iptables reload (lokkit added rule matches this rule-spec)
         """
-        return 'iptables -D INPUT -m state --state new -p %s --dport %s -j ACCEPT && iptables-save' % (proto, port)
+        return "iptables -D INPUT -m state --state new -p %s --dport %s -j ACCEPT && iptables-save" % (proto, port)
 
     @staticmethod
     def remote_validate_persistent_rule_cmd(port):
         """ return string representation of bash command to check for existence of port entry in firewall config """
-        return 'grep -e \"{0}{1}\|{2}{1}\" {3} {4}'.format('--dport ',
-                                                           port,
-                                                           '--port=',
-                                                           '/etc/sysconfig/iptables',
-                                                           '/etc/sysconfig/system-config-firewall')
+        return 'grep -e "{0}{1}\|{2}{1}" {3} {4}'.format(
+            "--dport ", port, "--port=", "/etc/sysconfig/iptables", "/etc/sysconfig/system-config-firewall"
+        )
 
 
 class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
@@ -169,10 +169,10 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
 
     class_priority = 1
 
-    firewall_app_name = 'firewall-cmd'
+    firewall_app_name = "firewall-cmd"
 
     # test firewall command used to identify firewall application running on remote server
-    firewall_list_cmd = 'firewall-cmd --list-ports'
+    firewall_list_cmd = "firewall-cmd --list-ports"
 
     def process_rules(self):
         """
@@ -188,7 +188,9 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
 
         if result.rc != 0:
             from iml_common.lib.shell import Shell
-            raise RuntimeError('''process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
+
+            raise RuntimeError(
+                """process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)
 systemctl status firewalld:
 %s
 
@@ -196,30 +198,38 @@ systemctl status polkit:
 %s
 
 journalctl -n 100:
-%s''' % (result.rc, result.stdout, result.stderr,
-         Shell.run(['systemctl', 'status', 'firewalld']).stdout,
-         Shell.run(['systemctl', 'status', 'polkit']).stdout,
-         Shell.run(['journalctl', '-n', '100']).stdout))
+%s"""
+                % (
+                    result.rc,
+                    result.stdout,
+                    result.stderr,
+                    Shell.run(["systemctl", "status", "firewalld"]).stdout,
+                    Shell.run(["systemctl", "status", "polkit"]).stdout,
+                    Shell.run(["journalctl", "-n", "100"]).stdout,
+                )
+            )
 
-        if result.stdout.strip() == '':
+        if result.stdout.strip() == "":
             return None
 
         # handle output separated by either new-line chars, spaces, or both
-        tokens = [token for token in result.stdout.replace('\n', ' ').split() if token]
+        tokens = [token for token in result.stdout.replace("\n", " ").split() if token]
 
         # as we are reading in a new firewall table content, reset 'rules' member list
         self.rules = []
         index = 0
 
         while index < len(tokens):
-            match = re.search('(?P<port>\d+)\/(?P<proto>\w+)', tokens[index])
+            match = re.search("(?P<port>\d+)\/(?P<proto>\w+)", tokens[index])
 
             if match:
                 # Note: because we are uncertain about the command used to obtain the input string, assume persist=False
-                self.rules.append(self.firewall_rule(match.group('port'), match.group('proto')))
+                self.rules.append(self.firewall_rule(match.group("port"), match.group("proto")))
             else:
-                raise RuntimeError('process_rules(): "%s" command output contains unexpected firewall-cmd output' %
-                                   self.firewall_list_cmd)
+                raise RuntimeError(
+                    'process_rules(): "%s" command output contains unexpected firewall-cmd output'
+                    % self.firewall_list_cmd
+                )
 
             index += 1
 
@@ -228,18 +238,14 @@ journalctl -n 100:
     @staticmethod
     def remote_add_port_cmd(port, proto):
         """ return string representation of bash command to add port on a remote firewall """
-        return 'for i in "" "--permanent"; do ' \
-               '/usr/bin/firewall-cmd --add-port=%s/%s $i; ' \
-               'done' % (port, proto)
+        return 'for i in "" "--permanent"; do ' "/usr/bin/firewall-cmd --add-port=%s/%s $i; " "done" % (port, proto)
 
     @staticmethod
     def remote_remove_port_cmd(port, proto):
         """ return string representation of bash command to remove port on a remote firewall """
-        return 'for i in "" "--permanent"; do ' \
-               '/usr/bin/firewall-cmd --remove-port=%s/%s $i; ' \
-               'done' % (port, proto)
+        return 'for i in "" "--permanent"; do ' "/usr/bin/firewall-cmd --remove-port=%s/%s $i; " "done" % (port, proto)
 
     @staticmethod
     def remote_validate_persistent_rule_cmd(port):
         """ return string representation of bash command to check for existence of port entry in firewall config """
-        return '/usr/bin/firewall-cmd --list-ports --permanent | grep %s' % port
+        return "/usr/bin/firewall-cmd --list-ports --permanent | grep %s" % port

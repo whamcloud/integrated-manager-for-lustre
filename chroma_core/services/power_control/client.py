@@ -23,8 +23,9 @@ class PowerControlClient(object):
     @classmethod
     def create_device(cls, device_data):
         from chroma_core.models import PowerControlDevice
+
         device_id = PowerControlRpc().create_device(device_data)
-        return PowerControlDevice.objects.get(pk = device_id)
+        return PowerControlDevice.objects.get(pk=device_id)
 
     @classmethod
     def remove_device(cls, sockaddr):

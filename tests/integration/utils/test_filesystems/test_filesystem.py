@@ -25,7 +25,7 @@ class TestFileSystem(object):
         try:
             subtype = next(klass for klass in TestFileSystem.__subclasses__() if fstype in klass._supported_filesystems)
 
-            if (cls != subtype):
+            if cls != subtype:
                 return subtype.__new__(subtype, fstype, device_path)
             else:
                 return super(TestFileSystem, cls).__new__(cls)
@@ -43,13 +43,16 @@ class TestFileSystem(object):
             return ""
 
     def _failover_parameter(self, targets):
-        if 'secondary_server' in targets:
-            if targets.get('failover_mode', 'failnode') == 'failnode':
-                return '--failnode %s ' % targets['secondary_lnet_address']
+        if "secondary_server" in targets:
+            if targets.get("failover_mode", "failnode") == "failnode":
+                return "--failnode %s " % targets["secondary_lnet_address"]
             else:
-                return '--servicenode %s --servicenode %s' % (targets['lnet_address'], targets['secondary_lnet_address'])
+                return "--servicenode %s --servicenode %s" % (
+                    targets["lnet_address"],
+                    targets["secondary_lnet_address"],
+                )
         else:
-            return ''
+            return ""
 
     @abc.abstractmethod
     def mkfs_command(self, targets, type, fsname, mgs_nids, additional_options):

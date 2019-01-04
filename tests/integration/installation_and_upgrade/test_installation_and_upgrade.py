@@ -1,5 +1,3 @@
-
-
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.remote_operations import RealRemoteOperations

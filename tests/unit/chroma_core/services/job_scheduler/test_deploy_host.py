@@ -16,18 +16,20 @@ class TestDeployHostJob(IMLUnitTestCase):
         load_default_profile()
 
         host = synthetic_host()
-        host.state = 'undeployed'
+        host.state = "undeployed"
         host.save()
 
-        self.assertEquals(host.state, 'undeployed')
+        self.assertEquals(host.state, "undeployed")
 
         # Check the available states changes depending on how installed.
-        for install_method, states in {ManagedHost.INSTALL_MANUAL: [],
-                                       ManagedHost.INSTALL_SSHSKY: ['managed'],
-                                       ManagedHost.INSTALL_SSHPKY: ['managed'],
-                                       ManagedHost.INSTALL_SSHSKY: ['managed']}.items():
+        for install_method, states in {
+            ManagedHost.INSTALL_MANUAL: [],
+            ManagedHost.INSTALL_SSHSKY: ["managed"],
+            ManagedHost.INSTALL_SSHPKY: ["managed"],
+            ManagedHost.INSTALL_SSHSKY: ["managed"],
+        }.items():
             host.install_method = install_method
-            self.assertEquals(host.get_available_states('undeployed'), states)
+            self.assertEquals(host.get_available_states("undeployed"), states)
 
     def test_host_complete_job(self):
         """If a DeployHostJob completes in failure, the host should be in state "undeploy" """
@@ -37,7 +39,7 @@ class TestDeployHostJob(IMLUnitTestCase):
         load_default_profile()
 
         host = synthetic_host()
-        host.state = 'undeployed'
+        host.state = "undeployed"
         host.save()
 
         deploy_host_job = DeployHostJob.objects.create(managed_host=host)
@@ -46,4 +48,4 @@ class TestDeployHostJob(IMLUnitTestCase):
         job_scheduler._complete_job(deploy_host_job, errored=True, cancelled=False)
 
         host = freshen(host)
-        self.assertEqual(host.state, 'undeployed')
+        self.assertEqual(host.state, "undeployed")

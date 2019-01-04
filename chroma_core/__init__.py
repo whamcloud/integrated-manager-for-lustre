@@ -11,7 +11,7 @@ import os
 try:
     settings_module = os.environ["DJANGO_SETTINGS_MODULE"]
 
-    if not settings_module:             # If it's set but is an empty string.
+    if not settings_module:  # If it's set but is an empty string.
         raise KeyError
 
 except KeyError:

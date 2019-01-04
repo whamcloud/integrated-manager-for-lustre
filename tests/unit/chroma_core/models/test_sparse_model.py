@@ -1,5 +1,4 @@
-
-#import mock
+# import mock
 
 from django.db import models
 from django.test import TestCase
@@ -26,10 +25,9 @@ from chroma_core.models import SparseModel
 #     pass
 
 
-@skip('Skip until we write these')
+@skip("Skip until we write these")
 class TestSparseModel(TestCase):
-
-    class MockModel():
+    class MockModel:
         pass
 
     def setUp(self):

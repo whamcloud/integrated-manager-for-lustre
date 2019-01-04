@@ -29,7 +29,7 @@ class ChromaUserChangeForm(UserChangeForm):
             return ""
 
     class Meta(UserChangeForm.Meta):
-        fields = ('username', 'first_name', 'last_name', 'email',)
+        fields = ("username", "first_name", "last_name", "email")
 
 
 class UserAuthorization(DjangoAuthorization):
@@ -43,29 +43,31 @@ class UserAuthorization(DjangoAuthorization):
         elif not request.user.is_authenticated():
             # Anonymous sees nothing
             return object_list.none()
-        elif request.user.has_perm('add_user'):
+        elif request.user.has_perm("add_user"):
             # People who can create users can see all users
             return object_list
         else:
-            return object_list.filter(id = request.user.id)
+            return object_list.filter(id=request.user.id)
 
 
 class UserValidation(Validation):
     """A custom Validation class, calling into django.contrib.auth's Form
     classes (can't use FormValidation because we have different forms
     for PUT than for POST)"""
+
     def is_valid(self, bundle, request=None):
         data = bundle.data or {}
         if request.method == "PUT":
             errors = {}
             try:
-                user = get_object_or_404(User, pk=data['id'])
+                user = get_object_or_404(User, pk=data["id"])
             except KeyError:
-                errors['id'] = ['id attribute is mandatory']
+                errors["id"] = ["id attribute is mandatory"]
             else:
-                change_pw_fields = ['new_password1', 'new_password2']
+                change_pw_fields = ["new_password1", "new_password2"]
                 if any((True for k in change_pw_fields if data[k] is not None)):
                     from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+
                     # Non-superusers always require old_password
                     # Superusers require old_password when editing themselves
                     if not request.user.is_superuser or request.user.id == user.id:
@@ -93,6 +95,7 @@ class UserValidation(Validation):
         else:
             raise NotImplementedError
 
+
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpForbidden
 
@@ -101,37 +104,45 @@ class UserResource(ChromaModelResource):
     """
     A user account
     """
-    groups = fields.ToManyField('chroma_api.group.GroupResource',
-                                attribute = 'groups',
-                                full = True, null = True,
-                                help_text = "List of groups that this user is a member of.  May "
-                                            "only be modified by superusers")
-    alert_subscriptions = fields.ToManyField('chroma_api.alert.AlertSubscriptionResource',
-                                             attribute = 'alert_subscriptions', null = True, full = True,
-                                             help_text = "List of alert subscriptions (alerts for which this user"
-                                                         "will be sent emails.  See alert_subscription resource"
-                                                         "for format")
-    full_name = fields.CharField(help_text = "Human readable form derived from ``first_name`` and ``last_name``")
 
-    password1 = fields.CharField(help_text = "Used when creating a user (request must be made by a superuser)")
-    password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
-    new_password1 = fields.CharField(help_text = "Used for modifying password (request must be "
-                                                 "made by the same user or by a superuser)")
-    new_password2 = fields.CharField(help_text = "Password confirmation, must match ``new_password1``")
+    groups = fields.ToManyField(
+        "chroma_api.group.GroupResource",
+        attribute="groups",
+        full=True,
+        null=True,
+        help_text="List of groups that this user is a member of.  May " "only be modified by superusers",
+    )
+    alert_subscriptions = fields.ToManyField(
+        "chroma_api.alert.AlertSubscriptionResource",
+        attribute="alert_subscriptions",
+        null=True,
+        full=True,
+        help_text="List of alert subscriptions (alerts for which this user"
+        "will be sent emails.  See alert_subscription resource"
+        "for format",
+    )
+    full_name = fields.CharField(help_text="Human readable form derived from ``first_name`` and ``last_name``")
+
+    password1 = fields.CharField(help_text="Used when creating a user (request must be made by a superuser)")
+    password2 = fields.CharField(help_text="Password confirmation, must match ``password1``")
+    new_password1 = fields.CharField(
+        help_text="Used for modifying password (request must be " "made by the same user or by a superuser)"
+    )
+    new_password2 = fields.CharField(help_text="Password confirmation, must match ``new_password1``")
 
     is_superuser = fields.BooleanField(readonly=True, help_text="Is the user a superuser", attribute="is_superuser")
 
     def alter_deserialized_detail_data(self, request, data):
         def handle_groups(group):
             if isinstance(group, dict):
-                return group['resource_uri']
+                return group["resource_uri"]
             elif isinstance(group, basestring):
                 return group
             else:
                 raise NotImplementedError(group.__class__)
 
-        if 'groups' in data:
-            data['groups'] = map(handle_groups, data['groups'])
+        if "groups" in data:
+            data["groups"] = map(handle_groups, data["groups"])
 
         return data
 
@@ -140,11 +151,11 @@ class UserResource(ChromaModelResource):
 
         # Prevent non-superusers from modifying their groups
         if not bundle.request.user.is_superuser:
-            if 'groups' in bundle.data:
+            if "groups" in bundle.data:
                 group_ids = []
-                for group in bundle.data['groups']:
+                for group in bundle.data["groups"]:
                     if isinstance(group, dict):
-                        group_ids.append(int(group['id']))
+                        group_ids.append(int(group["id"]))
                     elif isinstance(group, basestring):
                         group_ids.append(int(GroupResource().get_via_uri(group, bundle.request).id))
                     elif isinstance(group, Bundle):
@@ -162,7 +173,7 @@ class UserResource(ChromaModelResource):
     # via the User resource, though, so perhaps this is not so bad.
     def hydrate_alert_subscriptions(self, bundle):
         try:
-            del bundle.data['alert_subscriptions'][:]
+            del bundle.data["alert_subscriptions"][:]
         except KeyError:
             pass
 
@@ -178,15 +189,16 @@ class UserResource(ChromaModelResource):
         return bundle
 
     def hydrate_password2(self, bundle):
-        return self._hydrate_password(bundle, 'password2')
+        return self._hydrate_password(bundle, "password2")
 
     def hydrate_new_password2(self, bundle):
-        return self._hydrate_password(bundle, 'new_password2')
+        return self._hydrate_password(bundle, "new_password2")
 
     def obj_create(self, bundle, **kwargs):
         bundle = super(UserResource, self).obj_create(bundle, **kwargs)
         from django.contrib.auth.models import Group
-        superuser_group = Group.objects.get(name = 'superusers')
+
+        superuser_group = Group.objects.get(name="superusers")
         for g in bundle.obj.groups.all():
             if g == superuser_group:
                 bundle.obj.is_superuser = True
@@ -198,8 +210,10 @@ class UserResource(ChromaModelResource):
         return bundle.obj.get_full_name()
 
     def delete_detail(self, request, **kwargs):
-        if int(kwargs['pk']) == request.user.id:
-            return self.create_response(request, {'id': ["Cannot delete currently authenticated user"]}, response_class = HttpBadRequest)
+        if int(kwargs["pk"]) == request.user.id:
+            return self.create_response(
+                request, {"id": ["Cannot delete currently authenticated user"]}, response_class=HttpBadRequest
+            )
         else:
             return super(UserResource, self).delete_detail(request, **kwargs)
 
@@ -208,9 +222,21 @@ class UserResource(ChromaModelResource):
         authorization = UserAuthorization()
         queryset = User.objects.all()
         validation = UserValidation()
-        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'new_password1',
-                  'new_password2', 'password1', 'password2', 'resource_uri', 'username', 'email']
-        ordering = ['username', 'email']
-        list_allowed_methods = ['get', 'post']
-        detail_allowed_methods = ['get', 'put', 'delete']
+        fields = [
+            "first_name",
+            "full_name",
+            "groups",
+            "id",
+            "last_name",
+            "new_password1",
+            "new_password2",
+            "password1",
+            "password2",
+            "resource_uri",
+            "username",
+            "email",
+        ]
+        ordering = ["username", "email"]
+        list_allowed_methods = ["get", "post"]
+        detail_allowed_methods = ["get", "put", "delete"]
         always_return_data = True

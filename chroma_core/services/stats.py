@@ -14,7 +14,7 @@ log = log_register(__name__)
 
 
 class StatsQueue(queue.ServiceQueue):
-    name = 'stats'
+    name = "stats"
 
     def put(self, samples):
         queue.ServiceQueue.put(self, [(id, str(dt), value) for id, dt, value in samples])
@@ -32,7 +32,7 @@ class Service(ChromaService):
         try:
             outdated = Stats.insert((id, dateparse.parse_datetime(dt), value) for id, dt, value in samples)
         except db.IntegrityError:
-            log.error("Duplicate stats insert: " + db.connection.queries[-1]['sql'])
+            log.error("Duplicate stats insert: " + db.connection.queries[-1]["sql"])
             db.transaction.rollback()  # allow future stats to still work
         except:
             log.error("Error handling stats insert: " + traceback.format_exc())

@@ -18,7 +18,7 @@ from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 
-__all__ = 'Point', 'Series', 'Stats'
+__all__ = "Point", "Series", "Stats"
 
 
 def total_seconds(td):
@@ -31,11 +31,14 @@ class SampleInfo(object):
         self.sample_rate = int(total_seconds(timedelta(**sample_rate)))
         self.expiration_time = timedelta(**expiration_time)
 
-SAMPLES = [SampleInfo({'seconds': 10}, settings.STATS_10_SECOND_EXPIRATION),
-           SampleInfo({'minutes': 1}, settings.STATS_1_MINUTE_EXPIRATION),
-           SampleInfo({'minutes': 5}, settings.STATS_5_MINUTE_EXPIRATION),
-           SampleInfo({'hours': 1}, settings.STATS_1_HOUR_EXPIRATION),
-           SampleInfo({'days': 1}, settings.STATS_1_DAY_EXPIRATION)]
+
+SAMPLES = [
+    SampleInfo({"seconds": 10}, settings.STATS_10_SECOND_EXPIRATION),
+    SampleInfo({"minutes": 1}, settings.STATS_1_MINUTE_EXPIRATION),
+    SampleInfo({"minutes": 5}, settings.STATS_5_MINUTE_EXPIRATION),
+    SampleInfo({"hours": 1}, settings.STATS_1_HOUR_EXPIRATION),
+    SampleInfo({"days": 1}, settings.STATS_1_DAY_EXPIRATION),
+]
 
 
 def div_samplerate(x, y):
@@ -50,7 +53,7 @@ def timestamp(dt):
     return calendar.timegm(dt.utctimetuple())
 
 
-class Point(collections.namedtuple('Point', ('dt', 'sum', 'len'))):
+class Point(collections.namedtuple("Point", ("dt", "sum", "len"))):
     "Fast and small tuple wrapper for a single data point."
     __slots__ = ()
 
@@ -67,6 +70,7 @@ class Point(collections.namedtuple('Point', ('dt', 'sum', 'len'))):
 
     def __sub__(self, other):
         return type(self)(self.dt, self.mean - other.mean, total_seconds(self.dt - other.dt))
+
 
 epoch = datetime.fromtimestamp(0, utc)
 Point.zero = Point(epoch, 0.0, 0)
@@ -86,22 +90,23 @@ class Series(models.Model):
     """Sources and their associated fields.
     Leverages the ContentTypes framework to allow series to be associated with other apps' models.
     """
-    DATA_TYPES = 'Gauge', 'Counter', 'Derive'
-    JOB_TYPES = 'SLURM_JOB_ID', 'JOB_ID', 'LSB_JOBID', 'LOADL_STEP_ID', 'PBS_JOBID', 'procname_uid'
+
+    DATA_TYPES = "Gauge", "Counter", "Derive"
+    JOB_TYPES = "SLURM_JOB_ID", "JOB_ID", "LSB_JOBID", "LOADL_STEP_ID", "PBS_JOBID", "procname_uid"
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=30)
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
+    content_object = generic.GenericForeignKey("content_type", "object_id")
 
     class Meta:
-        app_label = 'chroma_core'
-        unique_together = ('content_type', 'object_id', 'name'),
+        app_label = "chroma_core"
+        unique_together = (("content_type", "object_id", "name"),)
 
     cache = Cache(None)
 
     @classmethod
-    def get(cls, obj, name, type=''):
+    def get(cls, obj, name, type=""):
         "Return cached series for measured object and field, optionally creating it with given type."
         try:
             return cls.cache[obj, name]
@@ -127,6 +132,7 @@ class Sample(models.Model):
     Only used for query generation.
     Subclasses require 'step', 'expiration_time', and 'cache' attributes.
     """
+
     id = models.IntegerField(primary_key=True)  # for django only, not really the primary key
     dt = models.DateTimeField(db_index=True)
     sum = models.FloatField()
@@ -134,12 +140,12 @@ class Sample(models.Model):
 
     class Meta:
         abstract = True
-        unique_together = ('id', 'dt'),
+        unique_together = (("id", "dt"),)
 
     @classmethod
     def latest(cls, id):
         "Return most recent data point for series."
-        return (cls.cache[id] or list(cls.select(id, order_by='-dt', limit=1)) or [Point.zero])[-1]
+        return (cls.cache[id] or list(cls.select(id, order_by="-dt", limit=1)) or [Point.zero])[-1]
 
     @classmethod
     def start(cls, id):
@@ -161,7 +167,7 @@ class Sample(models.Model):
             yield Point(dt, *sum(points, Point.zero)[1:])
 
     @classmethod
-    def select(cls, id, order_by='dt', limit=None, **filters):
+    def select(cls, id, order_by="dt", limit=None, **filters):
         "Generate points for a series."
         query = cls.objects.filter(id=id, **filters).order_by(order_by)[:limit]
         return itertools.starmap(Point, query.values_list(*Point._fields))
@@ -197,17 +203,20 @@ class Sample(models.Model):
 
 class Stats(list):
     "Primary interface to all sample models."
+
     def __init__(self, samples):
         maxlen = max(map(div_samplerate, samples[1:], samples[:-1]))
         for sample in samples:
             cache = Cache(functools.partial(collections.deque, maxlen=maxlen))
-            namespace = {'__module__': 'chroma_core.models',
-                         'step': sample.sample_rate,
-                         'expiration_time': sample.expiration_time,
-                         'next_flush_orphans_time': epoch,
-                         'flush_orphans_interval': sample.expiration_time / settings.STATS_FLUSH_RATE,
-                         'cache': cache}
-            self.append(type('Sample_{0:d}'.format(sample.sample_rate), (Sample,), namespace))
+            namespace = {
+                "__module__": "chroma_core.models",
+                "step": sample.sample_rate,
+                "expiration_time": sample.expiration_time,
+                "next_flush_orphans_time": epoch,
+                "flush_orphans_interval": sample.expiration_time / settings.STATS_FLUSH_RATE,
+                "cache": cache,
+            }
+            self.append(type("Sample_{0:d}".format(sample.sample_rate), (Sample,), namespace))
 
     def insert(self, samples):
         "Bulk insert new samples (id, dt, value).  Skip and return outdated samples."
@@ -240,7 +249,7 @@ class Stats(list):
         model.expire(stats)
         return outdated
 
-    def select(self, id, start, stop, rate=False, maxlen=float('inf'), fixed=0):
+    def select(self, id, start, stop, rate=False, maxlen=float("inf"), fixed=0):
         """Return points for a series within inclusive interval of most granular samples.
         Optionally derive the rate of change of points.
         Optionally limit number of points by increasing sample resolution.

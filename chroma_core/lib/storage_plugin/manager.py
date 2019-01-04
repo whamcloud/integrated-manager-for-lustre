@@ -11,7 +11,11 @@ import traceback
 from django.conf import settings
 
 from chroma_core.lib.storage_plugin.api import relations
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource, ResourceProgrammingError
+from chroma_core.lib.storage_plugin.base_resource import (
+    BaseStorageResource,
+    BaseScannableResource,
+    ResourceProgrammingError,
+)
 
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.log import storage_plugin_log
@@ -41,12 +45,14 @@ class VersionMismatchError(PluginProgrammingError):
 
 class VersionNotFoundError(PluginProgrammingError):
     """Raised when a plugin doesn't declare a version attribute."""
+
     pass
 
 
 class LoadedResourceClass(object):
     """Convenience store of introspected information about BaseStorageResource
        subclasses from loaded modules."""
+
     def __init__(self, resource_class, resource_class_id):
         self.resource_class = resource_class
         self.resource_class_id = resource_class_id
@@ -55,11 +61,13 @@ class LoadedResourceClass(object):
 class LoadedPlugin(object):
     """Convenience store of introspected information about loaded
        plugin modules."""
+
     def __init__(self, plugin_manager, module, module_name, plugin_class):
         # Populate _resource_classes from all BaseStorageResource in the same module
         # (or leave it untouched if the plugin author overrode it)
-        if not hasattr(plugin_class, '_resource_classes'):
+        if not hasattr(plugin_class, "_resource_classes"):
             import inspect
+
             plugin_class._resource_classes = []
             for name, cls in inspect.getmembers(module):
                 if inspect.isclass(cls) and issubclass(cls, BaseStorageResource) and cls != BaseStorageResource:
@@ -68,7 +76,7 @@ class LoadedPlugin(object):
         # Map of name string to class
         self.resource_classes = {}
         self.plugin_class = plugin_class
-        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name = module_name)
+        self.plugin_record, created = StoragePluginRecord.objects.get_or_create(module_name=module_name)
         if created:
             self.plugin_record.internal = plugin_class.internal
             self.plugin_record.save()
@@ -76,20 +84,18 @@ class LoadedPlugin(object):
         self.scannable_resource_classes = []
 
         for cls in plugin_class._resource_classes:
-            if not hasattr(cls._meta, 'identifier'):
+            if not hasattr(cls._meta, "identifier"):
                 raise ResourceProgrammingError(cls.__name__, "No Meta.identifier")
 
             # Populate database records for the classes
             vrc, created = StorageResourceClass.objects.get_or_create(
-                    storage_plugin = self.plugin_record,
-                    class_name = cls.__name__)
+                storage_plugin=self.plugin_record, class_name=cls.__name__
+            )
             if created:
                 vrc.user_creatable = issubclass(cls, BaseScannableResource)
                 vrc.save()
             for name, stat_obj in cls._meta.storage_statistics.items():
-                class_stat, created = StorageResourceClassStatistic.objects.get_or_create(
-                        resource_class = vrc,
-                        name = name)
+                class_stat, created = StorageResourceClassStatistic.objects.get_or_create(resource_class=vrc, name=name)
 
             plugin_manager.resource_class_id_to_class[vrc.id] = cls
             plugin_manager.resource_class_class_to_id[cls] = vrc.id
@@ -107,10 +113,11 @@ class StoragePluginManager(object):
         self.resource_class_class_to_id = {}
 
         from settings import INSTALLED_STORAGE_PLUGINS
+
         for plugin in INSTALLED_STORAGE_PLUGINS:
             try:
                 self.load_plugin(plugin)
-            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError), e:
+            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError) as e:
                 storage_plugin_log.error("Failed to load plugin '%s': %s" % (plugin, traceback.format_exc()))
                 self.errored_plugins.append((plugin, e))
 
@@ -169,13 +176,15 @@ class StoragePluginManager(object):
 
     def get_scannable_resource_ids(self, plugin):
         loaded_plugin = self.loaded_plugins[plugin]
-        records = StorageResourceRecord.objects.\
-               filter(resource_class__storage_plugin = loaded_plugin.plugin_record).\
-               filter(resource_class__class_name__in = loaded_plugin.scannable_resource_classes).\
-               filter(parents = None).values('id')
-        return [r['id'] for r in records]
+        records = (
+            StorageResourceRecord.objects.filter(resource_class__storage_plugin=loaded_plugin.plugin_record)
+            .filter(resource_class__class_name__in=loaded_plugin.scannable_resource_classes)
+            .filter(parents=None)
+            .values("id")
+        )
+        return [r["id"] for r in records]
 
-    def get_resource_classes(self, scannable_only = False, show_internal = False):
+    def get_resource_classes(self, scannable_only=False, show_internal=False):
         """Return a list of StorageResourceClass records
 
            :param scannable_only: Only report BaseScannableResource subclasses
@@ -187,9 +196,9 @@ class StoragePluginManager(object):
                 continue
 
             filter = {}
-            filter['storage_plugin'] = v.plugin_record
+            filter["storage_plugin"] = v.plugin_record
             if scannable_only:
-                filter['class_name__in'] = v.scannable_resource_classes
+                filter["class_name__in"] = v.scannable_resource_classes
 
             class_records.extend(list(StorageResourceClass.objects.filter(**filter)))
 
@@ -214,8 +223,10 @@ class StoragePluginManager(object):
         try:
             loaded_resource = loaded_plugin.resource_classes[resource_class_name]
         except KeyError:
-            raise PluginNotFound("Resource %s not found in %s (not one of %s)" % (
-                resource_class_name, plugin_module, loaded_plugin.resource_classes.keys()))
+            raise PluginNotFound(
+                "Resource %s not found in %s (not one of %s)"
+                % (resource_class_name, plugin_module, loaded_plugin.resource_classes.keys())
+            )
 
         return loaded_resource.resource_class, loaded_resource.resource_class_id
 
@@ -235,35 +246,37 @@ class StoragePluginManager(object):
         errors = []
         try:
             self.load_plugin(module)
-        except ResourceProgrammingError, e:
+        except ResourceProgrammingError as e:
             errors.append(e.__str__())
-        except VersionNotFoundError, e:
-            errors.append("Add version=<int> to your plugin module. Consult "
-                          "Comand Center documentation for API version "
-                          "supported.")
-        except VersionMismatchError, e:
+        except VersionNotFoundError as e:
+            errors.append(
+                "Add version=<int> to your plugin module. Consult "
+                "Comand Center documentation for API version "
+                "supported."
+            )
+        except VersionMismatchError as e:
             plugin_version = e.version
             command_center_version = settings.STORAGE_API_VERSION
-            errors.append("The plugin declares version %s. "
-                          "However, this manager server version supports "
-                          "version %s of the Plugin API." % (plugin_version,
-                                                     command_center_version))
-        except PluginProgrammingError, e:
+            errors.append(
+                "The plugin declares version %s. "
+                "However, this manager server version supports "
+                "version %s of the Plugin API." % (plugin_version, command_center_version)
+            )
+        except PluginProgrammingError as e:
             errors.append(e.__str__())
-        except SyntaxError, e:
+        except SyntaxError as e:
             errors.append("SyntaxError: %s:%s:%s: %s" % (e.filename, e.lineno, e.offset, e.text))
-        except ImportError, e:
+        except ImportError as e:
             errors.append(e.__str__())
 
         return errors
 
     def _validate_api_version(self, module):
 
-        if not hasattr(module, 'version'):
+        if not hasattr(module, "version"):
             raise VersionNotFoundError()
 
-        if (type(module.version) != int or
-            settings.STORAGE_API_VERSION != module.version):
+        if type(module.version) != int or settings.STORAGE_API_VERSION != module.version:
             raise VersionMismatchError(module.version)
 
     def _load_plugin(self, module, module_name, plugin_klass):
@@ -293,7 +306,7 @@ class StoragePluginManager(object):
                 storage_plugin_log.error("Error importing %s: %s" % (module, e))
                 raise
 
-        components = module.split('.')
+        components = module.split(".")
 
         plugin_name = module
         for comp in components[1:]:
@@ -305,15 +318,24 @@ class StoragePluginManager(object):
 
         # Find all BaseStoragePlugin subclasses in the module
         from chroma_core.lib.storage_plugin.api.plugin import Plugin
+
         plugin_klasses = []
         import inspect
+
         for name, cls in inspect.getmembers(plugin_module):
-            if inspect.isclass(cls) and issubclass(cls, BaseStoragePlugin) and cls != BaseStoragePlugin and cls != Plugin:
+            if (
+                inspect.isclass(cls)
+                and issubclass(cls, BaseStoragePlugin)
+                and cls != BaseStoragePlugin
+                and cls != Plugin
+            ):
                 plugin_klasses.append(cls)
 
         # Make sure we have exactly one BaseStoragePlugin subclass
         if len(plugin_klasses) > 1:
-            raise PluginProgrammingError("Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses))
+            raise PluginProgrammingError(
+                "Module %s defines more than one BaseStoragePlugin: %s!" % (module, plugin_klasses)
+            )
         elif len(plugin_klasses) == 0:
             raise PluginProgrammingError("Module %s does not define a BaseStoragePlugin!" % module)
         else:
@@ -323,6 +345,7 @@ class StoragePluginManager(object):
         if not plugin_klass._log:
             import logging
             import settings
+
             log = logging.getLogger("storage_plugin_log_%s" % module)
             if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:
                 log.setLevel(logging.DEBUG)

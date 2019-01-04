@@ -8,14 +8,14 @@ from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlock
 
 
 class TestBlockDeviceLvm(TestBlockDevice):
-    _supported_device_types = ['lvm']
+    _supported_device_types = ["lvm"]
 
     def __init__(self, device_type, device_path):
         super(TestBlockDeviceLvm, self).__init__(device_type, device_path)
 
     @property
     def preferred_fstype(self):
-        return 'ldiskfs'
+        return "ldiskfs"
 
     # Create a lvm on the device.
     @property
@@ -29,13 +29,11 @@ class TestBlockDeviceLvm(TestBlockDevice):
 
     @property
     def vg_name(self):
-        return "vg_%s" % "".join(
-            [c for c in self._device_path if re.match(r'\w', c)])
+        return "vg_%s" % "".join([c for c in self._device_path if re.match(r"\w", c)])
 
     @property
     def lv_name(self):
-        return "lv_%s" % "".join(
-            [c for c in self._device_path if re.match(r'\w', c)])
+        return "lv_%s" % "".join([c for c in self._device_path if re.match(r"\w", c)])
 
     @property
     def device_path(self):
@@ -44,15 +42,15 @@ class TestBlockDeviceLvm(TestBlockDevice):
     @classmethod
     def clear_device_commands(cls, device_paths):
         lv_destroy = [
-            "if lvdisplay /dev/{0}/{1}; then lvchange -an /dev/{0}/{1} && lvremove /dev/{0}/{1}; else exit 0; fi".
-            format(
-                TestBlockDeviceLvm('lvm', device_path).vg_name,
-                TestBlockDeviceLvm('lvm', device_path).lv_name)
+            "if lvdisplay /dev/{0}/{1}; then lvchange -an /dev/{0}/{1} && lvremove /dev/{0}/{1}; else exit 0; fi".format(
+                TestBlockDeviceLvm("lvm", device_path).vg_name, TestBlockDeviceLvm("lvm", device_path).lv_name
+            )
             for device_path in device_paths
         ]
         vg_destroy = [
             "if vgdisplay {0}; then vgremove {0}; else exit 0; fi".format(
-                TestBlockDeviceLvm('lvm', device_path).vg_name)
+                TestBlockDeviceLvm("lvm", device_path).vg_name
+            )
             for device_path in device_paths
         ]
 

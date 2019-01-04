@@ -42,11 +42,11 @@ def assertQueries(*prefixes):
     count = len(connection.queries)
     yield
     for prefix, query in itertools.izip_longest(prefixes, connection.queries[count:]):
-        assert prefix and query and query['sql'].startswith(prefix), (prefix, query)
+        assert prefix and query and query["sql"].startswith(prefix), (prefix, query)
         cursor = connection.cursor()
-        cursor.execute('EXPLAIN ' + query['sql'])
-        plan = ''.join(row for row, in cursor)
-        assert prefix == 'INSERT' or 'Index Scan' in plan, (plan, query)
+        cursor.execute("EXPLAIN " + query["sql"])
+        plan = "".join(row for row, in cursor)
+        assert prefix == "INSERT" or "Index Scan" in plan, (plan, query)
 
 
 class TestModels(IMLUnitTestCase):
@@ -57,11 +57,11 @@ class TestModels(IMLUnitTestCase):
 
         Stats.delete_all()
         connection.use_debug_cursor = True
-        connection.cursor().execute('SET enable_seqscan = off')
+        connection.cursor().execute("SET enable_seqscan = off")
         self.preserve_stats_wipe = settings.STATS_SIMPLE_WIPE
 
     def tearDown(self):
-        connection.cursor().execute('SET enable_seqscan = on')
+        connection.cursor().execute("SET enable_seqscan = on")
         connection.use_debug_cursor = False
         Stats.delete_all()
         settings.STATS_SIMPLE_WIPE = self.preserve_stats_wipe
@@ -80,7 +80,7 @@ class TestModels(IMLUnitTestCase):
 
     def test_sample_select(self):
         model = Stats[0]
-        with assertQueries('SELECT', 'SELECT', 'SELECT'):
+        with assertQueries("SELECT", "SELECT", "SELECT"):
             point = model.latest(id)
             self.assertEqual(point, model.latest(id))
             start = model.start(id)
@@ -93,7 +93,7 @@ class TestModels(IMLUnitTestCase):
 
         model.objects.all().delete()
 
-        with assertQueries('INSERT', 'SELECT'):
+        with assertQueries("INSERT", "SELECT"):
             model.insert({id: points})
             point = model.latest(id)
             model.cache.clear()
@@ -103,14 +103,14 @@ class TestModels(IMLUnitTestCase):
         self.assertLessEqual(floor, point.dt)
         self.assertEqual(floor.microsecond, 0)
 
-        with assertQueries('SELECT', 'DELETE', 'SELECT'):
+        with assertQueries("SELECT", "DELETE", "SELECT"):
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
 
         self.assertEqual(len(list(model.reduce(points))), len(points))
         self.assertLess(len(list(Stats[1].reduce(points))), len(points))
 
-        with assertQueries('DELETE'):
+        with assertQueries("DELETE"):
             model.delete(id=id)
         self.assertListEqual(list(model.select(id)), [])
         self.assertTrue(Stats[-1].start(id))
@@ -121,7 +121,7 @@ class TestModels(IMLUnitTestCase):
 
         model.objects.all().delete()
 
-        with assertQueries('INSERT', 'SELECT'):
+        with assertQueries("INSERT", "SELECT"):
             model.insert({id: points})
             point = model.latest(id)
             model.cache.clear()
@@ -133,7 +133,7 @@ class TestModels(IMLUnitTestCase):
 
         # Check it tries to expire something
         model.next_flush_orphans_time = epoch
-        with assertQueries('DELETE', 'SELECT'):
+        with assertQueries("DELETE", "SELECT"):
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
 
@@ -148,11 +148,11 @@ class TestModels(IMLUnitTestCase):
         model.insert({id: [Point(epoch, 1, 1)]})
         model.next_flush_orphans_time = epoch
         self.assertListEqual(list(model.select(id)), [Point(epoch, 1, 1)] + points)
-        with assertQueries('DELETE', 'SELECT'):
+        with assertQueries("DELETE", "SELECT"):
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points)
 
-        with assertQueries('DELETE'):
+        with assertQueries("DELETE"):
             model.delete(id=id)
         self.assertListEqual(list(model.select(id)), [])
         self.assertTrue(Stats[-1].start(id))
@@ -169,12 +169,17 @@ class TestModels(IMLUnitTestCase):
         self.assertLessEqual(point, points[-1])
         count = len(points) + 1
         for stat in Stats[:-1]:
-            timestamps = map(operator.attrgetter('timestamp'), Stats.select(id, point.dt - (stat.expiration_time - timedelta(seconds=stat.step)), point.dt))
+            timestamps = map(
+                operator.attrgetter("timestamp"),
+                Stats.select(id, point.dt - (stat.expiration_time - timedelta(seconds=stat.step)), point.dt),
+            )
             self.assertLess(len(timestamps), count)
             count = len(timestamps)
             steps = set(y - x for x, y in zip(timestamps, timestamps[1:]))
             self.assertLessEqual(len(steps), 1)
-        timestamps = map(operator.attrgetter('timestamp'), Stats.select(id, point.dt - timedelta(hours=1), point.dt, maxlen=100))
+        timestamps = map(
+            operator.attrgetter("timestamp"), Stats.select(id, point.dt - timedelta(hours=1), point.dt, maxlen=100)
+        )
         self.assertLessEqual(len(timestamps), 100)
         self.assertFalse(any(timestamp % 60 for timestamp in timestamps))
         self.assertTrue(any(timestamp % 300 for timestamp in timestamps))
@@ -196,7 +201,7 @@ class TestModels(IMLUnitTestCase):
 
         self.assertEqual(selection[0].len, 0)
         point, = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
-        with assertQueries(*['DELETE'] * 5):
+        with assertQueries(*["DELETE"] * 5):
             Stats.delete(id)
         for model in Stats:
             self.assertListEqual(list(model.select(id)), [])
@@ -212,10 +217,10 @@ class TestMonsterData(IMLUnitTestCase):
         Stats.delete_all()
         settings.STATS_SIMPLE_WIPE = self.preserve_stats_wipe
 
-    def _test_monster_data(self, simple_wipe, ids_to_create = 500, job_stats_to_create = 50, days = 365 * 10):
-        '''
+    def _test_monster_data(self, simple_wipe, ids_to_create=500, job_stats_to_create=50, days=365 * 10):
+        """
         Push 10 years worth of data through that stats system for 550 (50 of which are jobstats) ids.
-        '''
+        """
 
         date = start_time = datetime.now(utc)
         end_date = now + timedelta(days=days)
@@ -224,7 +229,7 @@ class TestMonsterData(IMLUnitTestCase):
         first_job_stat = ids_to_create + 1
         iterations_completed = 0
 
-        with mock.patch('chroma_core.models.stats.datetime') as dt:
+        with mock.patch("chroma_core.models.stats.datetime") as dt:
             while date < end_date:
                 data = []
 
@@ -243,16 +248,19 @@ class TestMonsterData(IMLUnitTestCase):
 
         end_time = datetime.now(utc)
 
-        print "Time to run test_monster_data %s, time per 10 second step %s, wipe=%s" % (end_time - start_time,
-                                                                                         (end_time - start_time) / iterations_completed,
-                                                                                         settings.STATS_SIMPLE_WIPE)
+        print(
+            "Time to run test_monster_data %s, time per 10 second step %s, wipe=%s"
+            % (end_time - start_time, (end_time - start_time) / iterations_completed, settings.STATS_SIMPLE_WIPE)
+        )
 
         # This test fails if we are not using SIMPLE_WIPE and we have job_stats, so don't run the test
         # in that case.
         if settings.STATS_SIMPLE_WIPE or job_stats_to_create == 0:
             for stat in Stats:
                 actual_records = stat.objects.count()
-                max_expected_records = ids_to_create * total_seconds(stat.expiration_time + stat.flush_orphans_interval) / stat.step
+                max_expected_records = (
+                    ids_to_create * total_seconds(stat.expiration_time + stat.flush_orphans_interval) / stat.step
+                )
                 self.assertLess(actual_records, max_expected_records)
 
     def test_monster_data_simple_wipe(self):

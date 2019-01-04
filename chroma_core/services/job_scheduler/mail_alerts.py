@@ -13,7 +13,7 @@ from chroma_core.services import log_register
 from chroma_core.models.alert import AlertState, AlertEmail
 
 
-logging = log_register('email_alerts')
+logging = log_register("email_alerts")
 
 
 class MailAlerts(threading.Thread):
@@ -37,7 +37,7 @@ class MailAlerts(threading.Thread):
                 if self.exit:
                     break
 
-                alerts = AlertState.objects.filter(alertemail = None, dismissed = False)
+                alerts = AlertState.objects.filter(alertemail=None, dismissed=False)
 
                 # Now filter the types that send mail alerts.
                 alerts = [alert for alert in alerts if alert.require_mail_alert]
@@ -63,10 +63,12 @@ class MailAlerts(threading.Thread):
             self.change_event.set()
 
     def _send_alerts_email(self, alert_email):
-        for user in User.objects.annotate(num_subscriptions = Count('alert_subscriptions')).filter(num_subscriptions__gt = 0):
+        for user in User.objects.annotate(num_subscriptions=Count("alert_subscriptions")).filter(
+            num_subscriptions__gt=0
+        ):
             alert_messages = []
             subscriptions = [subscription.alert_type_name for subscription in user.alert_subscriptions.all()]
-            for alert in AlertState.objects.filter(id__in = alert_email.alerts.all(), record_type__in = subscriptions):
+            for alert in AlertState.objects.filter(id__in=alert_email.alerts.all(), record_type__in=subscriptions):
                 alert_message = "%s %s" % (alert.begin, alert.message())
                 if alert.active:
                     alert_message += "  Alert state is currently active"

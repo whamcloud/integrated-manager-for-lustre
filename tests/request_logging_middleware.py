@@ -6,13 +6,10 @@ from django.conf import settings
 from chroma_core.services.log import custom_log_register
 from iml_common.lib.date_time import IMLDateTime
 
-REQUEST_LOG_PATH = os.path.join(settings.LOG_PATH, 'requests.log')
+REQUEST_LOG_PATH = os.path.join(settings.LOG_PATH, "requests.log")
 logger = custom_log_register(__name__, REQUEST_LOG_PATH, False)
 
-TYPES = {
-    'JSON': 'application/json',
-    'HTML': 'text/html'
-}
+TYPES = {"JSON": "application/json", "HTML": "text/html"}
 
 
 class RequestLoggingMiddleware(object):
@@ -22,16 +19,16 @@ class RequestLoggingMiddleware(object):
     """
 
     def process_response(self, request, response):
-        content_type = response['Content-Type']
+        content_type = response["Content-Type"]
 
         if not any(x in content_type for x in TYPES.values()):
             return response
 
         def get_meta(prop):
-            return request.META.get(prop, '')
+            return request.META.get(prop, "")
 
         def try_loads(string, default):
-            if TYPES['JSON'] not in content_type:
+            if TYPES["JSON"] not in content_type:
                 return default
 
             try:
@@ -40,22 +37,22 @@ class RequestLoggingMiddleware(object):
                 return default
 
         request_data = {
-            'status': response.status_code,
-            'content_length': get_meta('CONTENT_LENGTH'),
-            'user_agent': get_meta('HTTP_USER_AGENT').decode('utf-8', 'replace'),
-            'body': try_loads(request.body, ''),
-            'response': try_loads(response.content, response.content),
-            'request_headers': dict([(key, val) for key, val in request.META.items() if key.isupper()]),
-            'response_headers': dict([(key.upper().replace('-', '_'), val) for key, val in response.items()]),
+            "status": response.status_code,
+            "content_length": get_meta("CONTENT_LENGTH"),
+            "user_agent": get_meta("HTTP_USER_AGENT").decode("utf-8", "replace"),
+            "body": try_loads(request.body, ""),
+            "response": try_loads(response.content, response.content),
+            "request_headers": dict([(key, val) for key, val in request.META.items() if key.isupper()]),
+            "response_headers": dict([(key.upper().replace("-", "_"), val) for key, val in response.items()]),
             # The following are required by Bunyan.
-            'hostname': get_meta('HTTP_X_FORWARDED_HOST'),
-            'name': 'Request Log',
-            'time': IMLDateTime.utcnow().isoformat(),
-            'v': 0,
-            'pid': os.getpid(),
-            'msg': 'Request made to {0} {1}'.format(request.method, request.get_full_path()),
+            "hostname": get_meta("HTTP_X_FORWARDED_HOST"),
+            "name": "Request Log",
+            "time": IMLDateTime.utcnow().isoformat(),
+            "v": 0,
+            "pid": os.getpid(),
+            "msg": "Request made to {0} {1}".format(request.method, request.get_full_path()),
             # Bunyan log level is python's log level + 10
-            'level': settings.LOG_LEVEL + 10,
+            "level": settings.LOG_LEVEL + 10,
         }
 
         logger.debug(json.dumps(request_data))

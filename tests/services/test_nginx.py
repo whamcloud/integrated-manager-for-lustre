@@ -1,4 +1,3 @@
-
 """
 Tests for the frontend HTTP and HTTPS functionality provided by nginx
 """
@@ -16,15 +15,14 @@ from tests.services.systemd_test_case import SystemdTestCase
 
 class NginxTestCase(SystemdTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ['nginx', 'iml-gunicorn', 'iml-job-scheduler', 'iml-view-server']
+    SERVICES = ["nginx", "iml-gunicorn", "iml-job-scheduler", "iml-view-server"]
 
 
 class TestUi(NginxTestCase):
-
     def test_simple_access(self):
         """Test passthrough for /ui/ to gunicorn"""
 
-        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify=False)
+        response = requests.get("https://localhost:{}/ui/".format(settings.HTTPS_FRONTEND_PORT), verify=False)
         self.assertEqual(response.status_code, 200)
 
 
@@ -37,10 +35,11 @@ class TestInsecureUrls(NginxTestCase):
         """Test that connections on the HTTP scheme are redirected
            to the HTTPS url"""
 
-        response = requests.get("http://localhost:%s/" % settings.HTTPS_FRONTEND_PORT,
-                                verify=False, allow_redirects=False)
+        response = requests.get(
+            "http://localhost:%s/" % settings.HTTPS_FRONTEND_PORT, verify=False, allow_redirects=False
+        )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers['location'], "https://localhost:%s/" % settings.HTTPS_FRONTEND_PORT)
+        self.assertEqual(response.headers["location"], "https://localhost:%s/" % settings.HTTPS_FRONTEND_PORT)
 
     def test_missing_slash(self):
         """Test rewriting of HTTP redirects is happening (ProxyPassReverse)"""
@@ -48,14 +47,14 @@ class TestInsecureUrls(NginxTestCase):
         without_slash = "https://localhost/api/session"
         response = requests.get(without_slash, verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
-        self.assertEqual(response.headers['location'], without_slash + "/")
+        self.assertEqual(response.headers["location"], without_slash + "/")
 
     def test_simple_access(self):
         """Test passthrough for /api/, /old-gui/"""
 
         response = requests.get(
-            "https://localhost:%s/old-gui/js/router.js" % settings.HTTPS_FRONTEND_PORT,
-            verify=False)
+            "https://localhost:{}/old-gui/js/router.js".format(settings.HTTPS_FRONTEND_PORT), verify=False
+        )
         self.assertEqual(response.status_code, 200)
 
         response = requests.get("https://localhost:%s/api/session/" % settings.HTTPS_FRONTEND_PORT, verify=False)
@@ -66,14 +65,15 @@ class TestInsecureUrls(NginxTestCase):
 
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             response = requests.post(
-                "https://localhost:%s/agent/register/" % settings.HTTPS_FRONTEND_PORT, verify=False)
+                "https://localhost:%s/agent/register/" % settings.HTTPS_FRONTEND_PORT, verify=False
+            )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(listener.requests), 1)
             self.assertEqual(listener.last_request.path, "/agent/register/")
 
     def test_certificate(self):
         """Test certificate is fetchable"""
-        with open("%s/authority.crt" % settings.SSL_PATH, 'r') as cert:
+        with open("%s/authority.crt" % settings.SSL_PATH, "r") as cert:
             text = cert.read()
             response = requests.get("https://localhost:%s/certificate" % settings.HTTPS_FRONTEND_PORT, verify=False)
             self.assertEqual(response.text, text)
@@ -89,7 +89,7 @@ class TestInsecureUrls(NginxTestCase):
         with HttpListener(settings.REALTIME_PORT) as listener:
             uri = "https://localhost:%s/socket.io/" % settings.HTTPS_FRONTEND_PORT
             requests.get(uri, verify=False, allow_redirects=False)
-            self.assertEqual(listener.last_request.headers.getheader('Connection'), 'upgrade')
+            self.assertEqual(listener.last_request.headers.getheader("Connection"), "upgrade")
 
 
 class TestSecureUrls(NginxTestCase):
@@ -100,7 +100,7 @@ class TestSecureUrls(NginxTestCase):
     # Note that this test replicates a subset of the manager and agent Crypto classes, this
     # is intentional as the unit under test is the HTTPS frontend config, not those classes.
     def _openssl(self, args):
-        p = subprocess.Popen(['openssl'] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(["openssl"] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         sys.stdout.write(stdout)
         sys.stdout.write(stderr)
@@ -113,12 +113,36 @@ class TestSecureUrls(NginxTestCase):
         csr = tempfile.NamedTemporaryFile()
 
         # A private key
-        self._openssl(['genrsa', '-out', server_key.name, '2048', '-sha256'])
+        self._openssl(["genrsa", "-out", server_key.name, "2048", "-sha256"])
         # A self signed cert
-        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority",
-                       "-key", server_key.name, "-out", csr.name, "-sha256"])
-        self._openssl(["x509", "-req", "-days", "36500", "-signkey", server_key.name,
-                       "-out", server_cert.name, "-in", csr.name, "-sha256"])
+        self._openssl(
+            [
+                "req",
+                "-new",
+                "-subj",
+                "/C=/ST=/L=/O=/CN=x_local_authority",
+                "-key",
+                server_key.name,
+                "-out",
+                csr.name,
+                "-sha256",
+            ]
+        )
+        self._openssl(
+            [
+                "x509",
+                "-req",
+                "-days",
+                "36500",
+                "-signkey",
+                server_key.name,
+                "-out",
+                server_cert.name,
+                "-in",
+                csr.name,
+                "-sha256",
+            ]
+        )
 
         return server_key.name, server_cert.name
 
@@ -128,13 +152,40 @@ class TestSecureUrls(NginxTestCase):
         client_csr = tempfile.NamedTemporaryFile()
 
         # Client key
-        self._openssl(['genrsa', '-out', client_key.name, '2048', '-sha256'])
+        self._openssl(["genrsa", "-out", client_key.name, "2048", "-sha256"])
         # Client CSR
-        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % client_cn,
-                       "-key", client_key.name, "-out", client_csr.name, "-sha256"])
+        self._openssl(
+            [
+                "req",
+                "-new",
+                "-subj",
+                "/C=/ST=/L=/O=/CN=%s" % client_cn,
+                "-key",
+                client_key.name,
+                "-out",
+                client_csr.name,
+                "-sha256",
+            ]
+        )
         # Generate client cert
-        self._openssl(["x509", "-req", "-days", "36500", "-sha256", "-CAkey", authority_key,
-                       "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
+        self._openssl(
+            [
+                "x509",
+                "-req",
+                "-days",
+                "36500",
+                "-sha256",
+                "-CAkey",
+                authority_key,
+                "-CA",
+                authority_cert,
+                "-CAcreateserial",
+                "-out",
+                client_cert.name,
+                "-in",
+                client_csr.name,
+            ]
+        )
 
         return client_cert.name, client_key.name
 
@@ -142,8 +193,7 @@ class TestSecureUrls(NginxTestCase):
         """Check that I'm rejected if I try to connect to the secure namespace without a certificate"""
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             # Check that we are rejected
-            response = requests.post(
-                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT, verify=False)
+            response = requests.post("https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT, verify=False)
 
             self.assertEqual(response.status_code, 401)
 
@@ -160,9 +210,8 @@ class TestSecureUrls(NginxTestCase):
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             # Check that we are rejected
             response = requests.get(
-                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT,
-                verify=False,
-                cert=(cert, key))
+                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT, verify=False, cert=(cert, key)
+            )
 
             self.assertEqual(response.status_code, 400)
 
@@ -178,14 +227,14 @@ class TestSecureUrls(NginxTestCase):
         authority_cert = "{0}/authority.crt".format(settings.SSL_PATH)
         cert, key = self._client_credentials(client_cn, authority_key, authority_cert)
 
-        rc, stdout, stderr = self._openssl(['x509', '-in', cert, '-serial', '-noout'])
+        rc, stdout, stderr = self._openssl(["x509", "-in", cert, "-serial", "-noout"])
         client_cert_serial = stdout.strip().split("=")[1]
 
         url = "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
-            response = requests.post(url, data=' ' * 16 * 1024, verify=False, cert=(cert, key))
+            response = requests.post(url, data=" " * 16 * 1024, verify=False, cert=(cert, key))
             self.assertEqual(response.status_code, 200)
-            response = requests.post(url, data=' ' * 16 * 1024 ** 2, verify=False, cert=(cert, key))
+            response = requests.post(url, data=" " * 16 * 1024 ** 2, verify=False, cert=(cert, key))
             self.assertEqual(response.status_code, 413)
             response = requests.get(url, verify=False, cert=(cert, key))
             # My request succeeded
@@ -194,9 +243,9 @@ class TestSecureUrls(NginxTestCase):
             self.assertEqual(len(listener.requests), 2)
             self.assertEqual(listener.last_request.path, "/agent/message/")
             # The client name header was set
-            self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-On'), "SUCCESS")
-            self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Name'), client_cn)
-            self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Serial'), client_cert_serial)
+            self.assertEqual(listener.last_request.headers.getheader("X-SSL-Client-On"), "SUCCESS")
+            self.assertEqual(listener.last_request.headers.getheader("X-SSL-Client-Name"), client_cn)
+            self.assertEqual(listener.last_request.headers.getheader("X-SSL-Client-Serial"), client_cert_serial)
 
             url = "https://localhost:%s/agent/reregister/" % settings.HTTPS_FRONTEND_PORT
             response = requests.post(url, verify=False, cert=(cert, key))
@@ -204,14 +253,14 @@ class TestSecureUrls(NginxTestCase):
 
 
 class TestCrypto(SystemdTestCase):
-    SERVICES = ['nginx']
+    SERVICES = ["nginx"]
 
     def _connect_socket(self, *args, **kwargs):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         ssl_sock = ssl.wrap_socket(sock, *args, **kwargs)
 
-        ssl_sock.connect(('127.0.0.1', settings.HTTPS_FRONTEND_PORT))
+        ssl_sock.connect(("127.0.0.1", settings.HTTPS_FRONTEND_PORT))
 
         sock.close()
 
@@ -221,44 +270,35 @@ class TestCrypto(SystemdTestCase):
 
     https://www.us-cert.gov/ncas/alerts/TA14-290A
     """
+
     def test_ssl3_disabled(self):
-        self.assertRaises(socket.error,
-                          self._connect_socket,
-                          ssl_version=ssl.PROTOCOL_SSLv3)
+        self.assertRaises(socket.error, self._connect_socket, ssl_version=ssl.PROTOCOL_SSLv3)
 
     def test_ssl2_disabled(self):
         try:
-            self.assertRaises(socket.error,
-                              self._connect_socket,
-                              ssl_version=ssl.PROTOCOL_SSLv2)
+            self.assertRaises(socket.error, self._connect_socket, ssl_version=ssl.PROTOCOL_SSLv2)
         except AttributeError:
             # RHEL 7.5 (for example)'s Python doesn't support
             # SSLv2 any more
             pass
 
     def test_tls1_disabled(self):
-        self.assertRaises(socket.error,
-                          self._connect_socket,
-                          ssl_version=ssl.PROTOCOL_TLSv1)
+        self.assertRaises(socket.error, self._connect_socket, ssl_version=ssl.PROTOCOL_TLSv1)
 
     def test_tls1_1_disabled(self):
-        self.assertRaises(socket.error,
-                          self._connect_socket,
-                          ssl_version=ssl.PROTOCOL_TLSv1_1)
+        self.assertRaises(socket.error, self._connect_socket, ssl_version=ssl.PROTOCOL_TLSv1_1)
 
     def test_tls1_2_enabled(self):
         self._connect_socket(ssl_version=ssl.PROTOCOL_TLSv1_2)
 
     def test_good_cipher(self):
-        self._connect_socket(ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers='ECDHE-RSA-AES128-GCM-SHA256')
+        self._connect_socket(ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers="ECDHE-RSA-AES128-GCM-SHA256")
 
     def test_bad_ciphers(self):
-        bad_ciphers = ['DH+3DES', 'ADH', 'AECDH', 'RC4', 'aNULL', 'MD5']
+        bad_ciphers = ["DH+3DES", "ADH", "AECDH", "RC4", "aNULL", "MD5"]
 
         for bad_cipher in bad_ciphers:
-            self.assertRaises(socket.error,
-                              self._connect_socket,
-                              ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers=bad_cipher)
+            self.assertRaises(socket.error, self._connect_socket, ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers=bad_cipher)
 
     def test_connection(self):
         self._connect_socket()

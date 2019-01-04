@@ -28,21 +28,19 @@ class TestInitialLoadDismissables(NotificationTestCase):
         #  Make one of each kinds of dismissable object
         for dismissed in [True, False]:
             for level in [INFO, WARNING, ERROR]:
-                self.make_alertstate(HostOfflineAlert, dismissed=dismissed,
-                                     severity=level, created_at=timezone.now())
+                self.make_alertstate(HostOfflineAlert, dismissed=dismissed, severity=level, created_at=timezone.now())
 
     def test_fetch_not_dismissed_alerts(self):
-        data = {"dismissed": 'false',
-                "severity__in": ['WARNING', 'ERROR']}
+        data = {"dismissed": "false", "severity__in": ["WARNING", "ERROR"]}
 
         response = self.api_client.get("/api/alert/", data=data)
 
         self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
+        objects = self.deserialize(response)["objects"]
         self.assertEqual(len(objects), 2, self.dump_objects(objects))
         for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
-            self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
+            self.assertEqual(ev["dismissed"], False)
+            self.assertTrue(ev["severity"] in ["WARNING", "ERROR"])
 
 
 class TestSubsequentLoadDismissables(NotificationTestCase):
@@ -62,23 +60,20 @@ class TestSubsequentLoadDismissables(NotificationTestCase):
         for dismissed in [True, False]:
             for level in [INFO, WARNING, ERROR]:
                 for date in [previous_sample, current_sample]:
-                    self.make_alertstate(HostOfflineAlert, dismissed=dismissed,
-                                         severity=level, created_at=date)
+                    self.make_alertstate(HostOfflineAlert, dismissed=dismissed, severity=level, created_at=date)
 
     def test_fetch_not_dismissed_alerts_since_last_sample(self):
 
-        data = {"begin__gte": str(self.sample_date),
-                "dismissed": 'false',
-                "severity__in": ['WARNING', 'ERROR']}
+        data = {"begin__gte": str(self.sample_date), "dismissed": "false", "severity__in": ["WARNING", "ERROR"]}
 
         response = self.api_client.get("/api/alert/", data=data)
         self.assertHttpOK(response)
-        objects = self.deserialize(response)['objects']
+        objects = self.deserialize(response)["objects"]
         self.assertEqual(len(objects), 2, self.dump_objects(objects))
         for ev in objects:
-            self.assertEqual(ev['dismissed'], False)
-            self.assertTrue(ev['severity'] in ['WARNING', 'ERROR'])
-            self.assertTrue(IMLDateTime.parse(ev['begin']) >= self.sample_date)
+            self.assertEqual(ev["dismissed"], False)
+            self.assertTrue(ev["severity"] in ["WARNING", "ERROR"])
+            self.assertTrue(IMLDateTime.parse(ev["begin"]) >= self.sample_date)
 
 
 class TestPatchDismissables(NotificationTestCase):
@@ -86,18 +81,18 @@ class TestPatchDismissables(NotificationTestCase):
 
     Sending all fields as strings to simulate what I think the FE does
     """
+
     def test_dismissing_alert(self):
         """Send a API PATCH to update Alert.dismissed to True"""
 
-        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
-                                     severity=WARNING, created_at=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False, severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
-        path = '/api/alert/%s/' % alert.pk
+        path = "/api/alert/%s/" % alert.pk
         # reject if severity isn't descriptive string as per the api
-        response = self.api_client.patch(path, data={'dismissed': True, 'severity': 10})
+        response = self.api_client.patch(path, data={"dismissed": True, "severity": 10})
         self.assertHttpBadRequest(response)
-        response = self.api_client.patch(path, data={'dismissed': True})
+        response = self.api_client.patch(path, data={"dismissed": True})
         self.assertHttpAccepted(response)
 
         alert = freshen(alert)
@@ -109,6 +104,7 @@ class TestPatchDismissablesWithDeletedRelatedObject(NotificationTestCase):
 
     Sending all fields as strings to simulate what I think the FE does
     """
+
     def test_dismissing_alert(self):
         """Send a API PATCH to update Alert.dismissed to True with del obj
 
@@ -116,20 +112,17 @@ class TestPatchDismissablesWithDeletedRelatedObject(NotificationTestCase):
         item being set, but deleted
         """
 
-        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
-                                     severity=WARNING, created_at=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False, severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         self.assertEqual(type(alert.alert_item), ManagedHost)
         alert.alert_item.mark_deleted()
 
         #  Make sure it is deleted.
-        self.assertRaises(ManagedHost.DoesNotExist,
-                          ManagedHost.objects.get,
-                          pk=alert.alert_item.pk)
+        self.assertRaises(ManagedHost.DoesNotExist, ManagedHost.objects.get, pk=alert.alert_item.pk)
 
         #  Should not be able to PATCH this to dismissed without a failure
-        data = {"dismissed": 'true'}
+        data = {"dismissed": "true"}
         response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
         self.assertHttpAccepted(response)
 
@@ -151,8 +144,7 @@ class TestNotLoggedInUsersCannotDismiss(NotificationTestCase):
     def test_dismissing_alert(self):
         """Test dismissing alert, not logged in is prevented"""
 
-        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
-                                     severity=WARNING, created_at=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False, severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
         self.api_client.client.logout()
@@ -160,7 +152,7 @@ class TestNotLoggedInUsersCannotDismiss(NotificationTestCase):
         # ensure logged off
         self.assertFalse(self.api_client.client.session)
 
-        data = {"dismissed": 'true'}
+        data = {"dismissed": "true"}
         response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
         self.assertHttpUnauthorized(response)
 
@@ -175,17 +167,15 @@ class TestFSAdminsCanDismiss(NotificationTestCase):
     """
 
     def __init__(self, methodName=None):
-        super(TestFSAdminsCanDismiss, self).__init__(
-            methodName, username='debug', password='lustre')
+        super(TestFSAdminsCanDismiss, self).__init__(methodName, username="debug", password="lustre")
 
     def test_dismissing_alert(self):
         """Test dismissing alert by fs admins is allowed"""
 
-        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
-                                     severity=WARNING, created_at=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False, severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
-        data = {"dismissed": 'true'}
+        data = {"dismissed": "true"}
         response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
         self.assertHttpAccepted(response)
 
@@ -197,17 +187,15 @@ class TestFSUsersCannotDismiss(NotificationTestCase):
     """Make sure filesystem_users cannot Dismiss or Dismiss all alerts"""
 
     def __init__(self, methodName=None):
-        super(TestFSUsersCannotDismiss, self).__init__(
-            methodName, username='user', password='lustre')
+        super(TestFSUsersCannotDismiss, self).__init__(methodName, username="user", password="lustre")
 
     def test_dismissing_alert(self):
         """Test dismissing alert by fs users is prevented"""
 
-        alert = self.make_alertstate(HostOfflineAlert, dismissed=False,
-                                     severity=WARNING, created_at=timezone.now())
+        alert = self.make_alertstate(HostOfflineAlert, dismissed=False, severity=WARNING, created_at=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
-        data = {"dismissed": 'true'}
+        data = {"dismissed": "true"}
         response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
         self.assertHttpUnauthorized(response)
 

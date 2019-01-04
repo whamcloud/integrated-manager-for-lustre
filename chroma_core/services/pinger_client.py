@@ -64,12 +64,22 @@ class Service(ChromaService):
                 tot_latency += latency
         overall_te = time.time()
 
-        print "%.4d/%.4d/%.4d %10.1f %10.2fms" % (N - timeout_count - error_count, timeout_count, error_count, N / (overall_te - overall_ts), (tot_latency / N) * 1000.0)
+        print(
+            "%.4d/%.4d/%.4d %10.1f %10.2fms"
+            % (
+                N - timeout_count - error_count,
+                timeout_count,
+                error_count,
+                N / (overall_te - overall_ts),
+                (tot_latency / N) * 1000.0,
+            )
+        )
 
-        #print "Successful/timeout/error: %s/%s/%s" % (N - timeout_count - error_count, timeout_count, error_count)
-        #print "Issue rate: %s/s" % (N / (overall_te - overall_ts))
-        #print "Avg RTT: %.2fms" % ((tot_latency / N) * 1000.0)
+        # print "Successful/timeout/error: %s/%s/%s" % (N - timeout_count - error_count, timeout_count, error_count)
+        # print "Issue rate: %s/s" % (N / (overall_te - overall_ts))
+        # print "Avg RTT: %.2fms" % ((tot_latency / N) * 1000.0)
         import os
+
         os._exit(0)
 
     def stop(self):

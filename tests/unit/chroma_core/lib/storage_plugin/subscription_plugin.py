@@ -9,14 +9,14 @@ version = 1
 
 class Controller(resources.ScannableResource):
     class Meta:
-        identifier = GlobalId('address')
+        identifier = GlobalId("address")
 
     address = attributes.String()
 
 
 class Lun(resources.LogicalDrive):
     class Meta:
-        identifier = ScopedId('lun_id')
+        identifier = ScopedId("lun_id")
 
     lun_id = attributes.String()
 
@@ -27,14 +27,10 @@ class Presentation(resources.Resource):
     host_id = attributes.Integer()
 
     class Meta:
-        identifier = ScopedId('lun_id', 'host_id')
+        identifier = ScopedId("lun_id", "host_id")
         relations = [
-            relations.Provide(
-                provide_to = resources.DeviceNode,
-                attributes = ['host_id', 'path']),
-            relations.Subscribe(
-                subscribe_to = Lun,
-                attributes = ['lun_id'])
+            relations.Provide(provide_to=resources.DeviceNode, attributes=["host_id", "path"]),
+            relations.Subscribe(subscribe_to=Lun, attributes=["lun_id"]),
         ]
 
 

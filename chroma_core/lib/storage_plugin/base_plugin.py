@@ -56,9 +56,9 @@ class ResourceIndex(object):
     def find_by_attr(self, klass, **attrs):
         for resource_tuple in self._resource_id_to_resource:
             # Must compare klass before values, because values will only be valid for that klass.
-            if resource_tuple[1] == klass and klass.compare_id_tuple(resource_tuple[0],
-                                                                     klass.attrs_to_id_tuple(attrs, True),
-                                                                     True):
+            if resource_tuple[1] == klass and klass.compare_id_tuple(
+                resource_tuple[0], klass.attrs_to_id_tuple(attrs, True), True
+            ):
                 yield self._resource_id_to_resource[resource_tuple]
 
     def all(self):
@@ -74,6 +74,7 @@ class BaseStoragePlugin(object):
 
     def __init__(self, resource_manager, scannable_id=None):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         storage_plugin_manager.register_plugin(self)
         self._initialized = False
         self._resource_manager = resource_manager
@@ -104,6 +105,7 @@ class BaseStoragePlugin(object):
         self._update_period = settings.PLUGIN_DEFAULT_UPDATE_PERIOD
 
         from chroma_core.lib.storage_plugin.query import ResourceQuery
+
         root_resource = ResourceQuery().get_resource(scannable_id)
         root_resource._handle = self._generate_handle()
         root_resource._handle_global = False
@@ -186,11 +188,7 @@ class BaseStoragePlugin(object):
 
         fn(*args)
 
-        self._resource_manager.session_open(
-                self,
-                self._scannable_id,
-                self._index.all(),
-                self._update_period)
+        self._resource_manager.session_open(self, self._scannable_id, self._index.all(), self._update_period)
         self._session_open = True
         self._delta_new_resources = []
 
@@ -207,7 +205,7 @@ class BaseStoragePlugin(object):
 
     def _update(self, fn, *args):
         # Be sure that the session and the plugin match - HYD-3068 was a case where they didn't.
-        assert(self == self._resource_manager._sessions[self._scannable_id]._plugin_instance)
+        assert self == self._resource_manager._sessions[self._scannable_id]._plugin_instance
 
         fn(*args)
 
@@ -236,13 +234,15 @@ class BaseStoragePlugin(object):
     def _commit_resource_deletes(self):
         # Resources deleted since last update
         if len(self._delta_delete_local_resources) > 0:
-            self._resource_manager.session_remove_local_resources(self._scannable_id,
-                                                                  self._delta_delete_local_resources)
+            self._resource_manager.session_remove_local_resources(
+                self._scannable_id, self._delta_delete_local_resources
+            )
             self._delta_delete_local_resources = []
 
         if len(self._delta_delete_global_resources) > 0:
-            self._resource_manager.session_remove_global_resources(self._scannable_id,
-                                                                   self._delta_delete_global_resources)
+            self._resource_manager.session_remove_global_resources(
+                self._scannable_id, self._delta_delete_global_resources
+            )
             self._delta_delete_global_resources = []
 
     def _commit_resource_updates(self):
@@ -250,31 +250,32 @@ class BaseStoragePlugin(object):
         for resource in self._index.all():
             deltas = resource.flush_deltas()
             # If there were changes to attributes
-            if len(deltas['attributes']) > 0:
+            if len(deltas["attributes"]) > 0:
                 self._resource_manager.session_update_resource(
-                        self._scannable_id, resource._handle, deltas['attributes'])
+                    self._scannable_id, resource._handle, deltas["attributes"]
+                )
 
             # If there were parents added or removed
-            if len(deltas['parents']) > 0:
-                for parent_resource in deltas['parents']:
+            if len(deltas["parents"]) > 0:
+                for parent_resource in deltas["parents"]:
                     if parent_resource in resource._parents:
                         # If it's in the parents of the resource then it's an add
                         self._resource_manager.session_resource_add_parent(
-                                self._scannable_id, resource._handle,
-                                parent_resource._handle)
+                            self._scannable_id, resource._handle, parent_resource._handle
+                        )
                     else:
                         # Else if's a remove
                         self._resource_manager.session_resource_remove_parent(
-                                self._scannable_id, resource._handle,
-                                parent_resource._handle)
+                            self._scannable_id, resource._handle, parent_resource._handle
+                        )
 
     def _commit_alerts(self):
         with self._alerts_lock:
             for (resource, attribute, alert_class, severity) in self._delta_alerts:
                 active = self._alerts[(resource, attribute, alert_class, severity)]
                 self._resource_manager.session_notify_alert(
-                    self._scannable_id, resource._handle,
-                    active, severity, alert_class, attribute)
+                    self._scannable_id, resource._handle, active, severity, alert_class, attribute
+                )
             self._delta_alerts.clear()
 
     def _commit_resource_statistics(self):
@@ -287,7 +288,7 @@ class BaseStoragePlugin(object):
             StatsQueue().put(samples)
         return len(samples)
 
-    def _notify_alert(self, active, severity, resource, alert_name, attribute = None):
+    def _notify_alert(self, active, severity, resource, alert_name, attribute=None):
         # This will be flushed through to the database by update_scan
         key = (resource, attribute, alert_name, severity)
         with self._alerts_lock:
@@ -306,8 +307,8 @@ class BaseStoragePlugin(object):
         * Assign it a local ID
         * Add it to the local indices
         * Mark it for inclusion in the next update to global state"""
-        assert(isinstance(resource, BaseStorageResource))
-        assert(not resource._handle)
+        assert isinstance(resource, BaseStorageResource)
+        assert not resource._handle
 
         resource.validate()
 
@@ -403,8 +404,8 @@ class BaseStoragePlugin(object):
         :return: A standard python logging object which when used will write to the storage_plugin.log
         """
         if not self._log.handlers:
-            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
-            handler.setFormatter(logging.Formatter(self._log_format, '%d/%b/%Y:%H:%M:%S'))
+            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, "storage_plugin.log"))
+            handler.setFormatter(logging.Formatter(self._log_format, "%d/%b/%Y:%H:%M:%S"))
             self._log.addHandler(handler)
         return self._log
 

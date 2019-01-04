@@ -5,7 +5,7 @@ version = 1
 
 class Couplet(resources.ScannableResource):
     class Meta:
-        identifier = identifiers.GlobalId('address_1', 'address_2')
+        identifier = identifiers.GlobalId("address_1", "address_2")
 
     address_1 = attributes.Hostname()
     address_2 = attributes.Hostname()
@@ -13,26 +13,26 @@ class Couplet(resources.ScannableResource):
 
 class Controller(resources.Controller):
     class Meta:
-        identifier = identifiers.ScopedId('index')
+        identifier = identifiers.ScopedId("index")
 
     index = attributes.Enum(0, 1)
 
 
 class HardDrive(resources.PhysicalDisk):
     class Meta:
-        identifier = identifiers.ScopedId('serial_number')
+        identifier = identifiers.ScopedId("serial_number")
 
     serial_number = attributes.String()
     capacity = attributes.Bytes()
-    temperature = statistics.Gauge(units = 'C')
+    temperature = statistics.Gauge(units="C")
 
 
 class RaidPool(resources.StoragePool):
     class Meta:
-        identifier = identifiers.ScopedId('local_id')
+        identifier = identifiers.ScopedId("local_id")
 
     local_id = attributes.Integer()
-    raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
+    raid_type = attributes.Enum("raid0", "raid1", "raid5", "raid6")
     capacity = attributes.Bytes()
 
     def get_label(self):
@@ -41,10 +41,8 @@ class RaidPool(resources.StoragePool):
 
 class Lun(resources.LogicalDrive):
     class Meta:
-        identifier = identifiers.ScopedId('local_id')
-        relations = [
-            relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial'], ignorecase=True),
-        ]
+        identifier = identifiers.ScopedId("local_id")
+        relations = [relations.Provide(provide_to=("linux", "ScsiDevice"), attributes=["serial"], ignorecase=True)]
 
     local_id = attributes.Integer()
     name = attributes.String()

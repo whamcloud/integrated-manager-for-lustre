@@ -7,14 +7,14 @@ from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlock
 
 
 class TestBlockDeviceLinux(TestBlockDevice):
-    _supported_device_types = ['linux']
+    _supported_device_types = ["linux"]
 
     def __init__(self, device_type, device_path):
         super(TestBlockDeviceLinux, self).__init__(device_type, device_path)
 
     @property
     def preferred_fstype(self):
-        return 'ldiskfs'
+        return "ldiskfs"
 
     @property
     def device_path(self):
@@ -22,14 +22,11 @@ class TestBlockDeviceLinux(TestBlockDevice):
 
     @property
     def wipe_device_commands(self):
-        return [
-            'wipefs -a {}'.format(self.device_path),
-            'udevadm settle'
-        ]
+        return ["wipefs -a {}".format(self.device_path), "udevadm settle"]
 
     @property
     def destroy_commands(self):
         return self.wipe_device_commands
 
     def __str__(self):
-        return '%s' % self.device_path
+        return "%s" % self.device_path

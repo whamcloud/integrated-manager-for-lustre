@@ -8,6 +8,7 @@
 import os
 import sys
 import socket
+
 sys.path.insert(0, os.getcwd())
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
@@ -20,7 +21,9 @@ def fatal(msg):
 try:
     from chroma_core.models import PowerControlType, PowerControlDevice
 except ImportError:
-    fatal("Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma-manager ?")
+    fatal(
+        "Can't import chroma_core.models! Are you on the IML manager and is your current directory /usr/share/chroma-manager ?"
+    )
 try:
     from django.db import transaction
 except ImportError:
@@ -38,7 +41,9 @@ if __name__ == "__main__":
     ipmi.poweron_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s"
     ipmi.powercycle_template = "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s"
     ipmi.poweroff_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s"
-    ipmi.monitor_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor"
+    ipmi.monitor_template = (
+        "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor"
+    )
     ipmi.outlet_query_template = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s"
     ipmi.save()
 
@@ -49,14 +54,14 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
-    PowerControlDevice.objects.get_or_create(
-        device_type=ipmi, address=vm_host, port=22)
+    PowerControlDevice.objects.get_or_create(device_type=ipmi, address=vm_host, port=22)
     try:
         transaction.commit()
     except transaction.TransactionManagementError:
         pass
 
-    print """
+    print(
+        """
 ********* IMPORTANT: THIS IS AN UNSUPPORTED CONFIGURATION **********
 ************ NOT INTENDED FOR PRODUCTION DEPLOYMENTS!!! *************
 
@@ -67,3 +72,4 @@ and STONITH, provided the following conditions are met:
     * Lustre servers can ssh as root to the KVM host, WITHOUT A PASSWORD
     * When adding a BMC, the hostname entered matches the vm name as shown in `virsh list` on the KVM host
 """
+    )

@@ -18,10 +18,11 @@ class ConfParamStep(Step):
     database = True
 
     def run(self, kwargs):
-        conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
+        conf_param = ConfParam.objects.get(pk=kwargs["conf_param_id"]).downcast()
 
-        self.invoke_agent(conf_param.mgs.primary_host, "set_conf_param", {
-            'key': conf_param.get_key(), 'value': conf_param.value})
+        self.invoke_agent(
+            conf_param.mgs.primary_host, "set_conf_param", {"key": conf_param.get_key(), "value": conf_param.value}
+        )
 
 
 class ConfParamVersionStep(Step):
@@ -30,21 +31,20 @@ class ConfParamVersionStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import ManagedMgs
-        ManagedMgs.objects.\
-            filter(pk = kwargs['mgs_id']).\
-            update(conf_param_version_applied = kwargs['version'])
+
+        ManagedMgs.objects.filter(pk=kwargs["mgs_id"]).update(conf_param_version_applied=kwargs["version"])
 
 
 class ApplyConfParams(Job):
     mgs = models.ForeignKey(ManagedTarget)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['update_conf_params']
+        return help_text["update_conf_params"]
 
     def description(self):
         return "Update conf_params on %s" % (self.mgs.primary_host)
@@ -52,8 +52,9 @@ class ApplyConfParams(Job):
     def get_steps(self):
         from chroma_core.models import ConfParam
         from chroma_core.lib.job import job_log
+
         mgs = self.mgs.downcast()
-        new_params = ConfParam.objects.filter(version__gt = mgs.conf_param_version_applied, mgs = mgs).order_by('version')
+        new_params = ConfParam.objects.filter(version__gt=mgs.conf_param_version_applied, mgs=mgs).order_by("version")
         steps = []
 
         new_param_count = new_params.count()
@@ -70,26 +71,29 @@ class ApplyConfParams(Job):
             steps.append((ConfParamVersionStep, {"mgs_id": self.mgs.id, "version": highest_version}))
         else:
             # If we have no new params, no-op
-            job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, mgs.id, mgs.conf_param_version_applied))
+            job_log.warning(
+                "ApplyConfParams %d, mgs %d has no params newer than %d"
+                % (self.id, mgs.id, mgs.conf_param_version_applied)
+            )
 
         return steps
 
     def get_deps(self):
         mgs = self.mgs.downcast()
-        deps = [DependOn(self.mgs, 'mounted')]
-        new_params = ConfParam.objects.filter(version__gt = mgs.conf_param_version_applied, mgs = mgs).order_by('version')
+        deps = [DependOn(self.mgs, "mounted")]
+        new_params = ConfParam.objects.filter(version__gt=mgs.conf_param_version_applied, mgs=mgs).order_by("version")
         targets = set()
         for param in new_params:
             param = param.downcast()
-            if hasattr(param, 'mdt'):
+            if hasattr(param, "mdt"):
                 targets.add(param.mdt.managedtarget_ptr)
-            if hasattr(param, 'ost'):
+            if hasattr(param, "ost"):
                 targets.add(param.ost.managedtarget_ptr)
-            if hasattr(param, 'filesystem'):
-                targets.add(ManagedMdt._base_manager.get(filesystem = param.filesystem).managedtarget_ptr)
+            if hasattr(param, "filesystem"):
+                targets.add(ManagedMdt._base_manager.get(filesystem=param.filesystem).managedtarget_ptr)
 
         for target in targets:
-            deps.append(DependOn(target, 'mounted', acceptable_states = target.not_states(['unformatted', 'formatted'])))
+            deps.append(DependOn(target, "mounted", acceptable_states=target.not_states(["unformatted", "formatted"])))
 
         return DependAll(deps)
 
@@ -97,14 +101,14 @@ class ApplyConfParams(Job):
 class ConfParam(models.Model):
     __metaclass__ = DowncastMetaclass
     mgs = models.ForeignKey(ManagedMgs)
-    key = models.CharField(max_length = 512)
+    key = models.CharField(max_length=512)
     # A None value means "lctl conf_param -d", i.e. clear the setting
-    value = models.CharField(max_length = 512, blank = True, null = True)
+    value = models.CharField(max_length=512, blank=True, null=True)
     version = models.IntegerField()
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     @staticmethod
     def get_latest_params(queryset):
@@ -112,6 +116,7 @@ class ConfParam(models.Model):
         # obscenely inefficient to pull all historical values out of the DB before picking
         # the latest ones.
         from collections import defaultdict
+
         by_key = defaultdict(list)
         for conf_param in queryset:
             by_key[conf_param.get_key()].append(conf_param)
@@ -140,8 +145,8 @@ class FilesystemClientConfParam(ConfParam):
     filesystem = models.ForeignKey(ManagedFilesystem)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def __init__(self, *args, **kwargs):
         super(FilesystemClientConfParam, self).__init__(*args, **kwargs)
@@ -165,8 +170,8 @@ class FilesystemGlobalConfParam(ConfParam):
         return "%s.%s" % (self.filesystem.name, self.key)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def object_exists(self):
         return self.filesystem.not_deleted
@@ -185,8 +190,8 @@ class MdtConfParam(ConfParam):
         return "%s.%s" % (self.mdt.name, self.key)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def object_exists(self):
         return self.mdt.not_deleted
@@ -205,8 +210,8 @@ class OstConfParam(ConfParam):
         return "%s.%s" % (self.ost.name, self.key)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def object_exists(self):
         return self.ost.not_deleted

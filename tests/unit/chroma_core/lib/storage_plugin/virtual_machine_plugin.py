@@ -8,14 +8,14 @@ version = 1
 
 class Controller(resources.ScannableResource):
     class Meta:
-        identifier = GlobalId('address')
+        identifier = GlobalId("address")
 
     address = attributes.String()
 
 
 class VirtualMachine(resources.VirtualMachine):
     class Meta:
-        identifier = GlobalId('address')
+        identifier = GlobalId("address")
 
 
 class TestPlugin(Plugin):

@@ -3,8 +3,7 @@ from django.db import reset_queries, connection
 
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
-                                ManagedMdt, RebootHostJob, ShutdownHostJob)
+from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedOst, ManagedMdt, RebootHostJob, ShutdownHostJob
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helpers import synthetic_volume, synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
@@ -39,7 +38,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         load_default_profile()
 
         self.host = synthetic_host()
-        self.assertEqual(self.host.state, 'managed')
+        self.assertEqual(self.host.state, "managed")
 
     def tearDown(self):
 
@@ -54,7 +53,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         so_id = object.id
 
         #  In-process JSC call that works over RPC in production
-        receive_states = self.js.available_transitions([(so_ct_key, so_id, ), ])
+        receive_states = self.js.available_transitions([(so_ct_key, so_id)])
 
         return receive_states[object.id]
 
@@ -64,17 +63,15 @@ class TestAvailableTransitions(IMLUnitTestCase):
         #  No FS - mgs unformatted
         mgs = ManagedMgs.objects.create(volume=self.volume)
 
-        expected_transitions = ['registered', 'mounted',
-                                'formatted', 'unmounted', 'removed']
-        received_transitions = [t['state'] for t in self._get_transition_states(mgs)]
+        expected_transitions = ["registered", "mounted", "formatted", "unmounted", "removed"]
+        received_transitions = [t["state"] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
         # An fs causes the MGS to be non-removeable.
-        ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
+        ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
 
-        expected_transitions = ['registered', 'mounted',
-                                'formatted', 'unmounted']
-        received_transitions = [t['state'] for t in self._get_transition_states(mgs)]
+        expected_transitions = ["registered", "mounted", "formatted", "unmounted"]
+        received_transitions = [t["state"] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_ost(self):
@@ -82,13 +79,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
 
         #  ost unformatted
         mgs = ManagedMgs.objects.create(volume=self.volume)
-        fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
-        ost = ManagedOst.objects.create(volume=self.volume,
-            filesystem=fs, index=1)
+        fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
+        ost = ManagedOst.objects.create(volume=self.volume, filesystem=fs, index=1)
 
-        expected_transitions = ['formatted', 'registered',
-                                'unmounted', 'mounted', 'removed']
-        received_transitions = [t['state'] for t in self._get_transition_states(ost)]
+        expected_transitions = ["formatted", "registered", "unmounted", "mounted", "removed"]
+        received_transitions = [t["state"] for t in self._get_transition_states(ost)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_root_mdt(self):
@@ -96,13 +91,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
 
         #  ost unformatted
         mgs = ManagedMgs.objects.create(volume=self.volume)
-        fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
-        mdt = ManagedMdt.objects.create(volume=self.volume,
-            filesystem=fs, index=0)
+        fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
+        mdt = ManagedMdt.objects.create(volume=self.volume, filesystem=fs, index=0)
 
-        expected_transitions = ['formatted', 'registered',
-                                'unmounted', 'mounted']
-        received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
+        expected_transitions = ["formatted", "registered", "unmounted", "mounted"]
+        received_transitions = [t["state"] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_mdt(self):
@@ -110,13 +103,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
 
         #  ost unformatted
         mgs = ManagedMgs.objects.create(volume=self.volume)
-        fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
-        mdt = ManagedMdt.objects.create(volume=self.volume,
-            filesystem=fs, index=1)
+        fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
+        mdt = ManagedMdt.objects.create(volume=self.volume, filesystem=fs, index=1)
 
-        expected_transitions = ['formatted', 'registered',
-                                'unmounted', 'mounted']
-        received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
+        expected_transitions = ["formatted", "registered", "unmounted", "mounted"]
+        received_transitions = [t["state"] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_filesystem(self):
@@ -124,34 +115,39 @@ class TestAvailableTransitions(IMLUnitTestCase):
 
         #  filesystem unformatted states
         mgs = ManagedMgs.objects.create(volume=self.volume)
-        fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
+        fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
 
-        expected_transitions = ['available', 'removed']
-        received_transitions = [t['state'] for t in self._get_transition_states(fs)]
+        expected_transitions = ["available", "removed"]
+        received_transitions = [t["state"] for t in self._get_transition_states(fs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_host(self):
         """Test the MDT possible states are correct."""
 
         #  filesystem unformatted states
-        expected_transitions = ['removed']
-        received_transitions = [t['state'] for t in self._get_transition_states(self.host)]
+        expected_transitions = ["removed"]
+        received_transitions = [t["state"] for t in self._get_transition_states(self.host)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_lnet_configuration(self):
         """Test the lnet_configuration possible states are correct."""
 
         #  lnet configuration states
-        test_transitions = {'unconfigured': ['lnet_down', 'lnet_up'],            # lnet_unloaded is not advertised from unconfigured and so doesn't appear
-                            'lnet_unloaded': ['lnet_down', 'lnet_up'],
-                            'lnet_down': ['lnet_unloaded', 'lnet_up'],
-                            'lnet_up': ['lnet_unloaded', 'lnet_down']}
+        test_transitions = {
+            "unconfigured": [
+                "lnet_down",
+                "lnet_up",
+            ],  # lnet_unloaded is not advertised from unconfigured and so doesn't appear
+            "lnet_unloaded": ["lnet_down", "lnet_up"],
+            "lnet_down": ["lnet_unloaded", "lnet_up"],
+            "lnet_up": ["lnet_unloaded", "lnet_down"],
+        }
 
         for test_state, expected_transitions in test_transitions.items():
             self.host.lnet_configuration.state = test_state
             self.host.lnet_configuration.save()
 
-            received_transitions = [t['state'] for t in self._get_transition_states(self.host.lnet_configuration)]
+            received_transitions = [t["state"] for t in self._get_transition_states(self.host.lnet_configuration)]
             self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_no_locks_query_count(self):
@@ -164,20 +160,21 @@ class TestAvailableTransitions(IMLUnitTestCase):
         EXPECTED_QUERIES = 0
 
         #  no jobs locking this object
-        host_ct_key = ContentType.objects.get_for_model(
-            self.host.downcast()).natural_key()
+        host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
         host_id = self.host.id
 
         #  Loads up the caches
         js = JobScheduler()
 
         reset_queries()
-        js.available_transitions([(host_ct_key, host_id, ), ])
+        js.available_transitions([(host_ct_key, host_id)])
 
         query_sum = len(connection.queries)
-        self.assertEqual(query_sum, EXPECTED_QUERIES,
-            "something changed with queries! "
-            "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
+        self.assertEqual(
+            query_sum,
+            EXPECTED_QUERIES,
+            "something changed with queries! " "got %s expected %s" % (query_sum, EXPECTED_QUERIES),
+        )
 
     def test_locks_query_count(self):
         """Check that query count to pull in available jobs hasn't changed"""
@@ -185,8 +182,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         EXPECTED_QUERIES = 0
 
         #  object to be locked by jobs
-        host_ct_key = ContentType.objects.get_for_model(
-            self.host.downcast()).natural_key()
+        host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
         host_id = self.host.id
 
         #  create 200 host ups and down jobs in 'pending' default state
@@ -204,12 +200,14 @@ class TestAvailableTransitions(IMLUnitTestCase):
         reset_queries()
 
         #  Getting jobs here may incur a higher cost.
-        js.available_jobs([(host_ct_key, host_id), ])
+        js.available_jobs([(host_ct_key, host_id)])
 
         query_sum = len(connection.queries)
-        self.assertEqual(query_sum, EXPECTED_QUERIES,
-            "something changed with queries! "
-            "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
+        self.assertEqual(
+            query_sum,
+            EXPECTED_QUERIES,
+            "something changed with queries! " "got %s expected %s" % (query_sum, EXPECTED_QUERIES),
+        )
 
     def test_managed_target_dne(self):
         host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
@@ -219,8 +217,8 @@ class TestAvailableTransitions(IMLUnitTestCase):
 
         job_scheduler = JobScheduler()
 
-        avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host_id]
+        avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id)])[host_id]
         self.assertTrue(len(avail_trans) == 0, avail_trans)
-        avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host_id]
-        self.assertTrue(self.host.state, 'managed')
-        self.assertTrue(len(avail_jobs) == 3)   # Three states from configured -> Force Remove. Reboot, Shutdown
+        avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id)])[host_id]
+        self.assertTrue(self.host.state, "managed")
+        self.assertTrue(len(avail_jobs) == 3)  # Three states from configured -> Force Remove. Reboot, Shutdown

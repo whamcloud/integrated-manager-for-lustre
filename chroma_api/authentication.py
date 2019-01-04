@@ -17,6 +17,7 @@ def has_api_key(request):
 
     return not isinstance(result, HttpUnauthorized)
 
+
 class CsrfAuthentication(Authentication):
     """Tastypie authentication class for rejecting POSTs
     which do not contain a valid CSRF token.
@@ -35,6 +36,7 @@ class CsrfAuthentication(Authentication):
     the browser's (read: end user's) fault, not ours.  In the wild, that
     is a very unhelpful attitude.
     """
+
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
         if has_api_key(request):
@@ -43,7 +45,7 @@ class CsrfAuthentication(Authentication):
         if request.method != "POST":
             return True
 
-        request_csrf_token = request.META.get('HTTP_X_CSRFTOKEN', '')
+        request_csrf_token = request.META.get("HTTP_X_CSRFTOKEN", "")
         csrf_token = request.META["CSRF_COOKIE"]
 
         if not constant_time_compare(csrf_token, request_csrf_token):
@@ -55,6 +57,7 @@ class CsrfAuthentication(Authentication):
 class AnonymousAuthentication(CsrfAuthentication):
     """Tastypie authentication class which only allows in
     logged-in users unless settings.ALLOW_ANONYMOUS_READ is true"""
+
     def is_authenticated(self, request, object=None):
         # Return early if there is a valid API key
         if has_api_key(request):
@@ -77,8 +80,9 @@ class PermissionAuthorization(Authorization):
     """Tastypie authentication class which checks for
     the presence of a single permission for access to
     a resource"""
+
     def __init__(self, perm_name):
         self.perm_name = perm_name
 
-    def is_authorized(self, request, object = None):
+    def is_authorized(self, request, object=None):
         return request.user.has_perm(self.perm_name)

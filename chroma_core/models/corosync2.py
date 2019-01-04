@@ -17,7 +17,7 @@ from chroma_core.models import corosync_common
 from chroma_core.lib.job import Step
 from chroma_core.services.job_scheduler import job_scheduler_notify
 
-logging = log_register('corosync2')
+logging = log_register("corosync2")
 
 
 class Corosync2Configuration(CorosyncConfiguration):
@@ -30,15 +30,13 @@ class Corosync2Configuration(CorosyncConfiguration):
         return "%s Corosync2 configuration" % self.host
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_label(self):
         return "corosync2 configuration"
 
-    reverse_deps = {
-        'PacemakerConfiguration': lambda pc: Corosync2Configuration.objects.filter(host_id = pc.host.id),
-    }
+    reverse_deps = {"PacemakerConfiguration": lambda pc: Corosync2Configuration.objects.filter(host_id=pc.host.id)}
 
     # This is temporary, although will work perfectly functionally. Once landed we will move to
     #  use the sparse table functionality.
@@ -49,6 +47,7 @@ class Corosync2Configuration(CorosyncConfiguration):
     @property
     def configure_job_name(self):
         return "ConfigureCorosync2Job"
+
 
 # Semaphore for operations so that when we configure corosync for each HA cluster we configure
 # one node at a time hence removing any race conditions.
@@ -97,7 +96,11 @@ class AutoConfigureCorosyncStep(Step):
         cls.peer_mcast_ports[new_fqdn] = mcast_port
 
         # Return list of peers, but peers do not include ourselves.
-        peers = [match_fqdn for match_fqdn, match_mcast_port in cls.peer_mcast_ports.items() if match_mcast_port == mcast_port]
+        peers = [
+            match_fqdn
+            for match_fqdn, match_mcast_port in cls.peer_mcast_ports.items()
+            if match_mcast_port == mcast_port
+        ]
         peers.remove(new_fqdn)
 
         return peers
@@ -109,7 +112,9 @@ class AutoConfigureCorosyncStep(Step):
         :param subprocess_output: String containing the output from each subprocess
         :return: Value from parents routine
         """
-        return self._parent_console_callback(subprocess_output.replace(self._pcs_password, '*' * self._pcs_password_length))
+        return self._parent_console_callback(
+            subprocess_output.replace(self._pcs_password, "*" * self._pcs_password_length)
+        )
 
     @classmethod
     def _create_pcs_password(cls):
@@ -117,41 +122,48 @@ class AutoConfigureCorosyncStep(Step):
         Create a random password 20 characters long suitable for use as the pcs_password.
         :return: 20 character upper/lower/numeric password.
         """
-        return ''.join(random.SystemRandom().choice(string.ascii_uppercase +
-                                                    string.ascii_lowercase +
-                                                    string.digits) for _ in range(cls._pcs_password_length))
+        return "".join(
+            random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits)
+            for _ in range(cls._pcs_password_length)
+        )
 
     def run(self, kwargs):
-        corosync_configuration = kwargs['corosync_configuration']
+        corosync_configuration = kwargs["corosync_configuration"]
 
         # detect local interfaces for use in corosync 'rings', network level configuration only
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
 
-        ring0_name, ring0_config = next((interface, config) for interface, config in
-                                        config['interfaces'].items() if config['dedicated'] == False)
-        ring1_name, ring1_config = next((interface, config) for interface, config in
-                                        config['interfaces'].items() if config['dedicated'] == True)
+        ring0_name, ring0_config = next(
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
+        )
+        ring1_name, ring1_config = next(
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == True
+        )
 
         # apply the configurations of corosync 'rings', network level configuration only
-        self.invoke_agent_expect_result(corosync_configuration.host,
-                                        "configure_network",
-                                        {'ring0_name': ring0_name,
-                                         'ring1_name': ring1_name,
-                                         'ring1_ipaddr': ring1_config['ipaddr'],
-                                         'ring1_prefix': ring1_config['prefix']})
+        self.invoke_agent_expect_result(
+            corosync_configuration.host,
+            "configure_network",
+            {
+                "ring0_name": ring0_name,
+                "ring1_name": ring1_name,
+                "ring1_ipaddr": ring1_config["ipaddr"],
+                "ring1_prefix": ring1_config["prefix"],
+            },
+        )
 
-        logging.debug("Node %s returned corosync configuration %s" % (corosync_configuration.host.fqdn,
-                                                                      config))
+        logging.debug("Node %s returned corosync configuration %s" % (corosync_configuration.host.fqdn, config))
 
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
-        with peer_mcast_ports_configuration_lock[config['mcast_port']]:
+        with peer_mcast_ports_configuration_lock[config["mcast_port"]]:
             from chroma_core.models import ManagedHost
 
-            corosync_peers = self._corosync_peers(corosync_configuration.host.fqdn, config['mcast_port'])
+            corosync_peers = self._corosync_peers(corosync_configuration.host.fqdn, config["mcast_port"])
 
-            logging.debug("Node %s has corosync peers %s" % (corosync_configuration.host.fqdn,
-                                                             ",".join(corosync_peers)))
+            logging.debug(
+                "Node %s has corosync peers %s" % (corosync_configuration.host.fqdn, ",".join(corosync_peers))
+            )
 
             # If we are adding then we action on a host that is already part of the cluster
             # otherwise we have to action on the host we are adding because it is the first node in the cluster
@@ -161,51 +173,61 @@ class AutoConfigureCorosyncStep(Step):
             actioning_host = corosync_configuration.host
             if corosync_peers:
                 peer = ManagedHost.objects.get(fqdn=corosync_peers[0])
-                if peer.state in ['managed', 'packages_installed']:
+                if peer.state in ["managed", "packages_installed"]:
                     actioning_host = peer
                 else:
-                    logging.warning('peer corosync config ignored as host state == %s (not packages_installed or '
-                                    'managed)' % peer.state)
+                    logging.warning(
+                        "peer corosync config ignored as host state == %s (not packages_installed or "
+                        "managed)" % peer.state
+                    )
 
-            logging.debug('actioning host for %s corosync configuration stage 2: %s' % (corosync_configuration.host.fqdn,
-                                                                                        actioning_host.fqdn))
+            logging.debug(
+                "actioning host for %s corosync configuration stage 2: %s"
+                % (corosync_configuration.host.fqdn, actioning_host.fqdn)
+            )
 
             # Stage 1 configures pcsd on the host being added, sets the password, enables and starts it etc.
-            self.invoke_agent_expect_result(corosync_configuration.host,
-                                            "configure_corosync2_stage_1",
-                                            {'mcast_port': config['mcast_port'],
-                                             'pcs_password': self._pcs_password})
+            self.invoke_agent_expect_result(
+                corosync_configuration.host,
+                "configure_corosync2_stage_1",
+                {"mcast_port": config["mcast_port"], "pcs_password": self._pcs_password},
+            )
 
             # Stage 2 configures the cluster either by creating it or adding a node to it.
-            self.invoke_agent_expect_result(actioning_host,
-                                            "configure_corosync2_stage_2",
-                                            {'ring0_name': ring0_name,
-                                             'ring1_name': ring1_name,
-                                             'new_node_fqdn': corosync_configuration.host.fqdn,
-                                             'mcast_port': config['mcast_port'],
-                                             'pcs_password': self._pcs_password,
-                                             'create_cluster': actioning_host == corosync_configuration.host})
+            self.invoke_agent_expect_result(
+                actioning_host,
+                "configure_corosync2_stage_2",
+                {
+                    "ring0_name": ring0_name,
+                    "ring1_name": ring1_name,
+                    "new_node_fqdn": corosync_configuration.host.fqdn,
+                    "mcast_port": config["mcast_port"],
+                    "pcs_password": self._pcs_password,
+                    "create_cluster": actioning_host == corosync_configuration.host,
+                },
+            )
 
             logging.debug("Node %s corosync configuration complete" % corosync_configuration.host.fqdn)
 
-        job_scheduler_notify.notify(corosync_configuration,
-                                    now(),
-                                    {'mcast_port': config['mcast_port'],
-                                     'network_interfaces': [ring0_name, ring1_name]})
+        job_scheduler_notify.notify(
+            corosync_configuration,
+            now(),
+            {"mcast_port": config["mcast_port"], "network_interfaces": [ring0_name, ring1_name]},
+        )
 
 
 class AutoConfigureCorosync2Job(corosync_common.AutoConfigureCorosyncJob):
-    state_transition = corosync_common.AutoConfigureCorosyncJob.StateTransition(Corosync2Configuration,
-                                                                                'unconfigured',
-                                                                                'stopped')
+    state_transition = corosync_common.AutoConfigureCorosyncJob.StateTransition(
+        Corosync2Configuration, "unconfigured", "stopped"
+    )
     corosync_configuration = models.ForeignKey(Corosync2Configuration)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_steps(self):
-        return [(AutoConfigureCorosyncStep, {'corosync_configuration': self.corosync_configuration})]
+        return [(AutoConfigureCorosyncStep, {"corosync_configuration": self.corosync_configuration})]
 
 
 class UnconfigureCorosyncStep(Step):
@@ -214,62 +236,69 @@ class UnconfigureCorosyncStep(Step):
     def run(self, kwargs):
         # Serialize across nodes with the same mcast_port so that we ensure commands
         # are executed in the same order.
-        with peer_mcast_ports_configuration_lock[kwargs['mcast_port']]:
-            self.invoke_agent_expect_result(kwargs['host'],
-                                            "unconfigure_corosync2",
-                                            {'host_fqdn': kwargs['host'].fqdn,
-                                             'mcast_port': kwargs['mcast_port']})
+        with peer_mcast_ports_configuration_lock[kwargs["mcast_port"]]:
+            self.invoke_agent_expect_result(
+                kwargs["host"],
+                "unconfigure_corosync2",
+                {"host_fqdn": kwargs["host"].fqdn, "mcast_port": kwargs["mcast_port"]},
+            )
 
 
 class UnconfigureCorosync2Job(corosync_common.UnconfigureCorosyncJob):
-    state_transition = corosync_common.UnconfigureCorosyncJob.StateTransition(Corosync2Configuration, 'stopped', 'unconfigured')
+    state_transition = corosync_common.UnconfigureCorosyncJob.StateTransition(
+        Corosync2Configuration, "stopped", "unconfigured"
+    )
     corosync_configuration = models.ForeignKey(Corosync2Configuration)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_steps(self):
-        return [(UnconfigureCorosyncStep, {'host': self.corosync_configuration.host,
-                                           'mcast_port': self.corosync_configuration.mcast_port})]
+        return [
+            (
+                UnconfigureCorosyncStep,
+                {"host": self.corosync_configuration.host, "mcast_port": self.corosync_configuration.mcast_port},
+            )
+        ]
 
 
 class StartCorosyncStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'], "start_corosync2")
+        self.invoke_agent_expect_result(kwargs["host"], "start_corosync2")
 
 
 class StartCorosync2Job(corosync_common.StartCorosyncJob):
-    state_transition = corosync_common.StartCorosyncJob.StateTransition(Corosync2Configuration, 'stopped', 'started')
+    state_transition = corosync_common.StartCorosyncJob.StateTransition(Corosync2Configuration, "stopped", "started")
     corosync_configuration = models.ForeignKey(Corosync2Configuration)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_steps(self):
-        return [(StartCorosyncStep, {'host': self.corosync_configuration.host})]
+        return [(StartCorosyncStep, {"host": self.corosync_configuration.host})]
 
 
 class StopCorosyncStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        self.invoke_agent_expect_result(kwargs['host'], "stop_corosync2")
+        self.invoke_agent_expect_result(kwargs["host"], "stop_corosync2")
 
 
 class StopCorosync2Job(corosync_common.StopCorosyncJob):
-    state_transition = corosync_common.StopCorosyncJob.StateTransition(Corosync2Configuration, 'started', 'stopped')
+    state_transition = corosync_common.StopCorosyncJob.StateTransition(Corosync2Configuration, "started", "stopped")
     corosync_configuration = models.ForeignKey(Corosync2Configuration)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_steps(self):
-        return [(StopCorosyncStep, {'host': self.corosync_configuration.host})]
+        return [(StopCorosyncStep, {"host": self.corosync_configuration.host})]
 
 
 class ChangeMcastPortStep(Step):
@@ -277,28 +306,34 @@ class ChangeMcastPortStep(Step):
     database = True
 
     def run(self, kwargs):
-        corosync_configuration = kwargs['corosync_configuration']
+        corosync_configuration = kwargs["corosync_configuration"]
 
-        self.invoke_agent_expect_result(corosync_configuration.host,
-                                        "change_mcast_port",
-                                        {'old_mcast_port': kwargs['old_mcast_port'],
-                                         'new_mcast_port': kwargs['new_mcast_port']})
+        self.invoke_agent_expect_result(
+            corosync_configuration.host,
+            "change_mcast_port",
+            {"old_mcast_port": kwargs["old_mcast_port"], "new_mcast_port": kwargs["new_mcast_port"]},
+        )
 
-        job_scheduler_notify.notify(corosync_configuration,
-                                    now(),
-                                    {'mcast_port': kwargs['new_mcast_port']})
+        job_scheduler_notify.notify(corosync_configuration, now(), {"mcast_port": kwargs["new_mcast_port"]})
 
 
 class ConfigureCorosync2Job(corosync_common.ConfigureCorosyncJob):
     corosync_configuration = models.ForeignKey(Corosync2Configuration)
 
     class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        app_label = "chroma_core"
+        ordering = ["id"]
 
     def get_steps(self):
-        steps = [(ChangeMcastPortStep, {'corosync_configuration': self.corosync_configuration,
-                                        'old_mcast_port': self.corosync_configuration.mcast_port,
-                                        'new_mcast_port': self.mcast_port})]
+        steps = [
+            (
+                ChangeMcastPortStep,
+                {
+                    "corosync_configuration": self.corosync_configuration,
+                    "old_mcast_port": self.corosync_configuration.mcast_port,
+                    "new_mcast_port": self.mcast_port,
+                },
+            )
+        ]
 
         return steps
