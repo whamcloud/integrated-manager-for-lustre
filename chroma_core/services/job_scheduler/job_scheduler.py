@@ -879,7 +879,6 @@ class JobScheduler(object):
 
         return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
 
-    @transaction.atomic
     def cancel_job(self, job_id):
         cancelled_thread = None
 
@@ -901,11 +900,13 @@ class JobScheduler(object):
                     cancelled_thread.cancel()
                 except KeyError:
                     pass
-                self._job_collection.update(job, "complete", cancelled=True)
-                self._job_collection.update_commands(job)
+                with transaction.atomic():
+                    self._job_collection.update(job, "complete", cancelled=True)
+                    self._job_collection.update_commands(job)
             elif job.state == "pending":
-                self._job_collection.update(job, "complete", cancelled=True)
-                self._job_collection.update_commands(job)
+                with transaction.atomic():
+                    self._job_collection.update(job, "complete", cancelled=True)
+                    self._job_collection.update_commands(job)
             self._lock_cache.remove_job(job)
 
         # Drop self._lock while the thread completes - it will need
