@@ -84,7 +84,6 @@ class AgentPluginHandler(object):
 
         log.info("AgentDaemon: finished removing resources for host %s" % host_id)
 
-    @transaction.atomic
     def setup_host(self, host_id, data):
         with self._processing_lock:
             session = self._sessions.get(host_id, None)
