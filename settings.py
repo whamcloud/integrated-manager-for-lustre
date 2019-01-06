@@ -319,6 +319,8 @@ AGENT_RESTART_TIMEOUT = 30
 
 SSH_CONFIG = None
 
+TASTYPIE_DEFAULT_FORMATS = ["json"]
+
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
