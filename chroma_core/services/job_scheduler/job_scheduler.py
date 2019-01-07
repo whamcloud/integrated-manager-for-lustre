@@ -699,7 +699,9 @@ class JobScheduler(object):
                         job = ApplyConfParams(mgs=mgs.managedtarget_ptr)
                         if DepCache().get(job).satisfied():
                             if not command:
-                                command = Command.objects.create(message="Updating configuration parameters on %s" % mgs)
+                                command = Command.objects.create(
+                                    message="Updating configuration parameters on %s" % mgs
+                                )
                             self.CommandPlan.add_jobs([job], command)
 
             # Update TargetFailoverAlert from .active_mount

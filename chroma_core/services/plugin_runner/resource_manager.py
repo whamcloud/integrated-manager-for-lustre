@@ -1057,7 +1057,7 @@ class ResourceManager(object):
 
         with self._instance_lock:
             session = self._sessions[scannable_id]
-            
+
             with transaction.atomic():
                 self._persist_new_resources(session, resources)
                 self._persist_lun_updates(scannable_id)
