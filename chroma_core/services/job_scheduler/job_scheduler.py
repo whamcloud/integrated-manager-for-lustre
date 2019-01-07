@@ -17,7 +17,7 @@ from collections import defaultdict
 import Queue
 from copy import deepcopy
 from chroma_core.lib.util import all_subclasses
-from chroma_core.services.dbutils import exit_if_in_transaction
+from chroma_core.services import dbutils
 
 
 from django.contrib.contenttypes.models import ContentType
@@ -182,7 +182,7 @@ class JobProgress(threading.Thread, Queue.Queue):
         self._stopping.set()
 
     def complete_job(self, job_id, errored):
-        exit_if_in_transaction(log)
+        dbutils.exit_if_in_transaction(log)
         self.put(("complete_job", (job_id, errored), {}))
 
     def __getattr__(self, name):
@@ -192,7 +192,7 @@ class JobProgress(threading.Thread, Queue.Queue):
             self.__getattr__("_%s" % name)
 
             def getter(*args, **kwargs):
-                exit_if_in_transaction(log)
+                dbutils.exit_if_in_transaction(log)
                 log.debug("putting: {} on the queue".format(name))
                 self.put(deepcopy((name, args, kwargs)))
 

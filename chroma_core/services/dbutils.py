@@ -11,9 +11,6 @@ This lib provide useful features related to the database.
 
 import os
 import traceback
-from functools import wraps
-from contextlib import contextmanager
-import binascii
 
 from django.db import transaction, close_old_connections
 

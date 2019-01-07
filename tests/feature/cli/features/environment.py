@@ -71,8 +71,8 @@ def before_all(context):
     # test databases.
     context.runner = NoseTestSuiteRunner()
 
-    ## If you use South for migrations, uncomment this to monkeypatch
-    ## syncdb to get migrations to run.
+    # If you use South for migrations, uncomment this to monkeypatch
+    # syncdb to get migrations to run.
     from south.management.commands import patch_for_test_db_setup
 
     patch_for_test_db_setup()
