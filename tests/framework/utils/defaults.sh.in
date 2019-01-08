@@ -121,7 +121,7 @@ set_defaults() {
     # or to build a Lustre Review job:
     #LUSTRE_REVIEW_BUILD="56451"
     # or build a GA release
-    LUSTRE_VERSION=2.10.6
+    LUSTRE_VERSION=2.12.0
 
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         JENKINS_JOB="lustre-reviews"
