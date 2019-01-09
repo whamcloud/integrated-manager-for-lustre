@@ -42,10 +42,8 @@ class ResourceQuery(object):
     def resource_get_alerts(self, resource):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
-        assert resource._handle != None
+        assert resource._handle is not None
         from chroma_core.models import StorageResourceAlert
-
-        resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
 
         resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
 

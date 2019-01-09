@@ -10,7 +10,6 @@ from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
-from chroma_core.services import dbutils
 
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
