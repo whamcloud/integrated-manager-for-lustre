@@ -337,7 +337,7 @@ class GetPacemakerStateStep(Step):
         try:
             lnet_data = self.invoke_agent(host, "device_plugin", {"plugin": "linux_network"})["linux_network"]["lnet"]
             host.set_state(lnet_data["state"])
-            host.save()
+            host.save(update_fields=["state", "state_modified_at"])
         except TypeError:
             self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
         except AgentException as e:

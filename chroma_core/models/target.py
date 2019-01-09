@@ -1748,7 +1748,7 @@ class ManagedTargetMount(models.Model):
     primary = models.BooleanField(default=False)
     target = models.ForeignKey("ManagedTarget")
 
-    def save(self, force_insert=False, force_update=False, using=None):
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         # If primary is true, then target must be unique
         if self.primary:
             from django.db.models import Q
@@ -1772,7 +1772,7 @@ class ManagedTargetMount(models.Model):
 
                 raise ValidationError("Cannot have multiple MGS mounts on host %s" % self.host.address)
 
-        return super(ManagedTargetMount, self).save(force_insert, force_update, using)
+        return super(ManagedTargetMount, self).save(force_insert, force_update, using, update_fields)
 
     def device(self):
         return self.volume_node.path

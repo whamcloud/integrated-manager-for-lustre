@@ -40,9 +40,9 @@ class Corosync2Configuration(CorosyncConfiguration):
 
     # This is temporary, although will work perfectly functionally. Once landed we will move to
     #  use the sparse table functionality.
-    def save(self, force_insert=False, force_update=False, using=None):
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.record_type = "Corosync2Configuration"
-        return super(Corosync2Configuration, self).save(force_insert, force_update, using)
+        return super(Corosync2Configuration, self).save(force_insert, force_update, using, update_fields)
 
     @property
     def configure_job_name(self):

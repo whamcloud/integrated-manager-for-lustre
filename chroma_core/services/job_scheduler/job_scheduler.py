@@ -815,7 +815,7 @@ class JobScheduler(object):
                 else:
                     # If setting a normal attribute just write it straight away
                     setattr(instance, attr, value)
-                    instance.save()
+                    instance.save(update_fields=[attr])
                     log.info(
                         "_notify: Set %s=%s on %s (%s-%s) and saved"
                         % (attr, value, instance, model_klass.__name__, instance.id)

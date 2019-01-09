@@ -104,7 +104,7 @@ class Command(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def save(self, force_insert=False, force_update=False, using=None):
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         """
         Saves the current instance. Override this in a subclass if you want to
         control the saving process.
@@ -119,7 +119,7 @@ class Command(models.Model):
         :param force_update: bool
         :param using: str
         """
-        super(Command, self).save(force_insert, force_update, using)
+        super(Command, self).save(force_insert, force_update, using, update_fields)
 
         # This is a little bit messy and maybe shouldn't go here. We want to get the existing alert, if it exists
         # which could be of a number of types. CommandRunningAlert, CommandSuccessfulAlert, CommandCancelledAlert
