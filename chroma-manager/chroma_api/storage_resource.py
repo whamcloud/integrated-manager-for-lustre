@@ -30,29 +30,31 @@ from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonR
 
 
 class StorageResourceValidation(Validation):
-    def is_valid(self, bundle, request = None):
+    def is_valid(self, bundle, request=None):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.lib.storage_plugin.manager import PluginNotFound
 
         errors = defaultdict(list)
-        if 'alias' in bundle.data and bundle.data['alias'] is not None:
-            alias = bundle.data['alias']
+        if "alias" in bundle.data and bundle.data["alias"] is not None:
+            alias = bundle.data["alias"]
             if alias.strip() == "":
-                errors['alias'].append("May not be blank")
+                errors["alias"].append("May not be blank")
             elif alias != alias.strip():
-                errors['alias'].append("No trailing whitespace allowed")
+                errors["alias"].append("No trailing whitespace allowed")
 
-        if 'plugin_name' in bundle.data:
+        if "plugin_name" in bundle.data:
             try:
-                storage_plugin_manager.get_plugin_class(bundle.data['plugin_name'])
-            except PluginNotFound, e:
-                errors['plugin_name'].append(e.__str__())
+                storage_plugin_manager.get_plugin_class(bundle.data["plugin_name"])
+            except PluginNotFound as e:
+                errors["plugin_name"].append(e.__str__())
             else:
-                if 'class_name' in bundle.data:
+                if "class_name" in bundle.data:
                     try:
-                        storage_plugin_manager.get_plugin_resource_class(bundle.data['plugin_name'], bundle.data['class_name'])
-                    except PluginNotFound, e:
-                        errors['class_name'].append(e.__str__())
+                        storage_plugin_manager.get_plugin_resource_class(
+                            bundle.data["plugin_name"], bundle.data["class_name"]
+                        )
+                    except PluginNotFound as e:
+                        errors["class_name"].append(e.__str__())
 
         return errors
 
@@ -70,13 +72,15 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
     This resource has a special ``ancestor_of`` filter argument, which may be set to
     the ID of a storage resource to retrieve all the resources that are its ancestors.
     """
-    #FIXME: document this fully when the storage plugin API freezes
 
-    attributes = fields.DictField(help_text = "Dictionary of attributes as defined by the storage plugin")
-    alias = fields.CharField(help_text = "The human readable name of the resource (may be set by user)")
+    # FIXME: document this fully when the storage plugin API freezes
 
-    alerts = fields.ListField(help_text = "List of active ``alert`` objects which are associated with this resource")
-    stats = fields.DictField(help_text = """List of statistics defined by the plugin, with recent data for each.
+    attributes = fields.DictField(help_text="Dictionary of attributes as defined by the storage plugin")
+    alias = fields.CharField(help_text="The human readable name of the resource (may be set by user)")
+
+    alerts = fields.ListField(help_text="List of active ``alert`` objects which are associated with this resource")
+    stats = fields.DictField(
+        help_text="""List of statistics defined by the plugin, with recent data for each.
     Each statistic has the format:
     ::
 
@@ -94,25 +98,31 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
     For time series statistics, fetch the data separately with a call for the ``/metrics/`` sub-URL of the resource.
 
-    """)
-    charts = fields.ListField(help_text = "List of charts for this resource (defined by the plugin as Meta.charts)")
-    propagated_alerts = fields.ListField(help_text = "List of active ``alert`` objects which are associated with "
-                                                     "ancestors of this resource")
+    """
+    )
+    charts = fields.ListField(help_text="List of charts for this resource (defined by the plugin as Meta.charts)")
+    propagated_alerts = fields.ListField(
+        help_text="List of active ``alert`` objects which are associated with " "ancestors of this resource"
+    )
 
-    default_alias = fields.CharField(help_text = "The default human readable name of the resource")
+    default_alias = fields.CharField(help_text="The default human readable name of the resource")
 
-    plugin_name = fields.CharField(attribute='resource_class__storage_plugin__module_name',
-                                   help_text = "Name of the storage plugin which defines this resource")
-    class_name = fields.CharField(attribute='resource_class__class_name',
-                                  help_text = "Name of a ``storage_resource_class``")
+    plugin_name = fields.CharField(
+        attribute="resource_class__storage_plugin__module_name",
+        help_text="Name of the storage plugin which defines this resource",
+    )
+    class_name = fields.CharField(
+        attribute="resource_class__class_name", help_text="Name of a ``storage_resource_class``"
+    )
 
-    parent_classes = fields.ListField(blank = True, null = True, help_text = "List of strings, parent classes of"
-                                                                             "this object's class.")
+    parent_classes = fields.ListField(
+        blank=True, null=True, help_text="List of strings, parent classes of" "this object's class."
+    )
 
-    deletable = fields.BooleanField(help_text = "If ``true``, this object may be removed with a DELETE operation")
+    deletable = fields.BooleanField(help_text="If ``true``, this object may be removed with a DELETE operation")
 
     def dehydrate_parent_classes(self, bundle):
-        def find_bases(klass, bases = set()):
+        def find_bases(klass, bases=set()):
             for parent in klass.__bases__:
                 if issubclass(parent, BaseStorageResource):
                     bases.add(parent)
@@ -132,8 +142,8 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
         return objs
 
     def get_list(self, request, **kwargs):
-        if 'ancestor_of' in request.GET:
-            record = StorageResourceRecord.objects.get(id = request.GET['ancestor_of'])
+        if "ancestor_of" in request.GET:
+            record = StorageResourceRecord.objects.get(id=request.GET["ancestor_of"])
             ancestor_records = set(ResourceQuery().record_all_ancestors(record))
 
             bundles = [self.build_bundle(obj=obj, request=request) for obj in ancestor_records]
@@ -142,28 +152,29 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
         else:
             return super(StorageResourceResource, self).get_list(request, **kwargs)
 
-    def _sort_by_attr(self, obj_list, options = None, **kwargs):
+    def _sort_by_attr(self, obj_list, options=None, **kwargs):
         options = options or {}
-        order_by = options.get('order_by', None)
+        order_by = options.get("order_by", None)
         if not order_by:
             return obj_list
 
-        if order_by.find('attr_') == 0:
+        if order_by.find("attr_") == 0:
             attr_name = order_by[5:]
             invert = False
-        elif order_by.find('attr_') == 1:
+        elif order_by.find("attr_") == 1:
             attr_name = order_by[6:]
             invert = True
         else:
             raise RuntimeError("Can't sort on %s" % order_by)
 
         try:
-            class_name = kwargs['class_name']
-            plugin_name = kwargs['plugin_name']
+            class_name = kwargs["class_name"]
+            plugin_name = kwargs["plugin_name"]
         except KeyError:
             return obj_list
         else:
             from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
             klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin_name, class_name)
             model_klass = klass.attr_model_class(attr_name)
 
@@ -182,26 +193,28 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
     def dehydrate_stats(self, bundle):
         from chroma_core.models import SimpleHistoStoreTime
         from chroma_core.models import SimpleHistoStoreBin
+
         stats = {}
-        for s in StorageResourceStatistic.objects.filter(storage_resource = bundle.obj):
+        for s in StorageResourceStatistic.objects.filter(storage_resource=bundle.obj):
             from django.db import transaction
+
             stat_props = s.storage_resource.get_statistic_properties(s.name)
             if isinstance(stat_props, statistics.BytesHistogram):
                 with transaction.commit_manually():
                     transaction.commit()
                     try:
-                        time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic = s).latest('time')
-                        bins = SimpleHistoStoreBin.objects.filter(histo_store_time = time).order_by('bin_idx')
+                        time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic=s).latest("time")
+                        bins = SimpleHistoStoreBin.objects.filter(histo_store_time=time).order_by("bin_idx")
                     finally:
                         transaction.commit()
-                type_name = 'histogram'
+                type_name = "histogram"
                 # Composite type
                 data = {
-                    'bin_labels': [u'\u2264%s' % (bin[1:] or '') for bin in stat_props.bins],
-                    'values': [bin.value for bin in bins],
+                    "bin_labels": [u"\u2264%s" % (bin[1:] or "") for bin in stat_props.bins],
+                    "values": [bin.value for bin in bins],
                 }
             else:
-                type_name = 'timeseries'
+                type_name = "timeseries"
                 # Go get the data from <resource>/metrics/
                 data = None
 
@@ -209,11 +222,13 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
             if not label:
                 label = s.name
 
-            stat_data = {'name': s.name,
-                         'label': label,
-                         'type': type_name,
-                         'unit_name': stat_props.get_unit_name(),
-                         'data': data}
+            stat_data = {
+                "name": s.name,
+                "label": label,
+                "type": type_name,
+                "unit_name": stat_props.get_unit_name(),
+                "data": data,
+            }
             stats[s.name] = stat_data
 
         return stats
@@ -251,22 +266,24 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
             if isinstance(val, BaseStorageResource):
                 if val._handle:
                     from chroma_api.urls import api
-                    raw = api.get_resource_uri(StorageResourceRecord.objects.get(pk = val._handle))
+
+                    raw = api.get_resource_uri(StorageResourceRecord.objects.get(pk=val._handle))
                 else:
                     raw = None
             else:
                 raw = val
             result[name] = {
-                'raw': raw,
-                'markup': props.to_markup(val),
-                'label': props.get_label(name),
-                'class': props.__class__.__name__}
+                "raw": raw,
+                "markup": props.to_markup(val),
+                "label": props.get_label(name),
+                "class": props.__class__.__name__,
+            }
         return result
 
     class Meta:
-        queryset = StorageResourceRecord.objects.filter(resource_class__id__in = filter_class_ids())
-        resource_name = 'storage_resource'
-        filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
+        queryset = StorageResourceRecord.objects.filter(resource_class__id__in=filter_class_ids())
+        resource_name = "storage_resource"
+        filtering = {"class_name": ["exact"], "plugin_name": ["exact"]}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         always_return_data = True
@@ -286,9 +303,12 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
         # Note: not importing this at module scope so that this module can
         # be imported without loading plugins (useful at installation)
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(bundle.data['plugin_name'], bundle.data['class_name'])
+
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(
+            bundle.data["plugin_name"], bundle.data["class_name"]
+        )
         attrs = {}
-        input_attrs = bundle.data['attrs']
+        input_attrs = bundle.data["attrs"]
         for name, property in resource_class.get_all_attribute_properties():
             if name in input_attrs:
                 attrs[name] = property.encrypt(property.cast(input_attrs[name]))
@@ -300,7 +320,7 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
         # Construct a record
         record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
-        #record_dict = self.full_dehydrate(self.build_bundle(obj = record)).data
+        # record_dict = self.full_dehydrate(self.build_bundle(obj = record)).data
         bundle.obj = record
 
         return bundle
@@ -309,9 +329,9 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
     def obj_update(self, bundle, **kwargs):
         bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
 
-        if 'alias' in bundle.data:
+        if "alias" in bundle.data:
             # FIXME: sanitize input for alias (it gets echoed back as markup)
-            alias = bundle.data['alias']
+            alias = bundle.data["alias"]
             record = bundle.obj
             if alias == "":
                 record.alias = None
@@ -333,13 +353,18 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
             ScanDaemonRpcInterface().modify_resource(record.id, attrs)
 
         # Require that something was set
-        if not 'alias' in bundle.data or len(attrs):
+        if not "alias" in bundle.data or len(attrs):
             raise ImmediateHttpResponse(http.HttpBadRequest())
 
         return bundle
 
     def prepend_urls(self):
         from django.conf.urls import url
+
         return super(StorageResourceResource, self).prepend_urls() + [
-            url(r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
+            url(
+                r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name,
+                self.wrap_view("dispatch_list"),
+                name="dispatch_list",
+            )
         ]

@@ -3,11 +3,11 @@ from django.test import TestCase
 from chroma_core.models import Command
 from chroma_core.services.log import log_register
 
-log = log_register('iml_test_case')
+log = log_register("iml_test_case")
 
 
 class IMLUnitTestCase(TestCase):
-    def make_command(self, complete=False, created_at=None, errored=True, message='test'):
+    def make_command(self, complete=False, created_at=None, errored=True, message="test"):
 
         """
 
@@ -17,9 +17,7 @@ class IMLUnitTestCase(TestCase):
         :param message: str Message associated with the command
         :return: Command The command created.
         """
-        command = Command.objects.create(message=message,
-                                         complete=complete,
-                                         errored=errored)
+        command = Command.objects.create(message=message, complete=complete, errored=errored)
 
         #  Command.created_at is auto_add_now - so have to update it
         if created_at is not None:

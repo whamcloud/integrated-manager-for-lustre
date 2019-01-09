@@ -13,6 +13,7 @@ class AgentPluginHandlerCollection(object):
     def __init__(self, resource_manager):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.services.plugin_runner.agent_daemon import AgentPluginHandler
+
         self.resource_manager = resource_manager
         self.handlers = {}
         for plugin_name in storage_plugin_manager.loaded_plugin_names:

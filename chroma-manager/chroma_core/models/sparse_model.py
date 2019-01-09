@@ -54,8 +54,8 @@ class VariantDescriptor(object):
     def __init__(self, name, type_, getter, setter, default):
         assert isinstance(name, str)
         assert isinstance(type_, type)
-        assert getter is None or hasattr(getter, '__call__')
-        assert setter is None or hasattr(setter, '__call__')
+        assert getter is None or hasattr(getter, "__call__")
+        assert setter is None or hasattr(setter, "__call__")
         assert default is None or isinstance(default, type_)
 
         self.name = name
@@ -67,33 +67,34 @@ class VariantDescriptor(object):
 
 class SparseManager(models.Manager):
     """Filters results to return only not-deleted records"""
+
     def get_query_set(self):
-        if getattr(self.model, 'is_sparse_base', False):
+        if getattr(self.model, "is_sparse_base", False):
             return super(SparseManager, self).get_query_set()
         else:
             # This is a work in progress.
             # self.model.__class__.__name__ gives the SparseMetaclass which isn't want I expect or want.
-            record_type = str(self.model).split('.')[-1:][0][:-2]
+            record_type = str(self.model).split(".")[-1:][0][:-2]
             return super(SparseManager, self).get_query_set().filter(record_type=record_type)
 
 
 class SparseMetaclass(models.base.ModelBase):
     def __new__(cls, name, bases, dct):
-        dct['objects'] = SparseManager()
+        dct["objects"] = SparseManager()
         return super(SparseMetaclass, cls).__new__(cls, name, bases, dct)
 
     def __instancecheck__(self, instance):
         return self._instance_check(instance.__class__)
 
     def _instance_check(self, klass):
-            if klass == SparseModel:
+        if klass == SparseModel:
+            return True
+
+        for base in klass.__bases__:
+            if self._instance_check(base):
                 return True
 
-            for base in klass.__bases__:
-                if self._instance_check(base):
-                    return True
-
-            return False
+        return False
 
 
 class SparseModel(models.Model):
@@ -101,18 +102,18 @@ class SparseModel(models.Model):
 
     class Meta:
         abstract = True
-        app_label = 'chroma_core'
+        app_label = "chroma_core"
 
     class UnknownSparseModel(KeyError):
         pass
 
-    record_type = models.CharField(max_length = 128, default="")
+    record_type = models.CharField(max_length=128, default="")
 
     # Provide some space where an Alert can store some adhoc data of its own, also 5 adhoc strings.
     # This won't be searchable (except by class specific code but does allow some variation if required in subclasses.
     # It is supposed that this will be used to store a json representation of the data.
     # This should probably go into parent class.
-    variant = models.CharField(max_length = 512, default = "{}")
+    variant = models.CharField(max_length=512, default="{}")
     variant_fields = []
     variant_fields_inited = []
 
@@ -122,15 +123,15 @@ class SparseModel(models.Model):
 
         try:
             if kwargs != {}:
-                if 'record_type' not in kwargs:
-                    kwargs['record_type'] = cls.__name__
-                required_class = getattr(chroma_core.models, kwargs['record_type'])
+                if "record_type" not in kwargs:
+                    kwargs["record_type"] = cls.__name__
+                required_class = getattr(chroma_core.models, kwargs["record_type"])
             elif len(args) > 1:
                 # The args will be in the order of the fields, but we add 1 because the cls is appended on the front.
-                record_type_index = [field.attname for field in cls._meta.fields].index('record_type') + 1
+                record_type_index = [field.attname for field in cls._meta.fields].index("record_type") + 1
                 required_class = getattr(chroma_core.models, args[record_type_index])
 
-            if (cls != required_class):
+            if cls != required_class:
                 args = (required_class,) + args[1:]
                 instance = required_class.__new__(*args, **kwargs)
 
@@ -145,15 +146,15 @@ class SparseModel(models.Model):
             raise cls.UnknownSparseModel("SparseModel %s unknown" % cls)
 
     def __init__(self, *args, **kwargs):
-        if kwargs and 'record_type' not in kwargs:
-            kwargs['record_type'] = self.__class__.__name__
+        if kwargs and "record_type" not in kwargs:
+            kwargs["record_type"] = self.__class__.__name__
 
         super(SparseModel, self).__init__(*args, **kwargs)
 
     def get_variant(self, name, default, type_):
         assert isinstance(name, str)
         assert isinstance(type_, type)
-        assert default is None or isinstance(default, type_), 'Default variant issue for type %s' % type(self)
+        assert default is None or isinstance(default, type_), "Default variant issue for type %s" % type(self)
 
         value = json.loads(self.variant).get(name, default)
 
@@ -174,16 +175,24 @@ class SparseModel(models.Model):
     @classmethod
     def _init_variants(cls):
         def create_attr(variant):
-            '''
+            """
             Create the property for the variant, simple call of special getter/setter or call of get/set variant. This
             setattr has to be in a function because each property needs its only instance of the variant variable and so
             if they just sit in the loop they share an instance and all have the attributes of the last entry in the
             variant_fields list.
-            '''
-            setattr(cls,
-                    variant.name,
-                    property(variant.getter if variant.getter else lambda self_: self_.get_variant(variant.name, variant.default, variant.type_),
-                             variant.setter if variant.setter else lambda self_, value: self_.set_variant(variant.name, variant.type_, value)))
+            """
+            setattr(
+                cls,
+                variant.name,
+                property(
+                    variant.getter
+                    if variant.getter
+                    else lambda self_: self_.get_variant(variant.name, variant.default, variant.type_),
+                    variant.setter
+                    if variant.setter
+                    else lambda self_, value: self_.set_variant(variant.name, variant.type_, value),
+                ),
+            )
 
         # We only want to create the class attributes once, so keep track of classes already processed
         # and do not do them more than once.
@@ -207,12 +216,16 @@ class SparseModel(models.Model):
         :return: A new instance in the target class.
         """
 
-        assert self.table_name == target_class.table_name, "Invalid cast %s to %s, tables names differ" % (self._meta.object_name, target_class._meta.object_name)
-        assert sorted([variant.name for variant in self.variant_fields]) == sorted([variant.name for variant in target_class.variant_fields]), \
-            "Invalid cast %s to %s, variant fields differ." % (self._meta.object_name, target_class._meta.object_name)
+        assert self.table_name == target_class.table_name, "Invalid cast %s to %s, tables names differ" % (
+            self._meta.object_name,
+            target_class._meta.object_name,
+        )
+        assert sorted([variant.name for variant in self.variant_fields]) == sorted(
+            [variant.name for variant in target_class.variant_fields]
+        ), "Invalid cast %s to %s, variant fields differ." % (self._meta.object_name, target_class._meta.object_name)
 
         # This should really come from target_class.__class__ but for some Python reason that gives the meta_class
         # not the class, which seems wrong to me but is the python way. I should ask I guess.
         self.record_type = target_class._meta.object_name
         self.save()
-        return target_class.objects.get(id = self.id)
+        return target_class.objects.get(id=self.id)

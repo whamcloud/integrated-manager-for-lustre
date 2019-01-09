@@ -32,8 +32,9 @@ class ResourceQuery(object):
             record_id = record_id.pk
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
+
         alerts = set(StorageResourceAlert.filter_by_item_id(StorageResourceRecord, record_id))
-        for sap in StorageAlertPropagated.objects.filter(storage_resource = record_id):
+        for sap in StorageAlertPropagated.objects.filter(storage_resource=record_id):
             alerts.add(sap.alert_state)
 
         return alerts
@@ -41,10 +42,10 @@ class ResourceQuery(object):
     def resource_get_alerts(self, resource):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
-        assert(resource._handle != None)
+        assert resource._handle != None
         from chroma_core.models import StorageResourceAlert
-        resource_alerts = StorageResourceAlert.filter_by_item_id(
-                StorageResourceRecord, resource._handle)
+
+        resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
 
         return list(resource_alerts)
 
@@ -52,27 +53,28 @@ class ResourceQuery(object):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
         from chroma_core.models import StorageAlertPropagated
+
         alerts = []
-        for sap in StorageAlertPropagated.objects.filter(storage_resource = resource._handle):
+        for sap in StorageAlertPropagated.objects.filter(storage_resource=resource._handle):
             alerts.append(sap.alert_state)
         return alerts
 
     def record_alert_message(self, record_id, alert_class):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         # Get the StorageResourceRecord
         record = StorageResourceRecord.objects.get(pk=record_id)
 
         # Get the BaseStorageResource class and have it translate the alert_class
-        klass = storage_plugin_manager.get_resource_class_by_id(
-            record.resource_class_id)
+        klass = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
         msg = "%s (%s %s)" % (klass.alert_message(alert_class), klass._meta.label, record.alias_or_name())
         return msg
 
     def record_class_and_instance_string(self, record):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         # Get the BaseStorageResource class and have it translate the alert_class
-        klass = storage_plugin_manager.get_resource_class_by_id(
-            record.resource_class_id)
+        klass = storage_plugin_manager.get_resource_class_by_id(record.resource_class_id)
 
         return klass._meta.label, record.to_resource().get_label()
 
@@ -132,7 +134,7 @@ class ResourceQuery(object):
     def get_resource_parents(self, vrr_id):
         """Like get_resource by also fills out entire ancestry"""
 
-        vrr = StorageResourceRecord.objects.get(pk = vrr_id)
+        vrr = StorageResourceRecord.objects.get(pk=vrr_id)
         return self._record_to_resource_parents(vrr)
 
     @transaction.commit_on_success()
@@ -157,21 +159,19 @@ class ResourceQuery(object):
         except TypeError:
             classes = [class_or_classes]
 
-        records = StorageResourceRecord.objects.filter(resource_class__in = classes, **kwargs)
+        records = StorageResourceRecord.objects.filter(resource_class__in=classes, **kwargs)
         return records
 
     def get_class_record_ids(self, resource_class):
-        records = StorageResourceRecord.objects.filter(
-                resource_class = resource_class).values('pk')
+        records = StorageResourceRecord.objects.filter(resource_class=resource_class).values("pk")
         for r in records:
-            yield r['pk']
+            yield r["pk"]
 
     def _load_record_and_children(self, record):
         storage_plugin_log.debug("load_record_and_children: %s" % record)
         resource = self._record_to_resource_parents(record)
         if resource:
-            children_records = StorageResourceRecord.objects.filter(
-                parents = record)
+            children_records = StorageResourceRecord.objects.filter(parents=record)
 
             children_resources = []
             for c in children_records:
@@ -195,20 +195,20 @@ class ResourceQuery(object):
     def _record_by_attributes(self, fn, plugin, klass, **attrs):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         import json
+
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
         # FIXME: validate that attrs.keys() are all part of the resource's GlobalId
         resource = klass(**attrs)
-        return fn(
-                resource_class__id = klass_id,
-                storage_id_str = json.dumps(resource.id_tuple()),
-                storage_id_scope = None)
+        return fn(resource_class__id=klass_id, storage_id_str=json.dumps(resource.id_tuple()), storage_id_scope=None)
 
     def get_record_by_attributes(self, plugin, klass, **attrs):
         from chroma_core.models import StorageResourceRecord
+
         return self._record_by_attributes(StorageResourceRecord.objects.get, plugin, klass, **attrs)
 
     def filter_record_by_attributes(self, plugin, klass, **attrs):
         from chroma_core.models import StorageResourceRecord
+
         return self._record_by_attributes(StorageResourceRecord.objects.filter, plugin, klass, **attrs)
 
     def get_scannable_id_record_by_attributes(self, scope, plugin, klass, **attrs):
@@ -217,9 +217,9 @@ class ResourceQuery(object):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.models import StorageResourceRecord
         import json
+
         klass, klass_id = storage_plugin_manager.get_plugin_resource_class(plugin, klass)
         resource = klass(**attrs)
         return StorageResourceRecord.objects.get(
-                resource_class__id = klass_id,
-                storage_id_str = json.dumps(resource.id_tuple()),
-                storage_id_scope = scope)
+            resource_class__id=klass_id, storage_id_str=json.dumps(resource.id_tuple()), storage_id_scope=scope
+        )

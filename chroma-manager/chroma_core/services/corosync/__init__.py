@@ -31,11 +31,11 @@ class Service(ChromaService):
     drop older reports that come in late, so correct timing is critical.
     """
 
-    PLUGIN_NAME = 'corosync'
+    PLUGIN_NAME = "corosync"
 
     #  Class to store the in-memory online/offline status and sample times
     #  a HostStatus object is created for each host that is reported
-    HostStatus = namedtuple('HostStatus', ['status', 'datetime'])
+    HostStatus = namedtuple("HostStatus", ["status", "datetime"])
 
     def __init__(self):
         super(Service, self).__init__()
@@ -70,54 +70,60 @@ class Service(ChromaService):
             return
 
         # If corosync is not configured yet, or we don't actually have corosync - then ignore the input
-        if (not host.corosync_configuration) or host.corosync_configuration.state == 'unconfigured':
+        if (not host.corosync_configuration) or host.corosync_configuration.state == "unconfigured":
             return
 
-        if body.get('state'):
-            job_scheduler_notify.notify(host.corosync_configuration,
-                                        timezone.now(),
-                                        {'state': body['state']['corosync']})
+        if body.get("state"):
+            job_scheduler_notify.notify(
+                host.corosync_configuration, timezone.now(), {"state": body["state"]["corosync"]}
+            )
 
-            job_scheduler_notify.notify(host.pacemaker_configuration,
-                                        timezone.now(),
-                                        {'state': body['state']['pacemaker']})
+            job_scheduler_notify.notify(
+                host.pacemaker_configuration, timezone.now(), {"state": body["state"]["pacemaker"]}
+            )
 
-            if body['state']['corosync'] == 'stopped':
+            if body["state"]["corosync"] == "stopped":
                 return
         else:
-            if host.corosync_configuration.state != 'started':
+            if host.corosync_configuration.state != "started":
                 return
 
-        if body.get('crm_info'):
-            nodes = body['crm_info']['nodes']
-            dt = body['crm_info']['datetime']
+        if body.get("crm_info"):
+            nodes = body["crm_info"]["nodes"]
+            dt = body["crm_info"]["datetime"]
 
-            options = body['crm_info'].get('options', {
-                'stonith_enabled': None
-            })
-            stonith_enabled = options['stonith_enabled']
+            options = body["crm_info"].get("options", {"stonith_enabled": None})
+            stonith_enabled = options["stonith_enabled"]
 
             try:
                 dt = IMLDateTime.parse(dt)
             except ValueError:
-                if dt != '':
+                if dt != "":
                     log.warning("Invalid date or tz string from corosync plugin: %s" % dt)
                     raise
 
             def is_new(peer_node_identifier):
-                return (peer_node_identifier not in self._host_status or
-                        self._host_status[peer_node_identifier].datetime < dt)
+                return (
+                    peer_node_identifier not in self._host_status
+                    or self._host_status[peer_node_identifier].datetime < dt
+                )
 
-            peers_str = "; ".join(["%s: online=%s, new=%s" %
-                                   (peer_node_identifier, data['online'], is_new(peer_node_identifier))
-                                   for peer_node_identifier, data in nodes.items()])
+            peers_str = "; ".join(
+                [
+                    "%s: online=%s, new=%s" % (peer_node_identifier, data["online"], is_new(peer_node_identifier))
+                    for peer_node_identifier, data in nodes.items()
+                ]
+            )
             log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
             # NB: This will ignore any unknown peers in the report.
-            cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(Q(nodename__in=nodes.keys()) |
-                                                                                          Q(fqdn__in=nodes.keys()))
+            cluster_nodes = ManagedHost.objects.select_related("ha_cluster_peers").filter(
+                Q(nodename__in=nodes.keys()) | Q(fqdn__in=nodes.keys())
+            )
 
-            unknown_nodes = set(nodes.keys()) - set([h.nodename for h in cluster_nodes]) - set([h.fqdn for h in cluster_nodes])
+            unknown_nodes = (
+                set(nodes.keys()) - set([h.nodename for h in cluster_nodes]) - set([h.fqdn for h in cluster_nodes])
+            )
 
             # Leaving this out for now - because they raise issue caused by limitations in the simulator and
             # test system as a whole. Difficult to know if they will or won't be raised it all depends on the past.
@@ -143,10 +149,9 @@ class Service(ChromaService):
                 cluster_peer_keys = sorted([node.pk for node in cluster_nodes if node is not host])
 
                 if is_new(node_identifier) and host.corosync_configuration:
-                    host_reported_online = data['online'] == 'true'
+                    host_reported_online = data["online"] == "true"
 
-                    log.debug("Corosync processing "
-                              "peer %s of %s " % (host.fqdn, fqdn))
+                    log.debug("Corosync processing " "peer %s of %s " % (host.fqdn, fqdn))
 
                     #  Raise an Alert - system suppresses duplicates
                     log.debug("Alert notify on %s: active=%s" % (host, not host_reported_online))
@@ -158,20 +163,16 @@ class Service(ChromaService):
 
                     #  Attempt to save the state.
                     if host.corosync_configuration.corosync_reported_up != host_reported_online:
-                        job_scheduler_notify.notify(host.corosync_configuration,
-                                                    timezone.now(),
-                                                    {'corosync_reported_up': host_reported_online})
+                        job_scheduler_notify.notify(
+                            host.corosync_configuration, timezone.now(), {"corosync_reported_up": host_reported_online}
+                        )
 
-                    peer_host_peer_keys = sorted([h.pk for h in
-                                                  host.ha_cluster_peers.all()])
+                    peer_host_peer_keys = sorted([h.pk for h in host.ha_cluster_peers.all()])
                     if peer_host_peer_keys != cluster_peer_keys:
-                        job_scheduler_notify.notify(host,
-                                                    timezone.now(),
-                                                    {'ha_cluster_peers': cluster_peer_keys})
+                        job_scheduler_notify.notify(host, timezone.now(), {"ha_cluster_peers": cluster_peer_keys})
 
                     #  Keep internal track of the hosts state.
-                    self._host_status[node_identifier] = self.HostStatus(status=host_reported_online,
-                                                                         datetime=dt)
+                    self._host_status[node_identifier] = self.HostStatus(status=host_reported_online, datetime=dt)
 
     def run(self):
         super(Service, self).run()

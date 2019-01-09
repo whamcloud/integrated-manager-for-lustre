@@ -16,7 +16,7 @@ from chroma_core.models.storage_plugin import StorageResourceRecord
 from chroma_core.models.storage_plugin import StorageResourceOffline
 
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 
 class ScanDaemon(object):
@@ -33,6 +33,7 @@ class ScanDaemon(object):
     Creates a plugin instance for each ScannableResource.
 
     """
+
     def __init__(self, resource_manager):
         self.stopping = False
 
@@ -42,6 +43,7 @@ class ScanDaemon(object):
         # Map of module name to map of root_resource_id to PluginSession
         self.plugins = {}
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         for p in storage_plugin_manager.loaded_plugins.keys():
             # Create sessions for all root resources
             sessions = {}
@@ -65,7 +67,7 @@ class ScanDaemon(object):
             else:
                 kill_session.stop()
                 log.info("waiting for session to stop")
-                while(not kill_session.stopped):
+                while not kill_session.stopped:
                     time.sleep(1)
                 log.info("stopped.")
                 for plugin, sessions in self.plugins.items():
@@ -73,7 +75,7 @@ class ScanDaemon(object):
                         del sessions[resource_id]
                 del self._all_sessions[resource_id]
 
-            record = StorageResourceRecord.objects.get(pk = resource_id)
+            record = StorageResourceRecord.objects.get(pk=resource_id)
             record.update_attributes(attrs)
             record.save()
 
@@ -90,7 +92,7 @@ class ScanDaemon(object):
             else:
                 kill_session.stop()
                 log.info("waiting for session to stop")
-                while(not kill_session.stopped):
+                while not kill_session.stopped:
                     time.sleep(1)
                 log.info("stopped.")
 
@@ -100,6 +102,7 @@ class ScanDaemon(object):
     def root_resource_ids(self, plugin):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         # We will be polling, to need to commit to see new data
         with transaction.commit_manually():
             transaction.commit()
@@ -138,7 +141,7 @@ class ScanDaemon(object):
             session.stop()
         log.info("joining sessions")
         for scannable_id, session in self._all_sessions.items():
-            session.join(timeout = JOIN_TIMEOUT)
+            session.join(timeout=JOIN_TIMEOUT)
             if session.isAlive():
                 log.warning("session failed to return in %s seconds, forcing exit" % JOIN_TIMEOUT)
                 os._exit(-1)
@@ -160,9 +163,9 @@ class PluginSession(threading.Thread):
 
     def run(self):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
-        plugin_klass = storage_plugin_manager.get_plugin_class(
-                          record.resource_class.storage_plugin.module_name)
+        plugin_klass = storage_plugin_manager.get_plugin_class(record.resource_class.storage_plugin.module_name)
 
         RETRY_DELAY_MIN = 1
         RETRY_DELAY_MAX = 256
@@ -175,7 +178,7 @@ class PluginSession(threading.Thread):
                 self._scan_loop(plugin_klass, record)
             except Exception:
                 run_duration = datetime.datetime.now() - last_retry
-                if last_retry and run_duration > datetime.timedelta(seconds = RETRY_DELAY_MAX):
+                if last_retry and run_duration > datetime.timedelta(seconds=RETRY_DELAY_MAX):
                     # If the last run was long running (i.e. probably ran okay until something went
                     # wrong) then retry quickly.
                     retry_delay = RETRY_DELAY_MIN
@@ -183,13 +186,16 @@ class PluginSession(threading.Thread):
                     # If we've already retried recently, then start backing off.
                     retry_delay *= 2
 
-                log.warning("Exception in scan loop for resource %s, waiting %ss before restart" % (self.root_resource_id, retry_delay))
+                log.warning(
+                    "Exception in scan loop for resource %s, waiting %ss before restart"
+                    % (self.root_resource_id, retry_delay)
+                )
                 exc_info = sys.exc_info()
-                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+                backtrace = "\n".join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 log.warning("Backtrace: %s" % backtrace)
 
                 # Wait either retry_delay, or until stopping is set, whichever comes sooner
-                self.stopping.wait(timeout = retry_delay)
+                self.stopping.wait(timeout=retry_delay)
             else:
                 log.info("Session %s: out of scan loop cleanly" % self.root_resource_id)
 

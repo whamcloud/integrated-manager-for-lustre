@@ -14,7 +14,7 @@ from chroma_core.services.log import log_register
 from chroma_core.models import PowerControlDevice, PowerControlDeviceOutlet
 
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 
 class PowerControlManager(CommandLine):
@@ -53,7 +53,7 @@ class PowerControlManager(CommandLine):
             self.monitor_task_queue[sockaddr].put(task)
 
     def register_device(self, device_id):
-        device = PowerControlDevice.objects.get(pk = device_id)
+        device = PowerControlDevice.objects.get(pk=device_id)
         sockaddr = device.sockaddr
 
         with self._lock:
@@ -62,7 +62,7 @@ class PowerControlManager(CommandLine):
         log.info("Registered device: %s:%s" % sockaddr)
 
         log.info("Scheduling outlet query for new device: %s:%s" % sockaddr)
-        self.add_monitor_task(sockaddr, ('query_device_outlets', {'device_id': device.id}))
+        self.add_monitor_task(sockaddr, ("query_device_outlets", {"device_id": device.id}))
 
     def unregister_device(self, sockaddr):
         sockaddr = tuple(sockaddr)
@@ -78,16 +78,16 @@ class PowerControlManager(CommandLine):
         log.info("Unregistered device: %s:%s" % sockaddr)
 
         log.info("Scheduling stop for device monitor: %s:%s" % sockaddr)
-        self.add_monitor_task(sockaddr, ('stop', {}))
+        self.add_monitor_task(sockaddr, ("stop", {}))
 
     def reregister_device(self, device_id):
         # Not happy with this, but we don't have a great way to tell
         # if this was called because some attribute of the PDU was updated
         # or if it was saved due to a relation's update (e.g. an Outlet).
         def _needs_update(old):
-            new = PowerControlDevice.objects.get(pk = device_id)
+            new = PowerControlDevice.objects.get(pk=device_id)
 
-            excludes = ['_state']
+            excludes = ["_state"]
             for k, v in new.__dict__.items():
                 if k in excludes:
                     continue
@@ -112,7 +112,7 @@ class PowerControlManager(CommandLine):
 
         if not device.all_outlets_known:
             log.info("Scheduling query on %s:%s to resolve unknown outlet states." % device.sockaddr)
-            self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
+            self.add_monitor_task(device.sockaddr, ("query_device_outlets", {"device_id": device.id}))
 
         with self._device_locks[device.sockaddr]:
             bmc_states = {}
@@ -132,26 +132,22 @@ class PowerControlManager(CommandLine):
 
         if not device.all_outlets_known:
             log.info("Scheduling query on %s:%s to resolve unknown outlet states." % device.sockaddr)
-            self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
+            self.add_monitor_task(device.sockaddr, ("query_device_outlets", {"device_id": device.id}))
 
         with self._device_locks[device.sockaddr]:
             try:
                 self.try_shell(device.monitor_command())
-            except CommandError, e:
+            except CommandError as e:
                 log.error("Device %s did not respond to monitor: %s" % (device, e))
                 return False
             return True
 
     @transaction.commit_on_success
     def toggle_device_outlets(self, toggle_state, outlet_ids):
-        state_commands = {
-            'on': 'poweron_command',
-            'off': 'poweroff_command',
-            'reboot': 'powercycle_command'
-        }
+        state_commands = {"on": "poweron_command", "off": "poweroff_command", "reboot": "powercycle_command"}
 
         for outlet_id in outlet_ids:
-            outlet = PowerControlDeviceOutlet.objects.select_related('device').get(pk = outlet_id)
+            outlet = PowerControlDeviceOutlet.objects.select_related("device").get(pk=outlet_id)
             device = outlet.device
             command = getattr(device, state_commands[toggle_state])
 
@@ -159,15 +155,15 @@ class PowerControlManager(CommandLine):
                 try:
                     stdout = self.try_shell(command(outlet.identifier))[1]
                     log.info("Toggled %s:%s -> %s: %s" % (device, outlet.identifier, toggle_state, stdout))
-                    has_power = toggle_state in ('on', 'reboot')
-                except CommandError, e:
+                    has_power = toggle_state in ("on", "reboot")
+                except CommandError as e:
                     log.error("Failed to toggle %s:%s -> %s: %s" % (device, outlet.identifier, toggle_state, e.stderr))
                     has_power = None
                 PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)
 
     @transaction.commit_on_success
     def query_device_outlets(self, device_id):
-        device = PowerControlDevice.objects.select_related().get(pk = device_id)
+        device = PowerControlDevice.objects.select_related().get(pk=device_id)
 
         # With HYD-2089 landed, we can query PDU outlet states in one
         # shot, rather than sequentially.
@@ -185,7 +181,10 @@ class PowerControlManager(CommandLine):
                     # Verified: fence_apc, fence_wti, fence_xvm
                     has_power = {0: True, 2: False}.get(rc)
                     if has_power is None:
-                        log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
+                        log.error(
+                            "Unknown outlet state for %s:%s:%s: %s %s %s"
+                            % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr]))
+                        )
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
                     PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)
             else:
@@ -205,9 +204,12 @@ class PowerControlManager(CommandLine):
                         log.debug("Skipping unknown outlet %s:%s:%s" % (device.sockaddr + tuple([id])))
                         continue
 
-                    has_power = {'ON': True, 'OFF': False}.get(status)
+                    has_power = {"ON": True, "OFF": False}.get(status)
                     if has_power is None:
-                        log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([id, rc, stdout, stderr])))
+                        log.error(
+                            "Unknown outlet state for %s:%s:%s: %s %s %s"
+                            % (device.sockaddr + tuple([id, rc, stdout, stderr]))
+                        )
 
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
                     PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)

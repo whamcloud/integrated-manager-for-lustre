@@ -16,7 +16,7 @@ from chroma_core.models.jobs import StateChangeJob, SchedulingError, StateLock
 from chroma_core.models.command import Command
 
 
-log = log_register(__name__.split('.')[-1])
+log = log_register(__name__.split(".")[-1])
 
 
 class Transition(object):
@@ -27,11 +27,15 @@ class Transition(object):
         self.new_state = new_state
 
     def __str__(self):
-        return "%s/%s %s->%s" % (self.stateful_object.__class__, self.stateful_object.id, self.old_state, self.new_state)
+        return "%s/%s %s->%s" % (
+            self.stateful_object.__class__,
+            self.stateful_object.id,
+            self.old_state,
+            self.new_state,
+        )
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__)
-            and self.__dict__ == other.__dict__)
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -42,7 +46,7 @@ class Transition(object):
     def to_job(self):
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
         stateful_object_attr = job_klass.stateful_object
-        kwargs = {stateful_object_attr: self.stateful_object, 'old_state': self.old_state}
+        kwargs = {stateful_object_attr: self.stateful_object, "old_state": self.old_state}
         return job_klass(**kwargs)
 
 
@@ -52,6 +56,7 @@ class CommandPlan(object):
     Jobs.
 
     """
+
     def __init__(self, lock_cache, job_collection):
         self._dep_cache = DepCache()
         self._lock_cache = lock_cache
@@ -71,11 +76,7 @@ class CommandPlan(object):
         locks = []
         # Take read lock on everything from job.self._dep_cache.get
         for dependency in self._dep_cache.get(job).all():
-            locks.append(StateLock(
-                job = job,
-                locked_item = dependency.stateful_object,
-                write = False
-            ))
+            locks.append(StateLock(job=job, locked_item=dependency.stateful_object, write=False))
 
         if isinstance(job, StateChangeJob):
             stateful_object = job.get_stateful_object()
@@ -88,20 +89,23 @@ class CommandPlan(object):
             # requirement of lnet_up (to prevent someone stopping lnet while
             # we're still running)
             from itertools import chain
-            for d in chain(self._dep_cache.get(stateful_object, job.old_state).all(), self._dep_cache.get(stateful_object, job.state_transition.new_state).all()):
-                locks.append(StateLock(
-                    job = job,
-                    locked_item = d.stateful_object,
-                    write = False
-                ))
+
+            for d in chain(
+                self._dep_cache.get(stateful_object, job.old_state).all(),
+                self._dep_cache.get(stateful_object, job.state_transition.new_state).all(),
+            ):
+                locks.append(StateLock(job=job, locked_item=d.stateful_object, write=False))
 
             # Take a write lock on get_stateful_object if this is a StateChangeJob
-            locks.append(StateLock(
-                job = job,
-                locked_item = stateful_object,
-                begin_state = job.old_state,
-                end_state = job.state_transition.new_state,
-                write = True))
+            locks.append(
+                StateLock(
+                    job=job,
+                    locked_item=stateful_object,
+                    begin_state=job.old_state,
+                    end_state=job.state_transition.new_state,
+                    write=True,
+                )
+            )
 
         locks.extend(job.create_locks())
 
@@ -116,7 +120,10 @@ class CommandPlan(object):
         for job in jobs:
             for dependency in self._dep_cache.get(job).all():
                 if not dependency.satisfied():
-                    log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
+                    log.info(
+                        "add_jobs: setting required dependency %s %s"
+                        % (dependency.stateful_object, dependency.preferred_state)
+                    )
                     self._set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
             log.info("add_jobs: done checking dependencies")
             locks = self._create_locks(job)
@@ -147,15 +154,13 @@ class CommandPlan(object):
               unordered list.
         """
         from chroma_core.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
+
+        assert isinstance(instance, StatefulObject)
 
         self.expected_states = {}
         self.deps = set()
         self.edges = set()
-        self._emit_transition_deps(Transition(
-            instance,
-            self.get_expected_state(instance),
-            new_state))
+        self._emit_transition_deps(Transition(instance, self.get_expected_state(instance), new_state))
 
         log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         for d in self.deps:
@@ -177,12 +182,12 @@ class CommandPlan(object):
                 stateful_object_content_type_id = None
 
             description = {
-                'class': job.__class__.__name__,
-                'requires_confirmation': job.get_requires_confirmation(),
-                'confirmation_prompt': job.get_confirmation_string(),
-                'description': job.description(),
-                'stateful_object_id': stateful_object_id,
-                'stateful_object_content_type_id': stateful_object_content_type_id
+                "class": job.__class__.__name__,
+                "requires_confirmation": job.get_requires_confirmation(),
+                "confirmation_prompt": job.get_confirmation_string(),
+                "description": job.description(),
+                "stateful_object_id": stateful_object_id,
+                "stateful_object_content_type_id": stateful_object_content_type_id,
             }
 
             if d == self.deps[-1]:
@@ -190,7 +195,7 @@ class CommandPlan(object):
             else:
                 depended_jobs.append(description)
 
-        return {'transition_job': transition_job, 'dependency_jobs': depended_jobs}
+        return {"transition_job": transition_job, "dependency_jobs": depended_jobs}
 
     def _create_dependencies(self, job, locks):
         """Examine overlaps between a job's locks and those of
@@ -204,10 +209,13 @@ class CommandPlan(object):
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
                 # trust that it will have depended on any before that.
-                prior_write_lock = self._lock_cache.get_latest_write(wl.locked_item, not_job = job)
+                prior_write_lock = self._lock_cache.get_latest_write(wl.locked_item, not_job=job)
                 if prior_write_lock:
                     if wl.begin_state and prior_write_lock.end_state:
-                        assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (job, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
+                        assert wl.begin_state == prior_write_lock.end_state, (
+                            "%s locks %s in state %s but previous %s leaves it in state %s"
+                            % (job, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state)
+                        )
                     wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
@@ -217,12 +225,12 @@ class CommandPlan(object):
 
                 # Wait for any reads of the stateful object between the last write and
                 # our position.
-                prior_read_locks = self._lock_cache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = job)
+                prior_read_locks = self._lock_cache.get_read_locks(wl.locked_item, after=read_barrier_id, not_job=job)
                 for i in prior_read_locks:
                     wait_fors.add(i.job.id)
             else:
                 rl = lock
-                prior_write_lock = self._lock_cache.get_latest_write(rl.locked_item, not_job = job)
+                prior_write_lock = self._lock_cache.get_latest_write(rl.locked_item, not_job=job)
                 if prior_write_lock:
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job.id)
@@ -240,7 +248,7 @@ class CommandPlan(object):
 
         leaf_distance_cache = {}
 
-        def leaf_distance(obj, depth = 0, hops = 0):
+        def leaf_distance(obj, depth=0, hops=0):
             if obj in leaf_distance_cache:
                 return leaf_distance_cache[obj] + hops
 
@@ -265,10 +273,14 @@ class CommandPlan(object):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
 
-        log.info("set_state: %s-%s transitioning from %s to %s" % (instance.__class__, instance.id, instance.state, new_state))
+        log.info(
+            "set_state: %s-%s transitioning from %s to %s"
+            % (instance.__class__, instance.id, instance.state, new_state)
+        )
 
         from chroma_core.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
+
+        assert isinstance(instance, StatefulObject)
 
         # Get the computed list of valid transition states away from the
         # current state.
@@ -282,13 +294,17 @@ class CommandPlan(object):
         available_states += [instance.state]
 
         if new_state not in available_states:
-            raise SchedulingError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, available_states))
+            raise SchedulingError(
+                "State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, available_states)
+            )
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
         # It is possible the some locks have no end state and so these should be excluded.
         item_to_lock = self._lock_cache.get_write_by_locked_item()
-        self.expected_states = dict([(item, state_lock.end_state) for item, state_lock in item_to_lock.items() if state_lock.end_state])
+        self.expected_states = dict(
+            [(item, state_lock.end_state) for item, state_lock in item_to_lock.items() if state_lock.end_state]
+        )
 
         if new_state == self.get_expected_state(instance):
             log.info("set_state: already expected to be in state %s" % new_state)
@@ -304,10 +320,7 @@ class CommandPlan(object):
 
         self.deps = set()
         self.edges = set()
-        self._emit_transition_deps(Transition(
-            instance,
-            self.get_expected_state(instance),
-            new_state))
+        self._emit_transition_deps(Transition(instance, self.get_expected_state(instance), new_state))
 
         # This sort is done to make the following true:
         #  The order of the rows in the Job table corresponds to the order in which
@@ -332,7 +345,7 @@ class CommandPlan(object):
         command.save()
         self._job_collection.add_command(command, jobs)
 
-    def _emit_transition_deps(self, transition, transition_stack = {}):
+    def _emit_transition_deps(self, transition, transition_stack={}):
         if transition in self.deps:
             log.debug("emit_transition_deps: %s already scheduled" % (transition))
             return transition
@@ -344,7 +357,10 @@ class CommandPlan(object):
         # assume that we are in our new state
         transition_stack = dict(transition_stack.items())
         transition_stack[transition.stateful_object] = transition.new_state
-        log.debug("Updating transition_stack[%s/%s] = %s" % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state))
+        log.debug(
+            "Updating transition_stack[%s/%s] = %s"
+            % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state)
+        )
 
         # do nothing for a NOOP transition
         if transition.old_state == transition.new_state:
@@ -369,7 +385,7 @@ class CommandPlan(object):
         return prev
 
     def _collect_dependencies(self, root_transition, transition_stack):
-        if not hasattr(self, 'cdc'):
+        if not hasattr(self, "cdc"):
             self.cdc = defaultdict(list)
         if root_transition in self.cdc:
             return
@@ -379,15 +395,24 @@ class CommandPlan(object):
         transition_deps = self._dep_cache.get(root_transition.to_job())
         for dependency in transition_deps.all():
             from chroma_core.lib.job import DependOn
-            assert(isinstance(dependency, DependOn))
+
+            assert isinstance(dependency, DependOn)
             old_state = self.get_expected_state(dependency.stateful_object)
-            log.debug("cd %s/%s %s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states, id(dependency.stateful_object)))
+            log.debug(
+                "cd %s/%s %s %s %s"
+                % (
+                    dependency.stateful_object.__class__,
+                    dependency.stateful_object.id,
+                    old_state,
+                    dependency.acceptable_states,
+                    id(dependency.stateful_object),
+                )
+            )
 
             if not old_state in dependency.acceptable_states:
-                dep_transition = self._emit_transition_deps(Transition(
-                        dependency.stateful_object,
-                        old_state,
-                        dependency.preferred_state), transition_stack)
+                dep_transition = self._emit_transition_deps(
+                    Transition(dependency.stateful_object, old_state, dependency.preferred_state), transition_stack
+                )
                 self.edges.add((root_transition, dep_transition))
 
         def get_mid_transition_expected_state(object):
@@ -406,12 +431,14 @@ class CommandPlan(object):
 
             # Is old_state not what we want?
             if old_state and not old_state in dependency.acceptable_states:
-                log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
+                log.debug(
+                    "new state static requires = %s %s %s"
+                    % (dependency.stateful_object, old_state, dependency.acceptable_states)
+                )
                 # Emit some transitions to get depended_on into depended_state
-                dep_transition = self._emit_transition_deps(Transition(
-                        dependency.stateful_object,
-                        old_state,
-                        dependency.preferred_state), transition_stack)
+                dep_transition = self._emit_transition_deps(
+                    Transition(dependency.stateful_object, old_state, dependency.preferred_state), transition_stack
+                )
                 # Record that root_dep depends on depended_on making it into depended_state
                 self.edges.add((root_transition, dep_transition))
 
@@ -424,35 +451,47 @@ class CommandPlan(object):
             # What state do we expect the dependent to be in?
             dependent_state = get_mid_transition_expected_state(dependent)
             for dependency in self._dep_cache.get(dependent, dependent_state).all():
-                if dependency.stateful_object == root_transition.stateful_object \
-                        and not root_transition.new_state in dependency.acceptable_states:
-                    assert dependency.fix_state is not None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
+                if (
+                    dependency.stateful_object == root_transition.stateful_object
+                    and not root_transition.new_state in dependency.acceptable_states
+                ):
+                    assert dependency.fix_state is not None, (
+                        "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s"
+                        % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
+                    )
 
-                    if hasattr(dependency.fix_state, '__call__'):
+                    if hasattr(dependency.fix_state, "__call__"):
                         fix_state = dependency.fix_state(root_transition.new_state)
                     else:
                         fix_state = dependency.fix_state
 
-                    log.debug("Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
-                        dependent, dependent_state,
-                        root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
-                        fix_state))
-
-                    dep_transition = self._emit_transition_deps(Transition(
+                    log.debug(
+                        "Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s"
+                        % (
                             dependent,
-                            dependent_state, fix_state), transition_stack)
+                            dependent_state,
+                            root_transition.stateful_object.id,
+                            dependency.acceptable_states,
+                            root_transition.new_state,
+                            fix_state,
+                        )
+                    )
+
+                    dep_transition = self._emit_transition_deps(
+                        Transition(dependent, dependent_state, fix_state), transition_stack
+                    )
                     self.edges.add((root_transition, dep_transition))
 
     def command_run_jobs(self, job_dicts, message):
-        assert(len(job_dicts) > 0)
+        assert len(job_dicts) > 0
 
         jobs = []
         for job in job_dicts:
-            job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-            job_instance = job_klass(**job['args'])
+            job_klass = ContentType.objects.get_by_natural_key("chroma_core", job["class_name"].lower()).model_class()
+            job_instance = job_klass(**job["args"])
             jobs.append(job_instance)
 
-        command = Command.objects.create(message = message)
+        command = Command.objects.create(message=message)
         log.debug("command_run_jobs: command %s" % command.id)
         for job in jobs:
             log.debug("command_run_jobs:  job %s" % job)
@@ -475,16 +514,21 @@ class CommandPlan(object):
         return command
 
     def command_run_jobs_preserve_states(self, job_dicts, preserve_objects, message):
-        '''
+        """
         :param job_dicts: jobs to run
         :param preserve_objects: list of objects that should have there state restored (preserved) after the jobs have run.
         :param message: Message for the command being run.
         :return: id of command that contains the jobs.
-        '''
+        """
 
         command_id = self.command_run_jobs(job_dicts, message)
-        self.command_set_state([(ContentType.objects.get_for_model(type(object)).natural_key(), object.id, object.state) for object in preserve_objects],
-                               None,
-                               Command.objects.get(id=command_id))
+        self.command_set_state(
+            [
+                (ContentType.objects.get_for_model(type(object)).natural_key(), object.id, object.state)
+                for object in preserve_objects
+            ],
+            None,
+            Command.objects.get(id=command_id),
+        )
 
         return command_id

@@ -27,6 +27,7 @@ class QueueHandler(object):
     """Service ModificationNotificationQueue and call into JobScheduler on message
 
     """
+
     def __init__(self, job_scheduler):
         self._queue = job_scheduler_notify.NotificationQueue()
         self._queue.purge()
@@ -43,8 +44,8 @@ class QueueHandler(object):
         try:
             # Deserialize any datetimes which were serialized for JSON
             deserialized_update_attrs = {}
-            model_klass = ContentType.objects.get_by_natural_key(*message['instance_natural_key']).model_class()
-            for attr, value in message['update_attrs'].items():
+            model_klass = ContentType.objects.get_by_natural_key(*message["instance_natural_key"]).model_class()
+            for attr, value in message["update_attrs"].items():
                 try:
                     field = [f for f in model_klass._meta.fields if f.name == attr][0]
                 except IndexError:
@@ -59,11 +60,11 @@ class QueueHandler(object):
             log.debug("on_message: %s %s" % (message, deserialized_update_attrs))
 
             self._job_scheduler.notify(
-                message['instance_natural_key'],
-                message['instance_id'],
-                message['time'],
+                message["instance_natural_key"],
+                message["instance_id"],
+                message["time"],
                 deserialized_update_attrs,
-                message['from_states']
+                message["from_states"],
             )
         except:
             # Log bad messages and continue, swallow the exception to avoid
@@ -88,7 +89,7 @@ class Service(ChromaService):
         # Cancel anything that's left behind from a previous run
         for command in Command.objects.filter(complete=False):
             command.completed(True, True)
-        Job.objects.filter(~Q(state='complete')).update(state='complete', cancelled=True)
+        Job.objects.filter(~Q(state="complete")).update(state="complete", cancelled=True)
 
         self._job_scheduler = JobScheduler()
         self._queue_thread = ServiceThread(QueueHandler(self._job_scheduler))
@@ -100,9 +101,7 @@ class Service(ChromaService):
         self._progress_thread.start()
 
         self._children_started.set()
-        self._mail_alerts_thread = MailAlerts(settings.EMAIL_SENDER,
-                                              settings.EMAIL_SUBJECT_PREFIX,
-                                              settings.EMAIL_HOST)
+        self._mail_alerts_thread = MailAlerts(settings.EMAIL_SENDER, settings.EMAIL_SUBJECT_PREFIX, settings.EMAIL_HOST)
         self._mail_alerts_thread.start()
 
         self._complete.wait()
@@ -112,7 +111,7 @@ class Service(ChromaService):
         # Get a fresh view of the job table
         with transaction.commit_manually():
             transaction.commit()
-        for job in Job.objects.filter(~Q(state = 'complete')).order_by('-id'):
+        for job in Job.objects.filter(~Q(state="complete")).order_by("-id"):
             self._job_scheduler.cancel_job(job.id)
 
     def stop(self):

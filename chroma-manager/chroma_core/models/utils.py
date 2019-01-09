@@ -11,12 +11,12 @@ from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
 
 #  Convert dict used by models and apis
-STR_TO_SEVERITY = dict([(logging.getLevelName(level), level) for level in [
-    logging.INFO,
-    logging.ERROR,
-    logging.CRITICAL,
-    logging.WARNING,
-    logging.DEBUG]])
+STR_TO_SEVERITY = dict(
+    [
+        (logging.getLevelName(level), level)
+        for level in [logging.INFO, logging.ERROR, logging.CRITICAL, logging.WARNING, logging.DEBUG]
+    ]
+)
 
 # Default django max_length for CharField
 CHARFIELD_MAX_LENGTH = 1024
@@ -24,8 +24,9 @@ CHARFIELD_MAX_LENGTH = 1024
 
 class DeletableDowncastableManager(DowncastManager):
     """Filters results to return only not-deleted records"""
+
     def get_query_set(self):
-        return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted = True)
+        return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
         return super(DeletableDowncastableManager, self).get_query_set()
@@ -33,8 +34,9 @@ class DeletableDowncastableManager(DowncastManager):
 
 class DeletableManager(models.Manager):
     """Filters results to return only not-deleted records"""
+
     def get_query_set(self):
-        return super(DeletableManager, self).get_query_set().filter(not_deleted = True)
+        return super(DeletableManager, self).get_query_set().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
         return super(DeletableManager, self).get_query_set()
@@ -68,36 +70,37 @@ def _make_deletable(metaclass, dct):
         # we can get at the object
         from django.db.models import signals
 
-        signals.pre_delete.send(sender = self.__class__, instance = self)
+        signals.pre_delete.send(sender=self.__class__, instance=self)
         if self.not_deleted:
             self.not_deleted = None
             self.save()
-        signals.post_delete.send(sender = self.__class__, instance = self)
+        signals.post_delete.send(sender=self.__class__, instance=self)
 
         from chroma_core.lib.job import job_log
         from chroma_core.models.alert import AlertState
-        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active = None)
+
+        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active=None)
         job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
 
     def delete(self):
         raise NotImplementedError("Must use .mark_deleted on Deletable objects")
 
-    dct['objects'] = DeletableManager()
-    dct['delete'] = delete
-    dct['mark_deleted'] = mark_deleted
-    dct['_mark_deleted'] = _mark_deleted
+    dct["objects"] = DeletableManager()
+    dct["delete"] = delete
+    dct["mark_deleted"] = mark_deleted
+    dct["_mark_deleted"] = _mark_deleted
     # Conditional to only create the 'deleted' attribute on the immediate
     # user of the metaclass, not again on subclasses.
-    if issubclass(dct.get('__metaclass__', type), metaclass):
+    if issubclass(dct.get("__metaclass__", type), metaclass):
         # Please forgive me.  Logically this would be a field called 'deleted' which would
         # be True or False.  Instead, it is a field called 'not_deleted' which can be
         # True or None.  The reason is: unique_together constraints.
-        dct['not_deleted'] = models.NullBooleanField(default = True)
+        dct["not_deleted"] = models.NullBooleanField(default=True)
 
-    if 'Meta' in dct:
-        if hasattr(dct['Meta'], 'unique_together'):
-            if not 'not_deleted' in dct['Meta'].unique_together:
-                dct['Meta'].unique_together = dct['Meta'].unique_together + ('not_deleted',)
+    if "Meta" in dct:
+        if hasattr(dct["Meta"], "unique_together"):
+            if not "not_deleted" in dct["Meta"].unique_together:
+                dct["Meta"].unique_together = dct["Meta"].unique_together + ("not_deleted",)
 
 
 class DeletableMetaclass(models.base.ModelBase):
@@ -113,6 +116,7 @@ class DeletableMetaclass(models.base.ModelBase):
     once you've deleted that filesystem you should be able to create more with the
     same name.
     """
+
     def __new__(cls, name, bases, dct):
         _make_deletable(cls, dct)
         return super(DeletableMetaclass, cls).__new__(cls, name, bases, dct)
@@ -135,6 +139,7 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
     The manager we set is a subclass of polymorphic.models.DowncastManager, so we inherit the
     full DowncastMetaclass behaviour.
     """
+
     def __new__(cls, name, bases, dct):
         _make_deletable(cls, dct)
         return super(DeletableDowncastableMetaclass, cls).__new__(cls, name, bases, dct)
@@ -142,16 +147,20 @@ class DeletableDowncastableMetaclass(PolymorphicMetaclass):
 
 class MeasuredEntity(object):
     """Provides mix-in access to metrics specific to the instance."""
+
     @property
     def metrics(self):
         from chroma_core.lib.metrics import MetricStore
-        if not hasattr(self, '_metrics'):
+
+        if not hasattr(self, "_metrics"):
             self._metrics = MetricStore.new(self)
         return self._metrics
 
 
 class Version(tuple):
     "Version string as a comparable tuple, similar to sys.version_info."
+
     def __new__(cls, version):
-        return tuple.__new__(cls, (int(component) for component in (version or '').split('.') if component.isdigit()))
+        return tuple.__new__(cls, (int(component) for component in (version or "").split(".") if component.isdigit()))
+
     major, minor = (property(operator.itemgetter(index)) for index in range(2))
