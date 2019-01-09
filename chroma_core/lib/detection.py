@@ -40,78 +40,83 @@ class DetectScan(object):
     def run(self, all_hosts_data):
         """:param all_hosts_data: Dict of ManagedHost to detect-scan output"""
 
-        # Must be run in a transaction to avoid leaving invalid things
-        # in the DB on failure.
-        assert transaction.is_managed()
+        logs = []
 
-        self.all_hosts_data = all_hosts_data
+        with transaction.atomic():
+            self.all_hosts_data = all_hosts_data
 
-        # Create ManagedMgs objects
-        log.debug(">>learn_mgs_targets")
-        self.learn_mgs_targets()
+            # Create ManagedMgs objects
+            log.debug(">>learn_mgs_targets")
+            self.learn_mgs_targets()
 
-        # Create ManagedTargetMount objects
-        log.debug(">>learn_mgs_target_mounts")
-        self.learn_target_mounts()
+            # Create ManagedTargetMount objects
+            log.debug(">>learn_mgs_target_mounts")
+            self.learn_target_mounts()
 
-        # Create ManagedMdt and ManagedOst objects
-        log.debug(">>learn_fs_targets")
-        self.learn_fs_targets()
+            # Create ManagedMdt and ManagedOst objects
+            log.debug(">>learn_fs_targets")
+            self.learn_fs_targets()
 
-        # Create ManagedTargetMount objects
-        log.debug(">>learn_target_mounts")
-        self.learn_target_mounts()
+            # Create ManagedTargetMount objects
+            log.debug(">>learn_target_mounts")
+            self.learn_target_mounts()
 
-        # Assign a valid primary mount point,
-        # and remove any targets which don't have a primary mount point
-        for target in self.created_mgss + self.created_targets:
-            if self.learn_primary_target(target):
-                for tm in target.managedtargetmount_set.all():
-                    self._learn_event(tm.host, target)
-            else:
-                self.log(help_text["found_no_primary_mount_point_for_target"] % (target.target_type(), target))
-                target.mark_deleted()
-
-        if not self.created_filesystems:
-            self.log(help_text["discovered_no_new_filesystem"])
-        else:
-            # Remove any Filesystems with zero MDTs or zero OSTs, or set state
-            # of a valid filesystem
-            for fs in self.created_filesystems:
-                mdt_count = ManagedMdt.objects.filter(filesystem=fs).count()
-                ost_count = ManagedOst.objects.filter(filesystem=fs).count()
-                if not mdt_count:
-                    self.log(help_text["found_not_TYPE_for_filesystem"] % ("MDT", fs.name))
-                    fs.mark_deleted()
-                elif not ost_count:
-                    self.log(help_text["found_not_TYPE_for_filesystem"] % ("OST", fs.name))
-                    fs.mark_deleted()
+            # Assign a valid primary mount point,
+            # and remove any targets which don't have a primary mount point
+            for target in self.created_mgss + self.created_targets:
+                if self.learn_primary_target(target):
+                    for tm in target.managedtargetmount_set.all():
+                        self._learn_event(tm.host, target)
                 else:
-                    self.log(
-                        help_text["discovered_filesystem_with_n_MDTs_and_n_OSTs"] % (fs.name, mdt_count, ost_count)
+                    logs.append(help_text["found_no_primary_mount_point_for_target"] % (target.target_type(), target))
+                    target.mark_deleted()
+
+            if not self.created_filesystems:
+                logs.append(help_text["discovered_no_new_filesystem"])
+            else:
+                # Remove any Filesystems with zero MDTs or zero OSTs, or set state
+                # of a valid filesystem
+                for fs in self.created_filesystems:
+                    mdt_count = ManagedMdt.objects.filter(filesystem=fs).count()
+                    ost_count = ManagedOst.objects.filter(filesystem=fs).count()
+                    if not mdt_count:
+                        logs.append(help_text["found_not_TYPE_for_filesystem"] % ("MDT", fs.name))
+                        fs.mark_deleted()
+                    elif not ost_count:
+                        logs.append(help_text["found_not_TYPE_for_filesystem"] % ("OST", fs.name))
+                        fs.mark_deleted()
+                    else:
+                        logs.append(
+                            help_text["discovered_filesystem_with_n_MDTs_and_n_OSTs"] % (fs.name, mdt_count, ost_count)
+                        )
+
+                        if set([t.state for t in fs.get_targets()]) == set(["mounted"]):
+                            fs.state = "available"
+                        fs.save()
+
+                        first_target = fs.get_filesystem_targets()[0]
+                        self._learn_event(first_target.primary_host, first_target)
+
+            if not self.created_mgss:
+                logs.append(help_text["discovered_no_new_target"] % ManagedMgs().target_type().upper())
+            else:
+                for mgt in self.created_mgss:
+                    logs.append(
+                        help_text["discovered_target"] % (mgt.target_type().upper(), mgt.name, mgt.primary_host)
                     )
+                    ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
 
-                    if set([t.state for t in fs.get_targets()]) == set(["mounted"]):
-                        fs.state = "available"
-                    fs.save()
+            # Bit of additional complication so we can print really cracking messages, and detailed messages.
+            for target in [ManagedMdt(), ManagedOst()]:
+                if target.target_type() not in [target.target_type() for target in self.created_targets]:
+                    logs.append(help_text["discovered_no_new_target"] % target.target_type().upper())
 
-                    first_target = fs.get_filesystem_targets()[0]
-                    self._learn_event(first_target.primary_host, first_target)
+            for target in self.created_targets:
+                logs.append(
+                    help_text["discovered_target"] % (target.target_type().upper(), target.name, target.primary_host)
+                )
 
-        if not self.created_mgss:
-            self.log(help_text["discovered_no_new_target"] % ManagedMgs().target_type().upper())
-        else:
-            for mgt in self.created_mgss:
-                self.log(help_text["discovered_target"] % (mgt.target_type().upper(), mgt.name, mgt.primary_host))
-                ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
-
-        # Bit of additional complication so we can print really cracking messages, and detailed messages.
-        for target in [ManagedMdt(), ManagedOst()]:
-            if target.target_type() not in [target.target_type() for target in self.created_targets]:
-                self.log(help_text["discovered_no_new_target"] % target.target_type().upper())
-
-        for target in self.created_targets:
-            self.log(help_text["discovered_target"] % (target.target_type().upper(), target.name, target.primary_host))
+        map(self.log, logs)
 
     def _nids_to_mgs(self, host, nid_strings):
         """
@@ -339,7 +344,7 @@ class DetectScan(object):
                 try:
                     mgs = self._target_find_mgs(host, local_info)
                 except ManagedMgs.DoesNotExist:
-                    self.log("Can't find MGS for target %s on %s" % (name, host))
+                    log.warning("Can't find MGS for target %s on %s" % (name, host))
                     continue
 
                 fsname, index_str = re.search("([\w\-]+)-(\w)+", name).groups()

@@ -54,11 +54,9 @@ if __name__ == "__main__":
     except (socket.error, socket.gaierror):
         fatal("%s does not appear to be a valid address" % vm_host)
 
-    PowerControlDevice.objects.get_or_create(device_type=ipmi, address=vm_host, port=22)
-    try:
-        transaction.commit()
-    except transaction.TransactionManagementError:
-        pass
+    pcd = PowerControlDevice(device_type=ipmi, address=vm_host, port=22)
+
+    pcd.save()
 
     print(
         """

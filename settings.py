@@ -53,6 +53,8 @@ DEVICE_AGGREGATOR_PROXY_PASS = "http://unix:/var/run/device-aggregator.sock"
 
 SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
 
+ALLOWED_HOSTS = ["*"]
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
@@ -68,6 +70,7 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST", ""),  # Set to empty string for localhost. Not used with sqlite3.
         "PORT": os.getenv("DB_PORT", ""),  # Set to empty string for default. Not used with sqlite3.
         "OPTIONS": {},
+        "ATOMIC_REQUESTS": False,
     }
 }
 
@@ -177,12 +180,12 @@ if "django_nose" in INSTALLED_APPS:
     NOSE_ARGS = ["--logging-filter=-south"]
 
 MIDDLEWARE_CLASSES = (
-    "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "middleware.TastypieTransactionMiddleware",
 )
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -313,6 +316,8 @@ INSTALLATION_REBOOT_TIMEOUT = 300
 AGENT_RESTART_TIMEOUT = 30
 
 SSH_CONFIG = None
+
+TASTYPIE_DEFAULT_FORMATS = ["json"]
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 

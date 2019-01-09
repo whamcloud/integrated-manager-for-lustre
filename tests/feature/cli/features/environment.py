@@ -60,10 +60,7 @@ def patch_test_host_contact_task(context, result_attrs={}):
 
 
 def before_all(context):
-    settings = chroma_settings()
-    from django.core.management import setup_environ
-
-    setup_environ(settings)
+    chroma_settings()
 
     ### Take a TestRunner hostage.
     # Use django_nose's runner so that we can take advantage of REUSE_DB=1.
@@ -74,8 +71,8 @@ def before_all(context):
     # test databases.
     context.runner = NoseTestSuiteRunner()
 
-    ## If you use South for migrations, uncomment this to monkeypatch
-    ## syncdb to get migrations to run.
+    # If you use South for migrations, uncomment this to monkeypatch
+    # syncdb to get migrations to run.
     from south.management.commands import patch_for_test_db_setup
 
     patch_for_test_db_setup()

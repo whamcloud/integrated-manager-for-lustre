@@ -3,7 +3,6 @@ from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 import time
-from django.db import transaction
 
 from collections import namedtuple
 from tests.services.systemd_test_case import SystemdTestCase
@@ -21,6 +20,7 @@ from chroma_core.models import LNetConfiguration
 from chroma_core.models import ClientCertificate
 from chroma_core.models import AlertEmail
 from chroma_core.models import ServerProfile
+
 
 RABBITMQ_GRACE_PERIOD = 1
 RABBITMQ_LONGWAIT_PERIOD = 360
@@ -104,8 +104,6 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
     def tearDown(self):
         super(TestAgentRpc, self).tearDown()
         try:
-            with transaction.commit_manually():
-                transaction.commit()
             host = ManagedHost.objects.get(fqdn=self.CLIENT_NAME)
             for host_contact_alert in HostContactAlert.filter_by_item(host):
                 AlertEmail.objects.filter(alerts__in=[host_contact_alert]).delete()
@@ -211,8 +209,6 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         return response
 
     def _get_command(self, command_id):
-        with transaction.commit_manually():
-            transaction.commit()
         return Command.objects.get(pk=command_id)
 
     def _wait_for_command(self, command_id, timeout):

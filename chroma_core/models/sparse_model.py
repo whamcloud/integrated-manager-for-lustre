@@ -68,14 +68,14 @@ class VariantDescriptor(object):
 class SparseManager(models.Manager):
     """Filters results to return only not-deleted records"""
 
-    def get_query_set(self):
+    def get_queryset(self):
         if getattr(self.model, "is_sparse_base", False):
-            return super(SparseManager, self).get_query_set()
+            return super(SparseManager, self).get_queryset()
         else:
             # This is a work in progress.
             # self.model.__class__.__name__ gives the SparseMetaclass which isn't want I expect or want.
             record_type = str(self.model).split(".")[-1:][0][:-2]
-            return super(SparseManager, self).get_query_set().filter(record_type=record_type)
+            return super(SparseManager, self).get_queryset().filter(record_type=record_type)
 
 
 class SparseMetaclass(models.base.ModelBase):

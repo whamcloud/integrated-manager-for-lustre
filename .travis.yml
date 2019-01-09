@@ -37,7 +37,7 @@ jobs:
       - export IML_DISABLE_THREADS=1
       - echo "CRYPTO_FOLDER='./'" > local_settings.py
       - echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
-      - python manage.py test tests/unit/
+      - python -W always manage.py test tests/unit/
   - stage: test
     name: "Behave tests"
     install:

@@ -24,7 +24,6 @@ import os
 import time
 import jsonschema
 
-from django.db import transaction
 import kombu
 import kombu.pools
 from kombu.common import maybe_declare
@@ -33,7 +32,7 @@ from kombu.messaging import Queue, Producer
 from kombu.entity import TRANSIENT_DELIVERY_MODE
 
 from chroma_core.services.log import log_register
-from chroma_core.services import _amqp_connection, _amqp_exchange
+from chroma_core.services import _amqp_connection, _amqp_exchange, dbutils
 
 
 REQUEST_SCHEMA = {
@@ -95,10 +94,6 @@ class RunOneRpc(threading.Thread):
     """Handle a single incoming RPC in a new thread, and send the
     response (result or exception) from the execution thread."""
 
-    _outstanding = 0
-    _throttle_limit = 75
-    _throttled_locks = []
-
     def __init__(self, rpc, body, response_conn_pool):
         super(RunOneRpc, self).__init__()
         self.rpc = rpc
@@ -106,25 +101,7 @@ class RunOneRpc(threading.Thread):
         self._response_conn_pool = response_conn_pool
 
     def run(self):
-        # We do not throttle rpcs that do not hit the database.
-        rpc_throttle = self.body["method"] not in ["wait_table_change"]
-
         try:
-            if rpc_throttle:
-                if RunOneRpc._outstanding > RunOneRpc._throttle_limit:
-                    rpc_complete_event = threading.Event()
-                    RunOneRpc._throttled_locks.append(rpc_complete_event)
-                    log.info("_throttled_locks: '%s'" % RunOneRpc._throttled_locks)
-                    log.info(
-                        "Throttled rpc to %s throttled rpcs=%s" % (self.body["method"], len(RunOneRpc._throttled_locks))
-                    )
-                    rpc_complete_event.wait()
-                    log.info(
-                        "Released rpc to %s throttled rpcs=%s" % (self.body["method"], len(RunOneRpc._throttled_locks))
-                    )
-
-                RunOneRpc._outstanding += 1
-
             result = {
                 "result": self.rpc._local_call(self.body["method"], *self.body["args"], **self.body["kwargs"]),
                 "request_id": self.body["request_id"],
@@ -155,16 +132,7 @@ class RunOneRpc(threading.Thread):
             }
             log.error("RunOneRpc: exception calling %s: %s" % (self.body["method"], backtrace))
         finally:
-            try:
-                if rpc_throttle:
-                    try:
-                        rpc_complete_event = RunOneRpc._throttled_locks.pop(0)
-                        rpc_complete_event.set()
-                    except IndexError:
-                        pass
-                    RunOneRpc._outstanding -= 1
-            finally:
-                django.db.connection.close()
+            django.db.connection.close()
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
 
@@ -387,6 +355,7 @@ class RpcClient(object):
         :param request: JSON serializable dict
 
         """
+        dbutils.exit_if_in_transaction(log)
         log.debug("send %s" % request["request_id"])
         request["response_routing_key"] = self._response_routing_key
 
@@ -541,12 +510,6 @@ class RpcClientFactory(object):
 
     @classmethod
     def get_client(cls, queue_name):
-        # This is code to disable _lightweight threads. Because we are past FF I am not removing the
-        # code however the patch for on going master and so I don't want the risk of pulling out the
-        # lightweight code.
-        if cls._lightweight:
-            cls.initialize_threads()
-
         if cls._lightweight:
             if not cls._lightweight_initialized:
                 # connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
@@ -573,13 +536,6 @@ class ServiceRpcInterface(object):
     """Create a class inheriting from this to expose some methods of another
     class for RPC.  In your subclass, define the `methods` class attribute with a list
     of RPC-callable attributes.
-
-    Note on database transactions: calling an RPC will commit any outstanding transaction, for two reasons:
-
-    - Anything set in the caller should be visible to the callee
-    - To prevent deadlocks, we must make sure the caller is not locking
-      anything that the callee may also lock.
-
 
     If you have a class `foo` and you want to expose some methods to the world:
 
@@ -620,9 +576,6 @@ class ServiceRpcInterface(object):
             raise AttributeError(name)
 
     def _call(self, fn_name, *args, **kwargs):
-        with transaction.commit_manually():
-            transaction.commit()
-
         # If the caller specified rcp_timeout then fetch it from the args and remove.
         rpc_timeout = kwargs.pop("rpc_timeout", RESPONSE_TIMEOUT)
 

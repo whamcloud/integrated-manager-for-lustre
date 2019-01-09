@@ -42,7 +42,7 @@ class ResourceQuery(object):
     def resource_get_alerts(self, resource):
         # NB assumes resource is a out-of-plugin instance
         # which has _handle set to a DB PK
-        assert resource._handle != None
+        assert resource._handle is not None
         from chroma_core.models import StorageResourceAlert
 
         resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
@@ -119,7 +119,7 @@ class ResourceQuery(object):
     # XXX this could potentially cause problems if used from a view function
     # which depends on transaction behaviour, as we would commit their transaction
     # halfway through -- maybe use nested_commit_on_success?
-    @transaction.commit_on_success()
+    @transaction.atomic
     def get_resource(self, vrr):
         """Return a BaseStorageResource corresponding to a StorageResourceRecord
         identified by vrr_id.  May raise an exception if the plugin for that
@@ -130,14 +130,14 @@ class ResourceQuery(object):
 
         return self._record_to_resource(vrr)
 
-    @transaction.commit_on_success()
+    @transaction.atomic
     def get_resource_parents(self, vrr_id):
         """Like get_resource by also fills out entire ancestry"""
 
         vrr = StorageResourceRecord.objects.get(pk=vrr_id)
         return self._record_to_resource_parents(vrr)
 
-    @transaction.commit_on_success()
+    @transaction.atomic
     def get_all_resources(self):
         """Return list of all resources for all plugins"""
         records = StorageResourceRecord.objects.all()

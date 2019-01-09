@@ -19,14 +19,16 @@ class ServerProfile(models.Model):
     ui_name = models.CharField(max_length=50, help_text="String, human readable name")
     ui_description = models.TextField(help_text="Description of the server profile")
     managed = models.BooleanField(help_text="Boolean, True if the host will be managed")
-    worker = models.BooleanField(help_text="Boolean, True if the host is available to be used as a Lustre worker node")
+    worker = models.BooleanField(
+        default=False, help_text="Boolean, True if the host is available to be used as a Lustre worker node"
+    )
     bundles = models.ManyToManyField(Bundle, help_text="The bundles specified by this profile")
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
-    ntp = models.BooleanField(help_text="Boolean, True if the host will manage ntp")
-    corosync = models.BooleanField(help_text="Boolean, True if the host will manage corosync")
-    corosync2 = models.BooleanField(help_text="Boolean, True if the host will manage corosync2")
-    pacemaker = models.BooleanField(help_text="Boolean, True if the host will manage pacemaker")
+    ntp = models.BooleanField(default=False, help_text="Boolean, True if the host will manage ntp")
+    corosync = models.BooleanField(default=False, help_text="Boolean, True if the host will manage corosync")
+    corosync2 = models.BooleanField(default=False, help_text="Boolean, True if the host will manage corosync2")
+    pacemaker = models.BooleanField(default=False, help_text="Boolean, True if the host will manage pacemaker")
 
     @property
     def packages(self):

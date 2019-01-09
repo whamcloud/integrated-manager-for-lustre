@@ -15,7 +15,7 @@ import threading
 
 from collections import defaultdict
 
-import dse
+from massiviu.context import DelayedContextFrom
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from django.db import transaction
@@ -26,7 +26,6 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.dbutils import advisory_lock
 from chroma_core.lib.storage_plugin.api import attributes, relations
 
 from chroma_core.lib.storage_plugin.base_resource import (
@@ -297,8 +296,6 @@ class ResourceManager(object):
 
         self._label_cache = {}
 
-        dse.patch_models()
-
     def session_open(self, plugin_instance, scannable_id, initial_resources, update_period):
 
         # Assert the types, they are not optional or duckable
@@ -328,15 +325,17 @@ class ResourceManager(object):
                 pass
 
             self._sessions[scannable_id] = session
-            self._persist_new_resources(session, initial_resources)
-            self._cull_lost_resources(session, initial_resources)
 
-            self._persist_lun_updates(scannable_id)
-            self._persist_nid_updates(scannable_id, None, None)
+            with transaction.atomic():
+                self._persist_new_resources(session, initial_resources)
+                self._cull_lost_resources(session, initial_resources)
 
-            # Plugins are allowed to create VirtualMachine objects, indicating that
-            # we should created a ManagedHost to go with it (e.g. discovering VMs)
-            self._persist_created_hosts(session, scannable_id, initial_resources)
+                self._persist_lun_updates(scannable_id)
+                self._persist_nid_updates(scannable_id, None, None)
+
+                # Plugins are allowed to create VirtualMachine objects, indicating that
+                # we should created a ManagedHost to go with it (e.g. discovering VMs)
+                self._persist_created_hosts(session, scannable_id, initial_resources)
 
         log.debug("<< session_open %s" % scannable_id)
 
@@ -349,7 +348,7 @@ class ResourceManager(object):
 
     def _persist_created_hosts(self, session, scannable_id, new_resources):
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         log.debug("_persist_created_hosts")
 
@@ -409,7 +408,7 @@ class ResourceManager(object):
 
         host_id_to_fqdn = dict([(v["id"], v["fqdn"]) for v in ManagedHost.objects.all().values("id", "fqdn")])
 
-        with VolumeNode.delayed as vn_writer:
+        with DelayedContextFrom(VolumeNode) as vn_writer:
             for volume_id in volume_ids_to_balance:
                 volume_nodes = volume_to_volume_nodes[volume_id]
                 host_to_lun_nodes = defaultdict(list)
@@ -494,7 +493,7 @@ class ResourceManager(object):
         from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         scannable_resource = ResourceQuery().get_resource(scannable_id)
 
@@ -563,7 +562,7 @@ class ResourceManager(object):
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
         logicaldrive_id_handled = set()
 
-        with Volume.delayed as volumes:
+        with DelayedContextFrom(Volume) as volumes:
             for _, logicaldrive_id in node_to_logicaldrive_id.items():
                 if logicaldrive_id not in logicaldrive_id_to_volume and logicaldrive_id not in logicaldrive_id_handled:
                     # If this logicaldrive has one and only one ancestor which is
@@ -669,7 +668,7 @@ class ResourceManager(object):
                     % (len(nr_list), [node_id_to_path.items()], ld_id)
                 )
 
-        with VolumeNode.delayed as volume_nodes:
+        with DelayedContextFrom(VolumeNode) as volume_nodes:
             for node_record in unassigned_node_resources:
                 volume = logicaldrive_id_to_volume[node_to_logicaldrive_id[node_record]]
                 log.info("Setting up DeviceNode %s" % node_record.pk)
@@ -813,7 +812,7 @@ class ResourceManager(object):
         resource = StorageResourceRecord.objects.get(pk=deleted_resource_id).to_resource()
 
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         # Shame to do this twice, but it seems that the scannable resource might not always be a host
         # according to this test_subscriber
@@ -841,7 +840,7 @@ class ResourceManager(object):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         scannable_resource = ResourceQuery().get_resource(scannable_id)
 
@@ -958,10 +957,11 @@ class ResourceManager(object):
         for every field that changes for every record. I may change this comment if I can work out a solution!
         """
         with self._instance_lock:
-            self._resource_persist_update_attributes(scannable_id, record_id, attrs)
-            # self._persist_lun_updates(scannable_id)
-            self._persist_nid_updates(scannable_id, record_id, attrs)
-            # self._persist_created_hosts(scannable_id, scannable_id, resources)
+            with transaction.atomic():
+                self._resource_persist_update_attributes(scannable_id, record_id, attrs)
+                # self._persist_lun_updates(scannable_id)
+                self._persist_nid_updates(scannable_id, record_id, attrs)
+                # self._persist_created_hosts(scannable_id, scannable_id, resources)
 
     def session_resource_add_parent(self, scannable_id, local_resource_id, local_parent_id):
 
@@ -1005,10 +1005,8 @@ class ResourceManager(object):
             record_pk = session.local_id_to_global_id[local_resource_id]
             return self._get_stats(record_pk, update_data)
 
+    @transaction.atomic
     def _get_stats(self, record_pk, update_data):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         record = StorageResourceRecord.objects.get(pk=record_pk)
         samples = []
         for stat_name, stat_data in update_data.items():
@@ -1028,9 +1026,6 @@ class ResourceManager(object):
         return samples
 
     def _resource_modify_parent(self, record_pk, parent_pk, remove):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         record = StorageResourceRecord.objects.get(pk=record_pk)
         if remove:
             record.parents.remove(parent_pk)
@@ -1038,9 +1033,6 @@ class ResourceManager(object):
             record.parents.add(parent_pk)
 
     def _resource_persist_update_attributes(self, scannable_id, local_record_id, attrs):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         session = self._sessions[scannable_id]
 
         global_record_id = session.local_id_to_global_id[local_record_id]
@@ -1063,48 +1055,39 @@ class ResourceManager(object):
         and if so they must be added in a blob so that we can hook up the
         parent relationships"""
 
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         with self._instance_lock:
             session = self._sessions[scannable_id]
-            self._persist_new_resources(session, resources)
-            self._persist_lun_updates(scannable_id)
-            self._persist_nid_updates(scannable_id, None, None)
-            self._persist_created_hosts(session, scannable_id, resources)
 
-    @advisory_lock(AlertState, wait=False)
+            with transaction.atomic():
+                self._persist_new_resources(session, resources)
+                self._persist_lun_updates(scannable_id)
+                self._persist_nid_updates(scannable_id, None, None)
+                self._persist_created_hosts(session, scannable_id, resources)
+
     def session_remove_local_resources(self, scannable_id, resources):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         with self._instance_lock:
             session = self._sessions[scannable_id]
-            for local_resource in resources:
-                try:
-                    resource_global_id = session.local_id_to_global_id[local_resource._handle]
-                    self._delete_nid_resource(scannable_id, resource_global_id)
-                    self._delete_resource(StorageResourceRecord.objects.get(pk=resource_global_id))
-                except KeyError:
-                    pass
-            self._persist_lun_updates(scannable_id)
 
-    @advisory_lock(AlertState, wait=False)
+            with transaction.atomic():
+                for local_resource in resources:
+                    try:
+                        resource_global_id = session.local_id_to_global_id[local_resource._handle]
+                        self._delete_nid_resource(scannable_id, resource_global_id)
+                        self._delete_resource(StorageResourceRecord.objects.get(pk=resource_global_id))
+                    except KeyError:
+                        pass
+                self._persist_lun_updates(scannable_id)
+
     def session_remove_global_resources(self, scannable_id, resources):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         with self._instance_lock:
             session = self._sessions[scannable_id]
             resources = session._plugin_instance._index._local_id_to_resource.values()
 
-            self._cull_lost_resources(session, resources)
-            self._persist_lun_updates(scannable_id)
+            with transaction.atomic():
+                self._cull_lost_resources(session, resources)
+                self._persist_lun_updates(scannable_id)
 
     def session_notify_alert(self, scannable_id, resource_local_id, active, severity, alert_class, attribute):
-        # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
-
         with self._instance_lock:
             session = self._sessions[scannable_id]
             record_pk = session.local_id_to_global_id[resource_local_id]
@@ -1160,10 +1143,9 @@ class ResourceManager(object):
         )
         return alert_state
 
-    @advisory_lock(AlertState, wait=False)
     def _cull_lost_resources(self, session, reported_resources):
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         reported_scoped_resources = []
         reported_global_resources = []
@@ -1312,9 +1294,8 @@ class ResourceManager(object):
         victim_sras = StorageResourceAlert.objects.filter(alert_item_id__in=ordered_for_deletion).values("id")
         victim_saps = StorageAlertPropagated.objects.filter(alert_state__in=victim_sras).values("id")
 
-        for sap in victim_saps:
-            StorageAlertPropagated.delayed.delete(int(sap["id"]))
-        StorageAlertPropagated.delayed.flush()
+        with DelayedContextFrom(StorageAlertPropagated) as sap_delayed:
+            [sap_delayed.delete(int(x["id"])) for x in victim_saps]
 
         for sra in victim_sras:
             storage_resource_alert = StorageResourceAlert.objects.get(id=sra["id"])
@@ -1327,11 +1308,10 @@ class ResourceManager(object):
                     alert_type=storage_resource_alert.alert_type,
                 )
 
-        with StorageResourceStatistic.delayed as srs_delayed:
+        with DelayedContextFrom(StorageResourceStatistic) as srs_delayed:
             for srs in StorageResourceStatistic.objects.filter(storage_resource__in=ordered_for_deletion):
                 srs.metrics.clear()
                 srs_delayed.delete(int(srs.id))
-        StorageResourceStatistic.delayed.flush()
 
         for record_id in ordered_for_deletion:
             self._subscriber_index.remove_resource(record_id, self._class_index.get(record_id))
@@ -1347,24 +1327,20 @@ class ResourceManager(object):
                 except KeyError:
                     pass
 
-        with StorageResourceRecord.delayed as resources:
+        with DelayedContextFrom(StorageResourceRecord) as resources:
             for record_id in ordered_for_deletion:
                 resources.update({"id": int(record_id), "storage_id_scope_id": None})
 
         for klass in [StorageResourceAttributeReference, StorageResourceAttributeSerialized]:
             klass.objects.filter(resource__in=ordered_for_deletion).delete()
 
-        with StorageResourceRecord.delayed as deleter:
+        with DelayedContextFrom(StorageResourceRecord) as deleter:
             for record_id in ordered_for_deletion:
                 deleter.delete(int(record_id))
-        StorageResourceRecord.delayed.flush()
 
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
-            with transaction.commit_manually():
-                # Be extra-sure to see a fresh view (HYD-1301)
-                transaction.commit()
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 log.debug("global_remove_resource: %s" % resource_id)
                 try:
                     record = StorageResourceRecord.objects.get(pk=resource_id)
@@ -1422,7 +1398,7 @@ class ResourceManager(object):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
         # Must be run in a transaction to avoid leaving invalid things in the DB on failure.
-        assert transaction.is_managed()
+        assert not transaction.get_autocommit()
 
         # Sort the resources into an order based on ResourceReference
         # attributes, such that the referenced resource is created
@@ -1557,16 +1533,18 @@ class ResourceManager(object):
 
                 # If there was no existing record, create one
                 if not updated:
-                    attr_classes.add(attr_model_class)
+                    delayed_attr_model_class = DelayedContextFrom(attr_model_class)
+
+                    attr_classes.add(delayed_attr_model_class)
+
                     if issubclass(attr_model_class, StorageResourceAttributeSerialized):
                         data = dict(resource_id=record.id, key=key, value=attr_model_class.encode(val))
-
                     else:
                         data = dict(resource_id=record.id, key=key, value_id=attr_model_class.encode(val))
-                    attr_model_class.delayed.insert(data)
 
-        for attr_model_class in attr_classes:
-            attr_model_class.delayed.flush()
+                    delayed_attr_model_class.insert(data)
+
+        [x.item_cache.flush() for x in attr_classes]
 
         # Find out if new resources match anything in SubscriberIndex and create
         # relationships if so.

@@ -42,7 +42,7 @@ class UpdateScan(object):
         except AssertionError:
             return False
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def audit_host(self):
         self.update_properties(self.host_data.get("properties"))
         self.update_packages(self.host_data.get("packages"))
@@ -302,7 +302,7 @@ class UpdateScan(object):
 
         return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def store_metrics(self):
         """
         Pass the received metrics into the metrics library for storage.

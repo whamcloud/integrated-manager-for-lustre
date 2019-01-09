@@ -11,7 +11,6 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.alert import AlertSubscription
 from chroma_core.models.utils import STR_TO_SEVERITY
-from chroma_api.urls import api
 
 from tastypie.utils import trailing_slash
 from tastypie.resources import Resource
@@ -26,7 +25,6 @@ from chroma_core.models.lnet_configuration import LNetOfflineAlert
 from chroma_core.models.host import UpdatesAvailableAlert, ManagedHost
 from chroma_api.chroma_model_resource import ChromaModelResource
 from iml_common.lib import util
-from long_polling_api import LongPollingAPI
 
 
 class AlertSubscriptionValidation(Validation):
@@ -144,7 +142,7 @@ class AlertTypeResource(Resource):
         detail_allowed_methods = ["get"]
 
 
-class AlertResource(LongPollingAPI, SeverityResource):
+class AlertResource(SeverityResource):
     """
     Notification of a bad health state.  Alerts refer to particular objects (such as
     servers or targets), and can either be active (indicating this is a current
@@ -182,12 +180,6 @@ class AlertResource(LongPollingAPI, SeverityResource):
         enumerations=STR_TO_SEVERITY.keys(),
     )
 
-    # Long polling should return when any of the tables below changes or has changed.
-    long_polling_tables = [AlertState, LNetOfflineAlert]
-
-    def dispatch(self, request_type, request, **kwargs):
-        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
-
     def prepend_urls(self):
         return [
             url(
@@ -206,6 +198,8 @@ class AlertResource(LongPollingAPI, SeverityResource):
         return http.HttpNoContent()
 
     def dehydrate_alert_item(self, bundle):
+        from chroma_api.urls import api
+
         return api.get_resource_uri(bundle.obj.alert_item)
 
     def dehydrate_alert_item_str(self, bundle):

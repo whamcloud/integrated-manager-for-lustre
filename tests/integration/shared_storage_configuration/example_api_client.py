@@ -36,7 +36,6 @@ def list_hosts(url, username, password):
         raise RuntimeError("Failed to open session")
     session.headers["X-CSRFToken"] = response.cookies["csrftoken"]
     session.cookies["csrftoken"] = response.cookies["csrftoken"]
-    session.cookies["sessionid"] = response.cookies["sessionid"]
 
     # Authenticate our session by username and password
     response = session.post(urljoin(url, "api/session/"), data=json.dumps({"username": username, "password": password}))

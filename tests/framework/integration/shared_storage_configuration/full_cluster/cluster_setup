@@ -54,10 +54,7 @@ set -ex
 
 mv /tmp/chroma_support.repo /etc/yum.repos.d/
 
-# install cman here to test that the fence-agents-iml package is being a
-# 'duck-like' replacement for fence -agents since cman depends on
-# fence-agents
-yum -y install expect cman
+yum -y install expect
 # Install from the installation package
 cd /tmp
 yum -y install \$(ls $ARCHIVE_NAME)

@@ -30,13 +30,6 @@ try:
 except ImportError:
     fatal("Can't import django.db! Are you on the IML manager?")
 
-# PowerControlType will register on database saves for IML reasons, this will cause a hang
-# during the run, so disconnect it.
-from django.db.models import signals
-from chroma_core.models import register_power_device
-
-signals.post_save.disconnect(register_power_device, sender=PowerControlDevice)
-
 if __name__ == "__main__":
     try:
         ipmi = PowerControlType.objects.get(make="IPMI", model="1.5 (LAN)")
@@ -77,13 +70,9 @@ if __name__ == "__main__":
     if pw != pw2:
         fatal("Passwords do not match")
 
-    PowerControlDevice.objects.get_or_create(
-        device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw
-    )
-    try:
-        transaction.commit()
-    except transaction.TransactionManagementError:
-        pass
+    pcd = PowerControlDevice(device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw)
+
+    pcd.save()
 
     print(
         """

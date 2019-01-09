@@ -17,7 +17,6 @@ from chroma_api.utils import BulkResourceOperation
 from chroma_api.utils import dehydrate_command
 from chroma_api.validation_utils import validate
 from chroma_api.authentication import AnonymousAuthentication
-from chroma_api.urls import api
 
 log = log_register(__name__)
 
@@ -80,4 +79,6 @@ class CorosyncConfigurationResource(StatefulModelResource, BulkResourceOperation
         self._bulk_operation(_update_corosync_configuration, "command", bundle, request, **kwargs)
 
     def dehydrate_network_interfaces(self, bundle):
+        from chroma_api.urls import api
+
         return [api.get_resource_uri(network_interface) for network_interface in bundle.obj.network_interfaces]

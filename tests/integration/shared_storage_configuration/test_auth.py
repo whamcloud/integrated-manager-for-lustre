@@ -33,7 +33,6 @@ class TestAuthentication(ChromaIntegrationTestCase):
         self.assertEqual(response.json["user"], None)
         requests.session.headers["X-CSRFToken"] = response.cookies["csrftoken"]
         requests.session.cookies["csrftoken"] = response.cookies["csrftoken"]
-        requests.session.cookies["sessionid"] = response.cookies["sessionid"]
 
         response = requests.post("/api/session/", body={"username": user["username"], "password": user["password"]})
         self.assertEqual(response.successful, True, response.text)
