@@ -1,7 +1,7 @@
 include Makefile
 include logrotate.cfg
 include logrotate.cfg
-include chroma-manager.py
+include wsgi.py
 include production_supervisord.conf
 include chroma-manager.conf.template
 include mime.types

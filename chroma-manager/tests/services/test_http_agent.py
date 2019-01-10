@@ -12,7 +12,6 @@ settings = chroma_settings()
 
 from Queue import Empty
 import time
-from django.db import transaction
 
 from chroma_core.models import ManagedHost, HostContactAlert, ClientCertificate
 from chroma_core.services import _amqp_connection
@@ -171,9 +170,8 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
 
     def tearDown(self):
         super(TestHttpAgent, self).tearDown()
+
         try:
-            with transaction.commit_manually():
-                transaction.commit()
             host = ManagedHost.objects.get(fqdn=self.CLIENT_NAME)
             HostContactAlert.filter_by_item(host).delete()
             host.mark_deleted()
@@ -374,8 +372,6 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
             },
         )
 
-        with transaction.commit_manually():
-            transaction.commit()
         alerts = HostContactAlert.filter_by_item(self.host)
         self.assertEqual(alerts.count(), 1)
 

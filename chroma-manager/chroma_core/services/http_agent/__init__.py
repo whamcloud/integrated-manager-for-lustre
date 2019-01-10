@@ -47,7 +47,7 @@ class Service(ChromaService):
         self.queues.remove_host(fqdn)
         self.hosts.remove_host(fqdn)
 
-        with transaction.commit_on_success():
+        with transaction.atomic():
             for cert in ClientCertificate.objects.filter(host__fqdn=fqdn, revoked=False):
                 log.info("Revoking %s:%s" % (fqdn, cert.serial))
                 self.valid_certs.pop(cert.serial, None)

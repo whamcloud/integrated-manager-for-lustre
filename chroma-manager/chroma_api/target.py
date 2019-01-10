@@ -289,7 +289,7 @@ class TargetResource(MetricResource, ConfParamResource):
 
     def prepend_urls(self):
         urls = super(TargetResource, self).prepend_urls()
-        from django.conf.urls.defaults import url
+        from django.conf.urls import url
 
         urls.extend(
             [
@@ -464,7 +464,7 @@ class TargetResource(MetricResource, ConfParamResource):
         consequently in a single command).
         """
         deserialized = self.deserialize(
-            request, request.raw_post_data, format=request.META.get("CONTENT_TYPE", "application/json")
+            request, request.body, format=request.META.get("CONTENT_TYPE", "application/json")
         )
 
         if "objects" not in deserialized:

@@ -7,7 +7,6 @@ import threading
 import traceback
 
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
 from django.db.models import DateTimeField
 from django.db.models.query_utils import Q
 
@@ -108,9 +107,6 @@ class Service(ChromaService):
 
         self.log.info("Cancelling outstanding jobs...")
 
-        # Get a fresh view of the job table
-        with transaction.commit_manually():
-            transaction.commit()
         for job in Job.objects.filter(~Q(state="complete")).order_by("-id"):
             self._job_scheduler.cancel_job(job.id)
 

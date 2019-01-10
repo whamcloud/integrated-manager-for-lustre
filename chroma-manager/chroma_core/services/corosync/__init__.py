@@ -47,7 +47,7 @@ class Service(ChromaService):
 
     # Using transaction decorator to ensure that subsequent calls
     # see fresh data when polling the ManagedHost model.
-    @transaction.commit_on_success()
+    @transaction.atomic
     def on_data(self, fqdn, body):
         """Process all incoming messages from the Corosync agent plugin
 

@@ -28,7 +28,7 @@ setup(
     # that setuptools wants to strip the first character off the filename.
     package_data={
         "": [
-            ".chroma-manager.py",
+            ".wsgi.py",
             ".production_supervisord.conf",
             ".storage_server.repo",
             ".chroma-manager.conf.template",

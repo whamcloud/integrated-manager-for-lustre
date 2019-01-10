@@ -676,7 +676,7 @@ class DeployHostJob(StateChangeJob):
         from chroma_core.models.registration_token import RegistrationToken
 
         # Commit token so that registration request handler will see it
-        with transaction.commit_on_success():
+        with transaction.atomic():
             token = RegistrationToken.objects.create(credits=1, profile=self.managed_host.server_profile)
 
         return [
@@ -972,8 +972,7 @@ class DetectTargetsStep(Step):
                     {"path": volume_node.path, "type": resource.device_type(), "uuid": uuid}
                 )
 
-            with transaction.commit_on_success():
-                self.log("Scanning server %s..." % host)
+            self.log("Scanning server %s..." % host)
 
             thread = ExceptionThrowingThread(target=self.detect_scan, args=(host, host_data, host_target_devices[host]))
             thread.start()
@@ -983,8 +982,7 @@ class DetectTargetsStep(Step):
             threads
         )  # This will raise an exception if any of the threads raise an exception
 
-        with transaction.commit_on_success():
-            DetectScan(self).run(host_data)
+        DetectScan(self).run(host_data)
 
 
 class DetectTargetsJob(HostListMixin):

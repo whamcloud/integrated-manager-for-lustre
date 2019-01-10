@@ -139,8 +139,8 @@ class ServiceConfig(CommandLine):
     @staticmethod
     def _db_accessible():
         """Discover whether we have a working connection to the database"""
-        from psycopg2 import OperationalError
         from django.db import connection
+        from django.db.utils import OperationalError
 
         try:
             connection.introspection.table_names()

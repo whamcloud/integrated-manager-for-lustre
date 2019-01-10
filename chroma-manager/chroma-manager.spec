@@ -26,7 +26,7 @@ BuildRequires: python-setuptools
 BuildRequires: ed
 Requires: python-setuptools
 Requires: python-prettytable
-Requires: python-dse
+Requires: python-massiviu
 Requires: python2-supervisor
 Requires: python2-jsonschema < 0.9.0
 Requires: python-ordereddict
@@ -34,6 +34,8 @@ Requires: python-uuid
 Requires: python-paramiko
 Requires: python2-kombu >= 3.0.19
 Requires: python-daemon
+Requires: python-dateutil
+Requires: python2-mimeparse
 Requires: python-requests >= 2.6.0
 Requires: python-networkx
 Requires: python2-httpagentparser
@@ -43,14 +45,14 @@ Requires: postgresql-server
 Requires: python-psycopg2
 Requires: rabbitmq-server
 Requires: ntp
-Requires: Django >= 1.4, Django < 1.5
+Requires: Django >= 1.6, Django < 1.7
 Requires: Django-south >= 0.7.4
-Requires: django-tastypie = 0.9.16
+Requires: python2-django-tastypie = 0.12.2
 Requires: django-picklefield
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: iml_sos_plugin
 Requires: policycoreutils-python
-Requires: python2-gevent >= 1.0.1
+Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Requires: iml-supervisor-status
@@ -135,7 +137,7 @@ or on a separate node.
 Summary: Integrated Manager for Lustre Integration Tests
 Group: Development/Tools
 Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.3
-Requires: Django >= 1.4, Django < 1.5
+Requires: Django >= 1.6, Django < 1.7
 %description integration-tests
 This package contains the Integrated Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
@@ -162,7 +164,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %build
 %{__python} setup.py -q build
 # workaround setuptools inanity for top-level datafiles
-cp -a chroma-manager.py build/lib
+cp -a wsgi.py build/lib
 cp -a storage_server.repo build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
@@ -339,7 +341,7 @@ fi
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/*.conf
 %{manager_root}/agent-bootstrap-script.template
-%{manager_root}/chroma-manager.py
+%{manager_root}/wsgi.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
 %{manager_root}/ui-modules/node_modules/*

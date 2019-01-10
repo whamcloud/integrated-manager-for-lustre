@@ -22,8 +22,7 @@ def filter_class_ids():
     Return a list of storage resource class IDs which are valid for display (i.e.
     those for which we have a plugin available in this process)
     """
-    from psycopg2 import OperationalError
-    from django.db.utils import DatabaseError
+    from django.db.utils import DatabaseError, OperationalError
 
     try:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -98,7 +97,7 @@ class StorageResourceClassResource(ChromaModelResource):
         ordering = ["class_name"]
 
     def prepend_urls(self):
-        from django.conf.urls.defaults import url
+        from django.conf.urls import url
 
         return [
             url(

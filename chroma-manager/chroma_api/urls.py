@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-from django.conf.urls.defaults import patterns, include
+from django.conf.urls import patterns, include
 from tastypie.api import Api
 
 

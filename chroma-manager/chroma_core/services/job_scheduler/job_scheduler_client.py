@@ -44,8 +44,6 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "get_locks",
         "update_corosync_configuration",
         "get_transition_consequences",
-        "tables_changed",
-        "wait_table_change",
     ]
 
 
@@ -151,7 +149,7 @@ class JobSchedulerClient(object):
         :return: (<ManagedHost instance>, <Command instance>)
         """
         host_id, command_id = JobSchedulerRpc().create_host_ssh(address, server_profile, root_pw, pkey, pkey_pw)
-        return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
+        return (ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id))
 
     @classmethod
     def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
@@ -193,17 +191,6 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().trigger_plugin_update(include_host_ids, exclude_host_ids, plugin_names)
 
     @classmethod
-    def tables_changed(cls, timestamp, tables):
-        return JobSchedulerRpc().tables_changed(timestamp, tables)
-
-    @classmethod
-    def wait_table_change(cls, last_timestamp, tables_list, timeout):
-        # This can be a long time so we don't want to hang onto any database connection
-        db.connection.close()
-
-        return JobSchedulerRpc().wait_table_change(last_timestamp, tables_list, timeout, rpc_timeout=timeout + 5)
-
-    @classmethod
     def update_lnet_configuration(cls, lnet_configuration_list):
         return JobSchedulerRpc().update_lnet_configuration(lnet_configuration_list)
 
@@ -218,7 +205,7 @@ class JobSchedulerClient(object):
 
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
-        return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
+        return (ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id))
 
     @classmethod
     def set_host_profile(cls, host_id, server_profile_id):
