@@ -8,10 +8,8 @@ use lapin_futures::{
 };
 use tokio::runtime::Runtime;
 
-use iml_warp_drive::{
-    rabbit::{basic_publish, connect, create_channel, declare},
-    request::Request,
-};
+use iml_rabbit::{basic_publish, connect, create_channel, declare};
+use iml_warp_drive::request::Request;
 
 fn get_addr() -> SocketAddr {
     "127.0.0.1:5672".to_string().parse().unwrap()
@@ -55,9 +53,14 @@ fn test_connect() -> Result<(), failure::Error> {
 
                 handle.stop();
 
-                create_channel(client)
-                    .and_then(declare)
-                    .and_then(|c| basic_publish(c, Request::new("get_locks", "locks")))
+                create_channel(client).and_then(declare).and_then(|c| {
+                    basic_publish(
+                        "rpc",
+                        "JobSchedulerRpc.requests",
+                        c,
+                        Request::new("get_locks", "locks"),
+                    )
+                })
             })
             .and_then(|_| read_message()),
     )?;

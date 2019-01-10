@@ -2,13 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::Future;
-
-use serde_json;
 use std::collections::HashMap;
 use uuid::Uuid;
-
-use crate::TcpChannel;
 
 type Kwargs = HashMap<String, String>;
 
@@ -34,16 +29,4 @@ impl Request {
             response_routing_key: response_routing_key.into(),
         }
     }
-    pub fn to_vec(&self) -> Vec<u8> {
-        serde_json::to_vec(self).unwrap()
-    }
 }
-
-impl From<Request> for Vec<u8> {
-    fn from(req: Request) -> Self {
-        req.to_vec()
-    }
-}
-
-pub trait TcpChannelFuture: Future<Item = TcpChannel, Error = failure::Error> {}
-impl<T: Future<Item = TcpChannel, Error = failure::Error>> TcpChannelFuture for T {}

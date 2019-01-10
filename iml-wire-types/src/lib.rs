@@ -111,12 +111,6 @@ pub enum ManagerMessage {
     },
 }
 
-impl From<ManagerMessage> for Vec<u8> {
-    fn from(x: ManagerMessage) -> Self {
-        serde_json::to_vec(&x).unwrap()
-    }
-}
-
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct ManagerMessages {
     pub messages: Vec<ManagerMessage>,
@@ -145,12 +139,6 @@ pub enum PluginMessage {
     },
 }
 
-impl From<PluginMessage> for Vec<u8> {
-    fn from(x: PluginMessage) -> Self {
-        serde_json::to_vec(&x).unwrap()
-    }
-}
-
 #[derive(Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
 
@@ -171,4 +159,14 @@ pub enum Action {
     ActionCancel {
         id: ActionId,
     },
+}
+
+pub trait ToBytes {
+    fn to_bytes(&self) -> Result<Vec<u8>, serde_json::error::Error>;
+}
+
+impl<T: serde::Serialize> ToBytes for T {
+    fn to_bytes(&self) -> Result<Vec<u8>, serde_json::error::Error> {
+        serde_json::to_vec(&self)
+    }
 }

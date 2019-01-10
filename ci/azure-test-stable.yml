@@ -19,7 +19,17 @@ jobs:
         parameters:
           rust_version: stable
 
-      - script: cargo test
+      - task: Docker@1
+        displayName: RabbitMQ
+        inputs:
+          command: run
+          imageName: rabbitmq:3.6
+          runInBackground: true
+          ports: |
+            5672:5672
+
+      - script: |
+          cargo test
         env:
           LOOM_MAX_DURATION: 10
           CI: "True"

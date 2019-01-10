@@ -5,26 +5,23 @@
 // Long and nested future chains can quickly result in large generic types.
 #![type_length_limit = "16777216"]
 
-use std::{
-    collections::HashMap,
-    ops::DerefMut,
-    sync::{Arc, Mutex},
-};
-
 use futures::{
     future::{lazy, Future},
     sync::oneshot,
     Stream,
 };
-use lapin_futures::client::ConnectionOptions;
-use warp::Filter;
-
+use iml_manager_env;
+use iml_rabbit;
 use iml_warp_drive::{
-    env,
     locks::{self, create_locks_consumer, Locks},
-    rabbit::connect,
     users,
 };
+use std::{
+    collections::HashMap,
+    ops::DerefMut,
+    sync::{Arc, Mutex},
+};
+use warp::Filter;
 
 type SharedLocks = Arc<Mutex<Locks>>;
 
@@ -48,68 +45,52 @@ fn main() {
 
     tokio::run(lazy(move || {
         warp::spawn(
-            connect(
-                &env::get_addr(),
-                ConnectionOptions {
-                    username: env::get_user(),
-                    password: env::get_password(),
-                    vhost: env::get_vhost(),
-                    heartbeat: 0, // Turn off heartbeat due to https://github.com/sozu-proxy/lapin/issues/152
-                    frame_max: 65535,
-                },
-            )
-            .map(|(client, mut heartbeat)| {
-                let handle = heartbeat.handle().unwrap();
+            iml_rabbit::connect_to_rabbit()
+                .and_then(create_locks_consumer)
+                .and_then(move |stream| {
+                    log::debug!("Started consuming locks");
 
-                handle.stop();
+                    stream
+                        .for_each(move |message| {
+                            log::debug!("got message {:?}", std::str::from_utf8(&message.data));
 
-                client
-            })
-            .and_then(create_locks_consumer)
-            .and_then(move |stream| {
-                log::debug!("Started consuming locks");
+                            let lock_change: locks::Changes =
+                                serde_json::from_slice(&message.data).unwrap();
 
-                stream
-                    .for_each(move |message| {
-                        log::debug!("got message {:?}", std::str::from_utf8(&message.data));
+                            log::debug!("decoded message: {:?}", lock_change);
 
-                        let lock_change: locks::Changes =
-                            serde_json::from_slice(&message.data).unwrap();
+                            match lock_change {
+                                locks::Changes::Locks(l) => {
+                                    let mut hm = lock_state.lock().unwrap();
+                                    hm.clear();
+                                    hm.extend(l.result);
 
-                        log::debug!("decoded message: {:?}", lock_change);
+                                    users::send_message(
+                                        serde_json::to_string(hm.deref_mut()).unwrap(),
+                                        &user_state.clone(),
+                                    );
+                                }
+                                locks::Changes::LockChange(l) => {
+                                    let mut locks = lock_state.lock().unwrap();
+                                    let locks = locks.deref_mut();
 
-                        match lock_change {
-                            locks::Changes::Locks(l) => {
-                                let mut hm = lock_state.lock().unwrap();
-                                hm.clear();
-                                hm.extend(l.result);
+                                    locks::update_locks(locks, l);
 
-                                users::send_message(
-                                    serde_json::to_string(hm.deref_mut()).unwrap(),
-                                    &user_state.clone(),
-                                );
-                            }
-                            locks::Changes::LockChange(l) => {
-                                let mut locks = lock_state.lock().unwrap();
-                                let locks = locks.deref_mut();
+                                    users::send_message(
+                                        serde_json::to_string(&locks).unwrap(),
+                                        &user_state.clone(),
+                                    );
+                                }
+                            };
 
-                                locks::update_locks(locks, l);
-
-                                users::send_message(
-                                    serde_json::to_string(&locks).unwrap(),
-                                    &user_state.clone(),
-                                );
-                            }
-                        };
-
-                        Ok(())
-                    })
-                    .map_err(failure::Error::from)
-            })
-            .map_err(|err| {
-                let _ = tx.send(());
-                eprintln!("An error occured: {}", err);
-            }),
+                            Ok(())
+                        })
+                        .map_err(failure::Error::from)
+                })
+                .map_err(|err| {
+                    let _ = tx.send(());
+                    eprintln!("An error occured: {}", err);
+                }),
         );
 
         let users = warp::any().map(move || user_state2.clone());
@@ -129,7 +110,8 @@ fn main() {
 
         log::info!("about to serve");
 
-        let (_, fut) = warp::serve(routes).bind_with_graceful_shutdown(env::get_server_addr(), rx);
+        let (_, fut) = warp::serve(routes)
+            .bind_with_graceful_shutdown(iml_manager_env::get_warp_drive_addr(), rx);
 
         fut
     }));

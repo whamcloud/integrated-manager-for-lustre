@@ -5,18 +5,14 @@
 use futures::future::Future;
 use std::collections::{HashMap, HashSet};
 
-use lapin_futures::{
-    channel::{BasicConsumeOptions, ExchangeDeclareOptions, QueueDeclareOptions},
-    queue::Queue,
+use crate::request::Request;
+use iml_rabbit::{
+    basic_consume, basic_publish, create_channel, declare_queue, exchange_declare, queue_bind,
+    queue_purge, TcpChannel, TcpChannelFuture, TcpClient,
 };
-
-use crate::{
-    rabbit::{
-        basic_consume, basic_publish, create_channel, exchange_declare, queue_bind, queue_declare,
-        queue_purge,
-    },
-    request::Request,
-    TcpChannel, TcpChannelFuture, TcpClient,
+use lapin_futures::{
+    channel::{BasicConsumeOptions, ExchangeDeclareOptions},
+    queue::Queue,
 };
 
 /// Declares the exchange for rpc comms
@@ -36,14 +32,7 @@ fn declare_rpc_exchange(c: TcpChannel) -> impl TcpChannelFuture {
 fn declare_locks_queue(
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
-    queue_declare(
-        c,
-        "locks",
-        Some(QueueDeclareOptions {
-            durable: false,
-            ..Default::default()
-        }),
-    )
+    declare_queue("locks".to_string(), c)
 }
 
 /// Creates a consumer for the locks queue.
@@ -62,7 +51,13 @@ pub fn create_locks_consumer(
         .and_then(|(c, q)| queue_bind(c, "rpc", "locks").map(move |c2| (c2, q)))
         .and_then(|(c, q)| queue_purge(c, "locks").map(move |c2| (c2, q)))
         .and_then(|(c, q)| {
-            basic_publish(c, Request::new("get_locks", "locks")).map(move |c2| (c2, q))
+            basic_publish(
+                "rpc",
+                "JobSchedulerRpc.requests",
+                c,
+                Request::new("get_locks", "locks"),
+            )
+            .map(move |c2| (c2, q))
         })
         .and_then(|(c, q)| {
             basic_consume(
