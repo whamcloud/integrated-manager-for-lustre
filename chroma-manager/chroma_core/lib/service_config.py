@@ -229,14 +229,6 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-        # FIXME: HYD_640: there's really no sane reason to have to set the stderr and
-        #        stdout to None here except that subprocess.PIPE ends up
-        #        blocking subprocess.communicate().
-        #        we need to figure out why
-        # FIXME: this should also be converted to use the common Shell utility class
-        # self.try_shell(["service", "rabbitmq-server", "restart"],
-        #               mystderr=None, mystdout=None)
-        # ServiceControlEL7 really needs a _restart() method
         error = rabbit_service._stop()
         if error:
             log.error(error)
