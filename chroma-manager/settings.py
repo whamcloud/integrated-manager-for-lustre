@@ -8,8 +8,6 @@ import os
 import socket
 import logging
 
-from scripts import nginx_settings
-
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -19,12 +17,25 @@ if sys.version_info < (2, 6, 5):
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-populator = nginx_settings.get_dev_nginx_settings if DEBUG else nginx_settings.get_production_nginx_settings
+APP_PATH = '/usr/share/chroma-manager'
 
-for key, value in populator().items():
-    setattr(sys.modules[__name__], key, value)
+REPO_PATH = '/var/lib/chroma/repo'
 
 ALLOWED_HOSTS = ["*"]
+
+HTTP_FRONTEND_PORT = 80
+
+HTTPS_FRONTEND_PORT = 443
+
+HTTP_AGENT_PORT = 8002
+
+HTTP_API_PORT = 8001
+
+REALTIME_PORT = 8888
+
+VIEW_SERVER_PORT = 8889
+
+SSL_PATH = '/var/lib/chroma'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -136,7 +147,7 @@ INSTALLED_APPS = (
     "benchmark",
 )
 
-OPTIONAL_APPS = ["django_extensions", "django_coverage", "django_nose", "djsupervisor"]
+OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose']
 for app in OPTIONAL_APPS:
     import imp
 
@@ -186,20 +197,11 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 # Argument to mkfs.ext4 '-J' option
 JOURNAL_SIZE = "2048"
 
-if DEBUG:
-    LOG_PATH = ""
-else:
-    LOG_PATH = "/var/log/chroma"
+LOG_PATH = "/var/log/chroma"
 
-if DEBUG:
-    CRYPTO_FOLDER = "./"
-else:
-    CRYPTO_FOLDER = "/var/lib/chroma"
+CRYPTO_FOLDER = "/var/lib/chroma"
 
-if DEBUG:
-    GUNICORN_PID_PATH = "./gunicorn.pid"
-else:
-    GUNICORN_PID_PATH = "/var/run/gunicorn.pid"
+GUNICORN_PID_PATH = "/var/run/gunicorn.pid"
 
 LOG_LEVEL = logging.INFO
 

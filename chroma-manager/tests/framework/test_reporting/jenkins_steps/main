@@ -34,7 +34,6 @@ include =
 omit =
     *junk.py
     */tests/*
-    *chroma/chroma-manager/docs/*
     *chroma/chroma-manager/example_storage_plugin*
     *chroma/chroma-manager/benchmark/*
     *chroma/chroma-manager/chroma_core/south_migrations/*

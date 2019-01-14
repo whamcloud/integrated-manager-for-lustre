@@ -104,9 +104,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             # Enable agent debugging
             self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
 
-        self.wait_until_true(self.supervisor_controlled_processes_running)
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
-
     def tearDown(self):
         # TODO: move all of the (rest of the) "post-test cleanup" that is
         # done in setUp to here
@@ -132,10 +129,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 if len(down_nodes) and (self.down_node_expected is False):
                     logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
                     raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
-
-        self.assertTrue(self.supervisor_controlled_processes_running())
-        self.assertEqual(self.initial_supervisor_controlled_process_start_times,
-                         self.get_supervisor_controlled_process_start_times())
 
     @property
     def config_servers(self):
@@ -164,8 +157,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     def restart_chroma_manager(self, fqdn):
         self.remote_operations.restart_chroma_manager(fqdn)
-        # Process start times will be outdated after restarting chroma-manager so must update start times
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def api_contactable(self):
         try:
@@ -173,36 +164,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             return True
         except requests.ConnectionError:
             return False
-
-    def supervisor_controlled_processes_running(self):
-        # Use the api to verify the processes controlled by supervisor are all in a RUNNING state
-        try:
-            response = self.chroma_manager.get('/api/system_status/')
-        except requests.ConnectionError:
-            logger.warning("Connection error trying to connect to the manager")
-            return False
-
-        self.assertEqual(response.successful, True, response.text)
-        system_status = response.json
-        non_running_processes = []
-        for process in system_status['supervisor']:
-            if not process['statename'] == 'RUNNING':
-                non_running_processes.append(process)
-
-        if non_running_processes:
-            logger.warning("Supervisor processes found not to be running: '%s'" % non_running_processes)
-            return False
-        else:
-            return True
-
-    def get_supervisor_controlled_process_start_times(self):
-        response = self.chroma_manager.get('/api/system_status/')
-        self.assertEqual(response.successful, True, response.text)
-        system_status = response.json
-        supervisor_controlled_process_start_times = {}
-        for process in system_status['supervisor']:
-            supervisor_controlled_process_start_times[process['name']] = process['start']
-        return supervisor_controlled_process_start_times
 
     def _print_command(self, command, disposition, msg):
         print "COMMAND %s: %s" % (command['id'], disposition)
@@ -567,22 +528,6 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             )
             if not result.exit_status == 0:
                 logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout, result.stderr))
-
-            # Wait for all of the manager services to stop
-            running_time = 0
-            services = ['chroma-supervisor']
-            while services and running_time < TEST_TIMEOUT:
-                for service in services:
-                    result = self.remote_command(
-                        chroma_manager['address'],
-                        'service %s status' % service,
-                        expected_return_code = None
-                    )
-                    if result.exit_status == 3:
-                        services.remove(service)
-                time.sleep(1)
-                running_time += 1
-            self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
 
             # Completely nuke the database to start from a clean state.
             self.remote_command(

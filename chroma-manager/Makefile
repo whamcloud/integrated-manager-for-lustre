@@ -36,7 +36,14 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-all: rpms docs
+MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
+MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
+
+COPR_REPO_TARGETS := storage_server.repo tests/framework/utils/defaults.sh
+
+SUBSTS := $(COPR_REPO_TARGETS)
+
+all: rpms
 
 cleandist:
 	rm -rf  dist
@@ -79,20 +86,11 @@ nuke_logs:
 dev_setup: nuke_db nuke_logs
 	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
 
-supervisor: dev_setup
-	@./manage.py supervisor || exit $$?
-
-running_supervisor:
-	@nc -w1 -d localhost $(TEST_HTTPD_PORT) || { \
-		echo "You need to run 'make supervisor' in another terminal, then retry this command."; \
-		exit 1; \
-	}
-
 $(FCI_CLUSTER_CONFIG):
 	@echo "In order to run these tests, you must create $(FCI_CLUSTER_CONFIG) yourself."
 	@exit 1
 
-fci full_cluster_integration: $(FCI_CLUSTER_CONFIG) running_supervisor
+fci full_cluster_integration: $(FCI_CLUSTER_CONFIG)
 	@echo "Running integration tests against a full cluster ..."
 	@$(CURDIR)/tests/integration/run_tests -c $(FCI_CLUSTER_CONFIG) \
 		$(CURDIR)/tests/integration/shared_storage_configuration \
@@ -100,11 +98,6 @@ fci full_cluster_integration: $(FCI_CLUSTER_CONFIG) running_supervisor
 	exit $${PIPESTATUS[0]}
 
 service_tests: dev_setup
-	@while $(MAKE) running_supervisor >/dev/null; do \
-		spid=`ps aux | awk '/p[y]thon .\/manage.py supervisor/ {print $$2}'`; \
-		kill $$spid; \
-		sleep 1; \
-	done
 	@echo "Running service tests..."
 	@PYTHONPATH=. nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
@@ -140,7 +133,6 @@ tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 tarball: version ui-modules
 	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
-	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	if ! python setup.py sdist > sdist.out; then       \
 	    echo "python setup.py sdist failed.  stdout:"; \
 	    cat sdist.out;                                 \
@@ -155,7 +147,10 @@ rpms: cleandist tarball
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
 	gzip -c chroma-config.1 > chroma-config.1.gz
-	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg chroma-config.1.gz _topdir/SOURCES
+	cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service _topdir/SOURCES
+	cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service _topdir/SOURCES
+	cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service iml-view-server.service _topdir/SOURCES
+	cp chroma-host-discover-init.sh logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	set -e;                                                \
 	dist=$$(rpm --eval %dist);                             \
@@ -196,17 +191,11 @@ requirements.txt: ../chroma-dependencies/Makefile ../chroma-dependencies/*/Makef
 
 download: install_requirements
 
-docs: requirements.txt version
-	echo "jenkins_fold:start:Make Docs"
-	set -e;                                                         \
-	if [ -z $(VIRTUAL_ENV) ] ; then                                 \
-		virtualenv myenv;                                       \
-		. myenv/bin/activate;                                   \
-		pip install --upgrade pip;                              \
-		pip install --upgrade setuptools;                       \
-		pip install -Ur requirements.txt;                       \
-	fi;                                                             \
-	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
-	echo "jenkins_fold:end:Make Docs"
+substs: $(SUBSTS)
 
-.PHONY: docs download ui-modules
+clean_substs:
+	if [ -n "$(SUBSTS)" ]; then \
+	    rm -f $(SUBSTS);        \
+	fi
+
+.PHONY: download ui-modules substs

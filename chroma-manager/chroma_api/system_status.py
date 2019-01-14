@@ -15,7 +15,6 @@ from tastypie.resources import  Resource
 from tastypie.authorization import  Authorization
 from tastypie import fields
 
-from chroma_core.lib.service_config import SupervisorStatus
 from chroma_core.services import log_register
 from chroma_api.authentication import AnonymousAuthentication
 
@@ -53,18 +52,6 @@ def _get_table(table, silence_columns = []):
 
 
 class SystemStatus(object):
-    def get_supervisor_status(self):
-        """
-        Return list of processes or None if supervisor is unavailable
-        """
-        try:
-            return SupervisorStatus().get_all_process_info()
-        except Exception:
-            # Broad exception handler because we never want to 500 requests for
-            # system status during debugging
-            log.error("Exception getting supervisor state: %s" % (traceback.format_exc()))
-            return None
-
     def get_postgres_stats(self):
         result = {
             'pg_stat_activity': _get_table('pg_stat_activity', silence_columns = ['xact_start', 'query_start', 'backend_start', 'client_port', 'client_addr', 'datid']),
@@ -105,7 +92,6 @@ class SystemStatusResource(Resource):
     The internal status of this server.
     """
 
-    supervisor = fields.DictField(help_text = "Supervisor status")
     postgres = fields.DictField(help_text = "PostgreSQL statistics")
     rabbitmq = fields.DictField(help_text = "RabbitMQ statistics")
 
@@ -126,9 +112,6 @@ class SystemStatusResource(Resource):
 
     def dehydrate_postgres(self, bundle):
         return bundle.obj.get_postgres_stats()
-
-    def dehydrate_supervisor(self, bundle):
-        return bundle.obj.get_supervisor_status()
 
     def get_list(self, request = None, **kwargs):
         bundle = self.build_bundle(obj = SystemStatus(), request = request)

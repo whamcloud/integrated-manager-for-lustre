@@ -9,7 +9,8 @@ from setuptools import setup, find_packages, findall
 from scm_version import PACKAGE_VERSION
 from re import sub
 
-excludes = ["*docs*"]
+excludes = [
+]
 
 setup(
     name="chroma-manager",
@@ -29,7 +30,6 @@ setup(
     package_data={
         "": [
             ".wsgi.py",
-            ".production_supervisord.conf",
             ".storage_server.repo",
             ".chroma-manager.conf.template",
             ".mime.types",

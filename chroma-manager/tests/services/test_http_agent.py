@@ -18,7 +18,7 @@ from chroma_core.services import _amqp_connection
 from chroma_core.services.http_agent.host_state import HostState, HostStatePoller
 from chroma_core.services.http_agent import HttpAgentRpc
 
-from tests.services.supervisor_test_case import SupervisorTestCase
+from tests.services.systemd_test_case import SystemdTestCase
 from tests.services.agent_http_client import AgentHttpClient
 
 # The amount of time we allow rabbitmq to forward a message (including
@@ -43,19 +43,18 @@ class BackgroundGet(httplib.HTTPConnection):
         return json.load(response)["messages"]
 
 
-class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
+class TestHttpAgent(SystemdTestCase, AgentHttpClient):
     """
     Test that when everything is running and healthy, a session can be established and messages within
     it go back and forth
     """
-
-    SERVICES = ["http_agent"]
-    PLUGIN = "test_messaging"
+    SERVICES = ['iml-http-agent']
+    PLUGIN = 'test_messaging'
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = "agent_tx"
 
     def __init__(self, *args, **kwargs):
-        SupervisorTestCase.__init__(self, *args, **kwargs)
+        SystemdTestCase.__init__(self, *args, **kwargs)
         AgentHttpClient.__init__(self)
 
     def _open_session(self, expect_termination=None, expect_initial=True):
@@ -323,7 +322,7 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
 
         first_session_id = self._open_session()
 
-        self.restart("http_agent")
+        self.restart('iml-http-agent')
 
         # If we try to continue our session, it will tell us to terminate
         response = self._get()

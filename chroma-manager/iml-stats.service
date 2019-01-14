@@ -1,0 +1,13 @@
+[Unit]
+Description=IML Stats Service
+PartOf=iml-manager.target
+
+[Service]
+Type=simple
+ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=stats stats
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=iml-manager.target

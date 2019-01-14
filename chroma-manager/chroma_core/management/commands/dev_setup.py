@@ -21,7 +21,7 @@ class Command(BaseCommand):
                     action='store_true',
                     dest='no_bundles',
                     default=False,
-                    help='Do not load any bundles, instead create dummies for use with simulator'),
+                    help='Do not load any bundles, instead create dummies'),
     )
 
     def handle(self, *args, **options):
@@ -60,7 +60,6 @@ class Command(BaseCommand):
                     if not os.path.exists(repo):
                         os.makedirs(repo)
 
-                    #archive.list()
                     archive.extractall(repo)
                     archive.close()
 
@@ -78,11 +77,9 @@ class Command(BaseCommand):
 Missing bundles: %(bundles)s
 
 Package bundles are required for installation. In order to proceed, you
-have 3 options:
+have 2 options:
     1. Download an installer from %(bundle_url)s and unpack it in %(repo_path)s
     2. Build an installer locally and unpack it in %(repo_path)s
-    3. Run ./manage.py dev_setup --no-bundles to generate a set of fake
-       bundles for simulated servers
 
 Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
@@ -95,5 +92,5 @@ that work.
                 service_config.register_profile(profile_file)
 
         print """Great success:
- * run `./manage.py supervisor`
+ * run `systemctl start iml-manager.target`
  * open %s""" % settings.SERVER_HTTP_URL
