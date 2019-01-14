@@ -1,5 +1,5 @@
 language: python
-python: '2.7'
+python: "2.7"
 sudo: required
 services:
   - docker
@@ -7,45 +7,36 @@ services:
 addons:
   apt:
     update: true
-  postgresql: "9.2"
-  apt:
     packages:
       - postgresql-server-dev-9.2
+  postgresql: "9.2"
 jobs:
   include:
-  - stage: test
-    env: Type='virus scan'
-    script:
-      - sudo apt-get install clamav -y
-      - sudo freshclam
-      - clamscan --quiet -r ./
-  - stage: test
-    env: Type='unit tests'
-    install:
-      - cd chroma-manager
-      - pip install -r requirements.txt
-    before_script:
-      - psql -c "CREATE USER chroma;" -U postgres
-      - psql -c "ALTER USER chroma CREATEDB;" -U postgres
-      - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
-    script:
-      - export IML_DISABLE_THREADS=1
-      - echo "CRYPTO_FOLDER='./'" > local_settings.py
-      - python manage.py test tests/unit/
-  - stage: test
-    env: Type='behave tests'
-    install:
-      - cd chroma-manager
-      - pip install -r requirements.txt
-    before_script:
-      - psql -c "CREATE USER chroma;" -U postgres
-      - psql -c "ALTER USER chroma CREATEDB;" -U postgres
-      - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
-    script:
-      - export IML_DISABLE_THREADS=1
-      - behave --format plain tests/feature/cli/features
-  - stage: test
-    env: Type='service tests'
-    script:
-      - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/intel-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
-      - docker exec -i systemd bash -c "./intel-manager-for-lustre/chroma-manager/tests/framework/services/runner.sh"
+    - stage: test
+      name: "Unit Tests"
+      install:
+        - pip install -r requirements.txt
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - export IML_DISABLE_THREADS=1
+        - echo "CRYPTO_FOLDER='./'" > local_settings.py
+        - python manage.py test tests/unit/
+    - stage: test
+      env: Type='behave tests'
+      install:
+        - pip install -r requirements.txt
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - export IML_DISABLE_THREADS=1
+        - behave --format plain tests/feature/cli/features
+    - stage: test
+      env: Type='service tests'
+      script:
+        - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/intel-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
+        - docker exec -i systemd bash -c "./intel-manager-for-lustre/tests/framework/services/runner.sh"

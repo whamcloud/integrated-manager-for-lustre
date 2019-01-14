@@ -9,8 +9,7 @@ from setuptools import setup, find_packages, findall
 from scm_version import PACKAGE_VERSION
 from re import sub
 
-excludes = [
-]
+excludes = []
 
 setup(
     name="chroma-manager",
@@ -28,16 +27,10 @@ setup(
     # file creation/cleanup in the Makefile) to deal with the fact
     # that setuptools wants to strip the first character off the filename.
     package_data={
-        "": [
-            ".wsgi.py",
-            ".storage_server.repo",
-            ".chroma-manager.conf.template",
-            ".mime.types",
-        ],
+        "": [".wsgi.py", ".storage_server.repo", ".chroma-manager.conf.template", ".mime.types"],
         "chroma_core": ["fixtures/default_power_types.json"],
         "polymorphic": ["COPYING"],
         "tests": ["integration/run_tests", "integration/*/*.json", "sample_data/*", "integration/core/clear_ha_el?.sh"],
-        "ui-modules": [sub(r"^ui-modules/", "", x) for x in findall("ui-modules/node_modules/")],
     },
     scripts=["chroma-host-discover"],
     entry_points={

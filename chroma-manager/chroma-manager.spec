@@ -26,11 +26,9 @@ Source8: iml-lustre-audit.service
 Source9: iml-manager.target
 Source10: iml-plugin-runner.service
 Source11: iml-power-control.service
-Source12: iml-realtime.service
-Source13: iml-settings-populator.service
-Source14: iml-stats.service
-Source15: iml-syslog.service
-Source16: iml-view-server.service
+Source12: iml-settings-populator.service
+Source13: iml-stats.service
+Source14: iml-syslog.service
 
 License: MIT
 Group: Development/Libraries
@@ -71,8 +69,12 @@ Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Requires: iml-gui >= 6.3.3
+Requires: iml-old-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help >= 2.5.2
+Requires: iml-realtime
+Requires: iml-view-server
+Requires: iml-socket-worker
 Requires: createrepo
 Requires: python2-toolz
 Conflicts: chroma-agent
@@ -201,8 +203,6 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE16} $RPM_BUILD_ROOT%{_unitdir}/
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -338,18 +338,14 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/iml-plugin-runner.service
 %attr(0644,root,root)%{_unitdir}/iml-power-control.service
-%attr(0644,root,root)%{_unitdir}/iml-realtime.service
 %attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
 %attr(0644,root,root)%{_unitdir}/iml-stats.service
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
-%attr(0644,root,root)%{_unitdir}/iml-view-server.service
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/wsgi.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
-%{manager_root}/ui-modules/node_modules/*
-%{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/storage_server.repo

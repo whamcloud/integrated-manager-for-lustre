@@ -55,20 +55,10 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version ui-modules
+develop: version
 	$(MAKE) -C ../chroma-agent develop
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
-
-ui-modules:
-	echo "jenkins_fold:start:Setting up ui-modules"
-	@echo "Setting up ui-modules"; \
-	set -e;                        \
-	export NODE_ENV=production &&  \
-	cd ui-modules &&               \
-	npm i -d &&                    \
-	npm prune
-	echo "jenkins_fold:end:Setting up ui-modules"
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -130,7 +120,7 @@ feature_tests:
 
 tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version ui-modules
+tarball: version
 	echo "jenkins_fold:start:Make Manager Tarball"
 	rm -f MANIFEST
 	if ! python setup.py sdist > sdist.out; then       \
@@ -149,7 +139,7 @@ rpms: cleandist tarball
 	gzip -c chroma-config.1 > chroma-config.1.gz
 	cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service _topdir/SOURCES
 	cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service _topdir/SOURCES
-	cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service iml-view-server.service _topdir/SOURCES
+	cp iml-settings-populator.service iml-stats.service iml-syslog.service _topdir/SOURCES
 	cp chroma-host-discover-init.sh logrotate.cfg chroma-config.1.gz _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	set -e;                                                \
@@ -198,4 +188,4 @@ clean_substs:
 	    rm -f $(SUBSTS);        \
 	fi
 
-.PHONY: download ui-modules substs
+.PHONY: download substs
