@@ -21,9 +21,10 @@ jobs:
         - psql -c "ALTER USER chroma CREATEDB;" -U postgres
         - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
       script:
+        - cd chroma-manager
         - export IML_DISABLE_THREADS=1
         - echo "CRYPTO_FOLDER='./'" > local_settings.py
-        - python chroma-manager/manage.py test tests/unit/
+        - python manage.py test tests/unit/
     - stage: test
       name: "Behave tests"
       install:
@@ -33,8 +34,9 @@ jobs:
         - psql -c "ALTER USER chroma CREATEDB;" -U postgres
         - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
       script:
+        - cd chroma-manager
         - export IML_DISABLE_THREADS=1
-        - behave --format plain chroma-manager/tests/feature/cli/features
+        - behave --format plain tests/feature/cli/features
     - stage: test
       name: "Service tests"
       script:
