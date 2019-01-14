@@ -548,18 +548,15 @@ class ServiceConfig(CommandLine):
         conf_template = os.path.join(project_dir, "chroma-manager.conf.template")
 
         nginx_settings = [
+            "APP_PATH",
             "REPO_PATH",
+            "SSL_PATH",
             "HTTP_FRONTEND_PORT",
             "HTTPS_FRONTEND_PORT",
-            "HTTP_AGENT_PROXY_PASS",
-            "HTTP_API_PROXY_PASS",
-            "REALTIME_PROXY_PASS",
-            "VIEW_SERVER_PROXY_PASS",
-            "SSL_PATH",
-            "DEVICE_AGGREGATOR_PORT",
-            "UPDATE_HANDLER_PROXY_PASS",
-            "DEVICE_AGGREGATOR_PROXY_PASS",
-            "SRCMAP_REVERSE_PROXY_PASS",
+            "VIEW_SERVER_PORT",
+            "HTTP_API_PORT",
+            "REALTIME_PORT",
+            "HTTP_AGENT_PORT",
         ]
 
         with open(conf_template, "r") as f:
