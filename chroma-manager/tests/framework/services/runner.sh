@@ -64,6 +64,8 @@ cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-sche
 cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
 cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
+echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
+PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
 cp -r /intel-manager-for-lustre/chroma-manager /usr/share/chroma-manager
 mkdir /var/log/chroma
