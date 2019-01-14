@@ -237,10 +237,6 @@ rm -rf $RPM_BUILD_ROOT
 # Create chroma-config MAN Page
 makewhatis
 
-# set worker_processes to auto
-sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
-sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
-
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
 systemctl enable nginx
@@ -294,12 +290,6 @@ echo "run \"chroma-config setup\""
 %systemd_preun iml-stats.service
 %systemd_preun iml-syslog.service
 %systemd_preun iml-view-server.service
-
-if [ $1 -lt 1 ]; then
-    #reset worker processes
-    sed -i '/^worker_processes auto;/d' /etc/nginx/nginx.conf
-    sed -i '/^#worker_processes /s/^#//' /etc/nginx/nginx.conf
-fi
 
 %postun
 # Remove chroma-config MAN Page
