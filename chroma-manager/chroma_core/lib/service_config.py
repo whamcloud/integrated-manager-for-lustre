@@ -543,9 +543,38 @@ class ServiceConfig(CommandLine):
 
         return error
 
+    def set_nginx_config(self):
+        project_dir = os.path.dirname(os.path.realpath(settings.__file__))
+        conf_template = os.path.join(project_dir, "chroma-manager.conf.template")
+
+        nginx_settings = [
+            "REPO_PATH",
+            "HTTP_FRONTEND_PORT",
+            "HTTPS_FRONTEND_PORT",
+            "HTTP_AGENT_PROXY_PASS",
+            "HTTP_API_PROXY_PASS",
+            "REALTIME_PROXY_PASS",
+            "VIEW_SERVER_PROXY_PASS",
+            "SSL_PATH",
+            "DEVICE_AGGREGATOR_PORT",
+            "UPDATE_HANDLER_PROXY_PASS",
+            "DEVICE_AGGREGATOR_PROXY_PASS",
+            "SRCMAP_REVERSE_PROXY_PASS",
+        ]
+
+        with open(conf_template, "r") as f:
+            config = f.read()
+            for setting in nginx_settings:
+                config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
+
+            with open("/etc/nginx/conf.d/chroma-manager.conf", "w") as f2:
+                f2.write(config)
+
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
+
+        self.set_nginx_config()
 
         error = self._setup_database(username, password, check_db_space)
         if error:

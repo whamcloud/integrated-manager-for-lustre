@@ -233,8 +233,6 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post
-PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
-    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
 # Create chroma-config MAN Page
 makewhatis

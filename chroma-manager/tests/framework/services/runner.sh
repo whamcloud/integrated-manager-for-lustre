@@ -65,9 +65,6 @@ cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-pow
 cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
 
-cd /intel-manager-for-lustre/chroma-manager
-PYTHONPATH=. python ./scripts/production_nginx.py chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
-
 cp -r /intel-manager-for-lustre/chroma-manager /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
