@@ -15,7 +15,7 @@ jobs:
     - stage: test
       name: "Unit Tests"
       install:
-        - pip install -r requirements.txt
+        - pip install -r chroma-manager/requirements.txt
       before_script:
         - psql -c "CREATE USER chroma;" -U postgres
         - psql -c "ALTER USER chroma CREATEDB;" -U postgres
@@ -27,7 +27,7 @@ jobs:
     - stage: test
       env: Type='behave tests'
       install:
-        - pip install -r requirements.txt
+        - pip install -r chroma-manager/requirements.txt
       before_script:
         - psql -c "CREATE USER chroma;" -U postgres
         - psql -c "ALTER USER chroma CREATEDB;" -U postgres
