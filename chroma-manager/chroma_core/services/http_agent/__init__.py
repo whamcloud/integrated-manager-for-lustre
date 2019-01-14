@@ -5,7 +5,11 @@
 
 from django.core.handlers.wsgi import WSGIHandler
 from django.db import transaction
-import gevent.wsgi
+
+try:
+    import gevent.wsgi as wsgi
+except ImportError:
+    import gevent.pywsgi as wsgi
 
 from chroma_core.models.client_certificate import ClientCertificate
 from chroma_core.services.rpc import ServiceRpcInterface
