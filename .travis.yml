@@ -40,5 +40,5 @@ jobs:
     - stage: test
       name: "Service tests"
       script:
-        - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/intel-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
-        - docker exec -i systemd bash -c "./intel-manager-for-lustre/chroma-manager/tests/framework/services/runner.sh"
+        - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
+        - docker exec -i systemd bash -c "./integrated-manager-for-lustre/chroma-manager/tests/framework/services/runner.sh"
