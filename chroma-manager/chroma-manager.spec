@@ -29,6 +29,7 @@ Source11: iml-power-control.service
 Source12: iml-settings-populator.service
 Source13: iml-stats.service
 Source14: iml-syslog.service
+Source15: iml-manager-redirect.conf
 
 License: MIT
 Group: Development/Libraries
@@ -185,8 +186,9 @@ install -d -p $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
-mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
+mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf,nginx/default}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
+cp %{SOURCE15} $RPM_BUILD_ROOT/etc/nginx/default.d/iml-manager-redirect.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
 install %{SOURCE3} $RPM_BUILD_ROOT/usr/share/man/man1
@@ -315,6 +317,7 @@ fi
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 %ghost /etc/nginx/conf.d/chroma-manager.conf
+/etc/nginx/default.d/iml-manager-redirect.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
