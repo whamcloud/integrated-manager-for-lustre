@@ -5,7 +5,7 @@ PartOf=iml-manager.target
 [Service]
 Type=simple
 WorkingDirectory=/usr/share/chroma-manager
-ExecStart=/bin/gunicorn chroma-manager:application -c ./chroma-manager.py --preload
+ExecStart=/bin/gunicorn wsgi:application -c ./wsgi.py
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal

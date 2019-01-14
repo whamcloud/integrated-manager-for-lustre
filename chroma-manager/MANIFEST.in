@@ -11,7 +11,7 @@ include iml-power-control.service
 include iml-settings-populator.service
 include iml-stats.service
 include iml-syslog.service
-include chroma-manager.py
+include wsgi.py
 include chroma-manager.conf.template
 include mime.types
 include agent-bootstrap-script.template
