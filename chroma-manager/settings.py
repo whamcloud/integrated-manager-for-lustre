@@ -17,9 +17,9 @@ if sys.version_info < (2, 6, 5):
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-APP_PATH = '/usr/share/chroma-manager'
+APP_PATH = "/usr/share/chroma-manager"
 
-REPO_PATH = '/var/lib/chroma/repo'
+REPO_PATH = "/var/lib/chroma/repo"
 
 ALLOWED_HOSTS = ["*"]
 
@@ -35,7 +35,7 @@ REALTIME_PORT = 8888
 
 VIEW_SERVER_PORT = 8889
 
-SSL_PATH = '/var/lib/chroma'
+SSL_PATH = "/var/lib/chroma"
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -147,7 +147,7 @@ INSTALLED_APPS = (
     "benchmark",
 )
 
-OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose']
+OPTIONAL_APPS = ["django_extensions", "django_coverage", "django_nose"]
 for app in OPTIONAL_APPS:
     import imp
 

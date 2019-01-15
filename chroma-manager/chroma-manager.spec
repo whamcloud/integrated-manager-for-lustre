@@ -26,11 +26,10 @@ Source8: iml-lustre-audit.service
 Source9: iml-manager.target
 Source10: iml-plugin-runner.service
 Source11: iml-power-control.service
-Source12: iml-realtime.service
-Source13: iml-settings-populator.service
-Source14: iml-stats.service
-Source15: iml-syslog.service
-Source16: iml-view-server.service
+Source12: iml-settings-populator.service
+Source13: iml-stats.service
+Source14: iml-syslog.service
+Source15: iml-manager-redirect.conf
 
 License: MIT
 Group: Development/Libraries
@@ -71,8 +70,12 @@ Requires: python-gevent >= 1.0.1
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Requires: iml-gui >= 6.3.3
+Requires: iml-old-gui
 Requires: iml-srcmap-reverse
 Requires: iml-online-help >= 2.5.2
+Requires: iml-realtime
+Requires: iml-view-server
+Requires: iml-socket-worker
 Requires: createrepo
 Requires: python2-toolz
 Conflicts: chroma-agent
@@ -183,8 +186,9 @@ install -d -p $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
-mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
+mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf,nginx/default}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
+cp %{SOURCE15} $RPM_BUILD_ROOT/etc/nginx/default.d/iml-manager-redirect.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
 install %{SOURCE3} $RPM_BUILD_ROOT/usr/share/man/man1
@@ -201,8 +205,6 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE16} $RPM_BUILD_ROOT%{_unitdir}/
 
 # only include modules in the main package
 for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
@@ -233,15 +235,9 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post
-PYTHONPATH=$RPM_BUILD_ROOT%{manager_root} %{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.py \
-    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
 # Create chroma-config MAN Page
 makewhatis
-
-# set worker_processes to auto
-sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
-sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
 
 # Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
@@ -297,12 +293,6 @@ echo "run \"chroma-config setup\""
 %systemd_preun iml-syslog.service
 %systemd_preun iml-view-server.service
 
-if [ $1 -lt 1 ]; then
-    #reset worker processes
-    sed -i '/^worker_processes auto;/d' /etc/nginx/nginx.conf
-    sed -i '/^#worker_processes /s/^#//' /etc/nginx/nginx.conf
-fi
-
 %postun
 # Remove chroma-config MAN Page
 rm -rf $RPM_BUILD_ROOT/usr/share/man/man1/%{SOURCE3}.gz
@@ -327,6 +317,7 @@ fi
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 %ghost /etc/nginx/conf.d/chroma-manager.conf
+/etc/nginx/default.d/iml-manager-redirect.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)/usr/share/man/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
@@ -338,18 +329,14 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/iml-plugin-runner.service
 %attr(0644,root,root)%{_unitdir}/iml-power-control.service
-%attr(0644,root,root)%{_unitdir}/iml-realtime.service
 %attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
 %attr(0644,root,root)%{_unitdir}/iml-stats.service
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
-%attr(0644,root,root)%{_unitdir}/iml-view-server.service
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/wsgi.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/mime.types
-%{manager_root}/ui-modules/node_modules/*
-%{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/storage_server.repo

@@ -56,24 +56,18 @@ local   all         chroma                            trust' /var/lib/pgsql/data
 systemctl restart postgresql
 
 
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo
-yum -y install nodejs npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre/repo/epel-7/managerforlustre-manager-for-lustre-epel-7.repo
+yum -y install nodejs ed npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help iml-view-server iml-old-gui iml-realtime
 
-cd /intel-manager-for-lustre/chroma-manager
+cd /integrated-manager-for-lustre/chroma-manager
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
 cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
-cp iml-realtime.service iml-settings-populator.service iml-stats.service iml-syslog.service iml-view-server.service /lib/systemd/system
+cp iml-settings-populator.service iml-stats.service iml-syslog.service /lib/systemd/system
 pip install -r requirements.txt
+echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
+PYTHONPATH=. python -c 'from chroma_core.lib.service_config import ServiceConfig; ServiceConfig().set_nginx_config()'
 
-export NODE_ENV=production
-cd ui-modules
-npm i -d
-npm prune
-
-cd /intel-manager-for-lustre/chroma-manager
-PYTHONPATH=. python ./scripts/production_nginx.py chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
-
-cp -r /intel-manager-for-lustre/chroma-manager /usr/share/chroma-manager
+cp -r /integrated-manager-for-lustre/chroma-manager /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
