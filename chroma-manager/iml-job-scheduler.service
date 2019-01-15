@@ -1,0 +1,13 @@
+[Unit]
+Description=IML Job Scheduler Service
+PartOf=iml-manager.target
+
+[Service]
+Type=simple
+ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=job_scheduler job_scheduler
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=iml-manager.target

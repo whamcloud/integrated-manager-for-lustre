@@ -18,20 +18,22 @@ def nested_commit_on_success(func):
     whoever is managing the active transaction.
     """
     from django.db import transaction
-    commit_on_success = transaction.commit_on_success(func)
+
+    atomic = transaction.atomic(func)
 
     def _nested_commit_on_success(*args, **kwds):
-        if transaction.is_managed():
+        if not transaction.get_autocommit():
             return func(*args, **kwds)
-        else:
-            return commit_on_success(*args, **kwds)
+
+        return atomic(*args, **kwds)
+
     return transaction.wraps(func)(_nested_commit_on_success)
 
 
 class PolymorphicMetaclass(ModelBase):
     def __new__(cls, name, bases, dct):
         def save(self, *args, **kwargs):
-            if(not self.content_type):
+            if not self.content_type:
                 self.content_type = ContentType.objects.get_for_model(self.__class__)
 
             # We make sure this is happening inside a transaction
@@ -42,6 +44,7 @@ class PolymorphicMetaclass(ModelBase):
             @nested_commit_on_success
             def base_save():
                 models.Model.save(self, *args, **kwargs)
+
             base_save()
 
         @property
@@ -76,23 +79,23 @@ class PolymorphicMetaclass(ModelBase):
             # And, certainly, do not call downcast, and expect the an object to be any fresher.  Look it up in the DB.
             return getattr(self, model.__name__.lower())
 
-        if issubclass(dct.get('__metaclass__', type), PolymorphicMetaclass):
-            dct['content_type'] = models.ForeignKey(ContentType, editable=False, null=True)
-            dct['save'] = save
-            dct['downcast'] = downcast
-            dct['downcast_class'] = downcast_class
+        if issubclass(dct.get("__metaclass__", type), PolymorphicMetaclass):
+            dct["content_type"] = models.ForeignKey(ContentType, editable=False, null=True)
+            dct["save"] = save
+            dct["downcast"] = downcast
+            dct["downcast_class"] = downcast_class
 
         return super(PolymorphicMetaclass, cls).__new__(cls, name, bases, dct)
 
 
 class DowncastMetaclass(PolymorphicMetaclass):
     def __new__(cls, name, bases, dct):
-        dct['objects'] = DowncastManager()
+        dct["objects"] = DowncastManager()
         return super(DowncastMetaclass, cls).__new__(cls, name, bases, dct)
 
 
 class DowncastManager(models.Manager):
-    def get_query_set(self):
+    def get_queryset(self):
         return DowncastQuerySet(self.model)
 
 

@@ -14,6 +14,3 @@ class TestInstallationAndUpgrade(ChromaIntegrationTestCase):
 
         # Enable agent debugging
         self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
-
-        self.wait_until_true(self.supervisor_controlled_processes_running)
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()

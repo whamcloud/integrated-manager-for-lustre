@@ -49,10 +49,7 @@ fi
 scp $STORAGE_SERVER_REPO $ARCHIVE_PATH/$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
-# install cman here to test that the fence-agents-iml package is being a
-# 'duck-like' replacement for fence -agents since cman depends on
-# fence-agents
-yum -y install expect cman
+yum -y install expect
 # Install from the installation package
 cd /tmp
 rm -rf ${ARCHIVE_NAME%.tar.gz}
