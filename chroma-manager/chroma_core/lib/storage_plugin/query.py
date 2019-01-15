@@ -47,8 +47,6 @@ class ResourceQuery(object):
 
         resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
 
-        resource_alerts = StorageResourceAlert.filter_by_item_id(StorageResourceRecord, resource._handle)
-
         return list(resource_alerts)
 
     def resource_get_propagated_alerts(self, resource):
