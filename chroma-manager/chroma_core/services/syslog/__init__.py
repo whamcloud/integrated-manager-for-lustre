@@ -4,7 +4,7 @@
 
 
 import os
-import dse
+from massiviu.context import DelayedContextFrom
 
 from django.db import transaction
 
@@ -30,8 +30,6 @@ class Service(ChromaService):
         self._table_size = LogMessage.objects.count()
         self._parser = LogMessageParser()
 
-        dse.patch_models()
-
     def _check_size(self):
         """Apply a size limit to the table of log messages"""
         MAX_ROWS_PER_TRANSACTION = 10000
@@ -42,7 +40,7 @@ class Service(ChromaService):
             remove_num_entries = self._table_size - settings.DBLOG_LW
 
             trans_size = min(MAX_ROWS_PER_TRANSACTION, remove_num_entries)
-            with transaction.commit_on_success():
+            with transaction.atomic():
                 while remove_num_entries > 0:
                     removed_entries = LogMessage.objects.all().order_by("id")[0:trans_size]
                     self.log.debug("writing %s batch of entries" % trans_size)
@@ -67,8 +65,8 @@ class Service(ChromaService):
         return removed_num_entries
 
     def on_data(self, fqdn, body):
-        with transaction.commit_on_success():
-            with LogMessage.delayed as log_messages:
+        with transaction.atomic():
+            with DelayedContextFrom(LogMessage) as log_messages:
                 for msg in body["log_lines"]:
                     try:
                         log_messages.insert(

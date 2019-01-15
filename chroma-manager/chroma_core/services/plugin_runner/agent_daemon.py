@@ -84,7 +84,6 @@ class AgentPluginHandler(object):
 
         log.info("AgentDaemon: finished removing resources for host %s" % host_id)
 
-    @transaction.commit_on_success
     def setup_host(self, host_id, data):
         with self._processing_lock:
             session = self._sessions.get(host_id, None)
@@ -92,7 +91,7 @@ class AgentPluginHandler(object):
             assert session is not None
             session.plugin.do_agent_session_continue(data)
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def update_host_resources(self, host_id, data):
         with self._processing_lock:
             session = self._sessions.get(host_id, None)
@@ -113,7 +112,6 @@ class AgentPluginHandler(object):
 
         return self._plugin_klass(self._resource_manager, record.id)
 
-    @transaction.commit_on_success
     def on_message(self, message):
         with self._processing_lock:
             fqdn = message["fqdn"]

@@ -30,9 +30,6 @@ class PowerControlManager(CommandLine):
         self._refresh_power_devices()
 
     def _refresh_power_devices(self):
-        # Ensure that we have a fresh view of the DB
-        with transaction.commit_manually():
-            transaction.commit()
 
         with self._lock:
             for device in PowerControlDevice.objects.all():
@@ -142,7 +139,7 @@ class PowerControlManager(CommandLine):
                 return False
             return True
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def toggle_device_outlets(self, toggle_state, outlet_ids):
         state_commands = {"on": "poweron_command", "off": "poweroff_command", "reboot": "powercycle_command"}
 
@@ -161,7 +158,7 @@ class PowerControlManager(CommandLine):
                     has_power = None
                 PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def query_device_outlets(self, device_id):
         device = PowerControlDevice.objects.select_related().get(pk=device_id)
 

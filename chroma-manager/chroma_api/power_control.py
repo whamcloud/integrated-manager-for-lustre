@@ -112,6 +112,7 @@ class DeleteablePowerObjectResource(CustomModelResource):
 class PowerControlTypeForm(ModelForm):
     class Meta:
         model = PowerControlType
+        exclude = ()
 
 
 class PowerControlTypeResource(DeleteablePowerObjectResource):
@@ -152,6 +153,7 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
 class PowerControlDeviceForm(ModelForm):
     class Meta:
         model = PowerControlDevice
+        exclude = ()
 
     def _clean_fields(self):
         super(PowerControlDeviceForm, self)._clean_fields()
@@ -207,6 +209,7 @@ class PowerControlDeviceResource(DeleteablePowerObjectResource):
 class PowerControlDeviceOutletForm(ModelForm):
     class Meta:
         model = PowerControlDeviceOutlet
+        exclude = ()
 
 
 class PowerControlDeviceOutletResource(DeleteablePowerObjectResource):

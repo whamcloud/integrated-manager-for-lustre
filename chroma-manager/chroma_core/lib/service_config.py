@@ -24,7 +24,6 @@ from chroma_core.lib.util import chroma_settings
 
 settings = chroma_settings()
 
-from supervisor.xmlrpc import SupervisorTransport
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 from django.core.validators import validate_email
@@ -33,7 +32,7 @@ from django.core.exceptions import ValidationError
 from tastypie.models import ApiKey
 
 from chroma_core.models.bundle import Bundle
-from chroma_core.services.http_agent.crypto import Crypto
+from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
 from iml_common.lib.ntp import NTPConfig
@@ -50,31 +49,6 @@ except TypeError:
 log.setLevel(logging.INFO)
 
 firewall_control = FirewallControl.create()
-
-
-class SupervisorStatus(object):
-    def __init__(self):
-        username = None
-        password = None
-
-        if settings.DEBUG:
-            # In development, use inet_http_server set up by django-supervisor
-            username = hashlib.md5(settings.SECRET_KEY).hexdigest()[:7]
-            password = hashlib.md5(username).hexdigest()
-
-            url = "http://localhost:9100/RPC2"
-        else:
-            # In production, use static inet_http_server settings
-            url = "http://localhost:9100/RPC2"
-
-        self._xmlrpc = xmlrpclib.ServerProxy("http://127.0.0.1", transport=SupervisorTransport(username, password, url))
-
-    def get_all_process_info(self):
-        return self._xmlrpc.supervisor.getAllProcessInfo()
-
-    @staticmethod
-    def get_non_running_services():
-        return [p["name"] for p in SupervisorStatus().get_all_process_info() if p["statename"] != "RUNNING"]
 
 
 class ServiceConfig(CommandLine):
@@ -139,8 +113,8 @@ class ServiceConfig(CommandLine):
     @staticmethod
     def _db_accessible():
         """Discover whether we have a working connection to the database"""
-        from psycopg2 import OperationalError
         from django.db import connection
+        from django.db.utils import OperationalError
 
         try:
             connection.introspection.table_names()
@@ -255,14 +229,6 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-        # FIXME: HYD_640: there's really no sane reason to have to set the stderr and
-        #        stdout to None here except that subprocess.PIPE ends up
-        #        blocking subprocess.communicate().
-        #        we need to figure out why
-        # FIXME: this should also be converted to use the common Shell utility class
-        # self.try_shell(["service", "rabbitmq-server", "restart"],
-        #               mystderr=None, mystdout=None)
-        # ServiceControlEL7 really needs a _restart() method
         error = rabbit_service._stop()
         if error:
             log.error(error)
@@ -314,11 +280,22 @@ class ServiceConfig(CommandLine):
         # The server_cert attribute is created on read
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ["chroma-supervisor", "nginx"]
+    CONTROLLED_SERVICES = ['iml-manager.target', 'nginx']
+
+    MANAGER_SERVICES = [
+        'iml-corosync.service', 'iml-gunicorn.service',
+        'iml-http-agent.service', 'iml-job-scheduler.service',
+        'iml-lustre-audit.service', 'iml-plugin-runner.service',
+        'iml-power-control.service', 'iml-realtime.service',
+        'iml-stats.service', 'iml-syslog.service', 'iml-view-server.service'
+    ]
 
     def _enable_services(self):
         log.info("Enabling daemons")
-        for service in self.CONTROLLED_SERVICES:
+
+        xs = self.CONTROLLED_SERVICES + self.MANAGER_SERVICES
+
+        for service in xs:
             controller = ServiceControl.create(service)
 
             error = controller.enable()
@@ -336,19 +313,6 @@ class ServiceConfig(CommandLine):
                 log.error(error)
                 raise RuntimeError(error)
 
-        SUPERVISOR_START_TIMEOUT = 10
-        t = 0
-        while True:
-            if not SupervisorStatus().get_non_running_services():
-                break
-            else:
-                time.sleep(1)
-                t += 1
-                if t > SUPERVISOR_START_TIMEOUT:
-                    msg = "Some services failed to start: %s" % ", ".join(SupervisorStatus().get_non_running_services())
-                    log.error(msg)
-                    raise RuntimeError(msg)
-
     def _stop_services(self):
         log.info("Stopping daemons")
         for service in self.CONTROLLED_SERVICES:
@@ -358,32 +322,6 @@ class ServiceConfig(CommandLine):
             if error:
                 log.error(error)
                 raise RuntimeError(error)
-
-        # Wait for supervisord to stop running
-        SUPERVISOR_STOP_TIMEOUT = 20
-        t = 0
-        stopped = False
-        while True:
-            try:
-                SupervisorStatus().get_all_process_info()
-            except socket.error:
-                # No longer up
-                stopped = True
-            except xmlrpclib.Fault as e:
-                if (e.faultCode, e.faultString) == (6, "SHUTDOWN_STATE"):
-                    # Up but shutting down
-                    pass
-                else:
-                    raise
-
-            if stopped:
-                break
-            else:
-                if t > SUPERVISOR_STOP_TIMEOUT:
-                    raise RuntimeError("chroma-supervisor failed to stop after %s seconds" % SUPERVISOR_STOP_TIMEOUT)
-                else:
-                    t += 1
-                    time.sleep(1)
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -605,9 +543,35 @@ class ServiceConfig(CommandLine):
 
         return error
 
+    def set_nginx_config(self):
+        project_dir = os.path.dirname(os.path.realpath(settings.__file__))
+        conf_template = os.path.join(project_dir, "chroma-manager.conf.template")
+
+        nginx_settings = [
+            "APP_PATH",
+            "REPO_PATH",
+            "SSL_PATH",
+            "HTTP_FRONTEND_PORT",
+            "HTTPS_FRONTEND_PORT",
+            "VIEW_SERVER_PORT",
+            "HTTP_API_PORT",
+            "REALTIME_PORT",
+            "HTTP_AGENT_PORT",
+        ]
+
+        with open(conf_template, "r") as f:
+            config = f.read()
+            for setting in nginx_settings:
+                config = config.replace("{{%s}}" % setting, str(getattr(settings, setting)))
+
+            with open("/etc/nginx/conf.d/chroma-manager.conf", "w") as f2:
+                f2.write(config)
+
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
             return ["Name resolution is not correctly configured"]
+
+        self.set_nginx_config()
 
         error = self._setup_database(username, password, check_db_space)
         if error:
@@ -654,8 +618,10 @@ class ServiceConfig(CommandLine):
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        # Check init scripts are up
-        interesting_services = self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server"]
+        # Check services are active
+        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
+            'postgresql', 'rabbitmq-server'
+        ]
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -666,16 +632,6 @@ class ServiceConfig(CommandLine):
                     errors.append("Service %s is not running" % s)
             except KeyError:
                 errors.append("Service %s not found" % s)
-
-        # Check supervisor-controlled services are up
-        if "chroma-supervisor" not in service_config:
-            errors.append(
-                "Service supervisor is not configured. Please run the command: " "'chroma-config setup' prior"
-            )
-        elif service_config["chroma-supervisor"]["running"]:
-            for process in SupervisorStatus().get_all_process_info():
-                if process["statename"] != "RUNNING":
-                    errors.append("Service %s is not running (status %s)" % (process["name"], process["statename"]))
 
         return errors
 

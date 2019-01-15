@@ -32,10 +32,10 @@ requirements::
 	    echo "python-daemon==1.6 ";                           \
 	fi;                                                       \
 	echo "amqp==1.4.5";                                       \
-	echo "Django==1.4.5";                                     \
+	echo "Django==1.6.11";                                     \
 	echo "django-picklefield==0.1.9";                         \
-	echo "django-tastypie==0.9.16";                           \
-	echo "dse==3.3.0";                                        \
+	echo "django-tastypie==0.12.2";                           \
+	echo "https://github.com/weholt/massiviu/archive/master.tar.gz"; \
 	echo "gevent==1.0.1";                                     \
 	echo "greenlet==0.4.2";                                   \
 	echo "httpagentparser==1.5.0";                            \
@@ -48,13 +48,12 @@ requirements::
 	echo "meld3==0.6.10";                                     \
 	echo "ordereddict==1.1";                                  \
 	echo "psycopg2==2.0.14";                                  \
-	echo "South==0.7.5";                                      \
+	echo "South==1.0.2";                                      \
 	echo "tablib==0.9.11";                                    \
 	echo "requests==2.6.0";                                   \
 	echo "urllib3";                                           \
 	echo "python-dateutil==1.5";                              \
 	echo "nose==1.2.1";                                       \
-	echo "supervisor==3.0b1";                                 \
 	echo "pyparsing==1.5.6";                                  \
 	echo "jsonschema==0.8.0";                                 \
 	echo "nose-testconfig==0.8";                              \

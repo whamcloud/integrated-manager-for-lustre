@@ -25,32 +25,26 @@ CHARFIELD_MAX_LENGTH = 1024
 class DeletableDowncastableManager(DowncastManager):
     """Filters results to return only not-deleted records"""
 
-    def get_query_set(self):
-        return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted=True)
+    def get_queryset(self):
+        return super(DeletableDowncastableManager, self).get_queryset().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
-        return super(DeletableDowncastableManager, self).get_query_set()
+        return super(DeletableDowncastableManager, self).get_queryset()
 
 
 class DeletableManager(models.Manager):
     """Filters results to return only not-deleted records"""
 
-    def get_query_set(self):
-        return super(DeletableManager, self).get_query_set().filter(not_deleted=True)
+    def get_queryset(self):
+        return super(DeletableManager, self).get_queryset().filter(not_deleted=True)
 
     def get_query_set_with_deleted(self):
-        return super(DeletableManager, self).get_query_set()
+        return super(DeletableManager, self).get_queryset()
 
 
 def _make_deletable(metaclass, dct):
     def mark_deleted(self):
-        # If this is not within a managed transaction we must use commit_on_success to ensure that the object is
-        # only marked deleted if the updates to alerts also succeed
-        if transaction.is_managed():
-            self._mark_deleted()
-        else:
-            with transaction.commit_on_success():
-                self._mark_deleted()
+        self._mark_deleted()
 
     def _mark_deleted(self):
         """Mark a record as deleted, returns nothing.
@@ -71,16 +65,19 @@ def _make_deletable(metaclass, dct):
         from django.db.models import signals
 
         signals.pre_delete.send(sender=self.__class__, instance=self)
-        if self.not_deleted:
-            self.not_deleted = None
-            self.save()
+
+        with transaction.atomic():
+            if self.not_deleted:
+                self.not_deleted = None
+                self.save()
+
+            from chroma_core.lib.job import job_log
+            from chroma_core.models.alert import AlertState
+
+            updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active=None)
+            job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
+
         signals.post_delete.send(sender=self.__class__, instance=self)
-
-        from chroma_core.lib.job import job_log
-        from chroma_core.models.alert import AlertState
-
-        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active=None)
-        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
 
     def delete(self):
         raise NotImplementedError("Must use .mark_deleted on Deletable objects")

@@ -16,7 +16,7 @@ class NetworkInterface(models.Model):
     inet4_prefix = models.IntegerField()
     corosync_configuration = models.ForeignKey("CorosyncConfiguration", null=True)
     type = models.CharField(max_length=32)  # tcp, o2ib, ... (best stick to lnet types!)
-    state_up = models.BooleanField()
+    state_up = models.BooleanField(default=False)
 
     def __str__(self):
         return "%s-%s" % (self.host, self.name)

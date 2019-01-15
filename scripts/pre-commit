@@ -69,7 +69,6 @@ CHECKS = [
             '.*settings.py',
             '.*example_storage_plugin_package/example_storage_plugin/__init__.py',
             '.*chroma-manager/tests/unit/chroma_core/lib/storage_plugin/junk.py',
-            '.*/chroma-manager/docs/.*/conf.py$',
             '.*/features/steps/.*\.py',
             '.*/BUILD/.*',
             ],

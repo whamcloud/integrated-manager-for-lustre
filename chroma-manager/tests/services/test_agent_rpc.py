@@ -3,10 +3,9 @@ from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 import time
-from django.db import transaction
 
 from collections import namedtuple
-from tests.services.supervisor_test_case import SupervisorTestCase
+from tests.services.systemd_test_case import SystemdTestCase
 from tests.services.agent_http_client import AgentHttpClient
 from iml_common.lib import util
 from iml_common.lib.date_time import IMLDateTime
@@ -22,22 +21,22 @@ from chroma_core.models import ClientCertificate
 from chroma_core.models import AlertEmail
 from chroma_core.models import ServerProfile
 
+
 RABBITMQ_GRACE_PERIOD = 1
 RABBITMQ_LONGWAIT_PERIOD = 360
 
 
-class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
+class TestAgentRpc(SystemdTestCase, AgentHttpClient):
     """
     This class tests the AgentRpc functionality.  This class starts the job_scheduler
     service because that is where AgentRpc lives, but is not intended to test the other
     functionality in JobScheduler.
     """
-
-    SERVICES = ["http_agent", "job_scheduler"]
+    SERVICES = ['iml-http-agent', 'iml-job-scheduler']
     PLUGIN = AgentRpcMessenger.PLUGIN_NAME
 
     def __init__(self, *args, **kwargs):
-        SupervisorTestCase.__init__(self, *args, **kwargs)
+        SystemdTestCase.__init__(self, *args, **kwargs)
         AgentHttpClient.__init__(self)
 
     def _open_sessions(self, expect_initial=True, expect_reopen=False):
@@ -104,8 +103,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     def tearDown(self):
         super(TestAgentRpc, self).tearDown()
         try:
-            with transaction.commit_manually():
-                transaction.commit()
             host = ManagedHost.objects.get(fqdn=self.CLIENT_NAME)
             for host_contact_alert in HostContactAlert.filter_by_item(host):
                 AlertEmail.objects.filter(alerts__in=[host_contact_alert]).delete()
@@ -121,7 +118,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         """
 
         self._open_sessions()
-        self.restart("job_scheduler")
+        self.restart('iml-job-scheduler')
 
         # Allow the message to filter through
         time.sleep(RABBITMQ_GRACE_PERIOD)
@@ -211,8 +208,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         return response
 
     def _get_command(self, command_id):
-        with transaction.commit_manually():
-            transaction.commit()
         return Command.objects.get(pk=command_id)
 
     def _wait_for_command(self, command_id, timeout):
@@ -292,7 +287,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, first_request_action.actions[0])
 
         # Clean stop
-        self.stop("job_scheduler")
+        self.stop('iml-job-scheduler')
 
         # Running command should have its AgentRpc errored
         running_command = self._get_command(first_request_action.command_id)
@@ -306,7 +301,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.assertFalse(enqueued_command.errored)
 
         # Start it up again
-        self.start("job_scheduler")
+        self.start('iml-job-scheduler')
 
         # It should have the http_agent service cancel its sessions
         response_message = self._receive_messages(1)[0]
@@ -326,7 +321,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Clean stop
-        self.restart("http_agent")
+        self.restart('iml-http-agent')
 
         # The agent should be told to terminate all
         response_message = self._receive_messages(1)[0]

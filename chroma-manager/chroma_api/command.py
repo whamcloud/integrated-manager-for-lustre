@@ -21,7 +21,6 @@ from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_core.models import Command
 from chroma_core.models import SchedulingError
 from chroma_core.models import StepResult
-from long_polling_api import LongPollingAPI
 from chroma_api.validation_utils import validate
 
 
@@ -54,7 +53,7 @@ class CommandValidation(Validation):
         return errors
 
 
-class CommandResource(ChromaModelResource, LongPollingAPI):
+class CommandResource(ChromaModelResource):
     """
     Asynchronous user-initiated operations which create, remove or modify resources are
     represented by ``command`` objects.  When a PUT, POST, PATCH or DELETE to
@@ -72,12 +71,6 @@ class CommandResource(ChromaModelResource, LongPollingAPI):
         help_text="String.  Concatentation of all user-visible logs from the"
         "``job`` objects associated with this command."
     )
-
-    # Long polling should return when any of the tables below changes or has changed.
-    long_polling_tables = [Command]
-
-    def dispatch(self, request_type, request, **kwargs):
-        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def dehydrate_logs(self, bundle):
         command = bundle.obj

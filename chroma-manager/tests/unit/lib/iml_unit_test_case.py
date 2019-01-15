@@ -1,3 +1,5 @@
+import mock
+
 from django.test import TestCase
 
 from chroma_core.models import Command
@@ -7,6 +9,11 @@ log = log_register("iml_test_case")
 
 
 class IMLUnitTestCase(TestCase):
+    def setUp(self):
+        super(IMLUnitTestCase, self).setUp()
+
+        mock.patch("chroma_core.services.dbutils.exit_if_in_transaction").start()
+
     def make_command(self, complete=False, created_at=None, errored=True, message="test"):
 
         """

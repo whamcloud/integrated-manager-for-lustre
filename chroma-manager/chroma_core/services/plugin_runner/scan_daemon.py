@@ -9,7 +9,6 @@ import datetime
 import time
 import sys
 import traceback
-from django.db import transaction
 
 from chroma_core.services.log import log_register
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -103,11 +102,8 @@ class ScanDaemon(object):
         """Return the PK of all StorageResourceRecords for 'plugin' which have no parents"""
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
-        # We will be polling, to need to commit to see new data
-        with transaction.commit_manually():
-            transaction.commit()
-            ids = storage_plugin_manager.get_scannable_resource_ids(plugin)
-            transaction.commit()
+        ids = storage_plugin_manager.get_scannable_resource_ids(plugin)
+
         return ids
 
     def run(self):

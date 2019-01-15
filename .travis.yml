@@ -1,0 +1,44 @@
+language: python
+python: "2.7"
+sudo: required
+services:
+  - docker
+  - postgresql
+addons:
+  apt:
+    update: true
+    packages:
+      - postgresql-server-dev-9.2
+  postgresql: "9.2"
+jobs:
+  include:
+    - stage: test
+      name: "Unit Tests"
+      install:
+        - pip install -r chroma-manager/requirements.txt
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - cd chroma-manager
+        - export IML_DISABLE_THREADS=1
+        - echo "CRYPTO_FOLDER='./'" > local_settings.py
+        - python manage.py test tests/unit/
+    - stage: test
+      name: "Behave tests"
+      install:
+        - pip install -r chroma-manager/requirements.txt
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - cd chroma-manager
+        - export IML_DISABLE_THREADS=1
+        - behave --format plain tests/feature/cli/features
+    - stage: test
+      name: "Service tests"
+      script:
+        - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
+        - docker exec -i systemd bash -c "./integrated-manager-for-lustre/chroma-manager/tests/framework/services/runner.sh"

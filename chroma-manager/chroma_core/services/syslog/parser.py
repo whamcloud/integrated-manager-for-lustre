@@ -155,6 +155,7 @@ class LogMessageParser(object):
             except ManagedHost.DoesNotExist:
                 return None
 
+    @transaction.atomic
     def parse(self, fqdn, message):
         hit = find_one_in_many(message["message"], self.selectors.keys())
         if hit:
@@ -163,13 +164,5 @@ class LogMessageParser(object):
                 return
 
             fn = self.selectors[hit]
-            with transaction.commit_manually():
-                try:
-                    fn(message["message"], h)
-                except Exception as e:
-                    syslog_events_log.error(
-                        "Failed to parse log line '%s' using handler %s: %s" % (message["message"], fn, e)
-                    )
-                    transaction.rollback()
-                else:
-                    transaction.commit()
+
+            fn(message["message"], h)

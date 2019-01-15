@@ -19,13 +19,13 @@ def nested_commit_on_success(func):
     """
     from django.db import transaction
 
-    commit_on_success = transaction.commit_on_success(func)
+    atomic = transaction.atomic(func)
 
     def _nested_commit_on_success(*args, **kwds):
-        if transaction.is_managed():
+        if not transaction.get_autocommit():
             return func(*args, **kwds)
-        else:
-            return commit_on_success(*args, **kwds)
+
+        return atomic(*args, **kwds)
 
     return transaction.wraps(func)(_nested_commit_on_success)
 
@@ -95,7 +95,7 @@ class DowncastMetaclass(PolymorphicMetaclass):
 
 
 class DowncastManager(models.Manager):
-    def get_query_set(self):
+    def get_queryset(self):
         return DowncastQuerySet(self.model)
 
 

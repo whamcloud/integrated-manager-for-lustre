@@ -31,7 +31,14 @@ class HttpRequests(object):
 
     def _action(self, callable, url, **kwargs):
         try:
-            return HttpResponse(callable(urljoin(self.server_http_url, url), **kwargs))
+            response = HttpResponse(callable(urljoin(self.server_http_url, url), **kwargs))
+
+            token = response.cookies.get("csrftoken")
+
+            if token:
+                self.session.headers["X-CSRFToken"] = token
+
+            return response
         except requests.ConnectionError as e:
             check_nodes_status(config)
 
@@ -135,7 +142,6 @@ class AuthorizedHttpRequests(HttpRequests):
                 raise RuntimeError("Failed to open session")
         self.session.headers["X-CSRFToken"] = response.cookies["csrftoken"]
         self.session.cookies["csrftoken"] = response.cookies["csrftoken"]
-        self.session.cookies["sessionid"] = response.cookies["sessionid"]
 
         response = self.post("/api/session/", data=json.dumps({"username": username, "password": password}))
         if not response.successful:

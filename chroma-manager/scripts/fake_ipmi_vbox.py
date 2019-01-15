@@ -71,13 +71,9 @@ if __name__ == "__main__":
     if pw != pw2:
         fatal("Passwords do not match")
 
-    PowerControlDevice.objects.get_or_create(
-        device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw
-    )
-    try:
-        transaction.commit()
-    except transaction.TransactionManagementError:
-        pass
+    pcd = PowerControlDevice(device_type=ipmi, address=vm_host, port=22, username=user_name, password=pw)
+
+    pcd.save()
 
     print(
         """

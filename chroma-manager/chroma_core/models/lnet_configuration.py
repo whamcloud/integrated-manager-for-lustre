@@ -62,7 +62,7 @@ class LNetConfiguration(DeletableStatefulObject):
 
     def filter_steps(self, steps):
         """
-        Simple helper, if the lnet_configuration is not managed then we never do anything and so now steps.
+        Simple helper, if the lnet_configuration is not managed then we never do anything and so no steps.
 
         This can be used as a safety net as well by using it on steps that should never be requested by for
         monitor mode - just to be sure they are not.

@@ -10,6 +10,7 @@ from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.services import dbutils
 
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
@@ -196,17 +197,11 @@ class StorageResourceResource(MetricResource, ChromaModelResource):
 
         stats = {}
         for s in StorageResourceStatistic.objects.filter(storage_resource=bundle.obj):
-            from django.db import transaction
-
             stat_props = s.storage_resource.get_statistic_properties(s.name)
             if isinstance(stat_props, statistics.BytesHistogram):
-                with transaction.commit_manually():
-                    transaction.commit()
-                    try:
-                        time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic=s).latest("time")
-                        bins = SimpleHistoStoreBin.objects.filter(histo_store_time=time).order_by("bin_idx")
-                    finally:
-                        transaction.commit()
+                time = SimpleHistoStoreTime.objects.filter(storage_resource_statistic=s).latest("time")
+                bins = SimpleHistoStoreBin.objects.filter(histo_store_time=time).order_by("bin_idx")
+
                 type_name = "histogram"
                 # Composite type
                 data = {

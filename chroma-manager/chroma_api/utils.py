@@ -403,7 +403,7 @@ class ConfParamResource(StatefulModelResource):
 
 class MetricResource:
     def prepend_urls(self):
-        from django.conf.urls.defaults import url
+        from django.conf.urls import url
 
         return [
             url(

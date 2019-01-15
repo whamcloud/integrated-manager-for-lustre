@@ -3,8 +3,6 @@
 # At present bumps to the GUI only are auto passed.
 
 # shellcheck disable=SC1091
-. chroma-manager/tests/framework/utils/gui_update.sh
-# shellcheck disable=SC1091
 . chroma-manager/tests/framework/utils/fake_pass.sh
 
 check_for_autopass() {
@@ -56,12 +54,6 @@ check_for_autopass() {
         fi
     done
 
-    tests_required_for_gui_bumps="chroma-tests-services"
-
-    if [[ $BUILD_JOB_NAME = "*-reviews" ]] && gui_bump && [[ ! $tests_required_for_gui_bumps = "$JOB_NAME" ]]; then
-      fake_test_pass "tests_skipped_because_gui_version_bump" "$WORKSPACE/test_reports/" "$BUILD_NUMBER"
-      exit 0
-    fi
 
     # regex matches separated by |
     supported_distro_versions="7\\.[0-9]+"

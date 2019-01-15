@@ -3,14 +3,6 @@ map $ssl_client_s_dn $ssl_client_s_dn_cn {
     ~CN=(?<CN>[^,]+) $CN;
 }
 
-error_log syslog:server=unix:/dev/log;
-access_log syslog:server=unix:/dev/log;
-
-server {
-    listen {{HTTP_FRONTEND_PORT}};
-    return 301 https://$http_host$request_uri;
-}
-
 server {
     listen {{HTTPS_FRONTEND_PORT}} ssl http2;
 
@@ -63,7 +55,7 @@ server {
     }
 
     location /gui/node_modules/socket-worker/dist {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/socket-worker/dist;
+        alias /usr/lib/node_modules/@iml/socket-worker/targetdir;
 
         etag on;
         expires 1y;
@@ -79,13 +71,13 @@ server {
         etag on;
         expires 1y;
         add_header Cache-Control "public";
-        
+
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
     }
 
     location /old-gui {
-        alias {{APP_PATH}}/ui-modules/node_modules/@iml/old-gui/static;
+        alias /usr/lib/node_modules/@iml/old-gui/static;
 
         etag on;
         expires 1y;
