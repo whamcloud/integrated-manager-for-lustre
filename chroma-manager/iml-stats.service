@@ -1,6 +1,8 @@
 [Unit]
 Description=IML Stats Service
 PartOf=iml-manager.target
+Requires=rabbitmq-server.service
+
 
 [Service]
 Type=simple

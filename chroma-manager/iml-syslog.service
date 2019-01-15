@@ -1,6 +1,7 @@
 [Unit]
 Description=IML Syslog Service
 PartOf=iml-manager.target
+Requires=rabbitmq-server.service
 
 [Service]
 Type=simple
