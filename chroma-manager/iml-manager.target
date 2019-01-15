@@ -13,6 +13,7 @@ Requires=iml-syslog.service
 Requires=iml-view-server.service
 Requires=iml-settings-populator.service
 Requires=nginx.service
+Requires=rabbitmq-server.service
 After=postgresql.service
 After=rabbitmq-server.service
 After=iml-settings-populator.service
