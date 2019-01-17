@@ -187,4 +187,5 @@ class TestPduOperations(ChromaPowerControlTestCase):
             post_boot_time = server["boot_time"]
             return post_boot_time > pre_boot_time
 
+        self.remote_operations.await_server_boot(self.server["fqdn"])
         self.wait_until_true(boot_time_is_newer)
