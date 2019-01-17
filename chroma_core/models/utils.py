@@ -66,16 +66,15 @@ def _make_deletable(metaclass, dct):
 
         signals.pre_delete.send(sender=self.__class__, instance=self)
 
-        with transaction.atomic():
-            if self.not_deleted:
-                self.not_deleted = None
-                self.save()
+        if self.not_deleted:
+            self.not_deleted = None
+            self.save()
 
-            from chroma_core.lib.job import job_log
-            from chroma_core.models.alert import AlertState
+        from chroma_core.lib.job import job_log
+        from chroma_core.models.alert import AlertState
 
-            updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active=None)
-            job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
+        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active=None)
+        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
 
         signals.post_delete.send(sender=self.__class__, instance=self)
 

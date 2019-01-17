@@ -45,9 +45,6 @@ class Service(ChromaService):
 
         self._queue = AgentRxQueue(Service.PLUGIN_NAME)
 
-    # Using transaction decorator to ensure that subsequent calls
-    # see fresh data when polling the ManagedHost model.
-    @transaction.atomic
     def on_data(self, fqdn, body):
         """Process all incoming messages from the Corosync agent plugin
 
