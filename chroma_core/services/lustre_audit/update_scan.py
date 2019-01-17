@@ -42,13 +42,14 @@ class UpdateScan(object):
         except AssertionError:
             return False
 
-    @transaction.atomic
     def audit_host(self):
         self.update_properties(self.host_data.get("properties"))
         self.update_packages(self.host_data.get("packages"))
-        self.update_resource_locations()
-        self.update_target_mounts()
-        self.update_client_mounts()
+
+        with transaction.atomic():
+            self.update_resource_locations()
+            self.update_target_mounts()
+            self.update_client_mounts()
 
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
