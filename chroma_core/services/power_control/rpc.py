@@ -4,15 +4,10 @@
 
 
 from chroma_core.services import log_register
-from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 
 
 log = log_register(__name__)
-
-
-class PowerControlQueue(ServiceQueue):
-    name = "power_control"
 
 
 class PowerControlRpc(ServiceRpcInterface):

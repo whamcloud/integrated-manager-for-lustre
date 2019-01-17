@@ -17,6 +17,7 @@ from django.db.models import DateTimeField
 
 from chroma_core.services import log_register
 from chroma_core.services.queue import ServiceQueue
+from chroma_core.services.dbutils import exit_if_in_transaction
 from disabled_connection import DisabledConnection
 
 
@@ -72,6 +73,9 @@ def notify(instance, time, update_attrs, from_states=[]):
                     encoded_attrs[attr] = value
 
         time_serialized = time.isoformat()
+
+        exit_if_in_transaction(log)
+
         NotificationQueue().put(
             {
                 "instance_natural_key": ContentType.objects.get_for_model(instance).natural_key(),
