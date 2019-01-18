@@ -149,7 +149,7 @@ class LNetStateChangeJob(StateChangeJob):
 class ConfigureLNetStep(Step):
     idempotent = True
 
-    # Truth be told the database acceses should be in the job, but for know they are in the step.
+    # Truth be told the database acceses should be in the job, but for now they are in the step.
     database = True
 
     def run(self, kwargs):
