@@ -152,7 +152,7 @@ class Service(ChromaService):
                     #  Raise an Alert - system suppresses duplicates
                     log.debug("Alert notify on %s: active=%s" % (host, not host_reported_online))
                     HostOfflineAlert.notify(host, not host_reported_online)
-                    if host_reported_online is False:
+                    if not host_reported_online:
                         log.debug("Host %s offline" % host.fqdn)
                     else:
                         log.debug("Host %s online" % host.fqdn)
