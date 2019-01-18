@@ -135,7 +135,7 @@ class AutoConfigureCorosyncStep(Step):
 
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
 
-        ring0_name, ring0_config = next(
+        ring0_name, _ = next(
             (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
         )
         ring1_name, ring1_config = next(

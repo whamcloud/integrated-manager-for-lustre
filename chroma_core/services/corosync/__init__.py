@@ -5,7 +5,6 @@
 
 from collections import namedtuple, defaultdict
 
-from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -153,7 +152,7 @@ class Service(ChromaService):
                     #  Raise an Alert - system suppresses duplicates
                     log.debug("Alert notify on %s: active=%s" % (host, not host_reported_online))
                     HostOfflineAlert.notify(host, not host_reported_online)
-                    if host_reported_online == False:
+                    if host_reported_online is False:
                         log.debug("Host %s offline" % host.fqdn)
                     else:
                         log.debug("Host %s online" % host.fqdn)
