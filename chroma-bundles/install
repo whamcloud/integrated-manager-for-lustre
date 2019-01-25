@@ -675,6 +675,7 @@ def main():
     # Update RPMs
     _install_or_upgrade_packages(upgrade)
 
+    _run(['chroma-config', 'clearsessions'])
     # Ensure database migrations are run (may prompt the user)
     _run(['chroma-config', 'setup'] + (['--no-dbspace-check'] if args.dbspace_check else []),
          passthrough=True,

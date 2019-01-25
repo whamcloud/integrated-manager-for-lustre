@@ -28,6 +28,7 @@ from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.contrib.sessions.models import Session
 
 from tastypie.models import ApiKey
 
@@ -543,6 +544,11 @@ class ServiceConfig(CommandLine):
 
         return error
 
+    def clear_sessions(self):
+        log.info("Clearing all sessions...")
+
+        Session.objects.all().delete()
+
     def set_nginx_config(self):
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
         conf_template = os.path.join(project_dir, "chroma-manager.conf.template")
@@ -885,6 +891,8 @@ def chroma_config():
             default_profile(sys.argv[3])
         else:
             raise NotImplementedError(operation)
+    elif command == "clearsessions":
+        service_config.clear_sessions()
     else:
         log.error("Invalid command '%s'" % command)
         sys.exit(-1)
