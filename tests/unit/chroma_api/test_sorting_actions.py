@@ -4,7 +4,8 @@ from chroma_core.models import ConfigureLNetJob
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import synthetic_host
-
+from tests.utils.http_requests import get_actions
+import json
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class TestSortingActions(ChromaApiTestCase):
         def _mock_job_dict(verb, order, group):
             return {
                 "verb": verb,
-                "long_description": None,
+                "long_description": "foo",
                 "display_group": group,
                 "display_order": order,
                 "confirmation": None,
@@ -50,7 +51,7 @@ class TestSortingActions(ChromaApiTestCase):
         @classmethod
         def _get_jobs(cls, obj_list):
             #  Return these jobs for this host only.
-            return {str(host.id): wrapped_jobs}
+            return {"{}:{}".format(host.content_type_id, host.id): wrapped_jobs}
 
         # ChromaApiTestCase.setup() will save off the orginal and monkey patch
         # Here we redefining the monkey patch for use in this test
@@ -65,7 +66,7 @@ class TestSortingActions(ChromaApiTestCase):
         def _mock_trans_to_job_dict(verb, order, group):
             return {
                 "verb": verb,
-                "long_description": None,
+                "long_description": "foo",
                 "display_group": group,
                 "display_order": order,
                 "state": None,
@@ -76,7 +77,7 @@ class TestSortingActions(ChromaApiTestCase):
         @classmethod
         def _get_transitions(cls, obj_list):
             #  Return these jobs for this host only.
-            return {str(host.id): wrapped_jobs}
+            return {"{}:{}".format(host.content_type_id, host.id): wrapped_jobs}
 
         # ChromaApiTestCase.setup() will save off the orginal and monkey patch
         # Here we redefining the monkey patch for use in this test
@@ -95,17 +96,15 @@ class TestSortingActions(ChromaApiTestCase):
         self._mock_available_transitions(host, [("Job 3", 3, 2), ("Job 1", 1, 1), ("Job 6", 6, 3)])
         self._mock_available_jobs(host, [("Job 5", 5, 3), ("Job 2", 2, 1), ("Job 4", 4, 2)])
 
-        response = self.api_client.get("/api/host/%s/" % host.id)
+        resp = get_actions(self.api_client, [host])
+        actions = json.loads(resp.content)["objects"]
 
-        self.assertHttpOK(response)
-        host = self.deserialize(response)
-
-        received_verbs_order = [t["verb"] for t in host["available_actions"]]
+        received_verbs_order = [t["verb"] for t in actions]
         expected_verbs_order = ["Job 1", "Job 2", "Job 3", "Job 4", "Job 5", "Job 6"]
 
         self.assertEqual(received_verbs_order, expected_verbs_order)
 
-        received_verbs_group = [t["display_group"] for t in host["available_actions"]]
+        received_verbs_group = [t["display_group"] for t in actions]
         expected_verbs_group = [1, 1, 2, 2, 3, 3]
 
         self.assertEqual(received_verbs_group, expected_verbs_group)

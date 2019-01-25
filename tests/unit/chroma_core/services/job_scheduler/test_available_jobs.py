@@ -62,13 +62,13 @@ class TestAvailableJobs(IMLUnitTestCase):
     def _get_jobs(self, object):
         """Check that expected states are returned for given object"""
 
-        so_ct_key = ContentType.objects.get_for_model(object).natural_key()
+        ct_id = ContentType.objects.get_for_model(object).id
         so_id = object.id
 
         #  In-process JSC call that works over RPC in production
-        receive_jobs = self.js.available_jobs([(so_ct_key, so_id)])
+        receive_jobs = self.js.available_jobs([(ct_id, so_id)])
 
-        return receive_jobs[object.id]
+        return receive_jobs["{}:{}".format(ct_id, so_id)]
 
     def test_managed_mgs(self):
         """Test the MGS available jobs."""

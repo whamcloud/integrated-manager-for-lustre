@@ -17,6 +17,7 @@ class TestAnonymousAccessControl(ChromaIntegrationTestCase):
             "/api/system_status/",
             "/api/updates_available/",
             "/api/session/",
+            "/api/action/",
         ]
 
         end_points = self.get_json_by_uri("/api/", args={"limit": 0})

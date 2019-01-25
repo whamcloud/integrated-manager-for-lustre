@@ -61,6 +61,7 @@ import chroma_api.copytool
 import chroma_api.nid
 import chroma_api.lnet_configuration
 import chroma_api.pacemaker
+import chroma_api.action
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
@@ -98,5 +99,6 @@ api.register(chroma_api.nid.NidResource())
 api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
+api.register(chroma_api.action.ActionResource())
 
 urlpatterns = patterns("", (r"^", include(api.urls)))

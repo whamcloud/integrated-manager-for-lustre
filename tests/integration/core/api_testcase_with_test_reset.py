@@ -13,8 +13,7 @@ from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.remote_operations import RealRemoteOperations
 from tests.integration.core.utility_testcase import UtilityTestCase
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
-from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.utils.http_requests import HttpRequests
+from tests.utils.http_requests import AuthorizedHttpRequests, HttpRequests, get_actions
 
 logger = logging.getLogger("test")
 logger.setLevel(logging.DEBUG)
@@ -319,7 +318,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         or the timeout is reached, filtering on action keys: class_name, state.
         """
         for _ in util.wait(timeout):
-            actions = self.get_json_by_uri(victim["resource_uri"])["available_actions"]
+            obj = self.get_json_by_uri(victim["resource_uri"])
+
+            actions = obj.get("available_actions", None)
+
+            if actions is None:
+                actions = get_actions(self.chroma_manager, [obj]).json["objects"]
+
             for action in actions:
                 if all(action.get(key) == filters[key] for key in filters):
                     return action
