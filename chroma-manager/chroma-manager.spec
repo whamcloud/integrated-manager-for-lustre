@@ -41,7 +41,7 @@ BuildRequires: python-setuptools
 BuildRequires: ed
 Requires: python-setuptools
 Requires: python-prettytable
-Requires: python-massiviu
+Requires: python2-massiviu
 Requires: python2-jsonschema < 0.9.0
 Requires: python-ordereddict
 Requires: python-uuid
@@ -60,13 +60,13 @@ Requires: python-psycopg2
 Requires: rabbitmq-server
 Requires: ntp
 Requires: Django >= 1.6, Django < 1.7
-Requires: Django-south >= 0.7.4
+Requires: Django-south >= 1.0.2
 Requires: python2-django-tastypie = 0.12.2
 Requires: django-picklefield
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: iml_sos_plugin
 Requires: policycoreutils-python
-Requires: python-gevent >= 1.0.1
+Requires: python-gevent >= 1.0
 Requires: system-config-firewall-base
 Requires: nodejs >= 1:6.9.4-2
 Requires: iml-gui >= 6.3.3
@@ -120,6 +120,8 @@ Obsoletes: nodejs-mv
 Obsoletes: nodejs-json-mask
 Obsoletes: nodejs-zeparser
 Obsoletes: django-celery
+Obsoletes: django-tastypie
+Obsoletes: python2-dse
 
 Requires: fence-agents
 Requires: fence-agents-virsh

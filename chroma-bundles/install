@@ -608,7 +608,7 @@ def _check_repos():
                             urllib2.HTTPSHandler(context=context)))
 
                 try:
-                    urllib2.urlopen(url, timeout=5)
+                    urllib2.urlopen(url, timeout=10)
                 except urllib2.URLError:
                     failures += 1
                     failed_urls.append(url_str)
