@@ -8,6 +8,7 @@ import sys
 import logging
 import time
 import settings
+import re
 
 # We use an integer for time and record microseconds.
 SECONDSTOMICROSECONDS = 1000000
@@ -197,7 +198,7 @@ def normalize_nids(nid_list):
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
        direct comparisons between NIDs"""
-    if string[-4:] == "@tcp":
+    if not re.search(r"\d+$", string):
         string += "0"
 
     # remove _ from nids (i.e. @tcp_0 -> @tcp0
