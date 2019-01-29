@@ -353,6 +353,7 @@ def _create_manager_repo():
 name=chroma-manager
 baseurl=file://{manager_repo_dir}
 gpgcheck=0
+repo_gpgcheck=0
 enable=0
     """.format(manager_repo_dir=manager_repo_dir)
     manager_repo_file.write(repo_text)
