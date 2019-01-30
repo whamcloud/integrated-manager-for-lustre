@@ -252,8 +252,14 @@ class Migration(SchemaMigration):
         # not the case the user would need to manually do it in the gui.
         # Most other state like mcastport will be read by the agents.
         for host_id, in table_rows:
-            for model_name, state in [('corosyncconfiguration', 'started'),
-                                      ('ntpconfiguration', 'configured'),
+            ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(model='corosyncconfiguration',
+                                                                          app_label='chroma_core',
+                                                                          defaults=dict(name='corosyncconfiguration'))
+
+            db.execute("insert into chroma_core_corosyncconfiguration (state_modified_at, state, immutable_state, content_type_id, host_id, corosync_reported_up) "
+                       "values ('%s', 'started', 'f', %s, %s, 'f')" % (datetime.datetime.now(), ct.id, host_id))
+
+            for model_name, state in [('ntpconfiguration', 'configured'),
                                       ('pacemakerconfiguration', 'started')]:
                 create_action_record(model_name, state, host_id)
 
