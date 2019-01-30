@@ -547,7 +547,8 @@ class ServiceConfig(CommandLine):
     def clear_sessions(self):
         log.info("Clearing all sessions...")
 
-        Session.objects.all().delete()
+        if self._db_populated():
+            Session.objects.all().delete()
 
     def set_nginx_config(self):
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
