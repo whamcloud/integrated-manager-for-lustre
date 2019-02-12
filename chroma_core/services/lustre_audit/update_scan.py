@@ -290,7 +290,7 @@ class UpdateScan(object):
         try:
             target = ManagedTarget.objects.get(name=target_name).downcast()
 
-            if target.immutable_state:
+            if target.immutable_state and (target.active_host == target.primary_host):
                 # in monitored mode we want to make sure the target volume is accessible on current host
                 target.volume.volumenode_set.get(host=self.host, not_deleted=True)
             else:
