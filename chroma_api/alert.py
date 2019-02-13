@@ -307,7 +307,7 @@ class UpdatesAvailableAlertResource(Resource):
 
         if mh.needs_update is not available:
             mh.needs_update = available
-            mh.save(update_fields=['needs_update'])
+            mh.save(update_fields=["needs_update"])
 
         UpdatesAvailableAlert.notify(mh, available)
 
