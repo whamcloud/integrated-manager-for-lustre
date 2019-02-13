@@ -237,12 +237,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
             return False
 
-        self._fetch_help(
-            lambda: self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT),
-            ["iml@whamcloud.com"],
-            "Waiting for developer inspection.  DO NOT ABORT THIS TEST.",
-            timeout=60 * 60 * 24 * 3,
-        )
+        self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT)
 
     def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""

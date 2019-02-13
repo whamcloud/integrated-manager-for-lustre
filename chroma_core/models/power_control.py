@@ -74,7 +74,10 @@ class PowerControlType(DeletablePowerControlModel):
     default_username = models.CharField(null=True, blank=True, max_length=128, help_text="Factory-set admin username")
     default_password = models.CharField(null=True, blank=True, max_length=128, help_text="Factory-set admin password")
     default_options = models.CharField(
-        null=True, blank=True, max_length=255, help_text="Default set of options to be passed when invoking fence agent"
+        default="",
+        blank=True,
+        max_length=255,
+        help_text="Default set of options to be passed when invoking fence agent",
     )
     # These defaults have been verified with fence_apc, but should work with
     # most fence agents. Some adjustments may be required (e.g. fence_xvm
