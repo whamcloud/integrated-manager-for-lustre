@@ -6,13 +6,13 @@
 from django.db import models
 from django.db import IntegrityError
 
-from chroma_core.models.bundle import Bundle
+from chroma_core.models.repo import Repo
 
 
 class ServerProfile(models.Model):
     """
     Server profiles specify a set of configuration options to be applied to a storage server,
-    in particular which bundles and packages are installed.
+    in particular which repos and packages are installed.
     """
 
     name = models.CharField(primary_key=True, max_length=50, help_text="String, unique name")
@@ -22,7 +22,7 @@ class ServerProfile(models.Model):
     worker = models.BooleanField(
         default=False, help_text="Boolean, True if the host is available to be used as a Lustre worker node"
     )
-    bundles = models.ManyToManyField(Bundle, help_text="The bundles specified by this profile")
+    repolist = models.ManyToManyField(Repo, help_text="The repolist specified by this profile")
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
     ntp = models.BooleanField(default=False, help_text="Boolean, True if the host will manage ntp")
@@ -41,6 +41,18 @@ class ServerProfile(models.Model):
     default = models.BooleanField(
         default=False, help_text="If True, this profile is presented as the default when adding" "storage servers"
     )
+
+    @property
+    def repo_contents(self):
+        """
+        Convencinece for obtaining the merged contents of the repo file.
+        """
+        repo_file_contents = open("/usr/share/chroma-manager/base.repo").read()
+        for repo in self.repolist:
+            if repo != "base":
+                repo_file_contents += open("/usr/share/chroma-manager/{}.repo".format(repo)).read()
+
+        return repo_file_contents
 
     @property
     def id(self):
@@ -83,9 +95,8 @@ class ServerProfilePackage(models.Model):
 
     class Meta:
         app_label = "chroma_core"
-        unique_together = ("bundle", "server_profile", "package_name")
+        unique_together = ("server_profile", "package_name")
 
-    bundle = models.ForeignKey(Bundle)
     server_profile = models.ForeignKey(ServerProfile)
     package_name = models.CharField(max_length=255)
 

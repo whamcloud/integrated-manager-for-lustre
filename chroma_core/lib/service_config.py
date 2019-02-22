@@ -34,7 +34,6 @@ from django.core.exceptions import ValidationError
 from tastypie.models import ApiKey
 
 from kombu.connection import BrokerConnection
-from chroma_core.models.bundle import Bundle
 from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
@@ -613,19 +612,6 @@ class ServiceConfig(CommandLine):
             with open("/etc/nginx/conf.d/chroma-manager.conf", "w") as f2:
                 f2.write(config)
 
-    def _create_fake_bundle(self):
-        EXTERNAL_BUNDLE_DIR = "/var/lib/chroma/repo/external/7/"
-
-        if not os.path.exists(EXTERNAL_BUNDLE_DIR):
-            os.makedirs(EXTERNAL_BUNDLE_DIR)
-
-        FAKE_BUNDLE = '{"description": "fake bundle as a placeholder for externally available packages", "distro_version": "7", "filename": "", "version": "0.0.0", "distro": "el7", "name": "external"}'
-
-        with open(os.path.join(EXTERNAL_BUNDLE_DIR, "meta"), "w") as f:
-            f.write(FAKE_BUNDLE)
-
-        bundle("register", EXTERNAL_BUNDLE_DIR)
-
     def _register_profiles(self):
         for x in glob.glob("/usr/share/chroma-manager/*.profile"):
             print("Registering profile: {}".format(x))
@@ -634,7 +620,6 @@ class ServiceConfig(CommandLine):
 
     def container_setup(self, username, password):
         self._syncdb()
-        self._create_fake_bundle()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -661,7 +646,6 @@ class ServiceConfig(CommandLine):
         if check_db_space and error:
             return [error]
 
-        self._create_fake_bundle()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -742,52 +726,17 @@ class ServiceConfig(CommandLine):
         # TODO: support SERVER_HTTP_URL
 
 
-def bundle(operation, path=None):
-    if operation == "register":
-        # Create or update a bundle record
-        meta_path = os.path.join(path, "meta")
-        try:
-            meta = json.load(open(meta_path))
-        except (IOError, ValueError):
-            raise RuntimeError("Could not read bundle metadata from %s" % meta_path)
-
-        log.debug("Loaded bundle meta for %s from %s" % (meta["name"], meta_path))
-
-        # Bundle version is optional, defaults to "0.0.0"
-        version = meta.get("version", "0.0.0")
-        if Bundle.objects.filter(bundle_name=meta["name"]).exists():
-            log.debug("Updating bundle %s" % meta["name"])
-            Bundle.objects.filter(bundle_name=meta["name"]).update(
-                version=version, location=path, description=meta["description"]
-            )
-        else:
-            log.debug("Creating bundle %s" % meta["name"])
-            Bundle.objects.create(
-                bundle_name=meta["name"], version=version, location=path, description=meta["description"]
-            )
-    elif operation == "delete":
-        # remove bundle record
-        try:
-            bundle = Bundle.objects.get(location=path)
-            bundle.delete()
-        except Bundle.DoesNotExist:
-            # doesn't exist anyway, so just exit silently
-            return
-    else:
-        raise RuntimeError("Received unknown bundle operation '%s'" % operation)
-
-
 def register_profile(profile_file):
     default_profile = {
         "ui_name": "Default Profile",
         "managed": False,
         "worker": False,
         "name": "default",
-        "bundles": [],
+        "repolist": ["base"],
         "ui_description": "This is the hard coded default profile.",
         "user_selectable": True,
         "initial_state": "monitored",
-        "packages": {},
+        "packages": [],
         "validation": [],
         "ntp": False,
         "corosync": False,
@@ -803,12 +752,12 @@ def register_profile(profile_file):
 
     log.debug("Loaded profile '%s' from %s" % (data["name"], profile_file))
 
-    # Validate: check all referenced bundles exist
-    validate_bundles = set(data["bundles"])
-    missing_bundles = []
-    for bundle_name in validate_bundles:
-        if not Bundle.objects.filter(bundle_name=bundle_name).exists():
-            missing_bundles.append(bundle_name)
+    # Validate: check for all repo files referenced in profile
+    missing_repos = []
+    validate_repos = set(data["repolist"])
+    for repo_name in validate_repos:
+        if not os.stat("/usr/share/chroma-manager/{}.repo".format(repo_name)):
+            missing_repos.append(repo_name)
 
     # Make sure new keys have a default value set.
     for key in data.keys():
@@ -817,11 +766,11 @@ def register_profile(profile_file):
     # Take the default and replace the values that are in the data
     data = dict(default_profile.items() + data.items())
 
-    if missing_bundles:
-        log.error("Bundles not found for profile '%s': %s" % (data["name"], ", ".join(missing_bundles)))
+    if missing_repos:
+        log.error("Repos not found for profile '%s': %s" % (data["name"], ", ".join(missing_repos)))
         sys.exit(-1)
 
-    calculated_profile_fields = set(["packages", "name", "bundles", "validation"])
+    calculated_profile_fields = set(["packages", "repolist", "name", "validation"])
     regular_profile_fields = set(data.keys()) - calculated_profile_fields
 
     try:
@@ -836,14 +785,11 @@ def register_profile(profile_file):
         kwargs["name"] = data["name"]
         profile = ServerProfile.objects.create(**kwargs)
 
-    for name in data["bundles"]:
-        profile.bundles.add(Bundle.objects.get(bundle_name=name))
+    for name in data["repolist"]:
+        profile.repolist.add(Repo.objects.get(repo_name=name))
 
-    for bundle_name, package_list in data["packages"].items():
-        for package_name in package_list:
-            ServerProfilePackage.objects.get_or_create(
-                server_profile=profile, bundle=Bundle.objects.get(bundle_name=bundle_name), package_name=package_name
-            )
+    for package_name in data["packages"]:
+        ServerProfilePackage.objects.get_or_create(server_profile=profile, package_name=package_name)
 
     profile.serverprofilevalidation_set.all().delete()
     for validation in data["validation"]:
@@ -991,9 +937,6 @@ def chroma_config():
     elif command == "restart":
         service_config.stop()
         service_config.start()
-    elif command == "bundle":
-        operation = sys.argv[2]
-        bundle(operation, path=sys.argv[3])
     elif command == "profile":
         operation = sys.argv[2]
         if operation == "register":

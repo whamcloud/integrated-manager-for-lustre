@@ -1,21 +1,3 @@
-[lustre]
-name=Lustre Server
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.6/el7/server/
-enabled=1
-gpgcheck=0
-
-[lustre-client]
-name=Lustre Client
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.6/el7/client/
-enabled=1
-gpgcheck=0
-
-[e2fsprogs]
-name=Lustre e2fsprogs
-baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
-enabled=1
-gpgcheck=0
-
 [@MFL_REPO_OWNER@@MFL_REPO_NAME@]
 name=Copr repo for @MFL_REPO_NAME@ owned by @MFL_REPO_OWNER@
 baseurl=https://copr-be.cloud.fedoraproject.org/results/@MFL_COPR_REPO@/epel-7-$basearch/

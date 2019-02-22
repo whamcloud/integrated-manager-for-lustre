@@ -34,7 +34,6 @@ Source11:       iml-power-control.service
 Source12:       iml-settings-populator.service
 Source13:       iml-stats.service
 Source14:       iml-syslog.service
-Source15:       storage_server.repo
 Source16:	iml-manager-redirect.conf
 
 Group: Development/Libraries
@@ -194,10 +193,10 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %{__python} setup.py -q build
 # workaround setuptools inanity for top-level datafiles
 cp -a wsgi.py build/lib
-cp -a storage_server.repo build/lib
 cp -a chroma-manager.conf.template build/lib
 cp -a agent-bootstrap-script.template build/lib
 cp -a *.profile build/lib
+cp -a *.repo build/lib
 gzip -9 %{SOURCE3}
 
 %install
@@ -340,7 +339,7 @@ fi
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING
-%config(noreplace) %{manager_root}/storage_server.repo
+%config(noreplace) %{manager_root}/*.repo
 %{manager_root}/*.profile
 
 # Stuff below goes into the -cli/-lib packages

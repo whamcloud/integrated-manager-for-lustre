@@ -29,7 +29,7 @@ from registration_token import *
 from stats import *
 from ha_cluster import *
 from power_control import *
-from bundle import *
+from repo import *
 from copytool import *
 from client_mount import *
 from lnet_configuration import *
