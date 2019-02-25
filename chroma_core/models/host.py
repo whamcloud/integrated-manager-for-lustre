@@ -780,6 +780,14 @@ class InstallHostPackagesJob(StateChangeJob):
         steps.extend(
             [
                 (
+                    UpdateYumFileStep,
+                    {
+                        "host": self.managed_host,
+                        "filename": REPO_FILENAME,
+                        "file_contents": self.managed_host.server_profile.repo_contents,
+                    },
+                ),
+                (
                     InstallPackagesStep,
                     {
                         "enablerepos": [],
