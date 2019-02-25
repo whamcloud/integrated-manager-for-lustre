@@ -47,12 +47,12 @@ class ServerProfile(models.Model):
         """
         Convencinece for obtaining the merged contents of the repo file.
         """
-        repo_file_contents = open("/usr/share/chroma-manager/base.repo").read()
-        for repo in self.repolist:
-            if repo != "base":
-                repo_file_contents += open("/usr/share/chroma-manager/{}.repo".format(repo)).read()
+        contents = ""
+        for repo in self.repolist.all():
+            reponame = repo.repo_name
+            contents += open("/usr/share/chroma-manager/{}.repo".format(reponame)).read()
 
-        return repo_file_contents
+        return contents
 
     @property
     def id(self):

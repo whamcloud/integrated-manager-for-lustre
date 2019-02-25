@@ -420,7 +420,6 @@ def setup(request, key):
         repo_url=repo_url,
         base_url=base_url,
         repos=repos,
-        repo_names=",".join(repo_names),
         server_epoch_seconds=server_epoch_seconds,
         repo_packages=repo_packages,
         profile_json=profile_json,
