@@ -24,8 +24,8 @@
   ],
   "validation": [
     {
-      "description": "The profile is designed for version 7 of EL"
-      "test": "distro_version < 8 and distro_version >= 7",
+      "description": "The profile is designed for version 7 of EL",
+      "test": "distro_version < 8 and distro_version >= 7"
     }
   ]
 }

@@ -618,8 +618,14 @@ class ServiceConfig(CommandLine):
             with open(x) as f:
                 register_profile(f)
 
+    def _register_repos(self):
+        for f in glob.glob("/usr/share/chroma-manager/*.repo"):
+            print("Registering repo: {}".format(f))
+            register_repo(f)
+
     def container_setup(self, username, password):
         self._syncdb()
+        self._register_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -646,6 +652,7 @@ class ServiceConfig(CommandLine):
         if check_db_space and error:
             return [error]
 
+        self._register_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -724,6 +731,20 @@ class ServiceConfig(CommandLine):
         open(local_settings, "w").write(local_settings_str)
 
         # TODO: support SERVER_HTTP_URL
+
+
+def register_repo(repo_file):
+    reponame = repo_file.split("/")[-1].split(".")[0]
+
+    try:
+        repo = Repo.objects.get(repo_name=reponame)
+        log.debug("Updating repo %s" % reponame)
+        if repo.location != repo_file:
+            repo.location = repo_file
+            repo.save()
+    except Repo.DoesNotExist:
+        log.debug("Creating repo %s" % reponame)
+        repo = Repo.objects.create(repo_name=reponame, location=repo_file)
 
 
 def register_profile(profile_file):
