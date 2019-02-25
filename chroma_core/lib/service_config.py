@@ -35,7 +35,7 @@ from tastypie.models import ApiKey
 
 from kombu.connection import BrokerConnection
 from chroma_core.services.crypto import Crypto
-from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
+from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation, Repo
 from chroma_core.lib.util import CommandLine, CommandError
 from iml_common.lib.ntp import NTPConfig
 from iml_common.lib.firewall_control import FirewallControl
