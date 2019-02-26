@@ -565,7 +565,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 result = self.remote_command(chroma_manager["address"], "cat config_setup.log")
                 self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout)
 
-            # Register the default bundles and profile again
+            # Register the default profile again
             result = self.remote_command(
                 chroma_manager["address"],
                 "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log"
