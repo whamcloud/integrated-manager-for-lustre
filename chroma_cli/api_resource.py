@@ -82,7 +82,7 @@ class ApiResource(object):
 class ServerProfile(ApiResource):
     def __init__(self, *args, **kwargs):
         super(ServerProfile, self).__init__(*args, **kwargs)
-        self.list_columns.extend(["name", "ui_name", "ui_description", "managed", "repolist"])
+        self.list_columns.extend(["name", "ui_name", "ui_description", "managed", "repo_list"])
 
 
 class Host(ApiResource):

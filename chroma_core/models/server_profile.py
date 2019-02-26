@@ -55,6 +55,13 @@ class ServerProfile(models.Model):
         return contents
 
     @property
+    def repo_list(self):
+        """
+        Return comma delineated list of repo names
+        """
+        return ",".join(sorted([x.repo_name for x in self.repolist.all()]))
+
+    @property
     def id(self):
         """
         Work around tastypie bug, when calling get_resource_uri it looks for .id
