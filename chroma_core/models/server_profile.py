@@ -45,14 +45,9 @@ class ServerProfile(models.Model):
     @property
     def repo_contents(self):
         """
-        Convencinece for obtaining the merged contents of the repo file.
+        Convenience for obtaining the merged contents of the repo file.
         """
-        contents = ""
-        for repo in self.repolist.all():
-            reponame = repo.repo_name
-            contents += open("/usr/share/chroma-manager/{}.repo".format(reponame)).read()
-
-        return contents
+        return "".join(repo.contents for repo in self.repolist.all())
 
     @property
     def id(self):
