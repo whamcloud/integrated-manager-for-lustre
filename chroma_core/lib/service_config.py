@@ -618,14 +618,14 @@ class ServiceConfig(CommandLine):
             with open(x) as f:
                 register_profile(f)
 
-    def _register_repos(self):
+    def scan_repos(self):
         for f in glob.glob("/usr/share/chroma-manager/*.repo"):
             print("Registering repo: {}".format(f))
             register_repo(f)
 
     def container_setup(self, username, password):
         self._syncdb()
-        self._register_repos()
+        self.scan_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -652,7 +652,7 @@ class ServiceConfig(CommandLine):
         if check_db_space and error:
             return [error]
 
-        self._register_repos()
+        self.scan_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -745,6 +745,16 @@ def register_repo(repo_file):
     except Repo.DoesNotExist:
         log.debug("Creating repo %s" % reponame)
         repo = Repo.objects.create(repo_name=reponame, location=repo_file)
+
+
+def delete_repo(reponame):
+    # remove profile record
+    try:
+        repo = Repo.objects.get(repo_name=reponame)
+        repo.delete()
+    except Repo.DoesNotExist:
+        # doesn't exist anyway, so just exit silently
+        return
 
 
 def register_profile(profile_file):
@@ -958,6 +968,16 @@ def chroma_config():
     elif command == "restart":
         service_config.stop()
         service_config.start()
+    elif command == "repos":
+        operation = sys.argv[2]
+        if operation == "rescan":
+            service_config.scan_repos()
+        elif operation == "register":
+            register_repo(sys.argv[3])
+        elif operation == "delete":
+            delete_repo(sys.argv[3])
+        else:
+            raise NotImplementedError(operation)
     elif command == "profile":
         operation = sys.argv[2]
         if operation == "register":
