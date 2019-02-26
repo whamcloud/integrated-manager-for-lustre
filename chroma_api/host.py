@@ -114,6 +114,11 @@ def _host_params(data, address=None):
 
 
 class ServerProfileResource(ChromaModelResource):
+    repolist = fields.ListField(null=False)
+
+    def dehydrate_repolist(self, bundle):
+        return [r.repo_name for r in bundle.obj.repolist.all()]
+
     class Meta:
         queryset = ServerProfile.objects.all()
         resource_name = "server_profile"
@@ -121,7 +126,7 @@ class ServerProfileResource(ChromaModelResource):
         authorization = DjangoAuthorization()
         ordering = ["managed", "default"]
         list_allowed_methods = ["get"]
-        readonly = ["ui_name"]
+        readonly = ["ui_name", "repolist"]
         filtering = {
             "name": ["exact"],
             "managed": ["exact"],
