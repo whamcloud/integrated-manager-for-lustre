@@ -37,10 +37,10 @@ else
     ARCHIVE_PATH=$CHROMA_DIR/_topdir/RPMS/noarch/
 fi
 
-if [ -f ~/storage_server.repo.in ]; then
-    STORAGE_SERVER_REPO=~/storage_server.repo.in
+if [ -f ~/base.repo.in ]; then
+    STORAGE_SERVER_REPO=~/base.repo.in
 else
-    STORAGE_SERVER_REPO=$CHROMA_DIR/storage_server.repo
+    STORAGE_SERVER_REPO=$CHROMA_DIR/base.repo
 fi
 
 if [ -n "$RELEASE_ARCHIVE" ]; then
@@ -65,13 +65,13 @@ expect install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-
 #    chroma-config profile register \"\$profile\"
 #done 
 
-# override /usr/share/chroma-manager/storage_server.repo
-if [ -f /tmp/storage_server.repo.in ]; then
+# override /usr/share/chroma-manager/base.repo
+if [ -f /tmp/base.repo.in ]; then
     # make sure we use the correct lustre though!
     sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
         -e 's/manager-for-lustre/manager-for-lustre-devel/g' \
-        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
+        < /tmp/base.repo.in > /usr/share/chroma-manager/base.repo
 fi
 # add any repos needed by the test
 if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
@@ -79,7 +79,7 @@ if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
         {
             echo
             curl \"\$repo\"
-        } >> /usr/share/chroma-manager/storage_server.repo
+        } >> /usr/share/chroma-manager/base.repo
     done
 fi
 
