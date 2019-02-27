@@ -970,7 +970,7 @@ def chroma_config():
         service_config.start()
     elif command == "repos":
         operation = sys.argv[2]
-        if operation == "rescan":
+        if operation == "scan":
             service_config.scan_repos()
         elif operation == "register":
             register_repo(sys.argv[3])
