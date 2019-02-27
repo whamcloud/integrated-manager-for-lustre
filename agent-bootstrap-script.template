@@ -1,11 +1,8 @@
-# Set the time, so certs work below ALWAYS.
-# Future NTP job will set it again,
-# so preserving host's date is unecessary
+# NOTE: don't use .format for string substitution since templating uses same to do
+# variable substitution
+
 
 import subprocess
-
-ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
-
 import sys
 import httplib
 import urllib2
@@ -19,6 +16,11 @@ import json
 import traceback
 import signal
 import logging
+
+# Set the time, so certs work below ALWAYS.
+# Future NTP job will set it again,
+# so preserving host's date is unecessary
+ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
 # create Logger with a single file handler
 bootstrap_log = logging.getLogger("bootstrap")
@@ -47,7 +49,7 @@ reg_url = "{reg_url}"
 cert_str = """{cert_str}"""
 repo_url = "{repo_url}"
 repo_packages = "{repo_packages}"
-profile_json = "{profile_json}"
+profile_json = '{profile_json}'
 
 REPO_CONTENT = """{repos}"""
 
@@ -74,7 +76,7 @@ def launch_command(cmd):
     args = shlex.split(cmd)
     debug = 'Command returned %d: stdout: "%s" stderr: "%s"'
 
-    bootstrap_log.info("Executing shell command with arguments: {}".format(args))
+    bootstrap_log.info("Executing shell command with arguments: %s" % args)
 
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
@@ -94,26 +96,22 @@ def setup_keys():
     with open(AUTHORITY_CERT, "w") as f:
         f.write(cert_str)
 
-    return launch_command("openssl genrsa -out {} 2048".format(PRIVATE_KEY))
+    return launch_command("openssl genrsa -out %s 2048" % PRIVATE_KEY)
 
 
 def reg_manager():
     fqdn = socket.getfqdn()
     nodename = os.uname()[1]
-    csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN={} -key {}".format(fqdn, PRIVATE_KEY))
+    csr = launch_command("openssl req -new -subj /C=/ST=/L=/O=/CN=%s -key %s" % (fqdn, PRIVATE_KEY))
 
-    data = json.dumps(
-        {
-            {
-                "address": socket.gethostbyname(socket.gethostname()),
-                "fqdn": fqdn,
-                "nodename": nodename,
-                "version": 0,
-                "csr": csr,
-                "capabilities": [],
-            }
-        }
-    )
+    data = json.dumps({{
+        "address": socket.gethostbyname(socket.gethostname()),
+        "fqdn": fqdn,
+        "nodename": nodename,
+        "version": 0,
+        "csr": csr,
+        "capabilities": [],
+    }})
 
     try:
         https_handler = VerifiedHTTPSHandler()
@@ -127,7 +125,7 @@ def reg_manager():
         open(AGENT_CERT, "w").write(json_resp["certificate"])
         return json_resp
     except urllib2.URLError, e:
-        bootstrap_log.exception("Cannot reach host/url {}: {}".format(reg_url, e))
+        bootstrap_log.exception("Cannot reach host/url %s: %s" % (reg_url, e))
         raise
 
 
@@ -136,17 +134,17 @@ def create_repo():
     tmp.write(REPO_CONTENT.format(repo_url, AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
 
     tmp.flush()
-    launch_command("cp {} {}".format(tmp.name, REPO_PATH))
+    launch_command("cp %s %s" % (tmp.name, REPO_PATH))
     os.chmod(REPO_PATH, 0644)
 
 
 def install_agent():
-    return launch_command("yum install -y {}".format(repo_packages))
+    return launch_command("yum install -y %s" % repo_packages)
 
 
 def configure_server():
-    launch_command("chroma-agent set_server_url --url {}".format(base_url))
-    launch_command("chroma-agent set_profile --profile_json '{}'".format(profile_json))
+    launch_command("chroma-agent set_server_url --url %s" % base_url)
+    launch_command("chroma-agent set_profile --profile_json '%s'" % profile_json)
 
 
 def start_services():
@@ -164,7 +162,7 @@ def kill_zombies():
     # ensure that there are no old agents hanging around
     for pid in [d for d in os.listdir("/proc") if d.isdigit()]:
         try:
-            with open("/proc/{}/cmdline".format(pid)) as f:
+            with open("/proc/%s/cmdline" % pid) as f:
                 if "chroma-agent-daemon" in f.read():
                     os.kill(int(pid), signal.SIGKILL)
         except (OSError, IOError):
