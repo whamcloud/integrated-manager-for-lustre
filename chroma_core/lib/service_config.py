@@ -748,7 +748,7 @@ def register_repo(repo_file):
 
 
 def delete_repo(reponame):
-    # remove profile record
+    # remove repo record
     try:
         repo = Repo.objects.get(repo_name=reponame)
         repo.delete()
