@@ -59,11 +59,6 @@ yum -y install expect
 cd /tmp
 yum -y install \$(ls $ARCHIVE_NAME)
 expect install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}
-#chroma-config bundle register /var/lib/chroma/repo/external/7
-#for profile in \$(ls /usr/share/chroma-manager/*.profile); do
-#    echo \"Registering profile: \$profile\"
-#    chroma-config profile register \"\$profile\"
-#done 
 
 # override /usr/share/chroma-manager/base.repo
 if [ -f /tmp/base.repo.in ]; then
