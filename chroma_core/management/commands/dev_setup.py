@@ -16,10 +16,6 @@ import settings
 
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option("--no-bundles", action="store_true", dest="no_bundles", default=False, help="Vestigital Setting"),
-    )
-
     def handle(self, *args, **options):
         from chroma_core.lib import service_config
 
@@ -27,8 +23,8 @@ class Command(BaseCommand):
         sc._setup_rabbitmq_credentials()
         sc._setup_crypto()
         sc._syncdb()
+        sc.scan_repos()
 
-        # default, works for --no-bundles
         profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed_RH7.profile")
 
         for profile_path in glob.glob(os.path.join(os.path.dirname(profile_path), "*.profile")):

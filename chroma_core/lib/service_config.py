@@ -787,7 +787,7 @@ def register_profile(profile_file):
     missing_repos = []
     validate_repos = set(data["repolist"])
     for repo_name in validate_repos:
-        if not os.stat("/usr/share/chroma-manager/{}.repo".format(repo_name)):
+        if not Repo.objects.filter(repo_name=repo_name).exists():
             missing_repos.append(repo_name)
 
     # Make sure new keys have a default value set.
