@@ -568,14 +568,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             # Register the default profile again
             result = self.remote_command(
                 chroma_manager["address"],
-                "chroma-config repo scan > config_repo.log",
+                "chroma-config repos scan > config_repo.log",
                 expected_return_code=None,
             )
             chroma_config_exit_status = result.exit_status
             if not chroma_config_exit_status == 0:
                 result = self.remote_command(chroma_manager["address"], "cat config_repo.log")
                 self.assertEqual(
-                    0, chroma_config_exit_status, "chroma-config repo scan failed: '%s'" % result.stdout
+                    0, chroma_config_exit_status, "chroma-config repos scan failed: '%s'" % result.stdout
                 )
 
             result = self.remote_command(
