@@ -38,6 +38,14 @@ class ServerProfile(models.Model):
         for package in self.serverprofilepackage_set.all().values("package_name"):
             yield package["package_name"]
 
+    @property
+    def repos(self):
+        """
+        Convenience for obtaining an iterable of repo names from the ServerProfilePackage model
+        """
+        for repo in self.repolist.all():
+            yield repo.repo_name
+
     default = models.BooleanField(
         default=False, help_text="If True, this profile is presented as the default when adding" "storage servers"
     )

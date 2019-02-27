@@ -117,7 +117,7 @@ class ServerProfileResource(ChromaModelResource):
     repolist = fields.ListField(null=False)
 
     def dehydrate_repolist(self, bundle):
-        return [r.repo_name for r in bundle.obj.repolist.all()]
+        return [r for r in bundle.obj.repos]
 
     class Meta:
         queryset = ServerProfile.objects.all()
