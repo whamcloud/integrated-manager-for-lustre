@@ -128,7 +128,7 @@ class Service(ChromaService):
         host_checker_thread.stop()
         session_rpc_thread.join()
         tx_svc_thread.join()
-        tx_svc_thread.join()
+        rx_svc_thread.join()
         host_checker_thread.join()
 
     def stop(self):
