@@ -626,7 +626,9 @@ class ServiceConfig(CommandLine):
 
     def install_repo(self, reponame, tarball):
         repopath = os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame))
-        repodir = os.path.join("/var/lib/chroma/repos", reponame)
+        repodir = os.path.join("/var/lib/chroma/repo", reponame)
+        if "." in reponame:
+            raise NameError("Names may not contain .")
         if os.path.exists(repodir):
             raise OSError(errno.EEXIST, os.strerror(errno.EEXIST), repodir)
         if os.path.exists(repopath):
@@ -643,12 +645,12 @@ sslverify = 1
 sslcacert = {0}
 sslclientkey = {1}
 sslclientcert = {2}
-roxy=_none_
+proxy=_none_
 
 """ % (
             reponame,
-            os.path.join(settings.SERVER_HTTP_URL, "repo"),
             reponame,
+            os.path.join(settings.SERVER_HTTP_URL, "repo"),
             reponame,
         )
         with open(repopath, "w") as fh:
@@ -656,7 +658,7 @@ roxy=_none_
         os.makedirs(repodir)
         self.try_shell(["tar", "-C", repodir, "-axf", tarball])
         self.try_shell(["createrepo", "--basedir", repodir, repodir])
-        register_repo(reponame)
+        register_repo(repopath)
 
     def delete_repo(self, reponame):
         # remove repo record
@@ -666,7 +668,10 @@ roxy=_none_
         except Repo.DoesNotExist:
             # doesn't exist anyway, so just exit silently
             return
-        self.try_shell(["rm", "-rf", os.path.join("/var/lib/chroma/repos", name)])
+        repodir = os.path.join("/var/lib/chroma/repo", reponame)
+        if os.path.exists(repodir):
+            self.try_shell(["rm", "-rf", repodir])
+            os.remove(os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame)))
 
     def container_setup(self, username, password):
         self._syncdb()
@@ -1010,7 +1015,7 @@ def chroma_config():
         elif operation == "register":
             register_repo(sys.argv[3])
         elif operation == "delete":
-            delete_repo(sys.argv[3])
+            service_config.delete_repo(sys.argv[3])
         elif operation == "install":
             service_config.install_repo(sys.argv[3], sys.argv[4])
         else:
