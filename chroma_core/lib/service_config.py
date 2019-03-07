@@ -14,6 +14,7 @@ import os
 import json
 import glob
 import shutil
+import errno
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -623,6 +624,50 @@ class ServiceConfig(CommandLine):
             print("Registering repo: {}".format(f))
             register_repo(f)
 
+    def install_repo(self, reponame, tarball):
+        repopath = os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame))
+        repodir = os.path.join("/var/lib/chroma/repos", reponame)
+        if os.path.exists(repodir):
+            raise OSError(errno.EEXIST, os.strerror(errno.EEXIST), repodir)
+        if os.path.exists(repopath):
+            raise OSError(errno.EEXIST, os.strerror(errno.EEXIST), repopath)
+
+        # {0,1,2} is replaced in agent configure_repo and agent-bootstrap-script
+        repo = """[%s]
+name=Created Repo - %s
+baseurl=%s/%s/
+enabled=0
+gpgcheck=0
+repo_gpgcheck=0
+sslverify = 1
+sslcacert = {0}
+sslclientkey = {1}
+sslclientcert = {2}
+roxy=_none_
+
+""" % (
+            reponame,
+            os.path.join(settings.SERVER_HTTP_URL, "repo"),
+            reponame,
+            reponame,
+        )
+        with open(repopath, "w") as fh:
+            fh.write(repo)
+        os.makedirs(repodir)
+        self.try_shell(["tar", "-C", repodir, "-axf", tarball])
+        self.try_shell(["createrepo", "--basedir", repodir, repodir])
+        register_repo(reponame)
+
+    def delete_repo(self, reponame):
+        # remove repo record
+        try:
+            repo = Repo.objects.get(repo_name=reponame)
+            repo.delete()
+        except Repo.DoesNotExist:
+            # doesn't exist anyway, so just exit silently
+            return
+        self.try_shell(["rm", "-rf", os.path.join("/var/lib/chroma/repos", name)])
+
     def container_setup(self, username, password):
         self._syncdb()
         self.scan_repos()
@@ -745,16 +790,6 @@ def register_repo(repo_file):
     except Repo.DoesNotExist:
         log.debug("Creating repo %s" % reponame)
         repo = Repo.objects.create(repo_name=reponame, location=repo_file)
-
-
-def delete_repo(reponame):
-    # remove repo record
-    try:
-        repo = Repo.objects.get(repo_name=reponame)
-        repo.delete()
-    except Repo.DoesNotExist:
-        # doesn't exist anyway, so just exit silently
-        return
 
 
 def register_profile(profile_file):
@@ -976,6 +1011,8 @@ def chroma_config():
             register_repo(sys.argv[3])
         elif operation == "delete":
             delete_repo(sys.argv[3])
+        elif operation == "install":
+            service_config.install_repo(sys.argv[3], sys.argv[4])
         else:
             raise NotImplementedError(operation)
     elif command == "profile":

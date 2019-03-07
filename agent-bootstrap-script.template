@@ -131,7 +131,8 @@ def reg_manager():
 
 def create_repo():
     tmp = tempfile.NamedTemporaryFile()
-    tmp.write(REPO_CONTENT.format(repo_url, AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
+    # this format needs to match chroma_agent.action_plugins.agent_setup.configure_repo
+    tmp.write(REPO_CONTENT.format(AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
 
     tmp.flush()
     launch_command("cp %s %s" % (tmp.name, REPO_PATH))
