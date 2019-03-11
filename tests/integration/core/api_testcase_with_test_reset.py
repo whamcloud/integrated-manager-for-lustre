@@ -565,22 +565,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 result = self.remote_command(chroma_manager["address"], "cat config_setup.log")
                 self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout)
 
-            # Register the default bundles and profile again
             result = self.remote_command(
-                chroma_manager["address"],
-                "for bundle_meta in /var/lib/chroma/repo/*/%s/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log"
-                % platform.dist()[1][0:1],
-                expected_return_code=None,
-            )
-            chroma_config_exit_status = result.exit_status
-            if not chroma_config_exit_status == 0:
-                result = self.remote_command(chroma_manager["address"], "cat config_bundle.log")
-                self.assertEqual(
-                    0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout
-                )
-
-            result = self.remote_command(
-                chroma_manager["address"], "ls /usr/share/chroma-manager/", expected_return_code=None
+                chroma_manager["address"], "ls -1 /usr/share/chroma-manager/", expected_return_code=None
             )
             share_dir_contents = result.stdout
             self.assertEqual(
@@ -591,6 +577,9 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             )
 
             logger.debug("/usr/share/chroma-manager contents: %s" % share_dir_contents)
+
+            # Register the repos
+            result = self.remote_command(chroma_manager["address"], "chroma-config repos scan", expected_return_code=0)
 
             # get a list of profiles and re-register them
             profiles = " ".join([line for line in share_dir_contents.split("\n") if line.endswith(".profile")])

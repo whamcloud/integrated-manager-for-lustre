@@ -4,8 +4,8 @@ NAME          := iml-manager
 #                 python2-toolz python-django
 MODULE_SUBDIR  = chroma_manager
 DEVELOP_DEPS  := version
-DEVELOP_POST  := ./manage.py dev_setup $(DEV_SETUP_BUNDLES)
-DIST_DEPS     := storage_server.repo version $(COPR_REPO_TARGETS)
+DEVELOP_POST  := ./manage.py dev_setup
+DIST_DEPS     := base.repo version $(COPR_REPO_TARGETS)
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
@@ -29,10 +29,6 @@ PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"
 	export HTTPS_PROXY=http://$(HTTPS_PROXY); \
 	export https_proxy=http://$(HTTPS_PROXY); \
 fi;
-
-# Override this if you don't want to use detected bundles
-USE_DETECTED_BUNDLES ?= true
-DEV_SETUP_BUNDLES ?= $(shell $(USE_DETECTED_BUNDLES) && { ls $(CURDIR)/repo/*.profile >/dev/null 2>&1 || echo "--no-bundles"; } || echo "--no-bundles")
 
 # Always nuke the DB when running tests?
 ALWAYS_NUKE_DB ?= false
@@ -59,7 +55,7 @@ ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo '
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
-COPR_REPO_TARGETS := storage_server.repo tests/framework/utils/defaults.sh chroma_support.repo
+COPR_REPO_TARGETS := base.repo tests/framework/utils/defaults.sh tests/framework/chroma_support.repo
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
@@ -89,7 +85,7 @@ nuke_logs:
 	} || true
 
 dev_setup: nuke_db nuke_logs
-	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
+	@./manage.py dev_setup || exit $$?
 
 $(FCI_CLUSTER_CONFIG):
 	@echo "In order to run these tests, you must create $(FCI_CLUSTER_CONFIG) yourself."
@@ -129,9 +125,9 @@ feature_tests:
 
 tests test: unit_tests feature_tests integration_tests service_tests
 
-storage_server.repo: storage_server.repo.in Makefile
+base.repo: base.repo.in Makefile
 
-chroma_support.repo: chroma_support.repo.in Makefile
+tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
 
 tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
 

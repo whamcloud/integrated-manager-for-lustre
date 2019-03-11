@@ -4,7 +4,7 @@ import uuid
 import mock
 
 from chroma_core.models import LogMessage
-from chroma_core.models import Bundle, ServerProfile
+from chroma_core.models import ServerProfile
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
@@ -80,14 +80,7 @@ def fake_log_message(message):
     )
 
 
-def load_default_bundles():
-    Bundle.objects.create(bundle_name="lustre", location="/tmp/", description="Lustre Bundle")
-    Bundle.objects.create(bundle_name="agent", location="/tmp/", description="Agent Bundle")
-    Bundle.objects.create(bundle_name="agent_dependencies", location="/tmp/", description="Agent Dependency Bundle")
-
-
 def load_default_profile():
-    load_default_bundles()
     default_sp = ServerProfile(
         name="test_profile",
         ui_name="Managed storage server",
@@ -99,7 +92,4 @@ def load_default_profile():
         ntp=True,
         initial_state="managed",
     )
-    default_sp.bundles.add("lustre")
-    default_sp.bundles.add("agent")
-    default_sp.bundles.add("agent_dependencies")
     default_sp.save()

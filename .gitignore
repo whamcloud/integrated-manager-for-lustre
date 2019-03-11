@@ -33,10 +33,12 @@ chroma_test_env/
 chroma-config.1.gz
 chroma_unit_test_env/
 tests/framework/utils/defaults.sh
+tests/framework/chroma_support.repo
 id_rsa
 id_rsa.pub
 install_build_deps-stamp
 python-iml-manager.spec
 localenv
 storage_server.repo
+base.repo
 copr-local.mk

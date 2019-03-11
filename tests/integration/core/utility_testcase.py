@@ -120,7 +120,11 @@ class UtilityTestCase(TestCase):
         stdout = channel.makefile("rb").read()
         stderr = channel.makefile_stderr("rb").read()
         if expected_return_code is not None:
-            self.assertEqual(exit_status, expected_return_code, stderr)
+            self.assertEqual(
+                exit_status,
+                expected_return_code,
+                "remote_command[%s]: '%s' failed:'%s' stderr:'%s'" % (server, command, stdout, stderr),
+            )
         return RemoteCommandResult(exit_status, stdout, stderr)
 
     def wait_until_true(self, lambda_expression, error_message="", timeout=TEST_TIMEOUT):

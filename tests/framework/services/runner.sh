@@ -72,5 +72,5 @@ cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
-python ./manage.py dev_setup --no-bundles
+python ./manage.py dev_setup
 PYTHONPATH=. nosetests tests/services/ --stop

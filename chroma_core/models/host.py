@@ -34,7 +34,6 @@ from chroma_core.models import NTPConfiguration
 from chroma_core.models import Job
 from chroma_core.models import AdvertisedJob
 from chroma_core.models import StateLock
-from chroma_core.models import Bundle
 from chroma_core.models import AlertEvent
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
@@ -737,7 +736,7 @@ class InstallPackagesStep(Step):
         host = kwargs["host"]
 
         self.invoke_agent_expect_result(
-            host, "install_packages", {"repos": kwargs["bundles"], "packages": kwargs["packages"]}
+            host, "install_packages", {"repos": kwargs["enablerepos"], "packages": kwargs["packages"]}
         )
 
 
@@ -781,13 +780,17 @@ class InstallHostPackagesJob(StateChangeJob):
         steps.extend(
             [
                 (
+                    UpdateYumFileStep,
+                    {
+                        "host": self.managed_host,
+                        "filename": REPO_FILENAME,
+                        "file_contents": self.managed_host.server_profile.repo_contents,
+                    },
+                ),
+                (
                     InstallPackagesStep,
                     {
-                        "bundles": [
-                            b["bundle_name"]
-                            for b in self.managed_host.server_profile.bundles.all().values("bundle_name")
-                            if b["bundle_name"] != "external"
-                        ],
+                        "enablerepos": [],
                         "host": self.managed_host,
                         "packages": list(self.managed_host.server_profile.packages),
                     },
@@ -1445,9 +1448,9 @@ class UpdatePackagesStep(RebootIfNeededStep):
         host = kwargs["host"]
 
         # install_packages will add any packages not existing that are specified within the profile
-        # as well as upgrading/downgrading packages to the version specified in the bundles
+        # as well as upgrading/downgrading packages to the version specified
         self.invoke_agent_expect_result(
-            host, "install_packages", {"repos": kwargs["bundles"], "packages": kwargs["packages"]}
+            host, "install_packages", {"repos": kwargs["enablerepos"], "packages": kwargs["packages"]}
         )
 
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
@@ -1499,45 +1502,17 @@ class UpdateJob(Job):
         #  when the packages are updated the new agent and yum file is used.
 
         # the minimum repos needed on a storage server now
-        repo_file_contents = open("/usr/share/chroma-manager/storage_server.repo").read()
+        repo_file_contents = self.host.server_profile.repo_contents
 
         # The base url of the repo.
         base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), "repo")
 
-        for bundle in Bundle.objects.all():
-            if bundle.bundle_name != "external":
-                repo_file_contents += """[%s]
-name=%s
-baseurl=%s/%s/$releasever
-enabled=0
-gpgcheck=0
-sslverify = 1
-sslcacert = {0}
-sslclientkey = {1}
-sslclientcert = {2}
-proxy=_none_
-
-""" % (
-                    bundle.bundle_name,
-                    bundle.description,
-                    base_repo_url,
-                    bundle.bundle_name,
-                )
-
         return [
-            (UpdatePackagesStep, {"host": self.host, "bundles": [], "packages": ["python2-iml-agent"]}),
+            (UpdatePackagesStep, {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent"]}),
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
             (
                 UpdatePackagesStep,
-                {
-                    "host": self.host,
-                    "bundles": [
-                        b["bundle_name"]
-                        for b in self.host.server_profile.bundles.all().values("bundle_name")
-                        if b["bundle_name"] != "external"
-                    ],
-                    "packages": list(self.host.server_profile.packages),
-                },
+                {"host": self.host, "enablerepos": [], "packages": list(self.host.server_profile.packages)},
             ),
             (UpdateProfileStep, {"host": self.host, "profile": self.host.server_profile}),
             (RebootIfNeededStep, {"host": self.host, "timeout": settings.INSTALLATION_REBOOT_TIMEOUT}),

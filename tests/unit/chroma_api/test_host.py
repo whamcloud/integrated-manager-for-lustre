@@ -4,7 +4,7 @@ import contextlib
 import mock
 
 from chroma_api.urls import api
-from chroma_core.models import Bundle, Command
+from chroma_core.models import Command
 from chroma_core.models import ManagedHost
 from chroma_core.models import Nid
 from chroma_core.models import ServerProfile, ServerProfileValidation
@@ -159,7 +159,6 @@ class TestHostResource(ChromaApiTestCase):
             initial_state="monitored",
         )
         test_sp.save()
-        test_sp.bundles.add(Bundle.objects.get(bundle_name="agent"))
 
         response = self.api_client.post(
             self.RESOURCE_PATH, data={"address": "foo", "server_profile": "/api/server_profile/test/"}
@@ -171,7 +170,6 @@ class TestHostResource(ChromaApiTestCase):
         self.assertEquals(test_sp.name, current_profile.name)
         self.assertEquals(test_sp.ui_name, current_profile.ui_name)
         self.assertEquals(test_sp.managed, current_profile.managed)
-        self.assertEquals(list(test_sp.bundles.all()), list(current_profile.bundles.all()))
 
     @create_host_ssh_patch
     def test_profile(self):
@@ -287,7 +285,6 @@ class TestHostResource(ChromaApiTestCase):
             initial_state="monitored",
         )
         profile.save()
-        profile.bundles.add(Bundle.objects.get(bundle_name="agent"))
 
         for profile in ServerProfile.objects.all():
             for validation in validations:

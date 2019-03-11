@@ -17,7 +17,7 @@ import settings
 from os import path
 from tastypie.http import HttpForbidden
 
-from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile, Bundle
+from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile
 from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperation, log as copytool_log, UNKNOWN_UUID
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
@@ -382,29 +382,6 @@ def setup(request, key):
     if token_error:
         return token_error
 
-    # the minimum repos needed on a storage server now
-    repos = open("/usr/share/chroma-manager/storage_server.repo").read()
-
-    repo_names = token.profile.bundles.values_list("bundle_name", flat=True)
-    for bundle in Bundle.objects.all():
-        if bundle.bundle_name != "external":
-            repos += """[%s]
-name=%s
-baseurl={0}/%s/$releasever/
-enabled=0
-gpgcheck=0
-sslverify = 1
-sslcacert = {1}
-sslclientkey = {2}
-sslclientcert = {3}
-proxy=_none_
-
-""" % (
-                bundle.bundle_name,
-                bundle.description,
-                bundle.bundle_name,
-            )
-
     base_url = str(settings.SERVER_HTTP_URL)
     reg_url = path.join(base_url, "agent/register/%s/" % key)
     repo_url = path.join(base_url, "repo/")
@@ -413,6 +390,8 @@ proxy=_none_
 
     repo_packages = "python2-iml-agent"
     server_profile = ServerProfile.objects.get(name=request.REQUEST["profile_name"])
+
+    repos = server_profile.repo_contents
 
     try:
         if server_profile.managed:
@@ -441,7 +420,6 @@ proxy=_none_
         repo_url=repo_url,
         base_url=base_url,
         repos=repos,
-        repo_names=",".join(repo_names),
         server_epoch_seconds=server_epoch_seconds,
         repo_packages=repo_packages,
         profile_json=profile_json,

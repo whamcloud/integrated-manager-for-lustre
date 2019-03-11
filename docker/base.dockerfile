@@ -3,7 +3,7 @@ WORKDIR /build
 COPY . .
 RUN yum update -y
 RUN yum install -y rpmdevtools make git
-RUN make storage_server.repo
+RUN make base.repo
 
 FROM python:2.7
 
@@ -18,7 +18,7 @@ ENV SERVER_FQDN nginx
 
 WORKDIR /usr/share/chroma-manager/
 COPY . .
-COPY --from=builder /build/storage_server.repo .
+COPY --from=builder /build/base.repo .
 RUN apt-get update \
     && apt install -y postgresql-client \
     && pip install -r requirements.txt

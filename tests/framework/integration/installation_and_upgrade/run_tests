@@ -183,8 +183,8 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if [ -f ~/storage_server.repo.in ]; then
-    STORAGE_SERVER_REPO=~/storage_server.repo.in
+if [ -f ~/base.repo.in ]; then
+    STORAGE_SERVER_REPO=~/base.repo.in
 fi
 
 if ! ${UPGRADE_FROM_3:-false}; then
@@ -307,12 +307,12 @@ LOG_LEVEL = logging.DEBUG
 $LOCAL_SETTINGS
 EOF1
 
-# override /usr/share/chroma-manager/storage_server.repo
-if [ -f /tmp/storage_server.repo.in ]; then
+# override /usr/share/chroma-manager/base.repo
+if [ -f /tmp/base.repo.in ]; then
     # make sure we use the correct lustre though!
     sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
-        < /tmp/storage_server.repo.in > /usr/share/chroma-manager/storage_server.repo
+        < /tmp/base.repo.in > /usr/share/chroma-manager/base.repo
 fi
 # add any repos needed by the test
 if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
@@ -320,7 +320,7 @@ if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
         {
             echo
             curl \"\$repo\"
-        } >> /usr/share/chroma-manager/storage_server.repo
+        } >> /usr/share/chroma-manager/base.repo
     done
 fi
 
@@ -341,7 +341,8 @@ if ${UPGRADE_FROM_3:-false}; then
 
     ssh root@"$CHROMA_MANAGER" "exec 2>&1; set -xe
     yum -y install pdsh
-    pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /usr/share/chroma-manager/storage_server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
+    cat /usr/share/chroma-manager/{base,lustre-server}.repo > /tmp/server.repo
+    pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /tmp/server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
     pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
 

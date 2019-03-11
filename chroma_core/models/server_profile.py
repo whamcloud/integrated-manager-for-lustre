@@ -6,13 +6,13 @@
 from django.db import models
 from django.db import IntegrityError
 
-from chroma_core.models.bundle import Bundle
+from chroma_core.models.repo import Repo
 
 
 class ServerProfile(models.Model):
     """
     Server profiles specify a set of configuration options to be applied to a storage server,
-    in particular which bundles and packages are installed.
+    in particular which repos and packages are installed.
     """
 
     name = models.CharField(primary_key=True, max_length=50, help_text="String, unique name")
@@ -22,7 +22,7 @@ class ServerProfile(models.Model):
     worker = models.BooleanField(
         default=False, help_text="Boolean, True if the host is available to be used as a Lustre worker node"
     )
-    bundles = models.ManyToManyField(Bundle, help_text="The bundles specified by this profile")
+    repolist = models.ManyToManyField(Repo, help_text="The repolist specified by this profile")
     user_selectable = models.BooleanField(default=True)
     initial_state = models.CharField(max_length=32)
     ntp = models.BooleanField(default=False, help_text="Boolean, True if the host will manage ntp")
@@ -38,9 +38,24 @@ class ServerProfile(models.Model):
         for package in self.serverprofilepackage_set.all().values("package_name"):
             yield package["package_name"]
 
+    @property
+    def repos(self):
+        """
+        Convenience for obtaining an iterable of repo names from the ServerProfilePackage model
+        """
+        for repo in self.repolist.all():
+            yield repo.repo_name
+
     default = models.BooleanField(
         default=False, help_text="If True, this profile is presented as the default when adding" "storage servers"
     )
+
+    @property
+    def repo_contents(self):
+        """
+        Convenience for obtaining the merged contents of the repo file.
+        """
+        return "".join(repo.contents for repo in self.repolist.all())
 
     @property
     def id(self):
@@ -83,9 +98,8 @@ class ServerProfilePackage(models.Model):
 
     class Meta:
         app_label = "chroma_core"
-        unique_together = ("bundle", "server_profile", "package_name")
+        unique_together = ("server_profile", "package_name")
 
-    bundle = models.ForeignKey(Bundle)
     server_profile = models.ForeignKey(ServerProfile)
     package_name = models.CharField(max_length=255)
 

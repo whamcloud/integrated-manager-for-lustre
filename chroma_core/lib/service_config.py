@@ -14,6 +14,7 @@ import os
 import json
 import glob
 import shutil
+import errno
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -34,9 +35,8 @@ from django.core.exceptions import ValidationError
 from tastypie.models import ApiKey
 
 from kombu.connection import BrokerConnection
-from chroma_core.models.bundle import Bundle
 from chroma_core.services.crypto import Crypto
-from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation
+from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation, Repo
 from chroma_core.lib.util import CommandLine, CommandError
 from iml_common.lib.ntp import NTPConfig
 from iml_common.lib.firewall_control import FirewallControl
@@ -613,28 +613,69 @@ class ServiceConfig(CommandLine):
             with open("/etc/nginx/conf.d/chroma-manager.conf", "w") as f2:
                 f2.write(config)
 
-    def _create_fake_bundle(self):
-        EXTERNAL_BUNDLE_DIR = "/var/lib/chroma/repo/external/7/"
-
-        if not os.path.exists(EXTERNAL_BUNDLE_DIR):
-            os.makedirs(EXTERNAL_BUNDLE_DIR)
-
-        FAKE_BUNDLE = '{"description": "fake bundle as a placeholder for externally available packages", "distro_version": "7", "filename": "", "version": "0.0.0", "distro": "el7", "name": "external"}'
-
-        with open(os.path.join(EXTERNAL_BUNDLE_DIR, "meta"), "w") as f:
-            f.write(FAKE_BUNDLE)
-
-        bundle("register", EXTERNAL_BUNDLE_DIR)
-
     def _register_profiles(self):
         for x in glob.glob("/usr/share/chroma-manager/*.profile"):
             print("Registering profile: {}".format(x))
             with open(x) as f:
                 register_profile(f)
 
+    def scan_repos(self):
+        for f in glob.glob("/usr/share/chroma-manager/*.repo"):
+            print("Registering repo: {}".format(f))
+            register_repo(f)
+
+    def install_repo(self, reponame, tarball):
+        repopath = os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame))
+        repodir = os.path.join("/var/lib/chroma/repo", reponame)
+        if "." in reponame:
+            raise NameError("Names may not contain .")
+        if os.path.exists(repodir):
+            raise OSError(errno.EEXIST, os.strerror(errno.EEXIST), repodir)
+        if os.path.exists(repopath):
+            raise OSError(errno.EEXIST, os.strerror(errno.EEXIST), repopath)
+
+        # {0,1,2} is replaced in agent configure_repo and agent-bootstrap-script
+        repo = """[%s]
+name=Created Repo - %s
+baseurl=%s/%s/
+enabled=0
+gpgcheck=0
+repo_gpgcheck=0
+sslverify = 1
+sslcacert = {0}
+sslclientkey = {1}
+sslclientcert = {2}
+proxy=_none_
+
+""" % (
+            reponame,
+            reponame,
+            os.path.join(settings.SERVER_HTTP_URL, "repo"),
+            reponame,
+        )
+        with open(repopath, "w") as fh:
+            fh.write(repo)
+        os.makedirs(repodir)
+        self.try_shell(["tar", "-C", repodir, "-axf", tarball])
+        self.try_shell(["createrepo", "--basedir", repodir, repodir])
+        register_repo(repopath)
+
+    def delete_repo(self, reponame):
+        # remove repo record
+        try:
+            repo = Repo.objects.get(repo_name=reponame)
+            repo.delete()
+        except Repo.DoesNotExist:
+            # doesn't exist anyway, so just exit silently
+            return
+        repodir = os.path.join("/var/lib/chroma/repo", reponame)
+        if os.path.exists(repodir):
+            self.try_shell(["rm", "-rf", repodir])
+            os.remove(os.path.join("/usr/share/chroma-manager", "{}.repo".format(reponame)))
+
     def container_setup(self, username, password):
         self._syncdb()
-        self._create_fake_bundle()
+        self.scan_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -661,7 +702,7 @@ class ServiceConfig(CommandLine):
         if check_db_space and error:
             return [error]
 
-        self._create_fake_bundle()
+        self.scan_repos()
         self._register_profiles()
 
         self._populate_database(username, password)
@@ -742,39 +783,18 @@ class ServiceConfig(CommandLine):
         # TODO: support SERVER_HTTP_URL
 
 
-def bundle(operation, path=None):
-    if operation == "register":
-        # Create or update a bundle record
-        meta_path = os.path.join(path, "meta")
-        try:
-            meta = json.load(open(meta_path))
-        except (IOError, ValueError):
-            raise RuntimeError("Could not read bundle metadata from %s" % meta_path)
+def register_repo(repo_file):
+    reponame = repo_file.split("/")[-1].split(".")[0]
 
-        log.debug("Loaded bundle meta for %s from %s" % (meta["name"], meta_path))
-
-        # Bundle version is optional, defaults to "0.0.0"
-        version = meta.get("version", "0.0.0")
-        if Bundle.objects.filter(bundle_name=meta["name"]).exists():
-            log.debug("Updating bundle %s" % meta["name"])
-            Bundle.objects.filter(bundle_name=meta["name"]).update(
-                version=version, location=path, description=meta["description"]
-            )
-        else:
-            log.debug("Creating bundle %s" % meta["name"])
-            Bundle.objects.create(
-                bundle_name=meta["name"], version=version, location=path, description=meta["description"]
-            )
-    elif operation == "delete":
-        # remove bundle record
-        try:
-            bundle = Bundle.objects.get(location=path)
-            bundle.delete()
-        except Bundle.DoesNotExist:
-            # doesn't exist anyway, so just exit silently
-            return
-    else:
-        raise RuntimeError("Received unknown bundle operation '%s'" % operation)
+    try:
+        repo = Repo.objects.get(repo_name=reponame)
+        log.debug("Updating repo %s" % reponame)
+        if repo.location != repo_file:
+            repo.location = repo_file
+            repo.save()
+    except Repo.DoesNotExist:
+        log.debug("Creating repo %s" % reponame)
+        repo = Repo.objects.create(repo_name=reponame, location=repo_file)
 
 
 def register_profile(profile_file):
@@ -783,11 +803,11 @@ def register_profile(profile_file):
         "managed": False,
         "worker": False,
         "name": "default",
-        "bundles": [],
+        "repolist": ["base"],
         "ui_description": "This is the hard coded default profile.",
         "user_selectable": True,
         "initial_state": "monitored",
-        "packages": {},
+        "packages": [],
         "validation": [],
         "ntp": False,
         "corosync": False,
@@ -803,12 +823,12 @@ def register_profile(profile_file):
 
     log.debug("Loaded profile '%s' from %s" % (data["name"], profile_file))
 
-    # Validate: check all referenced bundles exist
-    validate_bundles = set(data["bundles"])
-    missing_bundles = []
-    for bundle_name in validate_bundles:
-        if not Bundle.objects.filter(bundle_name=bundle_name).exists():
-            missing_bundles.append(bundle_name)
+    # Validate: check for all repo files referenced in profile
+    missing_repos = []
+    validate_repos = set(data["repolist"])
+    for repo_name in validate_repos:
+        if not Repo.objects.filter(repo_name=repo_name).exists():
+            missing_repos.append(repo_name)
 
     # Make sure new keys have a default value set.
     for key in data.keys():
@@ -817,11 +837,11 @@ def register_profile(profile_file):
     # Take the default and replace the values that are in the data
     data = dict(default_profile.items() + data.items())
 
-    if missing_bundles:
-        log.error("Bundles not found for profile '%s': %s" % (data["name"], ", ".join(missing_bundles)))
+    if missing_repos:
+        log.error("Repos not found for profile '%s': %s" % (data["name"], ", ".join(missing_repos)))
         sys.exit(-1)
 
-    calculated_profile_fields = set(["packages", "name", "bundles", "validation"])
+    calculated_profile_fields = set(["packages", "repolist", "name", "validation"])
     regular_profile_fields = set(data.keys()) - calculated_profile_fields
 
     try:
@@ -836,14 +856,11 @@ def register_profile(profile_file):
         kwargs["name"] = data["name"]
         profile = ServerProfile.objects.create(**kwargs)
 
-    for name in data["bundles"]:
-        profile.bundles.add(Bundle.objects.get(bundle_name=name))
+    for name in data["repolist"]:
+        profile.repolist.add(Repo.objects.get(repo_name=name))
 
-    for bundle_name, package_list in data["packages"].items():
-        for package_name in package_list:
-            ServerProfilePackage.objects.get_or_create(
-                server_profile=profile, bundle=Bundle.objects.get(bundle_name=bundle_name), package_name=package_name
-            )
+    for package_name in data["packages"]:
+        ServerProfilePackage.objects.get_or_create(server_profile=profile, package_name=package_name)
 
     profile.serverprofilevalidation_set.all().delete()
     for validation in data["validation"]:
@@ -991,9 +1008,18 @@ def chroma_config():
     elif command == "restart":
         service_config.stop()
         service_config.start()
-    elif command == "bundle":
+    elif command == "repos":
         operation = sys.argv[2]
-        bundle(operation, path=sys.argv[3])
+        if operation == "scan":
+            service_config.scan_repos()
+        elif operation == "register":
+            register_repo(sys.argv[3])
+        elif operation == "delete":
+            service_config.delete_repo(sys.argv[3])
+        elif operation == "install":
+            service_config.install_repo(sys.argv[3], sys.argv[4])
+        else:
+            raise NotImplementedError(operation)
     elif command == "profile":
         operation = sys.argv[2]
         if operation == "register":

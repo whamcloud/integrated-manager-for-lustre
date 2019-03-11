@@ -8,22 +8,24 @@
   "corosync": false,
   "corosync2": true,
   "pacemaker": true,
-  "bundles": [
-    "external"
-  ],
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
-  "packages": {
-    "external": [
-      "python2-iml-agent-management",
-      "kernel-devel-lustre",
-      "pcs",
-      "fence-agents",
-      "fence-agents-virsh",
-      "lustre-resource-agents",
-      "lustre-ldiskfs-zfs"
-    ]
-  },
+  "packages": [
+    "python2-iml-agent-management",
+    "kernel-devel-lustre",
+    "pcs",
+    "fence-agents",
+    "fence-agents-virsh",
+    "lustre-resource-agents",
+    "lustre-ldiskfs-zfs"
+  ],
+  "repolist": [
+    "base",
+    "lustre-server"
+  ],
   "validation": [
-    {"test": "distro_version < 8 and distro_version >= 7", "description": "The profile is designed for version 7 of EL"}
+    {
+      "description": "The profile is designed for version 7 of EL",
+      "test": "distro_version < 8 and distro_version >= 7"
+    }
   ]
 }
