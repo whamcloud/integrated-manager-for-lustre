@@ -195,6 +195,9 @@ class AutoConfigureCorosyncStep(Step):
                 {"mcast_port": config["mcast_port"], "pcs_password": self._pcs_password},
             )
 
+            corosync_configuration.host.corosync_ring0 = ring0_config["ipaddr"]
+            corosync_configuration.host.save(update_fields=["corosync_ring0"])
+
             # Stage 2 configures the cluster either by creating it or adding a node to it.
             self.invoke_agent_expect_result(
                 actioning_host,
@@ -202,7 +205,7 @@ class AutoConfigureCorosyncStep(Step):
                 {
                     "ring0_name": ring0_name,
                     "ring1_name": ring1_name,
-                    "new_node_fqdn": ring0_config["ipaddr"],
+                    "new_node_fqdn": corosync_configuration.host.corosync_ring0,
                     "mcast_port": config["mcast_port"],
                     "pcs_password": self._pcs_password,
                     "create_cluster": actioning_host == corosync_configuration.host,
@@ -242,7 +245,7 @@ class UnconfigureCorosyncStep(Step):
             self.invoke_agent_expect_result(
                 kwargs["host"],
                 "unconfigure_corosync2",
-                {"host_fqdn": kwargs["host"].fqdn, "mcast_port": kwargs["mcast_port"]},
+                {"host_fqdn": kwargs["host"].corosync_ring0, "mcast_port": kwargs["mcast_port"]},
             )
 
 
