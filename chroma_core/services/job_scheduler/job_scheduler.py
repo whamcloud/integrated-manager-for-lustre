@@ -22,7 +22,7 @@ from chroma_core.services import dbutils
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction, DEFAULT_DB_ALIAS
-from django.db.models import Q
+from django.db.models import Q, FieldDoesNotExist, ManyToManyField
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
@@ -81,7 +81,7 @@ class NotificationBuffer(object):
 
     def clear_notifications_for_key(self, key):
         with self._lock:
-            del (self._notifications[key])
+            del self._notifications[key]
 
     def drain_notifications_for_key(self, key):
         """
@@ -91,7 +91,7 @@ class NotificationBuffer(object):
         with self._lock:
             while not self._notifications[key].empty():
                 notifications.append(self._notifications[key].get())
-            del (self._notifications[key])
+            del self._notifications[key]
 
         # For multiple notifications affecting the same set of attributes, drop all but the latest
         seen_attr_tuples = set()
@@ -798,6 +798,16 @@ class JobScheduler(object):
 
             return
 
+        def is_real_model_field(inst, name):
+            try:
+                field = inst._meta.get_field_by_name(name)
+                if isinstance(field, ManyToManyField):
+                    return True
+            except FieldDoesNotExist:
+                return False
+            else:
+                return False
+
         with transaction.atomic():
             for attr, value in update_attrs.items():
                 old_value = getattr(instance, attr)
@@ -813,9 +823,12 @@ class JobScheduler(object):
                     # If setting the special 'state' attribute then maybe schedule some jobs
                     instance.set_state(value)
                 else:
-                    # If setting a normal attribute just write it straight away
+                    # If setting a "normal" attribute just write it straight away
                     setattr(instance, attr, value)
-                    instance.save(update_fields=[attr])
+
+                    if is_real_model_field(instance, attr):
+                        instance.save(update_fields=[attr])
+
                     log.info(
                         "_notify: Set %s=%s on %s (%s-%s) and saved"
                         % (attr, value, instance, model_klass.__name__, instance.id)
