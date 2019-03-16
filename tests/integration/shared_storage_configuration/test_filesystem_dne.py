@@ -219,7 +219,6 @@ class TestFilesystemDNE(ChromaIntegrationTestCase):
         self.assertEqual(len(filesystem["osts"]), 1)
         self._check_stats(filesystem)
 
-    @skip("LU-6586 Prevents DNE Removal Working")
     def test_mdt_add_delete_add(self):
         """
         Test to ensure that we add and delete MDTs
