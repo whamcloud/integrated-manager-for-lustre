@@ -294,7 +294,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         # configured, once until that occurs just remember what it wants.
         if self.state in ["unconfigured", "undeployed"]:
             self.server_profile = server_profile
-            self.save()
+            self.save(update_fields=["server_profile"])
 
             return []
         else:

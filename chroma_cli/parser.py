@@ -98,7 +98,7 @@ class ResettableArgumentParser(ArgumentParser):
         super(ResettableArgumentParser, self)._remove_action(action)
         action.container._group_actions.remove(action)
         for option_string in action.option_strings:
-            del (self._option_string_actions[option_string])
+            del self._option_string_actions[option_string]
 
     def clear_resets(self):
         """
@@ -106,7 +106,7 @@ class ResettableArgumentParser(ArgumentParser):
         will be "frozen" into the parser (e.g. global arguments).  Any
         arguments added after this will be removed by a reset().
         """
-        del (self._resettable_actions[0:])
+        del self._resettable_actions[0:]
 
     def reset(self):
         """

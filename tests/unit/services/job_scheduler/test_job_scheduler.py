@@ -179,7 +179,7 @@ class TestStateManager(JobTestCaseWithHost):
 
         # Now, remove the lock and make sure that the second notification
         # didn't get through during the lock.
-        del (self.job_scheduler._lock_cache.all_by_item[self.host])
+        del self.job_scheduler._lock_cache.all_by_item[self.host]
         self.assertEqual(freshen(self.host).boot_time, now)
 
         # Run any job, doesn't matter -- we just want to ensure that the

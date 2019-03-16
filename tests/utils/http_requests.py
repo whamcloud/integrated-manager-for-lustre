@@ -104,10 +104,10 @@ class AuthorizedHttpRequests(HttpRequests):
             ignore_set = set(os.environ["IGNORE_PROXY_LIST"].split())
             if len(ignore_set & set(["all", "ALL"])):
                 for key in [key for key in os.environ.keys() if key in [key for p in ["_proxy", "_PROXY"] if p in key]]:
-                    del (os.environ[key])
+                    del os.environ[key]
             else:
                 for key in set(os.environ.keys()) & ignore_set:
-                    del (os.environ[key])
+                    del os.environ[key]
 
         # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
         # but let's not completely rule out the possibility that someone might want to run

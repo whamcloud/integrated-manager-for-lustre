@@ -120,7 +120,7 @@ class CorosyncConfiguration(DeletableStatefulObject):
                 pass
 
         for interface in host_interfaces:
-            interface.save()
+            interface.save(update_fields=["corosync_configuration"])
 
     @property
     def configure_job_name(self):
