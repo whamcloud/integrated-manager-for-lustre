@@ -1,6 +1,6 @@
 [lustre-client]
 name=Lustre Client
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.6/el7/client/
+baseurl=https://build.whamcloud.com/job/lustre-b2_12/lastSuccessfulBuild/arch%3Dx86_64%2Cbuild_type%3Dclient%2Cdistro%3Del7.6%2Cib_stack%3Dinkernel/artifact/artifacts/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
