@@ -42,11 +42,11 @@ class UpdateScan(object):
         except AssertionError:
             return False
 
-    @transaction.atomic
     def audit_host(self):
         self.update_properties(self.host_data.get("properties"))
         self.update_packages(self.host_data.get("packages"))
         self.update_resource_locations()
+
         self.update_target_mounts()
         self.update_client_mounts()
 
@@ -144,7 +144,7 @@ class UpdateScan(object):
 
         # If lustre_client_mounts is None then nothing changed since the last update and so we can just return.
         # Not the same as [] empty list which means no mounts
-        if client_mounts == None:
+        if client_mounts is None:
             return
 
         expected_fs_mounts = LustreClientMount.objects.select_related("filesystem").filter(host=self.host)
@@ -177,7 +177,7 @@ class UpdateScan(object):
     def update_target_mounts(self):
         # If mounts is None then nothing changed since the last update and so we can just return.
         # Not the same as [] empty list which means no mounts
-        if self.host_data["mounts"] == None:
+        if self.host_data["mounts"] is None:
             return
 
         # Loop over all mountables we expected on this host, whether they
@@ -218,17 +218,19 @@ class UpdateScan(object):
                         ["mounted", "unmounted"],
                     )
 
-            if target_mount.target.active_mount == None:
-                TargetRecoveryInfo.update(target_mount.target, {})
-                TargetRecoveryAlert.notify(target_mount.target, False)
+            if target_mount.target.active_mount is None:
+                with transaction.atomic():
+                    TargetRecoveryInfo.update(target_mount.target, {})
+                    TargetRecoveryAlert.notify(target_mount.target, False)
             elif mounted_locally:
-                recovering = TargetRecoveryInfo.update(target_mount.target, recovery_status)
-                TargetRecoveryAlert.notify(target_mount.target, recovering)
+                with transaction.atomic():
+                    recovering = TargetRecoveryInfo.update(target_mount.target, recovery_status)
+                    TargetRecoveryAlert.notify(target_mount.target, recovering)
 
     def update_resource_locations(self):
         # If resource_locations is None then nothing changed since the last update and so we can just return.
         # Not the same as [] empty list which means no resource_locations
-        if self.host_data["resource_locations"] == None:
+        if self.host_data["resource_locations"] is None:
             return
 
         if "crm_mon_error" in self.host_data["resource_locations"]:
@@ -276,7 +278,7 @@ class UpdateScan(object):
                     target,
                     self.started_at,
                     {
-                        "state": ["unmounted", "mounted"][active_mount != None],
+                        "state": ["unmounted", "mounted"][active_mount is not None],
                         "active_mount_id": None if active_mount is None else active_mount.id,
                     },
                     ["mounted", "unmounted"],
