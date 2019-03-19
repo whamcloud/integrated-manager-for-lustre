@@ -128,10 +128,10 @@ set_defaults() {
         JENKINS_BUILD="$LUSTRE_REVIEW_BUILD"
     fi
     if [ -n "$JENKINS_JOB" ]; then
-        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7.6/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
     elif [ -n "$LUSTRE_VERSION" ]; then
         # To use a GA release of Lustre:
-        BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"
+        BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7.6/@CLIENT_OR_SERVER@"
     else
         echo "I don't know which Lustre you want to use.  Bailing."
         exit 1
