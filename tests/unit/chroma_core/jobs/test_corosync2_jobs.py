@@ -51,7 +51,7 @@ class TestCorosyncConfiguration(TestJobs):
             InvokeAgentInvoke(
                 mock_corosync_configuration.host.fqdn,
                 "configure_network",
-                {"ring1_ipaddr": eth1_ipaddr, "ring1_name": "eth1", "ring0_name": "eth0", "ring1_prefix": prefix},
+                {"ring1_ipaddr": eth0_ipaddr, "ring1_name": "eth0", "ring0_name": "eth1", "ring1_prefix": prefix},
                 None,
                 None,
             ),
@@ -66,11 +66,11 @@ class TestCorosyncConfiguration(TestJobs):
                 mock_actioning_host.fqdn,
                 "configure_corosync2_stage_2",
                 {
-                    "ring1_name": "eth1",
+                    "ring0_name": "eth1",
                     "create_cluster": False,
                     "mcast_port": mcast_port,
                     "new_node_fqdn": mock_corosync_configuration.host.fqdn,
-                    "ring0_name": "eth0",
+                    "ring1_name": "eth0",
                     "pcs_password": "vVGuFNrZ1YUhMDEv6MDe",
                 },
                 None,
