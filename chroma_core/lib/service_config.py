@@ -638,7 +638,7 @@ class ServiceConfig(CommandLine):
         repo = """[%s]
 name=Created Repo - %s
 baseurl=%s/%s/
-enabled=0
+enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 sslverify = 1
