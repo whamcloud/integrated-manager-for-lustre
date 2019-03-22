@@ -25,3 +25,17 @@ enabled=1
 gpgcheck=1
 #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
 gpgkey=https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+
+[bintray-rabbitmq-server]
+name=bintray-rabbitmq-rpm
+baseurl=https://dl.bintray.com/rabbitmq/rpm/rabbitmq-server/v3.7.x/el/7/
+gpgcheck=0
+repo_gpgcheck=0
+enabled=1
+
+[bintraybintray-rabbitmq-erlang-rpm]
+name=bintray-rabbitmq-erlang-rpm
+baseurl=https://dl.bintray.com/rabbitmq-erlang/rpm/erlang/21/el/7/
+gpgcheck=0
+repo_gpgcheck=0
+enabled=1
