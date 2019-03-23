@@ -239,8 +239,7 @@ class RpcClient(object):
                 self._result = body
                 self._complete = True
             finally:
-                with self._lock:
-                    message.ack()
+                message.ack()
 
         with self._lock:
             consumer = kombu.Consumer(
@@ -418,8 +417,9 @@ class ServiceRpcInterface(object):
         return fn(*args, **kwargs)
 
     def run(self):
-        self.worker = RpcServer(self, self._connection, self.__class__.__name__)
-        self.worker.run()
+        with _amqp_connection() as connection:
+            self.worker = RpcServer(self, connection, self.__class__.__name__)
+            self.worker.run()
 
     def stop(self):
         log.info("Stopping ServiceRpcInterface")
