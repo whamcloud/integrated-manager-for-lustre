@@ -1,29 +1,22 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
 
-"""RPC facility for use in ChromaService services.
-
-The outward facing parts of this module are the `ServiceRpc` class and the
-RpcWaiter.initialize/shutdown methods.
-
-Concurrent RPC invocations from a single process are handled by a global
-instance of RpcWaiter, which requires explicit initialization and shutdown.
-This is taken care of if your code is running within the `chroma_service`
-management command.
 """
-import logging
+RPC facility for use in ChromaService services.
 
+The outward facing part of this module is the `ServiceRpc` class.
+"""
+
+import logging
 import socket
 import threading
 import uuid
 import django
 import errno
-import os
 import time
 import jsonschema
-
 import kombu
 import kombu.pools
 from kombu.common import maybe_declare
@@ -42,7 +35,6 @@ REQUEST_SCHEMA = {
         "method": {"type": "string", "required": True},
         "args": {"type": "array", "required": True},
         "kwargs": {"type": "object", "required": True},
-        "response_routing_key": {"type": "string", "required": True},
     },
 }
 
@@ -57,27 +49,14 @@ RESPONSE_SCHEMA = {
 }
 
 RESPONSE_TIMEOUT = 300
-
-"""
-Max number of lightweight RPCs that can be in flight concurrently.  This must
-be well within the rabbitmq server's connection limit
-
-"""
-LIGHTWEIGHT_CONNECTIONS_LIMIT = 10
-
-
 RESPONSE_CONN_LIMIT = 10
-
-tx_connections = None
-rx_connections = None
-lw_connections = None
 
 log = log_register("rpc")
 
 
 class RpcError(Exception):
     def __init__(self, description, exception_type, **kwargs):
-        super(Exception, self).__init__(description)
+        super(RpcError, self).__init__(description)
         self.description = description
         self.remote_exception_type = exception_type
         self.traceback = kwargs.get("traceback")
@@ -94,10 +73,11 @@ class RunOneRpc(threading.Thread):
     """Handle a single incoming RPC in a new thread, and send the
     response (result or exception) from the execution thread."""
 
-    def __init__(self, rpc, body, response_conn_pool):
+    def __init__(self, rpc, body, routing_key, response_conn_pool):
         super(RunOneRpc, self).__init__()
         self.rpc = rpc
         self.body = body
+        self.routing_key = routing_key
         self._response_conn_pool = response_conn_pool
 
     def run(self):
@@ -145,17 +125,7 @@ class RunOneRpc(threading.Thread):
 
             with Producer(connection) as producer:
 
-                maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
-                producer.publish(
-                    result,
-                    serializer="json",
-                    routing_key=self.body["response_routing_key"],
-                    delivery_mode=TRANSIENT_DELIVERY_MODE,
-                    retry=True,
-                    retry_policy=retry_policy,
-                    immedate=True,
-                    mandatory=True,
-                )
+                producer.publish(result, serializer="json", routing_key=self.routing_key)
 
 
 class RpcServer(ConsumerMixin):
@@ -195,7 +165,8 @@ class RpcServer(ConsumerMixin):
             # breaks our faith in request_id and response_routing_key
             log.error("Invalid RPC body: %s" % e)
         else:
-            RunOneRpc(self.rpc, body, self._response_conn_pool).start()
+            routing_key = message.properties["reply_to"]
+            RunOneRpc(self.rpc, body, routing_key, self._response_conn_pool).start()
 
     def stop(self):
         self.should_stop = True
@@ -212,115 +183,6 @@ class ResponseWaitState(object):
         self.timeout_at = time.time() + rpc_timeout
 
 
-class RpcClientResponseHandler(threading.Thread):
-    """Handle responses for a particular named RPC service.
-
-    """
-
-    def __init__(self, response_routing_key):
-        super(RpcClientResponseHandler, self).__init__()
-        self._stopping = False
-        self._response_states = {}
-        self._response_routing_key = response_routing_key
-
-        self._started = threading.Event()
-
-    def wait_for_start(self):
-        """During initialization, caller needs to be able to block
-        on the handler thread starting up, to avoid attempting to issue
-        RPCs before the response handler is available
-
-        """
-        self._started.wait()
-
-    def start_wait(self, request_id, rpc_timeout):
-        log.debug("start_wait %s" % request_id)
-        self._response_states[request_id] = ResponseWaitState(rpc_timeout)
-
-    def complete_wait(self, request_id):
-        log.debug("complete_wait %s" % request_id)
-        state = self._response_states[request_id]
-        state.complete.wait()
-        log.debug("complete_wait %s triggered" % request_id)
-
-        del self._response_states[request_id]
-
-        if state.timeout:
-            raise RpcTimeout()
-        else:
-            return state.result
-
-    def _age_response_states(self):
-        # FIXME: keep a sorted list by insertion time to avoid
-        # the need to check all the timeouts
-        t = time.time()
-        for request_id, state in self._response_states.items():
-            if not state.complete.is_set() and t > state.timeout_at:
-                log.debug("Aged out RPC %s" % request_id)
-                state.timeout = True
-                state.complete.set()
-
-    def timeout_all(self):
-        for request_id, state in self._response_states.items():
-            state.timeout = True
-            state.complete.set()
-
-    def run(self):
-        log.debug("ResponseThread.run")
-
-        def callback(body, message):
-            # log.debug(body)
-            try:
-                jsonschema.validate(body, RESPONSE_SCHEMA)
-            except jsonschema.ValidationError as e:
-                log.debug("Malformed response: %s" % e)
-            else:
-                try:
-                    state = self._response_states[body["request_id"]]
-                except KeyError:
-                    log.debug("Unknown request ID %s" % body["request_id"])
-                else:
-                    state.result = body
-                    state.complete.set()
-            finally:
-                message.ack()
-
-        with rx_connections[_amqp_connection()].acquire(block=True) as connection:
-            # Prepare the response queue
-            with connection.Consumer(
-                queues=[
-                    kombu.messaging.Queue(
-                        self._response_routing_key,
-                        _amqp_exchange(),
-                        routing_key=self._response_routing_key,
-                        auto_delete=True,
-                        durable=False,
-                    )
-                ],
-                callbacks=[callback],
-            ):
-
-                self._started.set()
-                while not self._stopping:
-                    try:
-                        connection.drain_events(timeout=1)
-                    except socket.timeout:
-                        pass
-                    except IOError as e:
-                        #  See HYD-2551
-                        if e.errno != errno.EINTR:
-                            # if not [Errno 4] Interrupted system call
-                            raise
-
-                    self._age_response_states()
-
-        log.debug("%s stopped" % self.__class__.__name__)
-
-    def stop(self):
-        log.debug("%s stopping" % self.__class__.__name__)
-        self._stopping = True
-
-
 class RpcClient(object):
     """
     One instance of this is created for each named RPC service
@@ -328,113 +190,89 @@ class RpcClient(object):
 
     """
 
-    def __init__(self, service_name, lightweight=False):
+    def __init__(self, service_name, connection, channel, lock):
         self._service_name = service_name
         self._request_routing_key = "%s.requests" % self._service_name
-        self._lightweight = lightweight
-        if not self._lightweight:
-            self._response_routing_key = "%s.responses_%s_%s" % (self._service_name, os.uname()[1], os.getpid())
-            self.response_thread = RpcClientResponseHandler(self._response_routing_key)
-            self.response_thread.start()
-            self.response_thread.wait_for_start()
+        self._connection = connection
+        self._channel = channel
+        self._lock = lock
 
-    def stop(self):
-        if not self._lightweight:
-            self.response_thread.stop()
-
-    def join(self):
-        if not self._lightweight:
-            self.response_thread.join()
-
-    def timeout_all(self):
-        if not self._lightweight:
-            self.response_thread.timeout_all()
-
-    def _send(self, connection, request):
+    def _send(self, channel, request):
         """
         :param request: JSON serializable dict
 
         """
         dbutils.exit_if_in_transaction(log)
         log.debug("send %s" % request["request_id"])
-        request["response_routing_key"] = self._response_routing_key
 
         def errback(exc, _):
             log.info("RabbitMQ rpc got a temporary error. May retry. Error: %r", exc, exc_info=1)
 
         retry_policy = {"max_retries": 10, "errback": errback}
 
-        with Producer(connection) as producer:
-            maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
-            producer.publish(
-                request,
-                serializer="json",
-                routing_key=self._request_routing_key,
-                delivery_mode=TRANSIENT_DELIVERY_MODE,
-                retry=True,
-                retry_policy=retry_policy,
-            )
+        with self._lock:
+            producer = Producer(channel)
+
+            try:
+                maybe_declare(_amqp_exchange(), channel, True, **retry_policy)
+                producer.publish(
+                    request,
+                    serializer="json",
+                    routing_key=self._request_routing_key,
+                    delivery_mode=TRANSIENT_DELIVERY_MODE,
+                    retry=True,
+                    retry_policy=retry_policy,
+                    reply_to="amq.rabbitmq.reply-to",
+                )
+            finally:
+                producer.release()
 
     def call(self, request, rpc_timeout=RESPONSE_TIMEOUT):
-        request_id = request["request_id"]
+        self._complete = False
 
-        if not self._lightweight:
-            self.response_thread.start_wait(request_id, rpc_timeout)
-            with tx_connections[_amqp_connection()].acquire(block=True) as connection:
-                self._send(connection, request)
-            return self.response_thread.complete_wait(request_id)
-        else:
-            self._response_routing_key = "%s.responses_%s_%s_%s" % (
-                self._service_name,
-                os.uname()[1],
-                os.getpid(),
-                request_id,
+        def callback(body, message):
+            try:
+                jsonschema.validate(body, RESPONSE_SCHEMA)
+            except jsonschema.ValidationError as e:
+                log.debug("Malformed response: %s" % e)
+            else:
+                self._result = body
+                self._complete = True
+            finally:
+                message.ack()
+
+        with self._lock:
+            consumer = kombu.Consumer(
+                self._channel,
+                queues=[kombu.messaging.Queue("amq.rabbitmq.reply-to", no_ack=True)],
+                callbacks=[callback],
             )
-            self._complete = False
 
-            def callback(body, message):
-                # log.debug(body)
+        try:
+            with self._lock:
+                consumer.consume()
+
+            self._send(self._channel, request)
+
+            timeout_at = time.time() + rpc_timeout
+            while not self._complete:
                 try:
-                    jsonschema.validate(body, RESPONSE_SCHEMA)
-                except jsonschema.ValidationError as e:
-                    log.debug("Malformed response: %s" % e)
-                else:
-                    self._result = body
-                    self._complete = True
-                finally:
-                    message.ack()
+                    with self._lock:
+                        self._connection.drain_events(timeout=1)
+                except socket.timeout:
+                    pass
+                except IOError as e:
+                    #  See HYD-2551
+                    if e.errno != errno.EINTR:
+                        # if not [Errno 4] Interrupted system call
+                        raise
+                if time.time() > timeout_at:
+                    raise RpcTimeout()
 
-            with lw_connections[_amqp_connection()].acquire(block=True) as connection:
-                with connection.Consumer(
-                    queues=[
-                        kombu.messaging.Queue(
-                            self._response_routing_key,
-                            _amqp_exchange(),
-                            routing_key=self._response_routing_key,
-                            auto_delete=True,
-                            durable=False,
-                        )
-                    ],
-                    callbacks=[callback],
-                ):
-
-                    self._send(connection, request)
-
-                    timeout_at = time.time() + rpc_timeout
-                    while not self._complete:
-                        try:
-                            connection.drain_events(timeout=1)
-                        except socket.timeout:
-                            pass
-                        except IOError as e:
-                            #  See HYD-2551
-                            if e.errno != errno.EINTR:
-                                # if not [Errno 4] Interrupted system call
-                                raise
-                        if time.time() > timeout_at:
-                            raise RpcTimeout()
-
-                    return self._result
+            return self._result
+        finally:
+            with self._lock:
+                consumer.cancel()
 
 
 class RpcClientFactory(object):
@@ -445,91 +283,39 @@ class RpcClientFactory(object):
     This class creates and destroys RpcClient instances
     for each RPC service that this process makes calls to.
 
-    This class operates either in a 'lightweight' mode or
-    in a multi-threaded mode depending on whether `initialize_threads`
-    is called.
+    This class does not spawn any additional threads to handle
+    RPC responses, instead it uses direct reply-to (https://www.rabbitmq.com/direct-reply-to.html) to ensure
+    no additional queues are created.
 
-    Lightweight mode does not spawn any additional threads to handle
-    RPC responses, but has the overhead of creating separate AMQP connections
-    for each concurrent RPC, and creating a separate response queue for each
-    call.  This is for use in WSGI handlers performing comparatively rare
-    operations (things that happen when a user clicks a button).
-
-    Threaded mode spawns a response handler thread for each named RPC
-    service that the calling process interacts with.  This reduces the number
-    of queues and connections to one per service rather than one per call.  This
-    is for use when issuing large numbers of concurrent RPCs, such as when
-    performing a 1-per-server set of calls between backend processes.
+    Connections passed into this factory should be reused,
+    only channels should be variant
     """
 
-    _instances = {}
-    _factory_lock = None
-    _available = True
-
-    _lightweight = True
-    _lightweight_initialized = False
-
     @classmethod
-    def initialize_threads(cls):
-        """Set up for multi-threaded operation.  Calling this turns off
-        'lightweight' mode, and causes the rpc module to use multiple
-        threads when issuing RPCs.  If this is not called, then no
-        extra threads are started when issuing RPCs
+    def get_client(cls, queue_name, connection, channel, lock):
+        return RpcClient(queue_name, connection, channel, lock)
 
-        """
 
-        if not cls._lightweight:
-            raise RuntimeError("Called %s.initialize_threads more than once!" % cls.__name__)
-        log.debug("%s enabling multi-threading" % cls.__name__)
+class Noop:
+    def __init__(self):
+        pass
 
-        # Cannot instantiate lock at module import scope because
-        # it needs to happen after potential gevent monkey patching
-        cls._factory_lock = threading.Lock()
-        cls._lightweight = False
+    def __enter__(self):
+        pass
 
-        global tx_connections
-        global rx_connections
-        tx_connections = kombu.pools.Connections(limit=10)
-        rx_connections = kombu.pools.Connections(limit=20)
+    def __exit__(self, *args):
+        pass
 
-    @classmethod
-    def shutdown_threads(cls):
-        """Join any threads created.  Only necessary if `initialize` was called
 
-        """
-        assert not cls._lightweight
-        with cls._factory_lock:
-            for instance in cls._instances.values():
-                instance.stop()
-            for instance in cls._instances.values():
-                instance.join()
-            for instance in cls._instances.values():
-                instance.timeout_all()
+if kombu.utils.compat.detect_environment() == "gevent":
+    from gevent.lock import Semaphore
 
-            cls._available = False
+    lock = Semaphore()
+else:
+    lock = Noop()
 
-    @classmethod
-    def get_client(cls, queue_name):
-        if cls._lightweight:
-            if not cls._lightweight_initialized:
-                # connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
-                global lw_connections
-                lw_connections = kombu.pools.Connections(limit=LIGHTWEIGHT_CONNECTIONS_LIMIT)
-                cls._lightweight_initialized = True
-            return RpcClient(queue_name, lightweight=True)
-        else:
-            with cls._factory_lock:
-                if not cls._available:
-                    raise RuntimeError("Attempted to acquire %s instance after shutdown" % cls.__name__)
 
-                try:
-                    instance = cls._instances[queue_name]
-                except KeyError:
-                    log.debug("Instantiating RpcWaiter for %s" % queue_name)
-                    instance = RpcClient(queue_name)
-                    cls._instances[queue_name] = instance
-
-            return instance
+conn = _amqp_connection()
 
 
 class ServiceRpcInterface(object):
@@ -559,6 +345,9 @@ class ServiceRpcInterface(object):
 
     """
 
+    _connection = conn
+    _lock = lock
+
     def __init__(self, wrapped=None):
         self.worker = None
         self.wrapped = wrapped
@@ -585,9 +374,16 @@ class ServiceRpcInterface(object):
         log.debug("Starting rpc: %s, id: %s " % (fn_name, request_id))
         log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
 
-        rpc_client = RpcClientFactory.get_client(self.__class__.__name__)
+        with self._lock:
+            chan = self._connection.channel()
 
-        result = rpc_client.call(request, rpc_timeout)
+        try:
+            rpc_client = RpcClientFactory.get_client(self.__class__.__name__, self._connection, chan, self._lock)
+
+            result = rpc_client.call(request, rpc_timeout)
+        finally:
+            with self._lock:
+                chan.close()
 
         if result["exception"]:
             log.error(
@@ -621,11 +417,14 @@ class ServiceRpcInterface(object):
         return fn(*args, **kwargs)
 
     def run(self):
-        with _amqp_connection() as connection:
-            self.worker = RpcServer(self, connection, self.__class__.__name__)
-            self.worker.run()
+        self.worker = RpcServer(self, self._connection, self.__class__.__name__)
+        self.worker.run()
 
     def stop(self):
+        log.info("Stopping ServiceRpcInterface")
         # self.worker could be None if thread stopped before run() gets to the point of setting it
         if self.worker is not None:
             self.worker.stop()
+
+        with self._lock:
+            self._connection.release()

@@ -1,4 +1,4 @@
-# Copyright (c) 2018 DDN. All rights reserved.
+# Copyright (c) 2019 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
@@ -22,7 +22,6 @@ except ImportError:
 from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
-from chroma_core.services.rpc import RpcClientFactory
 from iml_common.lib.date_time import IMLDateTime
 import chroma_core.services.log
 
@@ -35,7 +34,6 @@ class Command(BaseCommand):
     help = """Run a single ChromaService in a new plugin."""
     option_list = BaseCommand.option_list + (
         make_option("--gevent", action="store_true", dest="gevent", default=False),
-        make_option("--lightweight-rpc", action="store_true", dest="lightweight_rpc", default=False),
         make_option("--verbose", action="store_true", dest="verbose", default=False),
         make_option("--console", action="store_true", dest="console", default=False),
         make_option("--name", dest="name", default="chroma_service"),
@@ -126,9 +124,6 @@ class Command(BaseCommand):
             sys.stderr.write("IML is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 
-        if not options["lightweight_rpc"]:
-            RpcClientFactory.initialize_threads()
-
         # Respond to Ctrl+C
         stopped = threading.Event()
 
@@ -144,9 +139,6 @@ class Command(BaseCommand):
             if not setup_complete.is_set():
                 log.warning("Terminated during setup, exiting hard")
                 os._exit(0)
-
-            if not options["lightweight_rpc"]:
-                RpcClientFactory.shutdown_threads()
 
             for service_thread in service_mains:
                 log.info("Stopping %s" % service_thread.service.name)
