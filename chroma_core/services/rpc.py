@@ -239,7 +239,8 @@ class RpcClient(object):
                 self._result = body
                 self._complete = True
             finally:
-                message.ack()
+                with self._lock:
+                    message.ack()
 
         with self._lock:
             consumer = kombu.Consumer(
