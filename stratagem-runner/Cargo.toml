@@ -1,5 +1,5 @@
 [package]
-name = "strategem-runner"
+name = "stratagem-runner"
 version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
@@ -13,13 +13,13 @@ path = "src/lib.rs"
 
 
 [[bin]]
-name = "strategem_warning"
-path = "src/strategem_warning.rs"
+name = "stratagem_warning"
+path = "src/stratagem_warning.rs"
 
 
 #[[bin]]
-#name = "strategem_purge"
-#path = "src/strategem_purge.rs"
+#name = "stratagem_purge"
+#path = "src/stratagem_purge.rs"
 
 
 [build-dependencies]

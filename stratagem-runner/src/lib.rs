@@ -43,8 +43,8 @@ impl From<raw::lu_fid> for Fid {
     }
 }
 
-pub fn fid2path(device: &String, fidstr: &String) -> Option<String> {
-    if !fidstr.starts_with("[") {
+pub fn fid2path(device: &str, fidstr: &str) -> Option<String> {
+    if !fidstr.starts_with('[') {
         return None;
     }
 

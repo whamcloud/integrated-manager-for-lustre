@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Usage: strategem_warning FS [NID1] [NID2] ...
+// Usage: stratagem_warning FS [NID1] [NID2] ...
 
 use llapi;
 use std::env;

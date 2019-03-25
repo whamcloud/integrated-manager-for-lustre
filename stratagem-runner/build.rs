@@ -9,7 +9,7 @@ use std::env;
 fn main() {
     let out_file = env::current_dir().unwrap().join("src").join("bindings.rs");
 
-    // Tell cargo to tell rustc to link the system bzip2
+    // Tell cargo to tell rustc to link the system liblustreapi
     // shared library.
     println!("cargo:rustc-link-lib=lustreapi");
 

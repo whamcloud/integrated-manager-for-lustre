@@ -1770,7 +1770,7 @@ version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "strategem-runner"
+name = "stratagem-runner"
 version = "0.1.0"
 dependencies = [
  "bindgen 0.43.2 (registry+https://github.com/rust-lang/crates.io-index)",
