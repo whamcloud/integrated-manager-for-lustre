@@ -21,8 +21,6 @@ fn main() {
     // to bindgen, and lets you build up options for
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
-        // The input header we would like to generate
-        // bindings for.
         .header("wrapper.h")
         .constified_enum_module("boolean")
         // // Logging
@@ -50,8 +48,8 @@ fn main() {
         // .whitelist_function("llapi_get_poollist")
         // .whitelist_function("llapi_get_poolmembers")
         // // Stat
-        // .whitelist_type("obd_statfs")
-        // .whitelist_function("llapi_obd_statfs")
+        .whitelist_type("obd_statfs")
+        .whitelist_function("llapi_obd_statfs")
         // // Find
         // .whitelist_type("find_param")
         // .whitelist_function("llapi_find")

@@ -1,24 +1,19 @@
+// Copyright (c) 2019 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+// Usage: strategem_warning FS [NID1] [NID2] ...
+
 use llapi;
 use std::env;
 
-fn cwd() -> String {
-    String::from(
-        env::current_dir()
-            .expect("Failed to get CWD")
-            .to_str()
-            .expect("Failed to show CWD"),
-    )
-}
-
 fn main() {
-    let device = cwd();
+    let mut args = env::args();
+    let device = args.nth(1).expect("No device specified");
 
-    for fid in env::args() {
-        println!("Looking at {}", &fid);
-
-        match llapi::fid2path(&device, &fid) {
-            Some(path) => println!("{} -> {}", fid, path),
-            None => (),
+    for fid in args {
+        if let Some(path) = llapi::fid2path(&device, &fid) {
+            println!("{}, {}", path, fid);
         }
     }
 }
