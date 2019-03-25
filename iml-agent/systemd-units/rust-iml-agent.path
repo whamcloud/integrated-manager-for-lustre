@@ -1,0 +1,9 @@
+[Unit]
+Description=Rust IML Agent path detection
+PartOf=iml-storage-server.target
+
+[Path]
+PathExists=/etc/iml/manager-url.conf
+
+[Install]
+WantedBy=iml-storage-server.target
