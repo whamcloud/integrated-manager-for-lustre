@@ -30,11 +30,11 @@ pub trait DaemonPlugin: std::fmt::Debug {
     fn start_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
         Box::new(future::ok(None))
     }
-    ///  Return information needed to maintain a manager-agent session, i.e. what
+    /// Return information needed to maintain a manager-agent session, i.e. what
     /// has changed since the start of the session or since the last update.
     ///
     /// If you need to refer to any data from the start_session call, you can
-    /// store it as property on this DaemonPlugin instance.
+    /// store it as a property on this DaemonPlugin instance.
     ///
     /// This will never be called concurrently with respect to start_session, or
     /// before start_session.

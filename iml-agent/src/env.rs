@@ -29,33 +29,47 @@ lazy_static! {
         Url::parse(&get_var("IML_MANAGER_URL")).expect("Could not parse manager url");
 }
 
-static PRIVATE_PEM_PATH: &str = "/etc/iml/private.pem";
-static CRT_PATH: &str = "/etc/iml/self.crt";
-static PFX_PATH: &str = "/etc/iml/identity.pfx";
+fn get_private_pem_path() -> String {
+    get_var("PRIVATE_PEM_PATH")
+}
+
+fn get_cert_path() -> String {
+    get_var("CRT_PATH")
+}
+
+fn get_pfx_path() -> String {
+    get_var("PFX_PATH")
+}
 
 /// Gets the pfx file.
 /// If pfx is not found it will be created.
 lazy_static! {
     pub static ref PFX: Vec<u8> = {
-        if !path_exists(PRIVATE_PEM_PATH) {
-            panic!("{} does not exist", PRIVATE_PEM_PATH)
+        let private_pem_path = get_private_pem_path();
+
+        if !path_exists(&private_pem_path) {
+            panic!("{} does not exist", private_pem_path)
         };
 
-        if !path_exists(CRT_PATH) {
-            panic!("{} does not exist", CRT_PATH)
+        let cert_path = get_cert_path();
+
+        if !path_exists(&cert_path) {
+            panic!("{} does not exist", cert_path)
         }
 
-        if !path_exists(PFX_PATH) {
+        let pfx_path = get_pfx_path();
+
+        if !path_exists(&pfx_path) {
             Command::new("openssl")
                 .args(&[
                     "pkcs12",
                     "-export",
                     "-out",
-                    PFX_PATH,
+                    &pfx_path,
                     "-inkey",
-                    PRIVATE_PEM_PATH,
+                    &private_pem_path,
                     "-in",
-                    CRT_PATH,
+                    &cert_path,
                     "-certfile",
                     "/etc/iml/authority.crt",
                     "-passout",
@@ -65,6 +79,6 @@ lazy_static! {
                 .expect("Error creating pfx");
         }
 
-        std::fs::read(PFX_PATH).expect("Could not read pfx")
+        std::fs::read(&pfx_path).expect("Could not read pfx")
     };
 }
