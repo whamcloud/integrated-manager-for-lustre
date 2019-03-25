@@ -6,8 +6,8 @@
 pub mod raw {
     include!("bindings.rs");
 }
-use std::fs; // replace with llapi::rmfid
 use std::ffi::{CStr, CString};
+use std::io; // for std::io::Result
 static PATH_BYTES: usize = 4096;
 
 pub fn fid2path(device: &String, fidstr: &String) -> Option<String> {
@@ -48,6 +48,17 @@ pub fn fid2path(device: &String, fidstr: &String) -> Option<String> {
     let cstr = CString::new(buf).expect("Found invalide UTF-8");
 
     Some(cstr.into_string().expect("Invalide UTF-8"))
+}
+
+pub fn rmfid(device: &String, fidlist: &Vec<String>) -> io::Result<()> {
+    use std::fs; // replace with raw::llapi_rmfid
+    for fidstr in fidlist.iter() {
+        if let Some(path) = fid2path(device, fidstr) {
+            fs::remove_file(path)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
