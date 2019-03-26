@@ -86,7 +86,7 @@ class SessionCollection(object):
 
     def reset_plugin_sessions(self, victim_plugin):
         """
-        This is a reset for the TX direction, for services to tell all sessions
+        This is a reset for the RX direction, for services to tell all sessions
         for a particular plugin have gone away.
         """
         with self._lock:

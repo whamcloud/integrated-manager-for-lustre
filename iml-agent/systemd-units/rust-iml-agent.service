@@ -1,0 +1,17 @@
+[Unit]
+Description=Rust IML Agent Daemon
+After=network.target
+PartOf=rust-iml-agent.path
+After=rust-iml-agent.path
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/iml/manager-url.conf
+Environment=RUST_LOG=info
+Environment=PRIVATE_PEM_PATH=/etc/iml/private.pem
+Environment=CRT_PATH=/etc/iml/self.crt
+Environment=PFX_PATH=/etc/iml/identity.pfx
+Environment=AUTHORITY_CRT_PATH=/etc/iml/authority.crt
+ExecStart=/usr/bin/iml-agent-daemon
+StandardOutput=journal
+StandardError=journal

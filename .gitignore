@@ -42,3 +42,6 @@ localenv
 storage_server.repo
 base.repo
 copr-local.mk
+target
+**/*.rs.bk
+.cargo

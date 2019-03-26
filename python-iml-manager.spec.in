@@ -34,7 +34,9 @@ Source11:       iml-power-control.service
 Source12:       iml-settings-populator.service
 Source13:       iml-stats.service
 Source14:       iml-syslog.service
-Source16:	iml-manager-redirect.conf
+Source16:       iml-manager-redirect.conf
+Source17:       rabbitmq-env.conf
+
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -207,7 +209,9 @@ mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf,nginx/default}.d
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
+mkdir -p $RPM_BUILD_ROOT/etc/rabbitmq
 cp %{SOURCE16} $RPM_BUILD_ROOT/etc/nginx/default.d/iml-manager-redirect.conf
+cp %{SOURCE17} $RPM_BUILD_ROOT/etc/rabbitmq/rabbitmq-env.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install %{SOURCE3}.gz $RPM_BUILD_ROOT%{_mandir}/man1
@@ -319,6 +323,7 @@ fi
 %dir %attr(0755,nginx,nginx)/var/log/chroma
 %ghost /etc/nginx/conf.d/chroma-manager.conf
 /etc/nginx/default.d/iml-manager-redirect.conf
+/etc/rabbitmq/rabbitmq-env.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
