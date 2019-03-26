@@ -41,6 +41,10 @@ fn get_pfx_path() -> String {
     get_var("PFX_PATH")
 }
 
+fn get_authority_cert_path() -> String {
+    get_var("AUTHORITY_CRT_PATH")
+}
+
 /// Gets the pfx file.
 /// If pfx is not found it will be created.
 lazy_static! {
@@ -57,6 +61,8 @@ lazy_static! {
             panic!("{} does not exist", cert_path)
         }
 
+        let authority_cert_path = get_authority_cert_path();
+
         let pfx_path = get_pfx_path();
 
         if !path_exists(&pfx_path) {
@@ -71,7 +77,7 @@ lazy_static! {
                     "-in",
                     &cert_path,
                     "-certfile",
-                    "/etc/iml/authority.crt",
+                    &authority_cert_path,
                     "-passout",
                     "pass:",
                 ])
