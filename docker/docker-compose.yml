@@ -1,6 +1,5 @@
 version: "3.7"
-x-deploy:
-  &default-deploy
+x-deploy: &default-deploy
   restart_policy:
     condition: on-failure
     delay: 5s
@@ -28,6 +27,7 @@ services:
       - RABBITMQ_DEFAULT_USER=chroma
       - RABBITMQ_DEFAULT_PASS=chroma123
       - RABBITMQ_DEFAULT_VHOST=chromavhost
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit heartbeat 0
     healthcheck:
       test: ["CMD-SHELL", "rabbitmqctl status"]
       timeout: 5s
@@ -173,6 +173,21 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - LOG_PATH=.
+  iml-warp-drive:
+    image: "imlteam/iml-warp-drive"
+    hostname: "iml-warp-drive"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-warp-drive.dockerfile
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+        delay: 5s
+        window: 5s
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - PROXY_HOST=iml-warp-drive
   setup:
     image: "imlteam/manager-setup"
     command: ["tail", "-f", "/dev/null"]
@@ -185,10 +200,10 @@ services:
       - iml_pw
     deploy: *default-deploy
 volumes:
-  ? manager-config
-  ? db-data
-  ? static-config1
-  ? static-config2
+  manager-config:
+  db-data:
+  static-config1:
+  static-config2:
 secrets:
   iml_pw:
     external: true

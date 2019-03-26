@@ -44,10 +44,11 @@ from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
-from chroma_core.services.job_scheduler.lock_cache import LockCache
+from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 from disabled_connection import DISABLED_CONNECTION
@@ -58,6 +59,17 @@ from chroma_help.help import help_text
 import chroma_core.lib.conf_param
 
 log = log_register(__name__.split(".")[-1])
+
+
+class LockQueue(ServiceQueue):
+    name = "locks"
+
+
+@lock_change_receiver()
+def on_rec(lock, add_remove):
+    LockQueue().put(to_lock_json(lock, add_remove))
+
+    log.debug("got lock: {}. add_remove: {}".format(lock, add_remove))
 
 
 class NotificationBuffer(object):
@@ -1615,17 +1627,21 @@ class JobScheduler(object):
 
             return jobs
 
-    def get_locks(self, obj_key, obj_id):
-        locks = {"read": [], "write": []}
+    def get_locks(self):
+        all_locks = [to_lock_json(x) for x in self._lock_cache.read_locks + self._lock_cache.write_locks]
 
-        try:
-            object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
-            locks["read"] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
-            locks["write"] = list(set([x.job.id for x in self._lock_cache.write_by_item[object]]))
-        except ObjectDoesNotExist:
-            pass
+        def update_locks(locks, lock):
+            lock_id = "{}:{}".format(lock["content_type_id"], lock["item_id"])
 
-        return locks
+            xs = locks.get(lock_id, [])
+
+            xs.append(lock)
+
+            locks[lock_id] = xs
+
+            return locks
+
+        return reduce(update_locks, all_locks, {})
 
     def update_nids(self, nid_list):
         # Although this is creating/deleting a NID it actually rewrites the whole NID configuration for the node
