@@ -12,8 +12,7 @@ fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
 
-    let fidlist: Vec<_> = args.map(|arg| arg).collect();
-    if let Err(e) = liblustreapi::rmfid(&device, &fidlist[..]) {
+    if let Err(e) = liblustreapi::rmfid(&device, args) {
         println!("Failed to remove all fids {}", e);
         process::exit(1);
     }

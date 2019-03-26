@@ -2,8 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#![crate_name = "liblustreapi"]
-
 use std::convert::From;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -11,7 +9,7 @@ use std::io;
 extern crate liblustreapi_sys as sys;
 static PATH_BYTES: usize = 4096;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Fid {
     pub seq: u64,
     pub oid: u32,
@@ -22,6 +20,7 @@ impl fmt::Display for Fid {
         write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq, self.oid, self.ver)
     }
 }
+// @@ There's got to be a better way to do this!
 fn num2u32(num: &str) -> u32 {
     if num.starts_with("0x") {
         u32::from_str_radix(num.trim_start_matches("0x"), 16).unwrap()
@@ -66,7 +65,7 @@ impl From<sys::lu_fid> for Fid {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct StatfsState {
     degraded: bool,
     readonly: bool,
@@ -76,7 +75,7 @@ pub struct StatfsState {
 }
 impl fmt::Display for StatfsState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut list: Vec<String> = Vec::new();
+        let mut list: Vec<String> = vec![];
         if self.degraded {
             list.push("degraded".to_string());
         }
@@ -107,7 +106,7 @@ impl From<u32> for StatfsState {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Statfs {
     pub ostype: u64,
     pub blocks: u64,
@@ -187,17 +186,18 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, io::Error> {
     }
 }
 
-//pub fn obd_statfs(filepath: &String) -> Option<sys::obd_statfs> {
+// pub fn obd_statfs(filepath: &String) -> Result<Statfs, io::Error> {
+//     let mut path = filepath;
+//     sys::llapi_obd_statfs(path.as_ptr(),
+//     Ok(Statfs::from(statfs))
+// }
 
-//Some(sys::obd_statfs { })
-//}
-
-pub fn rmfid(device: &str, fidlist: &[String]) -> Result<(), io::Error> {
+pub fn rmfid(device: &str, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
     use std::fs; // replace with sys::llapi_rmfid
-    for fidstr in fidlist.iter() {
-        if let Ok(path) = fid2path(device, fidstr) {
-            fs::remove_file(path)?;
-        }
+
+    for fidstr in fidlist {
+        let path = fid2path(device, &fidstr)?;
+        fs::remove_file(path)?;
     }
 
     Ok(())

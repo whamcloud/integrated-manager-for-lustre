@@ -952,6 +952,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "liblustreapi"
+version = "0.1.0"
+dependencies = [
+ "liblustreapi-sys 0.1.0",
+]
+
+[[package]]
+name = "liblustreapi-sys"
+version = "0.1.0"
+dependencies = [
+ "bindgen 0.43.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1773,7 +1787,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stratagem-runner"
 version = "0.1.0"
 dependencies = [
- "bindgen 0.43.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "liblustreapi 0.1.0",
 ]
 
 [[package]]

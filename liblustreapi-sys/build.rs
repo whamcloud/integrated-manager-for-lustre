@@ -4,10 +4,8 @@
 
 extern crate bindgen;
 
-use std::env;
-
 fn main() {
-    let out_file = env::current_dir().unwrap().join("src").join("bindings.rs");
+    let out_file = std::env::current_dir().unwrap().join("src").join("bindings.rs");
 
     // Tell cargo to tell rustc to link the system liblustreapi
     // shared library.
