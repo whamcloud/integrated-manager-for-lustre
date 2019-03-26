@@ -1,0 +1,11 @@
+[package]
+name = "liblustreapi-sys"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.43.1"

@@ -2,18 +2,19 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Usage: stratagem_warning FS [NID1] [NID2] ...
+// Usage: stratagem_purge FS [NID1] [NID2] ...
 
 use liblustreapi;
 use std::env;
+use std::process;
 
 fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
 
-    for fid in args {
-        if let Ok(path) = liblustreapi::fid2path(&device, &fid) {
-            println!("{}, {}", path, fid);
-        }
+    let fidlist: Vec<_> = args.map(|arg| arg).collect();
+    if let Err(e) = liblustreapi::rmfid(&device, &fidlist[..]) {
+        println!("Failed to remove all fids {}", e);
+        process::exit(1);
     }
 }

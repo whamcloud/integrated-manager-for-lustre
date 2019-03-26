@@ -3,24 +3,18 @@ name = "stratagem-runner"
 version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
-build = "build.rs"
 
 [dependencies]
-
-[lib]
-name="llapi"
-path = "src/lib.rs"
-
+liblustreapi = { path = "liblustreapi", version = "0.1.0" }
 
 [[bin]]
 name = "stratagem_warning"
 path = "src/stratagem_warning.rs"
 
+[[bin]]
+name = "stratagem_purge"
+path = "src/stratagem_purge.rs"
 
-#[[bin]]
-#name = "stratagem_purge"
-#path = "src/stratagem_purge.rs"
 
-
-[build-dependencies]
-bindgen = "0.43.1"
+[workspace]
+members = ['liblustreapi', 'liblustreapi-sys']
