@@ -146,3 +146,19 @@ class AuthorizedHttpRequests(HttpRequests):
         response = self.post("/api/session/", data=json.dumps({"username": username, "password": password}))
         if not response.successful:
             raise RuntimeError("Failed to authenticate with username: %s and password: %s" % (username, password))
+
+
+def _get_value(obj, key):
+    attr = getattr(obj, key, None)
+
+    if attr is None:
+        attr = obj[key]
+
+    return attr
+
+
+def get_actions(requests, stateful_objects):
+
+    xs = ["{}:{}".format(_get_value(x, "content_type_id"), _get_value(x, "id")) for x in stateful_objects]
+
+    return requests.get("/api/action/", data={"composite_ids": xs, "limit": 0})

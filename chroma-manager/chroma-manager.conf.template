@@ -3,6 +3,11 @@ map $ssl_client_s_dn $ssl_client_s_dn_cn {
     ~CN=(?<CN>[^,]+) $CN;
 }
 
+map $status $loggable {
+    ~^[23]  0;
+    default 1;
+}
+
 server {
     listen {{HTTPS_FRONTEND_PORT}} ssl http2;
 
@@ -10,7 +15,38 @@ server {
 
     proxy_read_timeout 330s;
 
-    include {{APP_PATH}}/mime.types;
+    access_log /var/log/nginx/access.log combined if=$loggable;
+
+    types {
+        text/html html htm;
+        text/css css;
+        text/xml xml rss;
+        image/gif gif;
+        image/jpeg jpeg jpg;
+        application/javascript js;
+        application/json json map
+        text/plain txt;
+        text/x-component htc;
+        image/png png;
+        image/x-icon ico;
+        application/x-shockwave-flash swf
+        application/x-makeself run;
+        application/x-pilot prc pdb;
+        application/x-rar-compressed rar;
+        application/x-redhat-package-manager rpm;
+        application/x-tcl tcl tk;
+        application/x-x509-ca-cert der pem crt;
+        application/x-xpinstall xpi;
+        application/zip zip;
+        application/octet-stream deb;
+        application/octet-stream bin exe dll;
+        application/octet-stream dmg;
+        application/octet-stream eot;
+        application/octet-stream iso img;
+        application/octet-stream msi msp msm;
+        application/font-woff woff;
+        application/wasm wasm;
+    }
 
     ssl_certificate {{SSL_PATH}}/manager.crt;
     ssl_certificate_key {{SSL_PATH}}/manager.pem;
@@ -91,11 +127,22 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{VIEW_SERVER_PORT}}/ui;
+        proxy_pass {{VIEW_SERVER_PROXY_PASS}}/ui;
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
 
         gzip on;
+    }
+
+    location /wasm-components {
+        alias /usr/share/iml-manager/iml-wasm-components;
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control "public";
+
+        gzip on;
+        gzip_types text/css application/x-javascript application/javascript text/javascript application/json application/wasm;
     }
 
     location /api {
@@ -103,32 +150,41 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_API_PORT}}/api;
+        proxy_pass {{HTTP_API_PROXY_PASS}}/api;
     }
 
     location /socket.io {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{REALTIME_PORT}}/socket.io;
+        proxy_pass {{REALTIME_PROXY_PASS}}/socket.io;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 
+    location /messaging {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_pass {{WARP_DRIVE_PROXY_PASS}};
+    }
+
     location /agent/register {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/register;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/register;
     }
 
     location /agent/setup {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/setup;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/setup;
     }
 
     location /agent/reregister {
@@ -143,7 +199,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/reregister;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/reregister;
     }
 
     location /agent/message {
@@ -161,7 +217,22 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/message;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/message;
+    }
+
+    location /agent2/message {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
+
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
+
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass {{HTTP_AGENT2_PROXY_PASS}}/message;
     }
 
     location /agent/copytool_event {
@@ -176,7 +247,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/copytool_event;
+        proxy_pass {{HTTP_AGENT_PROXY_PASS}}/agent/copytool_event;
     }
 
     location /repo/ {
@@ -197,6 +268,22 @@ server {
     }
 
     location /iml-srcmap-reverse {
-        proxy_pass http://unix:/var/run/iml-srcmap-reverse.sock;
+        proxy_pass {{SRCMAP_REVERSE_PROXY_PASS}};
+    }
+
+    location /iml_has_package_updates {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
+
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
+
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Http-Host      $http_host;
+        proxy_pass {{UPDATE_HANDLER_PROXY_PASS}};
     }
 }

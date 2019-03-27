@@ -50,13 +50,13 @@ class TestAvailableTransitions(IMLUnitTestCase):
     def _get_transition_states(self, object):
         """Check that expected states are returned for given object"""
 
-        so_ct_key = ContentType.objects.get_for_model(object).natural_key()
+        ct_id = ContentType.objects.get_for_model(object).id
         so_id = object.id
 
         #  In-process JSC call that works over RPC in production
-        receive_states = self.js.available_transitions([(so_ct_key, so_id, ), ])
+        receive_states = self.js.available_transitions([(ct_id, so_id)])
 
-        return receive_states[object.id]
+        return receive_states["{}:{}".format(ct_id, so_id)]
 
     def test_managed_mgs(self):
         """Test the MGS some possible states."""
@@ -212,15 +212,17 @@ class TestAvailableTransitions(IMLUnitTestCase):
             "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
 
     def test_managed_target_dne(self):
-        host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
+        ct_id = ContentType.objects.get_for_model(self.host.downcast()).id
         host_id = self.host.id
 
         self.host.mark_deleted()
 
         job_scheduler = JobScheduler()
 
-        avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host_id]
+        composite_id = "{}:{}".format(ct_id, host_id)
+
+        avail_trans = job_scheduler.available_transitions([(ct_id, host_id)])[composite_id]
         self.assertTrue(len(avail_trans) == 0, avail_trans)
-        avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host_id]
-        self.assertTrue(self.host.state, 'managed')
-        self.assertTrue(len(avail_jobs) == 3)   # Three states from configured -> Force Remove. Reboot, Shutdown
+        avail_jobs = job_scheduler.available_jobs([(ct_id, host_id)])[composite_id]
+        self.assertTrue(self.host.state, "managed")
+        self.assertTrue(len(avail_jobs) == 3)  # Three states from configured -> Force Remove. Reboot, Shutdown

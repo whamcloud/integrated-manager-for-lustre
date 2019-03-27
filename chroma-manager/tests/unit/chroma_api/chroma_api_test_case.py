@@ -163,30 +163,30 @@ class ChromaApiTestCase(ResourceTestCase):
 
         from chroma_api.urls import api
 
-        for name, resource in api._registry.items():
-            if "get" in resource._meta.list_allowed_methods:
-                list_uri = resource.get_resource_uri()
-                response = self.api_client.get(list_uri, data={"limit": 0})
-                self.assertEqual(
-                    response.status_code,
-                    200,
-                    "%s: %s %s" % (list_uri, response.status_code, self.deserialize(response)),
-                )
-                if "get" in resource._meta.detail_allowed_methods:
-                    objects = self.deserialize(response)["objects"]
+        xs = filter(lambda x: x[0] != "action", api._registry.items())
+        xs = filter(lambda x: "get" in x[1]._meta.list_allowed_methods, xs)
 
-                    for object in objects:
-                        # Deal with the newer bulk data format, if it is in that format.
-                        if ("resource_uri" not in object) and ("traceback" in object) and ("error" in object):
-                            del object["traceback"]
-                            del object["error"]
-                            self.assertEqual(len(object), 1)
-                            object = object.values()[0]
+        for _, resource in xs:
+            list_uri = resource.get_resource_uri()
+            response = self.api_client.get(list_uri, data={"limit": 0})
+            self.assertEqual(
+                response.status_code, 200, "%s: %s %s" % (list_uri, response.status_code, self.deserialize(response))
+            )
+            if "get" in resource._meta.detail_allowed_methods:
+                objects = self.deserialize(response)["objects"]
 
-                        response = self.api_client.get(object["resource_uri"])
-                        self.assertEqual(
-                            response.status_code,
-                            200,
-                            "resource_url: %s, %s %s %s"
-                            % (object["resource_uri"], response.status_code, self.deserialize(response), object),
-                        )
+                for object in objects:
+                    # Deal with the newer bulk data format, if it is in that format.
+                    if ("resource_uri" not in object) and ("traceback" in object) and ("error" in object):
+                        del object["traceback"]
+                        del object["error"]
+                        self.assertEqual(len(object), 1)
+                        object = object.values()[0]
+
+                    response = self.api_client.get(object["resource_uri"])
+                    self.assertEqual(
+                        response.status_code,
+                        200,
+                        "resource_url: %s, %s %s %s"
+                        % (object["resource_uri"], response.status_code, self.deserialize(response), object),
+                    )

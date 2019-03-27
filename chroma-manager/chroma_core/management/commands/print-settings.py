@@ -30,6 +30,9 @@ class Command(BaseCommand):
             lambda xs: "{}={}".format(xs[0], xs[1]),
             [
                 ("REALTIME_PORT", settings.REALTIME_PORT),
+                ("VIEW_SERVER_PORT", settings.VIEW_SERVER_PORT),
+                ("WARP_DRIVE_PORT", settings.WARP_DRIVE_PORT),
+                ("HTTP_AGENT2_PORT", settings.HTTP_AGENT2_PORT),
                 ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),
                 ("BUILD", settings.BUILD),
                 ("IS_RELEASE", json.dumps(settings.IS_RELEASE)),
@@ -41,10 +44,16 @@ class Command(BaseCommand):
                 ("API_USER", API_USER),
                 ("API_KEY", API_KEY),
                 ("SOURCE_MAP_PATH", SOURCE_MAP_PATH),
+                ("PROXY_HOST", settings.PROXY_HOST),
                 ("DB_HOST", DB.get("HOST")),
                 ("DB_NAME", DB.get("NAME")),
                 ("DB_USER", DB.get("USER")),
                 ("DB_PASSWORD", DB.get("PASSWORD")),
+                ("AMQP_BROKER_USER", settings.AMQP_BROKER_USER),
+                ("AMQP_BROKER_PASSWORD", settings.AMQP_BROKER_PASSWORD),
+                ("AMQP_BROKER_VHOST", settings.AMQP_BROKER_VHOST),
+                ("AMQP_BROKER_HOST", settings.AMQP_BROKER_HOST),
+                ("AMQP_BROKER_PORT", settings.AMQP_BROKER_PORT),
             ],
         )
 

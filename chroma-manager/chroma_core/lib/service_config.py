@@ -284,11 +284,19 @@ class ServiceConfig(CommandLine):
     CONTROLLED_SERVICES = ['iml-manager.target', 'nginx']
 
     MANAGER_SERVICES = [
-        'iml-corosync.service', 'iml-gunicorn.service',
-        'iml-http-agent.service', 'iml-job-scheduler.service',
-        'iml-lustre-audit.service', 'iml-plugin-runner.service',
-        'iml-power-control.service', 'iml-realtime.service',
-        'iml-stats.service', 'iml-syslog.service', 'iml-view-server.service'
+        "iml-corosync.service",
+        "iml-gunicorn.service",
+        "iml-http-agent.service",
+        "iml-job-scheduler.service",
+        "iml-lustre-audit.service",
+        "iml-plugin-runner.service",
+        "iml-power-control.service",
+        "iml-syslog.service",
+        "iml-stats.service",
+        "iml-view-server.service",
+        "iml-realtime.service",
+        "iml-warp-drive.service",
+        "iml-srcmap-reverse.socket",
     ]
 
     def _enable_services(self):
@@ -560,10 +568,15 @@ class ServiceConfig(CommandLine):
             "SSL_PATH",
             "HTTP_FRONTEND_PORT",
             "HTTPS_FRONTEND_PORT",
-            "VIEW_SERVER_PORT",
-            "HTTP_API_PORT",
-            "REALTIME_PORT",
-            "HTTP_AGENT_PORT",
+            "HTTP_AGENT_PROXY_PASS",
+            "HTTP_AGENT2_PROXY_PASS",
+            "HTTP_API_PROXY_PASS",
+            "REALTIME_PROXY_PASS",
+            "VIEW_SERVER_PROXY_PASS",
+            "WARP_DRIVE_PROXY_PASS",
+            "SSL_PATH",
+            "UPDATE_HANDLER_PROXY_PASS",
+            "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
         with open(conf_template, "r") as f:

@@ -14,7 +14,7 @@ SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 if sys.version_info < (2, 6, 5):
     raise EnvironmentError("Python >= 2.6.5 is required")
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 APP_PATH = "/usr/share/chroma-manager"
@@ -29,13 +29,41 @@ HTTPS_FRONTEND_PORT = 443
 
 HTTP_AGENT_PORT = 8002
 
+HTTP_AGENT2_PORT = 8003
+
 HTTP_API_PORT = 8001
 
 REALTIME_PORT = 8888
 
 VIEW_SERVER_PORT = 8889
 
+PROXY_HOST = os.getenv("PROXY_HOST", "127.0.0.1")
+
+HTTP_AGENT_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_AGENT_PORT)
+
+HTTP_AGENT2_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_AGENT2_PORT)
+
+HTTP_API_PORT = 8001
+
+HTTP_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_API_PORT)
+
+REALTIME_PORT = 8888
+
+REALTIME_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, REALTIME_PORT)
+
+VIEW_SERVER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, VIEW_SERVER_PORT)
+
+WARP_DRIVE_PORT = 8890
+
+WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
+
 SSL_PATH = "/var/lib/chroma"
+
+UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
+
+SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
+
+ALLOWED_HOSTS = ["*"]
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -130,8 +158,12 @@ TEMPLATE_DIRS = (
 AMQP_BROKER_USER = "chroma"
 AMQP_BROKER_PASSWORD = "chroma123"
 AMQP_BROKER_VHOST = "chromavhost"
+AMQP_BROKER_HOST = os.getenv("AMQP_BROKER_HOST", "localhost")
+AMQP_BROKER_PORT = "5672"
 
-BROKER_URL = "amqp://%s:%s@localhost:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_VHOST)
+BROKER_URL = "amqp://{}:{}@{}:{}/{}".format(
+    AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_HOST, AMQP_BROKER_PORT, AMQP_BROKER_VHOST
+)
 
 INSTALLED_APPS = (
     "django.contrib.auth",
