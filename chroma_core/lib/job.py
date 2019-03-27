@@ -151,7 +151,7 @@ class Step(object):
 
     # Indicate whether the step is idempotent.  For example, mounting
     # a target.  Step subclasses which are always idempotent should set the
-    # idempotent class attribute.   Subclasses which may be idempotent should
+    # idempotent class attribute. Subclasses which may be idempotent should
     # override this attribute.
     idempotent = False
 
