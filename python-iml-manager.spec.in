@@ -93,6 +93,7 @@ Requires:       rust-iml-warp-drive
 Requires:       createrepo
 Requires:       python2-toolz
 Requires:       iml-update-handler < 2
+Requires:       iml-wasm-components
 Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes:      chroma-manager

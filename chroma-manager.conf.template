@@ -45,6 +45,7 @@ server {
         application/octet-stream iso img;
         application/octet-stream msi msp msm;
         application/font-woff woff;
+        application/wasm wasm;
     }
 
     ssl_certificate {{SSL_PATH}}/manager.crt;
@@ -131,6 +132,17 @@ server {
         add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; ";
 
         gzip on;
+    }
+
+    location /wasm-components {
+        alias /usr/share/iml-manager/iml-wasm-components;
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control "public";
+
+        gzip on;
+        gzip_types text/css application/x-javascript application/javascript text/javascript application/json application/wasm;
     }
 
     location /api {

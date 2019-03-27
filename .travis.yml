@@ -61,6 +61,14 @@ jobs:
         - pip install black
       script:
         - black --check ./
+    - stage: test
+      name: "iml-wasm-components Build Check"
+      script:
+        - docker run -dit --cap-add=SYS_ADMIN --privileged --name mock imlteam/mock /usr/sbin/init
+        - docker cp -a ./ mock:/builddir
+        - docker exec -it mock bash -xec 'chown -R root:root /builddir'
+        - docker exec -it mock bash -xec 'yum install -y gcc wget openssl-devel spectool'
+        - docker exec -it mock bash -xec 'cd /builddir/iml-wasm-components && make -f .copr/Makefile srpm outdir=/tmp/'
     - stage: cd
       git:
         depth: 999999

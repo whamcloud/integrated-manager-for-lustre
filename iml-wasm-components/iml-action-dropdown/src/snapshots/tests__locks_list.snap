@@ -1,0 +1,16 @@
+---
+created: "2019-02-05T22:00:13.296907Z"
+creator: insta@0.6.1
+source: iml-action-dropdown/src/locks.rs
+expression: xs
+---
+{
+    LockChange {
+        job_id: 53,
+        content_type_id: 61,
+        item_id: 1,
+        description: "Shut down the LNet networking layer and stop any targets running on this server.",
+        lock_type: Write,
+        action: Add
+    }
+}
