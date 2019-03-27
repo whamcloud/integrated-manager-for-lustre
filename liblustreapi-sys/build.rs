@@ -2,8 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-extern crate bindgen;
-
 fn main() {
     let out_file = std::env::current_dir().unwrap().join("src").join("bindings.rs");
 

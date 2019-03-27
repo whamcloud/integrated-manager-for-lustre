@@ -9,7 +9,7 @@ use std::io;
 extern crate liblustreapi_sys as sys;
 static PATH_BYTES: usize = 4096;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Fid {
     pub seq: u64,
     pub oid: u32,
@@ -65,7 +65,7 @@ impl From<sys::lu_fid> for Fid {
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct StatfsState {
     degraded: bool,
     readonly: bool,
@@ -106,7 +106,7 @@ impl From<u32> for StatfsState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Statfs {
     pub ostype: u64,
     pub blocks: u64,
