@@ -569,13 +569,11 @@ class ServiceConfig(CommandLine):
             "HTTP_FRONTEND_PORT",
             "HTTPS_FRONTEND_PORT",
             "HTTP_AGENT_PROXY_PASS",
-            "HTTP_AGENT2_PROXY_PASS",
             "HTTP_API_PROXY_PASS",
             "REALTIME_PROXY_PASS",
             "VIEW_SERVER_PROXY_PASS",
             "WARP_DRIVE_PROXY_PASS",
             "SSL_PATH",
-            "UPDATE_HANDLER_PROXY_PASS",
             "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
