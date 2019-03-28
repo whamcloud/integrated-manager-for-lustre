@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+      - refs/heads/*
+      - refs/tags/*
+
+jobs:
+  # Check formatting
+  - template: ci/azure-rustfmt.yml
+    parameters:
+      name: rustfmt
+
+  # Check linting
+  - template: ci/azure-clippy.yml
+    parameters:
+      name: clippy
+
+  # Test top level crate
+  - template: ci/azure-test-stable.yml
+    parameters:
+      name: test_iml
+      displayName: Test IML
+
+  # Check building srpm works
+  - template: ci/azure-build-check.yml
+    parameters:
+      name: test_srpm_build
+      displayName: Test Srpm building
+      spec: rust-iml.spec
+
+  # Continuous Release to Devel Copr
+  - template: ci/azure-release.yml
+    parameters:
+      name: copr_devel_push
+      displayName: Copr Devel Push
+      project: manager-for-lustre-devel
+      package: rust-iml
+      spec: rust-iml.spec
+      release: false
+      branchref: refs/tags/
+
+  - template: ci/azure-release.yml
+    parameters:
+      name: copr_push
+      displayName: Copr Push
+      project: manager-for-lustre
+      package: rust-iml
+      spec: rust-iml.spec
+      release: true
+      branchref: refs/heads/master

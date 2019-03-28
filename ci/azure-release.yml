@@ -1,0 +1,22 @@
+jobs:
+  - job: ${{ parameters.name }}
+    displayName: ${{ parameters.displayName }}
+    condition: and(succeeded(), contains(variables['Build.SourceBranch'], '${{parameters.branchref}}'))
+    steps:
+      - task: Docker@1
+        displayName: ${{ parameters.displayName }}
+        env:
+          key: ${key}
+          iv: ${iv}
+        inputs:
+          imageName: imlteam/copr
+          command: run
+          volumes: $(Build.SourcesDirectory):/build:rw
+          runInBackground: false
+          envVars: OWNER=managerforlustre
+            PROJECT=${{parameters.project}}
+            PACKAGE=${{parameters.package}}
+            SPEC=${{parameters.spec}}
+            RELEASE=${{parameters.release}}
+            KEY=$key
+            IV=$iv
