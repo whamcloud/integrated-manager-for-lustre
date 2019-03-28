@@ -119,7 +119,6 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
                 volumes_expected_hosts_in_normal_state,
             )
 
-    @skip("Disabled until LU-9725 is fixed")
     def test_create_filesystem_with_failover_oss(self):
 
         filesystem_id, volumes_expected_hosts_in_normal_state = self._test_create_filesystem_with_failover()
