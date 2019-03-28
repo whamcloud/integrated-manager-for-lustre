@@ -24,7 +24,7 @@ use web_sys::Element;
 pub type RecordMap = HashMap<String, Record>;
 
 /// A record
-#[derive(serde::Deserialize, serde:: Serialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct Record {
     content_type_id: i64,
     id: i64,
