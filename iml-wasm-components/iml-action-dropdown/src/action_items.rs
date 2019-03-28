@@ -2,24 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::hsm::{contains_hsm_params, RecordAndHsmControlParam};
-use crate::tooltip::tooltip_component;
-use crate::{ActionMap, AvailableActionAndRecord, Msg, RecordMap, TooltipPlacement, TooltipSize};
-
+use crate::{
+    dispatch_custom_event::dispatch_custom_event,
+    hsm::{contains_hsm_params, RecordAndHsmControlParam},
+    tooltip::{tooltip_component, TooltipPlacement, TooltipSize},
+    ActionMap, AvailableActionAndRecord, Msg, RecordMap,
+};
 use seed::{a, class, li, prelude::*, style};
-
-/// Sends the custom event up to the window, carrying with it the data. Should we move this into its own module?
-fn dispatch_custom_event<T>(_type: &str, data: &T)
-where
-    T: serde::Serialize + ?Sized,
-{
-    let js_value = JsValue::from_serde(data).expect("Error serializing data");
-    let ev = web_sys::CustomEvent::new(_type).unwrap();
-    ev.init_custom_event_with_can_bubble_and_cancelable_and_detail(_type, true, true, &js_value);
-
-    let window = web_sys::window().unwrap();
-    window.dispatch_event(&ev).unwrap();
-}
 
 fn get_record_els_from_hsm_control_params(
     records: &RecordMap,
@@ -28,37 +17,36 @@ fn get_record_els_from_hsm_control_params(
 ) -> Vec<El<Msg>> {
     let record_els: Vec<El<Msg>> = records
         .iter()
-        .filter(|(_, x)| x.hsm_control_params != None)
+        .filter(|(_, x)| x.hsm_control_params.is_some())
         .flat_map(|(_, x)| {
-            let label = x.clone().label;
-            let params = x
-                .clone()
-                .hsm_control_params
-                .expect("hsm_control_params are not set.");
+            let label = &x.label;
 
-            let mut ys: Vec<El<Msg>> = params
-                .into_iter()
+            let mut ys: Vec<El<Msg>> = x
+                .hsm_control_params
+                .clone()
+                .expect("hsm_control_params are not set.")
+                .iter()
                 .map(|y| {
-                    let x2 = x.clone();
-                    let y2 = y.clone();
-                    let long_description = y2.long_description.as_str();
+                    let record_and_param = RecordAndHsmControlParam {
+                        record: x.clone(),
+                        hsm_control_param: y.clone(),
+                    };
 
                     li![
                         class!["tooltip-container", "tooltip-hover"],
-                        a![y.verb],
+                        a![&y.verb],
                         mouse_ev(Ev::Click, move |ev| {
                             ev.stop_propagation();
                             ev.prevent_default();
-                            dispatch_custom_event(
-                                "hsm_action_selected",
-                                &RecordAndHsmControlParam {
-                                    record: x2.clone(),
-                                    hsm_control_param: y.clone(),
-                                },
-                            );
+                            dispatch_custom_event("hsm_action_selected", &record_and_param);
                             Msg::Open(false)
                         }),
-                        tooltip_component(long_description, tooltip_placement, tooltip_size, None)
+                        tooltip_component(
+                            &y.long_description,
+                            tooltip_placement,
+                            tooltip_size,
+                            None
+                        )
                     ]
                 })
                 .collect();
@@ -94,12 +82,16 @@ fn get_record_els_from_available_actions(
             let mut ys: Vec<El<Msg>> = xs
                 .iter()
                 .map(|x| {
-                    let x2 = x.clone();
                     let record = records
                         .get(&x.composite_id)
                         .expect("Could not locate the record label.")
                         .clone();
-                    let flag2 = flag.clone();
+
+                    let available_action_and_record = AvailableActionAndRecord {
+                        available_action: x.clone(),
+                        record,
+                        flag: flag.clone(),
+                    };
 
                     li![
                         class!["tooltip-container", "tooltip-hover"],
@@ -107,14 +99,7 @@ fn get_record_els_from_available_actions(
                         mouse_ev(Ev::Click, move |ev| {
                             ev.stop_propagation();
                             ev.prevent_default();
-                            dispatch_custom_event(
-                                "action_selected",
-                                &AvailableActionAndRecord {
-                                    available_action: x2.clone(),
-                                    record: record.clone(),
-                                    flag: flag2.clone(),
-                                },
-                            );
+                            dispatch_custom_event("action_selected", &available_action_and_record);
                             Msg::Open(false)
                         }),
                         tooltip_component(
@@ -164,7 +149,7 @@ pub fn get_record_els(
         els.append(&mut hsm_els);
     }
 
-    if available_actions.len() > 0 {
+    if !available_actions.is_empty() {
         let mut action_els = get_record_els_from_available_actions(
             available_actions,
             records,

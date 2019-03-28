@@ -6,7 +6,6 @@ use crate::{
     api_transforms::{composite_ids_to_query_string, group_actions_by_label, sort_actions},
     sleep, AvailableActionsApiData, Model, Msg, RecordMap,
 };
-
 use futures::{
     future::{loop_fn, Either, Loop},
     Future, Stream,

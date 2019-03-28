@@ -2,7 +2,9 @@
 
 Name:       iml-wasm-components
 Version:    0.1.0
+# Release Start
 Release:    1%{?dist}
+# Release End
 Summary:    WebAssembly components for use in IML GUIs
 
 

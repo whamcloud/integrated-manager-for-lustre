@@ -5,6 +5,7 @@
 mod action_items;
 mod api_transforms;
 mod button;
+mod dispatch_custom_event;
 mod fetch_actions;
 mod hsm;
 mod sleep;
@@ -12,11 +13,10 @@ mod tooltip;
 
 use action_items::get_record_els;
 use api_transforms::{lock_list, record_to_composite_id_string};
-
 use hsm::{contains_hsm_params, HsmControlParam};
 use seed::{class, div, prelude::*, spawn_local, ul};
-use serde;
 use std::collections::{HashMap, HashSet};
+use tooltip::{TooltipPlacement, TooltipSize};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
@@ -36,46 +36,6 @@ pub struct Record {
 
 /// Records is a vector of Record items
 pub type Records = Vec<Record>;
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum TooltipPlacement {
-    Left,
-    Right,
-    Top,
-    Bottom,
-}
-
-impl From<&TooltipPlacement> for &str {
-    fn from(p: &TooltipPlacement) -> Self {
-        match p {
-            TooltipPlacement::Left => "left",
-            TooltipPlacement::Right => "right",
-            TooltipPlacement::Top => "top",
-            TooltipPlacement::Bottom => "bottom",
-        }
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum TooltipSize {
-    XSmall,
-    Small,
-    Medium,
-    Large,
-}
-
-impl From<&TooltipSize> for &str {
-    fn from(s: &TooltipSize) -> Self {
-        match s {
-            TooltipSize::XSmall => "xsmall",
-            TooltipSize::Small => "small",
-            TooltipSize::Medium => "medium",
-            TooltipSize::Large => "large",
-        }
-    }
-}
 
 /// Data is what is being passed into the component.
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -97,7 +57,7 @@ pub struct MetaData {
     total_count: u32,
 }
 
-/// AvailableActionsApiData contains the meta and the array of objects returned by a fetch call
+/// AvailableActionsApiData contains the metadata and the `Vec` of objects returned by a fetch call
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct AvailableActionsApiData {
     meta: MetaData,
@@ -105,20 +65,14 @@ pub struct AvailableActionsApiData {
 }
 
 /// ActionArgs contains the arguments to an action. It is currently not being used.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct ActionArgs {
     host_id: Option<u64>,
     target_id: Option<u64>,
 }
 
-impl PartialEq for ActionArgs {
-    fn eq(&self, other: &ActionArgs) -> bool {
-        self.host_id == other.host_id
-    }
-}
-
 /// AvailableAction represents an action that will be displayed on the dropdown.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct AvailableAction {
     args: Option<ActionArgs>,
     composite_id: String,
@@ -137,21 +91,6 @@ pub struct AvailableActionAndRecord {
     available_action: AvailableAction,
     record: Record,
     flag: Option<String>,
-}
-
-// TODO do we need this?
-impl PartialEq for AvailableAction {
-    fn eq(&self, other: &AvailableAction) -> bool {
-        self.args == other.args
-            && self.composite_id == other.composite_id
-            && self.class_name == other.class_name
-            && self.confirmation == other.confirmation
-            && self.display_group == other.display_group
-            && self.display_order == other.display_order
-            && self.long_description == other.long_description
-            && self.state == other.state
-            && self.verb == other.verb
-    }
 }
 
 /// The ActionMap is a map consisting of actions grouped by the composite_id
@@ -187,34 +126,8 @@ pub struct LockChange {
     pub action: LockAction,
 }
 
-fn records_to_map(xs: Records) -> RecordMap {
-    xs.into_iter()
-        .map(
-            |Record {
-                 content_type_id,
-                 id,
-                 label,
-                 hsm_control_params,
-                 extra,
-             }| {
-                (
-                    record_to_composite_id_string(content_type_id, id),
-                    Record {
-                        content_type_id,
-                        id,
-                        label,
-                        hsm_control_params,
-                        extra,
-                    },
-                )
-            },
-        )
-        .collect()
-}
-
 // Model
-
-#[derive(Clone)]
+#[derive(Default)]
 pub struct Model {
     records: RecordMap,
     available_actions: ActionMap,
@@ -228,39 +141,6 @@ pub struct Model {
     destroyed: bool,
 }
 
-// Setup a default here, for initialization later.
-impl Default for Model {
-    fn default() -> Self {
-        Self {
-            records: HashMap::new(),
-            available_actions: HashMap::new(),
-            locks: HashMap::new(),
-            open: false,
-            button_activated: false,
-            first_fetch_active: false,
-            flag: None,
-            tooltip_placement: TooltipPlacement::Left,
-            tooltip_size: TooltipSize::Large,
-            destroyed: false,
-        }
-    }
-}
-
-fn get_hsm_records(records: RecordMap) -> RecordMap {
-    records
-        .clone()
-        .into_iter()
-        .filter(|(_, x)| x.hsm_control_params != None)
-        .collect()
-}
-
-fn get_action_records(records: RecordMap) -> RecordMap {
-    records
-        .clone()
-        .into_iter()
-        .filter(|(_, x)| x.hsm_control_params == None)
-        .collect()
-}
 // Update
 
 #[derive(Clone)]
@@ -278,50 +158,42 @@ fn update(msg: Msg, model: &mut Model) -> Update<Msg> {
     match msg {
         Msg::Open(open) => {
             model.open = open;
-
-            Render.into()
         }
         Msg::AvailableActions(available_actions) => {
             model.available_actions = available_actions;
             model.first_fetch_active = false;
-
-            Render.into()
         }
         Msg::UpdateHsmRecords(hsm_records) => {
-            let records = model.records.clone();
-            let mut records = get_action_records(records);
-            records.extend(hsm_records);
+            model.records = model
+                .records
+                .drain()
+                .filter(|(_, x)| x.hsm_control_params == None)
+                .chain(hsm_records)
+                .collect();
 
-            model.records = records;
             model.button_activated = true;
-
-            Render.into()
         }
         Msg::SetLocks(locks) => {
             model.locks = locks;
-
-            Render.into()
         }
         Msg::Destroy => {
             model.records = HashMap::new();
             model.available_actions = HashMap::new();
             model.locks = HashMap::new();
             model.destroyed = true;
-
-            Render.into()
         }
         Msg::StartFetch(action_records) => {
-            let records = model.records.clone();
-            let mut records = get_hsm_records(records);
-            records.extend(action_records);
-
+            model.records = model
+                .records
+                .drain()
+                .filter(|(_, x)| x.hsm_control_params.is_some())
+                .chain(action_records)
+                .collect();
             model.button_activated = true;
             model.first_fetch_active = true;
-            model.records = records;
-
-            Render.into()
         }
-    }
+    };
+    Render.into()
 }
 
 // View
@@ -374,14 +246,14 @@ fn view(
         next_open,
     );
 
-    let records2 = records.clone();
+    if !has_hsm_params && !records.is_empty() && !button_activated {
+        let records = records.clone();
 
-    if !has_hsm_params && records.len() > 0 && !button_activated {
         btn.listeners.push(mouse_ev(Ev::MouseMove, move |ev| {
             ev.stop_propagation();
             ev.prevent_default();
 
-            Msg::StartFetch(records2.clone())
+            Msg::StartFetch(records.clone())
         }));
     }
 
@@ -425,6 +297,16 @@ impl Callbacks {
 
         self.app.update(Msg::UpdateHsmRecords(records));
     }
+}
+
+fn records_to_map(xs: Records) -> RecordMap {
+    xs.into_iter()
+        .map(|r| {
+            let id = record_to_composite_id_string(r.content_type_id, r.id);
+
+            (id, r)
+        })
+        .collect()
 }
 
 #[wasm_bindgen]

@@ -1,10 +1,10 @@
 ---
-created: "2019-02-05T22:00:13.296907Z"
-creator: insta@0.6.1
-source: iml-action-dropdown/src/locks.rs
+created: "2019-03-28T21:17:34.568960Z"
+creator: insta@0.7.4
+source: iml-action-dropdown/src/api_transforms.rs
 expression: xs
 ---
-{
+[
     LockChange {
         job_id: 53,
         content_type_id: 61,
@@ -13,4 +13,4 @@ expression: xs
         lock_type: Write,
         action: Add
     }
-}
+]

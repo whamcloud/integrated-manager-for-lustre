@@ -3,15 +3,21 @@
 // license that can be found in the LICENSE file.
 
 use futures::{task, Async, Future, Poll};
-use seed::prelude::{Closure, JsValue};
-use std::{cell::RefCell, rc::Rc};
+use seed::{
+    prelude::{Closure, JsValue},
+    window,
+};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use wasm_bindgen::JsCast;
 
 pub struct Sleep {
     millis: i32,
     closure: Option<Closure<dyn FnMut()>>,
     token: Option<i32>,
-    fired: Rc<RefCell<Option<bool>>>,
+    fired: Arc<AtomicBool>,
 }
 
 impl Sleep {
@@ -20,24 +26,19 @@ impl Sleep {
             millis,
             closure: None,
             token: None,
-            fired: Rc::new(RefCell::new(Some(false))),
+            fired: Arc::new(AtomicBool::new(false)),
         }
     }
     fn run(&mut self, task: task::Task) {
-        let fired = self.fired.clone();
+        let fired = Arc::clone(&self.fired);
 
         // Construct a new closure.
         let closure = Closure::wrap(Box::new(move || {
-            fired
-                .try_borrow_mut()
-                .expect("Failed to borrow mutable fired")
-                .take();
+            fired.store(true, Ordering::Relaxed);
             task.notify();
         }) as Box<dyn FnMut()>);
 
-        let window = web_sys::window().expect("Could not obtain window ref");
-
-        let token = window
+        let token = window()
             .set_timeout_with_callback_and_timeout_and_arguments_0(
                 closure.as_ref().unchecked_ref(),
                 self.millis,
@@ -66,11 +67,7 @@ impl Future for Sleep {
             self.run(task::current());
         }
 
-        let fired = self
-            .fired
-            .try_borrow()
-            .expect("Failed borrowing from fired")
-            .is_none();
+        let fired = self.fired.load(Ordering::Relaxed);
 
         if fired {
             Ok(Async::Ready(()))

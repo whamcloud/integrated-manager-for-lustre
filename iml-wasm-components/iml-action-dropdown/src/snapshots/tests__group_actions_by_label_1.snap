@@ -1,6 +1,6 @@
 ---
-created: "2019-02-08T15:42:36.095102Z"
-creator: insta@0.6.1
+created: "2019-03-28T21:17:34.569005Z"
+creator: insta@0.7.4
 source: iml-action-dropdown/src/api_transforms.rs
 expression: "groups.get(&\"Label1\".to_string())"
 ---
@@ -9,7 +9,10 @@ Some(
         AvailableAction {
             args: Some(
                 ActionArgs {
-                    host_id: 1
+                    host_id: Some(
+                        1
+                    ),
+                    target_id: None
                 }
             ),
             composite_id: "62:1",
@@ -26,7 +29,10 @@ Some(
         AvailableAction {
             args: Some(
                 ActionArgs {
-                    host_id: 1
+                    host_id: Some(
+                        1
+                    ),
+                    target_id: None
                 }
             ),
             composite_id: "62:1",

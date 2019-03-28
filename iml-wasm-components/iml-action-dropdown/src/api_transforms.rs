@@ -48,8 +48,7 @@ pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: RecordMap)
 }
 
 /// Sort items by display_group, then by display_order. Mark the last item in each group
-pub fn sort_actions(actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
-    let mut actions = actions;
+pub fn sort_actions(mut actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
     actions.sort_by(|a, b| a.display_group.cmp(&b.display_group));
     actions.sort_by(|a, b| a.display_order.cmp(&b.display_order));
     actions

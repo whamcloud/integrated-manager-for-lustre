@@ -21,6 +21,13 @@ jobs:
       name: test_iml
       displayName: Test IML
 
+  # Test wasm-components
+  - template: ci/azure-test-stable.yml
+    parameters:
+      name: test_wasm_components
+      displayName: Test Wasm components
+      crate: iml-wasm-components
+
   # Check building srpm works
   - template: ci/azure-build-check.yml
     parameters:
