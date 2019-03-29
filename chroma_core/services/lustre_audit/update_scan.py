@@ -218,12 +218,11 @@ class UpdateScan(object):
                         ["mounted", "unmounted"],
                     )
 
-            if target_mount.target.active_mount is None:
-                with transaction.atomic():
+            with transaction.atomic():
+                if target_mount.target.active_mount is None:
                     TargetRecoveryInfo.update(target_mount.target, {})
                     TargetRecoveryAlert.notify(target_mount.target, False)
-            elif mounted_locally:
-                with transaction.atomic():
+                elif mounted_locally:
                     recovering = TargetRecoveryInfo.update(target_mount.target, recovery_status)
                     TargetRecoveryAlert.notify(target_mount.target, recovering)
 
