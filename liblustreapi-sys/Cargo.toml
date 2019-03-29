@@ -9,4 +9,4 @@ build = "build.rs"
 libc = "0.2.50"
 
 [build-dependencies]
-bindgen = "0.48.1"
+bindgen = "0.49.0"

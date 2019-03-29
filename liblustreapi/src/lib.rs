@@ -2,19 +2,24 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::convert::From;
-use std::ffi::{CStr, CString};
-use std::fmt;
-use std::io;
-use std::path::PathBuf;
+use std::{
+    convert::From,
+    ffi::{CStr, CString},
+    fmt,
+    io,
+    num::ParseIntError,
+    path::PathBuf,
+    str::FromStr,
+};
 extern crate errno;
 extern crate libc;
-extern crate liblustreapi_sys as sys;
+use liblustreapi_sys as sys;
+
 static PATH_BYTES: usize = 4096;
 
 // FID
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Fid {
     pub seq: u64,
     pub oid: u32,
@@ -25,26 +30,26 @@ impl fmt::Display for Fid {
         write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq, self.oid, self.ver)
     }
 }
-fn num2u32(num: &str) -> u32 {
-    u32::from_str_radix(num.to_lowercase().trim_start_matches("0x"), 16).unwrap()
-}
-fn num2u64(num: &str) -> u64 {
-    u64::from_str_radix(num.to_lowercase().trim_start_matches("0x"), 16).unwrap()
-}
-impl From<String> for Fid {
-    fn from(fidstr: String) -> Self {
-        let fidstr = fidstr.trim_matches(|c| c == '[' || c == ']');
-        let arr: Vec<&str> = fidstr.split(':').collect();
-        Fid {
-            seq: num2u64(arr[0]),
-            oid: num2u32(arr[1]),
-            ver: num2u32(arr[2]),
-        }
+impl FromStr for Fid {
+    type Err = ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let fidstr = s.trim_matches(|c| c == '[' || c == ']');
+        let arr: Vec<&str> = fidstr.split(':')
+            .map(|num| num.trim_start_matches("0x"))
+            .collect();
+        Ok(Fid {
+            seq: u64::from_str_radix(arr[0], 16)?,
+            oid: u32::from_str_radix(arr[1], 16)?,
+            ver: u32::from_str_radix(arr[2], 16)?,
+        })
     }
 }
 impl From<[u8; 40usize]> for Fid {
     fn from(fidstr: [u8; 40usize]) -> Self {
-        Fid::from(String::from_utf8_lossy(&fidstr).into_owned())
+        String::from_utf8_lossy(&fidstr)
+            .into_owned()
+            .parse::<Fid>()
+            .unwrap()
     }
 }
 impl From<sys::lu_fid> for Fid {
@@ -113,7 +118,7 @@ pub fn search_rootpath(fsname: &String) -> Result<String, io::Error> {
     }
     let fsc = CString::new(fsname.as_bytes())
         .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x))?;
-    let mut page: Vec<u8> = Vec::with_capacity(libc::PATH_MAX as usize);
+    let mut page: Vec<u8> = Vec::with_capacity(PATH_BYTES);
     let rc = unsafe { sys::llapi_search_rootpath(page.as_mut_ptr() as *mut i8, fsc.as_ptr()) };
     if rc != 0 {
         eprintln!(
@@ -127,7 +132,7 @@ pub fn search_rootpath(fsname: &String) -> Result<String, io::Error> {
 }
 
 pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
-    let page = Vec::with_capacity(libc::PATH_MAX as usize);
+    let page = Vec::with_capacity(PATH_BYTES);
     let path = PathBuf::from(pathname);
     let file = path.file_name().unwrap().to_str().unwrap();
     let dir = path.parent().unwrap();
@@ -166,7 +171,7 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
 }
 
 pub fn rmfid(device: &String, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
-    use std::fs; // replace with sys::llapi_rmfid
+    use std::fs; // replace with sys::llapi_rmfid see LU-12090
     let mntpt = match search_rootpath(&device) {
         Ok(p) => p,
         Err(e) => {
@@ -211,9 +216,7 @@ mod tests {
 
     #[test]
     fn string2fid() {
-        assert_eq!(
-            "[0x404:0x40:0x10]",
-            format!("{}", Fid::from("[0x404:0x40:0x10]".to_string()))
-        )
+        let fid = Fid { seq: 0x404, oid: 0x40, ver: 0x10 };
+        assert_eq!(Ok(fid), Fid::from_str("[0x404:0x40:0x10]"))
     }
 }
