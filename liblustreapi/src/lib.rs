@@ -6,8 +6,13 @@ use std::convert::From;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
+use std::path::PathBuf;
+extern crate errno;
+extern crate libc;
 extern crate liblustreapi_sys as sys;
 static PATH_BYTES: usize = 4096;
+
+// FID
 
 #[derive(Copy, Clone)]
 pub struct Fid {
@@ -20,24 +25,11 @@ impl fmt::Display for Fid {
         write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq, self.oid, self.ver)
     }
 }
-// @@ There's got to be a better way to do this!
 fn num2u32(num: &str) -> u32 {
-    if num.starts_with("0x") {
-        u32::from_str_radix(num.trim_start_matches("0x"), 16).unwrap()
-    } else if num.starts_with("0X") {
-        u32::from_str_radix(num.trim_start_matches("0X"), 16).unwrap()
-    } else {
-        num.parse().unwrap()
-    }
+    u32::from_str_radix(num.to_lowercase().trim_start_matches("0x"), 16).unwrap()
 }
 fn num2u64(num: &str) -> u64 {
-    if num.starts_with("0x") {
-        u64::from_str_radix(num.trim_start_matches("0x"), 16).unwrap()
-    } else if num.starts_with("0X") {
-        u64::from_str_radix(num.trim_start_matches("0X"), 16).unwrap()
-    } else {
-        num.parse().unwrap()
-    }
+    u64::from_str_radix(num.to_lowercase().trim_start_matches("0x"), 16).unwrap()
 }
 impl From<String> for Fid {
     fn from(fidstr: String) -> Self {
@@ -65,78 +57,19 @@ impl From<sys::lu_fid> for Fid {
     }
 }
 
-#[derive(Copy, Clone)]
-pub struct StatfsState {
-    degraded: bool,
-    readonly: bool,
-    noprecreate: bool,
-    enospc: bool,
-    enoino: bool,
-}
-impl fmt::Display for StatfsState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut list: Vec<String> = vec![];
-        if self.degraded {
-            list.push("degraded".to_string());
-        }
-        if self.readonly {
-            list.push("readonly".to_string());
-        }
-        if self.noprecreate {
-            list.push("noprecreate".to_string());
-        }
-        if self.enospc {
-            list.push("enospc".to_string());
-        }
-        if self.enoino {
-            list.push("enoino".to_string());
-        }
-        write!(f, "{}", list.join(","))
-    }
-}
-impl From<u32> for StatfsState {
-    fn from(state: u32) -> Self {
-        StatfsState {
-            degraded: state & sys::obd_statfs_state_OS_STATE_DEGRADED != 0,
-            readonly: state & sys::obd_statfs_state_OS_STATE_READONLY != 0,
-            noprecreate: state & sys::obd_statfs_state_OS_STATE_NOPRECREATE != 0,
-            enospc: state & sys::obd_statfs_state_OS_STATE_ENOSPC != 0,
-            enoino: state & sys::obd_statfs_state_OS_STATE_ENOINO != 0,
-        }
-    }
-}
+fn buf2string(mut buf: Vec<u8>) -> Result<String, io::Error> {
+    unsafe {
+        let s = CStr::from_ptr(buf.as_ptr() as *const i8);
+        let len = s.to_bytes().len();
+        buf.set_len(len);
+    };
 
-#[derive(Copy, Clone)]
-pub struct Statfs {
-    pub ostype: u64,
-    pub blocks: u64,
-    pub bfree: u64,
-    pub bavail: u64,
-    pub files: u64,
-    pub ffree: u64,
-    pub fsid: Fid,
-    pub bsize: u32,
-    pub namelen: u32,
-    pub maxbytes: u64,
-    pub state: StatfsState,
-    pub fprecreated: u32,
-}
-impl From<sys::obd_statfs> for Statfs {
-    fn from(statfs: sys::obd_statfs) -> Self {
-        Statfs {
-            ostype: statfs.os_type,
-            blocks: statfs.os_blocks,
-            bfree: statfs.os_bfree,
-            bavail: statfs.os_bavail,
-            files: statfs.os_files,
-            ffree: statfs.os_ffree,
-            fsid: Fid::from(statfs.os_fsid),
-            bsize: statfs.os_bsize,
-            namelen: statfs.os_namelen,
-            maxbytes: statfs.os_maxbytes,
-            state: StatfsState::from(statfs.os_state),
-            fprecreated: statfs.os_fprecreated,
-        }
+    let cstr = CString::new(buf);
+    match cstr {
+        Err(x) => Err(io::Error::new(io::ErrorKind::InvalidData, x)),
+        Ok(x) => x
+            .into_string()
+            .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x)),
     }
 }
 
@@ -168,36 +101,85 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, io::Error> {
         )
     };
     if rc != 0 {
-        return Err(io::Error::from_raw_os_error(rc));
+        return Err(io::Error::from_raw_os_error(rc.abs()));
     }
 
-    unsafe {
-        let s = CStr::from_ptr(ptr);
-        let len = s.to_bytes().len();
-        buf.set_len(len);
-    };
-
-    let cstr = CString::new(buf);
-    match cstr {
-        Err(x) => Err(io::Error::new(io::ErrorKind::InvalidData, x)),
-        Ok(x) => x
-            .into_string()
-            .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x)),
-    }
+    buf2string(buf)
 }
 
-// pub fn obd_statfs(filepath: &String) -> Result<Statfs, io::Error> {
-//     let mut path = filepath;
-//     sys::llapi_obd_statfs(path.as_ptr(),
-//     Ok(Statfs::from(statfs))
-// }
+pub fn search_rootpath(fsname: &String) -> Result<String, io::Error> {
+    if fsname.starts_with("/") {
+        return Ok(fsname.to_string());
+    }
+    let fsc = CString::new(fsname.as_bytes())
+        .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x))?;
+    let mut page: Vec<u8> = Vec::with_capacity(libc::PATH_MAX as usize);
+    let rc = unsafe { sys::llapi_search_rootpath(page.as_mut_ptr() as *mut i8, fsc.as_ptr()) };
+    if rc != 0 {
+        eprintln!(
+            "Error: llapi_serach_rootpath({}) => {}",
+            fsc.into_string().unwrap(),
+            rc
+        );
+        return Err(io::Error::from_raw_os_error(rc.abs()));
+    }
+    buf2string(page)
+}
 
-pub fn rmfid(device: &str, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
+pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
+    let page = Vec::with_capacity(libc::PATH_MAX as usize);
+    let path = PathBuf::from(pathname);
+    let file = path.file_name().unwrap().to_str().unwrap();
+    let dir = path.parent().unwrap();
+
+    let rc = unsafe {
+        libc::memcpy(
+            page.as_ptr() as *mut libc::c_void,
+            file.as_ptr() as *const libc::c_void,
+            file.len(),
+        );
+
+        let dircstr = CString::new(dir.to_str().unwrap()).unwrap();
+        let dirptr = dircstr.as_ptr() as *const i8;
+        let dirhandle = libc::opendir(dirptr);
+        if dirhandle.is_null() {
+            let err: i32 = errno::errno().into();
+            eprintln!("Failed top opendir({:?}) -> {}", dircstr, err);
+            return Err(io::Error::from(io::Error::from_raw_os_error(err)));
+        }
+        let rc = libc::ioctl(
+            libc::dirfd(dirhandle),
+            sys::IOC_MDC_GETFILEINFO as u64,
+            page.as_ptr() as *mut sys::lov_user_mds_data_v1,
+        );
+        libc::closedir(dirhandle);
+        rc
+    };
+    if rc != 0 {
+        eprintln!("Failed ioctl({}) => {}", dir.to_str().unwrap(), rc);
+        return Err(io::Error::from_raw_os_error(rc.abs()));
+    }
+    let statptr: *const libc::stat64 = page.as_ptr();
+    let stat: libc::stat64 = unsafe { *statptr };
+
+    Ok(stat)
+}
+
+pub fn rmfid(device: &String, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
     use std::fs; // replace with sys::llapi_rmfid
+    let mntpt = match search_rootpath(&device) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
+            return Err(e);
+        }
+    };
 
     for fidstr in fidlist {
         let path = fid2path(device, &fidstr)?;
-        fs::remove_file(path)?;
+        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
+        let fullpath = pb.to_str().unwrap();
+        fs::remove_file(fullpath)?;
     }
 
     Ok(())

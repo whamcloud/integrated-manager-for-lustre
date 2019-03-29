@@ -11,9 +11,11 @@ use std::process;
 fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
+    // This is neccissary, but I don't know why yet.
+    let _out = std::io::stdout();
 
     if let Err(e) = liblustreapi::rmfid(&device, args) {
-        println!("Failed to remove all fids {}", e);
+        eprintln!("Failed to remove all fids {}", e);
         process::exit(1);
     }
 }
