@@ -13,12 +13,27 @@ mod tooltip;
 
 use action_items::get_record_els;
 use api_transforms::{lock_list, record_to_composite_id_string};
+use cfg_if::cfg_if;
 use hsm::{contains_hsm_params, HsmControlParam};
 use seed::{class, div, prelude::*, spawn_local, ul};
 use std::collections::{HashMap, HashSet};
 use tooltip::{TooltipPlacement, TooltipSize};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
+
+cfg_if! {
+    if #[cfg(feature = "console-log")] {
+        fn init_log() {
+            use log::Level;
+            match console_log::init_with_level(Level::Trace) {
+                Ok(_) => (),
+                Err(e) => log::info!("{:?}", e)
+            };
+        }
+    } else {
+        fn init_log() {}
+    }
+}
 
 /// A record map is a map of composite id's to labels
 pub type RecordMap = HashMap<String, Record>;
@@ -311,7 +326,9 @@ fn records_to_map(xs: Records) -> RecordMap {
 
 #[wasm_bindgen]
 pub fn init(x: &JsValue, el: Element) -> Callbacks {
-    console_error_panic_hook::set_once();
+    init_log();
+
+    log::debug!("Incoming value is: {:?}", x);
 
     let Data {
         records,
@@ -319,7 +336,7 @@ pub fn init(x: &JsValue, el: Element) -> Callbacks {
         flag,
         tooltip_placement,
         tooltip_size,
-    } = x.into_serde().unwrap();
+    } = x.into_serde().expect("Could not parse incoming data");
 
     let records: RecordMap = records_to_map(records);
     let has_hsm_params = contains_hsm_params(&records);
@@ -327,8 +344,8 @@ pub fn init(x: &JsValue, el: Element) -> Callbacks {
         records,
         locks,
         flag,
-        tooltip_placement: tooltip_placement.unwrap_or(TooltipPlacement::Left),
-        tooltip_size: tooltip_size.unwrap_or(TooltipSize::Large),
+        tooltip_placement: tooltip_placement.unwrap_or_default(),
+        tooltip_size: tooltip_size.unwrap_or_default(),
         ..Default::default()
     };
 

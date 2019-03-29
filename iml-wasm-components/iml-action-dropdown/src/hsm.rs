@@ -27,7 +27,7 @@ pub struct MdtConfParams {
         #[serde(rename = "mdt.MDS.mds_setattr.threads_min")]
         mdt_mds_mds_setattr_threads_min: Option<String>,
         #[serde(rename = "mdt.hsm_control")]
-        mdt_hsm_control: String,
+        mdt_hsm_control: Option<String>,
 }
 
 /// Mdt is part of the HsmControlParam

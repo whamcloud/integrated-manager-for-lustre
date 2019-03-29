@@ -2,4 +2,4 @@
 rm -rf package
 cargo build --target wasm32-unknown-unknown --release
 mkdir package
-wasm-bindgen target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --no-modules --out-dir ./package --out-name package
+wasm-bindgen target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --target no-modules --out-dir ./package --out-name package

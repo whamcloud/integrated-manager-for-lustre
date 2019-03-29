@@ -16,9 +16,14 @@ futures = "0.1.25"
 wasm-bindgen = { version = "0.2.40", features = ["serde-serialize"]}
 web-sys = { version = "0.3.17", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
 js-sys = "0.3.17"
-console_error_panic_hook = "0.1.6"
+cfg-if = "0.1"
+log = "0.4"
+console_log = { version = "0.1", optional = true }
 
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
 insta = "0.7.4"
+
+[features]
+console-log = ["console_log"]
