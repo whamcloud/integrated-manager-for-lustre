@@ -1,0 +1,7 @@
+[package]
+name = "iml-manager-env"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]

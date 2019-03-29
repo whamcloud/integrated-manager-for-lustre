@@ -48,11 +48,10 @@ class HostQueueCollection(object):
 
 
 class HostQueues(object):
-    """Both directions of messages for a single host"""
+    """Outgoing messages for a single host"""
 
     def __init__(self, fqdn):
         self.fqdn = fqdn
-        self.rx = Queue.Queue()
         self.tx = Queue.Queue()
         self.tx_lock = threading.Lock()
 
