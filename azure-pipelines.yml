@@ -37,7 +37,7 @@ jobs:
       package: rust-iml
       spec: rust-iml.spec
       release: false
-      branchref: refs/tags/
+      branchref: refs/heads/master
 
   # Release to Prod Copr
   - template: ci/azure-release.yml
@@ -48,4 +48,4 @@ jobs:
       package: rust-iml
       spec: rust-iml.spec
       release: true
-      branchref: refs/heads/master
+      branchref: refs/tags/
