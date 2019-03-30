@@ -71,3 +71,12 @@ pub fn get_server_host() -> String {
 pub fn get_addr() -> SocketAddr {
     to_socket_addr(get_host(), get_port())
 }
+
+/// Get the server port from the env or panic
+pub fn get_warp_drive_port() -> String {
+    get_var("WARP_DRIVE_PORT")
+}
+
+pub fn get_warp_drive_addr() -> SocketAddr {
+    to_socket_addr(get_server_host(), get_warp_drive_port())
+}

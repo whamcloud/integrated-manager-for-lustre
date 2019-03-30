@@ -7,11 +7,12 @@ srpm:
 	mkdir -p ${TMPDIR}/release/rust-iml
 	rm -rf ${BUILDROOT}/_topdir
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,stratagem} \
+	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,stratagem,warp-drive} \
 		iml-agent-comms.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
 		iml-agent/systemd-units/* \
+		iml-warp-drive/systemd-units/* \
 		${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/

@@ -308,6 +308,7 @@ class ServiceConfig(CommandLine):
         "iml-stats.service",
         "iml-view-server.service",
         "iml-realtime.service",
+        "iml-warp-drive.service",
         "device-aggregator.socket",
         "iml-srcmap-reverse.socket",
     ]
@@ -599,6 +600,7 @@ class ServiceConfig(CommandLine):
             "HTTP_API_PROXY_PASS",
             "REALTIME_PROXY_PASS",
             "VIEW_SERVER_PROXY_PASS",
+            "WARP_DRIVE_PROXY_PASS",
             "SSL_PATH",
             "DEVICE_AGGREGATOR_PORT",
             "UPDATE_HANDLER_PROXY_PASS",

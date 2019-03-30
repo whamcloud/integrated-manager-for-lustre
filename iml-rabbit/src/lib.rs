@@ -2,10 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::ToBytes;
 use std::net::SocketAddr;
 
 use failure::Error;
-use futures::future::Future;
+use futures::future::{self, Either, Future};
 use iml_manager_env;
 use lapin_futures::{
     channel::{
@@ -201,7 +202,7 @@ pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
     .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
 }
 
-pub fn basic_publish<T: Into<Vec<u8>> + std::fmt::Debug>(
+pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     exchange: &str,
     routing_key: &str,
     channel: TcpChannel,
@@ -209,20 +210,25 @@ pub fn basic_publish<T: Into<Vec<u8>> + std::fmt::Debug>(
 ) -> impl TcpChannelFuture {
     log::info!("publishing Request: {:?}", req);
 
-    channel
-        .basic_publish(
-            exchange,
-            routing_key,
-            req.into(),
-            BasicPublishOptions::default(),
-            BasicProperties::default()
-                .with_content_type("application/json".into())
-                .with_content_encoding("utf-8".into())
-                .with_priority(0),
-        )
-        .map(|confirmation| log::info!("publish got confirmation: {:?}", confirmation))
-        .map(|_| channel)
-        .map_err(failure::Error::from)
+    match req.to_bytes() {
+        Ok(bytes) => Either::A(
+            channel
+                .basic_publish(
+                    exchange,
+                    routing_key,
+                    bytes,
+                    BasicPublishOptions::default(),
+                    BasicProperties::default()
+                        .with_content_type("application/json".into())
+                        .with_content_encoding("utf-8".into())
+                        .with_priority(0),
+                )
+                .map(|confirmation| log::info!("publish got confirmation: {:?}", confirmation))
+                .map(|_| channel)
+                .from_err(),
+        ),
+        Err(e) => Either::B(future::err(e.into())),
+    }
 }
 
 pub fn declare_queue<'a>(

@@ -1,91 +1,90 @@
 language: python
-python: '2.7'
+python: "2.7"
 sudo: required
 services:
   - docker
   - postgresql
 addons:
-  apt:
-    update: true
   postgresql: "9.2"
   apt:
+    update: true
     packages:
       - postgresql-server-dev-9.2
 jobs:
   include:
-  - stage: test
-    name: "Docker build Test"
-    script:
-      - sudo rm /usr/local/bin/docker-compose
-      - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
-      - chmod +x docker-compose
-      - sudo mv docker-compose /usr/local/bin
-      - cd docker
-      - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
-      - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
-      - docker-compose build
-  - stage: test
-    name: "Unit Tests"
-    install:
-      - pip install -r requirements.txt
-      - pip install -r requirements.test
-    before_script:
-      - psql -c "CREATE USER chroma;" -U postgres
-      - psql -c "ALTER USER chroma CREATEDB;" -U postgres
-      - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
-    script:
-      - export IML_DISABLE_THREADS=1
-      - echo "CRYPTO_FOLDER='./'" > local_settings.py
-      - echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
-      - python -W always manage.py test tests/unit/
-  - stage: test
-    name: "Behave tests"
-    install:
-      - pip install -r requirements.txt
-      - pip install -r requirements.test
-    before_script:
-      - psql -c "CREATE USER chroma;" -U postgres
-      - psql -c "ALTER USER chroma CREATEDB;" -U postgres
-      - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
-    script:
-      - export IML_DISABLE_THREADS=1
-      - behave --format plain tests/feature/cli/features
-  - stage: test
-    name: "Service tests"
-    script:
-      - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
-      - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
-  - stage: test
-    name: "Format Check"
-    python: "3.6"
-    install:
+    - stage: test
+      name: "Docker build Test"
+      script:
+        - sudo rm /usr/local/bin/docker-compose
+        - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+        - chmod +x docker-compose
+        - sudo mv docker-compose /usr/local/bin
+        - cd docker
+        - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
+        - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
+        - docker-compose build
+    - stage: test
+      name: "Unit Tests"
+      install:
+        - pip install -r requirements.txt
+        - pip install -r requirements.test
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - export IML_DISABLE_THREADS=1
+        - echo "CRYPTO_FOLDER='./'" > local_settings.py
+        - echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
+        - python -W always manage.py test tests/unit/
+    - stage: test
+      name: "Behave tests"
+      install:
+        - pip install -r requirements.txt
+        - pip install -r requirements.test
+      before_script:
+        - psql -c "CREATE USER chroma;" -U postgres
+        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
+        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
+      script:
+        - export IML_DISABLE_THREADS=1
+        - behave --format plain tests/feature/cli/features
+    - stage: test
+      name: "Service tests"
+      script:
+        - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
+        - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
+    - stage: test
+      name: "Format Check"
+      python: "3.6"
+      install:
         - pip install black
-    script:
+      script:
         - black --check ./
-  - stage: cd
-    git:
-      depth: 999999
-    name: "Continuous Deployment (Copr)"
-    script:
-      - include/travis/copr-deploy.sh prepare
-      - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
-  - stage: cd
-    git:
-      depth: 999999
-    name: "Continuous Deployment (Docker)"
-    script:
-      - sudo rm /usr/local/bin/docker-compose
-      - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
-      - chmod +x docker-compose
-      - sudo mv docker-compose /usr/local/bin
-      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-      - cd docker
-      - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
-      - docker push imlteam/manager-service-base
-      - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
-      - docker push imlteam/manager-nginx
-      - docker-compose build
-      - docker-compose push
+    - stage: cd
+      git:
+        depth: 999999
+      name: "Continuous Deployment (Copr)"
+      script:
+        - include/travis/copr-deploy.sh prepare
+        - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
+    - stage: cd
+      git:
+        depth: 999999
+      name: "Continuous Deployment (Docker)"
+      script:
+        - sudo rm /usr/local/bin/docker-compose
+        - curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-Linux-x86_64 > docker-compose
+        - chmod +x docker-compose
+        - sudo mv docker-compose /usr/local/bin
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - cd docker
+        - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
+        - docker push imlteam/manager-service-base
+        - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
+        - docker push imlteam/manager-nginx
+        - docker-compose build
+        - docker-compose push
 stages:
   - test
   - name: cd
