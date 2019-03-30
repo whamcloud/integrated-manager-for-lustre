@@ -1,25 +1,21 @@
- /build/.cargo/bin/rustup:
-	cd /tmp; \
-	wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init; \
-	chmod +x rustup-init; \
-	./rustup-init -y; \
-	/build/.cargo/bin/cargo install wasm-bindgen-cli;
+BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
+TMPDIR:=$(shell mktemp -d)
 
-srpm: /build/.cargo/bin/rustup
-	mkdir -p /tmp/_topdir/SOURCES
-	mkdir -p /tmp/scratch
-	cp -r /build/Cargo.toml /build/Cargo.lock /build/iml-action-dropdown /build/iml-wasm-components.spec /tmp/scratch
-	cd /tmp/scratch; \
-	/build/.cargo/bin/rustup default stable; \
-	/build/.cargo/bin/rustup target add wasm32-unknown-unknown; \
-	/build/.cargo/bin/cargo build --target wasm32-unknown-unknown --release; \
-	mkdir -p /tmp/package; \
-	/build/.cargo/bin/wasm-bindgen /tmp/scratch/target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --no-modules --out-dir /tmp/package --out-name package; \
-	cd /tmp; \
-	tar cvf /tmp/_topdir/SOURCES/iml-wasm-components.tar package
-
-	rpmbuild -bs --define "_topdir /tmp/_topdir" /tmp/scratch/iml-wasm-components.spec
-
-	cp -r /tmp/_topdir/SRPMS/* $(outdir)
+srpm:
+	mkdir -p ${TMPDIR}/_topdir/SOURCES
+	mkdir -p ${TMPDIR}/_topdir/SPECS
+	mkdir -p ${TMPDIR}/package
+	rm -rf ${BUILDROOT}/_topdir
+	curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable \
+	export PATH=$$PATH:$$HOME/.cargo/bin \
+	cargo install wasm-bindgen-cli; \
+	rustup target add wasm32-unknown-unknown \
+	cargo build --target wasm32-unknown-unknown --release \
+	wasm-bindgen target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --target no-modules --out-dir ${TMPDIR}/package --out-name package
+	tar cvf ${TMPDIR}/_topdir/SOURCES/iml-wasm-components.tar -C ${TMPDIR}/package .
+	cp iml-wasm-components.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-wasm-components.spec
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f _topdir/SRPMS/*.rpm $(outdir)
 
 .PHONY: srpm
