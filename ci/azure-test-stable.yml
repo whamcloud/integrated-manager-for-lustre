@@ -27,10 +27,10 @@ jobs:
           runInBackground: true
           ports: |
             5672:5672
-
-      - script: |
-          cargo test
+      - script: cargo test
         env:
           LOOM_MAX_DURATION: 10
           CI: "True"
         displayName: cargo test
+        ${{ if parameters.crate }}:
+          workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}
