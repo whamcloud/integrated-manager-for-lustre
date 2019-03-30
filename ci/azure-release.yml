@@ -3,20 +3,10 @@ jobs:
     displayName: ${{ parameters.displayName }}
     condition: and(succeeded(), contains(variables['Build.SourceBranch'], '${{parameters.branchref}}'))
     steps:
-      - task: Docker@1
-        displayName: ${{ parameters.displayName }}
+      - script: |
+          docker run -i -e OWNER="managerforlustre" -e PROD="${{parameters.release}}" -e PROJECT="${{parameters.project}}" -e PACKAGE="${{parameters.package}}" -e SPEC="${{parameters.spec}}" -e KEY="$(KEY)" -e IV="$(IV)" -v $(pwd):/build:rw imlteam/copr
         env:
-          key: ${key}
-          iv: ${iv}
-        inputs:
-          imageName: imlteam/copr
-          command: run
-          volumes: $(Build.SourcesDirectory):/build:rw
-          runInBackground: false
-          envVars: OWNER=managerforlustre
-            PROJECT=${{parameters.project}}
-            PACKAGE=${{parameters.package}}
-            SPEC=${{parameters.spec}}
-            RELEASE=${{parameters.release}}
-            KEY=$key
-            IV=$iv
+          KEY: (copr_key)
+          IV: $(copr_iv)
+    ${{ if parameters.crate }}:
+      workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}
