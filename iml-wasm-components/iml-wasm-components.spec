@@ -16,7 +16,7 @@ Source0:    iml-wasm-components.tar
 %{summary}.
 
 %prep
-%setup -q -n package
+%setup -c
 
 %build
 #nothing to do
