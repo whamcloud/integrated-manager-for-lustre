@@ -14,3 +14,5 @@ jobs:
       - script: |
           cargo clippy
         displayName: Check linting
+        ${{ if parameters.crate }}:
+          workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}
