@@ -39,6 +39,7 @@ jobs:
       release: false
       branchref: refs/tags/
 
+  # Release to Prod Copr
   - template: ci/azure-release.yml
     parameters:
       name: copr_push
