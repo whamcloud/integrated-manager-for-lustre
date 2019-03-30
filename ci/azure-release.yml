@@ -8,5 +8,5 @@ jobs:
         env:
           KEY: (copr_key)
           IV: $(copr_iv)
-    ${{ if parameters.crate }}:
-      workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}
+        ${{ if parameters.crate }}:
+          workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}

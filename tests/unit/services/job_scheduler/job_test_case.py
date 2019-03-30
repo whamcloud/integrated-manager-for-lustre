@@ -121,7 +121,7 @@ class JobTestCase(IMLUnitTestCase):
         # turn into local calls -- self is a catch-all to prevent any RPC classes
         # from trying to do network comms during unit tests
         ServiceRpcInterface._call = mock.Mock(side_effect=NotImplementedError)
-        ServiceQueue.put = mock.Mock(side_effect=NotImplementedError)
+        ServiceQueue.put = mock.Mock()
         ServiceQueue.purge = mock.Mock()
 
         # Create an instance for the purposes of the test

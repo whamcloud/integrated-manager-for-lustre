@@ -250,5 +250,5 @@ class JobSchedulerClient(object):
         JobSchedulerRpc().unregister_copytool(copytool_id)
 
     @classmethod
-    def get_locks(cls, obj_key, obj_id):
-        return JobSchedulerRpc().get_locks(obj_key, obj_id)
+    def get_locks(cls):
+        return JobSchedulerRpc().get_locks()

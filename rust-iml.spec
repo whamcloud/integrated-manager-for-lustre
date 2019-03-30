@@ -29,11 +29,13 @@ cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-stratagem %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
+cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.service %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
+cp iml-warp-drive.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 
@@ -125,6 +127,27 @@ systemctl preset iml-action-runner.service
 %files action-runner
 %{_bindir}/iml-action-runner
 %attr(0644,root,root)%{_unitdir}/iml-action-runner.service
+
+%package warp-drive
+Summary: Streaming IML messages with Server-Sent Events
+License: MIT
+Group: System Environment/Libraries
+
+%description warp-drive
+%{summary}
+
+%post warp-drive
+systemctl preset iml-warp-drive.service
+
+%preun warp-drive
+%systemd_preun iml-warp-drive.service
+
+%postun warp-drive
+%systemd_postun_with_restart iml-warp-drive.service
+
+%files warp-drive
+%{_bindir}/iml-warp-drive
+%attr(0644,root,root)%{_unitdir}/iml-warp-drive.service
 
 %changelog
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

@@ -168,23 +168,10 @@ class CustomModelResource(ChromaModelResource):
 
 class StatefulModelResource(CustomModelResource):
     content_type_id = fields.IntegerField()
-    available_transitions = fields.ListField()
-    available_jobs = fields.ListField()
     label = fields.CharField()
-    locks = fields.DictField(help_text="Lists of locked job ids for this object")
 
     class Meta:
-        readonly = [
-            "id",
-            "immutable_state",
-            "state",
-            "content_type_id",
-            "available_transitions",
-            "available_jobs",
-            "label",
-            "state_modified_at",
-            "locks",
-        ]
+        readonly = ["id", "immutable_state", "state", "content_type_id", "label", "state_modified_at"]
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, "content_type"):
@@ -194,90 +181,6 @@ class StatefulModelResource(CustomModelResource):
 
     def dehydrate_label(self, bundle):
         return bundle.obj.get_label()
-
-    def dehydrate_locks(self, bundle):
-        obj = bundle.obj
-        obj_key = ContentType.objects.get_for_model(obj.downcast()).natural_key()
-
-        return JobSchedulerClient.get_locks(obj_key, obj.id)
-
-    def alter_detail_data_to_serialize(self, request, bundle):
-        """Add post dehydrate data to a single bundle
-
-        Call in methods that call obj_create() and have a flag to create
-        a fresh copy of the bundle.
-
-        Recommended to be used in places that call full_dehydrate directly
-        around this app to get available_* data added to the bundle.
-
-        Normally as GET call to TastyPie will call the
-        alter_list_data_to_serialize hook method which populates the
-        available_* data.  In the short circuit case of calling full_dehydrate
-        you can use this method to get the available_* post added.
-
-        Example:
-          self.alter_detail_data_to_serialize(
-            self.full_dehydrate(
-                self.build_bundle(obj=the_obj)
-                )
-            ).data
-
-        or, perhaps more readable
-
-          bundle = self.full_dehydrate(self.build_bundle(obj=the_obj))
-          bundle = self.alter_detail_data_to_serialize(bundle)
-          data = bundle.data
-
-        """
-
-        to_be_serialized = dict()
-        to_be_serialized["objects"] = [bundle]
-        to_be_serialized = self.alter_list_data_to_serialize(None, to_be_serialized)
-
-        #  Return the bundle
-        return to_be_serialized["objects"][0]
-
-    def alter_list_data_to_serialize(self, request, to_be_serialized):
-        """Post process available jobs and state transitions
-
-        This method is a TastyPie hook that is called after all fields
-        have been dehydrated.  The available_* methods are no longer
-        dehydrated one at a time.  Instead, they are all done in two batched
-        calls, and set in the return datastructure here.
-
-        to_be_serialized is a list of TastyPie Bundles composing some
-        subclass of StatefulObjects under the key 'objects.
-
-        Returns an updated copy of the input dict.
-        """
-
-        batch = []
-        for bundle in to_be_serialized["objects"]:
-            so_ct_key = ContentType.objects.get_for_model(bundle.obj.downcast()).natural_key()
-            batch.append((so_ct_key, bundle.obj.id))
-
-        computed_transitions = JobSchedulerClient.available_transitions(batch)
-        computed_jobs = JobSchedulerClient.available_jobs(batch)
-
-        #  decorate the transition lists with verbs
-        #  and install in the bundle for return
-        for idx, bundle in enumerate(to_be_serialized["objects"]):
-            obj_transitions_states_and_verbs = computed_transitions[str(bundle.obj.id)]
-
-            obj_jobs = computed_jobs[str(bundle.obj.id)]
-
-            # TODO: available_transitions is deprecated, use available_actions
-            bundle.data["available_transitions"] = obj_transitions_states_and_verbs
-
-            # TODO: available_jobs is deprecated, use available_actions
-            bundle.data["available_jobs"] = obj_jobs
-
-            available_actions = sorted(
-                obj_transitions_states_and_verbs + obj_jobs, key=lambda action: action["display_order"]
-            )
-            bundle.data["available_actions"] = available_actions
-
-        return to_be_serialized
 
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
     def obj_update(self, bundle, **kwargs):
@@ -358,7 +261,7 @@ class ConfParamResource(StatefulModelResource):
         # FIXME HYD-1032: PUTing modified conf_params and modified state in the same request will
         # cause one of those two things to be ignored.
 
-        if not "conf_params" in bundle.data or isinstance(obj, ManagedMgs):
+        if "conf_params" not in bundle.data or isinstance(obj, ManagedMgs):
             super(ConfParamResource, self).obj_update(bundle, **kwargs)
 
         try:

@@ -1,0 +1,18 @@
+[Unit]
+Description=IML Warp Drive Service
+PartOf=iml-manager.target
+After=rabbitmq-server.service
+After=iml-settings-populator.service
+Requires=iml-settings-populator.service
+
+
+[Service]
+Type=simple
+EnvironmentFile=/var/lib/chroma/iml-settings.conf
+ExecStart=/bin/iml-warp-drive
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=iml-manager.target
