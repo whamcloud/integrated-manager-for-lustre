@@ -1,5 +1,7 @@
 BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
+export PATH := $(PATH):$(HOME)/.cargo/bin
+
 
 srpm:
 	mkdir -p ${TMPDIR}/_topdir/SOURCES
@@ -7,7 +9,6 @@ srpm:
 	mkdir -p ${TMPDIR}/package
 	rm -rf ${BUILDROOT}/_topdir
 	curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable \
-	export PATH=$$PATH:$$HOME/.cargo/bin \
 	cargo install wasm-bindgen-cli; \
 	rustup target add wasm32-unknown-unknown \
 	cargo build --target wasm32-unknown-unknown --release \
