@@ -2,22 +2,20 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
-};
-
+use crate::locks::Locks;
 use futures::{
     future::{poll_fn, Future},
     sync::{mpsc, oneshot},
     Stream,
 };
-
-use crate::locks::Locks;
-
+use parking_lot::Mutex;
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 use warp::sse::ServerSentEvent;
 
 /// Our global unique user id counter.
@@ -49,11 +47,11 @@ pub fn user_connected(
         }
     }
 
-    // Make an extra clone of users list to give to our disconnection handler...
-    let state2 = state.clone();
-
     // Save the sender in our list of connected users.
-    state2.lock().unwrap().insert(id, tx);
+    state.lock().insert(id, tx);
+
+    // Make an extra clone of users list to give to our disconnection handler...
+    let state2 = Arc::clone(&state);
 
     // Create channel to track disconnecting the receiver side of events.
     // This is little bit tricky.
@@ -66,7 +64,10 @@ pub fn user_connected(
     }));
 
     // Convert messages into Server-Sent Events and return resulting stream.
-    rx.map(|msg| match msg {
+    rx.inspect(|msg| {
+        log::debug!("Handling message: {:?}", msg);
+    })
+    .map(|msg| match msg {
         Message::UserId(id) => (warp::sse::event("user"), warp::sse::data(id)).into_a(),
         Message::Data(reply) => warp::sse::data(reply).into_b(),
     })
@@ -80,7 +81,7 @@ pub fn user_connected(
 pub fn send_message(msg: String, state: &SharedUsers) {
     log::debug!("Sending message {:?} to users {:?}", msg, state);
 
-    for (_, tx) in state.lock().unwrap().iter() {
+    for (_, tx) in state.lock().iter() {
         match tx.unbounded_send(Message::Data(msg.clone())) {
             Ok(()) => (),
             Err(_disconnected) => {
@@ -93,14 +94,14 @@ pub fn send_message(msg: String, state: &SharedUsers) {
 }
 
 pub fn disconnect_all_users(state: &SharedUsers) {
-    log::debug!("Flushing all users");
+    log::info!("Flushing all users");
 
-    state.lock().unwrap().clear();
+    state.lock().clear();
 }
 
 pub fn user_disconnected(id: usize, state: &SharedUsers) {
     log::debug!("user {} disconnected", id);
 
     // Stream closed up, so remove from the user list
-    state.lock().unwrap().remove(&id);
+    state.lock().remove(&id);
 }
