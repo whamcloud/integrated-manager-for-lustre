@@ -4,15 +4,16 @@
 
 // Usage: stratagem_purge FS [NID1] [NID2] ...
 
-use liblustreapi;
-use std::env;
-use std::process;
+use std::{env, process};
 
 fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
     // This is neccissary, but I don't know why yet.
-    let _ = { std::io::stdout(); () };
+    let _ = {
+        std::io::stdout();
+        ()
+    };
 
     if let Err(e) = liblustreapi::rmfid(&device, args) {
         eprintln!("Failed to remove all fids {}", e);

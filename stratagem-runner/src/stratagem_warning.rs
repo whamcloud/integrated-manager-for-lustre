@@ -4,18 +4,14 @@
 
 // Usage: stratagem_warning [FS-NAME|FS-MOUNT-POINT] [NID1] [NID2] ...
 
-extern crate csv;
-#[macro_use]
-extern crate serde;
-
 use libc;
-use liblustreapi;
 use std::env;
 use std::ffi::CStr;
 use std::io;
 use std::process;
+use stratagem_runner::error::StratagemError;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 struct Record<'a> {
     path: &'a str,
@@ -28,35 +24,33 @@ struct Record<'a> {
     fid: &'a str,
 }
 
-fn write_records(device: &String, args: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
+fn write_records(
+    device: &String,
+    args: impl IntoIterator<Item = String>,
+) -> Result<(), StratagemError> {
     let out = io::stdout();
-    let mntpt = match liblustreapi::search_rootpath(&device) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
-            return Err(e);
-        }
-    };
+    let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
+        eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
+        e
+    })?;
     let mut wtr = csv::Writer::from_writer(out);
 
     for fid in args {
         if let Ok(path) = liblustreapi::fid2path(&device, &fid) {
             let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
             let fullpath = pb.to_str().unwrap();
-            let stat = match liblustreapi::mdc_stat(&fullpath) {
-                Ok(stat) => stat,
-                Err(e) => {
-                    eprintln!("Failed to mdc_stat({}) => {:?}", fullpath, e);
-                    return Err(e);
-                }
-            };
+            let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
+                eprintln!("Failed to mdc_stat({}) => {:?}", fullpath, e);
+                e
+            })?;
             let user = unsafe {
                 let pwent = libc::getpwuid(stat.st_uid);
                 if pwent.is_null() {
                     eprintln!("Failed to getpwuid({})", stat.st_uid);
-                    return Err(io::Error::from(io::ErrorKind::NotFound));
+
+                    return Err(io::Error::from(io::ErrorKind::NotFound).into());
                 }
-                CStr::from_ptr((*pwent).pw_name).to_str().unwrap()
+                CStr::from_ptr((*pwent).pw_name).to_str()?
             };
             wtr.serialize(Record {
                 path: &path,
@@ -70,7 +64,10 @@ fn write_records(device: &String, args: impl IntoIterator<Item = String>) -> Res
             })?;
         }
     }
-    wtr.flush()
+
+    wtr.flush()?;
+
+    Ok(())
 }
 
 fn main() {

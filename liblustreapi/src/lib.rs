@@ -2,13 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod error;
+
 use errno;
+use error::LiblustreError;
 use libc;
 use liblustreapi_sys as sys;
 use std::{
     convert::From,
     ffi::{CStr, CString},
-    fmt, io,
+    fmt,
     num::ParseIntError,
     path::PathBuf,
     str::FromStr,
@@ -62,28 +65,22 @@ impl From<sys::lu_fid> for Fid {
     }
 }
 
-fn buf2string(mut buf: Vec<u8>) -> Result<String, io::Error> {
+fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
     unsafe {
         let s = CStr::from_ptr(buf.as_ptr() as *const i8);
         let len = s.to_bytes().len();
         buf.set_len(len);
     };
 
-    let cstr = CString::new(buf);
-    match cstr {
-        Err(x) => Err(io::Error::new(io::ErrorKind::InvalidData, x)),
-        Ok(x) => x
-            .into_string()
-            .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x)),
-    }
+    Ok(CString::new(buf)?.into_string()?)
 }
 
-pub fn fid2path(device: &str, fidstr: &str) -> Result<String, io::Error> {
+pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     if !fidstr.starts_with('[') {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("FID is invalid format {}", fidstr),
-        ));
+        return Err(LiblustreError::invalid_input(format!(
+            "FID is invalid format {}",
+            fidstr
+        )));
     }
 
     let mut buf = Vec::with_capacity(PATH_BYTES);
@@ -106,65 +103,49 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, io::Error> {
         )
     };
     if rc != 0 {
-        return Err(io::Error::from_raw_os_error(rc.abs()));
+        return Err(LiblustreError::os_error(rc.abs()));
     }
 
     buf2string(buf)
 }
 
-pub fn search_rootpath(fsname: &str) -> Result<String, io::Error> {
+pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     if fsname.starts_with("/") {
         return Ok(fsname.to_string());
     }
-    let fsc = CString::new(fsname.as_bytes())
-        .map_err(|x| io::Error::new(io::ErrorKind::InvalidData, x))?;
+    let fsc = CString::new(fsname.as_bytes())?;
     let mut page: Vec<u8> = Vec::with_capacity(PATH_BYTES);
     let rc = unsafe { sys::llapi_search_rootpath(page.as_mut_ptr() as *mut i8, fsc.as_ptr()) };
     if rc != 0 {
         eprintln!(
             "Error: llapi_serach_rootpath({}) => {}",
-            fsc.into_string().unwrap(),
+            fsc.into_string()?,
             rc
         );
-        return Err(io::Error::from_raw_os_error(rc.abs()));
+        return Err(LiblustreError::os_error(rc.abs()));
     }
     buf2string(page)
 }
 
-pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
+pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, LiblustreError> {
     let page = Vec::with_capacity(PATH_BYTES);
     let path = PathBuf::from(pathname);
-    let file = match path.file_name() {
-        Some(f) => match f.to_str() {
-            Some(s) => s,
-            None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("No String for: {}", pathname),
-                ));
-            }
-        },
-        None => {
-            return Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("File Not Found: {}", pathname),
-            ));
-        }
-    };
-    let dir = match path.parent() {
-        Some(d) => d,
-        None => return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("No Parent directory: {}", pathname),
-        )),
-    };
-    let dirstr = match dir.to_str() {
-        Some(s) => s,
-        None => return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("No string for Parent: {}", pathname),
-        )),
-    };
+
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| LiblustreError::not_found(format!("No String for: {}", pathname)))?;
+
+    let file = file_name
+        .to_str()
+        .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {}", pathname)))?;
+
+    let dir = path
+        .parent()
+        .ok_or_else(|| LiblustreError::not_found(format!("No Parent directory: {}", pathname)))?;
+
+    let dirstr = dir
+        .to_str()
+        .ok_or_else(|| LiblustreError::not_found(format!("No string for Parent: {}", pathname)))?;
 
     let rc = unsafe {
         libc::memcpy(
@@ -173,13 +154,13 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
             file.len(),
         );
 
-        let dircstr = CString::new(dirstr).unwrap();
+        let dircstr = CString::new(dirstr)?;
         let dirptr = dircstr.as_ptr() as *const i8;
         let dirhandle = libc::opendir(dirptr);
         if dirhandle.is_null() {
             let err: i32 = errno::errno().into();
             eprintln!("Failed top opendir({:?}) -> {}", dircstr, err);
-            return Err(io::Error::from(io::Error::from_raw_os_error(err)));
+            return Err(LiblustreError::os_error(err));
         }
         let rc = libc::ioctl(
             libc::dirfd(dirhandle),
@@ -191,7 +172,7 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
     };
     if rc != 0 {
         eprintln!("Failed ioctl({}) => {}", dirstr, rc);
-        return Err(io::Error::from_raw_os_error(rc.abs()));
+        return Err(LiblustreError::os_error(rc.abs()));
     }
     let statptr: *const libc::stat64 = page.as_ptr();
     let stat: libc::stat64 = unsafe { *statptr };
@@ -199,21 +180,21 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
     Ok(stat)
 }
 
-pub fn rmfid(device: &String, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
+pub fn rmfid(
+    device: &String,
+    fidlist: impl IntoIterator<Item = String>,
+) -> Result<(), LiblustreError> {
     use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
-    let mntpt = match search_rootpath(&device) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
-            return Err(e);
-        }
-    };
+
+    let mntpt = search_rootpath(&device).map_err(|e| {
+        eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
+        e
+    })?;
 
     for fidstr in fidlist {
         let path = fid2path(device, &fidstr)?;
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-        let fullpath = pb.to_str().unwrap();
-        fs::remove_file(fullpath)?;
+        fs::remove_file(pb)?;
     }
 
     Ok(())
