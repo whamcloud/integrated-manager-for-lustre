@@ -112,7 +112,7 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, io::Error> {
     buf2string(buf)
 }
 
-pub fn search_rootpath(fsname: &String) -> Result<String, io::Error> {
+pub fn search_rootpath(fsname: &str) -> Result<String, io::Error> {
     if fsname.starts_with("/") {
         return Ok(fsname.to_string());
     }
