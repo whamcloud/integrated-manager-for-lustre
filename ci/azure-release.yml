@@ -6,7 +6,7 @@ jobs:
       - script: |
           docker run -i -e OWNER="managerforlustre" -e PROD="${{parameters.release}}" -e PROJECT="${{parameters.project}}" -e PACKAGE="${{parameters.package}}" -e SPEC="${{parameters.spec}}" -e KEY="$(KEY)" -e IV="$(IV)" -v $(pwd):/build:rw imlteam/copr
         env:
-          KEY: (copr_key)
+          KEY: $(copr_key)
           IV: $(copr_iv)
         ${{ if parameters.crate }}:
           workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}

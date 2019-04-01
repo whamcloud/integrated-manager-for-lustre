@@ -75,7 +75,7 @@ pub fn create_locks_consumer(
 }
 
 /// The type of lock
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq, Hash)]
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
 enum LockType {
     Read,
@@ -83,7 +83,7 @@ enum LockType {
 }
 
 /// The Action associated with a `LockChange`
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq, Hash)]
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
 enum Action {
     Add,
@@ -91,7 +91,7 @@ enum Action {
 }
 
 /// A change to be applied to `Locks`
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq, Hash)]
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct LockChange {
     job_id: u64,
     content_type_id: u64,
