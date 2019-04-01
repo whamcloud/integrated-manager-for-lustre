@@ -12,7 +12,7 @@ https://bitbucket.org/jordilin/alerta/downloads/log4tailer-3.0.9.tar.gz
 https://github.com/drkjam/netaddr/archive/rel-0.7.5.tar.gz
 iml-common>=1.4,<1.5
 jsonschema==0.8.0
-kombu==4.2.2
+kombu==4.3.0
 lockfile==0.9.1
 meld3==0.6.10
 mimeparse==0.1.3
