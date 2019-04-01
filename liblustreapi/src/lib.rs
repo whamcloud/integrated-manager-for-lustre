@@ -2,18 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use errno;
+use libc;
+use liblustreapi_sys as sys;
 use std::{
     convert::From,
     ffi::{CStr, CString},
-    fmt,
-    io,
+    fmt, io,
     num::ParseIntError,
     path::PathBuf,
     str::FromStr,
 };
-extern crate errno;
-extern crate libc;
-use liblustreapi_sys as sys;
 
 static PATH_BYTES: usize = 4096;
 
@@ -34,7 +33,8 @@ impl FromStr for Fid {
     type Err = ParseIntError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let fidstr = s.trim_matches(|c| c == '[' || c == ']');
-        let arr: Vec<&str> = fidstr.split(':')
+        let arr: Vec<&str> = fidstr
+            .split(':')
             .map(|num| num.trim_start_matches("0x"))
             .collect();
         Ok(Fid {
@@ -134,8 +134,37 @@ pub fn search_rootpath(fsname: &str) -> Result<String, io::Error> {
 pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
     let page = Vec::with_capacity(PATH_BYTES);
     let path = PathBuf::from(pathname);
-    let file = path.file_name().unwrap().to_str().unwrap();
-    let dir = path.parent().unwrap();
+    let file = match path.file_name() {
+        Some(f) => match f.to_str() {
+            Some(s) => s,
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("No String for: {}", pathname),
+                ));
+            }
+        },
+        None => {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("File Not Found: {}", pathname),
+            ));
+        }
+    };
+    let dir = match path.parent() {
+        Some(d) => d,
+        None => return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("No Parent directory: {}", pathname),
+        )),
+    };
+    let dirstr = match dir.to_str() {
+        Some(s) => s,
+        None => return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("No string for Parent: {}", pathname),
+        )),
+    };
 
     let rc = unsafe {
         libc::memcpy(
@@ -144,7 +173,7 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
             file.len(),
         );
 
-        let dircstr = CString::new(dir.to_str().unwrap()).unwrap();
+        let dircstr = CString::new(dirstr).unwrap();
         let dirptr = dircstr.as_ptr() as *const i8;
         let dirhandle = libc::opendir(dirptr);
         if dirhandle.is_null() {
@@ -161,7 +190,7 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
         rc
     };
     if rc != 0 {
-        eprintln!("Failed ioctl({}) => {}", dir.to_str().unwrap(), rc);
+        eprintln!("Failed ioctl({}) => {}", dirstr, rc);
         return Err(io::Error::from_raw_os_error(rc.abs()));
     }
     let statptr: *const libc::stat64 = page.as_ptr();
@@ -171,7 +200,7 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, io::Error> {
 }
 
 pub fn rmfid(device: &String, fidlist: impl IntoIterator<Item = String>) -> Result<(), io::Error> {
-    use std::fs; // replace with sys::llapi_rmfid see LU-12090
+    use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
     let mntpt = match search_rootpath(&device) {
         Ok(p) => p,
         Err(e) => {
@@ -216,7 +245,11 @@ mod tests {
 
     #[test]
     fn string2fid() {
-        let fid = Fid { seq: 0x404, oid: 0x40, ver: 0x10 };
+        let fid = Fid {
+            seq: 0x404,
+            oid: 0x40,
+            ver: 0x10,
+        };
         assert_eq!(Ok(fid), Fid::from_str("[0x404:0x40:0x10]"))
     }
 }

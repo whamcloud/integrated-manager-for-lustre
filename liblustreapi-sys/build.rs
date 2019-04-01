@@ -2,12 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-macro_rules! mtime {
-    ($path:expr) => {
-        std::fs::metadata($path).unwrap().modified().unwrap()
-    };
-}
-
 fn main() {
     let out_file = std::env::current_dir()
         .unwrap()
@@ -18,7 +12,7 @@ fn main() {
     // shared library.
     println!("cargo:rustc-link-lib=lustreapi");
 
-    if out_file.exists() && mtime!(&out_file) > mtime!(std::env::current_exe().unwrap()) {
+    if out_file.exists() {
         return;
     }
 
