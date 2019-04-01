@@ -12,6 +12,7 @@ class IMLUnitTestCase(TestCase):
     def setUp(self):
         super(IMLUnitTestCase, self).setUp()
 
+        mock.patch("chroma_core.services.job_scheduler.job_scheduler.LockQueue.put").start()
         mock.patch("chroma_core.services.dbutils.exit_if_in_transaction").start()
 
     def make_command(self, complete=False, created_at=None, errored=True, message="test"):

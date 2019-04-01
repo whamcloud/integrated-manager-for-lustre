@@ -1,6 +1,7 @@
 import re
 
 from testconfig import config
+from tests.utils.http_requests import get_actions
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
@@ -25,12 +26,16 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             self.assertEqual(response.successful, True, response.text)
             hosts = response.json["objects"]
             self.assertEqual(len(config["lustre_servers"]), len(hosts))
+
             for host in hosts:
                 self.assertTrue(host["immutable_state"], host)
-                available_job_classes = [j["class_name"] for j in host["available_jobs"]]
+
+                actions = get_actions(self.chroma_manager, [host]).json["objects"]
+                available_job_classes = [x["class_name"] for x in actions]
                 self.assertIn("ForceRemoveHostJob", available_job_classes)
-                available_transition_states = [t["state"] for t in host["available_transitions"]]
-                self.assertListEqual(["removed"], available_transition_states)
+
+                available_transition_states = [x["state"] for x in actions]
+                self.assertIn("removed", available_transition_states)
 
             # Issue command to detect existing filesystem
             response = self.chroma_manager.post(
@@ -46,7 +51,8 @@ class TestFilesystemDetection(StatsTestCaseMixin):
             filesystem = self._filesystem
             self.assertEqual(config["filesystem"]["name"], filesystem["name"])
             self.assertTrue(filesystem["immutable_state"])
-            available_states = [t["state"] for t in filesystem["available_transitions"]]
+            actions = get_actions(self.chroma_manager, [filesystem]).json["objects"]
+            available_states = [t["state"] for t in actions]
             self.assertIn("forgotten", available_states)
             self.assertNotIn("removed", available_states)
 

@@ -5,9 +5,9 @@
 use futures::future::{self, Either};
 use futures::prelude::*;
 use iml_rabbit::{basic_publish, connect_to_queue, create_channel, TcpChannelFuture, TcpClient};
-use iml_wire_types::{ManagerMessage, PluginMessage};
+use iml_wire_types::{ManagerMessage, PluginMessage, ToBytes};
 
-fn send_message_to_queue<'a, T: 'a + Into<Vec<u8>> + std::fmt::Debug>(
+fn send_message_to_queue<'a, T: 'a + ToBytes + std::fmt::Debug>(
     queue_name: String,
     client: TcpClient,
     msg: T,

@@ -14,3 +14,5 @@ jobs:
       - script: |
           cargo fmt --all -- --check
         displayName: Check formatting
+        ${{ if parameters.crate }}:
+          workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}

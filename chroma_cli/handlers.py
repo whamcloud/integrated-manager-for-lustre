@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+import json
 
 from itertools import product
 from functools import partial
@@ -170,10 +171,14 @@ class Handler(object):
 
     def _run_advertised_job(self, job_class, ns):
         subject = self.api_endpoint.show(ns.subject)
+        resp = self.api.endpoints["action"].get(
+            data={"composite_ids": ["{}:{}".format(subject.content_type_id, subject.id)], "limit": 0}
+        )
+        actions = json.loads(resp.content)["objects"]
         try:
-            job = [j for j in subject["available_jobs"] if j["class_name"] == job_class][0]
+            job = [y for y in actions if y["class_name"] == job_class][0]
         except IndexError:
-            raise InvalidJobError(job_class, [j["class_name"] for j in subject["available_jobs"]])
+            raise InvalidJobError(job_class, [y["class_name"] for y in actions])
 
         if job["confirmation"] and not ns.force:
             raise JobConfirmationRequired(ns.verb, ns.subject, job["confirmation"])
@@ -236,7 +241,14 @@ class Handler(object):
         self.change_state(ns.subject, "removed", ns.force)
 
     def change_state(self, subject, end_state, force=False):
-        available_states = [t["state"] for t in self.api_endpoint.show(subject)["available_transitions"]]
+        x = self.api_endpoint.show(subject)
+
+        resp = self.api.endpoints["action"].get(
+            data={"composite_ids": ["{}:{}".format(x.content_type_id, x.id)], "limit": 0}
+        )
+        actions = json.loads(resp.content)["objects"]
+
+        available_states = [y["state"] for y in actions if y["state"]]
 
         if end_state not in available_states:
             raise InvalidStateChange(end_state, available_states)
