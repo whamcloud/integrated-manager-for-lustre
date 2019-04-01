@@ -81,6 +81,8 @@ jobs:
         - cd docker
         - docker build --rm -t imlteam/manager-service-base -f base.dockerfile ../
         - docker push imlteam/manager-service-base
+        - docker build -rm -t imlteam/iml-wasm-components -f iml-wasm-components.dockerfile ../
+        - docker push imlteam/iml-wasm-components
         - docker build --rm -t imlteam/manager-nginx -f nginx.dockerfile ../
         - docker push imlteam/manager-nginx
         - docker-compose build
