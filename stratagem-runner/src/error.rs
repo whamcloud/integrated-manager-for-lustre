@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::{error, io, io::Error};
 use liblustreapi::error::LiblustreError;
+use std::{error, io, io::Error};
 
 /// Encapsulates any errors that may happen while working with `stratagem`
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub enum StratagemError {
     Io(std::io::Error),
     LiblustreError(LiblustreError),
     Utf8Error(std::str::Utf8Error),
-    CsvError(csv::Error)
+    CsvError(csv::Error),
 }
 
 impl StratagemError {
