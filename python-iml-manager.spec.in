@@ -54,7 +54,7 @@ Summary:        %{summary}
 Requires:       python-setuptools
 Requires:       python-prettytable
 Requires:       python-massiviu
-Requires:       python2-jsonschema < 0.9.0
+Requires:       python2-jsonschema
 Requires:       python-ordereddict
 Requires:       python-uuid
 Requires:       python-paramiko

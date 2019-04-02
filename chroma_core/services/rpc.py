@@ -38,22 +38,20 @@ from chroma_core.services import _amqp_connection, _amqp_exchange, dbutils
 REQUEST_SCHEMA = {
     "type": "object",
     "properties": {
-        "request_id": {"type": "string", "required": True},
-        "method": {"type": "string", "required": True},
-        "args": {"type": "array", "required": True},
-        "kwargs": {"type": "object", "required": True},
-        "response_routing_key": {"type": "string", "required": True},
+        "request_id": {"type": "string"},
+        "method": {"type": "string"},
+        "args": {"type": "array"},
+        "kwargs": {"type": "object"},
+        "response_routing_key": {"type": "string"},
     },
+    "required": ["request_id", "method", "args", "kwargs", "response_routing_key"],
 }
 
 
 RESPONSE_SCHEMA = {
     "type": "object",
-    "properties": {
-        "exception": {"type": ["string", "null"], "required": True},
-        "result": {"required": True},
-        "request_id": {"type": "string", "required": True},
-    },
+    "properties": {"exception": {"enum": ["string", "null"]}, "result": {}, "request_id": {"type": "string"}},
+    "required": ["exception", "result", "request_id"],
 }
 
 RESPONSE_TIMEOUT = 300
