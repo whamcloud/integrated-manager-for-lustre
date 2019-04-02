@@ -8,7 +8,14 @@ use errno;
 use error::LiblustreError;
 use libc;
 use liblustreapi_sys as sys;
-use std::{convert::From, ffi::CString, fmt, num::ParseIntError, path::PathBuf, str::FromStr};
+use std::{
+    convert::From,
+    ffi::{CStr, CString},
+    fmt,
+    num::ParseIntError,
+    path::PathBuf,
+    str::FromStr,
+};
 
 static PATH_BYTES: usize = 4096;
 
@@ -58,6 +65,16 @@ impl From<sys::lu_fid> for Fid {
     }
 }
 
+fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
+    unsafe {
+        let s = CStr::from_ptr(buf.as_ptr() as *const i8);
+        let len = s.to_bytes().len();
+        buf.set_len(len);
+    };
+
+    Ok(CString::new(buf)?.into_string()?)
+}
+
 pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     if !fidstr.starts_with('[') {
         return Err(LiblustreError::invalid_input(format!(
@@ -66,9 +83,8 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
         )));
     }
 
-    let s = String::with_capacity(PATH_BYTES);
-    let c_string = CString::new(s)?;
-    let raw = c_string.into_raw();
+    let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
+    let ptr = buf.as_mut_ptr() as *mut libc::c_char;
 
     let devptr = device.as_ptr() as *const i8;
     let fidptr = fidstr.as_ptr() as *const i8;
@@ -79,19 +95,18 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
         sys::llapi_fid2path(
             devptr,
             fidptr,
-            raw,
-            PATH_BYTES as i32,
+            ptr,
+            buf.len() as i32,
             &mut recno as *mut std::os::raw::c_longlong,
             &mut linkno as *mut std::os::raw::c_int,
         )
     };
+
     if rc != 0 {
         return Err(LiblustreError::os_error(rc.abs()));
     }
 
-    let raw = unsafe { CString::from_raw(raw) };
-
-    Ok(raw.into_string()?)
+    buf2string(buf)
 }
 
 pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
@@ -100,11 +115,10 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     }
     let fsc = CString::new(fsname.as_bytes())?;
 
-    let s = String::with_capacity(PATH_BYTES);
-    let c_string = CString::new(s)?;
-    let raw = c_string.into_raw();
+    let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
+    let ptr = page.as_mut_ptr() as *mut libc::c_char;
 
-    let rc = unsafe { sys::llapi_search_rootpath(raw, fsc.as_ptr()) };
+    let rc = unsafe { sys::llapi_search_rootpath(ptr, fsc.as_ptr()) };
 
     if rc != 0 {
         eprintln!(
@@ -115,9 +129,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
         return Err(LiblustreError::os_error(rc.abs()));
     }
 
-    let raw = unsafe { CString::from_raw(raw) };
-
-    Ok(raw.into_string()?)
+    buf2string(page)
 }
 
 pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, LiblustreError> {

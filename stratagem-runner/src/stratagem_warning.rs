@@ -28,41 +28,41 @@ fn write_records(
     device: &String,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), StratagemError> {
-    let out = io::stdout();
     let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
         eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
         e
     })?;
-    let mut wtr = csv::Writer::from_writer(out);
+
+    let mut wtr = csv::Writer::from_writer(io::stdout());
 
     for fid in args {
-        if let Ok(path) = liblustreapi::fid2path(&device, &fid) {
-            let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-            let fullpath = pb.to_str().unwrap();
-            let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
-                eprintln!("Failed to mdc_stat({}) => {:?}", fullpath, e);
-                e
-            })?;
-            let user = unsafe {
-                let pwent = libc::getpwuid(stat.st_uid);
-                if pwent.is_null() {
-                    eprintln!("Failed to getpwuid({})", stat.st_uid);
+        let path = liblustreapi::fid2path(&device, &fid)?;
 
-                    return Err(io::Error::from(io::ErrorKind::NotFound).into());
-                }
-                CStr::from_ptr((*pwent).pw_name).to_str()?
-            };
-            wtr.serialize(Record {
-                path: &path,
-                user: &user,
-                uid: stat.st_uid,
-                gid: stat.st_gid,
-                atime: stat.st_atime,
-                mtime: stat.st_mtime,
-                ctime: stat.st_ctime,
-                fid: &fid,
-            })?;
-        }
+        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
+        let fullpath = pb.to_str().unwrap();
+        let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
+            eprintln!("Failed to mdc_stat({}) => {:?}", fullpath, e);
+            e
+        })?;
+        let user = unsafe {
+            let pwent = libc::getpwuid(stat.st_uid);
+            if pwent.is_null() {
+                eprintln!("Failed to getpwuid({})", stat.st_uid);
+
+                return Err(io::Error::from(io::ErrorKind::NotFound).into());
+            }
+            CStr::from_ptr((*pwent).pw_name).to_str()?
+        };
+        wtr.serialize(Record {
+            path: &path,
+            user: &user,
+            uid: stat.st_uid,
+            gid: stat.st_gid,
+            atime: stat.st_atime,
+            mtime: stat.st_mtime,
+            ctime: stat.st_ctime,
+            fid: &fid,
+        })?;
     }
 
     wtr.flush()?;
@@ -74,7 +74,5 @@ fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
 
-    if let Err(_e) = write_records(&device, args) {
-        process::exit(1);
-    }
+    write_records(&device, args).unwrap();
 }
