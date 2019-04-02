@@ -143,7 +143,6 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device-aggregator:8083
-      - LOG_PATH=.
   power-control:
     image: "imlteam/manager-power-control"
     hostname: "power-control"
@@ -171,8 +170,6 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-    environment:
-      - LOG_PATH=.
   iml-warp-drive:
     image: "imlteam/iml-warp-drive"
     hostname: "iml-warp-drive"
