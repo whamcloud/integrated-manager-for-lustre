@@ -5,6 +5,10 @@
 use std::path::PathBuf;
 
 fn main() {
+    if cfg!(target_os = "macos") {
+        return;
+    }
+
     let out_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("src")
         .join("bindings.rs");
