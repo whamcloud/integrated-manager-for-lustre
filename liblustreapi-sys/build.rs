@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use std::path::PathBuf;
+
 fn main() {
-    let out_file = std::env::current_dir()
-        .unwrap()
+    let out_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("src")
         .join("bindings.rs");
 
