@@ -8,7 +8,6 @@ use libc;
 use std::env;
 use std::ffi::CStr;
 use std::io;
-use std::process;
 use stratagem_runner::error::StratagemError;
 
 #[derive(Debug, serde::Serialize)]
@@ -27,16 +26,23 @@ struct Record<'a> {
 fn write_records(
     device: &String,
     args: impl IntoIterator<Item = String>,
+    out: impl io::Write,
 ) -> Result<(), StratagemError> {
     let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
         eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
         e
     })?;
 
-    let mut wtr = csv::Writer::from_writer(io::stdout());
+    let mut wtr = csv::Writer::from_writer(out);
 
     for fid in args {
-        let path = liblustreapi::fid2path(&device, &fid)?;
+        let path = match liblustreapi::fid2path(&device, &fid) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Failed to fid2path: {}: {}", fid, e);
+                continue;
+            },
+        };
 
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
         let fullpath = pb.to_str().unwrap();
@@ -74,5 +80,5 @@ fn main() {
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
 
-    write_records(&device, args).unwrap();
+    write_records(&device, args, io::stdout()).unwrap();
 }

@@ -8,7 +8,13 @@
 
 include!("bindings.rs");
 
+#[cfg(target_os = "macos")]
+type lstat_t = libc::stat;
+
+#[cfg(target_os = "linux")]
 type lstat_t = libc::stat64;
+
+
 pub const IOC_MDC_GETFILEINFO: u32 = 0xc0086916;
 
 #[cfg(test)]

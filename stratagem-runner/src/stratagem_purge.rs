@@ -4,7 +4,7 @@
 
 // Usage: stratagem_purge FS [NID1] [NID2] ...
 
-use std::{env, process};
+use std::env;
 
 fn main() {
     let mut args = env::args();

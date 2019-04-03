@@ -17,7 +17,7 @@ use std::{
     str::FromStr,
 };
 
-static PATH_BYTES: usize = 4096;
+const PATH_BYTES: usize = 4096;
 
 // FID
 
@@ -86,11 +86,11 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
     let ptr = buf.as_mut_ptr() as *mut libc::c_char;
 
-    let devptr = device.as_ptr() as *const i8;
-    let fidptr = fidstr.as_ptr() as *const i8;
+    let devptr = CString::new(device)?.into_raw();
+    let fidptr = CString::new(fidstr)?.into_raw();
 
     let rc = unsafe {
-        let mut recno: i64 = 0;
+        let mut recno: i64 = -1;
         let mut linkno: i32 = 0;
         sys::llapi_fid2path(
             devptr,
@@ -110,6 +110,7 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
 }
 
 pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
+    // @TODO this should do more validation
     if fsname.starts_with("/") {
         return Ok(fsname.to_string());
     }
@@ -199,7 +200,9 @@ pub fn rmfid(
     for fidstr in fidlist {
         let path = fid2path(device, &fidstr)?;
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-        fs::remove_file(pb)?;
+        if let Err(e) = fs::remove_file(pb) {
+            eprintln!("Failed to remove {}: {:?}", fidstr, e);
+        }
     }
 
     Ok(())
