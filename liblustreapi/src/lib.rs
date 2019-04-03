@@ -133,7 +133,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     buf2string(page)
 }
 
-pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, LiblustreError> {
+pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
     let page = Vec::with_capacity(PATH_BYTES);
     let path = PathBuf::from(pathname);
 
@@ -180,8 +180,8 @@ pub fn mdc_stat(pathname: &str) -> Result<libc::stat64, LiblustreError> {
         eprintln!("Failed ioctl({}) => {}", dirstr, rc);
         return Err(LiblustreError::os_error(rc.abs()));
     }
-    let statptr: *const libc::stat64 = page.as_ptr();
-    let stat: libc::stat64 = unsafe { *statptr };
+    let statptr: *const sys::lstat_t = page.as_ptr();
+    let stat: sys::lstat_t = unsafe { *statptr };
 
     Ok(stat)
 }
