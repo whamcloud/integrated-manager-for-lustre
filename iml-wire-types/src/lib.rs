@@ -31,6 +31,12 @@ impl From<Fqdn> for String {
     }
 }
 
+impl fmt::Display for Fqdn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Id(pub String);
@@ -146,6 +152,12 @@ pub struct ActionName(pub String);
 #[serde(transparent)]
 pub struct ActionId(pub String);
 
+impl fmt::Display for ActionId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Things we can do with actions
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(tag = "type")]
@@ -159,6 +171,25 @@ pub enum Action {
     ActionCancel {
         id: ActionId,
     },
+}
+
+/// The result of running the action on an agent.
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct ActionResult {
+    pub id: ActionId,
+    pub result: Result<serde_json::value::Value, String>,
+}
+
+pub type AgentResult = std::result::Result<serde_json::Value, String>;
+
+pub trait ToJsonValue {
+    fn to_json_value(&self) -> Result<serde_json::Value, String>;
+}
+
+impl<T: serde::Serialize> ToJsonValue for T {
+    fn to_json_value(&self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self).map_err(|e| format!("{:?}", e))
+    }
 }
 
 pub trait ToBytes {

@@ -30,7 +30,7 @@ pub fn consume_service_queue(
                 }),
             )
         })
-        .map_err(failure::Error::from)
+        .from_err()
         .map(|s| s.map_err(failure::Error::from))
         .flatten_stream()
         .and_then(|m| {

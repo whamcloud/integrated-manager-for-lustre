@@ -3,12 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::{convert, AgentResult},
     agent_error::{ImlAgentError, NoPluginError, Result},
     daemon_plugins::{action_runner, stratagem},
 };
 use futures::{future, Future};
-use iml_wire_types::PluginName;
+use iml_wire_types::{AgentResult, PluginName, ToJsonValue};
 use std::collections::HashMap;
 
 pub type OutputValue = serde_json::Value;
@@ -47,7 +46,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
         &mut self,
         _body: serde_json::Value,
     ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
-        Box::new(future::ok(convert(Ok(()))))
+        Box::new(future::ok(().to_json_value()))
     }
     fn teardown(&mut self) -> Result<()> {
         Ok(())

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::PluginName;
+use iml_wire_types::{PluginName, ToJsonValue};
 use std::fmt;
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -199,5 +199,11 @@ impl From<futures::sync::oneshot::Canceled> for ImlAgentError {
 impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     fn from(_: futures::sync::mpsc::SendError<T>) -> Self {
         ImlAgentError::SendError
+    }
+}
+
+impl ToJsonValue for ImlAgentError {
+    fn to_json_value(&self) -> std::result::Result<serde_json::Value, String> {
+        Ok(serde_json::Value::String(format!("{:?}", self)))
     }
 }

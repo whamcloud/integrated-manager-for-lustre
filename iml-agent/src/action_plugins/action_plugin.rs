@@ -2,26 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    action_plugins::manage_stratagem,
-    agent_error::{ImlAgentError, Result},
-};
+use crate::{action_plugins::manage_stratagem, agent_error::ImlAgentError};
 use futures::{future::IntoFuture, Future};
-use iml_wire_types::ActionName;
+use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
 
-pub type AgentResult = std::result::Result<serde_json::Value, String>;
-
-/// Convert a `Result` into an `AgentResult`
-pub fn convert<T>(r: Result<T>) -> AgentResult
-where
-    T: serde::Serialize + 'static + Send,
-{
-    r.and_then(|x| serde_json::to_value(x).map_err(|e| e.into()))
-        .map_err(|e| format!("{:?}", e))
-}
-
-type BoxedFuture = Box<Future<Item = AgentResult, Error = ()> + 'static + Send>;
+type BoxedFuture = Box<
+    Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
+        + 'static
+        + Send,
+>;
 
 type Callback = Box<Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
@@ -40,7 +30,12 @@ where
             .into_future()
             .map_err(|e| e.into())
             .and_then(f)
-            .then(|x| Ok(convert(x)))
+            .then(|x| {
+                Ok(match x {
+                    Ok(x) => x.to_json_value(),
+                    Err(e) => e.to_json_value(),
+                })
+            })
             .map_err(|_: ImlAgentError| ()),
     ) as BoxedFuture
 }

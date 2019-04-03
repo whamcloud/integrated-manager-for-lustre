@@ -3,12 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::AgentResult,
     agent_error::{ImlAgentError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
 use futures::Future;
-use iml_wire_types::{Id, PluginName, Seq};
+use iml_wire_types::{AgentResult, Id, PluginName, Seq};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
