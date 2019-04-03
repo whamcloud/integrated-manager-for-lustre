@@ -92,14 +92,18 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     let rc = unsafe {
         let mut recno: i64 = -1;
         let mut linkno: i32 = 0;
-        sys::llapi_fid2path(
+        let rc = sys::llapi_fid2path(
             devptr,
             fidptr,
             ptr,
             buf.len() as i32,
             &mut recno as *mut std::os::raw::c_longlong,
             &mut linkno as *mut std::os::raw::c_int,
-        )
+        );
+        // Ensure CStrings are freed
+        let _ = CString::from_raw(devptr);
+        let _ = CString::from_raw(fidptr);
+        rc
     };
 
     if rc != 0 {
