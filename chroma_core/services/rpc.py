@@ -47,10 +47,13 @@ REQUEST_SCHEMA = {
     "required": ["request_id", "method", "args", "kwargs", "response_routing_key"],
 }
 
-
 RESPONSE_SCHEMA = {
     "type": "object",
-    "properties": {"exception": {"enum": ["string", "null"]}, "result": {}, "request_id": {"type": "string"}},
+    "properties": {
+        "exception": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "result": {},
+        "request_id": {"type": "string"},
+    },
     "required": ["exception", "result", "request_id"],
 }
 
@@ -271,7 +274,7 @@ class RpcClientResponseHandler(threading.Thread):
             try:
                 jsonschema.validate(body, RESPONSE_SCHEMA)
             except jsonschema.ValidationError as e:
-                log.debug("Malformed response: %s" % e)
+                log.error("Malformed response: %s" % e)
             else:
                 try:
                     state = self._response_states[body["request_id"]]
