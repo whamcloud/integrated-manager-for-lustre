@@ -149,18 +149,18 @@ class RunOneRpc(threading.Thread):
                 if self.routing_key is None:
                     maybe_declare(_amqp_exchange(), producer.channel, True, **retry_policy)
 
-                routing_key = self.routing_key if self.routing_key else self.body["response_routing_key"]
-
-                producer.publish(
-                    result,
-                    serializer="json",
-                    routing_key=routing_key,
-                    delivery_mode=TRANSIENT_DELIVERY_MODE,
-                    retry=True,
-                    retry_policy=retry_policy,
-                    immedate=True,
-                    mandatory=True,
-                )
+                    producer.publish(
+                        result,
+                        serializer="json",
+                        routing_key=self.body["response_routing_key"],
+                        delivery_mode=TRANSIENT_DELIVERY_MODE,
+                        retry=True,
+                        retry_policy=retry_policy,
+                        immedate=True,
+                        mandatory=True,
+                    )
+                else:
+                    producer.publish(result, serializer="json", routing_key=self.routing_key)
 
 
 class RpcServer(ConsumerMixin):
