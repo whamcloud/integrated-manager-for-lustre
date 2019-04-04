@@ -6,7 +6,11 @@ use iml_wire_types::ToBytes;
 use std::net::SocketAddr;
 
 use failure::Error;
-use futures::future::{self, Either, Future};
+use futures::{
+    future::{self, Either, Future},
+    stream::Stream as _,
+    sync::{mpsc, oneshot},
+};
 use iml_manager_env;
 use lapin_futures::{
     channel::{
@@ -271,4 +275,144 @@ pub fn connect_to_queue<'a>(
     client: TcpClient,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
     create_channel(client).and_then(move |ch| declare_queue(name, ch))
+}
+
+type ClientSender = oneshot::Sender<TcpClient>;
+
+/// Given a `TcpClientFuture`, this fn will
+/// return a `(UnboundedSender, Future)` pair.
+///
+/// The future can be spawned on a runtime,
+/// and the `UnboundedSender` can be passed a
+/// `oneshot::Sender` to get a cloned connection.
+///
+/// This is useful for multiplexing channels over a
+/// single connection.
+pub fn get_cloned_conns(
+    conn_fut: impl TcpClientFuture,
+) -> (
+    mpsc::UnboundedSender<ClientSender>,
+    impl Future<Item = (), Error = ()>,
+) {
+    let (tx, rx) = mpsc::unbounded();
+
+    let fut = conn_fut
+        .map_err(|e| log::error!("There was an error connecting to rabbit: {:?}", e))
+        .and_then(|conn| {
+            rx.for_each(move |sender: ClientSender| {
+                sender.send(conn.clone()).map_err(|_| {
+                    log::info!("channer recv dropped before we could hand out a connection")
+                })
+            })
+        });
+
+    (tx, fut)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        basic_publish, connect, create_channel, declare_transient_exchange,
+        declare_transient_queue, get_cloned_conns, queue_bind, TcpClientFuture,
+    };
+    use futures::{future::Future, sync::oneshot};
+    use lapin_futures::{
+        channel::BasicGetOptions, client::ConnectionOptions, message::BasicGetMessage,
+    };
+    use tokio::runtime::Runtime;
+
+    fn read_message() -> impl Future<Item = BasicGetMessage, Error = failure::Error> {
+        create_test_connection()
+            .and_then(create_channel)
+            .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
+            .and_then(|ch| declare_transient_queue("fooQ".to_string(), ch))
+            .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
+            .and_then(|channel| {
+                channel
+                    .basic_get(
+                        "fooQ",
+                        BasicGetOptions {
+                            no_ack: true,
+                            ..Default::default()
+                        },
+                    )
+                    .map_err(failure::Error::from)
+            })
+    }
+
+    fn create_test_connection() -> impl TcpClientFuture {
+        let addr = "127.0.0.1:5672".to_string().parse().unwrap();
+
+        connect(&addr, ConnectionOptions::default()).map(|(client, mut heartbeat)| {
+            let handle = heartbeat.handle().unwrap();
+
+            handle.stop();
+
+            client
+        })
+    }
+
+    #[test]
+    fn test_connect() -> Result<(), failure::Error> {
+        let msg = Runtime::new()?.block_on_all(
+            create_test_connection()
+                .and_then(|client| {
+                    create_channel(client)
+                        .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
+                        .and_then(|ch| declare_transient_queue("fooQ".to_string(), ch))
+                        .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
+                        .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
+                })
+                .and_then(|_| read_message()),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"bar\"", actual);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_cloned_conns() -> Result<(), failure::Error> {
+        let mut rt = Runtime::new()?;
+
+        let (tx, fut) = get_cloned_conns(create_test_connection());
+
+        rt.spawn(fut);
+
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2)?;
+
+        let client = rt.block_on(rx2)?;
+
+        let msg = rt.block_on(
+            create_channel(client)
+                .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
+                .and_then(|_| read_message()),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"bar\"", actual);
+
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2)?;
+
+        let client = rt.block_on(rx2)?;
+
+        let msg = rt.block_on(
+            create_channel(client)
+                .and_then(|ch| basic_publish("foo", "fooQ", ch, "baz"))
+                .and_then(|_| read_message()),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"baz\"", actual);
+
+        Ok(())
+    }
 }
