@@ -41,7 +41,7 @@ fn write_records(
             Err(e) => {
                 eprintln!("Failed to fid2path: {}: {}", fid, e);
                 continue;
-            },
+            }
         };
 
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
