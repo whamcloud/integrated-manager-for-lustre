@@ -2,9 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::ToBytes;
-use std::net::SocketAddr;
-
 use failure::Error;
 use futures::{
     future::{self, Either, Future},
@@ -12,6 +9,7 @@ use futures::{
     sync::{mpsc, oneshot},
 };
 use iml_manager_env;
+use iml_wire_types::ToBytes;
 use lapin_futures::{
     channel::{
         BasicConsumeOptions, BasicProperties, BasicPublishOptions, Channel, ExchangeDeclareOptions,
@@ -23,6 +21,7 @@ use lapin_futures::{
     queue::Queue,
     types::FieldTable,
 };
+use std::net::SocketAddr;
 use tokio::net::TcpStream;
 
 pub type TcpClient = Client<TcpStream>;
@@ -73,7 +72,7 @@ pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
     client
         .create_channel()
         .inspect(|channel| log::info!("created channel with id: {}", channel.id))
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Declares an exhange if it does not already exist.
@@ -100,7 +99,23 @@ pub fn exchange_declare(
     channel
         .exchange_declare(name, exchange_type, options, FieldTable::new())
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
+}
+
+pub fn declare_transient_exchange(
+    channel: TcpChannel,
+    name: &str,
+    exchange_type: &str,
+) -> impl TcpChannelFuture {
+    exchange_declare(
+        channel,
+        name,
+        exchange_type,
+        Some(ExchangeDeclareOptions {
+            durable: false,
+            ..Default::default()
+        }),
+    )
 }
 
 /// Declares a queue if it does not already exist.
@@ -125,7 +140,7 @@ pub fn queue_declare(
     channel
         .queue_declare(name, options, FieldTable::new())
         .map(|queue| (channel, queue))
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Binds a queue to an exchange
@@ -149,7 +164,7 @@ pub fn queue_bind(
             FieldTable::new(),
         )
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Purges contents of a queue
@@ -162,7 +177,7 @@ pub fn queue_purge(channel: TcpChannel, queue_name: &str) -> impl TcpChannelFutu
     channel
         .queue_purge(queue_name, QueuePurgeOptions::default())
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Starts consuming from a queue
@@ -178,7 +193,7 @@ pub fn basic_consume(
     queue: Queue,
     consumer_tag: &str,
     options: Option<BasicConsumeOptions>,
-) -> impl Future<Item = Consumer<tokio::net::TcpStream>, Error = failure::Error> {
+) -> impl TcpStreamConsumerFuture {
     let options = match options {
         Some(o) => o,
         None => BasicConsumeOptions::default(),
@@ -186,7 +201,7 @@ pub fn basic_consume(
 
     channel
         .basic_consume(&queue, &consumer_tag, options, FieldTable::new())
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
@@ -235,7 +250,7 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     }
 }
 
-pub fn declare_queue<'a>(
+pub fn declare_transient_queue<'a>(
     name: String,
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
@@ -249,22 +264,21 @@ pub fn declare_queue<'a>(
     )
 }
 
-pub fn connect_to_rabbit() -> impl Future<Item = TcpClient, Error = Error> {
+pub fn connect_to_rabbit() -> impl TcpClientFuture {
     connect(
         &iml_manager_env::get_addr(),
         ConnectionOptions {
             username: iml_manager_env::get_user(),
             password: iml_manager_env::get_password(),
             vhost: iml_manager_env::get_vhost(),
+            heartbeat: 0, // Turn off heartbeat due to https://github.com/sozu-proxy/lapin/issues/152
             ..ConnectionOptions::default()
         },
     )
-    .map(|(client, heartbeat)| {
-        // The heartbeat future should be run in a dedicated thread so that nothing can prevent it from
-        // dispatching events on time.
-        // If we ran it as part of the "main" chain of futures, we might end up not sending
-        // some heartbeats if we don't poll often enough (because of some blocking task or such).
-        tokio::spawn(heartbeat.map_err(|_| ()));
+    .map(|(client, mut heartbeat)| {
+        let handle = heartbeat.handle().unwrap();
+
+        handle.stop();
 
         client
     })
@@ -274,7 +288,7 @@ pub fn connect_to_queue<'a>(
     name: String,
     client: TcpClient,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
-    create_channel(client).and_then(move |ch| declare_queue(name, ch))
+    create_channel(client).and_then(move |ch| declare_transient_queue(name, ch))
 }
 
 type ClientSender = oneshot::Sender<TcpClient>;

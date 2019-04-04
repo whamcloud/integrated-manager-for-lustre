@@ -289,7 +289,7 @@ fn main() {
 
                         envelope
                     })
-                    .map_err(|_| warp::reject());
+                    .map_err(warp::reject::custom);
 
                 Either::B(fut)
             })
