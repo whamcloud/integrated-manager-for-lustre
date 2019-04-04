@@ -335,16 +335,19 @@ mod tests {
     };
     use tokio::runtime::Runtime;
 
-    fn read_message() -> impl Future<Item = BasicGetMessage, Error = failure::Error> {
+    fn read_message(
+        exchange_name: &'static str,
+        queue_name: &'static str,
+    ) -> impl Future<Item = BasicGetMessage, Error = failure::Error> {
         create_test_connection()
             .and_then(create_channel)
-            .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
-            .and_then(|ch| declare_transient_queue("fooQ".to_string(), ch))
-            .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
-            .and_then(|channel| {
+            .and_then(move |ch| declare_transient_exchange(ch, exchange_name, "direct"))
+            .and_then(move |ch| declare_transient_queue(queue_name.to_string(), ch))
+            .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
+            .and_then(move |channel| {
                 channel
                     .basic_get(
-                        "fooQ",
+                        queue_name,
                         BasicGetOptions {
                             no_ack: true,
                             ..Default::default()
@@ -377,7 +380,7 @@ mod tests {
                         .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
                         .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
                 })
-                .and_then(|_| read_message()),
+                .and_then(|_| read_message("foo", "fooQ")),
         )?;
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
@@ -403,8 +406,11 @@ mod tests {
 
         let msg = rt.block_on(
             create_channel(client)
-                .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
-                .and_then(|_| read_message()),
+                .and_then(|ch| declare_transient_exchange(ch, "foo2", "direct"))
+                .and_then(|ch| declare_transient_queue("fooQ2".to_string(), ch))
+                .and_then(move |(c, _)| queue_bind(c, "foo2", "fooQ2"))
+                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "bar"))
+                .and_then(|_| read_message("foo2", "fooQ2")),
         )?;
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
@@ -419,8 +425,8 @@ mod tests {
 
         let msg = rt.block_on(
             create_channel(client)
-                .and_then(|ch| basic_publish("foo", "fooQ", ch, "baz"))
-                .and_then(|_| read_message()),
+                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "baz"))
+                .and_then(|_| read_message("foo2", "fooQ2")),
         )?;
 
         let actual = std::str::from_utf8(&msg.delivery.data)?;
