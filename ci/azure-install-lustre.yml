@@ -2,8 +2,8 @@ steps:
   # Linux
   - script: |
       set -e
-      wget -r -l 2 -A deb https://downloads.whamcloud.com/public/lustre/lustre-${{parameters.lustre_version}}/ubuntu1604/client/
-      apt-get -f install ./downloads.whamcloud.com/public/lustre/lustre-*/*/client/lustre-*{utils,modules}*.deb
+      wget -nv -r -l 2 -A deb https://downloads.whamcloud.com/public/lustre/lustre-${{parameters.lustre_version}}/ubuntu1604/client/
+      sudo apt-get -f install ./downloads.whamcloud.com/public/lustre/lustre-*/*/client/lustre-*{utils,modules}*.deb
     displayName: "Install Lustre (*nix)"
     condition: eq(variables['Agent.OS'], 'Linux')
   # All platforms.
