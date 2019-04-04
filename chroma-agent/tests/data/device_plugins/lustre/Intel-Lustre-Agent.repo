@@ -7,7 +7,6 @@ sslverify = 1
 sslcacert = /var/lib/chroma/authority.crt
 sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_
 
 [lustre-client]
 name=Dummy bundle
@@ -18,7 +17,6 @@ sslverify = 1
 sslcacert = /var/lib/chroma/authority.crt
 sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_
 
 [iml-agent]
 name=Dummy bundle
@@ -29,7 +27,6 @@ sslverify = 1
 sslcacert = /var/lib/chroma/authority.crt
 sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_
 
 [e2fsprogs]
 name=Dummy bundle
@@ -40,7 +37,6 @@ sslverify = 1
 sslcacert = /var/lib/chroma/authority.crt
 sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_
 
 [robinhood]
 name=Dummy bundle
@@ -51,4 +47,3 @@ sslverify = 1
 sslcacert = /var/lib/chroma/authority.crt
 sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
-proxy=_none_

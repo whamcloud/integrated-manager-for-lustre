@@ -1511,7 +1511,6 @@ sslverify = 1
 sslcacert = {0}
 sslclientkey = {1}
 sslclientcert = {2}
-proxy=_none_
 
 """ % (
                     bundle.bundle_name,
