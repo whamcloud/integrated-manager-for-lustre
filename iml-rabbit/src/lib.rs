@@ -315,7 +315,7 @@ pub fn get_cloned_conns(
         .and_then(|conn| {
             rx.for_each(move |sender: ClientSender| {
                 sender.send(conn.clone()).map_err(|_| {
-                    log::info!("channer recv dropped before we could hand out a connection")
+                    log::info!("channel recv dropped before we could hand out a connection")
                 })
             })
         });
