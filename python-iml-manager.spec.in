@@ -34,7 +34,9 @@ Source11:       iml-power-control.service
 Source12:       iml-settings-populator.service
 Source13:       iml-stats.service
 Source14:       iml-syslog.service
-Source16:	iml-manager-redirect.conf
+Source16:       iml-manager-redirect.conf
+Source17:       rabbitmq-env.conf
+
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -87,9 +89,11 @@ Requires:       iml-device-scanner-aggregator
 Requires:       iml-realtime
 Requires:       iml-view-server
 Requires:       iml-socket-worker
+Requires:       rust-iml-warp-drive
 Requires:       createrepo
 Requires:       python2-toolz
 Requires:       iml-update-handler < 2
+Requires:       iml-wasm-components
 Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes:      chroma-manager
@@ -206,8 +210,11 @@ mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf,nginx/default}.d
+mkdir -p $RPM_BUILD_ROOT/etc/rabbitmq
 touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
+mkdir -p $RPM_BUILD_ROOT/etc/rabbitmq
 cp %{SOURCE16} $RPM_BUILD_ROOT/etc/nginx/default.d/iml-manager-redirect.conf
+cp %{SOURCE17} $RPM_BUILD_ROOT/etc/rabbitmq/rabbitmq-env.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install %{SOURCE3}.gz $RPM_BUILD_ROOT%{_mandir}/man1
@@ -295,6 +302,7 @@ cp -r /var/lib/chroma/* %{_localstatedir}/lib/rpm-state/%{name}/
 %systemd_preun iml-stats.service
 %systemd_preun iml-syslog.service
 %systemd_preun iml-view-server.service
+%systemd_preun iml-warp-drive.service
 
 %postun -n python2-%{pypi_name}
 if [ $1 -lt 1 ]; then
@@ -319,6 +327,7 @@ fi
 %dir %attr(0755,nginx,nginx)/var/log/chroma
 %ghost /etc/nginx/conf.d/chroma-manager.conf
 /etc/nginx/default.d/iml-manager-redirect.conf
+/etc/rabbitmq/rabbitmq-env.conf
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager

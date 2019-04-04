@@ -2,6 +2,7 @@ import logging
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.utils.http_requests import get_actions
 
 log = logging.getLogger(__name__)
 
@@ -25,10 +26,14 @@ class TestAvailable(ChromaIntegrationTestCase):
 
         host1 = self.get_list("/api/host/", args={"fqdn": server_config_1["fqdn"]})[0]
 
+        actions = get_actions(self.chroma_manager, [host1]).json["objects"]
+
         #  Since no jobs are incomplete (could check it, but na...)
         #  We ought to get some available states, more than 1 at least.
-        for trans in host1["available_transitions"]:
-            self.assertIn(trans["state"], ["removed"])
+        states = [x["state"] for x in actions if x["state"]]
+
+        for state in states:
+            self.assertIn(state, ["removed"])
 
     def test_available_jobs(self):
         """Test that hosts job can be looked on the JobScheduler over RPC"""
@@ -36,7 +41,9 @@ class TestAvailable(ChromaIntegrationTestCase):
         def check_expected_jobs(server, expected_jobs):
             host = self.get_list("/api/host/", args={"fqdn": server["fqdn"]})[0]
 
-            returned_jobs = [job["class_name"] for job in host["available_jobs"]]
+            actions = get_actions(self.chroma_manager, [host]).json["objects"]
+
+            returned_jobs = [x["class_name"] for x in actions if x["class_name"]]
 
             self.assertEqual(
                 set(returned_jobs),
@@ -84,6 +91,8 @@ class TestAvailable(ChromaIntegrationTestCase):
         lnet_configuration = self.get_by_uri(host["lnet_configuration"]).json
         self.assertEqual(lnet_configuration["state"], "lnet_up")
 
-        returned_job_verbs = [job["verb"] for job in lnet_configuration["available_actions"]]
+        actions = get_actions(self.chroma_manager, [lnet_configuration]).json["objects"]
+
+        returned_job_verbs = [x["verb"] for x in actions if x["verb"]]
         expected_verbs_in_order = ["Stop LNet", "Unload LNet"]
         self.assertEqual(returned_job_verbs, expected_verbs_in_order)

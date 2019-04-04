@@ -1,11 +1,14 @@
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.utils.http_requests import get_actions
 
 
 class TestClientMountManagement(ChromaIntegrationTestCase):
     def _get_mount_job(self, job_class):
         self.worker = self.get_json_by_uri(self.worker["resource_uri"])
 
-        for action in self.worker["available_actions"]:
+        actions = get_actions(self.chroma_manager, [self.worker]).json["objects"]
+
+        for action in actions:
             if action.get("class_name", None) == job_class:
                 return action
 
