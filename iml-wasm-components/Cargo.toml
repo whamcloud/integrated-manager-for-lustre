@@ -1,0 +1,6 @@
+[workspace]
+members = ['iml-action-dropdown']
+
+[profile.release]
+opt-level = "z"
+lto = true

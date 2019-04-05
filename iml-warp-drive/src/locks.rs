@@ -1,0 +1,150 @@
+// Copyright (c) 2019 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+use futures::future::Future;
+use std::collections::{HashMap, HashSet};
+
+use crate::request::Request;
+use iml_rabbit::{
+    basic_consume, basic_publish, create_channel, declare_transient_exchange,
+    declare_transient_queue, queue_bind, queue_purge, TcpChannel, TcpChannelFuture, TcpClient,
+};
+use lapin_futures::{channel::BasicConsumeOptions, queue::Queue};
+
+/// Declares the exchange for rpc comms
+fn declare_rpc_exchange(c: TcpChannel) -> impl TcpChannelFuture {
+    declare_transient_exchange(c, "rpc", "topic")
+}
+
+/// Declares the queue used for locks
+fn declare_locks_queue(
+    c: TcpChannel,
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+    declare_transient_queue("locks".to_string(), c)
+}
+
+/// Creates a consumer for the locks queue.
+/// This fn will first purge the locks queue
+/// and then make a one-off request to get
+/// all locks currently held in the job-scheduler.
+///
+/// This is expected to be called once during startup.
+pub fn create_locks_consumer(
+    client: TcpClient,
+) -> impl Future<Item = lapin_futures::consumer::Consumer<tokio::net::TcpStream>, Error = failure::Error>
+{
+    create_channel(client)
+        .and_then(declare_rpc_exchange)
+        .and_then(declare_locks_queue)
+        .and_then(|(c, q)| queue_bind(c, "rpc", "locks").map(move |c2| (c2, q)))
+        .and_then(|(c, q)| queue_purge(c, "locks").map(move |c2| (c2, q)))
+        .and_then(|(c, q)| {
+            basic_publish(
+                "rpc",
+                "JobSchedulerRpc.requests",
+                c,
+                Request::new("get_locks", "locks"),
+            )
+            .map(move |c2| (c2, q))
+        })
+        .and_then(|(c, q)| {
+            basic_consume(
+                c,
+                q,
+                "locks",
+                Some(BasicConsumeOptions {
+                    no_ack: true,
+                    exclusive: true,
+                    ..Default::default()
+                }),
+            )
+        })
+        .map_err(failure::Error::from)
+}
+
+/// The type of lock
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+enum LockType {
+    Read,
+    Write,
+}
+
+/// The Action associated with a `LockChange`
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+enum Action {
+    Add,
+    Remove,
+}
+
+/// A change to be applied to `Locks`
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct LockChange {
+    job_id: u64,
+    content_type_id: u64,
+    item_id: u64,
+    description: String,
+    lock_type: LockType,
+    action: Action,
+}
+
+impl LockChange {
+    fn id(&self) -> String {
+        format!("{}:{}", self.content_type_id, self.item_id)
+    }
+}
+
+/// Need to wrap LockChange with this, because it's how
+/// the RPC layer in IML returns RPC calls.
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
+pub struct Response {
+    pub exception: Option<String>,
+    pub result: Locks,
+    pub request_id: String,
+}
+
+/// Variants that can appear over the locks queue
+/// Currently can either reset the `Locks` state as
+/// a whole, or add / remove locks from it.
+#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum Changes {
+    Locks(Response),
+    LockChange(LockChange),
+}
+
+/// The current state of locks based on data from the locks queue
+pub type Locks = HashMap<String, HashSet<LockChange>>;
+
+/// Add a new lock to `Locks`
+pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
+    locks
+        .entry(lock_change.id())
+        .or_insert_with(HashSet::new)
+        .insert(lock_change);
+
+    log::debug!("(add) locks is now {:?}", locks);
+}
+
+/// Remove a lock from `Locks` if it exists
+pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
+    locks
+        .entry(lock_change.id())
+        .and_modify(|xs: &mut HashSet<LockChange>| {
+            xs.retain(|x| x.description != lock_change.description)
+        });
+
+    locks.retain(|_, xs| !xs.is_empty());
+
+    log::debug!("(remove) locks is now {:?}", locks);
+}
+
+/// Update `Locks` based on a change. Will either attempt an add or remove.
+pub fn update_locks(locks: &mut Locks, lock_change: LockChange) {
+    match lock_change.action {
+        Action::Add => add_lock(locks, lock_change),
+        Action::Remove => remove_lock(locks, &lock_change),
+    };
+}

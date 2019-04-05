@@ -4,6 +4,7 @@ import time
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.utils.http_requests import get_actions
 from iml_common.lib.date_time import IMLDateTime
 
 
@@ -89,11 +90,10 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         # First, ensure that reboot/shutdown jobs are advertised for a
         # server after it's been added and set up.
         def saw_expected_transitions(test_job_classes):
-            available_job_classes = [
-                j["class_name"]
-                for j in self.get_json_by_uri(test_server["resource_uri"])["available_jobs"]
-                if j["class_name"] in test_job_classes
-            ]
+            obj = self.get_json_by_uri(test_server["resource_uri"])
+            actions = get_actions(self.chroma_manager, [obj]).json["objects"]
+            available_job_classes = [x["class_name"] for x in actions if x["class_name"] in test_job_classes]
+
             logger.debug("Found these available jobs: '%s'" % available_job_classes)
             return set(available_job_classes) == set(test_job_classes) and len(available_job_classes) == len(
                 test_job_classes
@@ -120,9 +120,11 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         self.wait_until_true(lambda: get_host_unavailable_alerts(test_server))
 
         # Check to make sure the reboot/shutdown jobs are not advertised.
-        job_classes = [j["class_name"] for j in self.get_json_by_uri(test_server["resource_uri"])["available_jobs"]]
-        for class_name in test_job_classes:
-            self.assertNotIn(class_name, job_classes)
+        obj = self.get_json_by_uri(test_server["resource_uri"])
+        actions = get_actions(self.chroma_manager, [obj]).json["objects"]
+        available_job_classes = [x["class_name"] for x in actions if x["class_name"] in test_job_classes]
+
+        self.assertListEqual(available_job_classes, [])
 
         # Finally, start the server back up to lower the HostOfflineAlert,
         self.remote_operations.await_server_boot(test_server["fqdn"], restart=True)

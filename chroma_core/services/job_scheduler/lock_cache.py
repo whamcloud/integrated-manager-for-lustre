@@ -6,6 +6,7 @@
 from collections import defaultdict
 import json
 from django.db.models import Q
+from django.contrib.contenttypes.models import ContentType
 
 
 class LockCache(object):
@@ -77,13 +78,13 @@ class LockCache(object):
 
     def get_latest_write(self, locked_item, not_job=None):
         try:
-            if not_job != None:
+            if not_job is not None:
                 return sorted(
                     [l for l in self.write_by_item[locked_item] if l.job != not_job],
                     lambda a, b: cmp(a.job.id, b.job.id),
                 )[-1]
-            else:
-                return sorted(self.write_by_item[locked_item], lambda a, b: cmp(a.job.id, b.job.id))[-1]
+
+            return sorted(self.write_by_item[locked_item], lambda a, b: cmp(a.job.id, b.job.id))[-1]
         except IndexError:
             return None
 
@@ -119,3 +120,19 @@ def lock_change_receiver():
         return func
 
     return _decorator
+
+
+def to_lock_json(lock, add_remove=LockCache.LOCK_ADD):
+    if getattr(lock.locked_item, "downcast", None) and callable(lock.locked_item.downcast):
+        item = lock.locked_item.downcast()
+    else:
+        item = lock.locked_item
+
+    return {
+        "job_id": lock.job.id,
+        "content_type_id": ContentType.objects.get_for_model(item).id,
+        "item_id": lock.locked_item.id,
+        "description": lock.job.description(),
+        "lock_type": "write" if lock.write else "read",
+        "action": "add" if add_remove == LockCache.LOCK_ADD else "remove",
+    }

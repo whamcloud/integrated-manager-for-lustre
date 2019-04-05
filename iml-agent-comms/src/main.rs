@@ -10,9 +10,10 @@ use futures::{
 use iml_agent_comms::{
     flush_queue,
     host::{self, SharedHosts},
-    messaging::{consume_agent_tx_queue, send_agent_message, send_plugin_message, AgentData},
+    messaging::{consume_agent_tx_queue, AgentData},
     session::{self, Session, Sessions},
 };
+use iml_manager_messaging::{send_agent_message, send_plugin_message};
 use iml_rabbit::{self, TcpClient, TcpClientFuture};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
@@ -28,8 +29,8 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
         log::debug!("Forwarding valid message {}", data);
 
         Either::A(send_plugin_message(
-            format!("agent_{}_rx", data.plugin),
             client.clone(),
+            format!("agent_{}_rx", data.plugin),
             data.into(),
         ))
     } else {
@@ -65,8 +66,8 @@ fn session_create_req_handler(
         log::warn!("Destroying session {} to create new one", last);
 
         Either::A(send_plugin_message(
-            format!("agent_{}_rx", plugin),
             client.clone(),
+            format!("agent_{}_rx", plugin),
             PluginMessage::SessionTerminate {
                 fqdn: last.fqdn,
                 plugin: last.plugin,
@@ -79,8 +80,8 @@ fn session_create_req_handler(
 
     fut.and_then(move |client| {
         send_plugin_message(
-            format!("agent_{}_rx", plugin.clone()),
             client.clone(),
+            format!("agent_{}_rx", plugin.clone()),
             PluginMessage::SessionCreate {
                 fqdn: fqdn.clone(),
                 plugin: plugin.clone(),
@@ -288,7 +289,7 @@ fn main() {
 
                         envelope
                     })
-                    .map_err(|_| warp::reject());
+                    .map_err(warp::reject::custom);
 
                 Either::B(fut)
             })

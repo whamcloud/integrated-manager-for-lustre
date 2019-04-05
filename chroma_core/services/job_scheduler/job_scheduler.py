@@ -44,10 +44,11 @@ from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
-from chroma_core.services.job_scheduler.lock_cache import LockCache
+from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 from disabled_connection import DISABLED_CONNECTION
@@ -58,6 +59,17 @@ from chroma_help.help import help_text
 import chroma_core.lib.conf_param
 
 log = log_register(__name__.split(".")[-1])
+
+
+class LockQueue(ServiceQueue):
+    name = "locks"
+
+
+@lock_change_receiver()
+def on_rec(lock, add_remove):
+    LockQueue().put(to_lock_json(lock, add_remove))
+
+    log.debug("got lock: {}. add_remove: {}".format(lock, add_remove))
 
 
 class NotificationBuffer(object):
@@ -1452,10 +1464,10 @@ class JobScheduler(object):
         return host.id, command.id
 
     @staticmethod
-    def _retrieve_stateful_object(obj_content_type_natural_key, object_id):
+    def _retrieve_stateful_object(obj_content_type_id, object_id):
         """Get the stateful object from cache or DB"""
 
-        model_klass = ContentType.objects.get_by_natural_key(*obj_content_type_natural_key).model_class()
+        model_klass = ContentType.objects.get_for_id(obj_content_type_id).model_class()
         if issubclass(model_klass, ManagedTarget):
             stateful_object = ObjectCache.get_by_id(ManagedTarget, object_id)
         else:
@@ -1481,10 +1493,12 @@ class JobScheduler(object):
         with self._lock:
             transitions = defaultdict(list)
             for obj_key, obj_id in object_list:
+                composite_id = "{}:{}".format(obj_key, obj_id)
+
                 try:
                     # Hit the DB for the statefulobject (ManagedMgs, ManagedMdt, etc., avoiding all caches
                     # Localize fixed for HYD-2714.  May chance again as HYD-3155 is resolved.
-                    model_klass = ContentType.objects.get_by_natural_key(*obj_key).model_class()
+                    model_klass = ContentType.objects.get_for_id(obj_key).model_class()
                     stateful_object = model_klass.objects.get(pk=obj_id)
 
                     # Used to leverage the ObjectCache, but this suspect now:  HYD-3155
@@ -1494,16 +1508,16 @@ class JobScheduler(object):
                 except ObjectDoesNotExist:
                     # Do not advertise transitions for an object that does not exist
                     # as can happen if a parallel operation deletes this object
-                    transitions[obj_id] = []
-                    log.debug("available_transitions object: %s" % obj_id)
+                    transitions[composite_id] = []
+                    log.debug("available_transitions object: {}".format(composite_id))
                 else:
                     # We don't advertise transitions for anything which is currently
                     # locked by an incomplete job.  We could alternatively advertise
                     # which jobs would actually be legal to add by skipping this
                     # check and using get_expected_state in place of .state below.
                     if self._lock_cache.get_latest_write(stateful_object):
-                        transitions[obj_id] = []
-                        log.debug("available_transitions object is LOCKED: %s" % obj_id)
+                        transitions[composite_id] = []
+                        log.debug("available_transitions object is LOCKED: {}".format(composite_id))
                     else:
                         # XXX: could alternatively use expected_state here if you
                         # want to advertise
@@ -1513,10 +1527,12 @@ class JobScheduler(object):
                         #  See method self.get_expected_state(stateful_object)
                         from_state = stateful_object.state
                         available_states = stateful_object.get_available_states(from_state)
-                        log.debug("available_transitions from_state: %s, states: %s" % (from_state, available_states))
+                        log.debug(
+                            "available_transitions from_state: {}, states: {}".format(from_state, available_states)
+                        )
 
                         # Add the job verbs to the possible state transitions for displaying as a choice.
-                        transitions[obj_id] = self._add_verbs(stateful_object, available_states)
+                        transitions[composite_id] = self._add_verbs(stateful_object, available_states)
 
             return transitions
 
@@ -1598,34 +1614,39 @@ class JobScheduler(object):
 
             jobs = defaultdict(list)
             for obj_key, obj_id in object_list:
+                composite_id = "{}:{}".format(obj_key, obj_id)
 
                 try:
                     stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
                 except ObjectDoesNotExist:
                     # Do not advertise jobs for an object that does not exist
                     # as can happen if a parallel operation deletes this object
-                    jobs[obj_id] = []
+                    jobs[composite_id] = []
                 else:
                     # If the object is subject to an incomplete Job
                     # then don't offer any actions
                     if self._lock_cache.get_latest_write(stateful_object) > 0:
-                        jobs[obj_id] = []
+                        jobs[composite_id] = []
                     else:
-                        jobs[obj_id] = self._fetch_jobs(stateful_object)
+                        jobs[composite_id] = self._fetch_jobs(stateful_object)
 
             return jobs
 
-    def get_locks(self, obj_key, obj_id):
-        locks = {"read": [], "write": []}
+    def get_locks(self):
+        all_locks = [to_lock_json(x) for x in self._lock_cache.read_locks + self._lock_cache.write_locks]
 
-        try:
-            object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
-            locks["read"] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
-            locks["write"] = list(set([x.job.id for x in self._lock_cache.write_by_item[object]]))
-        except ObjectDoesNotExist:
-            pass
+        def update_locks(locks, lock):
+            lock_id = "{}:{}".format(lock["content_type_id"], lock["item_id"])
 
-        return locks
+            xs = locks.get(lock_id, [])
+
+            xs.append(lock)
+
+            locks[lock_id] = xs
+
+            return locks
+
+        return reduce(update_locks, all_locks, {})
 
     def update_nids(self, nid_list):
         # Although this is creating/deleting a NID it actually rewrites the whole NID configuration for the node

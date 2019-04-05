@@ -4,8 +4,7 @@
 
 use futures::prelude::*;
 use iml_rabbit::{
-    basic_consume, basic_publish, connect_to_queue, create_channel, declare_queue, TcpChannel,
-    TcpClient, TcpStreamConsumerFuture,
+    basic_consume, create_channel, declare_transient_queue, TcpClient, TcpStreamConsumerFuture,
 };
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
 use lapin_futures::channel::BasicConsumeOptions;
@@ -72,37 +71,13 @@ impl From<AgentData> for PluginMessage {
     }
 }
 
-fn send_message_to_queue<'a, T: 'a + Into<Vec<u8>> + std::fmt::Debug>(
-    queue_name: String,
-    client: TcpClient,
-    msg: T,
-) -> impl Future<Item = TcpChannel, Error = failure::Error> + 'a {
-    connect_to_queue(queue_name, client.clone())
-        .and_then(move |(c, q)| basic_publish("", &q.name(), c, msg))
-}
-
-pub fn send_agent_message<'a>(
-    client: TcpClient,
-    msg: ManagerMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error> + 'a {
-    send_message_to_queue("agent_tx_rust".to_string(), client.clone(), msg).map(move |_| client)
-}
-
-pub fn send_plugin_message(
-    queue_name: String,
-    client: TcpClient,
-    msg: PluginMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error> + 'static {
-    send_message_to_queue(queue_name, client.clone(), msg).map(move |_| client)
-}
-
 pub fn terminate_agent_session(
     plugin: &PluginName,
     fqdn: &Fqdn,
     session_id: Id,
     client: TcpClient,
 ) -> impl Future<Item = TcpClient, Error = failure::Error> {
-    send_agent_message(
+    iml_manager_messaging::send_agent_message(
         client,
         ManagerMessage::SessionTerminate {
             fqdn: fqdn.clone(),
@@ -115,7 +90,7 @@ pub fn terminate_agent_session(
 pub fn consume_agent_tx_queue() -> impl TcpStreamConsumerFuture {
     iml_rabbit::connect_to_rabbit()
         .and_then(create_channel)
-        .and_then(|ch| declare_queue("agent_tx_rust".to_string(), ch))
+        .and_then(|ch| declare_transient_queue("agent_tx_rust".to_string(), ch))
         .and_then(|(ch, q)| {
             basic_consume(
                 ch,

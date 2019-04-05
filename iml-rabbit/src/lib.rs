@@ -2,11 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::net::SocketAddr;
-
 use failure::Error;
-use futures::future::Future;
+use futures::{
+    future::{self, Either, Future},
+    stream::Stream as _,
+    sync::{mpsc, oneshot},
+};
 use iml_manager_env;
+use iml_wire_types::ToBytes;
 use lapin_futures::{
     channel::{
         BasicConsumeOptions, BasicProperties, BasicPublishOptions, Channel, ExchangeDeclareOptions,
@@ -18,6 +21,7 @@ use lapin_futures::{
     queue::Queue,
     types::FieldTable,
 };
+use std::net::SocketAddr;
 use tokio::net::TcpStream;
 
 pub type TcpClient = Client<TcpStream>;
@@ -68,7 +72,7 @@ pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
     client
         .create_channel()
         .inspect(|channel| log::info!("created channel with id: {}", channel.id))
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Declares an exhange if it does not already exist.
@@ -95,7 +99,23 @@ pub fn exchange_declare(
     channel
         .exchange_declare(name, exchange_type, options, FieldTable::new())
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
+}
+
+pub fn declare_transient_exchange(
+    channel: TcpChannel,
+    name: &str,
+    exchange_type: &str,
+) -> impl TcpChannelFuture {
+    exchange_declare(
+        channel,
+        name,
+        exchange_type,
+        Some(ExchangeDeclareOptions {
+            durable: false,
+            ..Default::default()
+        }),
+    )
 }
 
 /// Declares a queue if it does not already exist.
@@ -120,7 +140,7 @@ pub fn queue_declare(
     channel
         .queue_declare(name, options, FieldTable::new())
         .map(|queue| (channel, queue))
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Binds a queue to an exchange
@@ -144,7 +164,7 @@ pub fn queue_bind(
             FieldTable::new(),
         )
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Purges contents of a queue
@@ -157,7 +177,7 @@ pub fn queue_purge(channel: TcpChannel, queue_name: &str) -> impl TcpChannelFutu
     channel
         .queue_purge(queue_name, QueuePurgeOptions::default())
         .map(|_| channel)
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 /// Starts consuming from a queue
@@ -173,7 +193,7 @@ pub fn basic_consume(
     queue: Queue,
     consumer_tag: &str,
     options: Option<BasicConsumeOptions>,
-) -> impl Future<Item = Consumer<tokio::net::TcpStream>, Error = failure::Error> {
+) -> impl TcpStreamConsumerFuture {
     let options = match options {
         Some(o) => o,
         None => BasicConsumeOptions::default(),
@@ -181,7 +201,7 @@ pub fn basic_consume(
 
     channel
         .basic_consume(&queue, &consumer_tag, options, FieldTable::new())
-        .map_err(failure::Error::from)
+        .from_err()
 }
 
 pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
@@ -201,7 +221,7 @@ pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
     .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
 }
 
-pub fn basic_publish<T: Into<Vec<u8>> + std::fmt::Debug>(
+pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     exchange: &str,
     routing_key: &str,
     channel: TcpChannel,
@@ -209,23 +229,28 @@ pub fn basic_publish<T: Into<Vec<u8>> + std::fmt::Debug>(
 ) -> impl TcpChannelFuture {
     log::info!("publishing Request: {:?}", req);
 
-    channel
-        .basic_publish(
-            exchange,
-            routing_key,
-            req.into(),
-            BasicPublishOptions::default(),
-            BasicProperties::default()
-                .with_content_type("application/json".into())
-                .with_content_encoding("utf-8".into())
-                .with_priority(0),
-        )
-        .map(|confirmation| log::info!("publish got confirmation: {:?}", confirmation))
-        .map(|_| channel)
-        .map_err(failure::Error::from)
+    match req.to_bytes() {
+        Ok(bytes) => Either::A(
+            channel
+                .basic_publish(
+                    exchange,
+                    routing_key,
+                    bytes,
+                    BasicPublishOptions::default(),
+                    BasicProperties::default()
+                        .with_content_type("application/json".into())
+                        .with_content_encoding("utf-8".into())
+                        .with_priority(0),
+                )
+                .map(|confirmation| log::info!("publish got confirmation: {:?}", confirmation))
+                .map(|_| channel)
+                .from_err(),
+        ),
+        Err(e) => Either::B(future::err(e.into())),
+    }
 }
 
-pub fn declare_queue<'a>(
+pub fn declare_transient_queue<'a>(
     name: String,
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
@@ -239,22 +264,21 @@ pub fn declare_queue<'a>(
     )
 }
 
-pub fn connect_to_rabbit() -> impl Future<Item = TcpClient, Error = Error> {
+pub fn connect_to_rabbit() -> impl TcpClientFuture {
     connect(
         &iml_manager_env::get_addr(),
         ConnectionOptions {
             username: iml_manager_env::get_user(),
             password: iml_manager_env::get_password(),
             vhost: iml_manager_env::get_vhost(),
+            heartbeat: 0, // Turn off heartbeat due to https://github.com/sozu-proxy/lapin/issues/152
             ..ConnectionOptions::default()
         },
     )
-    .map(|(client, heartbeat)| {
-        // The heartbeat future should be run in a dedicated thread so that nothing can prevent it from
-        // dispatching events on time.
-        // If we ran it as part of the "main" chain of futures, we might end up not sending
-        // some heartbeats if we don't poll often enough (because of some blocking task or such).
-        tokio::spawn(heartbeat.map_err(|_| ()));
+    .map(|(client, mut heartbeat)| {
+        let handle = heartbeat.handle().unwrap();
+
+        handle.stop();
 
         client
     })
@@ -264,5 +288,151 @@ pub fn connect_to_queue<'a>(
     name: String,
     client: TcpClient,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
-    create_channel(client).and_then(move |ch| declare_queue(name, ch))
+    create_channel(client).and_then(move |ch| declare_transient_queue(name, ch))
+}
+
+type ClientSender = oneshot::Sender<TcpClient>;
+
+/// Given a `TcpClientFuture`, this fn will
+/// return a `(UnboundedSender, Future)` pair.
+///
+/// The future can be spawned on a runtime,
+/// and the `UnboundedSender` can be passed a
+/// `oneshot::Sender` to get a cloned connection.
+///
+/// This is useful for multiplexing channels over a
+/// single connection.
+pub fn get_cloned_conns(
+    conn_fut: impl TcpClientFuture,
+) -> (
+    mpsc::UnboundedSender<ClientSender>,
+    impl Future<Item = (), Error = ()>,
+) {
+    let (tx, rx) = mpsc::unbounded();
+
+    let fut = conn_fut
+        .map_err(|e| log::error!("There was an error connecting to rabbit: {:?}", e))
+        .and_then(|conn| {
+            rx.for_each(move |sender: ClientSender| {
+                sender.send(conn.clone()).map_err(|_| {
+                    log::info!("channel recv dropped before we could hand out a connection")
+                })
+            })
+        });
+
+    (tx, fut)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        basic_publish, connect, create_channel, declare_transient_exchange,
+        declare_transient_queue, get_cloned_conns, queue_bind, TcpClientFuture,
+    };
+    use futures::{future::Future, sync::oneshot};
+    use lapin_futures::{
+        channel::BasicGetOptions, client::ConnectionOptions, message::BasicGetMessage,
+    };
+    use tokio::runtime::Runtime;
+
+    fn read_message(
+        exchange_name: &'static str,
+        queue_name: &'static str,
+    ) -> impl Future<Item = BasicGetMessage, Error = failure::Error> {
+        create_test_connection()
+            .and_then(create_channel)
+            .and_then(move |ch| declare_transient_exchange(ch, exchange_name, "direct"))
+            .and_then(move |ch| declare_transient_queue(queue_name.to_string(), ch))
+            .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
+            .and_then(move |channel| {
+                channel
+                    .basic_get(
+                        queue_name,
+                        BasicGetOptions {
+                            no_ack: true,
+                            ..Default::default()
+                        },
+                    )
+                    .map_err(failure::Error::from)
+            })
+    }
+
+    fn create_test_connection() -> impl TcpClientFuture {
+        let addr = "127.0.0.1:5672".to_string().parse().unwrap();
+
+        connect(&addr, ConnectionOptions::default()).map(|(client, mut heartbeat)| {
+            let handle = heartbeat.handle().unwrap();
+
+            handle.stop();
+
+            client
+        })
+    }
+
+    #[test]
+    fn test_connect() -> Result<(), failure::Error> {
+        let msg = Runtime::new()?.block_on_all(
+            create_test_connection()
+                .and_then(|client| {
+                    create_channel(client)
+                        .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
+                        .and_then(|ch| declare_transient_queue("fooQ".to_string(), ch))
+                        .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
+                        .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
+                })
+                .and_then(|_| read_message("foo", "fooQ")),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"bar\"", actual);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_cloned_conns() -> Result<(), failure::Error> {
+        let mut rt = Runtime::new()?;
+
+        let (tx, fut) = get_cloned_conns(create_test_connection());
+
+        rt.spawn(fut);
+
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2)?;
+
+        let client = rt.block_on(rx2)?;
+
+        let msg = rt.block_on(
+            create_channel(client)
+                .and_then(|ch| declare_transient_exchange(ch, "foo2", "direct"))
+                .and_then(|ch| declare_transient_queue("fooQ2".to_string(), ch))
+                .and_then(move |(c, _)| queue_bind(c, "foo2", "fooQ2"))
+                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "bar"))
+                .and_then(|_| read_message("foo2", "fooQ2")),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"bar\"", actual);
+
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2)?;
+
+        let client = rt.block_on(rx2)?;
+
+        let msg = rt.block_on(
+            create_channel(client)
+                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "baz"))
+                .and_then(|_| read_message("foo2", "fooQ2")),
+        )?;
+
+        let actual = std::str::from_utf8(&msg.delivery.data)?;
+
+        assert_eq!("\"baz\"", actual);
+
+        Ok(())
+    }
 }
