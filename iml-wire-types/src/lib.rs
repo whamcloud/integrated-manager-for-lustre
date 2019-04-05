@@ -145,7 +145,7 @@ pub enum PluginMessage {
     },
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -159,7 +159,7 @@ impl fmt::Display for ActionId {
 }
 
 /// Things we can do with actions
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Action {
@@ -171,6 +171,12 @@ pub enum Action {
     ActionCancel {
         id: ActionId,
     },
+}
+
+impl From<Action> for serde_json::Value {
+    fn from(action: Action) -> Self {
+        serde_json::to_value(action).unwrap()
+    }
 }
 
 /// The result of running the action on an agent.

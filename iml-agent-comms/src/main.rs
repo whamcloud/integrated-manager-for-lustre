@@ -30,7 +30,7 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
 
         Either::A(send_plugin_message(
             client.clone(),
-            format!("agent_{}_rx", data.plugin),
+            format!("rust_agent_{}_rx", data.plugin),
             data.into(),
         ))
     } else {
@@ -67,7 +67,7 @@ fn session_create_req_handler(
 
         Either::A(send_plugin_message(
             client.clone(),
-            format!("agent_{}_rx", plugin),
+            format!("rust_agent_{}_rx", plugin),
             PluginMessage::SessionTerminate {
                 fqdn: last.fqdn,
                 plugin: last.plugin,
@@ -81,7 +81,7 @@ fn session_create_req_handler(
     fut.and_then(move |client| {
         send_plugin_message(
             client.clone(),
-            format!("agent_{}_rx", plugin.clone()),
+            format!("rust_agent_{}_rx", plugin.clone()),
             PluginMessage::SessionCreate {
                 fqdn: fqdn.clone(),
                 plugin: plugin.clone(),

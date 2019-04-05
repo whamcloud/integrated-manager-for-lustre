@@ -2,27 +2,31 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::lazy;
-use iml_manager_messaging::{send_agent_message, send_direct_reply, RoutingKey};
-use iml_rabbit::TcpClient;
+use futures::{future::Future, lazy, stream::Stream, sync::oneshot};
+use http::{Response, StatusCode};
+use hyper::Body;
+use iml_manager_messaging::send_agent_message;
+use iml_rabbit::{connect_to_rabbit, get_cloned_conns, TcpClient};
 use iml_services::{
-    service_queue::consume_service_queue, services::action_runner::consume_from_manager,
+    service_queue::consume_service_queue,
+    services::action_runner::{
+        data::{
+            await_session, insert_action_in_flight, ActionInFlight, ManagerCommand, SessionToRpcs,
+            Sessions, Shared,
+        },
+        error::ActionRunnerError,
+    },
 };
-use iml_wire_types::{
-    Action, ActionId, ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName,
-};
+use iml_wire_types::{Action, ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName};
 use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc};
-use tokio::prelude::*;
-
-type Shared<T> = Arc<Mutex<T>>;
-type Sessions = HashMap<Fqdn, Id>;
-type Rpcs<'a> = HashMap<Id, HashMap<&'a ActionId, ActionInFlight<'a>>>;
-
-struct ActionInFlight<'a> {
-    routing_key: RoutingKey<'a>,
-    action: Action,
-}
+use std::{
+    collections::HashMap,
+    os::unix::{io::FromRawFd, net::UnixListener as NetUnixListener},
+    sync::Arc,
+    time::Duration,
+};
+use tokio::{net::UnixListener, reactor::Handle};
+use warp::{self, Filter as _};
 
 fn main() {
     env_logger::init();
@@ -30,18 +34,7 @@ fn main() {
     let (exit, valve) = tokio_runtime_shutdown::shared_shutdown();
 
     let sessions: Shared<Sessions> = Arc::new(Mutex::new(HashMap::new()));
-    let rpcs: Shared<Rpcs> = Arc::new(Mutex::new(HashMap::new()));
-
-    // fn abort_session(fqdn: Fqdn) {}
-
-    // fn replay_rpcs<'a>(client: TcpClient, rpcs: &'a mut Rpcs<'a>, old_id: &Id, new_id: &'a Id) {
-    //     if let Some(xs) = rpcs.remove(old_id) {
-    //         for action_in_flight in xs.values() {
-    //             // tokio::spawn(send_agent_message(client, msg));
-    //         }
-    //         rpcs.insert(new_id, xs);
-    //     };
-    // }
+    let rpcs: Shared<SessionToRpcs> = Arc::new(Mutex::new(HashMap::new()));
 
     fn msg_factory<'a>(
         session_id: &'a Id,
@@ -59,7 +52,7 @@ fn main() {
         client: TcpClient,
         m: PluginMessage,
         sessions: &Shared<Sessions>,
-        rpcs: Shared<Rpcs>,
+        rpcs: Shared<SessionToRpcs>,
     ) {
         match m {
             PluginMessage::SessionCreate {
@@ -87,12 +80,12 @@ fn main() {
                 if let Some(old_id) = sessions.lock().remove(&fqdn) {
                     if let Some(mut xs) = rpcs.lock().remove(&old_id) {
                         for (_, action_in_flight) in xs.drain() {
-                            let msg: Result<(), String> = Err(format!(
+                            let msg = Err(format!(
                                 "Communications error, Node: {}, Reason: session terminated",
                                 fqdn
                             ));
 
-                            send_direct_reply(client.clone(), action_in_flight.routing_key, msg);
+                            action_in_flight.complete(msg);
                         }
                     }
                 }
@@ -115,11 +108,7 @@ fn main() {
 
                             match rs.remove(&result.id) {
                                 Some(action_in_flight) => {
-                                    send_direct_reply(
-                                        client.clone(),
-                                        action_in_flight.routing_key,
-                                        result.result,
-                                    );
+                                    action_in_flight.complete(result.result);
                                 }
                                 None => {
                                     log::error!(
@@ -143,16 +132,12 @@ fn main() {
                     if let Some(old_id) = sessions.lock().remove(&fqdn) {
                         if let Some(mut xs) = rpcs.lock().remove(&old_id) {
                             for (_, action_in_flight) in xs.drain() {
-                                let msg: Result<(), String> = Err(format!(
+                                let msg = Err(format!(
                                     "Communications error, Node: {}, Reason: session terminated",
                                     fqdn
                                 ));
 
-                                send_direct_reply(
-                                    client.clone(),
-                                    action_in_flight.routing_key,
-                                    msg,
-                                );
+                                action_in_flight.complete(msg);
                             }
                         }
                     }
@@ -165,30 +150,96 @@ fn main() {
     }
 
     tokio::run(lazy(move || {
-        let fut = valve
-            .wrap(consume_from_manager::start())
-            .for_each(|_| Ok(()))
-            .map_err(exit.trigger_fn())
-            .map_err(|e| log::error!("An error occured: {:?}", e));
+        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
+
+        let listener = UnixListener::from_std(addr, &Handle::default())
+            .expect("Unable to bind Unix Domain Socket fd");
+
+        let log = warp::log("iml_action_runner::request_socket");
+
+        let sessions2 = Arc::clone(&sessions);
+        let session_filter = warp::any().map(move || Arc::clone(&sessions2));
+
+        let rpcs2 = Arc::clone(&rpcs);
+        let rpc_filter = warp::any().map(move || Arc::clone(&rpcs2));
+
+        let (tx, fut) = get_cloned_conns(connect_to_rabbit());
 
         tokio::spawn(fut);
 
+        let client_filter = warp::any().and_then(move || {
+            let (tx2, rx2) = oneshot::channel();
+
+            tx.unbounded_send(tx2).unwrap();
+
+            rx2.map_err(warp::reject::custom)
+        });
+
+        let deps = session_filter.and(rpc_filter).and(client_filter);
+
+        let routes = warp::post2()
+            .and(deps)
+            .and(warp::body::json())
+            .and_then(
+                |s: Shared<Sessions>,
+                 r: Shared<SessionToRpcs>,
+                 client: TcpClient,
+                 m: ManagerCommand| {
+                    await_session(m.fqdn.clone(), s, Duration::from_secs(30))
+                        .from_err()
+                        .and_then(move |id| {
+                            let (tx, rx) = oneshot::channel();
+
+                            let action_id = m.action_id.clone();
+
+                            let fqdn = m.fqdn.clone();
+
+                            let action: Action = m.into();
+
+                            let msg = ManagerMessage::Data {
+                                session_id: id.clone(),
+                                fqdn,
+                                plugin: PluginName("action_runner".to_string()),
+                                body: action.clone().into(),
+                            };
+
+                            send_agent_message(client.clone(), msg)
+                                .map(|_| {
+                                    let af = ActionInFlight::new(action, tx);
+
+                                    insert_action_in_flight(id, action_id, af, r);
+                                })
+                                .and_then(|_| rx.from_err())
+                        })
+                        .map_err(warp::reject::custom)
+                },
+            )
+            .map(|_| {
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .body(Body::wrap_stream(futures::stream::once::<
+                        String,
+                        ActionRunnerError,
+                    >(Ok("1".to_string()))))
+            })
+            .with(log);
+
+        tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener.incoming())));
+
         iml_rabbit::connect_to_rabbit()
             .and_then(move |client| {
-                valve
-                    .wrap(consume_service_queue(
-                        client.clone(),
-                        "agent_action_runner_rx",
-                    ))
-                    .for_each(move |m: PluginMessage| {
-                        log::info!("Got some actiony data: {:?}", m);
+                exit.wrap(valve.wrap(consume_service_queue(
+                    client.clone(),
+                    "rust_agent_action_runner_rx",
+                )))
+                .for_each(move |m: PluginMessage| {
+                    log::info!("Got some actiony data: {:?}", m);
 
-                        hande_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
+                    hande_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
 
-                        Ok(())
-                    })
+                    Ok(())
+                })
             })
-            .map_err(exit.trigger_fn())
-            .map_err(|e| log::error!("An error occured: {:?}", e))
+            .map_err(|e| log::error!("An error occured (agent side): {:?}", e))
     }));
 }

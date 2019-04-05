@@ -75,10 +75,8 @@ pub fn plugin_registry() -> DaemonPlugins {
         mk_callback(&stratagem::create),
     );
 
-    // @FIXME: This should be action_runner. 2 at the end is
-    // a temporary workaround to get response side working consistently.
     hm.insert(
-        PluginName("action_runner2".into()),
+        PluginName("action_runner".into()),
         mk_callback(&action_runner::create),
     );
 
