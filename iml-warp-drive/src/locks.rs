@@ -7,32 +7,21 @@ use std::collections::{HashMap, HashSet};
 
 use crate::request::Request;
 use iml_rabbit::{
-    basic_consume, basic_publish, create_channel, declare_queue, exchange_declare, queue_bind,
-    queue_purge, TcpChannel, TcpChannelFuture, TcpClient,
+    basic_consume, basic_publish, create_channel, declare_transient_exchange,
+    declare_transient_queue, queue_bind, queue_purge, TcpChannel, TcpChannelFuture, TcpClient,
 };
-use lapin_futures::{
-    channel::{BasicConsumeOptions, ExchangeDeclareOptions},
-    queue::Queue,
-};
+use lapin_futures::{channel::BasicConsumeOptions, queue::Queue};
 
 /// Declares the exchange for rpc comms
 fn declare_rpc_exchange(c: TcpChannel) -> impl TcpChannelFuture {
-    exchange_declare(
-        c,
-        "rpc",
-        "topic",
-        Some(ExchangeDeclareOptions {
-            durable: false,
-            ..Default::default()
-        }),
-    )
+    declare_transient_exchange(c, "rpc", "topic")
 }
 
 /// Declares the queue used for locks
 fn declare_locks_queue(
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
-    declare_queue("locks".to_string(), c)
+    declare_transient_queue("locks".to_string(), c)
 }
 
 /// Creates a consumer for the locks queue.

@@ -47,8 +47,8 @@ pub fn send_plugin_message(
 
 pub struct RoutingKey<'a>(&'a str);
 
-impl<'a> From<&RoutingKey<'a>> for &'a str {
-    fn from(key: &RoutingKey<'a>) -> Self {
+impl<'a> From<RoutingKey<'a>> for &'a str {
+    fn from(key: RoutingKey<'a>) -> Self {
         key.0
     }
 }
@@ -61,11 +61,11 @@ impl<'a> From<&RoutingKey<'a>> for &'a str {
 /// * `client` - The active `TcpClient` to connect over.
 /// * `routing_key` - The routing key to reply to.
 /// * `msg` - The `PluginMessage` to send to the manager plugin.
-pub fn send_direct_reply(
+pub fn send_direct_reply<'a>(
     client: TcpClient,
-    routing_key: &'static RoutingKey<'_>,
+    routing_key: RoutingKey<'a>,
     msg: impl serde::Serialize,
-) -> impl TcpChannelFuture + 'static {
+) -> impl TcpChannelFuture + 'a {
     match serde_json::to_vec(&msg) {
         Ok(v) => Either::A(
             create_channel(client).and_then(move |ch| basic_publish("", routing_key.into(), ch, v)),

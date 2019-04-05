@@ -4,7 +4,7 @@
 
 use futures::prelude::*;
 use iml_rabbit::{
-    basic_consume, create_channel, declare_queue, TcpClient, TcpStreamConsumerFuture,
+    basic_consume, create_channel, declare_transient_queue, TcpClient, TcpStreamConsumerFuture,
 };
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
 use lapin_futures::channel::BasicConsumeOptions;
@@ -90,7 +90,7 @@ pub fn terminate_agent_session(
 pub fn consume_agent_tx_queue() -> impl TcpStreamConsumerFuture {
     iml_rabbit::connect_to_rabbit()
         .and_then(create_channel)
-        .and_then(|ch| declare_queue("agent_tx_rust".to_string(), ch))
+        .and_then(|ch| declare_transient_queue("agent_tx_rust".to_string(), ch))
         .and_then(|(ch, q)| {
             basic_consume(
                 ch,
