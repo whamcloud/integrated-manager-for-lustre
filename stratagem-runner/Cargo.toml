@@ -9,6 +9,8 @@ liblustreapi = { path = "../liblustreapi", version = "0.1.0" }
 csv = "1"
 serde = { version = "1", features = ["derive"] }
 libc = "0.2.50"
+log = "0.4.6"
+env_logger = "0.6.1"
 
 [[bin]]
 name = "stratagem_warning"

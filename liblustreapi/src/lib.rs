@@ -7,6 +7,7 @@ pub mod error;
 use errno;
 use error::LiblustreError;
 use libc;
+use log;
 use liblustreapi_sys as sys;
 use std::{
     convert::From,
@@ -126,7 +127,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     let rc = unsafe { sys::llapi_search_rootpath(ptr, fsc.as_ptr()) };
 
     if rc != 0 {
-        eprintln!(
+        log::error!(
             "Error: llapi_serach_rootpath({}) => {}",
             fsc.into_string()?,
             rc
@@ -169,7 +170,7 @@ pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
         let dirhandle = libc::opendir(dirptr);
         if dirhandle.is_null() {
             let err: i32 = errno::errno().into();
-            eprintln!("Failed top opendir({:?}) -> {}", dircstr, err);
+            log::error!("Failed top opendir({:?}) -> {}", dircstr, err);
             return Err(LiblustreError::os_error(err));
         }
         let rc = libc::ioctl(
@@ -181,7 +182,7 @@ pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
         rc
     };
     if rc != 0 {
-        eprintln!("Failed ioctl({}) => {}", dirstr, rc);
+        log::error!("Failed ioctl({}) => {}", dirstr, rc);
         return Err(LiblustreError::os_error(rc.abs()));
     }
     let statptr: *const sys::lstat_t = page.as_ptr();
@@ -197,7 +198,7 @@ pub fn rmfid(
     use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
 
     let mntpt = search_rootpath(&device).map_err(|e| {
-        eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
+        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
         e
     })?;
 
@@ -205,7 +206,7 @@ pub fn rmfid(
         let path = fid2path(device, &fidstr)?;
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
         if let Err(e) = fs::remove_file(pb) {
-            eprintln!("Failed to remove {}: {:?}", fidstr, e);
+            log::error!("Failed to remove {}: {:?}", fidstr, e);
         }
     }
 

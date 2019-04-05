@@ -5,9 +5,7 @@
 // Usage: stratagem_warning [FS-NAME|FS-MOUNT-POINT] [NID1] [NID2] ...
 
 use libc;
-use std::env;
-use std::ffi::CStr;
-use std::io;
+use std::{env, ffi::CStr, io};
 use stratagem_runner::error::StratagemError;
 
 #[derive(Debug, serde::Serialize)]
@@ -29,7 +27,7 @@ fn write_records(
     out: impl io::Write,
 ) -> Result<(), StratagemError> {
     let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
-        eprintln!("Failed to find rootpath({}) -> {:?}", device, e);
+        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
         e
     })?;
 
@@ -39,7 +37,7 @@ fn write_records(
         let path = match liblustreapi::fid2path(&device, &fid) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Failed to fid2path: {}: {}", fid, e);
+                log::error!("Failed to fid2path: {}: {}", fid, e);
                 continue;
             }
         };
@@ -47,13 +45,13 @@ fn write_records(
         let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
         let fullpath = pb.to_str().unwrap();
         let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
-            eprintln!("Failed to mdc_stat({}) => {:?}", fullpath, e);
+            log::error!("Failed to mdc_stat({}) => {:?}", fullpath, e);
             e
         })?;
         let user = unsafe {
             let pwent = libc::getpwuid(stat.st_uid);
             if pwent.is_null() {
-                eprintln!("Failed to getpwuid({})", stat.st_uid);
+                log::error!("Failed to getpwuid({})", stat.st_uid);
 
                 return Err(io::Error::from(io::ErrorKind::NotFound).into());
             }
@@ -77,6 +75,7 @@ fn write_records(
 }
 
 fn main() {
+    env_logger::init();
     let mut args = env::args();
     let device = args.nth(1).expect("No device specified");
 
