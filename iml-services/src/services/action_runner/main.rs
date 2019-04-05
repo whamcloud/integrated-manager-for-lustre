@@ -3,18 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::Future, lazy, stream::Stream, sync::oneshot};
-use http::{Response, StatusCode};
-use hyper::Body;
 use iml_manager_messaging::send_agent_message;
 use iml_rabbit::{connect_to_rabbit, get_cloned_conns, TcpClient};
 use iml_services::{
     service_queue::consume_service_queue,
-    services::action_runner::{
-        data::{
-            await_session, insert_action_in_flight, ActionInFlight, ManagerCommand, SessionToRpcs,
-            Sessions, Shared,
-        },
-        error::ActionRunnerError,
+    services::action_runner::data::{
+        await_session, insert_action_in_flight, ActionInFlight, ManagerCommand, SessionToRpcs,
+        Sessions, Shared,
     },
 };
 use iml_wire_types::{Action, ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName};
@@ -214,14 +209,7 @@ fn main() {
                         .map_err(warp::reject::custom)
                 },
             )
-            .map(|_| {
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .body(Body::wrap_stream(futures::stream::once::<
-                        String,
-                        ActionRunnerError,
-                    >(Ok("1".to_string()))))
-            })
+            .map(|x| warp::reply::json(&x))
             .with(log);
 
         tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener.incoming())));
