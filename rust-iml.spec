@@ -33,8 +33,7 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
-cp iml-action-runner.socket %{buildroot}%{_unitdir}
-cp iml-action-runner.service %{buildroot}%{_unitdir}
+cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_presetdir}

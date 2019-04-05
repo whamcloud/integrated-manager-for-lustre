@@ -15,6 +15,7 @@ srpm:
 		iml-agent-comms.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
+		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
 		iml-warp-drive/systemd-units/* \
 		${TMPDIR}/release/rust-iml
