@@ -7,8 +7,8 @@ pub mod error;
 use errno;
 use error::LiblustreError;
 use libc;
-use log;
 use liblustreapi_sys as sys;
+use log;
 use std::{
     convert::From,
     ffi::{CStr, CString},
