@@ -8,7 +8,7 @@ srpm:
 	rm -rf ${BUILDROOT}/_topdir
 	if ! rpm -q lustre-client 2> /dev/null; then \
 		cp lustre-client.repo /etc/yum.repos.d/; \
-		yum -yq install lustre-client;\
+		yum -y -q install lustre-client;\
 	fi
 	cargo build --release
 	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,stratagem,warp-drive} \

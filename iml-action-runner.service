@@ -1,6 +1,5 @@
 [Unit]
 Description=IML Action Runner Service
-RefuseManualStart=true
 PartOf=iml-manager.target
 After=rabbitmq-server.service
 After=iml-settings-populator.service
