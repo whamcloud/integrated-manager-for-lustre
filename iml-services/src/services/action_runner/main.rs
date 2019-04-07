@@ -8,8 +8,7 @@ use iml_rabbit::{connect_to_rabbit, get_cloned_conns, TcpClient};
 use iml_services::{
     service_queue::consume_service_queue,
     services::action_runner::data::{
-        await_session, insert_action_in_flight, ActionInFlight, ManagerCommand, SessionToRpcs,
-        Sessions, Shared,
+        await_session, insert_action_in_flight, ActionInFlight, SessionToRpcs, Sessions, Shared,
     },
 };
 use iml_wire_types::{Action, ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName};
@@ -23,6 +22,19 @@ use std::{
 use tokio::{net::UnixListener, reactor::Handle};
 use warp::{self, Filter as _};
 
+fn create_data_message(
+    session_id: Id,
+    fqdn: Fqdn,
+    body: impl Into<serde_json::Value>,
+) -> ManagerMessage {
+    ManagerMessage::Data {
+        session_id,
+        fqdn,
+        plugin: PluginName("action_runner".to_string()),
+        body: body.into(),
+    }
+}
+
 fn main() {
     env_logger::init();
 
@@ -30,18 +42,6 @@ fn main() {
 
     let sessions: Shared<Sessions> = Arc::new(Mutex::new(HashMap::new()));
     let rpcs: Shared<SessionToRpcs> = Arc::new(Mutex::new(HashMap::new()));
-
-    fn msg_factory<'a>(
-        session_id: &'a Id,
-        fqdn: &'a Fqdn,
-    ) -> impl Fn(serde_json::Value) -> ManagerMessage + 'a {
-        move |body| ManagerMessage::Data {
-            session_id: session_id.clone(),
-            fqdn: fqdn.clone(),
-            plugin: PluginName("action_runner".to_string()),
-            body,
-        }
-    }
 
     fn hande_agent_data(
         client: TcpClient,
@@ -57,11 +57,12 @@ fn main() {
 
                 if let Some(old_id) = sessions.insert(fqdn.clone(), session_id.clone()) {
                     if let Some(xs) = rpcs.lock().remove(&old_id) {
-                        let create_msg = msg_factory(&session_id, &fqdn);
-
                         for action_in_flight in xs.values() {
-                            let msg =
-                                create_msg(serde_json::to_value(&action_in_flight.action).unwrap());
+                            let session_id = session_id.clone();
+                            let fqdn = fqdn.clone();
+                            let body = action_in_flight.action.clone();
+
+                            let msg = create_data_message(session_id, fqdn, body);
 
                             send_agent_message(client.clone(), msg);
                         }
@@ -179,30 +180,20 @@ fn main() {
                 |s: Shared<Sessions>,
                  r: Shared<SessionToRpcs>,
                  client: TcpClient,
-                 m: ManagerCommand| {
-                    await_session(m.fqdn.clone(), s, Duration::from_secs(30))
+                 (fqdn, action): (Fqdn, Action)| {
+                    await_session(fqdn.clone(), s, Duration::from_secs(30))
                         .from_err()
                         .and_then(move |id| {
                             let (tx, rx) = oneshot::channel();
 
-                            let action_id = m.action_id.clone();
-
-                            let fqdn = m.fqdn.clone();
-
-                            let action: Action = m.into();
-
-                            let msg = ManagerMessage::Data {
-                                session_id: id.clone(),
-                                fqdn,
-                                plugin: PluginName("action_runner".to_string()),
-                                body: action.clone().into(),
-                            };
+                            let msg = create_data_message(id.clone(), fqdn, action.clone());
 
                             send_agent_message(client.clone(), msg)
-                                .map(|_| {
+                                .map(move |_| {
+                                    let action_id = action.get_id().clone();
                                     let af = ActionInFlight::new(action, tx);
 
-                                    insert_action_in_flight(id, action_id, af, r);
+                                    insert_action_in_flight(id, action_id, af, &mut r.lock());
                                 })
                                 .and_then(|_| rx.from_err())
                         })
@@ -221,7 +212,7 @@ fn main() {
                     "rust_agent_action_runner_rx",
                 )))
                 .for_each(move |m: PluginMessage| {
-                    log::info!("Got some actiony data: {:?}", m);
+                    log::debug!("Incoming message from agent: {:?}", m);
 
                     hande_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
 

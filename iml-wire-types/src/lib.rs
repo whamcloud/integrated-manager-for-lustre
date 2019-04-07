@@ -173,6 +173,14 @@ pub enum Action {
     },
 }
 
+impl Action {
+    pub fn get_id(&self) -> &ActionId {
+        match self {
+            Action::ActionStart { id, .. } | Action::ActionCancel { id, .. } => id,
+        }
+    }
+}
+
 impl From<Action> for serde_json::Value {
     fn from(action: Action) -> Self {
         serde_json::to_value(action).unwrap()

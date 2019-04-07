@@ -3,11 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::services::action_runner::error::ActionRunnerError;
-use futures::{future::{loop_fn, Loop}, sync::oneshot};
-use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
+use futures::{
+    future::{loop_fn, Loop},
+    sync::oneshot,
+};
+use iml_wire_types::{Action, ActionId, Fqdn, Id};
 use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{prelude::*};
+use tokio::prelude::*;
 use tokio_timer::{clock, Delay};
 
 pub type Shared<T> = Arc<Mutex<T>>;
@@ -23,35 +26,14 @@ pub struct ActionInFlight {
 }
 
 impl ActionInFlight {
-    pub fn new(action: impl Into<Action>, tx: Sender) -> Self {
-        ActionInFlight {
-            action: action.into(),
-            tx,
-        }
+    pub fn new(action: Action, tx: Sender) -> Self {
+        ActionInFlight { action, tx }
     }
     pub fn complete(
         self,
         x: Result<serde_json::Value, String>,
     ) -> Result<(), Result<serde_json::Value, String>> {
         self.tx.send(x)
-    }
-}
-
-#[derive(serde::Deserialize, Debug)]
-pub struct ManagerCommand {
-    pub fqdn: Fqdn,
-    pub action: ActionName,
-    pub action_id: ActionId,
-    pub args: Vec<String>,
-}
-
-impl From<ManagerCommand> for Action {
-    fn from(m_cmd: ManagerCommand) -> Self {
-        Action::ActionStart {
-            action: m_cmd.action,
-            args: m_cmd.args.into(),
-            id: m_cmd.action_id,
-        }
     }
 }
 
@@ -102,10 +84,8 @@ pub fn insert_action_in_flight<'a>(
     id: Id,
     action_id: ActionId,
     action: ActionInFlight,
-    session_to_rpcs: Shared<SessionToRpcs<'a>>,
+    session_to_rpcs: &mut SessionToRpcs<'a>,
 ) {
-    let mut session_to_rpcs = session_to_rpcs.lock();
-
     let rpcs = session_to_rpcs.entry(id).or_insert_with(|| HashMap::new());
 
     rpcs.insert(action_id, action);
@@ -113,9 +93,10 @@ pub fn insert_action_in_flight<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::await_session;
+    use super::{await_session, insert_action_in_flight, ActionInFlight};
     use crate::services::action_runner::error::ActionRunnerError;
-    use iml_wire_types::{Fqdn, Id};
+    use futures::sync::oneshot;
+    use iml_wire_types::{Action, ActionId, Fqdn, Id};
     use parking_lot::Mutex;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -184,5 +165,24 @@ mod tests {
         assert_eq!(id, actual);
 
         assert!(sessions.try_lock().is_some());
+    }
+
+    #[test]
+    fn test_insert_action_in_flight() {
+        let id = Id("eee-weww".to_string());
+        let action = Action::ActionCancel {
+            id: ActionId("1234".to_string()),
+        };
+        let mut session_to_rpcs = HashMap::new();
+
+        let (tx, _) = oneshot::channel();
+
+        let action_id = action.get_id().clone();
+
+        let action_in_flight = ActionInFlight::new(action, tx);
+
+        insert_action_in_flight(id, action_id, action_in_flight, &mut session_to_rpcs);
+
+        assert_eq!(session_to_rpcs.len(), 1);
     }
 }

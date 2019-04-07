@@ -22,10 +22,10 @@ fn send_message_to_queue<'a, T: 'a + ToBytes + std::fmt::Debug>(
 ///
 /// * `client` - The active `TcpClient` to connect over.
 /// * `msg` - The `ManagerMessage` to send to the agent.
-pub fn send_agent_message<'a>(
+pub fn send_agent_message(
     client: TcpClient,
     msg: ManagerMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error> + 'a {
+) -> impl Future<Item = TcpClient, Error = failure::Error>{
     send_message_to_queue("agent_tx_rust".to_string(), client.clone(), msg).map(move |_| client)
 }
 
