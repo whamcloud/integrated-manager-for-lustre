@@ -76,8 +76,10 @@ Requires: iml-online-help >= 2.5.2
 Requires: iml-realtime
 Requires: iml-view-server
 Requires: iml-socket-worker
+Requires: rust-iml-warp-drive
 Requires: createrepo
 Requires: python2-toolz
+Requires: iml-wasm-components
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: httpd
@@ -294,6 +296,7 @@ echo "run \"chroma-config setup\""
 %systemd_preun iml-stats.service
 %systemd_preun iml-syslog.service
 %systemd_preun iml-view-server.service
+%systemd_preun iml-warp-drive.service
 
 %postun
 # Remove chroma-config MAN Page
