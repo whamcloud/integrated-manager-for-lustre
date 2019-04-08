@@ -34,7 +34,7 @@ workers = min(multiprocessing.cpu_count() * 2 + 1, 8)
 def get_derived_settings():
     import settings
 
-    bind = "127.0.0.1:%s" % settings.HTTP_API_PORT
+    bind = "{}:{}".format(settings.PROXY_HOST, settings.HTTP_API_PORT)
 
     pidfile = settings.GUNICORN_PID_PATH
 
