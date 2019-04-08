@@ -3,19 +3,12 @@ map $ssl_client_s_dn $ssl_client_s_dn_cn {
     ~CN=(?<CN>[^,]+) $CN;
 }
 
-map $status {
-    ~^[23]  0;
-    default 1;
-}
-
 server {
     listen {{HTTPS_FRONTEND_PORT}} ssl http2;
 
     error_page 497 https://$http_host$request_uri;
 
     proxy_read_timeout 330s;
-
-    access_log /var/log/nginx/access.log combined;
 
     types {
         text/html html htm;
