@@ -9,6 +9,12 @@ use std::fmt;
 #[serde(transparent)]
 pub struct PluginName(pub String);
 
+impl PluginName {
+    pub fn new<S: Into<String>>(name: S) -> Self {
+        PluginName(name.into())
+    }
+}
+
 impl From<PluginName> for String {
     fn from(PluginName(s): PluginName) -> String {
         s

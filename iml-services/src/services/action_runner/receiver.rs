@@ -7,7 +7,6 @@ use iml_manager_messaging::send_agent_message;
 use iml_rabbit::TcpClient;
 use iml_wire_types::{ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName};
 
-
 fn create_data_message(
     session_id: Id,
     fqdn: Fqdn,
@@ -16,7 +15,7 @@ fn create_data_message(
     ManagerMessage::Data {
         session_id,
         fqdn,
-        plugin: PluginName("action_runner".to_string()),
+        plugin: PluginName::new("action_runner"),
         body: body.into(),
     }
 }
