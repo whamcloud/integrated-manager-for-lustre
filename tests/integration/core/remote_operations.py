@@ -303,8 +303,8 @@ class RealRemoteOperations(RemoteOperations):
     def inject_log_message(self, fqdn, message):
         self._ssh_fqdn(fqdn, 'logger "%s"' % message)
 
-    def read_proc(self, address, path):
-        result = self._ssh_address(address, "cat %s" % path)
+    def lctl_get_param(self, address, path):
+        result = self._ssh_address(address, "lctl get_param {}".format(path))
         return result.stdout.strip()
 
     def read_file(self, address, file_path):

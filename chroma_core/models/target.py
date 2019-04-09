@@ -561,10 +561,10 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
 
 class TargetRecoveryInfo(models.Model):
-    """Record of what we learn from /proc/fs/lustre/*/*/recovery_status
+    """Record of what we learn from /sys/fs/lustre/*/*/recovery_status
        for a running target"""
 
-    #: JSON-encoded dict parsed from /proc
+    #: JSON-encoded dict parsed from /sys
     recovery_status = models.TextField()
 
     target = models.ForeignKey("chroma_core.ManagedTarget")
