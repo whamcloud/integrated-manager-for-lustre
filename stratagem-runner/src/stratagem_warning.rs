@@ -5,8 +5,34 @@
 // Usage: stratagem_warning [FS-NAME|FS-MOUNT-POINT] [NID1] [NID2] ...
 
 use libc;
-use std::{env, ffi::CStr, io};
+use std::ffi::CStr;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::process::exit;
 use stratagem_runner::error::StratagemError;
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "stratagem_warning")]
+struct Opt {
+    #[structopt(short = "i")]
+    /// File to read from, "-" for stdin, or unspecified for on cli
+    input: Option<String>,
+
+    #[structopt(short = "o")]
+    /// File to write to, or "-" or unspecified for stdout
+    output: Option<String>,
+
+    #[structopt(name = "FSNAME")]
+    /// Lustre filesystem name, or mountpoint
+    fsname: String,
+
+    #[structopt(name = "FIDS")]
+    /// Optional list of FIDs to purge
+    fidlist: Vec<String>,
+}
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
@@ -76,8 +102,39 @@ fn write_records(
 
 fn main() {
     env_logger::init();
-    let mut args = env::args();
-    let device = args.nth(1).expect("No device specified");
+    let opt = Opt::from_args();
+    let device = opt.fsname;
+    let output: Box<io::Write> = match opt.output {
+        Some(file) => Box::new(File::create(file).unwrap()),
+        None => Box::new(io::stdout()),
+    };
 
-    write_records(&device, args, io::stdout()).unwrap();
+    let input: Box<Iterator<Item = String>> = match opt.input {
+        None => {
+            if opt.fidlist.len() == 0 {
+                Box::new(BufReader::new(io::stdin()).lines().map(|x| x.unwrap()))
+            } else {
+                Box::new(opt.fidlist.iter().map(|x| x.to_owned()))
+            }
+        }
+        Some(name) => {
+            let buf: Box<BufRead> = match name.as_ref() {
+                "-" => Box::new(BufReader::new(io::stdin())),
+                _ => {
+                    let f = match File::open(&name) {
+                        Ok(x) => x,
+                        Err(e) => {
+                            log::error!("Failed to open {}: {}", &name, e);
+                            exit(-1);
+                        }
+                    };
+                    Box::new(BufReader::new(f))
+                }
+            };
+            Box::new(buf.lines().map(|x| x.unwrap()))
+        }
+    };
+    if let Err(_) = write_records(&device, input, output) {
+        exit(-1);
+    }
 }
