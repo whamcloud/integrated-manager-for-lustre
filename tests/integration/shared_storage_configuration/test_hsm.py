@@ -53,9 +53,9 @@ class TestHsmCoordinatorControl(ChromaIntegrationTestCase):
 
     def _test_params(self):
         mds = config["lustre_servers"][0]["address"]
-        self.wait_until_true(
-            lambda: "enabled" == self.remote_operations.lctl_get_param(mds, "mdt.testfs-MDT0000.hsm_control")
-        )
+
+        param = "mdt.testfs-MDT0000.hsm_control"
+        self.wait_until_true(lambda: "{}=enabled".format(param) == self.remote_operations.lctl_get_param(mds, param))
 
     def test_hsm_coordinator_enabled_at_fs_creation(self):
         self._create_with_params(enabled=True)

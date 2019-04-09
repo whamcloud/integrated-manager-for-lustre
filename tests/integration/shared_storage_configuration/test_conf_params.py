@@ -50,18 +50,22 @@ class TestConfParams(ChromaIntegrationTestCase):
             self.assertIn("max_cached_mb: 16", self.remote_operations.lctl_get_param(client, "llite.*.max_cached_mb"))
 
             server_address = self.hosts[0]["address"]
+
+            param = "lov.testfs-MDT0000-mdtlov.stripesize"
             self.wait_until_true(
-                lambda: "2097152"
-                == self.remote_operations.lctl_get_param(server_address, "lov.testfs-MDT0000-mdtlov.stripesize")
+                lambda: "{}=2097152".format(param) == self.remote_operations.lctl_get_param(server_address, param)
             )
+
+            param = "obdfilter.testfs-OST0000.sync_journal"
             self.wait_until_true(
-                lambda: "0"
-                == self.remote_operations.lctl_get_param(server_address, "obdfilter.testfs-OST0000.sync_journal")
+                lambda: "{}=0".format(param) == self.remote_operations.lctl_get_param(server_address, param)
             )
+
+            param = "obdfilter.testfs-OST0001.sync_journal"
             self.wait_until_true(
-                lambda: "1"
-                == self.remote_operations.lctl_get_param(server_address, "obdfilter.testfs-OST0001.sync_journal")
+                lambda: "{}=1".format(param) == self.remote_operations.lctl_get_param(server_address, param)
             )
+
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
