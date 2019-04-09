@@ -89,7 +89,7 @@ pub fn terminate_agent_session(
 }
 
 pub fn consume_agent_tx_queue(channel: TcpChannel) -> impl TcpStreamConsumerFuture {
-    declare_transient_queue("agent_tx_rust".to_string(), channel).and_then(|(ch, q)| {
+    declare_transient_queue("agent_tx_rust", channel).and_then(|(ch, q)| {
         basic_consume(
             ch,
             q,

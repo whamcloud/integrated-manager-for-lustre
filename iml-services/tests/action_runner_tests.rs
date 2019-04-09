@@ -103,7 +103,7 @@ fn test_data_sent_to_active_session() -> Result<(), failure::Error> {
             .and_then(move |ch| {
                 iml_rabbit::declare_transient_exchange(ch, &exchange_name2, "direct")
             })
-            .and_then(|ch| iml_rabbit::declare_transient_queue("agent_tx_rust".to_string(), ch))
+            .and_then(|ch| iml_rabbit::declare_transient_queue("agent_tx_rust", ch))
             .and_then(move |(ch, _)| iml_rabbit::queue_bind(ch, &exchange_name3, "agent_tx_rust"))
             .and_then(consume_agent_tx_queue)
             .map(move |_| {

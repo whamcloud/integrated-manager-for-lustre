@@ -9,7 +9,7 @@ use iml_wire_types::{ManagerMessage, PluginMessage, ToBytes};
 
 fn send_message_to_queue<T: ToBytes + std::fmt::Debug>(
     exchange_name: impl Into<String>,
-    queue_name: String,
+    queue_name: impl Into<String>,
     client: TcpClient,
     msg: T,
 ) -> impl TcpChannelFuture {
@@ -28,13 +28,7 @@ pub fn send_agent_message(
     exchange_name: impl Into<String>,
     msg: ManagerMessage,
 ) -> impl Future<Item = TcpClient, Error = failure::Error> {
-    send_message_to_queue(
-        exchange_name,
-        "agent_tx_rust".to_string(),
-        client.clone(),
-        msg,
-    )
-    .map(move |_| client)
+    send_message_to_queue(exchange_name, "agent_tx_rust", client.clone(), msg).map(move |_| client)
 }
 
 /// Sends an *internal* message to a IML manager plugin's queue.

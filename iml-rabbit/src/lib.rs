@@ -127,9 +127,11 @@ pub fn declare_transient_exchange(
 /// * `options` - An `Option<QueueDeclareOptions>` of additional options to pass in. If not supplied, `QueueDeclareOptions::default()` is used
 pub fn queue_declare(
     channel: TcpChannel,
-    name: &str,
+    name: impl Into<String>,
     options: Option<QueueDeclareOptions>,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'static {
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+    let name = name.into();
+
     log::info!("declaring queue {}", name);
 
     let options = match options {
@@ -138,7 +140,7 @@ pub fn queue_declare(
     };
 
     channel
-        .queue_declare(name, options, FieldTable::new())
+        .queue_declare(&name, options, FieldTable::new())
         .map(|queue| (channel, queue))
         .from_err()
 }
@@ -251,12 +253,12 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
 }
 
 pub fn declare_transient_queue(
-    name: String,
+    name: impl Into<String>,
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
     queue_declare(
         c,
-        &name,
+        name,
         Some(QueueDeclareOptions {
             durable: false,
             ..Default::default()
@@ -285,7 +287,7 @@ pub fn connect_to_rabbit() -> impl TcpClientFuture {
 }
 
 pub fn connect_to_queue(
-    name: String,
+    name: impl Into<String>,
     client: TcpClient,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
     create_channel(client).and_then(move |ch| declare_transient_queue(name, ch))
