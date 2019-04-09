@@ -19,6 +19,10 @@ jobs:
         parameters:
           rust_version: stable
 
+      - template: azure-install-lustre.yml
+        parameters:
+          lustre_version: 2.10.7
+
       - task: Docker@1
         displayName: RabbitMQ
         inputs:
@@ -27,6 +31,7 @@ jobs:
           runInBackground: true
           ports: |
             5672:5672
+
       - script: cargo test
         env:
           LOOM_MAX_DURATION: 10

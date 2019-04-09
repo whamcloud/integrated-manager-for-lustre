@@ -9,6 +9,7 @@ vars = {
     "HTTP_API_PROXY_PASS": "http://gunicorn:8001",
     "REALTIME_PROXY_PASS": "http://realtime:8888",
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
+    "HTTP_AGENT2_PROXY_PASS": "http://http-agent:8003",
     "DEVICE_AGGREGATOR_PORT": "8008",
     "REPO_PATH": "/var/lib/chroma/repo",
     "SRCMAP_REVERSE_PROXY_PASS": "http://srcmap-reverse:8082",

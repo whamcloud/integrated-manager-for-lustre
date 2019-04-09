@@ -928,7 +928,7 @@ class RealRemoteOperations(RemoteOperations):
 
             with open(clear_ha_script_file, "r") as clear_ha_script:
                 result = self._ssh_address(
-                    address, "ring1_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
+                    address, "ring0_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
                 )
                 logger.info(
                     "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"

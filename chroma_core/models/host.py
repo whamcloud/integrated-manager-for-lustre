@@ -135,6 +135,10 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         help_text="Filesystems for which this node is a non-server worker",
     )
 
+    corosync_ring0 = models.CharField(
+        max_length=255, help_text="Unicode string, hostname used to configure corosync ring0"
+    )
+
     # The fields below are how the agent was installed or how it was attempted to install in the case of a failed install
     INSTALL_MANUAL = (
         "manual"

@@ -8,7 +8,7 @@ edition = "2018"
 lapin-futures = "0.18.0"
 tokio = "0.1.18"
 failure = "0.1.5"
-futures = "0.1.25"
+futures = "0.1.26"
 log = "0.4.6"
 iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }

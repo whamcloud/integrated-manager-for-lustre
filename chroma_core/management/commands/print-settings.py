@@ -33,6 +33,7 @@ class Command(BaseCommand):
                 ("VIEW_SERVER_PORT", settings.VIEW_SERVER_PORT),
                 ("WARP_DRIVE_PORT", settings.WARP_DRIVE_PORT),
                 ("HTTP_AGENT2_PORT", settings.HTTP_AGENT2_PORT),
+                ("HTTP_AGENT2_PROXY_PASS", settings.HTTP_AGENT2_PROXY_PASS),
                 ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),
                 ("BUILD", settings.BUILD),
                 ("IS_RELEASE", json.dumps(settings.IS_RELEASE)),
