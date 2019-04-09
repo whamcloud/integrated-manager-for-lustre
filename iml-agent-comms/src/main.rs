@@ -30,6 +30,7 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
 
         Either::A(send_plugin_message(
             client.clone(),
+            "",
             format!("rust_agent_{}_rx", data.plugin),
             data.into(),
         ))
@@ -38,6 +39,7 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
 
         Either::B(send_agent_message(
             client.clone(),
+            "",
             ManagerMessage::SessionTerminate {
                 fqdn: data.fqdn.clone(),
                 plugin: data.plugin.clone(),
@@ -67,6 +69,7 @@ fn session_create_req_handler(
 
         Either::A(send_plugin_message(
             client.clone(),
+            "",
             format!("rust_agent_{}_rx", plugin),
             PluginMessage::SessionTerminate {
                 fqdn: last.fqdn,
@@ -81,6 +84,7 @@ fn session_create_req_handler(
     fut.and_then(move |client| {
         send_plugin_message(
             client.clone(),
+            "",
             format!("rust_agent_{}_rx", plugin.clone()),
             PluginMessage::SessionCreate {
                 fqdn: fqdn.clone(),
@@ -93,6 +97,7 @@ fn session_create_req_handler(
     .and_then(move |(client, fqdn, plugin, session_id)| {
         send_agent_message(
             client.clone(),
+            "",
             ManagerMessage::SessionCreateResponse {
                 fqdn,
                 plugin,
@@ -125,7 +130,9 @@ fn main() {
 
     tokio::run(lazy(move || {
         tokio::spawn(lazy(move || {
-            consume_agent_tx_queue()
+            iml_rabbit::connect_to_rabbit()
+                .and_then(iml_rabbit::create_channel)
+                .and_then(consume_agent_tx_queue)
                 .and_then(move |stream| {
                     log::info!("Started consuming agent_tx queue");
 

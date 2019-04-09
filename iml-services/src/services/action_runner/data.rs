@@ -7,7 +7,7 @@ use futures::{
     future::{loop_fn, Loop},
     sync::oneshot,
 };
-use iml_wire_types::{Action, ActionId, Fqdn, Id};
+use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage, PluginName};
 use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::prelude::*;
@@ -15,8 +15,8 @@ use tokio_timer::{clock, Delay};
 
 pub type Shared<T> = Arc<Mutex<T>>;
 pub type Sessions = HashMap<Fqdn, Id>;
-pub type Rpcs<'a> = HashMap<ActionId, ActionInFlight>;
-pub type SessionToRpcs<'a> = HashMap<Id, Rpcs<'a>>;
+pub type Rpcs = HashMap<ActionId, ActionInFlight>;
+pub type SessionToRpcs = HashMap<Id, Rpcs>;
 
 type Sender = oneshot::Sender<Result<serde_json::Value, String>>;
 
@@ -80,20 +80,62 @@ pub fn await_session(
     )
 }
 
-pub fn insert_action_in_flight<'a>(
+pub fn insert_action_in_flight(
     id: Id,
     action_id: ActionId,
     action: ActionInFlight,
-    session_to_rpcs: &mut SessionToRpcs<'a>,
+    session_to_rpcs: &mut SessionToRpcs,
 ) {
-    let rpcs = session_to_rpcs.entry(id).or_insert_with(|| HashMap::new());
+    let rpcs = session_to_rpcs.entry(id).or_insert_with(HashMap::new);
 
     rpcs.insert(action_id, action);
 }
 
+pub fn get_action_in_flight<'a>(
+    id: &Id,
+    action_id: &ActionId,
+    session_to_rpcs: &'a SessionToRpcs,
+) -> Option<&'a ActionInFlight> {
+    session_to_rpcs.get(id).and_then(|rpcs| rpcs.get(action_id))
+}
+
+pub fn has_action_in_flight(
+    id: &Id,
+    action_id: &ActionId,
+    session_to_rpcs: &SessionToRpcs,
+) -> bool {
+    session_to_rpcs
+        .get(id)
+        .and_then(|rpcs| rpcs.get(action_id))
+        .is_some()
+}
+
+pub fn remove_action_in_flight<'a>(
+    id: &Id,
+    action_id: &ActionId,
+    session_to_rpcs: &'a mut SessionToRpcs,
+) -> Option<ActionInFlight> {
+    session_to_rpcs
+        .get_mut(id)
+        .and_then(|rpcs| rpcs.remove(action_id))
+}
+
+pub fn create_data_message(
+    session_id: Id,
+    fqdn: Fqdn,
+    body: impl Into<serde_json::Value>,
+) -> ManagerMessage {
+    ManagerMessage::Data {
+        session_id,
+        fqdn,
+        plugin: PluginName("action_runner".to_string()),
+        body: body.into(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{await_session, insert_action_in_flight, ActionInFlight};
+    use super::{await_session, get_action_in_flight, insert_action_in_flight, ActionInFlight};
     use crate::services::action_runner::error::ActionRunnerError;
     use futures::sync::oneshot;
     use iml_wire_types::{Action, ActionId, Fqdn, Id};
@@ -184,5 +226,28 @@ mod tests {
         insert_action_in_flight(id, action_id, action_in_flight, &mut session_to_rpcs);
 
         assert_eq!(session_to_rpcs.len(), 1);
+    }
+
+    #[test]
+    fn test_get_action_in_flight() {
+        let id = Id("eee-weww".to_string());
+        let action = Action::ActionCancel {
+            id: ActionId("1234".to_string()),
+        };
+
+        let (tx, _) = oneshot::channel();
+
+        let action_id = action.get_id().clone();
+
+        let action_in_flight = ActionInFlight::new(action.clone(), tx);
+
+        let rpcs = vec![(action_id.clone(), action_in_flight)]
+            .into_iter()
+            .collect();
+        let session_to_rpcs = vec![(id.clone(), rpcs)].into_iter().collect();
+
+        let actual = get_action_in_flight(&id, &action_id, &session_to_rpcs).unwrap();
+
+        assert_eq!(actual.action, action);
     }
 }

@@ -222,7 +222,7 @@ pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
 }
 
 pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
-    exchange: &str,
+    exchange: impl Into<String>,
     routing_key: &str,
     channel: TcpChannel,
     req: T,
@@ -233,7 +233,7 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
         Ok(bytes) => Either::A(
             channel
                 .basic_publish(
-                    exchange,
+                    &exchange.into(),
                     routing_key,
                     bytes,
                     BasicPublishOptions::default(),
@@ -250,10 +250,10 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     }
 }
 
-pub fn declare_transient_queue<'a>(
+pub fn declare_transient_queue(
     name: String,
     c: TcpChannel,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
     queue_declare(
         c,
         &name,
@@ -284,10 +284,10 @@ pub fn connect_to_rabbit() -> impl TcpClientFuture {
     })
 }
 
-pub fn connect_to_queue<'a>(
+pub fn connect_to_queue(
     name: String,
     client: TcpClient,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
     create_channel(client).and_then(move |ch| declare_transient_queue(name, ch))
 }
 

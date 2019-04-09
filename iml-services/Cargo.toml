@@ -22,6 +22,10 @@ iml-manager-messaging = { path = "../iml-manager-messaging", version = "0.1.0" }
 tokio-runtime-shutdown = { path = "../tokio-runtime-shutdown", version = "0.1.0" }
 parking_lot = "0.7"
 
+[dev-dependencies]
+iml-agent-comms = { path = "../iml-agent-comms", version = "0.1.0"}
+rand = "0.6.5"
+
 [[bin]]
 name = "iml-stratagem"
 path = "src/services/stratagem.rs"

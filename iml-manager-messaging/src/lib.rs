@@ -7,13 +7,14 @@ use futures::prelude::*;
 use iml_rabbit::{basic_publish, connect_to_queue, create_channel, TcpChannelFuture, TcpClient};
 use iml_wire_types::{ManagerMessage, PluginMessage, ToBytes};
 
-fn send_message_to_queue<'a, T: 'a + ToBytes + std::fmt::Debug>(
+fn send_message_to_queue<T: ToBytes + std::fmt::Debug>(
+    exchange_name: impl Into<String>,
     queue_name: String,
     client: TcpClient,
     msg: T,
-) -> impl TcpChannelFuture + 'a {
+) -> impl TcpChannelFuture {
     connect_to_queue(queue_name, client.clone())
-        .and_then(move |(c, q)| basic_publish("", &q.name(), c, msg))
+        .and_then(move |(c, q)| basic_publish(exchange_name, &q.name(), c, msg))
 }
 
 /// Sends an *outgoing* message to an IML agent.
@@ -24,9 +25,16 @@ fn send_message_to_queue<'a, T: 'a + ToBytes + std::fmt::Debug>(
 /// * `msg` - The `ManagerMessage` to send to the agent.
 pub fn send_agent_message(
     client: TcpClient,
+    exchange_name: impl Into<String>,
     msg: ManagerMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error>{
-    send_message_to_queue("agent_tx_rust".to_string(), client.clone(), msg).map(move |_| client)
+) -> impl Future<Item = TcpClient, Error = failure::Error> {
+    send_message_to_queue(
+        exchange_name,
+        "agent_tx_rust".to_string(),
+        client.clone(),
+        msg,
+    )
+    .map(move |_| client)
 }
 
 /// Sends an *internal* message to a IML manager plugin's queue.
@@ -37,12 +45,13 @@ pub fn send_agent_message(
 /// * `client` - The active `TcpClient` to connect over.
 /// * `queue_name` - The name of the queue to connect and send messages over.
 /// * `msg` - The `PluginMessage` to send to the manager plugin.
-pub fn send_plugin_message(
+pub fn send_plugin_message<'a>(
     client: TcpClient,
+    exchange_name: &'a str,
     queue_name: String,
     msg: PluginMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error> + 'static {
-    send_message_to_queue(queue_name, client.clone(), msg).map(move |_| client)
+) -> impl Future<Item = TcpClient, Error = failure::Error> + 'a {
+    send_message_to_queue(exchange_name, queue_name, client.clone(), msg).map(move |_| client)
 }
 
 pub struct RoutingKey<'a>(&'a str);

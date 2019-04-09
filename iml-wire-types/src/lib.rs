@@ -159,7 +159,7 @@ impl fmt::Display for ActionId {
 }
 
 /// Things we can do with actions
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(tag = "type")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Action {
