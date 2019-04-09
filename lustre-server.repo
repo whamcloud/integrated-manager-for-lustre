@@ -1,6 +1,6 @@
 [lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/job/lustre-b2_12/lastSuccessfulBuild/arch%3Dx86_64%2Cbuild_type%3Dserver%2Cdistro%3Del7.6%2Cib_stack%3Dinkernel/artifact/artifacts/
+baseurl=https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7.6/axis-ib_stack/inkernel/builds/63298/archive/artifacts/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0

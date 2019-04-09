@@ -80,7 +80,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.assertEqual(host["state"], "managed")
         self.remote_operations.stop_lnet(host["fqdn"])
         self.wait_for_assert(lambda: self.assertHasAlert(host["lnet_configuration"], of_severity="INFO"))
-        self.wait_for_assert(lambda: self.assertState(host["lnet_configuration"], "lnet_down"))
+        self.wait_for_assert(lambda: self.assertState(host["lnet_configuration"], "lnet_unloaded"))
         lnet_offline_alert = self.get_alert(host["lnet_configuration"], alert_type="LNetOfflineAlert")
         self.assertEqual(lnet_offline_alert["severity"], "INFO")
 
