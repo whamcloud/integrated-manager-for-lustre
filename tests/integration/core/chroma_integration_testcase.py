@@ -253,14 +253,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
             ni.update(lnd_network=new_value)
 
-        response = self.chroma_manager.post("/api/nid", body=info.network_interfaces)
+        response = self.chroma_manager.post("/api/nid/", body=info.network_interfaces)
 
         self.assertTrue(response.successful, response.text)
         command_id = response.json["command"]["id"]
 
-        self.wait_for_command(
-            self.chroma_manager, command_id, timeout=LONG_TEST_TIMEOUT
-        )
+        self.wait_for_command(self.chroma_manager, command_id, timeout=LONG_TEST_TIMEOUT)
 
     def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""
