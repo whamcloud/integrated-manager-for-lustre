@@ -2,21 +2,26 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::services::action_runner::data::{SessionToRpcs, Sessions, Shared};
+use crate::services::action_runner::data::{
+    create_data_message, remove_action_in_flight, SessionToRpcs, Sessions, Shared,
+};
+use futures::Future as _;
 use iml_manager_messaging::send_agent_message;
 use iml_rabbit::TcpClient;
-use iml_wire_types::{ActionResult, Fqdn, Id, ManagerMessage, PluginMessage, PluginName};
+use iml_wire_types::{ActionResult, Fqdn, PluginMessage};
 
-fn create_data_message(
-    session_id: Id,
-    fqdn: Fqdn,
-    body: impl Into<serde_json::Value>,
-) -> ManagerMessage {
-    ManagerMessage::Data {
-        session_id,
-        fqdn,
-        plugin: PluginName::new("action_runner"),
-        body: body.into(),
+fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut SessionToRpcs) {
+    if let Some(old_id) = sessions.remove(fqdn) {
+        if let Some(mut xs) = session_to_rpcs.remove(&old_id) {
+            for (_, action_in_flight) in xs.drain() {
+                let msg = Err(format!(
+                    "Communications error, Node: {}, Reason: session terminated",
+                    fqdn
+                ));
+
+                action_in_flight.complete(msg).unwrap();
+            }
+        }
     }
 }
 
@@ -41,11 +46,15 @@ pub fn hande_agent_data(
 
                         let msg = create_data_message(session_id, fqdn, body);
 
-                        send_agent_message(
-                            client.clone(),
-                            "",
-                            iml_manager_messaging::AGENT_TX_RUST,
-                            msg,
+                        tokio::spawn(
+                            send_agent_message(
+                                client.clone(),
+                                "",
+                                iml_manager_messaging::AGENT_TX_RUST,
+                                msg,
+                            )
+                            .map(|_| ())
+                            .map_err(|e| log::error!("Got an error resending rpcs {:?}", e)),
                         );
                     }
                     rpcs.lock().insert(session_id.clone(), xs);
@@ -54,20 +63,23 @@ pub fn hande_agent_data(
         }
         PluginMessage::SessionTerminate {
             fqdn, session_id, ..
-        } => {
-            if let Some(old_id) = sessions.lock().remove(&fqdn) {
-                if let Some(mut xs) = rpcs.lock().remove(&old_id) {
-                    for (_, action_in_flight) in xs.drain() {
-                        let msg = Err(format!(
-                            "Communications error, Node: {}, Reason: session terminated",
-                            fqdn
-                        ));
-
-                        action_in_flight.complete(msg);
-                    }
-                }
+        } => match sessions.lock().get(&fqdn) {
+            Some(held_session) if held_session == &session_id => {
+                terminate_session(&fqdn, &mut sessions.lock(), &mut rpcs.lock());
             }
-        }
+            Some(unknown_session) => {
+                log::info!(
+                    "unknown session. Wanted: {}/{:?}, Got: {}/{:?}",
+                    fqdn,
+                    session_id,
+                    fqdn,
+                    unknown_session
+                );
+            }
+            None => {
+                log::info!("unknown session {:?}/{:?}", fqdn, session_id);
+            }
+        },
         PluginMessage::Data {
             fqdn,
             session_id,
@@ -77,27 +89,18 @@ pub fn hande_agent_data(
             Some(held_session) if held_session == &session_id => {
                 log::info!("good session {:?}/{:?}", fqdn, session_id);
 
-                match rpcs.lock().get_mut(&session_id) {
-                    Some(rs) => {
-                        let result: Result<ActionResult, String> =
-                            serde_json::from_value(body).unwrap();
+                let result: Result<ActionResult, String> = serde_json::from_value(body).unwrap();
 
-                        let result = result.unwrap();
+                let result = result.unwrap();
 
-                        match rs.remove(&result.id) {
-                            Some(action_in_flight) => {
-                                action_in_flight.complete(result.result);
-                            }
-                            None => {
-                                log::error!(
-                                    "Response received from UNKNOWN RPC of (id: {})",
-                                    result.id
-                                );
-                            }
-                        }
+                match remove_action_in_flight(&session_id, &result.id, &mut rpcs.lock()) {
+                    Some(action_in_flight) => {
+                        action_in_flight.complete(result.result).unwrap();
                     }
-                    None => {}
-                }
+                    None => {
+                        log::error!("Response received from UNKNOWN RPC of (id: {})", result.id);
+                    }
+                };
             }
             Some(held_session) => {
                 log::info!(
@@ -107,18 +110,7 @@ pub fn hande_agent_data(
                     session_id
                 );
 
-                if let Some(old_id) = sessions.lock().remove(&fqdn) {
-                    if let Some(mut xs) = rpcs.lock().remove(&old_id) {
-                        for (_, action_in_flight) in xs.drain() {
-                            let msg = Err(format!(
-                                "Communications error, Node: {}, Reason: session terminated",
-                                fqdn
-                            ));
-
-                            action_in_flight.complete(msg);
-                        }
-                    }
-                }
+                terminate_session(&fqdn, &mut sessions.lock(), &mut rpcs.lock());
             }
             None => {
                 log::info!("unknown session {:?}/{:?}", fqdn, session_id);

@@ -15,7 +15,7 @@ use iml_services::services::action_runner::{
 };
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
 use lapin_futures::client::ConnectionOptions;
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::Mutex;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use std::{collections::HashMap, sync::Arc};
