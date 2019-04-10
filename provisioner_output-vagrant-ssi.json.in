@@ -68,6 +68,7 @@
       "lustre_client_version": "",
       "address": "@HOSTNAME@vm@CLUSTER@2@DOMAINNAME@",
       "ip_address": "@VM2_IPADDRESS@",
+      "lnet_address": "@VM2_LNETADDRESS@",
       "distro": "el7.4"
     }
   ],
@@ -132,6 +133,7 @@
       "root_password": "vagrant",
       "address": "@HOSTNAME@vm@CLUSTER@5@DOMAINNAME@",
       "ip_address": "@VM5_IPADDRESS@",
+      "lnet_address": "@VM5_LNETADDRESS@",
       "distro": "el7.4"
     },
     {
@@ -160,6 +162,7 @@
       "root_password": "vagrant",
       "address": "@HOSTNAME@vm@CLUSTER@6@DOMAINNAME@",
       "ip_address": "@VM6_IPADDRESS@",
+      "lnet_address": "@VM6_LNETADDRESS@",
       "distro": "el7.4"
     },
     {
@@ -188,6 +191,7 @@
       "root_password": "vagrant",
       "address": "@HOSTNAME@vm@CLUSTER@7@DOMAINNAME@",
       "ip_address": "@VM7_IPADDRESS@",
+      "lnet_address": "@VM7_LNETADDRESS@",
       "distro": "el7.4"
     },
     {
@@ -216,6 +220,7 @@
       "root_password": "vagrant",
       "address": "@HOSTNAME@vm@CLUSTER@8@DOMAINNAME@",
       "ip_address": "@VM8_IPADDRESS@",
+      "lnet_address": "@VM8_LNETADDRESS@",
       "distro": "el7.4"
     },
     {
@@ -239,6 +244,7 @@
       "root_password": "vagrant",
       "address": "@HOSTNAME@vm@CLUSTER@9@DOMAINNAME@",
       "ip_address": "@VM9_IPADDRESS@",
+      "lnet_address": "@VM9_LNETADDRESS@",
       "distro": "el7.4"
     }
   ],
