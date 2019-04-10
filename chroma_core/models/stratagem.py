@@ -4,19 +4,27 @@
 
 from django.db import models
 
+from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.job import Step
+from chroma_core.models import Job
+from chroma_core.models import StateChangeJob
+from chroma_help.help import help_text
 
-class Stratagem(DeletableStatefulObject):
-    interval = models.IntegerField(help_text="Interval value in which a stratagem run will execute")
-    report_duration = models.IntegerField(help_text="Interval value in which stratagem reports are run")
+
+class Stratagem(models.Model):
+    id = models.IntegerField(primary_key=True, default=1, null=False)
+    interval = models.IntegerField(help_text="Interval value in which a stratagem run will execute", null=False)
+    report_duration = models.IntegerField(help_text="Interval value in which stratagem reports are run", null=False)
     report_duration_active = models.BooleanField(
         default=False, help_text="Indicates if the report should execute at the given interval"
     )
-    purge_duration = models.IntegerField(help_text="Interval value in which a stratagem purge will execute")
+    purge_duration = models.IntegerField(help_text="Interval value in which a stratagem purge will execute", null=False)
     purge_duration_active = models.BooleanField(
         default=False, help_text="Indicates if the purge should execute at the given interval"
     )
-    states = ["unconfigured", "configured"]
-    initial_state = "unconfigured"
+
+    class Meta:
+        app_label = "chroma_core"
 
 
 class ConfigureSettingsStep(Step):
@@ -29,16 +37,7 @@ class ConfigureSystemdTimerStep(Step):
         print "Create systemd time Step kwargs: {}".format(kwargs)
 
 
-
-class ConfigureStratagemJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(Stratagem, "unconfigured", "configured")
-    stateful_object = "stratagem"
-    stratagem = models.ForeignKey(Stratagem)
-    state_verb = help_text["configue_stratagem"]
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 10
-
+class ConfigureStratagemJob(Job):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -65,7 +64,3 @@ class ConfigureStratagemJob(StateChangeJob):
         ]
 
         return steps
-
-    @classmethod
-    def can_run(cls, host):
-        return host.state == "unconfigured"
