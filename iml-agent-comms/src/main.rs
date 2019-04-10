@@ -40,6 +40,7 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
         Either::B(send_agent_message(
             client.clone(),
             "",
+            iml_manager_messaging::AGENT_TX_RUST,
             ManagerMessage::SessionTerminate {
                 fqdn: data.fqdn.clone(),
                 plugin: data.plugin.clone(),
@@ -98,6 +99,7 @@ fn session_create_req_handler(
         send_agent_message(
             client.clone(),
             "",
+            iml_manager_messaging::AGENT_TX_RUST,
             ManagerMessage::SessionCreateResponse {
                 fqdn,
                 plugin,
@@ -132,7 +134,7 @@ fn main() {
         tokio::spawn(lazy(move || {
             iml_rabbit::connect_to_rabbit()
                 .and_then(iml_rabbit::create_channel)
-                .and_then(consume_agent_tx_queue)
+                .and_then(|ch| consume_agent_tx_queue(ch, iml_manager_messaging::AGENT_TX_RUST))
                 .and_then(move |stream| {
                     log::info!("Started consuming agent_tx queue");
 

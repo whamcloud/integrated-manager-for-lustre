@@ -80,6 +80,7 @@ pub fn terminate_agent_session(
     iml_manager_messaging::send_agent_message(
         client,
         "",
+        iml_manager_messaging::AGENT_TX_RUST,
         ManagerMessage::SessionTerminate {
             fqdn: fqdn.clone(),
             plugin: plugin.clone(),
@@ -88,12 +89,15 @@ pub fn terminate_agent_session(
     )
 }
 
-pub fn consume_agent_tx_queue(channel: TcpChannel) -> impl TcpStreamConsumerFuture {
-    declare_transient_queue("agent_tx_rust", channel).and_then(|(ch, q)| {
+pub fn consume_agent_tx_queue(
+    channel: TcpChannel,
+    queue_name: impl Into<String>,
+) -> impl TcpStreamConsumerFuture {
+    declare_transient_queue(queue_name, channel).and_then(|(ch, q)| {
         basic_consume(
             ch,
             q,
-            "agent_tx_rust",
+            "",
             Some(BasicConsumeOptions {
                 no_ack: true,
                 exclusive: true,

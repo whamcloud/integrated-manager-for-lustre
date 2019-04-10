@@ -26,6 +26,7 @@ use warp::{self, Filter};
 fn cancel_running_action(
     client: TcpClient,
     msg: ManagerMessage,
+    queue_name: impl Into<String>,
     session_id: Id,
     action_id: ActionId,
     session_to_rpcs: Shared<SessionToRpcs>,
@@ -35,7 +36,7 @@ fn cancel_running_action(
 
     if has_action_in_flight {
         Either::A(
-            send_agent_message(client.clone(), "", msg)
+            send_agent_message(client.clone(), "", queue_name, msg)
                 .inspect(move |_| {
                     if let Some(action_in_flight) = remove_action_in_flight(
                         &session_id,
@@ -58,6 +59,8 @@ fn cancel_running_action(
     }
 }
 
+/// Creates a warp `Filter` that will hand out
+/// a cloned client for each request.
 pub fn create_client_filter() -> (
     impl Future<Item = (), Error = ()>,
     impl Filter<Extract = (TcpClient,), Error = warp::Rejection> + Clone,
@@ -76,27 +79,27 @@ pub fn create_client_filter() -> (
 }
 
 pub fn sender(
-    exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
     sessions: Shared<Sessions>,
     session_to_rpcs: Shared<SessionToRpcs>,
     client_filter: impl Filter<Extract = (TcpClient,), Error = warp::Rejection> + Clone + Send,
 ) -> impl Filter<Extract = (Result<serde_json::Value, String>,), Error = warp::Rejection> + Clone {
-    let exchange_name = exchange_name.into();
+    let queue_name = queue_name.into();
 
     let sessions_filter = warp::any().map(move || Arc::clone(&sessions));
     let session_to_rpcs_filter = warp::any().map(move || Arc::clone(&session_to_rpcs));
-    let exchange_name_filter = warp::any().map(move || exchange_name.clone());
+    let queue_name_filter = warp::any().map(move || queue_name.clone());
 
     let deps = sessions_filter
         .and(session_to_rpcs_filter)
         .and(client_filter)
-        .and(exchange_name_filter);
+        .and(queue_name_filter);
 
     warp::post2().and(deps).and(warp::body::json()).and_then(
         move |s: Shared<Sessions>,
               r: Shared<SessionToRpcs>,
               client: TcpClient,
-              exchange_name: String,
+              queue_name: String,
               (fqdn, action): (Fqdn, Action)| {
             await_session(fqdn.clone(), s, Duration::from_secs(30))
                 .from_err()
@@ -107,6 +110,7 @@ pub fn sender(
                         Action::ActionCancel { id } => Either::A(cancel_running_action(
                             client.clone(),
                             msg,
+                            queue_name,
                             session_id,
                             id,
                             r,
@@ -115,7 +119,7 @@ pub fn sender(
                             let (tx, rx) = oneshot::channel();
 
                             Either::B(
-                                send_agent_message(client.clone(), exchange_name, msg)
+                                send_agent_message(client.clone(), "", queue_name, msg)
                                     .map(move |_| {
                                         let action_id: ActionId = action.get_id().clone();
                                         let af = ActionInFlight::new(action, tx);

@@ -41,7 +41,12 @@ pub fn hande_agent_data(
 
                         let msg = create_data_message(session_id, fqdn, body);
 
-                        send_agent_message(client.clone(), "", msg);
+                        send_agent_message(
+                            client.clone(),
+                            "",
+                            iml_manager_messaging::AGENT_TX_RUST,
+                            msg,
+                        );
                     }
                     rpcs.lock().insert(session_id.clone(), xs);
                 };

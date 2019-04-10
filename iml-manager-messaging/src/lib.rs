@@ -7,6 +7,8 @@ use futures::prelude::*;
 use iml_rabbit::{basic_publish, connect_to_queue, create_channel, TcpChannelFuture, TcpClient};
 use iml_wire_types::{ManagerMessage, PluginMessage, ToBytes};
 
+pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
+
 fn send_message_to_queue<T: ToBytes + std::fmt::Debug>(
     exchange_name: impl Into<String>,
     queue_name: impl Into<String>,
@@ -22,13 +24,15 @@ fn send_message_to_queue<T: ToBytes + std::fmt::Debug>(
 /// # Arguments
 ///
 /// * `client` - The active `TcpClient` to connect over.
+/// * `queue_name` - The queue to send to.
 /// * `msg` - The `ManagerMessage` to send to the agent.
 pub fn send_agent_message(
     client: TcpClient,
     exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
     msg: ManagerMessage,
 ) -> impl Future<Item = TcpClient, Error = failure::Error> {
-    send_message_to_queue(exchange_name, "agent_tx_rust", client.clone(), msg).map(move |_| client)
+    send_message_to_queue(exchange_name, queue_name, client.clone(), msg).map(move |_| client)
 }
 
 /// Sends an *internal* message to a IML manager plugin's queue.
@@ -38,13 +42,14 @@ pub fn send_agent_message(
 ///
 /// * `client` - The active `TcpClient` to connect over.
 /// * `queue_name` - The name of the queue to connect and send messages over.
+/// * `exchange_name` - The name of the exchange to connect to
 /// * `msg` - The `PluginMessage` to send to the manager plugin.
-pub fn send_plugin_message<'a>(
+pub fn send_plugin_message(
     client: TcpClient,
-    exchange_name: &'a str,
-    queue_name: String,
+    exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
     msg: PluginMessage,
-) -> impl Future<Item = TcpClient, Error = failure::Error> + 'a {
+) -> impl Future<Item = TcpClient, Error = failure::Error> {
     send_message_to_queue(exchange_name, queue_name, client.clone(), msg).map(move |_| client)
 }
 
