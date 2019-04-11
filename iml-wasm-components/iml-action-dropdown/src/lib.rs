@@ -234,9 +234,9 @@ fn view(
         tooltip_size,
         destroyed,
     }: &Model,
-) -> El<Msg> {
+) -> Vec<El<Msg>> {
     if *destroyed {
-        return seed::empty();
+        return vec![seed::empty()];
     }
 
     let next_open = Msg::Open(!open);
@@ -272,12 +272,14 @@ fn view(
         }));
     }
 
-    div![
-        class!["action-dropdown"],
+    vec![
         div![
-            class!["btn-group dropdown", &open_class],
-            btn,
-            ul![class!["dropdown-menu", &open_class], record_els],
+            class!["action-dropdown"],
+            div![
+                class!["btn-group dropdown", &open_class],
+                btn,
+                ul![class!["dropdown-menu", &open_class], record_els],
+            ]
         ]
     ]
 }
