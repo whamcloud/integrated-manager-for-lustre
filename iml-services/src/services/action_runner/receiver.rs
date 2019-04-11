@@ -6,9 +6,10 @@ use crate::services::action_runner::data::{
     create_data_message, remove_action_in_flight, SessionToRpcs, Sessions, Shared,
 };
 use futures::Future as _;
-use iml_manager_messaging::send_agent_message;
-use iml_rabbit::TcpClient;
+use iml_rabbit::{send_message, TcpClient};
 use iml_wire_types::{ActionResult, Fqdn, PluginMessage};
+
+pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
 
 fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut SessionToRpcs) {
     if let Some(old_id) = sessions.remove(fqdn) {
@@ -47,14 +48,9 @@ pub fn hande_agent_data(
                         let msg = create_data_message(session_id, fqdn, body);
 
                         tokio::spawn(
-                            send_agent_message(
-                                client.clone(),
-                                "",
-                                iml_manager_messaging::AGENT_TX_RUST,
-                                msg,
-                            )
-                            .map(|_| ())
-                            .map_err(|e| log::error!("Got an error resending rpcs {:?}", e)),
+                            send_message(client.clone(), "", AGENT_TX_RUST, msg)
+                                .map(|_| ())
+                                .map_err(|e| log::error!("Got an error resending rpcs {:?}", e)),
                         );
                     }
                     rpcs.lock().insert(session_id.clone(), xs);

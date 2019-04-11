@@ -11,8 +11,7 @@ use futures::{
     sync::oneshot,
     Future,
 };
-use iml_manager_messaging::send_agent_message;
-use iml_rabbit::{connect_to_rabbit, get_cloned_conns, TcpClient};
+use iml_rabbit::{connect_to_rabbit, get_cloned_conns, send_message, TcpClient};
 use iml_wire_types::{Action, ActionId, Fqdn, Id, ManagerMessage};
 use std::{sync::Arc, time::Duration};
 use warp::{self, Filter};
@@ -36,7 +35,7 @@ fn cancel_running_action(
 
     if has_action_in_flight {
         Either::A(
-            send_agent_message(client.clone(), "", queue_name, msg)
+            send_message(client.clone(), "", queue_name, msg)
                 .inspect(move |_| {
                     if let Some(action_in_flight) = remove_action_in_flight(
                         &session_id,
@@ -119,7 +118,7 @@ pub fn sender(
                             let (tx, rx) = oneshot::channel();
 
                             Either::B(
-                                send_agent_message(client.clone(), "", queue_name, msg)
+                                send_message(client.clone(), "", queue_name, msg)
                                     .map(move |_| {
                                         let action_id: ActionId = action.get_id().clone();
                                         let af = ActionInFlight::new(action, tx);

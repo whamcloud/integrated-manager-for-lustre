@@ -10,11 +10,10 @@ use futures::{
 use iml_agent_comms::{
     flush_queue,
     host::{self, SharedHosts},
-    messaging::{consume_agent_tx_queue, AgentData},
+    messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
     session::{self, Session, Sessions},
 };
-use iml_manager_messaging::{send_agent_message, send_plugin_message};
-use iml_rabbit::{self, TcpClient, TcpClientFuture};
+use iml_rabbit::{self, send_message, TcpClient, TcpClientFuture};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
@@ -28,19 +27,19 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
     if has_key {
         log::debug!("Forwarding valid message {}", data);
 
-        Either::A(send_plugin_message(
+        Either::A(send_message(
             client.clone(),
             "",
             format!("rust_agent_{}_rx", data.plugin),
-            data.into(),
+            data,
         ))
     } else {
         log::warn!("Terminating session because unknown {}", data);
 
-        Either::B(send_agent_message(
+        Either::B(send_message(
             client.clone(),
             "",
-            iml_manager_messaging::AGENT_TX_RUST,
+            AGENT_TX_RUST,
             ManagerMessage::SessionTerminate {
                 fqdn: data.fqdn.clone(),
                 plugin: data.plugin.clone(),
@@ -68,7 +67,7 @@ fn session_create_req_handler(
     let fut = if let Some(last) = last {
         log::warn!("Destroying session {} to create new one", last);
 
-        Either::A(send_plugin_message(
+        Either::A(send_message(
             client.clone(),
             "",
             format!("rust_agent_{}_rx", plugin),
@@ -83,7 +82,7 @@ fn session_create_req_handler(
     };
 
     fut.and_then(move |client| {
-        send_plugin_message(
+        send_message(
             client.clone(),
             "",
             format!("rust_agent_{}_rx", plugin.clone()),
@@ -96,10 +95,10 @@ fn session_create_req_handler(
         .map(|client| (client, fqdn, plugin, session.id))
     })
     .and_then(move |(client, fqdn, plugin, session_id)| {
-        send_agent_message(
+        send_message(
             client.clone(),
             "",
-            iml_manager_messaging::AGENT_TX_RUST,
+            AGENT_TX_RUST,
             ManagerMessage::SessionCreateResponse {
                 fqdn,
                 plugin,
@@ -134,7 +133,7 @@ fn main() {
         tokio::spawn(lazy(move || {
             iml_rabbit::connect_to_rabbit()
                 .and_then(iml_rabbit::create_channel)
-                .and_then(|ch| consume_agent_tx_queue(ch, iml_manager_messaging::AGENT_TX_RUST))
+                .and_then(|ch| consume_agent_tx_queue(ch, AGENT_TX_RUST))
                 .and_then(move |stream| {
                     log::info!("Started consuming agent_tx queue");
 

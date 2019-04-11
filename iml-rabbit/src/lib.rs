@@ -272,6 +272,18 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     }
 }
 
+/// Sends a JSON encoded message to the given exchange / queue
+pub fn send_message<T: ToBytes + std::fmt::Debug>(
+    client: TcpClient,
+    exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
+    msg: T,
+) -> impl TcpClientFuture {
+    connect_to_queue(queue_name, client.clone())
+        .and_then(move |(c, q)| basic_publish(c, exchange_name, q.name(), msg))
+        .map(move |_| client)
+}
+
 /// Connect to the rabbitmq instance running on the IML manager
 ///
 /// This fn is useful for production code as it reads in env vars

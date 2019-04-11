@@ -9,6 +9,9 @@ use iml_rabbit::{
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
 use lapin_futures::channel::BasicConsumeOptions;
 
+pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
+
+#[derive(Debug, serde::Serialize)]
 pub struct AgentData {
     pub fqdn: Fqdn,
     pub plugin: PluginName,
@@ -77,10 +80,10 @@ pub fn terminate_agent_session(
     session_id: Id,
     client: TcpClient,
 ) -> impl Future<Item = TcpClient, Error = failure::Error> {
-    iml_manager_messaging::send_agent_message(
+    iml_rabbit::send_message(
         client,
         "",
-        iml_manager_messaging::AGENT_TX_RUST,
+        AGENT_TX_RUST,
         ManagerMessage::SessionTerminate {
             fqdn: fqdn.clone(),
             plugin: plugin.clone(),
