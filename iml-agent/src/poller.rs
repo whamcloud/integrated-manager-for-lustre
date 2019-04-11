@@ -76,7 +76,7 @@ pub fn create_poller(
         .for_each(move |now| {
             log::trace!("interval triggered for {:?}", now);
 
-            for (name, state) in sessions.clone().lock()?.iter_mut() {
+            for (name, state) in sessions.clone().lock().iter_mut() {
                 let fut = handle_state(
                     state,
                     agent_client.clone(),

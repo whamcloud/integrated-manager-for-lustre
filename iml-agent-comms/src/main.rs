@@ -22,7 +22,7 @@ use tokio::{self, sync::oneshot};
 use warp::Filter;
 
 fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl TcpClientFuture {
-    let has_key = sessions.lock().unwrap().contains_key(&data.plugin);
+    let has_key = sessions.lock().contains_key(&data.plugin);
 
     if has_key {
         log::debug!("Forwarding valid message {}", data);
@@ -59,10 +59,7 @@ fn session_create_req_handler(
 
     log::info!("Creating session {}", session);
 
-    let last = sessions
-        .lock()
-        .unwrap()
-        .insert(plugin.clone(), session.clone());
+    let last = sessions.lock().insert(plugin.clone(), session.clone());
 
     let fut = if let Some(last) = last {
         log::warn!("Destroying session {} to create new one", last);
@@ -140,15 +137,15 @@ fn main() {
                     stream.from_err().for_each(move |msg| {
                         let MessageFqdn { fqdn } = serde_json::from_slice(&msg.data)?;
 
-                        let hosts_state = hosts_state.lock().unwrap();
+                        let hosts_state = hosts_state.lock();
                         let host = hosts_state.get(&fqdn);
 
                         if let Some(host) = host {
-                            host.queue.lock().unwrap().push_back(msg.data);
+                            host.queue.lock().push_back(msg.data);
                             log::debug!(
                                 "Put data on host queue {:?}: Queue size: {:?}",
                                 fqdn,
-                                host.queue.lock().unwrap().len()
+                                host.queue.lock().len()
                             );
                         } else {
                             log::warn!(
@@ -187,7 +184,7 @@ fn main() {
 
                     // If we are not dealing with the same agent anymore, remove the host.
                     let sessions = {
-                        let mut hosts = hosts.lock().unwrap();
+                        let mut hosts = hosts.lock();
                         host::remove_stale(&mut hosts, &fqdn, &envelope.client_start_time);
                         let host =
                             host::get_or_insert(&mut hosts, fqdn, envelope.client_start_time);
@@ -245,8 +242,8 @@ fn main() {
             .and(hosts)
             .and_then(move |fqdn, args: GetArgs, hosts: SharedHosts| {
                 // If we are not dealing with the same agent anymore, remove the host and put a new one in.
-                if host::is_stale(&mut hosts.lock().unwrap(), &fqdn, &args.client_start_time) {
-                    let mut hosts = hosts.lock().unwrap();
+                if host::is_stale(&mut hosts.lock(), &fqdn, &args.client_start_time) {
+                    let mut hosts = hosts.lock();
 
                     hosts.remove(&fqdn);
 
@@ -263,7 +260,7 @@ fn main() {
                 }
 
                 let (sessions, queue) = {
-                    let mut hosts = hosts.lock().unwrap();
+                    let mut hosts = hosts.lock();
 
                     let host = host::get_or_insert(
                         &mut hosts,
@@ -281,7 +278,7 @@ fn main() {
                             .collect()
                     })
                     .map(move |mut xs| {
-                        xs.retain(|x| session::is_session_valid(x, &sessions.lock().unwrap()));
+                        xs.retain(|x| session::is_session_valid(x, &sessions.lock()));
 
                         xs
                     })

@@ -4,9 +4,10 @@
 
 use crate::session::Sessions;
 use iml_wire_types::Fqdn;
+use parking_lot::Mutex;
 use std::{
     collections::{HashMap, VecDeque},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 /// References an active agent on a remote host.

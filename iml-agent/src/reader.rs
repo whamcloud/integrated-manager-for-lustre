@@ -83,7 +83,7 @@ pub fn create_reader(
                             session_id,
                             body,
                             ..
-                        } => match sessions2.lock()?.get_mut(&plugin) {
+                        } => match sessions2.lock().get_mut(&plugin) {
                             Some(State::Active(s)) => {
                                 let agent_client3 = agent_client2.clone();
 

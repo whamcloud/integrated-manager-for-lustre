@@ -13,10 +13,8 @@ use futures::{
     Future,
 };
 use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use parking_lot::Mutex;
+use std::{collections::HashMap, sync::Arc};
 
 pub struct ActionRunner {
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
@@ -70,10 +68,7 @@ impl DaemonPlugin for ActionRunner {
 
                 let (tx, rx) = oneshot::channel();
 
-                match self.ids.lock() {
-                    Ok(mut x) => x.insert(id.clone(), tx),
-                    Err(e) => return Box::new(future::err(e.into())),
-                };
+                self.ids.lock().insert(id.clone(), tx);
 
                 let fut = action_plugin_fn(args);
 
@@ -83,7 +78,7 @@ impl DaemonPlugin for ActionRunner {
                     fut.select2(rx)
                         .map(move |r| match r {
                             Either::A((result, _)) => {
-                                ids.lock().unwrap().remove(&id);
+                                ids.lock().remove(&id);
                                 ActionResult { id, result }
                             }
                             Either::B((_, z)) => {
@@ -101,10 +96,7 @@ impl DaemonPlugin for ActionRunner {
                 )
             }
             Action::ActionCancel { id } => {
-                let tx = match self.ids.lock() {
-                    Ok(mut x) => x.remove(&id),
-                    Err(e) => return Box::new(future::err(e.into())),
-                };
+                let tx = self.ids.lock().remove(&id);
 
                 if let Some(tx) = tx {
                     // We don't care what the result is here.
@@ -122,7 +114,7 @@ impl DaemonPlugin for ActionRunner {
         }
     }
     fn teardown(&mut self) -> Result<()> {
-        for (_, tx) in self.ids.lock()?.drain() {
+        for (_, tx) in self.ids.lock().drain() {
             // We don't care what the result is here.
             tx.send(()).is_ok();
         }
