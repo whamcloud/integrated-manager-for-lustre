@@ -93,7 +93,7 @@ pub fn consume_agent_tx_queue(
     channel: TcpChannel,
     queue_name: impl Into<String>,
 ) -> impl TcpStreamConsumerFuture {
-    declare_transient_queue(queue_name, channel).and_then(|(ch, q)| {
+    declare_transient_queue(channel, queue_name).and_then(|(ch, q)| {
         basic_consume(
             ch,
             q,

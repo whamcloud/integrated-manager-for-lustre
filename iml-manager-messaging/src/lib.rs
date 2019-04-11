@@ -2,9 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::{self, Either};
 use futures::prelude::*;
-use iml_rabbit::{basic_publish, connect_to_queue, create_channel, TcpChannelFuture, TcpClient};
+use iml_rabbit::{basic_publish, connect_to_queue, TcpChannelFuture, TcpClient};
 use iml_wire_types::{ManagerMessage, PluginMessage, ToBytes};
 
 pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
@@ -16,7 +15,7 @@ fn send_message_to_queue<T: ToBytes + std::fmt::Debug>(
     msg: T,
 ) -> impl TcpChannelFuture {
     connect_to_queue(queue_name, client.clone())
-        .and_then(move |(c, q)| basic_publish(exchange_name, &q.name(), c, msg))
+        .and_then(move |(c, q)| basic_publish(c, exchange_name, q.name(), msg))
 }
 
 /// Sends an *outgoing* message to an IML agent.
@@ -58,26 +57,5 @@ pub struct RoutingKey<'a>(&'a str);
 impl<'a> From<RoutingKey<'a>> for &'a str {
     fn from(key: RoutingKey<'a>) -> Self {
         key.0
-    }
-}
-
-/// Sends an *internal* message using the [Direct reply-to](https://www.rabbitmq.com/direct-reply-to.html)
-/// feature of RabbitMQ.
-///
-/// # Arguments
-///
-/// * `client` - The active `TcpClient` to connect over.
-/// * `routing_key` - The routing key to reply to.
-/// * `msg` - The `PluginMessage` to send to the manager plugin.
-pub fn send_direct_reply<'a>(
-    client: TcpClient,
-    routing_key: RoutingKey<'a>,
-    msg: impl serde::Serialize,
-) -> impl TcpChannelFuture + 'a {
-    match serde_json::to_vec(&msg) {
-        Ok(v) => Either::A(
-            create_channel(client).and_then(move |ch| basic_publish("", routing_key.into(), ch, v)),
-        ),
-        Err(e) => Either::B(future::err(e.into())),
     }
 }

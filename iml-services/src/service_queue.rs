@@ -22,7 +22,7 @@ pub fn consume_service_queue(
             basic_consume(
                 c,
                 q,
-                &name,
+                name,
                 Some(BasicConsumeOptions {
                     no_ack: true,
                     exclusive: true,
