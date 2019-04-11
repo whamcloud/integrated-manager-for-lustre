@@ -7,7 +7,7 @@ use iml_services::{
     service_queue::consume_service_queue,
     services::action_runner::{
         data::{SessionToRpcs, Sessions, Shared},
-        receiver::hande_agent_data,
+        receiver::handle_agent_data,
         sender::{create_client_filter, sender},
     },
 };
@@ -56,7 +56,7 @@ fn main() {
                 .for_each(move |m: PluginMessage| {
                     log::debug!("Incoming message from agent: {:?}", m);
 
-                    hande_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
+                    handle_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
 
                     Ok(())
                 })

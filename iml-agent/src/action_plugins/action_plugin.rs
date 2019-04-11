@@ -28,7 +28,7 @@ where
     Box::new(
         serde_json::from_value(v)
             .into_future()
-            .map_err(|e| e.into())
+            .from_err()
             .and_then(f)
             .then(|x| {
                 Ok(match x {

@@ -7,7 +7,7 @@ use crate::{
     daemon_plugins::{action_runner, stratagem},
 };
 use futures::{future, Future};
-use iml_wire_types::{AgentResult, PluginName, ToJsonValue};
+use iml_wire_types::{AgentResult, PluginName};
 use std::collections::HashMap;
 
 pub type OutputValue = serde_json::Value;
@@ -46,7 +46,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
         &mut self,
         _body: serde_json::Value,
     ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
-        Box::new(future::ok(().to_json_value()))
+        Box::new(future::ok(Ok(serde_json::Value::Null)))
     }
     fn teardown(&mut self) -> Result<()> {
         Ok(())

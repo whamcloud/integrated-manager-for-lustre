@@ -26,7 +26,7 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
     }
 }
 
-pub fn hande_agent_data(
+pub fn handle_agent_data(
     client: TcpClient,
     m: PluginMessage,
     sessions: &Shared<Sessions>,
