@@ -395,7 +395,7 @@ mod tests {
                     create_channel(client)
                         .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
                         .and_then(|ch| declare_transient_queue(ch, "fooQ"))
-                        .and_then(move |(c, _)| bind_queue(c, "foo", "fooQ", ""))
+                        .and_then(move |(c, _)| bind_queue(c, "foo", "fooQ", "fooQ"))
                         .and_then(|ch| basic_publish(ch, "foo", "fooQ", "bar"))
                 })
                 .and_then(|_| read_message("foo", "fooQ")),
@@ -426,7 +426,7 @@ mod tests {
             create_channel(client)
                 .and_then(|ch| declare_transient_exchange(ch, "foo2", "direct"))
                 .and_then(|ch| declare_transient_queue(ch, "fooQ2"))
-                .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", ""))
+                .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", "fooQ2"))
                 .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "bar"))
                 .and_then(|_| read_message("foo2", "fooQ2")),
         )?;
