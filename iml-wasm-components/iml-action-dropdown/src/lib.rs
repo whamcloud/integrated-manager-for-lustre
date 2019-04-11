@@ -272,16 +272,14 @@ fn view(
         }));
     }
 
-    vec![
+    vec![div![
+        class!["action-dropdown"],
         div![
-            class!["action-dropdown"],
-            div![
-                class!["btn-group dropdown", &open_class],
-                btn,
-                ul![class!["dropdown-menu", &open_class], record_els],
-            ]
+            class!["btn-group dropdown", &open_class],
+            btn,
+            ul![class!["dropdown-menu", &open_class], record_els],
         ]
-    ]
+    ]]
 }
 
 fn window_events(_model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
