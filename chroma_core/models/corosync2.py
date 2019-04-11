@@ -133,11 +133,13 @@ class AutoConfigureCorosyncStep(Step):
         # detect local interfaces for use in corosync 'rings', network level configuration only
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
 
+        # Select dedicated line as ring0 to carry all the traffic by default - this
+        # prevents congestion on managment network
         ring0_name, ring0_config = next(
-            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == True
         )
         ring1_name, ring1_config = next(
-            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == True
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
         )
 
         # apply the configurations of corosync 'rings', network level configuration only
@@ -193,6 +195,9 @@ class AutoConfigureCorosyncStep(Step):
                 {"mcast_port": config["mcast_port"], "pcs_password": self._pcs_password},
             )
 
+            corosync_configuration.host.corosync_ring0 = ring0_config["ipaddr"]
+            corosync_configuration.host.save(update_fields=["corosync_ring0"])
+
             # Stage 2 configures the cluster either by creating it or adding a node to it.
             self.invoke_agent_expect_result(
                 actioning_host,
@@ -200,7 +205,7 @@ class AutoConfigureCorosyncStep(Step):
                 {
                     "ring0_name": ring0_name,
                     "ring1_name": ring1_name,
-                    "new_node_fqdn": corosync_configuration.host.fqdn,
+                    "new_node_fqdn": corosync_configuration.host.corosync_ring0,
                     "mcast_port": config["mcast_port"],
                     "pcs_password": self._pcs_password,
                     "create_cluster": actioning_host == corosync_configuration.host,
@@ -240,7 +245,7 @@ class UnconfigureCorosyncStep(Step):
             self.invoke_agent_expect_result(
                 kwargs["host"],
                 "unconfigure_corosync2",
-                {"host_fqdn": kwargs["host"].fqdn, "mcast_port": kwargs["mcast_port"]},
+                {"host_fqdn": kwargs["host"].corosync_ring0, "mcast_port": kwargs["mcast_port"]},
             )
 
 
