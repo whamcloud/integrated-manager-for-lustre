@@ -248,12 +248,14 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         info = self._get_lnet_info(host)
 
-        for ni in info.network_interfaces:
-            new_value = 0 if ni.get("inet4_address") == host_config["lnet_address"] else -1
+        def convert(ni):
+            lnd_network = 0 if ni.get("inet4_address") == host_config["lnet_address"] else -1
 
-            ni.update(lnd_network=new_value)
+            return {"lnd_network": lnd_network, "network_interface": ni["resource_uri"]}
 
-        response = self.chroma_manager.post("/api/nid/", body=info.network_interfaces)
+        objects = map(convert, info.network_interfaces)
+
+        response = self.chroma_manager.post("/api/nid/", body={"objects": objects})
 
         self.assertTrue(response.successful, response.text)
         command_id = response.json["command"]["id"]
