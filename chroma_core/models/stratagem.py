@@ -27,17 +27,17 @@ class Stratagem(models.Model):
         app_label = "chroma_core"
 
 
-class ConfigureSettingsStep(Step):
-    def run(self, kwargs):
-        print "Configure settings Step kwargs: {}".format(kwargs)
-
-
 class ConfigureSystemdTimerStep(Step):
     def run(self, kwargs):
         print "Create systemd time Step kwargs: {}".format(kwargs)
 
 
 class ConfigureStratagemJob(Job):
+    stratagem_configuration = models.ForeignKey(Stratagem)
+
+    requires_confirmation = False
+    state_verb = "Configure Stratagem"
+
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -50,16 +50,7 @@ class ConfigureStratagemJob(Job):
         return help_text["configure_stratagem_description"]
 
     def get_steps(self):
-        self._so_cache = self.stratagem = ObjectCache.update(self.stratagem)
-
         steps = [
-            (ConfigureSettingsStep, {
-                "interval": 30,
-                "report_duration": 30,
-                "report_duration_active": True,
-                "purge_duration": 0,
-                "purge_duration_active": False
-            }),
             (ConfigureSystemdTimerStep, {})
         ]
 

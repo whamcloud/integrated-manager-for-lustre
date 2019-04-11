@@ -43,6 +43,7 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
+from chroma_core.models import ConfigureStratagemJob, Stratagem
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1745,3 +1746,20 @@ class JobScheduler(object):
     @property
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
+
+    def configure_stratagem(self, stratagem_data):
+        with self._lock:
+            stratagem_configuration = Stratagem.objects.get(id=stratagem_data["id"])
+            jobs = [
+                ConfigureStratagemJob(stratagem_configuration=stratagem_configuration)
+            ]
+
+            with transaction.atomic():
+                command = Command.objects.create(
+                    message="Configuring Stratagem"
+                )
+                self.CommandPlan.add_jobs(jobs, command)
+
+        self.progress.advance()
+
+        return command.id
