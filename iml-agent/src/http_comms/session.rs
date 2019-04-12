@@ -57,9 +57,7 @@ impl State {
         }
     }
     pub fn reset_empty(&mut self) {
-        if let State::Empty(_) = self {
-            std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
-        }
+        std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
     }
     pub fn convert_to_pending(&mut self) {
         std::mem::replace(self, State::Pending);

@@ -10,10 +10,12 @@ use crate::{
         session::{Session, SessionInfo, Sessions, State},
     },
 };
-use futures::future::{loop_fn, Loop};
+use futures::{
+    future::{self, loop_fn, Future, Loop},
+    stream::{self, Stream},
+};
 use iml_wire_types::ManagerMessage;
 use std::time::{Duration, Instant};
-use tokio::prelude::*;
 use tokio::timer::Delay;
 
 fn send_if_data(
@@ -30,7 +32,6 @@ fn send_if_data(
 type LoopState = Loop<(), (AgentClient, Sessions, std::sync::Arc<DaemonPlugins>)>;
 
 /// Continually polls the manager for any incoming commands using a tail-recursive loop.
-///
 pub fn create_reader(
     sessions: Sessions,
     agent_client: AgentClient,
@@ -38,7 +39,7 @@ pub fn create_reader(
 ) -> impl Future<Item = (), Error = ImlAgentError> {
     loop_fn(
         (agent_client, sessions, std::sync::Arc::new(registry)),
-        move |(agent_client, sessions, registry)| {
+        move |(agent_client, mut sessions, registry)| {
             let mut sessions2 = sessions.clone();
             let agent_client2 = agent_client.clone();
             let registry2 = registry.clone();
@@ -131,9 +132,13 @@ pub fn create_reader(
                                     e
                                 );
 
+                                if let Err(e) = sessions.terminate_all_sessions() {
+                                    return Box::new(future::err(e));
+                                };
+
                                 let when = Instant::now() + Duration::from_secs(5);
                                 Box::new(
-                                    Delay::new(when).map_err(|e| e.into()).map(|_| {
+                                    Delay::new(when).from_err().map(|_| {
                                         Loop::Continue((agent_client, sessions, registry))
                                     }),
                                 )

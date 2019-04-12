@@ -103,6 +103,8 @@ pub fn sender(
             await_session(fqdn.clone(), s, Duration::from_secs(30))
                 .from_err()
                 .and_then(move |session_id| {
+                    log::debug!("Sending {:?} to {}", action, fqdn);
+
                     let msg = create_data_message(session_id.clone(), fqdn, action.clone());
 
                     match action {

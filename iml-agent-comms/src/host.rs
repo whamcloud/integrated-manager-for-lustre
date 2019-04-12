@@ -13,7 +13,7 @@ use std::{
 /// References an active agent on a remote host.
 ///
 /// Contains references to any active sessions on the remote host,
-/// and maintains a mpsc of outgoing messages to send to the remote host.
+/// and maintains a `VecDeque` of outgoing messages to send to the remote host.
 #[derive(Debug)]
 pub struct Host {
     pub fqdn: Fqdn,
