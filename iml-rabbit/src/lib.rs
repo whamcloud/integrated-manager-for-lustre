@@ -38,6 +38,7 @@ pub trait TcpStreamConsumerFuture:
     Future<Item = TcpStreamConsumer, Error = failure::Error>
 {
 }
+
 impl<T: Future<Item = TcpStreamConsumer, Error = failure::Error>> TcpStreamConsumerFuture for T {}
 
 /// Connects over TCP to an AMQP server
@@ -52,13 +53,15 @@ pub fn connect(
 ) -> impl Future<
     Item = (
         TcpClient,
-        Heartbeat<impl Future<Item = (), Error = LapinError> + Send + 'static>,
+        Heartbeat<impl Future<Item = (), Error = LapinError>>,
     ),
     Error = Error,
 > {
+    log::info!("creating client");
+
     TcpStream::connect(addr)
-        .map_err(Error::from)
-        .and_then(|stream| Client::connect(stream, opts).map_err(Error::from))
+        .from_err()
+        .and_then(|stream| Client::connect(stream, opts).from_err())
 }
 
 /// Creates a channel for the passed in client
@@ -67,8 +70,6 @@ pub fn connect(
 ///
 /// * `client` - A `TcpClient` to create a channel on
 pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
-    log::info!("creating client");
-
     client
         .create_channel()
         .inspect(|channel| log::info!("created channel with id: {}", channel.id))
@@ -83,31 +84,37 @@ pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
 /// * `name` - The name of the exchange
 /// * `exchange_type` - The type of the exchange
 /// * `options` - An `Option<ExchangeDeclareOptions>` of additional options to pass in. If not supplied, `ExchangeDeclareOptions::default()` is used
-pub fn exchange_declare(
+pub fn declare_exchange(
     channel: TcpChannel,
-    name: &str,
-    exchange_type: &str,
+    name: impl Into<String>,
+    exchange_type: impl Into<String>,
     options: Option<ExchangeDeclareOptions>,
 ) -> impl TcpChannelFuture {
-    log::info!("declaring exchange {}", name);
+    let name = name.into();
+    let exchange_type = exchange_type.into();
+    let options = options.unwrap_or_default();
 
-    let options = match options {
-        Some(o) => o,
-        None => ExchangeDeclareOptions::default(),
-    };
+    log::info!("declaring exchange: {}, type: {}", name, exchange_type);
 
     channel
-        .exchange_declare(name, exchange_type, options, FieldTable::new())
+        .exchange_declare(&name, &exchange_type, options, FieldTable::new())
         .map(|_| channel)
         .from_err()
 }
 
+/// Declares a transient exhange if it does not already exist.
+///
+/// # Arguments
+///
+/// * `channel` - The `TcpChannel` to use
+/// * `name` - The name of the exchange
+/// * `exchange_type` - The type of the exchange
 pub fn declare_transient_exchange(
     channel: TcpChannel,
-    name: &str,
-    exchange_type: &str,
+    name: impl Into<String>,
+    exchange_type: impl Into<String>,
 ) -> impl TcpChannelFuture {
-    exchange_declare(
+    declare_exchange(
         channel,
         name,
         exchange_type,
@@ -125,22 +132,40 @@ pub fn declare_transient_exchange(
 /// * `channel` - The `TcpChannel` to use
 /// * `name` - The name of the queue
 /// * `options` - An `Option<QueueDeclareOptions>` of additional options to pass in. If not supplied, `QueueDeclareOptions::default()` is used
-pub fn queue_declare(
+pub fn declare_queue(
     channel: TcpChannel,
-    name: &str,
+    name: impl Into<String>,
     options: Option<QueueDeclareOptions>,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'static {
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+    let name = name.into();
+    let options = options.unwrap_or_default();
+
     log::info!("declaring queue {}", name);
 
-    let options = match options {
-        Some(o) => o,
-        None => QueueDeclareOptions::default(),
-    };
-
     channel
-        .queue_declare(name, options, FieldTable::new())
+        .queue_declare(&name, options, FieldTable::new())
         .map(|queue| (channel, queue))
         .from_err()
+}
+
+/// Declares a transient queue if it does not already exist.
+///
+/// # Arguments
+///
+/// * `channel` - The `TcpChannel` to use
+/// * `name` - The name of the queue
+pub fn declare_transient_queue(
+    channel: TcpChannel,
+    name: impl Into<String>,
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+    declare_queue(
+        channel,
+        name,
+        Some(QueueDeclareOptions {
+            durable: false,
+            ..Default::default()
+        }),
+    )
 }
 
 /// Binds a queue to an exchange
@@ -150,21 +175,30 @@ pub fn queue_declare(
 /// * `channel` - The `TcpChannel` to use
 /// * `exchange_name` - The name of the exchange
 /// * `queue_name` - The name of the queue
-pub fn queue_bind(
+/// * `routing_key` - The routing key
+pub fn bind_queue(
     channel: TcpChannel,
-    exchange_name: &str,
-    queue_name: &str,
+    exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
+    routing_key: impl Into<String>,
 ) -> impl TcpChannelFuture {
     channel
         .queue_bind(
-            queue_name,
-            exchange_name,
-            queue_name,
+            &queue_name.into(),
+            &exchange_name.into(),
+            &routing_key.into(),
             QueueBindOptions::default(),
             FieldTable::new(),
         )
         .map(|_| channel)
         .from_err()
+}
+
+pub fn connect_to_queue(
+    name: impl Into<String>,
+    client: TcpClient,
+) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
+    create_channel(client).and_then(move |ch| declare_transient_queue(ch, name))
 }
 
 /// Purges contents of a queue
@@ -173,9 +207,9 @@ pub fn queue_bind(
 ///
 /// * `channel` - The `TcpChannel` to use
 /// * `queue_name` - The name of the queue
-pub fn queue_purge(channel: TcpChannel, queue_name: &str) -> impl TcpChannelFuture {
+pub fn purge_queue(channel: TcpChannel, queue_name: impl Into<String>) -> impl TcpChannelFuture {
     channel
-        .queue_purge(queue_name, QueuePurgeOptions::default())
+        .queue_purge(&queue_name.into(), QueuePurgeOptions::default())
         .map(|_| channel)
         .from_err()
 }
@@ -191,50 +225,38 @@ pub fn queue_purge(channel: TcpChannel, queue_name: &str) -> impl TcpChannelFutu
 pub fn basic_consume(
     channel: TcpChannel,
     queue: Queue,
-    consumer_tag: &str,
+    consumer_tag: impl Into<String>,
     options: Option<BasicConsumeOptions>,
 ) -> impl TcpStreamConsumerFuture {
-    let options = match options {
-        Some(o) => o,
-        None => BasicConsumeOptions::default(),
-    };
+    let options = options.unwrap_or_default();
 
     channel
-        .basic_consume(&queue, &consumer_tag, options, FieldTable::new())
+        .basic_consume(&queue, &consumer_tag.into(), options, FieldTable::new())
         .from_err()
 }
 
-pub fn declare(channel: TcpChannel) -> impl TcpChannelFuture {
-    let exchange_name = "rpc";
-    let queue_name = "JobSchedulerRpc.requests";
-
-    exchange_declare(
-        channel,
-        exchange_name,
-        "topic",
-        Some(ExchangeDeclareOptions {
-            durable: false,
-            ..Default::default()
-        }),
-    )
-    .and_then(move |c| queue_declare(c, queue_name, None))
-    .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
-}
-
+/// Publish a message to a given exchange
+///
+/// # Arguments
+///
+/// * `exhange` - The exchange to publish to
+/// * `routing_key` - Where to route the message
+/// * `channel` - The channel to use for publishing
+/// * `msg` - The message to publish. Must implement `ToBytes + std::fmt::Debug`
 pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
-    exchange: &str,
-    routing_key: &str,
     channel: TcpChannel,
-    req: T,
+    exchange: impl Into<String>,
+    routing_key: impl Into<String>,
+    msg: T,
 ) -> impl TcpChannelFuture {
-    log::info!("publishing Request: {:?}", req);
+    log::debug!("publishing Message: {:?}", msg);
 
-    match req.to_bytes() {
+    match msg.to_bytes() {
         Ok(bytes) => Either::A(
             channel
                 .basic_publish(
-                    exchange,
-                    routing_key,
+                    &exchange.into(),
+                    &routing_key.into(),
                     bytes,
                     BasicPublishOptions::default(),
                     BasicProperties::default()
@@ -250,20 +272,23 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
     }
 }
 
-pub fn declare_transient_queue<'a>(
-    name: String,
-    c: TcpChannel,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
-    queue_declare(
-        c,
-        &name,
-        Some(QueueDeclareOptions {
-            durable: false,
-            ..Default::default()
-        }),
-    )
+/// Sends a JSON encoded message to the given exchange / queue
+pub fn send_message<T: ToBytes + std::fmt::Debug>(
+    client: TcpClient,
+    exchange_name: impl Into<String>,
+    queue_name: impl Into<String>,
+    msg: T,
+) -> impl TcpClientFuture {
+    connect_to_queue(queue_name, client.clone())
+        .and_then(move |(c, q)| basic_publish(c, exchange_name, q.name(), msg))
+        .map(move |_| client)
 }
 
+/// Connect to the rabbitmq instance running on the IML manager
+///
+/// This fn is useful for production code as it reads in env vars
+/// to make a connection.
+///
 pub fn connect_to_rabbit() -> impl TcpClientFuture {
     connect(
         &iml_manager_env::get_addr(),
@@ -282,13 +307,6 @@ pub fn connect_to_rabbit() -> impl TcpClientFuture {
 
         client
     })
-}
-
-pub fn connect_to_queue<'a>(
-    name: String,
-    client: TcpClient,
-) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> + 'a {
-    create_channel(client).and_then(move |ch| declare_transient_queue(name, ch))
 }
 
 type ClientSender = oneshot::Sender<TcpClient>;
@@ -326,8 +344,8 @@ pub fn get_cloned_conns(
 #[cfg(test)]
 mod tests {
     use super::{
-        basic_publish, connect, create_channel, declare_transient_exchange,
-        declare_transient_queue, get_cloned_conns, queue_bind, TcpClientFuture,
+        basic_publish, bind_queue, connect, create_channel, declare_transient_exchange,
+        declare_transient_queue, get_cloned_conns, TcpClientFuture,
     };
     use futures::{future::Future, sync::oneshot};
     use lapin_futures::{
@@ -342,8 +360,8 @@ mod tests {
         create_test_connection()
             .and_then(create_channel)
             .and_then(move |ch| declare_transient_exchange(ch, exchange_name, "direct"))
-            .and_then(move |ch| declare_transient_queue(queue_name.to_string(), ch))
-            .and_then(move |(c, _)| queue_bind(c, exchange_name, queue_name))
+            .and_then(move |ch| declare_transient_queue(ch, queue_name.to_string()))
+            .and_then(move |(c, _)| bind_queue(c, exchange_name, queue_name, ""))
             .and_then(move |channel| {
                 channel
                     .basic_get(
@@ -376,9 +394,9 @@ mod tests {
                 .and_then(|client| {
                     create_channel(client)
                         .and_then(|ch| declare_transient_exchange(ch, "foo", "direct"))
-                        .and_then(|ch| declare_transient_queue("fooQ".to_string(), ch))
-                        .and_then(move |(c, _)| queue_bind(c, "foo", "fooQ"))
-                        .and_then(|ch| basic_publish("foo", "fooQ", ch, "bar"))
+                        .and_then(|ch| declare_transient_queue(ch, "fooQ"))
+                        .and_then(move |(c, _)| bind_queue(c, "foo", "fooQ", "fooQ"))
+                        .and_then(|ch| basic_publish(ch, "foo", "fooQ", "bar"))
                 })
                 .and_then(|_| read_message("foo", "fooQ")),
         )?;
@@ -407,9 +425,9 @@ mod tests {
         let msg = rt.block_on(
             create_channel(client)
                 .and_then(|ch| declare_transient_exchange(ch, "foo2", "direct"))
-                .and_then(|ch| declare_transient_queue("fooQ2".to_string(), ch))
-                .and_then(move |(c, _)| queue_bind(c, "foo2", "fooQ2"))
-                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "bar"))
+                .and_then(|ch| declare_transient_queue(ch, "fooQ2"))
+                .and_then(move |(c, _)| bind_queue(c, "foo2", "fooQ2", "fooQ2"))
+                .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "bar"))
                 .and_then(|_| read_message("foo2", "fooQ2")),
         )?;
 
@@ -425,7 +443,7 @@ mod tests {
 
         let msg = rt.block_on(
             create_channel(client)
-                .and_then(|ch| basic_publish("foo2", "fooQ2", ch, "baz"))
+                .and_then(|ch| basic_publish(ch, "foo2", "fooQ2", "baz"))
                 .and_then(|_| read_message("foo2", "fooQ2")),
         )?;
 

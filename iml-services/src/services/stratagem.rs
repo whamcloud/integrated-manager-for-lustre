@@ -13,7 +13,7 @@ fn main() {
 
     tokio::run(lazy(move || {
         connect_to_rabbit()
-            .map(|client| consume_service_queue(client, "agent_stratagem_rx"))
+            .map(|client| consume_service_queue(client, "rust_agent_stratagem_rx"))
             .flatten_stream()
             .filter_map(data_only)
             .and_then(into_deserialized)

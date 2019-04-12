@@ -4,11 +4,14 @@
 
 use futures::prelude::*;
 use iml_rabbit::{
-    basic_consume, create_channel, declare_transient_queue, TcpClient, TcpStreamConsumerFuture,
+    basic_consume, declare_transient_queue, TcpChannel, TcpClient, TcpStreamConsumerFuture,
 };
 use iml_wire_types::{Fqdn, Id, ManagerMessage, Message, PluginMessage, PluginName, Seq};
 use lapin_futures::channel::BasicConsumeOptions;
 
+pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
+
+#[derive(Debug, serde::Serialize)]
 pub struct AgentData {
     pub fqdn: Fqdn,
     pub plugin: PluginName,
@@ -77,8 +80,10 @@ pub fn terminate_agent_session(
     session_id: Id,
     client: TcpClient,
 ) -> impl Future<Item = TcpClient, Error = failure::Error> {
-    iml_manager_messaging::send_agent_message(
+    iml_rabbit::send_message(
         client,
+        "",
+        AGENT_TX_RUST,
         ManagerMessage::SessionTerminate {
             fqdn: fqdn.clone(),
             plugin: plugin.clone(),
@@ -87,20 +92,20 @@ pub fn terminate_agent_session(
     )
 }
 
-pub fn consume_agent_tx_queue() -> impl TcpStreamConsumerFuture {
-    iml_rabbit::connect_to_rabbit()
-        .and_then(create_channel)
-        .and_then(|ch| declare_transient_queue("agent_tx_rust".to_string(), ch))
-        .and_then(|(ch, q)| {
-            basic_consume(
-                ch,
-                q,
-                "agent_tx_rust",
-                Some(BasicConsumeOptions {
-                    no_ack: true,
-                    exclusive: true,
-                    ..Default::default()
-                }),
-            )
-        })
+pub fn consume_agent_tx_queue(
+    channel: TcpChannel,
+    queue_name: impl Into<String>,
+) -> impl TcpStreamConsumerFuture {
+    declare_transient_queue(channel, queue_name).and_then(|(ch, q)| {
+        basic_consume(
+            ch,
+            q,
+            "",
+            Some(BasicConsumeOptions {
+                no_ack: true,
+                exclusive: true,
+                ..Default::default()
+            }),
+        )
+    })
 }

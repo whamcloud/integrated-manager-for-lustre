@@ -189,6 +189,9 @@ class Step(object):
             self._log_subprocesses(e.subprocesses)
             raise
 
+    def invoke_rust_agent(self, host, command, args={}):
+        pass
+
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
@@ -196,7 +199,7 @@ class Step(object):
 
         # This case is to deal with upgrades, once every installation is using the new protocol then we should not allow this.
         # Once everything is 3.0 or later we will also have version information in the wrapper header.
-        if (result == None) or ((type(result) == dict) and ("error" not in result) and ("result" not in result)):
+        if (result is None) or ((type(result) == dict) and ("error" not in result) and ("result" not in result)):
             job_log.info("Invalid result %s fixed up on called to %s with args %s" % (result, command, args))
 
             # Prior to 3.0 update_packages returned {'update_packages': data} so fix this up. This code is here so that all

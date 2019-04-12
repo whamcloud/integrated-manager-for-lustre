@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::{convert, create_registry, Actions, AgentResult},
+    action_plugins::{create_registry, Actions},
     agent_error::{ImlAgentError, RequiredError, Result},
     daemon_plugins::DaemonPlugin,
 };
@@ -12,7 +12,7 @@ use futures::{
     sync::oneshot,
     Future,
 };
-use iml_wire_types::{Action, ActionId};
+use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -55,10 +55,16 @@ impl DaemonPlugin for ActionRunner {
                 let action_plugin_fn = match self.registry.get_mut(&action) {
                     Some(p) => p,
                     None => {
-                        return Box::new(future::ok(convert::<()>(Err(RequiredError(
-                            "action and args required to start action".to_string(),
-                        )
-                        .into()))));
+                        let err = RequiredError(
+                            format!("Could not find action {:?} in registry", action).to_string(),
+                        );
+
+                        let result = ActionResult {
+                            id,
+                            result: Err(format!("{:?}", err)),
+                        };
+
+                        return Box::new(future::ok(result.to_json_value()));
                     }
                 };
 
@@ -76,15 +82,19 @@ impl DaemonPlugin for ActionRunner {
                 Box::new(
                     fut.select2(rx)
                         .map(move |r| match r {
-                            Either::A((b, _)) => {
+                            Either::A((result, _)) => {
                                 ids.lock().unwrap().remove(&id);
-                                b
+                                ActionResult { id, result }
                             }
                             Either::B((_, z)) => {
                                 drop(z);
-                                convert(Ok(()))
+                                ActionResult {
+                                    id,
+                                    result: ().to_json_value(),
+                                }
                             }
                         })
+                        .map(|r| r.to_json_value())
                         .map_err(|e| match e {
                             _ => unreachable!(),
                         }),
@@ -101,7 +111,13 @@ impl DaemonPlugin for ActionRunner {
                     tx.send(()).is_ok();
                 }
 
-                Box::new(future::ok(convert(Ok(()))))
+                Box::new(future::ok(
+                    ActionResult {
+                        id,
+                        result: ().to_json_value(),
+                    }
+                    .to_json_value(),
+                ))
             }
         }
     }

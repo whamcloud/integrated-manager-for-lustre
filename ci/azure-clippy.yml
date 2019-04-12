@@ -12,7 +12,7 @@ jobs:
           rustup component add clippy
         displayName: Install clippy
       - script: |
-          cargo clippy
+          cargo clippy --all-targets --all-features -- -W clippy::pedantic
         displayName: Check linting
         ${{ if parameters.crate }}:
           workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}

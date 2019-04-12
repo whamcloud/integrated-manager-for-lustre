@@ -40,11 +40,7 @@ pub fn flush(
             if drained.is_empty() {
                 let when = Instant::now() + Duration::from_millis(500);
 
-                Box::new(
-                    Delay::new(when)
-                        .map_err(failure::Error::from)
-                        .map(move |_| Loop::Continue(xs)),
-                )
+                Box::new(Delay::new(when).from_err().map(move |_| Loop::Continue(xs)))
             } else {
                 log::debug!("flush returning {:?} items", drained.len());
                 Box::new(future::ok(Loop::Break(drained)))

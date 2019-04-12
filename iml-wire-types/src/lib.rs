@@ -9,6 +9,12 @@ use std::fmt;
 #[serde(transparent)]
 pub struct PluginName(pub String);
 
+impl PluginName {
+    pub fn new<S: Into<String>>(name: S) -> Self {
+        PluginName(name.into())
+    }
+}
+
 impl From<PluginName> for String {
     fn from(PluginName(s): PluginName) -> String {
         s
@@ -28,6 +34,12 @@ pub struct Fqdn(pub String);
 impl From<Fqdn> for String {
     fn from(Fqdn(s): Fqdn) -> String {
         s
+    }
+}
+
+impl fmt::Display for Fqdn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -139,15 +151,21 @@ pub enum PluginMessage {
     },
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct ActionId(pub String);
 
+impl fmt::Display for ActionId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Things we can do with actions
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(tag = "type")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Action {
@@ -159,6 +177,39 @@ pub enum Action {
     ActionCancel {
         id: ActionId,
     },
+}
+
+impl Action {
+    pub fn get_id(&self) -> &ActionId {
+        match self {
+            Action::ActionStart { id, .. } | Action::ActionCancel { id, .. } => id,
+        }
+    }
+}
+
+impl From<Action> for serde_json::Value {
+    fn from(action: Action) -> Self {
+        serde_json::to_value(action).unwrap()
+    }
+}
+
+/// The result of running the action on an agent.
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct ActionResult {
+    pub id: ActionId,
+    pub result: Result<serde_json::value::Value, String>,
+}
+
+pub type AgentResult = std::result::Result<serde_json::Value, String>;
+
+pub trait ToJsonValue {
+    fn to_json_value(&self) -> Result<serde_json::Value, String>;
+}
+
+impl<T: serde::Serialize> ToJsonValue for T {
+    fn to_json_value(&self) -> Result<serde_json::Value, String> {
+        serde_json::to_value(self).map_err(|e| format!("{:?}", e))
+    }
 }
 
 pub trait ToBytes {
