@@ -111,11 +111,12 @@ else
             -e "s/@VM7_IPADDRESS@/10.73.10.23/g"     \
             -e "s/@VM8_IPADDRESS@/10.73.10.24/g"     \
             -e "s/@VM9_IPADDRESS@/10.73.10.39/g"     \
-            -e "s/@VM2_IPADDRESS@/10.73.20.32/g"     \
+            -e "s/@VM2_LNETADDRESS@/10.73.20.32/g"   \
             -e "s/@VM5_LNETADDRESS@/10.73.20.21/g"   \
             -e "s/@VM6_LNETADDRESS@/10.73.20.22/g"   \
             -e "s/@VM7_LNETADDRESS@/10.73.20.23/g"   \
             -e "s/@VM8_LNETADDRESS@/10.73.20.24/g"   \
+            -e "s/@VM9_LNETADDRESS@/10.73.20.39/g"   \
             < "$CHROMA_DIR"/provisioner_output-vagrant-"${MAKE_TARGET%_tests}".json.in \
             > provisioner_output.json
     fi
