@@ -33,7 +33,7 @@ cp iml-warp-drive %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
-cp iml-action-runner.service %{buildroot}%{_unitdir}
+cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_presetdir}
@@ -116,16 +116,20 @@ Group: System Environment/Libraries
 %{summary}
 
 %post action-runner
+systemctl preset iml-action-runner.socket
 systemctl preset iml-action-runner.service
 
 %preun action-runner
+%systemd_preun iml-action-runner.socket
 %systemd_preun iml-action-runner.service
 
 %postun action-runner
+%systemd_postun_with_restart iml-action-runner.socket
 %systemd_postun_with_restart iml-action-runner.service
 
 %files action-runner
 %{_bindir}/iml-action-runner
+%attr(0644,root,root)%{_unitdir}/iml-action-runner.socket
 %attr(0644,root,root)%{_unitdir}/iml-action-runner.service
 
 %package warp-drive

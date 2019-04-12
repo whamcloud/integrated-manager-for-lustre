@@ -4,9 +4,10 @@
 
 use crate::session::Sessions;
 use iml_wire_types::Fqdn;
+use parking_lot::Mutex;
 use std::{
     collections::{HashMap, VecDeque},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 /// References an active agent on a remote host.
@@ -68,7 +69,7 @@ pub fn remove_stale(hosts: &mut Hosts, fqdn: &Fqdn, client_start_time: &str) {
 /// Gets or inserts a new host cooresponding to the given fqdn
 pub fn get_or_insert(hosts: &mut Hosts, fqdn: Fqdn, client_start_time: String) -> &Host {
     hosts.entry(fqdn.clone()).or_insert_with(|| {
-        log::info!("Adding host {:?}", fqdn);
+        log::info!("Adding host {}", fqdn);
 
         Host::new(fqdn, client_start_time)
     })

@@ -3,20 +3,20 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::AgentResult,
     agent_error::{ImlAgentError, Result},
     daemon_plugins::{DaemonBox, OutputValue},
 };
 use futures::Future;
-use iml_wire_types::{Id, PluginName, Seq};
+use iml_wire_types::{AgentResult, Id, PluginName, Seq};
+use parking_lot::{Mutex, MutexGuard};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 /// Takes a `Duration` and figures out the next duration
-/// for a bounded linear backoff.Duration
+/// for a bounded linear backoff.
 ///
 /// # Arguments
 ///
@@ -80,14 +80,14 @@ impl Sessions {
         Sessions(Arc::new(Mutex::new(hm)))
     }
     pub fn reset_active(&mut self, name: &PluginName) -> Result<()> {
-        if let Some(x) = self.lock()?.get_mut(name) {
+        if let Some(x) = self.lock().get_mut(name) {
             x.reset_active()
         }
 
         Ok(())
     }
     pub fn reset_empty(&mut self, name: &PluginName) -> Result<()> {
-        if let Some(x) = self.lock()?.get_mut(name) {
+        if let Some(x) = self.lock().get_mut(name) {
             x.reset_empty()
         }
 
@@ -95,7 +95,7 @@ impl Sessions {
     }
 
     pub fn convert_to_pending(&mut self, name: &PluginName) -> Result<()> {
-        if let Some(s @ State::Empty(_)) = self.lock()?.get_mut(name) {
+        if let Some(s @ State::Empty(_)) = self.lock().get_mut(name) {
             s.convert_to_pending()
         } else {
             log::warn!("Session {:?} was not in Empty state", name);
@@ -113,12 +113,12 @@ impl Sessions {
         )
     }
     fn insert_state(&mut self, name: PluginName, state: State) -> Result<()> {
-        self.0.lock()?.insert(name, state);
+        self.0.lock().insert(name, state);
 
         Ok(())
     }
     pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
-        match self.0.lock()?.get_mut(name) {
+        match self.0.lock().get_mut(name) {
             Some(s) => {
                 s.teardown()?;
             }
@@ -134,14 +134,14 @@ impl Sessions {
         log::info!("Terminating all sessions");
 
         self.0
-            .lock()?
+            .lock()
             .iter_mut()
             .map(|(_, v)| v.teardown())
             .collect::<Result<Vec<()>>>()
             .map(|_| ())
     }
-    pub fn lock(&mut self) -> Result<std::sync::MutexGuard<'_, HashMap<PluginName, State>>> {
-        Ok(self.0.lock()?)
+    pub fn lock(&mut self) -> MutexGuard<'_, HashMap<PluginName, State>> {
+        self.0.lock()
     }
 }
 

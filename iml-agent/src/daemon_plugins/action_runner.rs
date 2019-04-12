@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    action_plugins::{convert, create_registry, Actions, AgentResult},
+    action_plugins::{create_registry, Actions},
     agent_error::{ImlAgentError, RequiredError, Result},
     daemon_plugins::DaemonPlugin,
 };
@@ -12,11 +12,9 @@ use futures::{
     sync::oneshot,
     Future,
 };
-use iml_wire_types::{Action, ActionId};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
+use parking_lot::Mutex;
+use std::{collections::HashMap, sync::Arc};
 
 pub struct ActionRunner {
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
@@ -55,19 +53,22 @@ impl DaemonPlugin for ActionRunner {
                 let action_plugin_fn = match self.registry.get_mut(&action) {
                     Some(p) => p,
                     None => {
-                        return Box::new(future::ok(convert::<()>(Err(RequiredError(
-                            "action and args required to start action".to_string(),
-                        )
-                        .into()))));
+                        let err = RequiredError(
+                            format!("Could not find action {:?} in registry", action).to_string(),
+                        );
+
+                        let result = ActionResult {
+                            id,
+                            result: Err(format!("{:?}", err)),
+                        };
+
+                        return Box::new(future::ok(result.to_json_value()));
                     }
                 };
 
                 let (tx, rx) = oneshot::channel();
 
-                match self.ids.lock() {
-                    Ok(mut x) => x.insert(id.clone(), tx),
-                    Err(e) => return Box::new(future::err(e.into())),
-                };
+                self.ids.lock().insert(id.clone(), tx);
 
                 let fut = action_plugin_fn(args);
 
@@ -76,37 +77,44 @@ impl DaemonPlugin for ActionRunner {
                 Box::new(
                     fut.select2(rx)
                         .map(move |r| match r {
-                            Either::A((b, _)) => {
-                                ids.lock().unwrap().remove(&id);
-                                b
+                            Either::A((result, _)) => {
+                                ids.lock().remove(&id);
+                                ActionResult { id, result }
                             }
                             Either::B((_, z)) => {
                                 drop(z);
-                                convert(Ok(()))
+                                ActionResult {
+                                    id,
+                                    result: ().to_json_value(),
+                                }
                             }
                         })
+                        .map(|r| r.to_json_value())
                         .map_err(|e| match e {
                             _ => unreachable!(),
                         }),
                 )
             }
             Action::ActionCancel { id } => {
-                let tx = match self.ids.lock() {
-                    Ok(mut x) => x.remove(&id),
-                    Err(e) => return Box::new(future::err(e.into())),
-                };
+                let tx = self.ids.lock().remove(&id);
 
                 if let Some(tx) = tx {
                     // We don't care what the result is here.
                     tx.send(()).is_ok();
                 }
 
-                Box::new(future::ok(convert(Ok(()))))
+                Box::new(future::ok(
+                    ActionResult {
+                        id,
+                        result: ().to_json_value(),
+                    }
+                    .to_json_value(),
+                ))
             }
         }
     }
     fn teardown(&mut self) -> Result<()> {
-        for (_, tx) in self.ids.lock()?.drain() {
+        for (_, tx) in self.ids.lock().drain() {
             // We don't care what the result is here.
             tx.send(()).is_ok();
         }

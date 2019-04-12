@@ -951,26 +951,18 @@ class RealRemoteOperations(RemoteOperations):
     def clear_lnet_config(self, server_list):
         """
         Removes the lnet configuration file for the server list passed.
-         """
+        """
 
-        # This isn't really that bad because the file will not be recreated if I delete it so probably ammounts
-        # to at most an extra reboot cycle per test session.
-        # Note the sleep ensures the reboot really happens otherwise it might look alive in the await_server_boot
         for server in server_list:
             self._ssh_address(
                 server["address"],
                 """
                               [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
                               rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
-                              reboot &&
-                              sleep 20
+                              lustre_rmmod
                               """,
                 expected_return_code=None,
             )  # Keep going if it failed - may be none there.
-
-        # Now ensure they have all comeback to life
-        for server in server_list:
-            self.await_server_boot(server["fqdn"], restart=True)
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")

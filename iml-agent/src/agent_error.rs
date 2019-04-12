@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::PluginName;
+use iml_wire_types::{PluginName, ToJsonValue};
 use std::fmt;
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -66,7 +66,6 @@ pub enum ImlAgentError {
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
-    PoisonError,
     SendError,
 }
 
@@ -85,7 +84,6 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
-            ImlAgentError::PoisonError => write!(f, "Mutex Poisoned"),
             ImlAgentError::SendError => write!(f, "Rx went away"),
         }
     }
@@ -106,7 +104,6 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => Some(err),
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
-            ImlAgentError::PoisonError => None,
             ImlAgentError::SendError => None,
         }
     }
@@ -166,12 +163,6 @@ impl From<std::num::ParseIntError> for ImlAgentError {
     }
 }
 
-impl<T> From<std::sync::PoisonError<T>> for ImlAgentError {
-    fn from(_: std::sync::PoisonError<T>) -> Self {
-        ImlAgentError::PoisonError
-    }
-}
-
 impl From<NoSessionError> for ImlAgentError {
     fn from(err: NoSessionError) -> Self {
         ImlAgentError::NoSessionError(err)
@@ -199,5 +190,11 @@ impl From<futures::sync::oneshot::Canceled> for ImlAgentError {
 impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     fn from(_: futures::sync::mpsc::SendError<T>) -> Self {
         ImlAgentError::SendError
+    }
+}
+
+impl ToJsonValue for ImlAgentError {
+    fn to_json_value(&self) -> std::result::Result<serde_json::Value, String> {
+        Ok(serde_json::Value::String(format!("{:?}", self)))
     }
 }

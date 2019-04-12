@@ -78,7 +78,7 @@ fn main() {
 
                             Ok(())
                         })
-                        .map_err(failure::Error::from)
+                        .from_err()
                 })
                 .map_err(|err| {
                     let _ = tx.send(());

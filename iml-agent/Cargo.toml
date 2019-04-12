@@ -9,7 +9,6 @@ repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/ma
 
 [dependencies]
 chrono = "0.4"
-clap = "2.32"
 dns-lookup = "1"
 env_logger = "0.6.1"
 exitcode = "1.1"
@@ -26,9 +25,8 @@ tokio = "0.1.18"
 tokio-process = "0.2.3"
 tokio-threadpool = "0.1.13"
 url = "1.7.2"
+parking_lot = "0.7"
 iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
-
-
 
 [dev-dependencies]
 mockito = "0.17.0"

@@ -239,6 +239,31 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT)
 
+    def configure_lnet(self, host):
+        host_config = self.get_host_config(host["nodename"])
+
+        if host_config is None:
+            logger.warning("No host config for '{}'".format(host["nodename"]))
+            return
+
+        info = self._get_lnet_info(host)
+
+        def convert(ni):
+            lnd_network = 0 if ni.get("inet4_address") == host_config["lnet_address"] else -1
+
+            return {"lnd_network": lnd_network, "lnd_type": "tcp", "network_interface": ni["resource_uri"]}
+
+        objects = map(convert, info.network_interfaces)
+
+        logger.info("updating LNet to: {}".format(objects))
+
+        response = self.chroma_manager.post("/api/nid/", body={"objects": objects})
+
+        self.assertTrue(response.successful, response.text)
+        command_id = response.json["command"]["id"]
+
+        self.wait_for_command(self.chroma_manager, command_id, timeout=LONG_TEST_TIMEOUT)
+
     def _add_hosts(self, addresses, auth_type):
         """Add a list of lustre server addresses to chroma and ensure lnet ends in the correct state."""
         self.validate_hosts(addresses, auth_type)
@@ -259,6 +284,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             "Set pacemaker debug for test",
             expected_return_code=None,
         )
+
+        for host in new_hosts:
+            profile = self.get_current_host_profile(host)
+
+            if profile.get("managed") or profile.get("worker"):
+                self.configure_lnet(host)
 
         for host in new_hosts:
             # Deal with pre-3.0 versions.
