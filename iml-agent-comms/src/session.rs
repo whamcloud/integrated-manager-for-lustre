@@ -3,10 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use iml_wire_types::{Fqdn, Id, ManagerMessage, PluginName};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use parking_lot::Mutex;
+use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
 pub type Sessions = Arc<Mutex<InnerSessions>>;

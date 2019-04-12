@@ -6,8 +6,9 @@ use futures::{
     future::{self, loop_fn, Loop},
     prelude::*,
 };
+use parking_lot::Mutex;
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::timer::Delay;
 
@@ -33,7 +34,7 @@ pub fn flush(
             }
 
             let drained = {
-                let mut queue = xs.lock().unwrap();
+                let mut queue = xs.lock();
                 queue.drain(..).collect::<Vec<_>>()
             };
 

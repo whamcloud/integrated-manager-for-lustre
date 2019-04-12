@@ -66,7 +66,6 @@ pub enum ImlAgentError {
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
-    PoisonError,
     SendError,
 }
 
@@ -85,7 +84,6 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
-            ImlAgentError::PoisonError => write!(f, "Mutex Poisoned"),
             ImlAgentError::SendError => write!(f, "Rx went away"),
         }
     }
@@ -106,7 +104,6 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => Some(err),
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
-            ImlAgentError::PoisonError => None,
             ImlAgentError::SendError => None,
         }
     }
@@ -163,12 +160,6 @@ impl From<std::net::AddrParseError> for ImlAgentError {
 impl From<std::num::ParseIntError> for ImlAgentError {
     fn from(err: std::num::ParseIntError) -> Self {
         ImlAgentError::ParseIntError(err)
-    }
-}
-
-impl<T> From<std::sync::PoisonError<T>> for ImlAgentError {
-    fn from(_: std::sync::PoisonError<T>) -> Self {
-        ImlAgentError::PoisonError
     }
 }
 
