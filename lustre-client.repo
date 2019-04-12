@@ -1,6 +1,6 @@
 [lustre-client]
 name=Lustre Client
-baseurl=https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/client/axis-distro/el7.6/axis-ib_stack/inkernel/builds/63298/archive/artifacts/
+baseurl=https://build.whamcloud.com/jobs-pub/lustre-reviews/configurations/axis-arch/x86_64/axis-build_type/client/axis-distro/el7.6/axis-ib_stack/inkernel/builds/63380/archive/artifacts/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
