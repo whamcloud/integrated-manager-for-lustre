@@ -31,7 +31,7 @@ fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl 
             client.clone(),
             "",
             format!("rust_agent_{}_rx", data.plugin),
-            data,
+            PluginMessage::from(data),
         ))
     } else {
         log::warn!("Terminating session because unknown {}", data);
