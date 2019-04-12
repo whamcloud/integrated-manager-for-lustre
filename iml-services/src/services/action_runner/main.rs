@@ -21,6 +21,8 @@ use std::{
 use tokio::{net::UnixListener, reactor::Handle};
 use warp::{self, Filter as _};
 
+pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
+
 fn main() {
     env_logger::init();
 
@@ -41,9 +43,14 @@ fn main() {
 
         tokio::spawn(fut);
 
-        let routes = sender("", Arc::clone(&sessions), Arc::clone(&rpcs), client_filter)
-            .map(|x| warp::reply::json(&x))
-            .with(log);
+        let routes = sender(
+            AGENT_TX_RUST,
+            Arc::clone(&sessions),
+            Arc::clone(&rpcs),
+            client_filter,
+        )
+        .map(|x| warp::reply::json(&x))
+        .with(log);
 
         tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener.incoming())));
 
