@@ -47,6 +47,12 @@ impl fmt::Display for Fqdn {
 #[serde(transparent)]
 pub struct Id(pub String);
 
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Seq(pub u64);

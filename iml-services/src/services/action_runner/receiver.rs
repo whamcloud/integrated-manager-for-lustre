@@ -56,12 +56,16 @@ pub fn handle_agent_data(
                     rpcs.lock().insert(session_id.clone(), xs);
                 };
             };
+
+            log::info!("Created new session: {}/{}", fqdn, session_id);
         }
         PluginMessage::SessionTerminate {
             fqdn, session_id, ..
         } => match sessions.lock().get(&fqdn) {
             Some(held_session) if held_session == &session_id => {
                 terminate_session(&fqdn, &mut sessions.lock(), &mut rpcs.lock());
+
+                log::info!("Terminated session: {}/{}", fqdn, session_id);
             }
             Some(unknown_session) => {
                 log::info!(

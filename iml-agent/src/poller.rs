@@ -35,18 +35,23 @@ fn handle_state(
     name: PluginName,
     now: Instant,
 ) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
-    log::debug!("handling state for {:?}: {:?}, ", name, state);
+    log::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
         State::Empty(wait) if *wait <= now => {
             state.convert_to_pending();
+
+            log::info!("sending session create request for {}", name);
 
             Box::new(
                 agent_client
                     .create_session(name.clone())
                     .then(move |r| match r {
                         Ok(_) => Ok(()),
-                        Err(_) => sessions.reset_empty(&name),
+                        Err(e) => {
+                            log::info!("session create request for {} failed: {:?}", name, e);
+                            sessions.reset_empty(&name)
+                        }
                     }),
             )
         }
