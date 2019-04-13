@@ -72,7 +72,21 @@ pub fn connect(
 pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
     client
         .create_channel()
-        .inspect(|channel| log::info!("created channel with id: {}", channel.id))
+        .inspect(|channel| log::debug!("created channel with id: {}", channel.id))
+        .from_err()
+}
+
+/// Closes the channel
+///
+/// # Arguments
+///
+/// * `channel` - The TcpChannel to use
+pub fn close_channel(channel: TcpChannel) -> impl Future<Item = (), Error = failure::Error> {
+    let id = channel.id;
+
+    channel
+        .close(200, "OK")
+        .map(move |_| log::debug!("closed channel with id: {}", id))
         .from_err()
 }
 
@@ -278,10 +292,11 @@ pub fn send_message<T: ToBytes + std::fmt::Debug>(
     exchange_name: impl Into<String>,
     queue_name: impl Into<String>,
     msg: T,
-) -> impl TcpClientFuture {
-    connect_to_queue(queue_name, client.clone())
+) -> impl Future<Item = (), Error = failure::Error> {
+    create_channel(client.clone())
+        .and_then(|ch| declare_transient_queue(ch, queue_name))
         .and_then(move |(c, q)| basic_publish(c, exchange_name, q.name(), msg))
-        .map(move |_| client)
+        .and_then(close_channel)
 }
 
 /// Connect to the rabbitmq instance running on the IML manager

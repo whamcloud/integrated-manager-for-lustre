@@ -79,7 +79,7 @@ pub fn terminate_agent_session(
     fqdn: &Fqdn,
     session_id: Id,
     client: TcpClient,
-) -> impl Future<Item = TcpClient, Error = failure::Error> {
+) -> impl Future<Item = (), Error = failure::Error> {
     iml_rabbit::send_message(
         client,
         "",
