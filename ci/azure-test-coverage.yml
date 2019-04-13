@@ -15,9 +15,10 @@ jobs:
       vmImage: $(vmImage)
 
     steps:
+
       - template: azure-install-rust.yml
         parameters:
-          rust_version: stable
+          rust_version: nightly
 
       - template: azure-install-lustre.yml
         parameters:
@@ -25,7 +26,11 @@ jobs:
       
       - template: azure-install-rabbit.yml
 
-      - script: cargo test
+      - script: |
+          set -e
+          RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
+          cargo test
+          cargo tarpaulin
         env:
           LOOM_MAX_DURATION: 10
           CI: "True"

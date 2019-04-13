@@ -77,7 +77,7 @@ pub fn create_poller(
     sessions: Sessions,
 ) -> impl Future<Item = (), Error = ImlAgentError> + 'static {
     tokio::timer::Interval::new_interval(Duration::from_secs(1))
-        .map_err(|e| e.into())
+        .from_err()
         .for_each(move |now| {
             log::trace!("interval triggered for {:?}", now);
 

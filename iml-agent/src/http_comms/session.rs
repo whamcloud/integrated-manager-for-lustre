@@ -150,9 +150,15 @@ pub struct SessionInfo {
     pub seq: Seq,
 }
 
+fn addon_info<T>(info: &mut SessionInfo, output: T) -> (SessionInfo, T) {
+    info.seq.increment();
+
+    (info.clone(), output)
+}
+
 #[derive(Debug)]
 pub struct Session {
-    pub info: SessionInfo,
+    pub info: Arc<Mutex<SessionInfo>>,
     plugin: DaemonBox,
 }
 
@@ -161,51 +167,136 @@ impl Session {
         log::info!("Created new session {:?}/{:?}", name, id);
 
         Self {
-            info: SessionInfo {
+            info: Arc::new(Mutex::new(SessionInfo {
                 name,
                 id,
-                seq: Seq(1),
-            },
+                seq: Seq::default(),
+            })),
             plugin,
         }
     }
     pub fn start(
-        &mut self,
+        &self,
     ) -> Box<Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> + Send> {
-        let info = self.info.clone();
+        let info = Arc::clone(&self.info);
 
-        Box::new(self.plugin.start_session().map(|x| match x {
-            Some(x) => Some((info, x)),
-            None => None,
-        }))
+        Box::new(
+            self.plugin
+                .start_session()
+                .map(move |x| x.map(|y| addon_info(&mut info.lock(), y))),
+        )
     }
     pub fn poll(
-        &mut self,
+        &self,
     ) -> Box<Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> + Send> {
-        self.info.seq += Seq(1);
-        let info = self.info.clone();
+        let info = Arc::clone(&self.info);
 
-        Box::new(self.plugin.update_session().map(|x| match x {
-            Some(x) => Some((info, x)),
-            None => None,
-        }))
+        Box::new(
+            self.plugin
+                .update_session()
+                .map(move |x| x.map(|y| addon_info(&mut info.lock(), y))),
+        )
     }
     pub fn message(
-        &mut self,
+        &self,
         body: serde_json::Value,
     ) -> Box<Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError> + Send> {
-        self.info.seq += Seq(1);
-        let info = self.info.clone();
+        let info = Arc::clone(&self.info);
 
-        Box::new(self.plugin.on_message(body).map(|x| (info, x)))
+        Box::new(
+            self.plugin
+                .on_message(body)
+                .map(move |x| addon_info(&mut info.lock(), x)),
+        )
     }
     pub fn teardown(&mut self) -> Result<()> {
-        log::info!(
-            "Terminating session {:?}/{:?}",
-            self.info.name,
-            self.info.id
-        );
+        let info = self.info.lock();
+
+        log::info!("Terminating session {:?}/{:?}", info.name, info.id);
 
         self.plugin.teardown()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Session, SessionInfo};
+    use crate::{
+        agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
+    };
+    use futures::Future;
+    use serde_json::json;
+
+    fn run<R: Send + 'static, E: Send + 'static>(
+        fut: impl Future<Item = R, Error = E> + Send + 'static,
+    ) -> std::result::Result<R, E> {
+        tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
+    }
+
+    #[test]
+    fn test_session_start() -> Result<()> {
+        let session = Session::new(
+            "test_plugin".into(),
+            "1234".into(),
+            Box::new(TestDaemonPlugin::default()),
+        );
+
+        let session_info = SessionInfo {
+            name: "test_plugin".into(),
+            id: "1234".into(),
+            seq: 1.into(),
+        };
+
+        let actual = run(session.start())?;
+
+        assert_eq!(actual, Some((session_info, json!(0))));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_session_update() -> Result<()> {
+        let session = Session::new(
+            "test_plugin".into(),
+            "1234".into(),
+            Box::new(TestDaemonPlugin::default()),
+        );
+
+        run(session.start())?;
+
+        let actual = run(session.poll())?;
+
+        let session_info = SessionInfo {
+            name: "test_plugin".into(),
+            id: "1234".into(),
+            seq: 2.into(),
+        };
+
+        assert_eq!(actual, Some((session_info, json!(1))));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_session_message() -> Result<()> {
+        let session = Session::new(
+            "test_plugin".into(),
+            "1234".into(),
+            Box::new(TestDaemonPlugin::default()),
+        );
+
+        run(session.start())?;
+
+        let actual = run(session.message(json!("hi!")))?;
+
+        let session_info = SessionInfo {
+            name: "test_plugin".into(),
+            id: "1234".into(),
+            seq: 2.into(),
+        };
+
+        assert_eq!(actual, (session_info, Ok(json!("hi!"))));
+
+        Ok(())
     }
 }

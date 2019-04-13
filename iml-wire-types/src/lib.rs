@@ -9,15 +9,15 @@ use std::fmt;
 #[serde(transparent)]
 pub struct PluginName(pub String);
 
-impl PluginName {
-    pub fn new<S: Into<String>>(name: S) -> Self {
-        Self(name.into())
-    }
-}
-
 impl From<PluginName> for String {
     fn from(PluginName(s): PluginName) -> Self {
         s
+    }
+}
+
+impl From<&str> for PluginName {
+    fn from(name: &str) -> Self {
+        Self(name.into())
     }
 }
 
@@ -47,6 +47,12 @@ impl fmt::Display for Fqdn {
 #[serde(transparent)]
 pub struct Id(pub String);
 
+impl From<&str> for Id {
+    fn from(name: &str) -> Self {
+        Self(name.into())
+    }
+}
+
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -57,9 +63,21 @@ impl fmt::Display for Id {
 #[serde(transparent)]
 pub struct Seq(pub u64);
 
-impl std::ops::AddAssign for Seq {
-    fn add_assign(&mut self, Self(y): Self) {
-        self.0 += y;
+impl From<u64> for Seq {
+    fn from(name: u64) -> Self {
+        Self(name)
+    }
+}
+
+impl Default for Seq {
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+impl Seq {
+    pub fn increment(&mut self) {
+        self.0 += 1;
     }
 }
 

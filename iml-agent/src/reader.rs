@@ -60,7 +60,7 @@ pub fn create_reader(
                         } => {
                             let plugin_instance = get_plugin(&plugin, &registry2)?;
 
-                            let mut s = Session::new(plugin.clone(), session_id, plugin_instance);
+                            let s = Session::new(plugin.clone(), session_id, plugin_instance);
 
                             let mut sessions3 = sessions2.clone();
                             let plugin2 = plugin.clone();
