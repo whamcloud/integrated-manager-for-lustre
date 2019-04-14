@@ -27,7 +27,7 @@ pub struct ActionInFlight {
 
 impl ActionInFlight {
     pub fn new(action: Action, tx: Sender) -> Self {
-        ActionInFlight { action, tx }
+        Self { action, tx }
     }
     pub fn complete(
         self,

@@ -26,7 +26,7 @@ pub fn consume_service_queue(
                 Some(BasicConsumeOptions {
                     no_ack: true,
                     exclusive: true,
-                    ..Default::default()
+                    ..BasicConsumeOptions::default()
                 }),
             )
         })

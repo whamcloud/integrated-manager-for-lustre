@@ -24,7 +24,7 @@ pub struct Host {
 
 impl Host {
     pub fn new(fqdn: Fqdn, client_start_time: String) -> Self {
-        Host {
+        Self {
             fqdn,
             client_start_time,
             queue: Arc::new(Mutex::new(VecDeque::new())),
@@ -40,7 +40,7 @@ pub fn shared_hosts() -> SharedHosts {
     Arc::new(Mutex::new(HashMap::new()))
 }
 
-/// Does this host entry have a different start_time than the remote host?
+/// Does this host entry have a different `start_time` than the remote host?
 pub fn is_stale(hosts: &mut Hosts, fqdn: &Fqdn, client_start_time: &str) -> bool {
     match hosts.get(fqdn) {
         Some(h) if h.client_start_time != client_start_time => true,

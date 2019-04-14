@@ -28,7 +28,7 @@ impl std::fmt::Display for Session {
 
 impl Session {
     pub fn new(plugin: PluginName, fqdn: Fqdn) -> Self {
-        Session {
+        Self {
             fqdn,
             id: Id(Uuid::new_v4().to_hyphenated().to_string()),
             plugin,

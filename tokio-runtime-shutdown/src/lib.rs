@@ -15,7 +15,7 @@ pub struct SharedTrigger(Arc<Mutex<Option<Trigger>>>);
 
 impl SharedTrigger {
     pub fn new(t: Trigger) -> Self {
-        SharedTrigger(Arc::new(Mutex::new(Some(t))))
+        Self(Arc::new(Mutex::new(Some(t))))
     }
     /// Triggers the exit. This will halt all
     /// associated tasks that have been wrapped.

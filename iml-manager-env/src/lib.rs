@@ -12,8 +12,8 @@ fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
 }
 
-/// Convert a given host and port to a SocketAddr or panic
-fn to_socket_addr(host: String, port: String) -> SocketAddr {
+/// Convert a given host and port to a `SocketAddr` or panic
+fn to_socket_addr(host: &str, port: &str) -> SocketAddr {
     let raw_addr = format!("{}:{}", host, port);
 
     let mut addrs_iter = raw_addr.to_socket_addrs().unwrap_or_else(|_| {
@@ -53,13 +53,13 @@ pub fn get_port() -> String {
     get_var("AMQP_BROKER_PORT")
 }
 
-/// Get the http_agent2 port from the env or panic
+/// Get the `http_agent2` port from the env or panic
 pub fn get_http_agent2_port() -> String {
     get_var("HTTP_AGENT2_PORT")
 }
 
 pub fn get_http_agent2_addr() -> SocketAddr {
-    to_socket_addr(get_server_host(), get_http_agent2_port())
+    to_socket_addr(&get_server_host(), &get_http_agent2_port())
 }
 
 /// Get the server host from the env or panic
@@ -69,7 +69,7 @@ pub fn get_server_host() -> String {
 
 /// Get the AMQP server address or panic
 pub fn get_addr() -> SocketAddr {
-    to_socket_addr(get_host(), get_port())
+    to_socket_addr(&get_host(), &get_port())
 }
 
 /// Get the server port from the env or panic
@@ -78,5 +78,5 @@ pub fn get_warp_drive_port() -> String {
 }
 
 pub fn get_warp_drive_addr() -> SocketAddr {
-    to_socket_addr(get_server_host(), get_warp_drive_port())
+    to_socket_addr(&get_server_host(), &get_warp_drive_port())
 }

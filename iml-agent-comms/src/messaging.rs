@@ -30,7 +30,7 @@ impl std::fmt::Display for AgentData {
     }
 }
 
-/// Converts agent Message out of it's enum and into a discrete AgentData
+/// Converts agent Message out of it's enum and into a discrete `AgentData`
 /// struct. This function will panic if the Message is not Data.
 impl From<Message> for AgentData {
     fn from(msg: Message) -> Self {
@@ -42,7 +42,7 @@ impl From<Message> for AgentData {
                 session_seq,
                 body,
                 ..
-            } => AgentData {
+            } => Self {
                 fqdn,
                 plugin,
                 session_id,
@@ -104,7 +104,7 @@ pub fn consume_agent_tx_queue(
             Some(BasicConsumeOptions {
                 no_ack: true,
                 exclusive: true,
-                ..Default::default()
+                ..BasicConsumeOptions::default()
             }),
         )
     })

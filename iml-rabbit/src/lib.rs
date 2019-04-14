@@ -80,7 +80,7 @@ pub fn create_channel(client: TcpClient) -> impl TcpChannelFuture {
 ///
 /// # Arguments
 ///
-/// * `channel` - The TcpChannel to use
+/// * `channel` - The `TcpChannel` to use
 pub fn close_channel(channel: TcpChannel) -> impl Future<Item = (), Error = failure::Error> {
     let id = channel.id;
 
@@ -134,7 +134,7 @@ pub fn declare_transient_exchange(
         exchange_type,
         Some(ExchangeDeclareOptions {
             durable: false,
-            ..Default::default()
+            ..ExchangeDeclareOptions::default()
         }),
     )
 }
@@ -177,7 +177,7 @@ pub fn declare_transient_queue(
         name,
         Some(QueueDeclareOptions {
             durable: false,
-            ..Default::default()
+            ..QueueDeclareOptions::default()
         }),
     )
 }
@@ -383,7 +383,7 @@ mod tests {
                         queue_name,
                         BasicGetOptions {
                             no_ack: true,
-                            ..Default::default()
+                            ..BasicGetOptions::default()
                         },
                     )
                     .map_err(failure::Error::from)

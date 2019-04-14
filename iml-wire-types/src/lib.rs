@@ -11,12 +11,12 @@ pub struct PluginName(pub String);
 
 impl PluginName {
     pub fn new<S: Into<String>>(name: S) -> Self {
-        PluginName(name.into())
+        Self(name.into())
     }
 }
 
 impl From<PluginName> for String {
-    fn from(PluginName(s): PluginName) -> String {
+    fn from(PluginName(s): PluginName) -> Self {
         s
     }
 }
@@ -32,7 +32,7 @@ impl fmt::Display for PluginName {
 pub struct Fqdn(pub String);
 
 impl From<Fqdn> for String {
-    fn from(Fqdn(s): Fqdn) -> String {
+    fn from(Fqdn(s): Fqdn) -> Self {
         s
     }
 }
@@ -58,7 +58,7 @@ impl fmt::Display for Id {
 pub struct Seq(pub u64);
 
 impl std::ops::AddAssign for Seq {
-    fn add_assign(&mut self, Seq(y): Seq) {
+    fn add_assign(&mut self, Self(y): Self) {
         self.0 += y;
     }
 }
@@ -96,7 +96,7 @@ impl Envelope {
         client_start_time: impl Into<String>,
         server_boot_time: impl Into<String>,
     ) -> Self {
-        Envelope {
+        Self {
             messages,
             server_boot_time: server_boot_time.into(),
             client_start_time: client_start_time.into(),

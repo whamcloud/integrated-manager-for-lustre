@@ -22,7 +22,7 @@ struct Record<'a> {
 }
 
 fn write_records(
-    device: &String,
+    device: &str,
     args: impl IntoIterator<Item = String>,
     out: impl io::Write,
 ) -> Result<(), StratagemError> {
