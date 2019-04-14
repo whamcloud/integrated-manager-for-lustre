@@ -56,7 +56,7 @@ pub fn create_locks_consumer(
                 Some(BasicConsumeOptions {
                     no_ack: true,
                     exclusive: true,
-                    ..Default::default()
+                    ..BasicConsumeOptions::default()
                 }),
             )
         })
@@ -96,7 +96,7 @@ impl LockChange {
     }
 }
 
-/// Need to wrap LockChange with this, because it's how
+/// Need to wrap `LockChange` with this, because it's how
 /// the RPC layer in IML returns RPC calls.
 #[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
 pub struct Response {

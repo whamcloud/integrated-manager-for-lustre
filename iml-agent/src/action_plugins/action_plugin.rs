@@ -52,7 +52,7 @@ where
 
 pub type Actions = HashMap<ActionName, Callback>;
 
-/// The registry of available actions to the AgentDaemon.
+/// The registry of available actions to the `AgentDaemon`.
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> HashMap<ActionName, Callback> {
     let mut map = HashMap::new();

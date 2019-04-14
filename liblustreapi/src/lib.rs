@@ -41,24 +41,24 @@ impl FromStr for Fid {
             .split(':')
             .map(|num| num.trim_start_matches("0x"))
             .collect();
-        Ok(Fid {
+        Ok(Self {
             seq: u64::from_str_radix(arr[0], 16)?,
             oid: u32::from_str_radix(arr[1], 16)?,
             ver: u32::from_str_radix(arr[2], 16)?,
         })
     }
 }
-impl From<[u8; 40usize]> for Fid {
-    fn from(fidstr: [u8; 40usize]) -> Self {
+impl From<[u8; 40_usize]> for Fid {
+    fn from(fidstr: [u8; 40_usize]) -> Self {
         String::from_utf8_lossy(&fidstr)
             .into_owned()
-            .parse::<Fid>()
+            .parse::<Self>()
             .unwrap()
     }
 }
 impl From<sys::lu_fid> for Fid {
     fn from(fid: sys::lu_fid) -> Self {
-        Fid {
+        Self {
             seq: fid.f_seq,
             oid: fid.f_oid,
             ver: fid.f_ver,
@@ -116,7 +116,7 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
 
 pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     // @TODO this should do more validation
-    if fsname.starts_with("/") {
+    if fsname.starts_with('/') {
         return Ok(fsname.to_string());
     }
     let fsc = CString::new(fsname.as_bytes())?;
@@ -192,7 +192,7 @@ pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
 }
 
 pub fn rmfid(
-    device: &String,
+    device: &str,
     fidlist: impl IntoIterator<Item = String>,
 ) -> Result<(), LiblustreError> {
     use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands

@@ -68,14 +68,14 @@ impl State {
 pub struct Sessions(Arc<Mutex<HashMap<PluginName, State>>>);
 
 impl Sessions {
-    pub fn new(plugins: &[PluginName]) -> Sessions {
+    pub fn new(plugins: &[PluginName]) -> Self {
         let hm = plugins
             .iter()
             .cloned()
             .map(|x| (x, State::Empty(Instant::now())))
             .collect();
 
-        Sessions(Arc::new(Mutex::new(hm)))
+        Self(Arc::new(Mutex::new(hm)))
     }
     pub fn reset_active(&mut self, name: &PluginName) -> Result<()> {
         if let Some(x) = self.lock().get_mut(name) {
@@ -160,7 +160,7 @@ impl Session {
     pub fn new(name: PluginName, id: Id, plugin: DaemonBox) -> Self {
         log::info!("Created new session {:?}/{:?}", name, id);
 
-        Session {
+        Self {
             info: SessionInfo {
                 name,
                 id,

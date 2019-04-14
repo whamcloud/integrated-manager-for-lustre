@@ -121,6 +121,25 @@ struct MessageFqdn {
     pub fqdn: Fqdn,
 }
 
+/// Creates a warp `Filter` that will hand out
+/// a cloned client for each request.
+pub fn create_client_filter() -> (
+    impl Future<Item = (), Error = ()>,
+    impl Filter<Extract = (TcpClient,), Error = warp::Rejection> + Clone,
+) {
+    let (tx, fut) = iml_rabbit::get_cloned_conns(iml_rabbit::connect_to_rabbit());
+
+    let filter = warp::any().and_then(move || {
+        let (tx2, rx2) = oneshot::channel();
+
+        tx.unbounded_send(tx2).unwrap();
+
+        rx2.map_err(warp::reject::custom)
+    });
+
+    (fut, filter)
+}
+
 fn main() {
     env_logger::init();
 
@@ -169,25 +188,6 @@ fn main() {
         }));
 
         let hosts = warp::any().map(move || Arc::clone(&hosts_state2));
-
-        /// Creates a warp `Filter` that will hand out
-        /// a cloned client for each request.
-        pub fn create_client_filter() -> (
-            impl Future<Item = (), Error = ()>,
-            impl Filter<Extract = (TcpClient,), Error = warp::Rejection> + Clone,
-        ) {
-            let (tx, fut) = iml_rabbit::get_cloned_conns(iml_rabbit::connect_to_rabbit());
-
-            let filter = warp::any().and_then(move || {
-                let (tx2, rx2) = oneshot::channel();
-
-                tx.unbounded_send(tx2).unwrap();
-
-                rx2.map_err(warp::reject::custom)
-            });
-
-            (fut, filter)
-        }
 
         let (fut, client_filter) = create_client_filter();
 

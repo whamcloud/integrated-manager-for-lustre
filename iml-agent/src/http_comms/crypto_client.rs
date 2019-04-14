@@ -132,6 +132,9 @@ mod tests {
 
     #[test]
     fn test_post() -> Result<()> {
+        #[derive(serde::Serialize)]
+        struct Foo {}
+
         let m = mock("POST", "/agent/message")
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -139,9 +142,6 @@ mod tests {
             .create();
 
         let url = create_url()?;
-
-        #[derive(serde::Serialize)]
-        struct Foo {}
 
         let r = Runtime::new()
             .unwrap()

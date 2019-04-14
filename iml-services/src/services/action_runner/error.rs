@@ -5,7 +5,7 @@
 use iml_wire_types::Fqdn;
 use tokio::timer;
 
-/// Encapsulates any errors that may happen while working with the ActionRunner service
+/// Encapsulates any errors that may happen while working with the `ActionRunner` service
 #[derive(Debug)]
 pub enum ActionRunnerError {
     AwaitSession(Fqdn),
