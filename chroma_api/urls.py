@@ -102,6 +102,6 @@ api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.action.ActionResource())
-api.register(chroma_api.stratagem.StratagemResource())
+api.register(chroma_api.stratagem.StratagemConfigurationResource())
 
 urlpatterns = patterns("", (r"^", include(api.urls)))

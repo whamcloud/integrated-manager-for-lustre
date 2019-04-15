@@ -43,7 +43,7 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
-from chroma_core.models import ConfigureStratagemJob, Stratagem
+from chroma_core.models import ConfigureStratagemJob, StratagemConfiguration
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1748,8 +1748,24 @@ class JobScheduler(object):
         return CommandPlan(self._lock_cache, self._job_collection)
 
     def configure_stratagem(self, stratagem_data):
+        # from remote_pdb import RemotePdb
+
+        # RemotePdb("127.0.0.1", 4444).set_trace()
+        #stratagem_configuration = StratagemConfiguration.objects.get(id=1)
         with self._lock:
-            stratagem_configuration = Stratagem.objects.get(id=stratagem_data["id"])
+            with transaction.atomic():
+                StratagemConfiguration.objects.all().delete()
+                stratagem_configuration = StratagemConfiguration.objects.create(
+                    state="unconfigured",
+                    id=1,
+                    interval=stratagem_data.get('interval'),
+                    report_duration=stratagem_data.get('report_duration'),
+                    report_duration_active=stratagem_data.get('report_duration_active'),
+                    purge_duration=stratagem_data.get('purge_duration'),
+                    purge_duration_active=stratagem_data.get('purge_duration_active')
+                )
+            ObjectCache.add(StratagemConfiguration, stratagem_configuration)
+
             jobs = [
                 ConfigureStratagemJob(stratagem_configuration=stratagem_configuration)
             ]
@@ -1762,4 +1778,7 @@ class JobScheduler(object):
 
         self.progress.advance()
 
-        return command.id
+        if command:
+            return command.id
+        else:
+            return None
