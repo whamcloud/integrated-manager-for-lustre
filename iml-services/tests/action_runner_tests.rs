@@ -4,7 +4,11 @@
 
 #![type_length_limit = "2097152"]
 
-use futures::{sync::oneshot, Future as _};
+use futures::{
+    future::{self, loop_fn, Either, Loop},
+    sync::oneshot,
+    Future,
+};
 use iml_agent_comms::messaging::consume_agent_tx_queue;
 use iml_services::services::action_runner::{
     data::{
@@ -16,14 +20,35 @@ use iml_services::services::action_runner::{
 use iml_wire_types::{Action, ActionId, ActionName, Fqdn, Id};
 use lapin_futures::client::ConnectionOptions;
 use parking_lot::Mutex;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-use std::{collections::HashMap, sync::Arc};
-use tokio::runtime::Runtime;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+use tokio::{runtime::Runtime, timer::Delay};
 use warp::{self, Filter};
 
 fn create_random_string() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(5).collect()
+}
+
+type State = Shared<SessionToRpcs>;
+
+fn check_until<R>(
+    xs: State,
+    mut predicate: impl FnMut(&mut State) -> Option<R>,
+    sleep: Duration,
+) -> impl Future<Item = R, Error = failure::Error> {
+    loop_fn(xs, move |mut xs| {
+        if let Some(x) = predicate(&mut xs) {
+            Either::B(future::ok(Loop::Break(x)))
+        } else {
+            let when = Instant::now() + sleep;
+
+            Either::A(Delay::new(when).from_err().map(move |_| Loop::Continue(xs)))
+        }
+    })
 }
 
 fn create_test_connection() -> impl iml_rabbit::TcpClientFuture {
@@ -101,13 +126,16 @@ fn test_data_sent_to_active_session() -> Result<(), failure::Error> {
         create_test_connection()
             .and_then(iml_rabbit::create_channel)
             .and_then(|ch| consume_agent_tx_queue(ch, queue_name2))
-            .map(move |_| {
-                while let Some(af) =
-                    remove_action_in_flight(&id, &action_id, &mut session_to_rpcs.lock())
-                {
-                    af.complete(Ok(serde_json::Value::String("ALL DONE!!!1!".to_string())))
-                        .unwrap();
-                }
+            .and_then(move |_| {
+                check_until(
+                    Arc::clone(&session_to_rpcs),
+                    move |xs| remove_action_in_flight(&id, &action_id, &mut xs.lock()),
+                    Duration::from_millis(10),
+                )
+            })
+            .map(|af| {
+                af.complete(Ok(serde_json::Value::String("ALL DONE!!!1!".to_string())))
+                    .unwrap()
             })
             .map_err(|e| panic!("Got an error {:?}", e)),
     );
