@@ -23,7 +23,7 @@ jobs:
       - template: azure-install-lustre.yml
         parameters:
           lustre_version: 2.10.7
-      
+
       - template: azure-install-rabbit.yml
 
       - script: |
