@@ -25,7 +25,7 @@ jobs:
     # Test top level crate
   - template: ci/azure-test-coverage.yml
     parameters:
-      name: test_iml
+      name: iml_coverage
       displayName: Collect Rust IML Coverage
 
   # Check building rpm works

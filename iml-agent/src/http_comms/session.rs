@@ -220,12 +220,13 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use super::{Session, SessionInfo};
+    use super::{Session, SessionInfo, State};
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
     use futures::Future;
     use serde_json::json;
+    use std::time::Instant;
 
     fn run<R: Send + 'static, E: Send + 'static>(
         fut: impl Future<Item = R, Error = E> + Send + 'static,
@@ -233,13 +234,17 @@ mod tests {
         tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
     }
 
-    #[test]
-    fn test_session_start() -> Result<()> {
-        let session = Session::new(
+    fn create_session() -> Session {
+        Session::new(
             "test_plugin".into(),
             "1234".into(),
             Box::new(TestDaemonPlugin::default()),
-        );
+        )
+    }
+
+    #[test]
+    fn test_session_start() -> Result<()> {
+        let session = create_session();
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -256,11 +261,7 @@ mod tests {
 
     #[test]
     fn test_session_update() -> Result<()> {
-        let session = Session::new(
-            "test_plugin".into(),
-            "1234".into(),
-            Box::new(TestDaemonPlugin::default()),
-        );
+        let session = create_session();
 
         run(session.start())?;
 
@@ -279,11 +280,7 @@ mod tests {
 
     #[test]
     fn test_session_message() -> Result<()> {
-        let session = Session::new(
-            "test_plugin".into(),
-            "1234".into(),
-            Box::new(TestDaemonPlugin::default()),
-        );
+        let session = create_session();
 
         run(session.start())?;
 
@@ -298,5 +295,17 @@ mod tests {
         assert_eq!(actual, (session_info, Ok(json!("hi!"))));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_session_state_pending() -> Result<()> {
+        let mut state = State::Empty(Instant::now());
+
+        state.convert_to_pending();
+
+        match state {
+            State::Pending => Ok(()),
+            _ => panic!("State was not Pending"),
+        }
     }
 }
