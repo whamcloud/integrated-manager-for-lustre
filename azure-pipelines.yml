@@ -14,12 +14,19 @@ jobs:
   - template: ci/azure-clippy.yml
     parameters:
       name: clippy
+      displayName: Lint Rust IML
 
   # Test top level crate
   - template: ci/azure-test-stable.yml
     parameters:
       name: test_iml
       displayName: Test IML
+
+    # Test top level crate
+  - template: ci/azure-test-coverage.yml
+    parameters:
+      name: test_iml
+      displayName: Collect Rust IML Coverage
 
   # Check building rpm works
   - template: ci/azure-build-check.yml
@@ -60,6 +67,7 @@ jobs:
   - template: ci/azure-clippy.yml
     parameters:
       name: clippy_wasm
+      displayName: Lint Wasm Components
       crate: iml-wasm-components
 
   # Test wasm-components
