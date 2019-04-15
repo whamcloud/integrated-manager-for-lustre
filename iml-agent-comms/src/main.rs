@@ -6,6 +6,7 @@ use futures::{
     future::{self, lazy, Either},
     prelude::*,
     stream,
+    sync::oneshot,
 };
 use iml_agent_comms::{
     flush_queue,
@@ -13,15 +14,19 @@ use iml_agent_comms::{
     messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
     session::{self, Session, Sessions},
 };
-use iml_rabbit::{self, send_message, TcpClient, TcpClientFuture};
+use iml_rabbit::{self, send_message, TcpClient};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
 use std::{sync::Arc, time::Duration};
-use tokio::{self, sync::oneshot};
+use tokio;
 use warp::Filter;
 
-fn data_handler(sessions: Sessions, client: TcpClient, data: AgentData) -> impl TcpClientFuture {
+fn data_handler(
+    sessions: Sessions,
+    client: TcpClient,
+    data: AgentData,
+) -> impl Future<Item = (), Error = failure::Error> {
     let has_key = sessions.lock().contains_key(&data.plugin);
 
     if has_key {
@@ -54,7 +59,7 @@ fn session_create_req_handler(
     client: TcpClient,
     fqdn: Fqdn,
     plugin: PluginName,
-) -> impl TcpClientFuture {
+) -> impl Future<Item = (), Error = failure::Error> {
     let session = Session::new(plugin.clone(), fqdn.clone());
 
     log::info!("Creating session {}", session);
@@ -75,10 +80,10 @@ fn session_create_req_handler(
             },
         ))
     } else {
-        Either::B(future::ok::<_, failure::Error>(client))
+        Either::B(future::ok(()))
     };
 
-    fut.and_then(move |client| {
+    fut.and_then(move |_| {
         send_message(
             client.clone(),
             "",
@@ -89,7 +94,7 @@ fn session_create_req_handler(
                 session_id: session.id.clone(),
             },
         )
-        .map(|client| (client, fqdn, plugin, session.id))
+        .map(|_| (client, fqdn, plugin, session.id))
     })
     .and_then(move |(client, fqdn, plugin, session_id)| {
         send_message(
@@ -165,13 +170,33 @@ fn main() {
 
         let hosts = warp::any().map(move || Arc::clone(&hosts_state2));
 
-        let client =
-            warp::any().and_then(|| iml_rabbit::connect_to_rabbit().map_err(warp::reject::custom));
+        /// Creates a warp `Filter` that will hand out
+        /// a cloned client for each request.
+        pub fn create_client_filter() -> (
+            impl Future<Item = (), Error = ()>,
+            impl Filter<Extract = (TcpClient,), Error = warp::Rejection> + Clone,
+        ) {
+            let (tx, fut) = iml_rabbit::get_cloned_conns(iml_rabbit::connect_to_rabbit());
+
+            let filter = warp::any().and_then(move || {
+                let (tx2, rx2) = oneshot::channel();
+
+                tx.unbounded_send(tx2).unwrap();
+
+                rx2.map_err(warp::reject::custom)
+            });
+
+            (fut, filter)
+        }
+
+        let (fut, client_filter) = create_client_filter();
+
+        tokio::spawn(fut);
 
         let receiver = warp::post2()
             .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
             .and(hosts)
-            .and(client)
+            .and(client_filter)
             .and(warp::body::json())
             .and_then(
                 |fqdn: Fqdn, hosts: SharedHosts, client: TcpClient, envelope: Envelope| {
