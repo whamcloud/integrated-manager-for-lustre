@@ -101,8 +101,8 @@ pub fn get_plugin(name: &PluginName, registry: &DaemonPlugins) -> Result<DaemonB
 pub mod test_plugin {
     use super::{as_output, DaemonPlugin, Output};
     use crate::agent_error::{ImlAgentError, Result};
-    use iml_wire_types::AgentResult;
     use futures::{future, Future};
+    use iml_wire_types::AgentResult;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Debug)]

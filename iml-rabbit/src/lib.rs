@@ -154,7 +154,7 @@ pub fn declare_queue(
     let name = name.into();
     let options = options.unwrap_or_default();
 
-    log::info!("declaring queue {}", name);
+    log::debug!("declaring queue {}", name);
 
     channel
         .queue_declare(&name, options, FieldTable::new())
@@ -278,7 +278,7 @@ pub fn basic_publish<T: ToBytes + std::fmt::Debug>(
                         .with_content_encoding("utf-8".into())
                         .with_priority(0),
                 )
-                .map(|confirmation| log::info!("publish got confirmation: {:?}", confirmation))
+                .map(|confirmation| log::debug!("publish got confirmation: {:?}", confirmation))
                 .map(|_| channel)
                 .from_err(),
         ),

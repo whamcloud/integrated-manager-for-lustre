@@ -30,7 +30,8 @@ jobs:
           set -e
           RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
           cargo test
-          cargo tarpaulin
+          cargo tarpaulin -v --all --out Xml -e liblustreapi-sys -e liblustreapi -e stratagem-runner
+          # bash <(curl -s https://codecov.io/bash)
         env:
           LOOM_MAX_DURATION: 10
           CI: "True"

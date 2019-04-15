@@ -58,26 +58,25 @@ pub fn create_reader(
                         ManagerMessage::SessionCreateResponse {
                             plugin, session_id, ..
                         } => {
-                            let plugin_instance = get_plugin(&plugin, &registry2)?;
-
-                            let s = Session::new(plugin.clone(), session_id, plugin_instance);
-
                             let mut sessions3 = sessions2.clone();
-                            let plugin2 = plugin.clone();
+                            let plugin_instance = get_plugin(&plugin, &registry2)?;
+                            let s = Session::new(plugin.clone(), session_id, plugin_instance);
+                            let fut = s.start();
+
+                            sessions2.insert_session(plugin.clone(), s);
 
                             tokio::spawn(
-                                s.start()
-                                    .and_then(send_if_data(agent_client2.clone()))
+                                fut.and_then(send_if_data(agent_client2.clone()))
                                     .or_else(move |e| {
                                         log::warn!("Error during session start {:?}", e);
-                                        sessions3.terminate_session(&plugin2)
+                                        sessions3.terminate_session(&plugin)
                                     })
                                     .map_err(|e| {
                                         log::error!("Got an error adding session {:?}", e)
                                     }),
                             );
 
-                            sessions2.insert_session(plugin, s)
+                            Ok(())
                         }
                         ManagerMessage::Data {
                             plugin,

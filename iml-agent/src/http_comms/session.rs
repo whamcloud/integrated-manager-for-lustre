@@ -14,6 +14,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tokio_timer::clock;
 
 /// Takes a `Duration` and figures out the next duration
 /// for a bounded linear backoff.
@@ -47,20 +48,24 @@ impl State {
             a.session.teardown()?;
         }
 
-        std::mem::replace(self, State::Empty(Instant::now()));
+        std::mem::replace(self, State::Empty(clock::now()));
 
         Ok(())
     }
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
-            a.instant = Instant::now() + Duration::from_secs(10);
+            a.instant = clock::now() + Duration::from_secs(10);
         }
     }
     pub fn reset_empty(&mut self) {
-        std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
+        std::mem::replace(self, State::Empty(clock::now() + Duration::from_secs(10)));
     }
     pub fn convert_to_pending(&mut self) {
-        std::mem::replace(self, State::Pending);
+        if let State::Empty(_) = self {
+            std::mem::replace(self, State::Pending);
+        } else {
+            log::warn!("Session was not in Empty state");
+        }
     }
 }
 
@@ -72,17 +77,15 @@ impl Sessions {
         let hm = plugins
             .iter()
             .cloned()
-            .map(|x| (x, State::Empty(Instant::now())))
+            .map(|x| (x, State::Empty(clock::now())))
             .collect();
 
         Self(Arc::new(Mutex::new(hm)))
     }
-    pub fn reset_active(&mut self, name: &PluginName) -> Result<()> {
+    pub fn reset_active(&mut self, name: &PluginName) {
         if let Some(x) = self.lock().get_mut(name) {
             x.reset_active()
         }
-
-        Ok(())
     }
     pub fn reset_empty(&mut self, name: &PluginName) -> Result<()> {
         if let Some(x) = self.lock().get_mut(name) {
@@ -91,29 +94,19 @@ impl Sessions {
 
         Ok(())
     }
-
-    pub fn convert_to_pending(&mut self, name: &PluginName) -> Result<()> {
-        if let Some(s @ State::Empty(_)) = self.lock().get_mut(name) {
-            s.convert_to_pending()
-        } else {
-            log::warn!("Session {:?} was not in Empty state", name);
+    pub fn convert_to_pending(&mut self, name: &PluginName) {
+        if let Some(x) = self.lock().get_mut(name) {
+            x.convert_to_pending()
         }
-
-        Ok(())
     }
-    pub fn insert_session(&mut self, name: PluginName, s: Session) -> Result<()> {
-        self.insert_state(
+    pub fn insert_session(&mut self, name: PluginName, s: Session) {
+        self.0.lock().insert(
             name,
             State::Active(Active {
                 session: s,
-                instant: Instant::now() + Duration::from_secs(10),
+                instant: clock::now() + Duration::from_secs(10),
             }),
-        )
-    }
-    fn insert_state(&mut self, name: PluginName, state: State) -> Result<()> {
-        self.0.lock().insert(name, state);
-
-        Ok(())
+        );
     }
     pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
         match self.0.lock().get_mut(name) {
@@ -220,18 +213,32 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use super::{Session, SessionInfo, State};
+    use super::{Session, SessionInfo, Sessions, State};
     use crate::{
         agent_error::Result, daemon_plugins::daemon_plugin::test_plugin::TestDaemonPlugin,
     };
     use futures::Future;
     use serde_json::json;
     use std::time::Instant;
+    use tokio_timer::clock::{self, Clock, Now};
+
+    struct MockNow(Instant);
+
+    impl Now for MockNow {
+        fn now(&self) -> Instant {
+            self.0
+        }
+    }
 
     fn run<R: Send + 'static, E: Send + 'static>(
+        clock: Clock,
         fut: impl Future<Item = R, Error = E> + Send + 'static,
     ) -> std::result::Result<R, E> {
-        tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
+        tokio::runtime::Builder::new()
+            .clock(clock)
+            .build()
+            .unwrap()
+            .block_on_all(fut)
     }
 
     fn create_session() -> Session {
@@ -252,7 +259,7 @@ mod tests {
             seq: 1.into(),
         };
 
-        let actual = run(session.start())?;
+        let actual = run(Clock::new(), session.start())?;
 
         assert_eq!(actual, Some((session_info, json!(0))));
 
@@ -263,9 +270,9 @@ mod tests {
     fn test_session_update() -> Result<()> {
         let session = create_session();
 
-        run(session.start())?;
+        run(Clock::new(), session.start())?;
 
-        let actual = run(session.poll())?;
+        let actual = run(Clock::new(), session.poll())?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -282,9 +289,9 @@ mod tests {
     fn test_session_message() -> Result<()> {
         let session = create_session();
 
-        run(session.start())?;
+        run(Clock::new(), session.start())?;
 
-        let actual = run(session.message(json!("hi!")))?;
+        let actual = run(Clock::new(), session.message(json!("hi!")))?;
 
         let session_info = SessionInfo {
             name: "test_plugin".into(),
@@ -299,12 +306,45 @@ mod tests {
 
     #[test]
     fn test_session_state_pending() -> Result<()> {
-        let mut state = State::Empty(Instant::now());
+        let mut state = State::Empty(clock::now());
 
         state.convert_to_pending();
 
         match state {
             State::Pending => Ok(()),
+            _ => panic!("State was not Pending"),
+        }
+    }
+
+    #[test]
+    fn test_sessions_convert_to_pending() -> Result<()> {
+        let mut sessions = Sessions::new(&["test_plugin".into()]);
+
+        sessions.convert_to_pending(&"test_plugin".into());
+
+        let sessions = sessions.lock();
+
+        let state = sessions.get(&"test_plugin".into()).unwrap();
+
+        match state {
+            State::Pending => Ok(()),
+            _ => panic!("State was not Pending"),
+        }
+    }
+
+    #[test]
+    fn test_sessions_insert_session() -> Result<()> {
+        let mut sessions = Sessions::new(&["test_plugin".into()]);
+
+        let session = create_session();
+
+        sessions.insert_session("test_plugin".into(), session);
+
+        let sessions = sessions.lock();
+        let state = sessions.get(&"test_plugin".into()).unwrap();
+
+        match state {
+            State::Active(_) => Ok(()),
             _ => panic!("State was not Pending"),
         }
     }

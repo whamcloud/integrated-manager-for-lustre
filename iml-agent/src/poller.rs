@@ -60,7 +60,10 @@ fn handle_state(
                 .poll()
                 .and_then(send_if_data(agent_client.clone()))
                 .then(move |r| match r {
-                    Ok(_) => sessions.reset_active(&name),
+                    Ok(_) => {
+                        sessions.reset_active(&name);
+                        Ok(())
+                    }
                     Err(_) => sessions.terminate_session(&name),
                 }),
         ),
