@@ -8,7 +8,7 @@ use crate::{
 };
 use futures::Future;
 use iml_wire_types::{AgentResult, Id, PluginName, Seq};
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::{
     collections::HashMap,
     sync::Arc,
@@ -70,7 +70,7 @@ impl State {
 }
 
 #[derive(Clone)]
-pub struct Sessions(Arc<Mutex<HashMap<PluginName, State>>>);
+pub struct Sessions(Arc<RwLock<HashMap<PluginName, State>>>);
 
 impl Sessions {
     pub fn new(plugins: &[PluginName]) -> Self {
@@ -80,25 +80,25 @@ impl Sessions {
             .map(|x| (x, State::Empty(clock::now())))
             .collect();
 
-        Self(Arc::new(Mutex::new(hm)))
+        Self(Arc::new(RwLock::new(hm)))
     }
     pub fn reset_active(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.lock().get_mut(name) {
+        if let Some(x) = self.0.write().get_mut(name) {
             x.reset_active()
         }
     }
     pub fn reset_empty(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.lock().get_mut(name) {
+        if let Some(x) = self.0.write().get_mut(name) {
             x.reset_empty()
         }
     }
     pub fn convert_to_pending(&mut self, name: &PluginName) {
-        if let Some(x) = self.0.lock().get_mut(name) {
+        if let Some(x) = self.0.write().get_mut(name) {
             x.convert_to_pending()
         }
     }
     pub fn insert_session(&mut self, name: PluginName, s: Session) {
-        self.0.lock().insert(
+        self.0.write().insert(
             name,
             State::Active(Active {
                 session: s,
@@ -111,7 +111,7 @@ impl Sessions {
         name: &PluginName,
         body: serde_json::Value,
     ) -> Option<impl Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError>> {
-        if let Some(State::Active(active)) = self.0.lock().get(name) {
+        if let Some(State::Active(active)) = self.0.read().get(name) {
             Some(active.session.message(body))
         } else {
             log::warn!("Received a message for unknown session {}", name);
@@ -120,7 +120,7 @@ impl Sessions {
         }
     }
     pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
-        match self.0.lock().get_mut(name) {
+        match self.0.write().get_mut(name) {
             Some(s) => {
                 s.teardown()?;
             }
@@ -136,14 +136,17 @@ impl Sessions {
         log::info!("Terminating all sessions");
 
         self.0
-            .lock()
+            .write()
             .iter_mut()
             .map(|(_, v)| v.teardown())
             .collect::<Result<Vec<()>>>()
             .map(|_| ())
     }
-    pub fn lock(&mut self) -> MutexGuard<'_, HashMap<PluginName, State>> {
-        self.0.lock()
+    pub fn write(&mut self) -> RwLockWriteGuard<'_, HashMap<PluginName, State>> {
+        self.0.write()
+    }
+    pub fn read(&mut self) -> RwLockReadGuard<'_, HashMap<PluginName, State>> {
+        self.0.read()
     }
 }
 
@@ -319,7 +322,7 @@ mod tests {
 
         sessions.convert_to_pending(&"test_plugin".into());
 
-        let sessions = sessions.lock();
+        let sessions = sessions.read();
 
         let state = sessions.get(&"test_plugin".into()).unwrap();
 
@@ -337,7 +340,7 @@ mod tests {
 
         sessions.insert_session("test_plugin".into(), session);
 
-        let sessions = sessions.lock();
+        let sessions = sessions.read();
         let state = sessions.get(&"test_plugin".into()).unwrap();
 
         match state {
@@ -358,7 +361,7 @@ mod tests {
             .message(&"test_plugin".into(), json!("hi!"))
             .unwrap();
 
-        let sessions = sessions.lock();
+        let sessions = sessions.read();
         let state = sessions.get(&"test_plugin".into()).unwrap();
 
         let actual = run(Clock::new(), fut)?;

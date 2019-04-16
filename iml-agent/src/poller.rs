@@ -67,7 +67,7 @@ pub fn create_poller(
         .for_each(move |now| {
             log::trace!("interval triggered for {:?}", now);
 
-            for (name, state) in sessions.clone().lock().iter_mut() {
+            for (name, state) in sessions.clone().write().iter_mut() {
                 match state {
                     State::Empty(wait) if *wait <= now => {
                         state.convert_to_pending();
@@ -88,7 +88,7 @@ pub fn create_poller(
                 };
             }
 
-            for (name, state) in sessions.clone().lock().iter() {
+            for (name, state) in sessions.clone().read().iter() {
                 let fut = handle_state(
                     state,
                     agent_client.clone(),
