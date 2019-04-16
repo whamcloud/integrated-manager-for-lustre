@@ -83,19 +83,17 @@ impl Sessions {
         Self(Arc::new(Mutex::new(hm)))
     }
     pub fn reset_active(&mut self, name: &PluginName) {
-        if let Some(x) = self.lock().get_mut(name) {
+        if let Some(x) = self.0.lock().get_mut(name) {
             x.reset_active()
         }
     }
-    pub fn reset_empty(&mut self, name: &PluginName) -> Result<()> {
-        if let Some(x) = self.lock().get_mut(name) {
+    pub fn reset_empty(&mut self, name: &PluginName) {
+        if let Some(x) = self.0.lock().get_mut(name) {
             x.reset_empty()
         }
-
-        Ok(())
     }
     pub fn convert_to_pending(&mut self, name: &PluginName) {
-        if let Some(x) = self.lock().get_mut(name) {
+        if let Some(x) = self.0.lock().get_mut(name) {
             x.convert_to_pending()
         }
     }
@@ -107,6 +105,19 @@ impl Sessions {
                 instant: clock::now() + Duration::from_secs(10),
             }),
         );
+    }
+    pub fn message(
+        &self,
+        name: &PluginName,
+        body: serde_json::Value,
+    ) -> Option<impl Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError>> {
+        if let Some(State::Active(active)) = self.0.lock().get(name) {
+            Some(active.session.message(body))
+        } else {
+            log::warn!("Received a message for unknown session {}", name);
+
+            None
+        }
     }
     pub fn terminate_session(&mut self, name: &PluginName) -> Result<()> {
         match self.0.lock().get_mut(name) {
@@ -170,37 +181,31 @@ impl Session {
     }
     pub fn start(
         &self,
-    ) -> Box<Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> + Send> {
+    ) -> impl Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> {
         let info = Arc::clone(&self.info);
 
-        Box::new(
-            self.plugin
-                .start_session()
-                .map(move |x| x.map(|y| addon_info(&mut info.lock(), y))),
-        )
+        self.plugin
+            .start_session()
+            .map(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
     }
     pub fn poll(
         &self,
-    ) -> Box<Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> + Send> {
+    ) -> impl Future<Item = Option<(SessionInfo, OutputValue)>, Error = ImlAgentError> {
         let info = Arc::clone(&self.info);
 
-        Box::new(
-            self.plugin
-                .update_session()
-                .map(move |x| x.map(|y| addon_info(&mut info.lock(), y))),
-        )
+        self.plugin
+            .update_session()
+            .map(move |x| x.map(|y| addon_info(&mut info.lock(), y)))
     }
     pub fn message(
         &self,
         body: serde_json::Value,
-    ) -> Box<Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError> + Send> {
+    ) -> impl Future<Item = (SessionInfo, AgentResult), Error = ImlAgentError> {
         let info = Arc::clone(&self.info);
 
-        Box::new(
-            self.plugin
-                .on_message(body)
-                .map(move |x| addon_info(&mut info.lock(), x)),
-        )
+        self.plugin
+            .on_message(body)
+            .map(move |x| addon_info(&mut info.lock(), x))
     }
     pub fn teardown(&mut self) -> Result<()> {
         let info = self.info.lock();
@@ -219,16 +224,8 @@ mod tests {
     };
     use futures::Future;
     use serde_json::json;
-    use std::time::Instant;
-    use tokio_timer::clock::{self, Clock, Now};
 
-    struct MockNow(Instant);
-
-    impl Now for MockNow {
-        fn now(&self) -> Instant {
-            self.0
-        }
-    }
+    use tokio_timer::clock::{self, Clock};
 
     fn run<R: Send + 'static, E: Send + 'static>(
         clock: Clock,
@@ -342,6 +339,37 @@ mod tests {
 
         let sessions = sessions.lock();
         let state = sessions.get(&"test_plugin".into()).unwrap();
+
+        match state {
+            State::Active(_) => Ok(()),
+            _ => panic!("State was not Pending"),
+        }
+    }
+
+    #[test]
+    fn test_sessions_session_message() -> Result<()> {
+        let mut sessions = Sessions::new(&["test_plugin".into()]);
+
+        let session = create_session();
+
+        sessions.insert_session("test_plugin".into(), session);
+
+        let fut = sessions
+            .message(&"test_plugin".into(), json!("hi!"))
+            .unwrap();
+
+        let sessions = sessions.lock();
+        let state = sessions.get(&"test_plugin".into()).unwrap();
+
+        let actual = run(Clock::new(), fut)?;
+
+        let session_info = SessionInfo {
+            name: "test_plugin".into(),
+            id: "1234".into(),
+            seq: 1.into(),
+        };
+
+        assert_eq!(actual, (session_info, Ok(json!("hi!"))));
 
         match state {
             State::Active(_) => Ok(()),

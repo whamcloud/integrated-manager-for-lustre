@@ -7,7 +7,7 @@ use crate::{
     daemon_plugins::{get_plugin, DaemonPlugins, OutputValue},
     http_comms::{
         agent_client::AgentClient,
-        session::{Session, SessionInfo, Sessions, State},
+        session::{Session, SessionInfo, Sessions},
     },
 };
 use futures::{
@@ -83,29 +83,20 @@ pub fn create_reader(
                             session_id,
                             body,
                             ..
-                        } => match sessions2.lock().get_mut(&plugin) {
-                            Some(State::Active(s)) => {
+                        } => {
+                            let r = { sessions2.message(&plugin, body) };
+
+                            if let Some(fut) = r {
                                 let agent_client3 = agent_client2.clone();
 
-                                let fut = s
-                                    .session
-                                    .message(body)
-                                    .and_then(move |(info, x)| agent_client3.send_data(info, x))
-                                    .map_err(|e| log::error!("{}", e));
-
-                                tokio::spawn(fut);
-
-                                Ok(())
-                            }
-                            _ => {
-                                log::warn!(
-                                    "Received a message for unknown session {:?}/{:?}",
-                                    plugin,
-                                    session_id
+                                tokio::spawn(
+                                    fut.and_then(move |(info, x)| agent_client3.send_data(info, x))
+                                        .map_err(|e| log::error!("{}", e)),
                                 );
-                                Ok(())
-                            }
-                        },
+                            };
+
+                            Ok(())
+                        }
                         ManagerMessage::SessionTerminate {
                             plugin,
                             session_id: _,

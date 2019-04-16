@@ -10,9 +10,9 @@ use crate::{
         session::{SessionInfo, Sessions, State},
     },
 };
+use futures::{future, Future, Stream};
 use iml_wire_types::PluginName;
 use std::time::{Duration, Instant};
-use tokio::prelude::*;
 
 fn send_if_data(
     agent_client: AgentClient,
@@ -29,7 +29,7 @@ fn send_if_data(
 /// this function will handle the state and move it to it's next state.
 ///
 fn handle_state(
-    state: &mut State,
+    state: &State,
     agent_client: AgentClient,
     mut sessions: Sessions,
     name: PluginName,
@@ -38,23 +38,6 @@ fn handle_state(
     log::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
-        State::Empty(wait) if *wait <= now => {
-            state.convert_to_pending();
-
-            log::info!("sending session create request for {}", name);
-
-            Box::new(
-                agent_client
-                    .create_session(name.clone())
-                    .then(move |r| match r {
-                        Ok(_) => Ok(()),
-                        Err(e) => {
-                            log::info!("session create request for {} failed: {:?}", name, e);
-                            sessions.reset_empty(&name)
-                        }
-                    }),
-            )
-        }
         State::Active(a) if a.instant <= now => Box::new(
             a.session
                 .poll()
@@ -85,6 +68,27 @@ pub fn create_poller(
             log::trace!("interval triggered for {:?}", now);
 
             for (name, state) in sessions.clone().lock().iter_mut() {
+                match state {
+                    State::Empty(wait) if *wait <= now => {
+                        state.convert_to_pending();
+
+                        let mut sessions = sessions.clone();
+                        let name = name.clone();
+
+                        log::info!("sending session create request for {}", name);
+
+                        let fut = agent_client.create_session(name.clone()).map_err(move |e| {
+                            log::info!("session create request for {} failed: {:?}", name, e);
+                            sessions.reset_empty(&name)
+                        });
+
+                        tokio::spawn(fut);
+                    }
+                    _ => (),
+                };
+            }
+
+            for (name, state) in sessions.clone().lock().iter() {
                 let fut = handle_state(
                     state,
                     agent_client.clone(),
