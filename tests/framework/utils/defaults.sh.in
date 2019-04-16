@@ -119,7 +119,7 @@ set_defaults() {
     # or to just build the latest from that branch
     # JENKINS_BUILD=lastSuccessfulBuild
     # or to build a Lustre Review job:
-    LUSTRE_REVIEW_BUILD="63380"
+    LUSTRE_REVIEW_BUILD="63547"
     # or build a GA release
     # LUSTRE_VERSION=2.10.7
 
