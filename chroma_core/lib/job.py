@@ -84,6 +84,8 @@ class DependOn(Dependable):
             depended_object = self.get_stateful_object()
         except:
             self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
+        from remote_pdb import RemotePdb
+        RemotePdb("127.0.0.1", 4444).set_trace()
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning(

@@ -478,9 +478,9 @@ class StateChangeJob(Job):
 
     old_state = models.CharField(max_length=MAX_STATE_STRING)
 
-    from remote_pdb import RemotePdb
+    # from remote_pdb import RemotePdb
 
-    RemotePdb("127.0.0.1", 4444).set_trace()
+    # RemotePdb("127.0.0.1", 4444).set_trace()
     StateTransition = namedtuple("StateTransition", ["class_", "old_state", "new_state"])
     state_transition = None
 

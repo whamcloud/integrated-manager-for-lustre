@@ -1748,12 +1748,11 @@ class JobScheduler(object):
         return CommandPlan(self._lock_cache, self._job_collection)
 
     def configure_stratagem(self, stratagem_data):
-        # from remote_pdb import RemotePdb
-
-        # RemotePdb("127.0.0.1", 4444).set_trace()
-        #stratagem_configuration = StratagemConfiguration.objects.get(id=1)
         with self._lock:
             with transaction.atomic():
+                # from remote_pdb import RemotePdb
+                # RemotePdb("127.0.0.1", 4444).set_trace()
+
                 StratagemConfiguration.objects.all().delete()
                 stratagem_configuration = StratagemConfiguration.objects.create(
                     state="unconfigured",

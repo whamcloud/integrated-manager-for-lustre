@@ -21,9 +21,9 @@ log = log_register(__name__.split(".")[-1])
 
 class Transition(object):
     def __init__(self, stateful_object, old_state, new_state):
-        from remote_pdb import RemotePdb
+        # from remote_pdb import RemotePdb
 
-        RemotePdb("127.0.0.1", 4444).set_trace()
+        # RemotePdb("127.0.0.1", 4444).set_trace()
         assert isinstance(stateful_object, django.db.models.Model)
         self.stateful_object = stateful_object
         self.old_state = old_state
@@ -391,9 +391,9 @@ class CommandPlan(object):
         return prev
 
     def _collect_dependencies(self, root_transition, transition_stack):
-        from remote_pdb import RemotePdb
+        # from remote_pdb import RemotePdb
 
-        RemotePdb("127.0.0.1", 4444).set_trace()
+        # RemotePdb("127.0.0.1", 4444).set_trace()
         if not hasattr(self, "cdc"):
             self.cdc = defaultdict(list)
         if root_transition in self.cdc:
