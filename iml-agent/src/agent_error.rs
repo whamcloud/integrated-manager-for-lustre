@@ -66,6 +66,8 @@ pub enum ImlAgentError {
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
+    LiblustreError(liblustreapi::error::LiblustreError),
+    CsvError(csv::Error),
     SendError,
 }
 
@@ -84,6 +86,8 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
+            ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CsvError(ref err) => write!(f, "{}", err),
             ImlAgentError::SendError => write!(f, "Rx went away"),
         }
     }
@@ -104,6 +108,8 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => Some(err),
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
+            ImlAgentError::LiblustreError(ref err) => Some(err),
+            ImlAgentError::CsvError(ref err) => Some(err),
             ImlAgentError::SendError => None,
         }
     }
@@ -175,6 +181,17 @@ impl From<NoPluginError> for ImlAgentError {
     }
 }
 
+impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
+    fn from(err: liblustreapi::error::LiblustreError) -> Self {
+        ImlAgentError::LiblustreError(err)
+    }
+}
+
+impl From<csv::Error> for ImlAgentError {
+    fn from(err: csv::Error) -> Self {
+        ImlAgentError::CsvError(err)
+    }
+}
 impl From<RequiredError> for ImlAgentError {
     fn from(err: RequiredError) -> Self {
         ImlAgentError::RequiredError(err)
@@ -198,3 +215,4 @@ impl ToJsonValue for ImlAgentError {
         Ok(serde_json::Value::String(format!("{:?}", self)))
     }
 }
+

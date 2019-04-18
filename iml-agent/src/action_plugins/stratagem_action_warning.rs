@@ -2,37 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Usage: stratagem_warning [FS-NAME|FS-MOUNT-POINT] [NID1] [NID2] ...
-
+use csv;
 use libc;
 use std::ffi::CStr;
-use std::fs::File;
 use std::io;
-use std::process::exit;
-use stratagem_runner::error::StratagemError;
-use structopt::StructOpt;
-mod cli;
-
-#[derive(Debug, StructOpt)]
-#[structopt(name = "stratagem_warning")]
-struct Opt {
-    #[structopt(short = "i")]
-    /// File to read from, "-" for stdin, or unspecified for on cli
-    input: Option<String>,
-
-    #[structopt(short = "o")]
-    /// File to write to, or "-" or unspecified for stdout
-    output: Option<String>,
-
-    #[structopt(name = "FSNAME")]
-    /// Lustre filesystem name, or mountpoint
-    fsname: String,
-
-    #[structopt(name = "FIDS")]
-    /// Optional list of FIDs to purge
-    fidlist: Vec<String>,
-}
-
+use crate::agent_error::ImlAgentError;
+           
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 struct Record<'a> {
@@ -46,11 +21,11 @@ struct Record<'a> {
     fid: &'a str,
 }
 
-fn write_records(
-    device: &str,
+pub fn write_records(
+    device: &String,
     args: impl IntoIterator<Item = String>,
     out: impl io::Write,
-) -> Result<(), StratagemError> {
+) -> Result<(), ImlAgentError> {
     let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {:?}", device, e);
         e
@@ -99,17 +74,4 @@ fn write_records(
     Ok(())
 }
 
-fn main() {
-    env_logger::init();
-    let opt = Opt::from_args();
-    let device = opt.fsname;
-    let output: Box<io::Write> = match opt.output {
-        Some(file) => Box::new(File::create(file).expect("Failed to create file")),
-        None => Box::new(io::stdout()),
-    };
-    let input = cli::input_to_iter(opt.input, opt.fidlist);
 
-    if write_records(&device, input, output).is_err() {
-        exit(-1);
-    }
-}
