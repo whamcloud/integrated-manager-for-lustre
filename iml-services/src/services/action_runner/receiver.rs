@@ -29,17 +29,18 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
 pub fn handle_agent_data(
     client: TcpClient,
     m: PluginMessage,
-    sessions: &Shared<Sessions>,
+    sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
 ) {
     match m {
         PluginMessage::SessionCreate {
             fqdn, session_id, ..
         } => {
-            let mut sessions = sessions.lock();
+            let maybe_old_id = { sessions.lock().insert(fqdn.clone(), session_id.clone()) };
 
-            if let Some(old_id) = sessions.insert(fqdn.clone(), session_id.clone()) {
-                if let Some(xs) = rpcs.lock().remove(&old_id) {
+            if let Some(old_id) = maybe_old_id {
+                if let Some(xs) = { rpcs.lock().remove(&old_id) } {
+                    
                     for action_in_flight in xs.values() {
                         let session_id = session_id.clone();
                         let fqdn = fqdn.clone();
