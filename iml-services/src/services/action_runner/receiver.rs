@@ -40,7 +40,6 @@ pub fn handle_agent_data(
 
             if let Some(old_id) = maybe_old_id {
                 if let Some(xs) = { rpcs.lock().remove(&old_id) } {
-                    
                     for action_in_flight in xs.values() {
                         let session_id = session_id.clone();
                         let fqdn = fqdn.clone();
