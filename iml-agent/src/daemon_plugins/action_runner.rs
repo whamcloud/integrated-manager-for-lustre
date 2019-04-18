@@ -40,7 +40,7 @@ pub fn create() -> impl DaemonPlugin {
 
 impl DaemonPlugin for ActionRunner {
     fn on_message(
-        &mut self,
+        &self,
         v: serde_json::Value,
     ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
         let action: Action = match serde_json::from_value(v) {
@@ -50,7 +50,7 @@ impl DaemonPlugin for ActionRunner {
 
         match action {
             Action::ActionStart { action, args, id } => {
-                let action_plugin_fn = match self.registry.get_mut(&action) {
+                let action_plugin_fn = match self.registry.get(&action) {
                     Some(p) => p,
                     None => {
                         let err = RequiredError(

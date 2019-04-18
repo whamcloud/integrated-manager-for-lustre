@@ -1,0 +1,9 @@
+steps:
+  - task: Docker@1
+    displayName: RabbitMQ
+    inputs:
+      command: run
+      imageName: rabbitmq:3.6
+      runInBackground: true
+      ports: |
+        5672:5672
