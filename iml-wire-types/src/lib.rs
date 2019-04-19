@@ -178,6 +178,18 @@ pub enum PluginMessage {
 #[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
 
+impl From<&str> for ActionName {
+    fn from(name: &str) -> Self {
+        Self(name.into())
+    }
+}
+
+impl fmt::Display for ActionName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct ActionId(pub String);

@@ -24,7 +24,7 @@ use warp::{self, Filter as _};
 pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
 
 fn main() {
-    env_logger::init();
+    env_logger::builder().default_format_timestamp(false).init();
 
     let (exit, valve) = tokio_runtime_shutdown::shared_shutdown();
 
