@@ -37,7 +37,7 @@ pub fn flush(
         };
 
         if drained.is_empty() {
-            let when = Instant::now() + Duration::from_millis(500);
+            let when = Instant::now() + Duration::from_millis(100);
 
             Either::A(Delay::new(when).from_err().map(move |_| Loop::Continue(xs)))
         } else {

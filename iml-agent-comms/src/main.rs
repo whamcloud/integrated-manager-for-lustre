@@ -4,30 +4,29 @@
 
 use futures::{
     future::{self, lazy, Either},
-    prelude::*,
     stream,
     sync::oneshot,
+    Future, Stream as _,
 };
 use iml_agent_comms::{
     flush_queue,
     host::{self, SharedHosts},
     messaging::{consume_agent_tx_queue, AgentData, AGENT_TX_RUST},
-    session::{self, Session, Sessions},
+    session::{self, Session, Sessions, SharedSessions},
 };
 use iml_rabbit::{self, send_message, TcpClient};
 use iml_wire_types::{
     Envelope, Fqdn, ManagerMessage, ManagerMessages, Message, PluginMessage, PluginName,
 };
 use std::{sync::Arc, time::Duration};
-use tokio;
 use warp::Filter;
 
 fn data_handler(
-    sessions: Sessions,
+    sessions: &Sessions,
     client: TcpClient,
     data: AgentData,
 ) -> impl Future<Item = (), Error = failure::Error> {
-    let has_key = sessions.lock().contains_key(&data.plugin);
+    let has_key = session::get_by_session_id(&data.plugin, &data.session_id, sessions).is_some();
 
     if has_key {
         log::debug!("Forwarding valid message {}", data);
@@ -46,8 +45,8 @@ fn data_handler(
             "",
             AGENT_TX_RUST,
             ManagerMessage::SessionTerminate {
-                fqdn: data.fqdn.clone(),
-                plugin: data.plugin.clone(),
+                fqdn: data.fqdn,
+                plugin: data.plugin,
                 session_id: data.session_id,
             },
         ))
@@ -55,7 +54,7 @@ fn data_handler(
 }
 
 fn session_create_req_handler(
-    sessions: Sessions,
+    sessions: SharedSessions,
     client: TcpClient,
     fqdn: Fqdn,
     plugin: PluginName,
@@ -141,14 +140,14 @@ pub fn create_client_filter() -> (
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::builder().default_format_timestamp(false).init();
 
     // Handle an error in locks by shutting down
     let (tx, rx) = oneshot::channel();
 
-    let hosts_state = host::shared_hosts();
-    let hosts_state2 = Arc::clone(&hosts_state);
-    let hosts_state3 = Arc::clone(&hosts_state);
+    let shared_hosts = host::shared_hosts();
+    let shared_hosts2 = Arc::clone(&shared_hosts);
+    let shared_hosts3 = Arc::clone(&shared_hosts);
 
     tokio::run(lazy(move || {
         tokio::spawn(lazy(move || {
@@ -161,13 +160,13 @@ fn main() {
                     stream.from_err().for_each(move |msg| {
                         let MessageFqdn { fqdn } = serde_json::from_slice(&msg.data)?;
 
-                        let hosts_state = hosts_state.lock();
-                        let host = hosts_state.get(&fqdn);
+                        let hosts = shared_hosts.lock();
+                        let host = hosts.get(&fqdn);
 
                         if let Some(host) = host {
                             host.queue.lock().push_back(msg.data);
                             log::debug!(
-                                "Put data on host queue {:?}: Queue size: {:?}",
+                                "Put data on host queue {}: Queue size: {:?}",
                                 fqdn,
                                 host.queue.lock().len()
                             );
@@ -187,7 +186,7 @@ fn main() {
                 })
         }));
 
-        let hosts = warp::any().map(move || Arc::clone(&hosts_state2));
+        let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts2));
 
         let (fut, client_filter) = create_client_filter();
 
@@ -195,7 +194,7 @@ fn main() {
 
         let receiver = warp::post2()
             .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
-            .and(hosts)
+            .and(hosts_filter)
             .and(client_filter)
             .and(warp::body::json())
             .and_then(
@@ -207,14 +206,10 @@ fn main() {
                         envelope
                     );
 
-                    // If we are not dealing with the same agent anymore, remove the host.
                     let sessions = {
-                        let mut hosts = hosts.lock();
-                        host::remove_stale(&mut hosts, &fqdn, &envelope.client_start_time);
-                        let host =
-                            host::get_or_insert(&mut hosts, fqdn, envelope.client_start_time);
-
-                        Arc::clone(&host.sessions)
+                        host::get_or_insert(&mut hosts.lock(), fqdn, envelope.client_start_time)
+                            .sessions
+                            .clone()
                     };
 
                     stream::iter_ok(envelope.messages)
@@ -228,7 +223,7 @@ fn main() {
                                     fqdn,
                                     ..
                                 } => Either::A(data_handler(
-                                    Arc::clone(&sessions),
+                                    &sessions.lock(),
                                     client.clone(),
                                     AgentData {
                                         fqdn,
@@ -248,7 +243,6 @@ fn main() {
                                 }
                             }
                             .map_err(warp::reject::custom)
-                            .map(|_| ())
                         })
                         .map(|_| {
                             warp::reply::with_status(
@@ -259,28 +253,26 @@ fn main() {
                 },
             );
 
-        let hosts = warp::any().map(move || Arc::clone(&hosts_state3));
+        let hosts_filter = warp::any().map(move || Arc::clone(&shared_hosts3));
 
         let sender = warp::get2()
             .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
             .and(warp::query::<GetArgs>())
-            .and(hosts)
+            .and(hosts_filter)
             .and_then(move |fqdn, args: GetArgs, hosts: SharedHosts| {
-                // If we are not dealing with the same agent anymore, remove the host and put a new one in.
-                if host::is_stale(&mut hosts.lock(), &fqdn, &args.client_start_time) {
-                    let mut hosts = hosts.lock();
-
-                    hosts.remove(&fqdn);
-
+                // If we are not dealing with the same agent anymore, terminate all existing sessions.
+                if host::is_stale(&hosts.lock(), &fqdn, &args.client_start_time) {
                     log::info!(
                         "Terminating all sessions on {:?} because start time has changed",
                         fqdn
                     );
 
-                    host::get_or_insert(&mut hosts, fqdn.clone(), args.client_start_time.clone());
+                    if let Some(host) = hosts.lock().get_mut(&fqdn) {
+                        host.client_start_time = args.client_start_time
+                    };
 
                     return Either::A(future::ok(ManagerMessages {
-                        messages: vec![ManagerMessage::SessionTerminateAll { fqdn: fqdn.clone() }],
+                        messages: vec![ManagerMessage::SessionTerminateAll { fqdn }],
                     }));
                 }
 

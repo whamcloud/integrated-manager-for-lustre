@@ -75,8 +75,8 @@ impl From<AgentData> for PluginMessage {
 }
 
 pub fn terminate_agent_session(
-    plugin: &PluginName,
-    fqdn: &Fqdn,
+    plugin: PluginName,
+    fqdn: Fqdn,
     session_id: Id,
     client: TcpClient,
 ) -> impl Future<Item = (), Error = failure::Error> {
@@ -85,8 +85,8 @@ pub fn terminate_agent_session(
         "",
         AGENT_TX_RUST,
         ManagerMessage::SessionTerminate {
-            fqdn: fqdn.clone(),
-            plugin: plugin.clone(),
+            fqdn,
+            plugin,
             session_id,
         },
     )
