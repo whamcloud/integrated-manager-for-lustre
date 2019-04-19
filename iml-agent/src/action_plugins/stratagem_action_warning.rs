@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::agent_error::ImlAgentError;
 use csv;
 use libc;
 use std::ffi::CStr;
 use std::io;
-use crate::agent_error::ImlAgentError;
-           
+
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 struct Record<'a> {
@@ -73,5 +73,3 @@ pub fn write_records(
 
     Ok(())
 }
-
-

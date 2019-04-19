@@ -61,7 +61,7 @@ pub enum ActionRunner {
     Purge {
         #[structopt(flatten)]
         fidopts: FidInput,
-    }
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -130,16 +130,19 @@ fn main() {
     let matches = App::from_args();
 
     match matches {
-        App::Action { command: cmd }=> match cmd {
-            ActionRunner::Purge{ fidopts: opt } => {
+        App::Action { command: cmd } => match cmd {
+            ActionRunner::Purge { fidopts: opt } => {
                 let device = opt.fsname;
                 let input = input_to_iter(opt.input, opt.fidlist);
 
                 if liblustreapi::rmfid(&device, input).is_err() {
                     exit(-1);
                 }
-            },
-            ActionRunner::Warning{ output: out, fidopts: opt } => {
+            }
+            ActionRunner::Warning {
+                output: out,
+                fidopts: opt,
+            } => {
                 let device = opt.fsname;
                 let output: Box<io::Write> = match out {
                     Some(file) => Box::new(File::create(file).expect("Failed to create file")),
@@ -150,8 +153,8 @@ fn main() {
                 if stratagem_action_warning::write_records(&device, input, output).is_err() {
                     exit(-1);
                 }
-            },
+            }
         },
-        App::Stratagem{ command: _ } => eprintln!("Not Yet Implemented"),
+        App::Stratagem { command: _ } => eprintln!("Not Yet Implemented"),
     }
 }

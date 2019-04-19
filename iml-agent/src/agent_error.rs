@@ -215,4 +215,3 @@ impl ToJsonValue for ImlAgentError {
         Ok(serde_json::Value::String(format!("{:?}", self)))
     }
 }
-
