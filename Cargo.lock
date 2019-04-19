@@ -1813,19 +1813,6 @@ version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "stratagem-runner"
-version = "0.1.0"
-dependencies = [
- "csv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.51 (registry+https://github.com/rust-lang/crates.io-index)",
- "liblustreapi 0.1.0",
- "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "stream-cancel"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
