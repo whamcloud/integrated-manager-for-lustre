@@ -8,7 +8,7 @@ from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
-from chroma_core.lib.job import Step, job_log, DependOn, DependAll
+from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock
 from chroma_help.help import help_text
@@ -31,17 +31,27 @@ class StratagemConfiguration(StatefulObject):
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
 
-    # def set_state(self, state, intentional=False):
+    #def set_state(self, state, intentional=False):
     #     job_log.debug("configure_stratagem.set_state %s %s" % (state, intentional))
     #     super(StratagemConfiguration, self).set_state(state, intentional)
     #     StratagemUnconfiguredAlert.notify_warning(self, self.state == "unconfigured")
 
     class Meta:
         app_label = "chroma_core"
+        ordering = ["id"]
 
-    def get_deps(self, state=None):
-        deps = []
-        return DependAll(deps)
+    # def get_deps(self, state=None):
+    #     return DependAny([DependOn(self, 'configured', 'unconfigured')])
+
+    # def get_available_states(self, begin_state):
+    #     from remote_pdb import RemotePdb
+    #     RemotePdb("127.0.0.1", 4444).set_trace()
+    #     if begin_state == "unconfigured":
+    #         return ["configured"]
+    #     elif self.immutable_state:
+    #         return ["unconfigured"]
+    #     else:
+    #         return super(StratagemConfiguration, self).get_available_states(begin_state)
 
 class StratagemUnconfiguredAlert(AlertStateBase):
     default_severity = logging.ERROR
@@ -84,6 +94,10 @@ class ConfigureStratagemJob(StateChangeJob):
         app_label = "chroma_core"
         ordering = ["id"]
 
+    def __init__(self, *args, **kwargs):
+        super(ConfigureStratagemJob, self).__init__(*args, **kwargs)
+        self.old_state = 'unconfigured'
+
     @classmethod
     def long_description(cls, stateful_object):
         return help_text["configure_stratagem_long"]
@@ -98,11 +112,11 @@ class ConfigureStratagemJob(StateChangeJob):
 
         return steps
 
-    def create_locks(self):
-        locks = super(ConfigureStratagemJob, self).create_locks()
+    # def create_locks(self):
+    #     locks = super(ConfigureStratagemJob, self).create_locks()
 
-        # Take a write lock on mtm objects related to this target
-        job_log.debug("Creating StateLock on %s/%s" % (self.stratagem_configuration.__class__, self.stratagem_configuration.id))
-        locks.append(StateLock(job=self, locked_item=self.stratagem_configuration, write=True))
+    #     # Take a write lock on mtm objects related to this target
+    #     job_log.debug("Creating StateLock on %s/%s" % (self.stratagem_configuration.__class__, self.stratagem_configuration.id))
+    #     locks.append(StateLock(job=self, locked_item=self.stratagem_configuration, write=True))
 
-        return locks
+    #     return locks
