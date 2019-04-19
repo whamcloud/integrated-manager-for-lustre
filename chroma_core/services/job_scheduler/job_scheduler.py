@@ -1750,9 +1750,6 @@ class JobScheduler(object):
     def configure_stratagem(self, stratagem_data):
         with self._lock:
             with transaction.atomic():
-                # from remote_pdb import RemotePdb
-                # RemotePdb("127.0.0.1", 4444).set_trace()
-
                 StratagemConfiguration.objects.all().delete()
                 stratagem_configuration = StratagemConfiguration.objects.create(
                     state="unconfigured",
@@ -1765,19 +1762,15 @@ class JobScheduler(object):
                 )
             ObjectCache.add(StratagemConfiguration, stratagem_configuration)
 
-            jobs = [
-                ConfigureStratagemJob(stratagem_configuration=stratagem_configuration)
-            ]
-
-            with transaction.atomic():
-                command = Command.objects.create(
-                    message="Configuring Stratagem"
+        
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    'configured',
                 )
-                self.CommandPlan.add_jobs(jobs, command)
-
-        self.progress.advance()
-
-        if command:
-            return command.id
-        else:
-            return None
+            ],
+            "Configuring Stratagem",
+            True
+        )

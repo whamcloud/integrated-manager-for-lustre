@@ -31,7 +31,7 @@ class StratagemConfiguration(StatefulObject):
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
 
-    #def set_state(self, state, intentional=False):
+    # def set_state(self, state, intentional=False):
     #     job_log.debug("configure_stratagem.set_state %s %s" % (state, intentional))
     #     super(StratagemConfiguration, self).set_state(state, intentional)
     #     StratagemUnconfiguredAlert.notify_warning(self, self.state == "unconfigured")
@@ -41,17 +41,16 @@ class StratagemConfiguration(StatefulObject):
         ordering = ["id"]
 
     # def get_deps(self, state=None):
-    #     return DependAny([DependOn(self, 'configured', 'unconfigured')])
+    #     return DependOn(ObjectCache.get_one(ServerProfile, lambda p: p.name == "stratagem_server"), True)
 
     # def get_available_states(self, begin_state):
-    #     from remote_pdb import RemotePdb
-    #     RemotePdb("127.0.0.1", 4444).set_trace()
     #     if begin_state == "unconfigured":
     #         return ["configured"]
     #     elif self.immutable_state:
     #         return ["unconfigured"]
     #     else:
     #         return super(StratagemConfiguration, self).get_available_states(begin_state)
+
 
 class StratagemUnconfiguredAlert(AlertStateBase):
     default_severity = logging.ERROR
@@ -76,7 +75,7 @@ class StratagemUnconfiguredAlert(AlertStateBase):
 
 class ConfigureSystemdTimerStep(Step):
     def run(self, kwargs):
-        print "Create systemd time Step kwargs: {}".format(kwargs)
+        job_log.debug("Create systemd time Step kwargs: {}".format(kwargs))
 
 
 class ConfigureStratagemJob(StateChangeJob):
@@ -94,9 +93,9 @@ class ConfigureStratagemJob(StateChangeJob):
         app_label = "chroma_core"
         ordering = ["id"]
 
-    def __init__(self, *args, **kwargs):
-        super(ConfigureStratagemJob, self).__init__(*args, **kwargs)
-        self.old_state = 'unconfigured'
+    # def __init__(self, *args, **kwargs):
+    #     super(ConfigureStratagemJob, self).__init__(*args, **kwargs)
+    #     self.old_state = "unconfigured"
 
     @classmethod
     def long_description(cls, stateful_object):
@@ -106,11 +105,12 @@ class ConfigureStratagemJob(StateChangeJob):
         return help_text["configure_stratagem_description"]
 
     def get_steps(self):
-        steps = [
-            (ConfigureSystemdTimerStep, {})
-        ]
+        steps = [(ConfigureSystemdTimerStep, {})]
 
         return steps
+
+    # def get_deps(self, state=None):
+    #     return DependOn(ObjectCache.get_one(ServerProfile, lambda p: p.name == "stratagem_server").managed, True)
 
     # def create_locks(self):
     #     locks = super(ConfigureStratagemJob, self).create_locks()
