@@ -3,8 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use iml_agent::action_plugins::manage_stratagem;
-use iml_agent::action_plugins::stratagem_action_warning;
+use iml_agent::action_plugins::stratagem::{server, action_warning};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -150,7 +149,7 @@ fn main() {
                 };
                 let input = input_to_iter(opt.input, opt.fidlist);
 
-                if stratagem_action_warning::write_records(&device, input, output).is_err() {
+                if action_warning::write_records(&device, input, output).is_err() {
                     exit(exitcode::IOERR);
                 }
             }
