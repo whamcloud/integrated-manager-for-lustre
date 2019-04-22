@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use iml_agent::action_plugins::stratagem::{server, action_warning};
+use iml_agent::action_plugins::stratagem::{action_warning, server};
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
