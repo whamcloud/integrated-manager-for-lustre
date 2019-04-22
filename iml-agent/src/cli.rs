@@ -75,8 +75,8 @@ pub enum App {
         command: Command,
     },
 
-    #[structopt(name = "action")]
-    /// Work with Stratagem server
+    #[structopt(name = "stratagem_client")]
+    /// Work with Stratagem client
     Action {
         #[structopt(subcommand)]
         command: ActionRunner,
@@ -110,7 +110,7 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<It
                         Ok(x) => x,
                         Err(e) => {
                             log::error!("Failed to open {}: {}", &name, e);
-                            exit(-1);
+                            exit(exitcode::CANTCREAT);
                         }
                     };
                     Box::new(BufReader::new(f))
@@ -136,7 +136,7 @@ fn main() {
                 let input = input_to_iter(opt.input, opt.fidlist);
 
                 if liblustreapi::rmfid(&device, input).is_err() {
-                    exit(-1);
+                    exit(exitcode::OSERR);
                 }
             }
             ActionRunner::Warning {
@@ -151,7 +151,7 @@ fn main() {
                 let input = input_to_iter(opt.input, opt.fidlist);
 
                 if stratagem_action_warning::write_records(&device, input, output).is_err() {
-                    exit(-1);
+                    exit(exitcode::IOERR);
                 }
             }
         },
