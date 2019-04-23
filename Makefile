@@ -59,7 +59,11 @@ COPR_REPO_TARGETS := base.repo tests/framework/utils/defaults.sh tests/framework
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
-all: rpms
+all: copr-rpms rpms
+
+copr-rpms:
+	$(MAKE) -f .copr/Makefile srpm outdir=.
+	rpmbuild -D "_topdir $(pwd)/_topdir" -bb _topdir/SPECS/rust-iml.spec
 
 cleandist:
 	rm -rf  dist

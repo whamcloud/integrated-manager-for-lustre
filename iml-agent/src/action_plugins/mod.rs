@@ -3,6 +3,6 @@
 // license that can be found in the LICENSE file.
 
 pub mod action_plugin;
-pub mod manage_stratagem;
+pub mod stratagem;
 
 pub use action_plugin::{create_registry, Actions};
