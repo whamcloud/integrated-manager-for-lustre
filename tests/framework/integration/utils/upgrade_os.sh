@@ -15,32 +15,6 @@ function upgrade_os {
     echo "Now upgrade the operating system to ${upgrade_distro_name_version_arch} on nodes ${comma_list_nodes}"
 
     pdsh -l root -R ssh -S -w ${comma_list_nodes} "exec 2>&1; set -xe
-if $JENKINS; then
-    if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
-        cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
-    fi
-
-    # Fetch the cobbler repo file for the version we are upgrading to, and clean the repo of
-    # the data form the previous repo file.
-    curl -o /etc/yum.repos.d/cobbler-config.repo \"http://cobbler/cblr/svc/op/yum/profile/${upgrade_distro_name_version_arch}\"
-fi
-
-# On RHEL systems, we need to set the releasever
-if which subscription-manager; then
-    # The way RHEL does their repos, the release for the specific minor version
-    # only exists once there are updates for that version. In the small window
-    # between a minor version GAing and its first updates, then there is only
-    # the more generic 6Server or 7Server release. So we first test if a minor
-    # version exists yet, and if so use that, but if not, use the more generic
-    # [67]Server. This allows us to 'pin' older OS versions, but not break if in
-    # the window between GA and first updates.
-    if subscription-manager release --list | grep ${upgrade_distro_version}; then
-        release=${upgrade_distro_version}
-    else
-        release=${upgrade_distro_version%%.*}Server
-    fi
-    subscription-manager release --set=\${release}
-fi
 
 # Clean the yum metadata and fetch fresh data since we just changed all of the
 # available repos. In addition to just wanting to be sure that the rest of the
@@ -51,35 +25,9 @@ fi
 yum clean all
 yum makecache
 
-yum-config-manager --disable *[eE][pP][eE][lL]*
-
 rpm -qa | sort >/tmp/before_upgrade
 
-# a little bit of jiggery to make RHEL upgrade CentOS
-# should be benign on RHEL
-rpm --nodeps -e \$(rpm -q --whatprovides redhat-release)
-RH_RELEASE=\$(repoquery -q --whatprovides redhat-release | tail -1)
-yum -y install \$RH_RELEASE
-if grep  ^distroverpkg= /etc/yum.conf; then
-    ed <<EOF /etc/yum.conf
-/distroverpkg=/c
-distroverpkg=\${RH_RELEASE%-*-*}
-.
-wq
-EOF
-fi
-
-yum -y upgrade
-
-# CentOS->RHEL upgrades need some additional packages
-os_id=\$(lsb_release -s -i)
-if [ "$upgrade_distro_name" = "el" ] &&
-   [ \$os_id = RedHatEnterpriseServer ] ||
-   [ \$os_id = "n/a" ]; then
-    yum -y install subscription-manager
-    yum -y erase redhat-lsb-{submod-security,core}
-    yum -y install redhat-lsb-core
-fi
+yum -y upgrade --exclude=python2-iml*
 
 if [[ ! \$(lsb_release -r -s) =~ ${upgrade_distro_version}(\\.[0-9]*.*)?$ ]]; then
     echo \"O/S didn't actually upgrade\"
@@ -88,13 +36,6 @@ fi
 
 rpm -qa | sort >/tmp/after_upgrade
 
-if $JENKINS; then
-    # The yum upgrade might have restored the /etc/yum.repos.d/CentOS-*.repo
-    # files so remove them here
-    if ls /etc/yum.repos.d/CentOS-*.repo; then
-        rm /etc/yum.repos.d/CentOS-*.repo
-    fi
-fi
 
 # TODO: we really ought to reboot here
 #       a new kernel was surely installed and real users would reboot here" | dshbak -c

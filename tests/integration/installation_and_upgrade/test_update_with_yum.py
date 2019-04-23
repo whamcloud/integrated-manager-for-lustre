@@ -70,10 +70,14 @@ class TestYumUpdate(TestInstallationAndUpgrade):
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
 
-        if packaging.version.parse(os.environ["UPGRADE_FROM_VER"]) >= packaging.version.parse("4.0"):
-            # Start the filesystem back up
-            filesystem = self.get_filesystem_by_name(self.fs_name)
-            self.start_filesystem(filesystem["id"])
+        # Update corosync on the storage servers
+        # N.B. This will also start the FS
+        for server in self.config_servers:
+            self.remote_command(server["fqdn"], "chroma-agent convert_targets")
+
+        # Start the filesystem back up
+        filesystem = self.get_filesystem_by_name(self.fs_name)
+        self.start_filesystem(filesystem["id"])
 
     @skip("Repos can't really be retired until at least an n+1 release")
     def test_no_retired_repos(self):
