@@ -7,9 +7,9 @@ use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
-pub type Sessions = Arc<Mutex<InnerSessions>>;
-
-pub type InnerSessions = HashMap<PluginName, Session>;
+pub type Shared<T> = Arc<Mutex<T>>;
+pub type Sessions = HashMap<PluginName, Session>;
+pub type SharedSessions = Shared<Sessions>;
 
 /// A bidirectional virtual channel between the manager and a remote agent plugin.
 /// There may be many of these per remote host, and they are transient.
@@ -36,7 +36,15 @@ impl Session {
     }
 }
 
-pub fn is_session_valid(msg: &ManagerMessage, sessions: &InnerSessions) -> bool {
+pub fn get_by_session_id<'a>(
+    plugin: &PluginName,
+    id: &Id,
+    sessions: &'a Sessions,
+) -> Option<&'a Session> {
+    sessions.get(plugin).filter(|s| &s.id == id)
+}
+
+pub fn is_session_valid(msg: &ManagerMessage, sessions: &Sessions) -> bool {
     let retain = match msg {
         ManagerMessage::SessionTerminateAll { .. } => true,
         ManagerMessage::SessionTerminate {
@@ -47,10 +55,7 @@ pub fn is_session_valid(msg: &ManagerMessage, sessions: &InnerSessions) -> bool 
         }
         | ManagerMessage::Data {
             session_id, plugin, ..
-        } => sessions
-            .get(&plugin)
-            .filter(|Session { id, .. }| id == session_id)
-            .is_some(),
+        } => get_by_session_id(&plugin, &session_id, sessions).is_some(),
     };
 
     if !retain {

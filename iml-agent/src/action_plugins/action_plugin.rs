@@ -58,7 +58,7 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     let mut map = HashMap::new();
 
     map.insert(
-        ActionName("start_scan_stratagem".into()),
+        "start_scan_stratagem".into(),
         mk_callback(&server::start_scan_stratagem),
     );
 

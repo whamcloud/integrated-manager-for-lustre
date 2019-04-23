@@ -24,7 +24,7 @@ use warp::{self, Filter as _};
 pub static AGENT_TX_RUST: &'static str = "agent_tx_rust";
 
 fn main() {
-    env_logger::init();
+    env_logger::builder().default_format_timestamp(false).init();
 
     let (exit, valve) = tokio_runtime_shutdown::shared_shutdown();
 
@@ -32,11 +32,6 @@ fn main() {
     let rpcs: Shared<SessionToRpcs> = Arc::new(Mutex::new(HashMap::new()));
 
     tokio::run(lazy(move || {
-        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
-
-        let listener = UnixListener::from_std(addr, &Handle::default())
-            .expect("Unable to bind Unix Domain Socket fd");
-
         let log = warp::log("iml_action_runner::sender");
 
         let (fut, client_filter) = create_client_filter();
@@ -52,7 +47,14 @@ fn main() {
         .map(|x| warp::reply::json(&x))
         .with(log);
 
-        tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener.incoming())));
+        let addr = unsafe { NetUnixListener::from_raw_fd(3) };
+
+        let listener = UnixListener::from_std(addr, &Handle::default())
+            .expect("Unable to bind Unix Domain Socket fd")
+            .incoming()
+            .inspect(|_| log::debug!("Client connected"));
+
+        tokio::spawn(warp::serve(routes).serve_incoming(valve.wrap(listener)));
 
         iml_rabbit::connect_to_rabbit()
             .and_then(move |client| {
@@ -63,7 +65,7 @@ fn main() {
                 .for_each(move |m: PluginMessage| {
                     log::debug!("Incoming message from agent: {:?}", m);
 
-                    handle_agent_data(client.clone(), m, &sessions, Arc::clone(&rpcs));
+                    handle_agent_data(client.clone(), m, Arc::clone(&sessions), Arc::clone(&rpcs));
 
                     Ok(())
                 })
