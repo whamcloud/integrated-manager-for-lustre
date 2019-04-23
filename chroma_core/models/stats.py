@@ -161,9 +161,17 @@ class Sample(models.Model):
         return dt - timedelta(seconds=timestamp(dt) % cls.step, microseconds=dt.microsecond)
 
     @classmethod
+    def round(cls, dt):
+        "Return datetime rounded to nearest sample size."
+        floor = timestamp(dt) % cls.step
+        ceil = cls.step - floor
+        diff = -ceil if ceil < floor else floor
+        return dt - timedelta(seconds=diff, microseconds=dt.microsecond)
+
+    @classmethod
     def reduce(cls, points_to_reduce):
         "Generate points grouped and summed by sample size."
-        for dt, points in itertools.groupby(points_to_reduce, key=lambda point: cls.floor(point.dt)):
+        for dt, points in itertools.groupby(points_to_reduce, key=lambda point: cls.round(point.dt)):
             yield Point(dt, *sum(points, Point.zero)[1:])
 
     @classmethod
