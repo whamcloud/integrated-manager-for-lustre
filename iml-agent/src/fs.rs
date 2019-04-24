@@ -28,7 +28,7 @@ where
 }
 
 /// Given a path, streams the file line by line till EOF
-/// 
+///
 /// # Arguments
 ///
 /// * `p` - The `Path` to a file.
@@ -44,7 +44,7 @@ where
 
 /// Given a directory of files,
 /// stream each file one at a time till EOF
-/// 
+///
 /// # Arguments
 ///
 /// * `p` - The `Path` to a directory.
