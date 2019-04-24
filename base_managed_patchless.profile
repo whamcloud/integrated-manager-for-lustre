@@ -11,7 +11,6 @@
   "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
   "packages": [
     "python2-iml-agent-management",
-    "kernel-devel-lustre",
     "pcs",
     "fence-agents",
     "fence-agents-virsh",

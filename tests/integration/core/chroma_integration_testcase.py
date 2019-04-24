@@ -74,6 +74,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Finally get one that pass all the tests, get the whole list and validate there is only one choice
         filtered_profile = [profile for profile in filtered_profile if self._validation_passed(profile["validations"])]
 
+        # pick patchless profile if available
+        if len(filtered_profile) > 1:
+            filtered_profile = [profile for profile in filtered_profile if "patchless" in profile["name"]]
+
         assert len(filtered_profile) == 1
 
         return filtered_profile[0]
