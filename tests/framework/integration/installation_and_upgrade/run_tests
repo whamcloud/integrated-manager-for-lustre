@@ -4,7 +4,6 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
-# shellcheck source=tests/framework/integration/utils/node_lib.sh
 . "$CHROMA_DIR"/tests/framework/integration/utils/node_lib.sh
 
 [ -r localenv ] && . localenv
@@ -45,53 +44,17 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if ${UPGRADE_FROM_3:-false}; then
-    # first fetch and install chroma 3.1.1.0
-    BUILD_JOB=ieel-b3_1
-    BUILD_NUM=427
-    set +x # don't remove this line lest you leak confidential information
-    . ~/auth.sh
-    cat <<"EOF"
-++ curl -s -k 'https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/ieel-b3_1/427/api/xml?xpath=*/artifact/fileName&wrapper=foo'
-++ sed -e 's/.*>\\([i]\\?ee[l]\\?-[0-9\\.][0-9\\.]*.tar.gz\\)<.*/\\1/'
-EOF
-    IEEL_FROM_ARCHIVE=$(curl -s -k "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\([i]\?ee[l]\?-[0-9\.][0-9\.]*.tar.gz\)<.*/\1/')
-    echo "+ IEEL_FROM_ARCHIVE=$IEEL_FROM_ARCHIVE"
-    set -x
-    IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
-    IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
 
-    if [ ! -f "$IEEL_FROM_ARCHIVE" ]; then
-        set +x # don't remove this line lest you leak confidential information
-        cat <<EOF
-+ curl -k -O https://jenkins-pull:********@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE
-EOF
-        curl -k -O "https://jenkins-pull:${OLDJENKINS_PULL}@jenkins-old.lotus.hpdd.lab.intel.com:8080/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-        set -x
-    fi
-else
-    # first fetch and install IML 4.0.4
-    # starting with 4.0.5 might leave us with no not have anything to
-    # upgrade which will fail the upgrade test as it expects that there
-    # should always be an upgrade available
-    BUILD_JOB=ieel
-    BUILD_NUM=3511
-    IEEL_FROM_ARCHIVE=$(curl -s -k "http://jenkins.lotus.hpdd.lab.intel.com/job/$BUILD_JOB/$BUILD_NUM/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -re 's/.*>(([i]\?ee[l]\?|iml)-[0-9\.][0-9\.]*.tar.gz)<.*/\1/')
-    IEEL_FROM_VER="${IEEL_FROM_ARCHIVE#*-}"
-    IEEL_FROM_VER="${IEEL_FROM_VER%.tar.gz}"
+# first fetch and install IML 4.0.x
+IML_PREVIOUS_VERSION="4.0.10.0"
+IML_PREVIOUS_URL="https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v${IML_PREVIOUS_VERSION}/iml-${IML_PREVIOUS_VERSION}.tar.gz"
+IML_TARBALL="iml-${IML_PREVIOUS_VERSION}.tar.gz"
+EXPECT_SCRIPT=install-4.x.exp
 
-    if [ ! -f "$IEEL_FROM_ARCHIVE" ]; then
-        curl -k -O "http://jenkins.lotus.hpdd.lab.intel.com/job/$BUILD_JOB/$BUILD_NUM/artifact/$IEEL_FROM_ARCHIVE"
-    fi
-fi
+curl -k -L "${IML_PREVIOUS_URL}" --output "${IML_TARBALL}"
 
-if ${UPGRADE_FROM_3:-false}; then
-    EXPECT_SCRIPT=install-3.x.exp
-else
-    EXPECT_SCRIPT=install.exp
-fi
 # Install and setup old manager
-scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/tests/utils/"$EXPECT_SCRIPT" root@$CHROMA_MANAGER:/tmp
+scp $IML_TARBALL $CHROMA_DIR/tests/utils/"$EXPECT_SCRIPT" root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
@@ -99,14 +62,14 @@ yum -y install expect
 # Unpack the previous install into /tmp/$PREVIOUS_INSTALL_DIR
 cd /tmp
 mkdir $PREVIOUS_INSTALL_DIR
-mv $IEEL_FROM_ARCHIVE $PREVIOUS_INSTALL_DIR/$IEEL_FROM_ARCHIVE
+mv $IML_TARBALL $PREVIOUS_INSTALL_DIR/$IML_TARBALL
 mv $EXPECT_SCRIPT $PREVIOUS_INSTALL_DIR/
 
 cd $PREVIOUS_INSTALL_DIR
-tar xzvf $IEEL_FROM_ARCHIVE
+tar xzvf $IML_TARBALL
 
 # Install from the installation package
-cd ${IEEL_FROM_ARCHIVE%%.tar.gz}
+cd ${IML_TARBALL%%.tar.gz}
 if ! expect ../$EXPECT_SCRIPT $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
@@ -123,7 +86,15 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup chroma software storage appliances
+# Replace extras repo with it's vault equivalent. see: https://github.com/whamcloud/integrated-manager-for-lustre/issues/827
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
+yum-config-manager --add-repo=http://vault.centos.org/centos/7.5.1804/extras/x86_64/
+yum-config-manager --disable extras" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# Install and setup IML storage servers
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
 # let's see what's in yum.conf at this point
 cat /etc/yum.conf
@@ -149,14 +120,12 @@ wait_for_nodes "$CLIENT_1" "rpm -q kmod-lustre-client || exit 0
 echo "Create and exercise a filesystem..."
 
 TESTS="$TESTS_DIR/../shared_storage_configuration/test_cluster_setup.py \
-       $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_clean_linux_devices \
        $TESTS_DIR/test_create_filesystem.py:TestCreateFilesystem.test_create"
 
 # shellcheck disable=SC2086
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
-unset http_proxy; unset https_proxy
-export UPGRADE_FROM_3=$UPGRADE_FROM_3
+export IML_4_INSTALLED=yup
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_pre_upgrade.xml $TESTS"
 
 echo "Now upgrade the OS and IML..."
@@ -164,136 +133,59 @@ echo "Now upgrade the OS and IML..."
 # first have to shut down the filesystem so that we don't have incompatible OS/IML issues
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
-unset http_proxy; unset https_proxy
-export UPGRADE_FROM_3=$UPGRADE_FROM_3
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_filesystem_stop.xml $TESTS_DIR/test_update_with_yum.py:TestYumUpdate.test_stop_before_update"
 
+# re-enable needed repos needed for the upgraded version
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
+rm -rf /etc/yum.repos.d/vault.centos.org_centos_7.5.1804_extras_x86_64_.repo
+yum-config-manager --enable extras" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
 . $CHROMA_DIR/tests/framework/integration/utils/upgrade_os.sh
-if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}); then
+if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}); then
     echo "Upgrade failed"
     exit 1
 fi
 
 # re-enable needed repos needed for the upgraded version
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
-yum-config-manager --enable addon-epel\$(rpm --eval %rhel)-x86_64
-yum-config-manager --enable $COPR_OWNER-$COPR_PROJECT
-yum-config-manager --enable mirror.centos.org_centos_7_extras_x86_64_" | dshbak -c
+yum-config-manager --enable $COPR_OWNER-$COPR_PROJECT"
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-if [ -f ~/base.repo.in ]; then
-    STORAGE_SERVER_REPO=~/base.repo.in
-fi
+# Install and setup new manager
+scp "$CHROMA_DIR"/chroma_support.repo "$CHROMA_DIR"/_topdir/RPMS/noarch/python2-iml-manager{,-cli,-libs}-5* "$CHROMA_DIR"/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
 
-if ! ${UPGRADE_FROM_3:-false}; then
-    # need to get the additional storage server repos on the agent
-    # nodes *BEFORE* the upgrade so that when the upgrade completes
-    # and the sessions to the agent are re-established, the agent
-    # already has access to the needed additional repos
-    # this also simulates the state of the MFL repo when the upgrade
-    # will be done in production
-    pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" \
-        "exec 2>&1; set -xe
-    # add any repos required by this test run
-    if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
-        for repo in $STORAGE_SERVER_REPOS; do
-            curl \"\$repo\" >> /etc/yum.repos.d/Intel-Lustre-Agent.repo
-        done
-    fi" | dshbak -c
-    if [ "${PIPESTATUS[0]}" != "0" ]; then
-        exit 1
-    fi
-fi
-
-# Install and setup manager
-ARCHIVE_SUFFIX=.tar.gz
-if $JENKINS; then
-    ARCHIVE_PATH=.
-    ARCHIVE_SUFFIX="-current$ARCHIVE_SUFFIX"
-else
-    ARCHIVE_PATH=chroma-bundles
-    ARCHIVE_NAME=$SHORT_ARCHIVE_NAME-$IEEL_VERSION.tar.gz
-fi
-scp $STORAGE_SERVER_REPO "$ARCHIVE_PATH/$ARCHIVE_NAME" "$CHROMA_DIR"/tests/utils/upgrade.exp root@"$CHROMA_MANAGER":/tmp
 ssh root@"$CHROMA_MANAGER" "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 
-# Unpack the current install into /tmp/$UPGRADE_INSTALL_DIR
 cd /tmp
+
+# Wipe out the old support repo with our new one.
+mv -f chroma_support.repo /etc/yum.repos.d/
+
+# Unpack the current install into /tmp/$UPGRADE_INSTALL_DIR
 mkdir $UPGRADE_INSTALL_DIR
-mv $ARCHIVE_NAME $UPGRADE_INSTALL_DIR/$ARCHIVE_NAME
+mv python2-iml-manager-* $UPGRADE_INSTALL_DIR/
 mv upgrade.exp $UPGRADE_INSTALL_DIR/upgrade.exp
 
 cd $UPGRADE_INSTALL_DIR
-tar xzvf $ARCHIVE_NAME
-cd \"${ARCHIVE_NAME%$ARCHIVE_SUFFIX}\"
 
-# Install from the installation package
-echo \"First without access to YUM repos\"
+yum install -y ./python2-iml-manager-*
 
-yum -y install bind-utils
-
-iptables_remove=\$(mktemp)
-trap 'bash -ex \"\$iptables_remove\"; rm \"\$iptables_remove\"' EXIT
-
-grep -e ^base -e ^mirror /etc/yum.repos.d/* | \
-    sed -e 's/.*=\(.*\):\/\/\([^/]*\)\/.*/\1 \2/' -e 's/\(.*\):\(.*\)/\1 \2/' | sort -u | \
-while read method host port; do
-    if [ \"\$method\" = \"file\" ]; then
-        continue
-    fi
-    if [ -z \"\$port\" ]; then
-        case \$method in
-             http)   port=80  ;;
-            https)   port=443 ;;
-        esac
-    fi
-    host \$host | sed -ne '/has address/s/.* //p' -e '/:/d' | \
-    while read ip; do
-        iptables -I OUTPUT -d \$ip -p tcp --dport \$port -j REJECT
-        echo \"iptables -D OUTPUT -d \$ip -p tcp --dport \$port -j REJECT\" >> \"\$iptables_remove\"
-    done
-done
-
-if expect ../upgrade.exp; then
-    echo \"Installation unexpectedly succeeded without access to repos\"
-    iptables -L -nv
-    exit 1
-fi
-
-bash -ex \"\$iptables_remove\"
-rm \"\$iptables_remove\"
-trap '' EXIT
-
-if $RHEL; then
-    release=\$(lsb_release -sr || sed -n -e '1s/.* release \(.*\) .*/\1/p' /etc/issue)
-    yum-config-manager --disable  rhel-\$(rpm --eval %rhel)-server-optional-rpms,RHEL-\$release-optional-x86_64
-    # let's also remove any local RH optional repo
-    if grep \"RHEL-\$(rpm --eval %rhel)\.[0-9]-optional-x86_64\" /etc/yum.repos.d/cobbler-config.repo; then
-        ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
-/\[RHEL-\$(rpm --eval %rhel)\.[0-9]-optional-x86_64\]/;/^$/d
-wq
-EOF
-    fi
-fi
-
-if ! expect ../upgrade.exp; then
+if ! expect upgrade.exp; then
     rc=\${PIPESTATUS[0]}
     echo \"Install log:\"
     cat /var/log/chroma/install.log
     exit \$rc
 fi
-# make some compatibilty links for older versions of RHEL
-# this is most likely a product gap
-ln -s 7 /var/lib/chroma/repo/iml-agent/7.5
-ln -s 7 /var/lib/chroma/repo/iml-agent/7.4
-ln -s 7 /var/lib/chroma/repo/iml-agent/7.3
 
 # make sure it really did do an upgrade
-upgraded_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
+upgraded_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" python2-iml-manager)
 if [ \$existing_IML_version = \$upgraded_IML_version ]; then
     echo \"Upgrade didn't actually upgrade the chroma-manager package\"
     echo \"Install log:\"
@@ -329,60 +221,18 @@ fi
 python_version=\$(python -c 'import platform; print \".\".join(platform.python_version_tuple()[0:2])')
 rm -f /usr/lib/python\$python_version/site-packages/sitecustomize.py*"
 
-if ${UPGRADE_FROM_3:-false}; then
-    # the manual bits that need to be done for 3.x to 4.x upgrades
-    # see https://github.com/whamcloud/integrated-manager-for-lustre/issues/125
-    # updated per https://github.com/whamcloud/Online-Help/pull/54
-    pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-    yum -y install pdsh" | dshbak -c
-    if [ ${PIPESTATUS[0]} != 0 ]; then
-        exit 1
-    fi
-
-    ssh root@"$CHROMA_MANAGER" "exec 2>&1; set -xe
-    yum -y install pdsh
-    cat /usr/share/chroma-manager/{base,lustre-server}.repo > /tmp/server.repo
-    pdcp -l root -R ssh -w $(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}") /tmp/server.repo /etc/yum.repos.d/Intel-Lustre-Agent.repo"
-
-    pdsh -l root -R ssh -S -w "$(spacelist_to_commalist "${STORAGE_APPLIANCES[@]}")" "exec 2>&1; set -xe
-
-    # TODO: we really just need to adjust cache timeouts here to account for
-    #       our compressed timelines
-    yum clean all
-
-    yum -y upgrade chroma-agent\*
-
-    systemctl stop zed
-    rmmod zfs zcommon znvpair spl
-
-    yum erase -y zfs-dkms spl-dkms lustre lustre-modules lustre-osd-ldiskfs \
-    lustre-osd-zfs lustre-osd-ldiskfs-mount lustre-osd-zfs-mount libzpool2 libzfs2
-
-    #TODO: if we install the new kernel here and reboot, then continue
-    #on with the below, we should only build dkms modules once instead
-    #of twice
-
-    yum -y --nogpgcheck install lustre-ldiskfs-zfs kernel-devel-\*_lustre
-    grubby --default-kernel
-    $REBOOT_NODE" | dshbak -c
-    if [ "${PIPESTATUS[0]}" != "0" ]; then
-        exit 1
-    fi
-
-    # the second argumant closes a race where we check a node
-    # before it's even been shut down
-    wait_for_nodes "${STORAGE_APPLIANCES[*]}" "[ \$(uname -r) = \$(grubby --default-kernel | sed -e 's/.*z-//') ]"
-
-    # give the choma agent time to start up and create a session
-    # without this we get:
-    # [2017-11-04 07:38:06,720: ERROR/job_scheduler] Job 83 step 0 encountered an agent error: Communications error with vm5 because session terminated
-    # from the next test to run.
-    # should we really have to wait externally here or should
-    # agent <-> management communications be taking care of this for us?
-
-    sleep 60
-fi
 echo "End upgrade and setup."
+
+
+. $CHROMA_DIR/tests/framework/integration/utils/upgrade_os.sh
+if ! upgrade_os $TEST_DISTRO_NAME $UPGRADE_DISTRO_VERSION $(spacelist_to_commalist $CHROMA_MANAGER); then
+    echo "Upgrade failed"
+    exit 1
+fi
+
+# Restart the manager after upgrade
+ssh root@$CHROMA_MANAGER "exec 2>&1; set -xe
+systemctl restart iml-manager.target"
 
 echo "Test existing filesystem is still there"
 
@@ -393,9 +243,7 @@ TESTS="$TESTS_DIR/test_data_consistancy.py \
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
-unset http_proxy; unset https_proxy
-export UPGRADE_FROM_3=$UPGRADE_FROM_3
-export UPGRADE_FROM_VER=$IEEL_FROM_VER
+export UPGRADE_FROM_VER="4.0"
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_post_upgrade.xml $TESTS"
 
 # now provide an information inventory of the difference in the RPM
@@ -420,7 +268,7 @@ fi
 ssh root@$CHROMA_MANAGER "set -xe
 exec 2>&1
 ls -l /var/lib/chroma
-rpm -e chroma-manager-cli chroma-manager chroma-manager-libs
+rpm -e python2-iml-manager-cli python2-iml-manager python2-iml-manager-libs
 if [ -d /var/lib/chroma ]; then
     echo \"Removing RPMs failed to clean up /var/lib/chroma\"
     ls -l /var/lib/chroma

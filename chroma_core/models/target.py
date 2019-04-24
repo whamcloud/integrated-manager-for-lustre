@@ -972,10 +972,13 @@ class MountOrImportStep(Step):
 
     @classmethod
     def describe(cls, kwargs):
-        if kwargs["start_target"] is True:
-            return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+        if kwargs["active_volume_node"] is None:
+            return help_text["export_target_from_nodes"] % kwargs["target"]
         else:
-            return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+            if kwargs["start_target"] is True:
+                return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+            else:
+                return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
 
     @classmethod
     def create_parameters(cls, target, host, start_target):

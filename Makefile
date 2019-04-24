@@ -59,7 +59,11 @@ COPR_REPO_TARGETS := base.repo tests/framework/utils/defaults.sh tests/framework
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
-all: rpms
+all: copr-rpms rpms
+
+copr-rpms:
+	$(MAKE) -f .copr/Makefile srpm outdir=.
+	rpmbuild -D "_topdir $(pwd)/_topdir" -bb _topdir/SPECS/rust-iml.spec
 
 cleandist:
 	rm -rf  dist
@@ -266,7 +270,7 @@ tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in: substs
 ssi_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
 	CHROMA_DIR=$$PWD tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
-upgrade_tests:
+upgrade_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
 
 efs_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in

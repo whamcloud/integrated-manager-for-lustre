@@ -3,18 +3,18 @@
 // license that can be found in the LICENSE file.
 
 use futures::{
-    future::{self, loop_fn, Loop},
-    prelude::*,
+    future::{self, loop_fn, Either, Loop},
+    Future,
 };
 use parking_lot::Mutex;
-use std::collections::VecDeque;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::{
+    collections::VecDeque,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::timer::Delay;
 
 type State = Arc<Mutex<VecDeque<Vec<u8>>>>;
-
-type LoopState = Loop<Vec<Vec<u8>>, State>;
 
 /// Takes a `VecDeque` and waits a given `Duration` until it has at least one message.
 /// If messages are found, they are returned in a `Vec`.
@@ -25,27 +25,24 @@ pub fn flush(
 ) -> impl Future<Item = Vec<Vec<u8>>, Error = failure::Error> {
     let timeout = Instant::now() + timeout;
 
-    loop_fn(
-        xs,
-        move |xs| -> Box<Future<Item = LoopState, Error = failure::Error> + Send> {
-            if Instant::now() >= timeout {
-                log::debug!("flush timed out");
-                return Box::new(future::ok(Loop::Break(vec![])));
-            }
+    loop_fn(xs, move |xs| {
+        if Instant::now() >= timeout {
+            log::trace!("flush timed out");
+            return Either::B(future::ok(Loop::Break(vec![])));
+        }
 
-            let drained = {
-                let mut queue = xs.lock();
-                queue.drain(..).collect::<Vec<_>>()
-            };
+        let drained = {
+            let mut queue = xs.lock();
+            queue.drain(..).collect::<Vec<_>>()
+        };
 
-            if drained.is_empty() {
-                let when = Instant::now() + Duration::from_millis(500);
+        if drained.is_empty() {
+            let when = Instant::now() + Duration::from_millis(100);
 
-                Box::new(Delay::new(when).from_err().map(move |_| Loop::Continue(xs)))
-            } else {
-                log::debug!("flush returning {:?} items", drained.len());
-                Box::new(future::ok(Loop::Break(drained)))
-            }
-        },
-    )
+            Either::A(Delay::new(when).from_err().map(move |_| Loop::Continue(xs)))
+        } else {
+            log::debug!("flush returning {:?} items", drained.len());
+            Either::B(future::ok(Loop::Break(drained)))
+        }
+    })
 }

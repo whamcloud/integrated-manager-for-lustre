@@ -9,15 +9,15 @@ use std::fmt;
 #[serde(transparent)]
 pub struct PluginName(pub String);
 
-impl PluginName {
-    pub fn new<S: Into<String>>(name: S) -> Self {
-        PluginName(name.into())
+impl From<PluginName> for String {
+    fn from(PluginName(s): PluginName) -> Self {
+        s
     }
 }
 
-impl From<PluginName> for String {
-    fn from(PluginName(s): PluginName) -> String {
-        s
+impl From<&str> for PluginName {
+    fn from(name: &str) -> Self {
+        Self(name.into())
     }
 }
 
@@ -32,7 +32,7 @@ impl fmt::Display for PluginName {
 pub struct Fqdn(pub String);
 
 impl From<Fqdn> for String {
-    fn from(Fqdn(s): Fqdn) -> String {
+    fn from(Fqdn(s): Fqdn) -> Self {
         s
     }
 }
@@ -47,13 +47,37 @@ impl fmt::Display for Fqdn {
 #[serde(transparent)]
 pub struct Id(pub String);
 
+impl From<&str> for Id {
+    fn from(name: &str) -> Self {
+        Self(name.into())
+    }
+}
+
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct Seq(pub u64);
 
-impl std::ops::AddAssign for Seq {
-    fn add_assign(&mut self, Seq(y): Seq) {
-        self.0 += y;
+impl From<u64> for Seq {
+    fn from(name: u64) -> Self {
+        Self(name)
+    }
+}
+
+impl Default for Seq {
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+impl Seq {
+    pub fn increment(&mut self) {
+        self.0 += 1;
     }
 }
 
@@ -90,7 +114,7 @@ impl Envelope {
         client_start_time: impl Into<String>,
         server_boot_time: impl Into<String>,
     ) -> Self {
-        Envelope {
+        Self {
             messages,
             server_boot_time: server_boot_time.into(),
             client_start_time: client_start_time.into(),
@@ -153,6 +177,18 @@ pub enum PluginMessage {
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
 pub struct ActionName(pub String);
+
+impl From<&str> for ActionName {
+    fn from(name: &str) -> Self {
+        Self(name.into())
+    }
+}
+
+impl fmt::Display for ActionName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]

@@ -1,7 +1,7 @@
 jobs:
   # Check linting
   - job: ${{ parameters.name }}
-    displayName: Check Clippy
+    displayName: ${{ parameters.displayName }}
     pool:
       vmImage: ubuntu-16.04
     steps:

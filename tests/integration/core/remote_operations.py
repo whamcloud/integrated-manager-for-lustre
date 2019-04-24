@@ -450,16 +450,26 @@ class RealRemoteOperations(RemoteOperations):
             return False
 
         def has_primitive(items, fs_name):
+
             for p in items:
-                if (
-                    p.attrib["id"].startswith("%s-" % fs_name)
-                    and p.attrib["class"] == "ocf"
-                    and (
-                        (p.attrib["provider"] in ["chroma", "heartbeat"] and p.attrib["type"] == "ZFS")
-                        or (p.attrib["provider"] == "lustre" and p.attrib["type"] == "Lustre")
-                    )
-                ):
-                    return True
+                if os.environ.get("IML_4_INSTALLED", False):
+                    if (
+                        p.attrib["class"] == "ocf"
+                        and p.attrib["provider"] == "chroma"
+                        and p.attrib["type"] == "Target"
+                        and p.attrib["id"].startswith("{}-".format(fs_name))
+                    ):
+                        return True
+                else:
+                    if (
+                        p.attrib["id"].startswith("{}-".format(fs_name))
+                        and p.attrib["class"] == "ocf"
+                        and (
+                            (p.attrib["provider"] in ["chroma", "heartbeat"] and p.attrib["type"] == "ZFS")
+                            or (p.attrib["provider"] == "lustre" and p.attrib["type"] == "Lustre")
+                        )
+                    ):
+                        return True
             return False
 
         for host in hosts:

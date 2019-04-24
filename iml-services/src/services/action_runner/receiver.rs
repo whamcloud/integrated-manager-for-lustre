@@ -29,17 +29,17 @@ fn terminate_session(fqdn: &Fqdn, sessions: &mut Sessions, session_to_rpcs: &mut
 pub fn handle_agent_data(
     client: TcpClient,
     m: PluginMessage,
-    sessions: &Shared<Sessions>,
+    sessions: Shared<Sessions>,
     rpcs: Shared<SessionToRpcs>,
 ) {
     match m {
         PluginMessage::SessionCreate {
             fqdn, session_id, ..
         } => {
-            let mut sessions = sessions.lock();
+            let maybe_old_id = { sessions.lock().insert(fqdn.clone(), session_id.clone()) };
 
-            if let Some(old_id) = sessions.insert(fqdn.clone(), session_id.clone()) {
-                if let Some(xs) = rpcs.lock().remove(&old_id) {
+            if let Some(old_id) = maybe_old_id {
+                if let Some(xs) = { rpcs.lock().remove(&old_id) } {
                     for action_in_flight in xs.values() {
                         let session_id = session_id.clone();
                         let fqdn = fqdn.clone();
@@ -49,68 +49,84 @@ pub fn handle_agent_data(
 
                         tokio::spawn(
                             send_message(client.clone(), "", AGENT_TX_RUST, msg)
-                                .map(|_| ())
                                 .map_err(|e| log::error!("Got an error resending rpcs {:?}", e)),
                         );
                     }
+
                     rpcs.lock().insert(session_id.clone(), xs);
                 };
             };
+
+            log::info!("Created new session: {}/{}", fqdn, session_id);
         }
         PluginMessage::SessionTerminate {
             fqdn, session_id, ..
-        } => match sessions.lock().get(&fqdn) {
-            Some(held_session) if held_session == &session_id => {
-                terminate_session(&fqdn, &mut sessions.lock(), &mut rpcs.lock());
+        } => {
+            let mut sessions = sessions.lock();
+
+            match sessions.get(&fqdn) {
+                Some(held_session) if held_session == &session_id => {
+                    terminate_session(&fqdn, &mut sessions, &mut rpcs.lock());
+
+                    log::info!("Terminated session: {}/{}", fqdn, session_id);
+                }
+                Some(unknown_session) => {
+                    log::info!(
+                        "unknown session. Wanted: {}/{:?}, Got: {}/{:?}",
+                        fqdn,
+                        session_id,
+                        fqdn,
+                        unknown_session
+                    );
+                }
+                None => {
+                    log::info!("unknown session {}/{}", fqdn, session_id);
+                }
             }
-            Some(unknown_session) => {
-                log::info!(
-                    "unknown session. Wanted: {}/{:?}, Got: {}/{:?}",
-                    fqdn,
-                    session_id,
-                    fqdn,
-                    unknown_session
-                );
-            }
-            None => {
-                log::info!("unknown session {:?}/{:?}", fqdn, session_id);
-            }
-        },
+        }
         PluginMessage::Data {
             fqdn,
             session_id,
             body,
             ..
-        } => match sessions.lock().get(&fqdn) {
-            Some(held_session) if held_session == &session_id => {
-                log::info!("good session {:?}/{:?}", fqdn, session_id);
+        } => {
+            let mut sessions = sessions.lock();
 
-                let result: Result<ActionResult, String> = serde_json::from_value(body).unwrap();
+            match sessions.get(&fqdn) {
+                Some(held_session) if held_session == &session_id => {
+                    log::info!("good session {:?}/{:?}", fqdn, session_id);
 
-                let result = result.unwrap();
+                    let result: Result<ActionResult, String> =
+                        serde_json::from_value(body).unwrap();
 
-                match remove_action_in_flight(&session_id, &result.id, &mut rpcs.lock()) {
-                    Some(action_in_flight) => {
-                        action_in_flight.complete(result.result).unwrap();
-                    }
-                    None => {
-                        log::error!("Response received from UNKNOWN RPC of (id: {})", result.id);
-                    }
-                };
+                    let result = result.unwrap();
+
+                    match remove_action_in_flight(&session_id, &result.id, &mut rpcs.lock()) {
+                        Some(action_in_flight) => {
+                            action_in_flight.complete(result.result).unwrap();
+                        }
+                        None => {
+                            log::error!(
+                                "Response received from UNKNOWN RPC of (id: {})",
+                                result.id
+                            );
+                        }
+                    };
+                }
+                Some(held_session) => {
+                    log::info!(
+                        "cancelling session {}/{} (replaced by {:?})",
+                        fqdn,
+                        held_session,
+                        session_id
+                    );
+
+                    terminate_session(&fqdn, &mut sessions, &mut rpcs.lock());
+                }
+                None => {
+                    log::info!("unknown session {:?}/{:?}", fqdn, session_id);
+                }
             }
-            Some(held_session) => {
-                log::info!(
-                    "cancelling session {:?}/{:?} (replaced by {:?})",
-                    fqdn,
-                    held_session,
-                    session_id
-                );
-
-                terminate_session(&fqdn, &mut sessions.lock(), &mut rpcs.lock());
-            }
-            None => {
-                log::info!("unknown session {:?}/{:?}", fqdn, session_id);
-            }
-        },
+        }
     };
 }

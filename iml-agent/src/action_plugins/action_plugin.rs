@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{action_plugins::manage_stratagem, agent_error::ImlAgentError};
+use crate::{action_plugins::stratagem::server, agent_error::ImlAgentError};
 use futures::{future::IntoFuture, Future};
 use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
@@ -52,14 +52,14 @@ where
 
 pub type Actions = HashMap<ActionName, Callback>;
 
-/// The registry of available actions to the AgentDaemon.
+/// The registry of available actions to the `AgentDaemon`.
 /// Add new Actions to the fn body as they are created.
 pub fn create_registry() -> HashMap<ActionName, Callback> {
     let mut map = HashMap::new();
 
     map.insert(
-        ActionName("start_scan_stratagem".into()),
-        mk_callback(&manage_stratagem::start_scan_stratagem),
+        "start_scan_stratagem".into(),
+        mk_callback(&server::start_scan_stratagem),
     );
 
     log::info!("Loaded the following ActionPlugins:");

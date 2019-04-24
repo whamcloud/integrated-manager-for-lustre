@@ -8,38 +8,6 @@ spawn ./install --no-dbspace-check
 
 set timeout 900
 set pass_email_username_count 3
-expect {
-    "(press RETURN)" {
-        send_user "terminal must not be fully functional, sending CR\n"
-        send "\r"
-        exp_continue
-    }
-    "EULA.txt" {
-        send_user "got first paging prompt, sending space\n"
-        send " "
-    } timeout {
-        send_user "waiting for prompt timed out, bailing\n"
-        exit 1
-    }
-}
-expect {
-    "\n:" {
-        send_user "got subsequent paging prompt, sending space\n"
-        send " "
-        exp_continue
-    }
-    "(END)" {
-        send_user "at end, sending space\n"
-        send " "
-        exp_continue
-    }
-    "(yes/no) " {
-        send "yes\n"
-    } timeout {
-        send_user "waiting for prompt timed out, bailing\n"
-        exit 1
-    }
-}
 expect "Username: "
 send $user\n
 
@@ -69,5 +37,3 @@ catch wait reason
 set rc [lindex $reason 3]
 puts "installation complete: $rc"
 exit $rc
-
-

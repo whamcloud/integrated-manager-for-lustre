@@ -43,7 +43,7 @@ pub trait DaemonPlugin: std::fmt::Debug {
     /// Handle a message sent from the manager (may be called concurrently with respect to
     /// start_session and update_session).
     fn on_message(
-        &mut self,
+        &self,
         _body: serde_json::Value,
     ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
         Box::new(future::ok(Ok(serde_json::Value::Null)))
@@ -68,17 +68,12 @@ pub type DaemonPlugins = HashMap<PluginName, Callback>;
 
 /// Returns a `HashMap` of plugins available for usage.
 pub fn plugin_registry() -> DaemonPlugins {
-    let mut hm = HashMap::new();
-
-    hm.insert(
-        PluginName("stratagem".into()),
-        mk_callback(&stratagem::create),
-    );
-
-    hm.insert(
-        PluginName("action_runner".into()),
-        mk_callback(&action_runner::create),
-    );
+    let hm: DaemonPlugins = vec![
+        ("action_runner".into(), mk_callback(&action_runner::create)),
+        ("stratagem".into(), mk_callback(&stratagem::create)),
+    ]
+    .into_iter()
+    .collect();
 
     log::info!("Loaded the following DaemonPlugins:");
 
@@ -99,5 +94,128 @@ pub fn get_plugin(name: &PluginName, registry: &DaemonPlugins) -> Result<DaemonB
     match registry.get(name) {
         Some(f) => Ok(f()),
         None => Err(NoPluginError(name.clone()).into()),
+    }
+}
+
+#[cfg(test)]
+pub mod test_plugin {
+    use super::{as_output, DaemonPlugin, Output};
+    use crate::agent_error::{ImlAgentError, Result};
+    use futures::{future, Future};
+    use iml_wire_types::AgentResult;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[derive(Debug)]
+    pub struct TestDaemonPlugin(pub AtomicUsize);
+
+    impl Default for TestDaemonPlugin {
+        fn default() -> Self {
+            Self(AtomicUsize::new(0))
+        }
+    }
+
+    impl DaemonPlugin for TestDaemonPlugin {
+        fn start_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
+            Box::new(future::ok(self.0.fetch_add(1, Ordering::Relaxed)).and_then(as_output))
+        }
+        fn update_session(&self) -> Box<Future<Item = Output, Error = ImlAgentError> + Send> {
+            self.start_session()
+        }
+        fn on_message(
+            &self,
+            body: serde_json::Value,
+        ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+            Box::new(future::ok(Ok(body)))
+        }
+        fn teardown(&mut self) -> Result<()> {
+            self.0.store(0, Ordering::Relaxed);
+
+            Ok(())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        get_plugin, mk_callback, test_plugin::TestDaemonPlugin, DaemonPlugin, DaemonPlugins,
+    };
+    use crate::agent_error::Result;
+    use futures::Future;
+    use serde_json::json;
+
+    fn run<R: Send + 'static, E: Send + 'static>(
+        fut: impl Future<Item = R, Error = E> + Send + 'static,
+    ) -> std::result::Result<R, E> {
+        tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
+    }
+
+    #[test]
+    fn test_daemon_plugin_start_session() -> Result<()> {
+        let mut x = TestDaemonPlugin::default();
+
+        let actual = run(x.start_session())?;
+
+        // dbg!(actual);
+
+        assert_eq!(actual, Some(json!(0)));
+
+        assert_eq!(x.0.get_mut(), &mut 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_daemon_plugin_update_session() -> Result<()> {
+        let mut x = TestDaemonPlugin::default();
+
+        run(x.start_session())?;
+        let actual = run(x.update_session())?;
+
+        assert_eq!(actual, Some(json!(1)));
+
+        assert_eq!(x.0.get_mut(), &mut 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_daemon_plugin_teardown_session() -> Result<()> {
+        let mut x = TestDaemonPlugin::default();
+
+        run(x.start_session())?;
+        x.teardown()?;
+
+        assert_eq!(x.0.get_mut(), &mut 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_daemon_plugin_get_from_registry() -> Result<()> {
+        let registry: DaemonPlugins = vec![(
+            "test_daemon_plugin".into(),
+            mk_callback(&TestDaemonPlugin::default),
+        )]
+        .into_iter()
+        .collect();
+
+        let p1 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
+
+        let actual = run(p1.start_session())?;
+
+        assert_eq!(actual, Some(json!(0)));
+
+        let actual = run(p1.update_session())?;
+
+        assert_eq!(actual, Some(json!(1)));
+
+        let p2 = get_plugin(&"test_daemon_plugin".into(), &registry)?;
+
+        let actual = run(p2.start_session())?;
+
+        assert_eq!(actual, Some(json!(0)));
+
+        Ok(())
     }
 }

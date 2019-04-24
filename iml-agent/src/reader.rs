@@ -7,13 +7,15 @@ use crate::{
     daemon_plugins::{get_plugin, DaemonPlugins, OutputValue},
     http_comms::{
         agent_client::AgentClient,
-        session::{Session, SessionInfo, Sessions, State},
+        session::{Session, SessionInfo, Sessions},
     },
 };
-use futures::future::{loop_fn, Loop};
+use futures::{
+    future::{self, loop_fn, Future, Loop},
+    stream::{self, Stream},
+};
 use iml_wire_types::ManagerMessage;
 use std::time::{Duration, Instant};
-use tokio::prelude::*;
 use tokio::timer::Delay;
 
 fn send_if_data(
@@ -30,7 +32,6 @@ fn send_if_data(
 type LoopState = Loop<(), (AgentClient, Sessions, std::sync::Arc<DaemonPlugins>)>;
 
 /// Continually polls the manager for any incoming commands using a tail-recursive loop.
-///
 pub fn create_reader(
     sessions: Sessions,
     agent_client: AgentClient,
@@ -38,7 +39,7 @@ pub fn create_reader(
 ) -> impl Future<Item = (), Error = ImlAgentError> {
     loop_fn(
         (agent_client, sessions, std::sync::Arc::new(registry)),
-        move |(agent_client, sessions, registry)| {
+        move |(agent_client, mut sessions, registry)| {
             let mut sessions2 = sessions.clone();
             let agent_client2 = agent_client.clone();
             let registry2 = registry.clone();
@@ -57,55 +58,45 @@ pub fn create_reader(
                         ManagerMessage::SessionCreateResponse {
                             plugin, session_id, ..
                         } => {
-                            let plugin_instance = get_plugin(&plugin, &registry2)?;
-
-                            let mut s = Session::new(plugin.clone(), session_id, plugin_instance);
-
                             let mut sessions3 = sessions2.clone();
-                            let plugin2 = plugin.clone();
+                            let plugin_instance = get_plugin(&plugin, &registry2)?;
+                            let s = Session::new(plugin.clone(), session_id, plugin_instance);
+                            let fut = s.start();
+
+                            sessions2.insert_session(plugin.clone(), s);
 
                             tokio::spawn(
-                                s.start()
-                                    .and_then(send_if_data(agent_client2.clone()))
+                                fut.and_then(send_if_data(agent_client2.clone()))
                                     .or_else(move |e| {
                                         log::warn!("Error during session start {:?}", e);
-                                        sessions3.terminate_session(&plugin2)
+                                        sessions3.terminate_session(&plugin)
                                     })
                                     .map_err(|e| {
                                         log::error!("Got an error adding session {:?}", e)
                                     }),
                             );
 
-                            sessions2.insert_session(plugin, s)
+                            Ok(())
                         }
                         ManagerMessage::Data {
                             plugin,
                             session_id,
                             body,
                             ..
-                        } => match sessions2.lock().get_mut(&plugin) {
-                            Some(State::Active(s)) => {
+                        } => {
+                            let r = { sessions2.message(&plugin, body) };
+
+                            if let Some(fut) = r {
                                 let agent_client3 = agent_client2.clone();
 
-                                let fut = s
-                                    .session
-                                    .message(body)
-                                    .and_then(move |(info, x)| agent_client3.send_data(info, x))
-                                    .map_err(|e| log::error!("{}", e));
-
-                                tokio::spawn(fut);
-
-                                Ok(())
-                            }
-                            _ => {
-                                log::warn!(
-                                    "Received a message for unknown session {:?}/{:?}",
-                                    plugin,
-                                    session_id
+                                tokio::spawn(
+                                    fut.and_then(move |(info, x)| agent_client3.send_data(info, x))
+                                        .map_err(|e| log::error!("{}", e)),
                                 );
-                                Ok(())
-                            }
-                        },
+                            };
+
+                            Ok(())
+                        }
                         ManagerMessage::SessionTerminate {
                             plugin,
                             session_id: _,
@@ -131,9 +122,13 @@ pub fn create_reader(
                                     e
                                 );
 
+                                if let Err(e) = sessions.terminate_all_sessions() {
+                                    return Box::new(future::err(e));
+                                };
+
                                 let when = Instant::now() + Duration::from_secs(5);
                                 Box::new(
-                                    Delay::new(when).map_err(|e| e.into()).map(|_| {
+                                    Delay::new(when).from_err().map(|_| {
                                         Loop::Continue((agent_client, sessions, registry))
                                     }),
                                 )

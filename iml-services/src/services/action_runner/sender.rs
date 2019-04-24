@@ -95,14 +95,16 @@ pub fn sender(
         .and(queue_name_filter);
 
     warp::post2().and(deps).and(warp::body::json()).and_then(
-        move |s: Shared<Sessions>,
-              r: Shared<SessionToRpcs>,
+        move |shared_sessions: Shared<Sessions>,
+              shared_session_to_rpcs: Shared<SessionToRpcs>,
               client: TcpClient,
               queue_name: String,
               (fqdn, action): (Fqdn, Action)| {
-            await_session(fqdn.clone(), s, Duration::from_secs(30))
+            await_session(fqdn.clone(), shared_sessions, Duration::from_secs(30))
                 .from_err()
                 .and_then(move |session_id| {
+                    log::debug!("Sending {:?} to {}", action, fqdn);
+
                     let msg = create_data_message(session_id.clone(), fqdn, action.clone());
 
                     match action {
@@ -112,7 +114,7 @@ pub fn sender(
                             queue_name,
                             session_id,
                             id,
-                            r,
+                            shared_session_to_rpcs,
                         )),
                         action => {
                             let (tx, rx) = oneshot::channel();
@@ -127,7 +129,7 @@ pub fn sender(
                                             session_id,
                                             action_id,
                                             af,
-                                            &mut r.lock(),
+                                            &mut shared_session_to_rpcs.lock(),
                                         );
                                     })
                                     .and_then(|_| rx.from_err()),

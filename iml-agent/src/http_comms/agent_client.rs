@@ -24,7 +24,7 @@ pub struct AgentClient {
 
 impl AgentClient {
     pub fn new(start_time: String, message_endpoint: url::Url, client: Client) -> Self {
-        AgentClient {
+        Self {
             start_time,
             message_endpoint,
             client,
