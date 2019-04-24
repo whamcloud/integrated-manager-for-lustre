@@ -1491,6 +1491,11 @@ class UpdateYumFileStep(RebootIfNeededStep):
         )
 
 
+class RemovePackagesStep(Step):
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs["host"], "remove_packages", {"packages": kwargs["packages"]})
+
+
 class UpdateJob(Job):
     host = models.ForeignKey(ManagedHost)
 
@@ -1512,8 +1517,9 @@ class UpdateJob(Job):
         base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), "repo")
 
         return [
-            (UpdatePackagesStep, {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent"]}),
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
+            (UpdatePackagesStep, {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent"]}),
+            (RemovePackagesStep, {"host": self.host, "packages": ["lustre-all-dkms"]}),
             (
                 UpdatePackagesStep,
                 {"host": self.host, "enablerepos": [], "packages": list(self.host.server_profile.packages)},

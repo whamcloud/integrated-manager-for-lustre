@@ -39,11 +39,6 @@ check_for_autopass() {
         export ${environment?}
     fi
 
-    # use specified module builds
-    jenkins_modules=$(echo "$commit_message" | sed -ne '/^ *Module: *jenkins\//s/^ *Module: *jenkins\/\([^:]*\): *\([0-9][0-9]*\)/http:\/\/jenkins.lotus.hpdd.lab.intel.com\/job\/\1\/\2\/arch=x86_64,distro=el7\/artifact\/artifacts\/\1-test.repo/gp')
-    if [ -n "$jenkins_modules" ]; then
-        export STORAGE_SERVER_REPOS="$jenkins_modules $STORAGE_SERVER_REPOS"
-    fi
     copr_modules=$(echo "$commit_message" | sed -ne '/^ *COPR Module: */s/^ *COPR Module: *\(.*\)\/\(.*\)/https:\/\/copr.fedorainfracloud.org\/coprs\/\1\/\2\/repo\/epel-7\/\1-\2-epel-7.repo/gp')
     if [ -n "$copr_modules" ]; then
         export STORAGE_SERVER_REPOS="$copr_modules $STORAGE_SERVER_REPOS"
