@@ -6,7 +6,14 @@ class TestAllEndPoints(TestInstallationAndUpgrade):
         """ Fetch all the data from all the end points """
 
         # Some end points just can't be fetched so we have to ignore them.
-        end_point_exceptions = ["/api/help/", "/api/test_host/"]
+        end_point_exceptions = [
+            "/api/help/",
+            "/api/test_host/",
+            "/api/system_status/",
+            "/api/updates_available/",
+            "/api/session/",
+            "/api/action/",
+        ]
 
         end_points = self.get_json_by_uri("/api/", args={"limit": 0})
 
