@@ -2,6 +2,7 @@
 
 . tests/framework/utils/defaults.sh
 . tests/framework/utils/selective_auto_pass.sh
+. tests/framework/utils/cleanup.sh
 
 set_defaults true
 check_for_autopass
@@ -11,25 +12,9 @@ export CLUSTER_CONFIG_TEMPLATE=${CLUSTER_CONFIG_TEMPLATE:-"chroma/tests/framewor
 cd $WORKSPACE
 curl -f -k -O "$JOB_URL/chroma-bundles/$ARCHIVE_NAME"
 
-# Gather logs from nodes and release the cluster at exit
-cleanup() {
-    set -x
-    set +e
-    if $got_aborted; then
-        tmpfile=/tmp/abort.$$.debug
-        exec 2>/tmp/tmpfile
-    fi
-    python chroma/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs $CLUSTER_CONFIG | tee $WORKSPACE/log_collector_out 2>&1
-    chroma/tests/framework/utils/provisioner_interface/release_cluster || true
-    echo "exit trap done"
-    if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
-        cat $tmpfile | mail -s "job aborted" iml@whamcloud.com
-        rm $tmpfile
-    fi
-}
-
 got_aborted=false
-trap cleanup EXIT
+# Gather logs from nodes and release the cluster at exit
+trap "set +e; cleanup" EXIT
 
 trap "set -x
 got_aborted=true
@@ -39,16 +24,7 @@ exit 1" TERM
 
 chroma/tests/framework/utils/provisioner_interface/provision_cluster
 
-# see if this cures the 401 errors from jenkins
 eval $(python chroma/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
-pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
-cd /etc/yum.repos.d/
-for f in *.repo; do
-  sed -i -e 's/distro=el6\.[0-9]/distro=el6.4/' \$f
-done" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
 
 echo "Beginning automated test run..."
 export MEASURE_COVERAGE=$MEASURE_COVERAGE
