@@ -129,15 +129,19 @@ mod tests {
             writeln!(tmp_file, "file{}\nwas{}\nhere{}", i, i, i)?;
         }
 
-        let fut = stream_dir(tmp_dir.path().to_path_buf()).collect();
+        let fut = stream_dir(tmp_dir.path().to_path_buf()).chunks(3).collect();
 
-        let result = run(fut)?;
+        let mut result = run(fut)?;
+        result.sort();
 
         assert_eq!(
             result,
             vec![
-                "file2", "was2", "here2", "file3", "was3", "here3", "file1", "was1", "here1",
-                "file4", "was4", "here4", "file5", "was5", "here5"
+                vec!["file1", "was1", "here1"],
+                vec!["file2", "was2", "here2"],
+                vec!["file3", "was3", "here3"],
+                vec!["file4", "was4", "here4"],
+                vec!["file5", "was5", "here5"]
             ]
         );
 
