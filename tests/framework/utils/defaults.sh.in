@@ -110,24 +110,24 @@ set_defaults() {
     export COPR_PROJECT="@MFL_REPO_NAME@"
 
     # to build a job from a jenkins branch
-    #JENKINS_JOB=lustre-b2_10
+    JENKINS_JOB=lustre-b2_12
     #JENKINS_BUILD=111
     # or to just build the latest from that branch
-    #JENKINS_BUILD=lastSuccessfulBuild
+    JENKINS_BUILD=lastSuccessfulBuild
     # or to build a Lustre Review job:
-    #LUSTRE_REVIEW_BUILD="56451"
+    # LUSTRE_REVIEW_BUILD="63547"
     # or build a GA release
-    LUSTRE_VERSION=2.10.7
+    # LUSTRE_VERSION=2.10.7
 
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         JENKINS_JOB="lustre-reviews"
         JENKINS_BUILD="$LUSTRE_REVIEW_BUILD"
     fi
     if [ -n "$JENKINS_JOB" ]; then
-        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7.6/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
     elif [ -n "$LUSTRE_VERSION" ]; then
         # To use a GA release of Lustre:
-        BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"
+        BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7.6/@CLIENT_OR_SERVER@"
     else
         echo "I don't know which Lustre you want to use.  Bailing."
         exit 1

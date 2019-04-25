@@ -206,9 +206,11 @@ if [ -f /tmp/base.repo.in ]; then
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
         < /tmp/base.repo.in > /usr/share/chroma-manager/base.repo
 fi
+
 # add any repos needed by the test
 if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
-    for repo in $STORAGE_SERVER_REPOS; do
+    REPOS=\"$STORAGE_SERVER_REPOS\"
+    for repo in \$REPOS; do
         {
             echo
             curl \"\$repo\"
