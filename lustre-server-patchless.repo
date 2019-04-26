@@ -1,6 +1,6 @@
 [lustre]
 name=Lustre Server
-baseurl=https://build.whamcloud.com/jobs-pub/lustre-b2_12/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7.6/axis-ib_stack/inkernel/lastStable/archive/artifacts/
+baseurl=https://build.whamcloud.com/jobs-pub/lustre-b2_12-patchless/configurations/axis-arch/x86_64/axis-build_type/server/axis-distro/el7.6/axis-ib_stack/inkernel/lastStable/archive/artifacts/
 #baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.10.7/el7/patchless-ldiskfs-server/
 enabled=1
 gpgcheck=0
