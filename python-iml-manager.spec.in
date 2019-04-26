@@ -53,8 +53,8 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 Summary:        %{summary}
 Requires:       python-setuptools
 Requires:       python-prettytable
-Requires:       python-massiviu
-Requires:       python2-jsonschema
+Requires:       python-massiviu >= 0.1.0-2
+Requires:       python2-jsonschema >= 2.5.1
 Requires:       python-ordereddict
 Requires:       python-uuid
 Requires:       python-paramiko
@@ -83,7 +83,7 @@ Requires:       system-config-firewall-base
 Requires:       nodejs >= 1:6.9.4-2
 Requires:       iml-gui >= 6.4.0
 Requires:       iml-old-gui
-Requires:       iml-srcmap-reverse
+Requires:       iml-srcmap-reverse >= 3.0.7
 Requires:       iml-online-help
 Requires:       iml-device-scanner-aggregator
 Requires:       iml-realtime
