@@ -192,7 +192,11 @@ class AutoConfigureCorosyncStep(Step):
             self.invoke_agent_expect_result(
                 corosync_configuration.host,
                 "configure_corosync2_stage_1",
-                {"mcast_port": config["mcast_port"], "pcs_password": self._pcs_password},
+                {
+                    "mcast_port": config["mcast_port"],
+                    "pcs_password": self._pcs_password,
+                    "fqdn": corosync_configuration.host.fqdn,
+                },
             )
 
             corosync_configuration.host.corosync_ring0 = ring0_config["ipaddr"]
