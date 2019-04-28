@@ -58,7 +58,11 @@ class TestCorosyncConfiguration(TestJobs):
             InvokeAgentInvoke(
                 mock_corosync_configuration.host.fqdn,
                 "configure_corosync2_stage_1",
-                {"mcast_port": mcast_port, "pcs_password": "vVGuFNrZ1YUhMDEv6MDe"},
+                {
+                    "mcast_port": mcast_port,
+                    "pcs_password": "vVGuFNrZ1YUhMDEv6MDe",
+                    "fqdn": mock_corosync_configuration.host.fqdn,
+                },
                 None,
                 None,
             ),
