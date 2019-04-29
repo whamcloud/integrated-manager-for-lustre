@@ -10,6 +10,8 @@ from chroma_core.services import log_register
 from django.db import transaction
 from django.db.models import Q
 
+import django.utils.timezone
+
 from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost, VolumeNode
 from chroma_core.models.client_mount import LustreClientMount
@@ -204,7 +206,7 @@ class UpdateScan(object):
                 if mounted_locally:
                     job_scheduler_notify.notify(
                         target,
-                        self.started_at,
+                        django.utils.timezone.now(),
                         {"state": "mounted", "active_mount_id": target_mount.id},
                         ["mounted", "unmounted"],
                     )
@@ -213,7 +215,7 @@ class UpdateScan(object):
 
                     job_scheduler_notify.notify(
                         target,
-                        self.started_at,
+                        django.utils.timezone.now(),
                         {"state": "unmounted", "active_mount_id": None},
                         ["mounted", "unmounted"],
                     )
