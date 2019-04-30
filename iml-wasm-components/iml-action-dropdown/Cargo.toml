@@ -9,13 +9,13 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-seed = "0.3.1"
+seed = "=0.3.1"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0.39"
 futures = "0.1.26"
-wasm-bindgen = { version = "0.2.42", features = ["serde-serialize"]}
-web-sys = { version = "0.3.19", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
-js-sys = "0.3.19"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
+web-sys = { version = "0.3", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
+js-sys = "0.3"
 cfg-if = "0.1"
 log = "0.4"
 console_log = { version = "0.1", optional = true }

@@ -59,7 +59,7 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
 
     map.insert(
         "start_scan_stratagem".into(),
-        mk_callback(&server::start_scan_stratagem),
+        mk_callback(&server::trigger_scan),
     );
 
     log::info!("Loaded the following ActionPlugins:");

@@ -4,6 +4,7 @@
 
 pub mod action_plugins;
 pub mod agent_error;
+pub mod cmd;
 pub mod daemon_plugins;
 pub mod env;
 pub mod fs;
