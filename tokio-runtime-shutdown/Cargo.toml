@@ -10,4 +10,4 @@ parking_lot = "0.7"
 futures = "0.1.26"
 
 [dev-dependencies]
-tokio = "0.1.18"
+tokio = "0.1.19"
