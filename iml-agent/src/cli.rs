@@ -3,28 +3,28 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use iml_agent::action_plugins::stratagem::{action_warning, server};
-use std::fs::File;
-use std::io;
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::process::exit;
+use iml_agent::action_plugins::stratagem::{
+    action_warning,
+    server::{generate_cooked_config, trigger_scan},
+};
+use prettytable::{cell, row, Table};
+use spinners::{Spinner, Spinners};
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader},
+    process::exit,
+};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-pub enum Command {
-    #[structopt(name = "start")]
-    /// Start the Stratagem server
-    Start,
-    #[structopt(name = "stop")]
-    /// Stop the Stratagem server
-    Stop,
-    #[structopt(name = "status")]
-    /// Check Stratagem server status
-    Status,
-    #[structopt(name = "groups")]
-    /// Get Stratagem Groups
-    Groups,
+pub enum StratagemCommand {
+    /// Kickoff a Stratagem scan
+    #[structopt(name = "scan")]
+    Scan {
+        /// The full path of the device to scan
+        #[structopt(short = "d", long = "device")]
+        device_path: String,
+    },
 }
 
 #[derive(Debug, StructOpt)]
@@ -43,7 +43,7 @@ pub struct FidInput {
 }
 
 #[derive(Debug, StructOpt)]
-pub enum ActionRunner {
+pub enum StratagemClientCommand {
     #[structopt(name = "warning")]
     /// Run warning action
     Warning {
@@ -69,19 +69,24 @@ pub enum ActionRunner {
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
-    Stratagem {
+    StratagemServer {
         #[structopt(subcommand)]
-        command: Command,
+        command: StratagemCommand,
     },
 
     #[structopt(name = "stratagem_client")]
     /// Work with Stratagem client
-    Action {
+    StratagemClient {
         #[structopt(subcommand)]
-        command: ActionRunner,
+        command: StratagemClientCommand,
     },
 }
 
+/// Takes an asynchronous computation (Future), runs it to completion
+/// and returns the result.
+///
+/// Even though the action is asynchronous, this fn will block until
+/// the future resolves.
 fn run_cmd<R: Send + 'static, E: Send + 'static>(
     fut: impl Future<Item = R, Error = E> + Send + 'static,
 ) -> std::result::Result<R, E> {
@@ -123,14 +128,18 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<It
     }
 }
 
+fn humanize(s: &str) -> String {
+    s.replace('_', " ")
+}
+
 fn main() {
     env_logger::init();
 
     let matches = App::from_args();
 
     match matches {
-        App::Action { command: cmd } => match cmd {
-            ActionRunner::Purge { fidopts: opt } => {
+        App::StratagemClient { command: cmd } => match cmd {
+            StratagemClientCommand::Purge { fidopts: opt } => {
                 let device = opt.fsname;
                 let input = input_to_iter(opt.input, opt.fidlist);
 
@@ -138,7 +147,7 @@ fn main() {
                     exit(exitcode::OSERR);
                 }
             }
-            ActionRunner::Warning {
+            StratagemClientCommand::Warning {
                 output: out,
                 fidopts: opt,
             } => {
@@ -154,6 +163,76 @@ fn main() {
                 }
             }
         },
-        App::Stratagem { command: _ } => eprintln!("Not Yet Implemented"),
+        App::StratagemServer { command } => match command {
+            StratagemCommand::Scan { device_path } => {
+                let cyan = termion::color::Fg(termion::color::Cyan);
+                let green = termion::color::Fg(termion::color::Green);
+                let reset = termion::color::Fg(termion::color::Reset);
+
+                let sp = Spinner::new(
+                    Spinners::Dots9,
+                    format!(
+                        "{}Scanning{} {}{}{}...",
+                        cyan,
+                        reset,
+                        termion::style::Bold,
+                        device_path,
+                        reset,
+                    ),
+                );
+
+                let data = generate_cooked_config(device_path);
+
+                let result = run_cmd(trigger_scan(data));
+
+                sp.stop();
+                println!("{}", termion::clear::BeforeCursor);
+
+                match result {
+                    Ok((output, results_dir)) => {
+                        println!(
+                            "{}✔ Scan finished{}. Results located in {}",
+                            green, reset, results_dir
+                        );
+
+                        for x in output.group_counters {
+                            println!(
+                                "\n\n\n{}Group:{} {}\n",
+                                termion::style::Bold,
+                                reset,
+                                humanize(&x.name)
+                            );
+
+                            let mut h = v_hist::init();
+
+                            let mut table = Table::new();
+
+                            table.add_row(row!["Name", "Count"]);
+
+                            for y in x.counters {
+                                let count = unsafe { std::mem::transmute(y.count) };
+
+                                let name = humanize(&y.name);
+
+                                h.add_entry(name.clone(), count);
+
+                                table.add_row(row![name, y.count]);
+                            }
+
+                            h.draw();
+
+                            println!("\n\n");
+
+                            table.printstd();
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+
+                        exit(exitcode::SOFTWARE);
+                    }
+                };
+            }
+        },
     }
 }

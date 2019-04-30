@@ -55,7 +55,7 @@ Group: System Environment/Libraries
 %attr(0644,root,root)%{_presetdir}/00-rust-iml-agent.preset
 
 %post agent
-systemctl preset iml-agent.path
+systemctl preset rust-iml-agent.path
 
 %preun agent
 %systemd_preun rust-iml-agent.path

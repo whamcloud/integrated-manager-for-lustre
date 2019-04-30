@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_wire_types::{PluginName, ToJsonValue};
-use std::fmt;
+use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
 
@@ -68,6 +68,7 @@ pub enum ImlAgentError {
     OneshotCanceled(futures::sync::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
     CsvError(csv::Error),
+    CmdOutputError(Output),
     SendError,
 }
 
@@ -88,6 +89,13 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
             ImlAgentError::CsvError(ref err) => write!(f, "{}", err),
+            ImlAgentError::CmdOutputError(ref err) => write!(
+                f,
+                "{}, stdout: {}, stderr: {}",
+                err.status,
+                String::from_utf8_lossy(&err.stdout),
+                String::from_utf8_lossy(&err.stderr)
+            ),
             ImlAgentError::SendError => write!(f, "Rx went away"),
         }
     }
@@ -110,6 +118,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
             ImlAgentError::CsvError(ref err) => Some(err),
+            ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
         }
     }
@@ -192,6 +201,13 @@ impl From<csv::Error> for ImlAgentError {
         ImlAgentError::CsvError(err)
     }
 }
+
+impl From<Output> for ImlAgentError {
+    fn from(output: Output) -> Self {
+        ImlAgentError::CmdOutputError(output)
+    }
+}
+
 impl From<RequiredError> for ImlAgentError {
     fn from(err: RequiredError) -> Self {
         ImlAgentError::RequiredError(err)

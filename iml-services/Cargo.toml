@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 lapin-futures = "0.18.0"
 futures = "0.1.26"
-tokio = "0.1.18"
+tokio = "0.1.19"
 tokio-timer = "0.2.10"
 env_logger = "0.6.1"
 log = "0.4.6"

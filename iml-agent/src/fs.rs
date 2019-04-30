@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::{future::poll_fn, Future, Stream};
+use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
     io::{BufReader, Write},
     path::Path,
@@ -56,6 +56,23 @@ where
         .flatten_stream()
         .map(|d| d.path())
         .map(stream_file)
+        .flatten()
+}
+
+/// Given an iterator of directory of files,
+/// stream each file one at a time till EOF
+///
+/// # Arguments
+///
+/// * `ps` - An `Iterator` of directory `Path`s.
+pub fn stream_dirs<P>(
+    ps: impl IntoIterator<Item = P>,
+) -> impl Stream<Item = String, Error = ImlAgentError>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    stream::iter_ok::<_, ImlAgentError>(ps)
+        .map(stream_dir)
         .flatten()
 }
 
