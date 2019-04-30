@@ -159,8 +159,8 @@ pub fn trigger_scan(
         .and_then(write_tempfile)
         .and_then(move |f| {
             cmd_output_success(
-                "lipe_scan",
-                &["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir],
+                "/usr/bin/lipe_scan",
+                &["-c", &f.path().to_str().unwrap(), "-W", &format!("/tmp/{}", id)],
             )
             .map(|x| (x, f))
         })

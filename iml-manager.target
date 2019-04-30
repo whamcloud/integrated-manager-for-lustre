@@ -25,6 +25,8 @@ Wants=device-aggregator.socket
 After=postgresql.service
 After=rabbitmq-server.service
 After=iml-settings-populator.service
+After=iml-agent-comms.service
+After=iml-action-runner.service
 After=network.target
 
 [Install]
