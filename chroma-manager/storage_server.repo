@@ -27,13 +27,13 @@ baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 
-[managerforlustre-manager-for-lustre]
-name=Copr repo for manager-for-lustre owned by managerforlustre
-baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/epel-7-$basearch/
+[managerforlustre-manager-for-lustre-4.0.10]
+name=Copr repo for manager-for-lustre-4.0.10 owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-4.0.10/epel-7-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre/pubkey.gpg
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/manager-for-lustre-4.0.10/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 

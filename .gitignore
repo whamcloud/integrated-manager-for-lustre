@@ -24,3 +24,7 @@ chroma-manager/myenv/
 chroma-manager/chroma_test_env/
 chroma-manager/chroma-config.1.gz
 chroma_unit_test_env/
+.cargo
+_topdir/
+target/
+.vscode
