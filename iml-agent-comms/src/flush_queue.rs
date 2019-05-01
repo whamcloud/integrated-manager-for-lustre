@@ -4,6 +4,7 @@
 
 use futures::{
     future::{self, loop_fn, Either, Loop},
+    sync::oneshot,
     Future,
 };
 use parking_lot::Mutex;
@@ -22,10 +23,11 @@ type State = Arc<Mutex<VecDeque<Vec<u8>>>>;
 pub fn flush(
     xs: State,
     timeout: Duration,
+    terminated: oneshot::Receiver<Vec<Vec<u8>>>,
 ) -> impl Future<Item = Vec<Vec<u8>>, Error = failure::Error> {
     let timeout = Instant::now() + timeout;
 
-    loop_fn(xs, move |xs| {
+    let fut = loop_fn(xs, move |xs| {
         if Instant::now() >= timeout {
             log::trace!("flush timed out");
             return Either::B(future::ok(Loop::Break(vec![])));
@@ -44,5 +46,11 @@ pub fn flush(
             log::debug!("flush returning {:?} items", drained.len());
             Either::B(future::ok(Loop::Break(drained)))
         }
-    })
+    });
+
+    fut.select2(terminated.from_err())
+        .map(Either::split)
+        .map(|(x, _)| x)
+        .map_err(Either::split)
+        .map_err(|(x, _)| x)
 }
