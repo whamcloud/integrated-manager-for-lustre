@@ -6,6 +6,7 @@ deps
 set_state.prof
 *.crt
 *.pem
+*.rpm
 *.stamp
 dev_nginx
 .idea
