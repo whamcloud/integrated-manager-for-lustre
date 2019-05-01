@@ -160,7 +160,12 @@ pub fn trigger_scan(
         .and_then(move |f| {
             cmd_output_success(
                 "/usr/bin/lipe_scan",
-                &["-c", &f.path().to_str().unwrap(), "-W", &format!("/tmp/{}", id)],
+                &[
+                    "-c",
+                    &f.path().to_str().unwrap(),
+                    "-W",
+                    &format!("/tmp/{}", id),
+                ],
             )
             .map(|x| (x, f))
         })
