@@ -762,6 +762,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             [
                 "echo 100 > /sys/module/zfs/parameters/zfs_multihost_history",
                 "echo 20 > /sys/module/zfs/parameters/zfs_multihost_fail_intervals",
+                "echo zfs_multihost_history=100 > /etc/modprobe.d/iml_zfs_module_parameters.conf",
+                "echo zfs_multihost_fail_intervals=20 >> /etc/modprobe.d/iml_zfs_module_parameters.conf",
             ],
             fqdns,
             "set multihost params for test",
@@ -829,7 +831,13 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         # only partprobe the devices we are cleaning, as we can get
         # EBUSY for the root disk for example
         self.execute_simultaneous_commands(
-            ["partprobe %s" % " ".join(zfs_device_paths), "udevadm settle"], fqdns, "sync partitions"
+            [
+                "partprobe %s" % " ".join(zfs_device_paths),
+                "udevadm settle",
+                "rm -f /etc/modprobe.d/iml_zfs_module_parameters.conf",
+            ],
+            fqdns,
+            "sync partitions",
         )
 
     def cleanup_linux_devices(self, test_servers):
