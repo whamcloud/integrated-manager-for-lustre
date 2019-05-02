@@ -357,6 +357,7 @@ __EOF
                             type: 'shell',
                             run: 'always',
                             inline: <<-SHELL
+                                yum install -y net-tools;
                                 ifconfig eth3 #{subnet_prefix}.#{xnet_idx}.2#{ss_idx} netmask 255.255.255.0
                             SHELL
 
