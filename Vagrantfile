@@ -348,17 +348,14 @@ __EOF
             ss.vm.network "private_network",
                 ip: "#{subnet_prefix}.#{xnet_idx}.2#{ss_idx}",
                 netmask: "255.255.255.0",
-                libvirt__dhcp_enabled: false,
-                auto_config: false
+                libvirt__dhcp_enabled: false
 
-            # Even though the above *looks* like it will set the ip,
-            # It does not. We *really* set it here.
-            ss.vm.provision 'fix-ip',
+            ss.vm.provision 'unmanage-xover',
                             type: 'shell',
                             run: 'always',
                             inline: <<-SHELL
-                                yum install -y net-tools;
-                                ifconfig eth3 #{subnet_prefix}.#{xnet_idx}.2#{ss_idx} netmask 255.255.255.0
+                                sed -i "/NM_CONTROLLED=/c\NM_CONTROLLED=no" /etc/sysconfig/network-scripts/ifcfg-eth3
+                                nmcli con load /etc/sysconfig/network-scripts/ifcfg-eth3
                             SHELL
 
             # Increment the "crossover" subnet number so that
