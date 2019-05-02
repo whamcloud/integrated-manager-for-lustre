@@ -342,6 +342,7 @@ __EOF
             ss.vm.network "private_network",
                 ip: "#{lnet_pfx}.2#{ss_idx}",
                 netmask: "255.255.255.0"
+
             # Private network to simulate crossover.
             # Used exclusively as additional cluster network
             ss.vm.network "private_network",
@@ -349,6 +350,15 @@ __EOF
                 netmask: "255.255.255.0",
                 libvirt__dhcp_enabled: false,
                 auto_config: false
+
+            # Even though the above *looks* like it will set the ip,
+            # It does not. We *really* set it here.
+            ss.vm.provision 'fix-ip',
+                            type: 'shell',
+                            run: 'always',
+                            inline: <<-SHELL
+                                ifconfig eth3 #{subnet_prefix}.#{xnet_idx}.2#{ss_idx} netmask 255.255.255.0
+                            SHELL
 
             # Increment the "crossover" subnet number so that
             # each HA pair has a unique "crossover" subnet
