@@ -59,6 +59,7 @@ pub enum ImlAgentError {
     Reqwest(reqwest::Error),
     UrlParseError(url::ParseError),
     Utf8Error(std::str::Utf8Error),
+    FromUtf8Error(std::string::FromUtf8Error),
     TokioTimerError(tokio::timer::Error),
     AddrParseError(std::net::AddrParseError),
     ParseIntError(std::num::ParseIntError),
@@ -80,6 +81,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => write!(f, "{}", err),
             ImlAgentError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
+            ImlAgentError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlAgentError::AddrParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::ParseIntError(ref err) => write!(f, "{}", err),
@@ -109,6 +111,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => Some(err),
             ImlAgentError::UrlParseError(ref err) => Some(err),
             ImlAgentError::Utf8Error(ref err) => Some(err),
+            ImlAgentError::FromUtf8Error(ref err) => Some(err),
             ImlAgentError::TokioTimerError(ref err) => Some(err),
             ImlAgentError::AddrParseError(ref err) => Some(err),
             ImlAgentError::ParseIntError(ref err) => Some(err),
@@ -151,6 +154,12 @@ impl From<url::ParseError> for ImlAgentError {
 impl From<std::str::Utf8Error> for ImlAgentError {
     fn from(err: std::str::Utf8Error) -> Self {
         ImlAgentError::Utf8Error(err)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for ImlAgentError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        ImlAgentError::FromUtf8Error(err)
     }
 }
 

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future::Either, Future, IntoFuture};
-
 use crate::{
     agent_error::ImlAgentError,
     http_comms::{crypto_client, session},
     server_properties,
 };
+use futures::{future::Either, Future, IntoFuture};
 use iml_wire_types;
 use reqwest::r#async::{Chunk, Client};
+use std::convert::Into;
 
 /// A wrapper around `CryptoClient`.
 ///
@@ -85,7 +85,7 @@ impl AgentClient {
         let value = serde_json::to_value(body);
 
         if value.is_err() {
-            return Either::A(value.map_err(|e| e.into()).map(|_| ()).into_future());
+            return Either::A(value.map_err(Into::into).map(|_| ()).into_future());
         }
 
         let m = iml_wire_types::Message::Data {
@@ -115,7 +115,7 @@ impl AgentClient {
 
         log::debug!("Sending get {:?}", get_params);
 
-        crypto_client::get(&self.client, self.message_endpoint.clone(), &get_params)
-            .and_then(|x| serde_json::from_slice(&x).map_err(|e| e.into()))
+        crypto_client::get_buffered(&self.client, self.message_endpoint.clone(), &get_params)
+            .and_then(|x| serde_json::from_slice(&x).map_err(Into::into))
     }
 }
