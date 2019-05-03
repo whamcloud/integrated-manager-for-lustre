@@ -1,6 +1,7 @@
 trigger:
   branches:
-    - master
+    include:
+      - master
   tags:
     include:
       - v*r5.0
