@@ -1,8 +1,9 @@
 trigger:
   branches:
-    include: master
+    - master
   tags:
-    include: v*r5.0
+    includ3:
+      - v*r5.0
 
 jobs:
   # Release to production Copr
