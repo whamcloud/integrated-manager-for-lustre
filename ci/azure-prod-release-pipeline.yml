@@ -1,8 +1,11 @@
 trigger:
+  branches:
+    - master
   tags:
+    exclude:
+      - v*r5.0
     include:
-    - v*r5.0
-
+      - v*.*.*-*
 
 jobs:
   # Release to production Copr
@@ -10,7 +13,7 @@ jobs:
     parameters:
       name: copr_push
       displayName: Copr Push
-      project: manager-for-lustre-5.0
+      project: manager-for-lustre
       package: rust-iml
       spec: rust-iml.spec
       release: true
@@ -20,7 +23,7 @@ jobs:
     parameters:
       name: wasm_components_copr_push
       displayName: Wasm Components Copr Push
-      project: manager-for-lustre-5.0
+      project: manager-for-lustre
       package: iml-wasm-components
       spec: iml-wasm-components.spec
       crate: iml-wasm-components
