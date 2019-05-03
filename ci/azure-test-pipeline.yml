@@ -35,28 +35,6 @@ jobs:
       displayName: Test rpm building
       spec: rust-iml.spec
 
-  # Continuous Release to Devel Copr
-  - template: template/azure-release.yml
-    parameters:
-      name: copr_devel_push
-      displayName: Copr Devel Push
-      project: manager-for-lustre-devel
-      package: rust-iml
-      spec: rust-iml.spec
-      release: false
-      branchref: refs/heads/master
-
-  # Release to production Copr
-  - template: template/azure-release.yml
-    parameters:
-      name: copr_push
-      displayName: Copr Push
-      project: manager-for-lustre
-      package: rust-iml
-      spec: rust-iml.spec
-      release: true
-      branchref: refs/tags/
-
   # Check formatting
   - template: template/azure-rustfmt.yml
     parameters:
@@ -84,27 +62,3 @@ jobs:
       displayName: Test wasm rpm building
       spec: iml-wasm-components.spec
       crate: iml-wasm-components
-
-  # Wasm-Components Continuous Release to Devel Copr
-  - template: template/azure-release.yml
-    parameters:
-      name: wasm_components_copr_push
-      displayName: Wasm Components Copr Push
-      project: manager-for-lustre-devel
-      package: iml-wasm-components
-      spec: iml-wasm-components.spec
-      crate: iml-wasm-components
-      release: false
-      branchref: refs/heads/master
-
-  # Wasm-Components Continuous Release to Prod Copr
-  - template: template/azure-release.yml
-    parameters:
-      name: wasm_components_copr_devel_push
-      displayName: Wasm Components Copr Devel Push
-      project: manager-for-lustre
-      package: iml-wasm-components
-      spec: iml-wasm-components.spec
-      crate: iml-wasm-components
-      release: true
-      branchref: refs/tags/
