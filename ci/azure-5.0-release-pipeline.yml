@@ -2,7 +2,7 @@ trigger:
   branches:
     - master
   tags:
-    includ3:
+    include:
       - v*r5.0
 
 jobs:
