@@ -2,6 +2,9 @@ trigger:
   tags:
     include:
     - v*r5.0
+  branches:
+    include:
+    - master
 
 
 jobs:
