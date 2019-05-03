@@ -6,37 +6,37 @@ trigger:
 
 jobs:
   # Check formatting
-  - template: ci/azure-rustfmt.yml
+  - template: template/azure-rustfmt.yml
     parameters:
       name: rustfmt
 
   # Check linting
-  - template: ci/azure-clippy.yml
+  - template: template/azure-clippy.yml
     parameters:
       name: clippy
       displayName: Lint Rust IML
 
   # Test top level crate
-  - template: ci/azure-test-stable.yml
+  - template: template/azure-test-stable.yml
     parameters:
       name: test_iml
       displayName: Test IML
 
     # Test top level crate
-  - template: ci/azure-test-coverage.yml
+  - template: template/azure-test-coverage.yml
     parameters:
       name: iml_coverage
       displayName: Collect Rust IML Coverage
 
   # Check building rpm works
-  - template: ci/azure-build-check.yml
+  - template: template/azure-build-check.yml
     parameters:
       name: test_rpm_build
       displayName: Test rpm building
       spec: rust-iml.spec
 
   # Continuous Release to Devel Copr
-  - template: ci/azure-release.yml
+  - template: template/azure-release.yml
     parameters:
       name: copr_devel_push
       displayName: Copr Devel Push
@@ -47,7 +47,7 @@ jobs:
       branchref: refs/heads/master
 
   # Release to production Copr
-  - template: ci/azure-release.yml
+  - template: template/azure-release.yml
     parameters:
       name: copr_push
       displayName: Copr Push
@@ -58,27 +58,27 @@ jobs:
       branchref: refs/tags/
 
   # Check formatting
-  - template: ci/azure-rustfmt.yml
+  - template: template/azure-rustfmt.yml
     parameters:
       name: rustfmt_wasm
       crate: iml-wasm-components
 
   # Check linting
-  - template: ci/azure-clippy.yml
+  - template: template/azure-clippy.yml
     parameters:
       name: clippy_wasm
       displayName: Lint Wasm Components
       crate: iml-wasm-components
 
   # Test wasm-components
-  - template: ci/azure-test-stable.yml
+  - template: template/azure-test-stable.yml
     parameters:
       name: test_wasm_components
       displayName: Test Wasm components
       crate: iml-wasm-components
 
   # Check building wasm-components rpm works
-  - template: ci/azure-build-check.yml
+  - template: template/azure-build-check.yml
     parameters:
       name: test_wasm_rpm_build
       displayName: Test wasm rpm building
@@ -86,7 +86,7 @@ jobs:
       crate: iml-wasm-components
 
   # Wasm-Components Continuous Release to Devel Copr
-  - template: ci/azure-release.yml
+  - template: template/azure-release.yml
     parameters:
       name: wasm_components_copr_push
       displayName: Wasm Components Copr Push
@@ -98,7 +98,7 @@ jobs:
       branchref: refs/heads/master
 
   # Wasm-Components Continuous Release to Prod Copr
-  - template: ci/azure-release.yml
+  - template: template/azure-release.yml
     parameters:
       name: wasm_components_copr_devel_push
       displayName: Wasm Components Copr Devel Push
