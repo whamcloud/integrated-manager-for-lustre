@@ -762,8 +762,8 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             [
                 "echo 100 > /sys/module/zfs/parameters/zfs_multihost_history",
                 "echo 20 > /sys/module/zfs/parameters/zfs_multihost_fail_intervals",
-                "echo zfs_multihost_history=100 > /etc/modprobe.d/iml_zfs_module_parameters.conf",
-                "echo zfs_multihost_fail_intervals=20 >> /etc/modprobe.d/iml_zfs_module_parameters.conf",
+                "echo options zfs zfs_multihost_history=100 > /etc/modprobe.d/iml_zfs_module_parameters.conf",
+                "echo options zfs zfs_multihost_fail_intervals=20 >> /etc/modprobe.d/iml_zfs_module_parameters.conf",
             ],
             fqdns,
             "set multihost params for test",
