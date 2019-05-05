@@ -32,4 +32,4 @@ tablib==0.9.11
 toolz
 tzlocal
 urllib3
-werkzeug
+setuptools

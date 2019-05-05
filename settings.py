@@ -8,6 +8,8 @@ import os
 import socket
 import logging
 
+from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
+
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -331,14 +333,6 @@ SSH_CONFIG = None
 TASTYPIE_DEFAULT_FORMATS = ["json"]
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
-
-try:
-    from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
-except ImportError:
-    PACKAGE_VERSION = "0.0.0"
-    VERSION = "dev"
-    BUILD = 0
-    IS_RELEASE = False
 
 try:
     LOCAL_SETTINGS

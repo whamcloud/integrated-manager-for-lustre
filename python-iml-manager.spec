@@ -4,8 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%{?!version: %global version @VERSION@}
-%{?!package_release: %global package_release @RELEASE@}
+%global version 5.0.0
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -15,7 +14,9 @@ BuildRequires: systemd
 
 Name:           python-%{pypi_name}
 Version:        %{version}
-Release:        %{package_release}%{?dist}
+# Release Start
+Release:    1%{?dist}
+# Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
 URL:            https://pypi.python.org/pypi/%{pypi_name}
@@ -196,7 +197,7 @@ done
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
 %build
-%{__python} setup.py -q build
+%{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
 cp -a wsgi.py build/lib
 cp -a chroma-manager.conf.template build/lib

@@ -8,7 +8,6 @@ set_state.prof
 *.pem
 *.rpm
 *.stamp
-dev_nginx
 .idea
 settings.json
 *~
@@ -20,7 +19,6 @@ settings.json
 *.orig
 *.rej
 local_settings.py
-scm_version.py*
 database.db
 .DS_Store
 dist/
@@ -38,7 +36,6 @@ tests/framework/chroma_support.repo
 id_rsa
 id_rsa.pub
 install_build_deps-stamp
-python-iml-manager.spec
 localenv
 storage_server.repo
 base.repo

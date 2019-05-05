@@ -56,7 +56,7 @@ local   all         chroma                            trust' /var/lib/pgsql/data
 systemctl restart postgresql
 
 
-yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/repo/epel-7/managerforlustre-manager-for-lustre-devel-epel-7.repo
+yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-5.0/repo/epel-7/managerforlustre-manager-for-lustre-5.0-epel-7.repo
 yum -y install nodejs ed npm nginx libuv iml-gui iml-srcmap-reverse iml-online-help iml-view-server iml-old-gui iml-realtime
 
 cd /integrated-manager-for-lustre
