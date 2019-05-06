@@ -65,7 +65,7 @@ if [ -f /tmp/base.repo.in ]; then
     # make sure we use the correct lustre though!
     sed -e \"s/@LUSTRE_SERVER_URL@/${LUSTRE_SERVER_URL//\//\\\\/}/\" \
         -e \"s/@LUSTRE_CLIENT_URL@/${LUSTRE_CLIENT_URL//\//\\\\/}/\" \
-        -e 's/manager-for-lustre/manager-for-lustre-devel/g' \
+        -e 's/manager-for-lustre/manager-for-lustre-5.0/g' \
         < /tmp/base.repo.in > /usr/share/chroma-manager/base.repo
 fi
 # add any repos needed by the test

@@ -3,7 +3,7 @@ WORKDIR /build
 COPY . .
 RUN yum update -y
 RUN yum install -y rpmdevtools make git
-RUN make base.repo
+RUN make -f .copr/Makefile base.repo
 
 FROM centos:7
 

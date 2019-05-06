@@ -35,19 +35,13 @@ set_distro_vars() {
 set_defaults() {
     upgrade_test="$1"
 
-    export CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
+    export CHROMA_DIR=${CHROMA_DIR:-"$PWD/"}
 
-    d=${0%/*}
-    if [[ $d != /* ]]; then
-        d=${PWD}/$d
-    fi
-    while [ ! -f $d/include/Makefile.version ]; do
-        d=${d%/*}
-    done
-    export IEEL_VERSION=$(make -s -f $d/include/Makefile.version .ieel_version)
-    export SHORT_ARCHIVE_NAME="$(make -s -f $d/include/Makefile.version .short_archive_name)"
-    export BUILD_VERSION="$(make -s -f $d/include/Makefile.version .build_version)"
-    export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-*$IEEL_VERSION-$BUILD_VERSION.el7.noarch.rpm"
+    SPEC=${CHROMA_DIR}/python-iml-manager.spec
+
+    export IEEL_VERSION="$(rpm -q --qf "%{VERSION}\n" --specfile ${SPEC} | sed -n '2p')"
+    export SHORT_ARCHIVE_NAME="$(rpm -q --qf "%{NAME}\n" --specfile ${SPEC} | sed -n '2p')"
+    export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-*$IEEL_VERSION-*.rpm"
 
     if $JENKINS && ! ${VAGRANT_PROVISION:-false}; then
         export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
