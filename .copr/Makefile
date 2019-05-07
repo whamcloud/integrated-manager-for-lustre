@@ -44,7 +44,7 @@ iml-srpm: iml-deps base.repo
 	rm -rf ${BUILDROOT}/_topdir
 
 	cp -r ${BUILDROOT}/{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
-	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
+	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
 	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
