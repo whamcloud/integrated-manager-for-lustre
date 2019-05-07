@@ -24,4 +24,5 @@ include *.repo
 include *.profile
 graft licenses
 graft polymorphic
+graft scripts
 global-exclude local_settings.py*
