@@ -99,10 +99,6 @@ Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes:      chroma-manager
 Provides:       chroma-manager
-Obsoletes:      httpd
-Obsoletes:      mod_proxy_wstunnel
-Obsoletes:      mod_wsgi
-Obsoletes:      mod_ssl
 Obsoletes:      nodejs-active-x-obfuscator
 Obsoletes:      nodejs-bunyan
 Obsoletes:      nodejs-commander
