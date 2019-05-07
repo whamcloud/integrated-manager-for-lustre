@@ -290,18 +290,19 @@ class UpdateScan(object):
 
         try:
             target = ManagedTarget.objects.get(name=target_name).downcast()
-
-            if target.immutable_state and (target.active_host == target.primary_host):
-                # in monitored mode we want to make sure the target volume is accessible on current host
-                target.volume.volumenode_set.get(host=self.host, not_deleted=True)
-            else:
-                target.managedtargetmount_set.get(host=self.host, not_deleted=True)
-        except (ManagedTarget.DoesNotExist, VolumeNode.DoesNotExist) as e:
+        except ManagedTarget.DoesNotExist as e:
             # Unknown target -- ignore metrics
             log.warning("Discarding metrics for unknown target: %s (%s)" % (target_name, e))
             return []
 
-        return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
+        if (
+            # in monitored mode we want to make sure the target volume is accessible on current host
+            (target.immutable_state and target.volume.volumenode_set.filter(host=self.host, not_deleted=True).exists())
+            or target.managedtargetmount_set.filter(host=self.host, not_deleted=True).exists()
+        ):
+            return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
+        log.warning("Discaring metrics not belonging for the host: %s (%s)" % (target_name, self.host))
+        return []
 
     @transaction.atomic
     def store_metrics(self):
