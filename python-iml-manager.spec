@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    2%{?dist}
+Release:    3%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT

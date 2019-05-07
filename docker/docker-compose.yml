@@ -176,11 +176,7 @@ services:
     build:
       context: ../
       dockerfile: ./docker/iml-warp-drive.dockerfile
-    deploy:
-      restart_policy:
-        condition: unless-stopped
-        delay: 5s
-        window: 5s
+    deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
