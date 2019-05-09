@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    4%{?dist}
+Release:    5%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
@@ -137,6 +137,7 @@ Obsoletes:      nodejs-zeparser
 Obsoletes:      django-celery
 Obsoletes:      django-tastypie
 Obsoletes:      python2-dse
+Obsoletes:      Django-south
 
 Requires:      fence-agents
 Requires:      fence-agents-virsh
