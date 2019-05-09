@@ -29,6 +29,7 @@ settings = chroma_settings()
 
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
+from django.contrib.sessions.models import Session
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
@@ -567,6 +568,11 @@ class ServiceConfig(CommandLine):
 
         return
 
+    def clear_sessions(self):
+        if self._db_populated():
+            log.info("Clearing all sessions...")
+            Session.objects.all().delete()
+
     def _configure_selinux(self):
         try:
             self.try_shell(["sestatus | grep enabled"], shell=True)
@@ -958,7 +964,10 @@ def chroma_config():
             usage()
 
         log.info("Starting setup...\n")
+
+        service_config.clear_sessions()
         errors = service_config.setup(username, password, ntpserver, check_db_space)
+
         if errors:
             print_errors(errors)
             sys.exit(-1)
@@ -1037,6 +1046,8 @@ def chroma_config():
             default_profile(sys.argv[3])
         else:
             raise NotImplementedError(operation)
+    elif command == "clearsessions":
+        service_config.clear_sessions()
     else:
         log.error("Invalid command '%s'" % command)
         sys.exit(-1)

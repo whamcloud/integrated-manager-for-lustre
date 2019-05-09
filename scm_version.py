@@ -5,6 +5,6 @@ try:
 except pkg_resources.DistributionNotFound:
     PACKAGE_VERSION = "0.0.0"
 
-VERSION = "{}-5".format(PACKAGE_VERSION)
+VERSION = "{}-6".format(PACKAGE_VERSION)
 BUILD = ""
 IS_RELEASE = True
