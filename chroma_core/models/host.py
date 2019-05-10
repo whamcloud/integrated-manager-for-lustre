@@ -705,7 +705,7 @@ class RebootIfNeededStep(Step):
         kernel_status = self.invoke_agent(host, "kernel_status")
         selinux_status = self.invoke_agent(host, "selinux_status")
 
-        reboot_needed = (selinux_status != "Disabled") or (
+        reboot_needed = (selinux_status["status"] != "Disabled") or (
             kernel_status["running"] != kernel_status["required"]
             and kernel_status["required"]
             and kernel_status["required"] in kernel_status["available"]
