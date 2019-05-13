@@ -47,6 +47,7 @@ iml-srpm: iml-deps base.repo
 	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
 	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
 	cp ${BUILDROOT}/iml-*.service \
+		${BUILDROOT}/10-rabbitmq-server.service.conf \
 		${BUILDROOT}/rabbitmq-env.conf \
 		${BUILDROOT}/iml-manager-redirect.conf \
 		${BUILDROOT}/iml-manager.target \

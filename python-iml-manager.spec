@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    7%{?dist}
+Release:    8%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
@@ -37,6 +37,7 @@ Source13:       iml-stats.service
 Source14:       iml-syslog.service
 Source16:       iml-manager-redirect.conf
 Source17:       rabbitmq-env.conf
+Source18:       10-rabbit-server.service.conf
 
 
 Group: Development/Libraries
@@ -231,6 +232,8 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
+mkdir -p %{buildroot}%{_unitdir}/rabbitmq-server.service.d
+install -m 644 %{SOURCE18} %{buildroot}%{_unitdir}/rabbitmq-server.service.d/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
@@ -342,6 +345,7 @@ fi
 %attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
 %attr(0644,root,root)%{_unitdir}/iml-stats.service
 %attr(0644,root,root)%{_unitdir}/iml-syslog.service
+%attr(0644,root,root)%{_unitdir}/rabbitmq-server.service.d/10-rabbitmq-server.service.conf
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
