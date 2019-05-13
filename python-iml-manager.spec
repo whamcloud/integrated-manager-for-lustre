@@ -37,7 +37,7 @@ Source13:       iml-stats.service
 Source14:       iml-syslog.service
 Source16:       iml-manager-redirect.conf
 Source17:       rabbitmq-env.conf
-Source18:       10-rabbit-server.service.conf
+Source18:       10-rabbitmq-server.service.conf
 
 
 Group: Development/Libraries
