@@ -1019,7 +1019,7 @@ class SetHostProfileStep(Step):
         host = kwargs["host"]
         server_profile = kwargs["server_profile"]
 
-        self.invoke_agent_expect_result(host, "update_profile", {"profile": server_profile.as_dict})
+        self.invoke_agent_expect_result(host, "set_profile", {"profile": server_profile.as_dict})
 
         job_scheduler_notify.notify(host, tznow(), {"server_profile_id": server_profile.id})
 
@@ -1482,7 +1482,7 @@ class UpdateProfileStep(RebootIfNeededStep):
     database = True
 
     def run(self, kwargs):
-        self.invoke_agent(kwargs["host"], "set_profile", {"profile_json": json.dumps(kwargs["profile"].as_dict)})
+        self.invoke_agent(kwargs["host"], "update_profile", {"profile_json": json.dumps(kwargs["profile"].as_dict)})
 
 
 class UpdateYumFileStep(RebootIfNeededStep):
