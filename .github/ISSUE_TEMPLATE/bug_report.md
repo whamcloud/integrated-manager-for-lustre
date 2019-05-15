@@ -39,6 +39,6 @@ What version of IML?
 What Operating System?
 What Operating System version?
 
-### iml-diagnostics
+### sosreport
 
-Attach any [`iml-diagnostics`](https://whamcloud.github.io/Online-Help/docs/Install_Guide/ig_ch_15_appD_getting_help.html) for nodes relevant to this issue.
+Attach any [`sosreport`s](https://whamcloud.github.io/Online-Help/docs/Install_Guide/ig_ch_15_appD_getting_help.html) for nodes relevant to this issue.
