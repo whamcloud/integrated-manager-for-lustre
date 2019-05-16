@@ -75,6 +75,8 @@ if [ -n \"$STORAGE_SERVER_REPOS\" ]; then
             echo
             curl \"\$repo\"
         } >> /usr/share/chroma-manager/base.repo
+
+        echo -e '\n' >> /usr/share/chroma-manager/base.repo
     done
 fi
 
