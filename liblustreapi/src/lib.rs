@@ -191,23 +191,30 @@ pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
     Ok(stat)
 }
 
-pub fn rmfid(
+pub fn rmfid(mntpt: &str, fidstr: &str) -> Result<(), LiblustreError> {
+    use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
+
+    let path = fid2path(mntpt, &fidstr)?;
+    let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
+    if let Err(e) = fs::remove_file(pb) {
+        log::error!("Failed to remove {}: {:?}", fidstr, e);
+    }
+
+    Ok(())
+}
+
+pub fn rmfids(
     device: &str,
     fidlist: impl IntoIterator<Item = String>,
 ) -> Result<(), LiblustreError> {
-    use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
-
     let mntpt = search_rootpath(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {:?}", device, e);
         e
     })?;
 
+    // @TODO replace with sys::llapi_rmfid once LU-12090 lands
     for fidstr in fidlist {
-        let path = fid2path(device, &fidstr)?;
-        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-        if let Err(e) = fs::remove_file(pb) {
-            log::error!("Failed to remove {}: {:?}", fidstr, e);
-        }
+        rmfid(&mntpt, &fidstr)?;
     }
 
     Ok(())

@@ -4,7 +4,7 @@
 
 use futures::Future;
 use iml_agent::action_plugins::stratagem::{
-    action_warning,
+    action_purge, action_warning,
     server::{generate_cooked_config, trigger_scan},
 };
 use prettytable::{cell, row, Table};
@@ -143,7 +143,7 @@ fn main() {
                 let device = opt.fsname;
                 let input = input_to_iter(opt.input, opt.fidlist);
 
-                if liblustreapi::rmfid(&device, input).is_err() {
+                if action_purge::purge_files(&device, input).is_err() {
                     exit(exitcode::OSERR);
                 }
             }

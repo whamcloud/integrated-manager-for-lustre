@@ -103,6 +103,7 @@ pub fn read_mailbox(device: &str, mailbox: &str, out: impl io::Write) -> Result<
     tokio::spawn(
         stream_lines::strings(crypto_client::get_stream(&client, message_endpoint, &query))
             // @@ add multithreading here
+            // @@ .map json -> fid
             .for_each(move |fid| {
                 if let Ok(rec) = fid2record(&mntpt, &fid) {
                     sender.send(rec).map_err(|_| ImlAgentError::SendError)?;
