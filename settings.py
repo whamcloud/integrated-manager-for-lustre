@@ -240,7 +240,7 @@ CRYPTO_FOLDER = "/var/lib/chroma"
 
 GUNICORN_PID_PATH = "/var/run/gunicorn.pid"
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
 
 EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
