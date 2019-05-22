@@ -72,11 +72,21 @@ pub fn get_addr() -> SocketAddr {
     to_socket_addr(&get_host(), &get_port())
 }
 
-/// Get the server port from the env or panic
+/// Get the warp drive port from the env or panic
 pub fn get_warp_drive_port() -> String {
     get_var("WARP_DRIVE_PORT")
 }
 
+/// Get the warp drive address from the env or panic
 pub fn get_warp_drive_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_warp_drive_port())
+}
+
+/// Get the mailbox port from the env or panic
+pub fn get_mailbox_port() -> String {
+    get_var("MAILBOX_PORT")
+}
+/// Get the mailbox address from the env or panic
+pub fn get_mailbox_addr() -> SocketAddr {
+    to_socket_addr(&get_host(), &get_mailbox_port())
 }

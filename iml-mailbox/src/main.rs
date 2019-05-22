@@ -7,18 +7,15 @@ use warp::Filter as _;
 fn main() {
     env_logger::builder().default_format_timestamp(false).init();
 
-    let log = warp::log("iml_agent_comms::api");
-
     let routes = warp::path("mailbox")
+        .and(warp::header::<String>("mailbox-address"))
         .and(iml_mailbox::line_stream())
-        .map(|_| warp::reply())
-        .with(log);
+        .map(|_, _| warp::reply())
+        .with(warp::log("mailbox"));
 
-    // let routes = warp::path("message").and(receiver.or(sender).with(log));
+    let addr = iml_manager_env::get_mailbox_addr();
 
-    // let addr = iml_manager_env::get_http_agent2_addr();
+    log::info!("Starting on {:?}", addr);
 
-    // log::info!("Starting iml-agent-comms on {:?}", addr);
-
-    // let (_, fut) = warp::serve(routes).bind_with_graceful_shutdown(addr, rx);
+    warp::serve(routes).run(addr);
 }
