@@ -839,6 +839,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-mailbox"
+version = "0.1.0"
+dependencies = [
+ "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stream-lines 0.1.0 (git+https://github.com/softprops/stream-lines)",
+ "warp 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "iml-manager-env"
 version = "0.1.0"
 
