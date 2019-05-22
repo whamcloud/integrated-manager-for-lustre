@@ -18,12 +18,14 @@ from chroma_core.models import AlertEvent
 
 class StratagemConfiguration(StatefulObject):
     id = models.IntegerField(primary_key=True, default=1, null=False)
-    interval = models.IntegerField(help_text="Interval value in which a stratagem run will execute", null=False)
-    report_duration = models.IntegerField(help_text="Interval value in which stratagem reports are run", null=False)
+    interval = models.IntegerField(help_text="Interval value in seconds between each stratagem execution", null=False)
+    report_duration = models.IntegerField(
+        help_text="Interval value in seconds between stratagem report execution", null=False
+    )
     report_duration_active = models.BooleanField(
         default=False, help_text="Indicates if the report should execute at the given interval"
     )
-    purge_duration = models.IntegerField(help_text="Interval value in which a stratagem purge will execute", null=False)
+    purge_duration = models.IntegerField(help_text="Interval value in seconds between stratagem purges", null=False)
     purge_duration_active = models.BooleanField(
         default=False, help_text="Indicates if the purge should execute at the given interval"
     )
@@ -31,25 +33,9 @@ class StratagemConfiguration(StatefulObject):
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
 
-    # def set_state(self, state, intentional=False):
-    #     job_log.debug("configure_stratagem.set_state %s %s" % (state, intentional))
-    #     super(StratagemConfiguration, self).set_state(state, intentional)
-    #     StratagemUnconfiguredAlert.notify_warning(self, self.state == "unconfigured")
-
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
-
-    # def get_deps(self, state=None):
-    #     return DependOn(ObjectCache.get_one(ServerProfile, lambda p: p.name == "stratagem_server"), True)
-
-    # def get_available_states(self, begin_state):
-    #     if begin_state == "unconfigured":
-    #         return ["configured"]
-    #     elif self.immutable_state:
-    #         return ["unconfigured"]
-    #     else:
-    #         return super(StratagemConfiguration, self).get_available_states(begin_state)
 
 
 class StratagemUnconfiguredAlert(AlertStateBase):
@@ -73,9 +59,9 @@ class StratagemUnconfiguredAlert(AlertStateBase):
         affect_target(self.alert_item)
 
 
-class ConfigureSystemdTimerStep(Step):
+class ConfigureStratagemTimerStep(Step):
     def run(self, kwargs):
-        job_log.debug("Create systemd time Step kwargs: {}".format(kwargs))
+        job_log.debug("Create stratagem timer step kwargs: {}".format(kwargs))
 
 
 class ConfigureStratagemJob(StateChangeJob):
@@ -93,10 +79,6 @@ class ConfigureStratagemJob(StateChangeJob):
         app_label = "chroma_core"
         ordering = ["id"]
 
-    # def __init__(self, *args, **kwargs):
-    #     super(ConfigureStratagemJob, self).__init__(*args, **kwargs)
-    #     self.old_state = "unconfigured"
-
     @classmethod
     def long_description(cls, stateful_object):
         return help_text["configure_stratagem_long"]
@@ -105,18 +87,6 @@ class ConfigureStratagemJob(StateChangeJob):
         return help_text["configure_stratagem_description"]
 
     def get_steps(self):
-        steps = [(ConfigureSystemdTimerStep, {})]
+        steps = [(ConfigureStratagemTimerStep, {})]
 
         return steps
-
-    # def get_deps(self, state=None):
-    #     return DependOn(ObjectCache.get_one(ServerProfile, lambda p: p.name == "stratagem_server").managed, True)
-
-    # def create_locks(self):
-    #     locks = super(ConfigureStratagemJob, self).create_locks()
-
-    #     # Take a write lock on mtm objects related to this target
-    #     job_log.debug("Creating StateLock on %s/%s" % (self.stratagem_configuration.__class__, self.stratagem_configuration.id))
-    #     locks.append(StateLock(job=self, locked_item=self.stratagem_configuration, write=True))
-
-    #     return locks

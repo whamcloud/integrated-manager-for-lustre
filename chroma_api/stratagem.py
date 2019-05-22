@@ -5,9 +5,18 @@ from tastypie.resources import Resource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tastypie.authorization import DjangoAuthorization
+from tastypie.validation import Validation
 from chroma_core.models import StratagemConfiguration
 
 from chroma_api.chroma_model_resource import ChromaModelResource
+
+
+class StratagemConfigurationValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        if len(bundle.data.get("objects", [bundle.data])) > 0:
+            return {}
+        else:
+            return {"__all__": "Stratagem configuration not populated."}
 
 
 class StratagemConfigurationResource(ChromaModelResource):
@@ -23,10 +32,10 @@ class StratagemConfigurationResource(ChromaModelResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         allowed_methods = ["get", "post"]
+        validation = StratagemConfigurationValidation()
 
     def obj_create(self, bundle, **kwargs):
         super(StratagemConfigurationResource, self).obj_create(bundle, **kwargs)
         stratagem_data = bundle.data.get("objects", [bundle.data])
 
-        if len(stratagem_data) > 0:
-            command_id = JobSchedulerClient.configure_stratagem(stratagem_data[0])
+        command_id = JobSchedulerClient.configure_stratagem(stratagem_data[0])

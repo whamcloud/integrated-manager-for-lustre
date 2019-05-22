@@ -14,8 +14,11 @@ help_text = {
     "start_copytool": "Start this copytool to begin processing HSM requests.",
     "stop_copytool": "Stop this copytool. In-progress HSM actions will be canceled.",
     "configure_copytool": "Configure this copytool on the worker.",
+    # Fixme: Need official text
     "configure_stratagem": "Configure's Stratagem on the selected node.",
+    # Fixme: Need official text
     "configure_stratagem_long": "Configure's Stratagem on the selected node.",
+    # Fixme: Need official text
     "configure_stratagem_description": "Configure Stratagem description",
     "remove_copytool": "Deconfigure and remove this copytool from the manager database.",
     "force_remove_copytool": "Remove this copytool from the manager database without any attempt to deconfigure the copytool on the worker node.",

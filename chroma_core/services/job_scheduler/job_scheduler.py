@@ -1750,16 +1750,22 @@ class JobScheduler(object):
     def configure_stratagem(self, stratagem_data):
         with self._lock:
             with transaction.atomic():
-                StratagemConfiguration.objects.all().delete()
-                stratagem_configuration = StratagemConfiguration.objects.create(
-                    state="unconfigured",
-                    id=1,
-                    interval=stratagem_data.get('interval'),
-                    report_duration=stratagem_data.get('report_duration'),
-                    report_duration_active=stratagem_data.get('report_duration_active'),
-                    purge_duration=stratagem_data.get('purge_duration'),
-                    purge_duration_active=stratagem_data.get('purge_duration_active')
-                )
+                configuration_data = {
+                    'state': "unconfigured",
+                    'id': 1,
+                    'interval': stratagem_data.get('interval'),
+                    'report_duration': stratagem_data.get('report_duration'),
+                    'report_duration_active': stratagem_data.get('report_duration_active'),
+                    'purge_duration': stratagem_data.get('purge_duration'),
+                    'purge_duration_active': stratagem_data.get('purge_duration_active')
+                }
+
+                if StratagemConfiguration.objects.exists() == True:
+                    StratagemConfiguration.objects.update(**configuration_data)
+                    stratagem_configuration = StratagemConfiguration.objects.all()[0]
+                else:
+                    stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
+
             ObjectCache.add(StratagemConfiguration, stratagem_configuration)
 
         
