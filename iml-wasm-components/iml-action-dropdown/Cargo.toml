@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 seed = "=0.3.1"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0.39"
-futures = "0.1.26"
+futures = "0.1.27"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
 web-sys = { version = "0.3", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
 js-sys = "0.3"
@@ -23,7 +23,7 @@ console_log = { version = "0.1", optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.7.4"
+insta = "0.8.1"
 
 [features]
 console-log = ["console_log"]
