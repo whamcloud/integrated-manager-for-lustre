@@ -32,6 +32,7 @@ class Command(BaseCommand):
                 ("REALTIME_PORT", settings.REALTIME_PORT),
                 ("VIEW_SERVER_PORT", settings.VIEW_SERVER_PORT),
                 ("WARP_DRIVE_PORT", settings.WARP_DRIVE_PORT),
+                ("MAILBOX_PORT", settings.MAILBOX_PORT),
                 ("HTTP_AGENT2_PORT", settings.HTTP_AGENT2_PORT),
                 ("HTTP_AGENT2_PROXY_PASS", settings.HTTP_AGENT2_PROXY_PASS),
                 ("ALLOW_ANONYMOUS_READ", json.dumps(settings.ALLOW_ANONYMOUS_READ)),

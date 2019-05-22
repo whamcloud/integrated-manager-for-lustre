@@ -20,8 +20,9 @@ srpm:
 		yum -y -q install lustre-client;\
 	fi
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,stratagem,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive} \
 		iml-agent-comms.service \
+		iml-mailbox.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \

@@ -8,5 +8,7 @@ edition = "2018"
 bytes = "0.4"
 env_logger = "0.6"
 futures = "0.1"
+log = "0.4"
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 stream-lines = { git = "https://github.com/softprops/stream-lines" }
 warp = "0.1" 

@@ -1,0 +1,18 @@
+[Unit]
+Description=IML Mailbox Service
+PartOf=iml-manager.target
+After=iml-settings-populator.service
+Requires=iml-settings-populator.service
+
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/var/lib/chroma/iml-settings.conf
+ExecStart=/bin/iml-mailbox
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=iml-manager.target 
