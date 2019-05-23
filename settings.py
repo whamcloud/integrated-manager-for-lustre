@@ -23,6 +23,8 @@ APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
 
+MAILBOX_PATH = "/var/spool/iml/mailbox"
+
 HTTP_FRONTEND_PORT = 80
 
 HTTPS_FRONTEND_PORT = os.getenv("HTTPS_FRONTEND_PORT", 443)

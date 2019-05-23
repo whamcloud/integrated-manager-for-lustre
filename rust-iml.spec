@@ -1,3 +1,6 @@
+%{?systemd_requires}
+BuildRequires: systemd
+
 %global crate iml
 
 Name: rust-%{crate}
@@ -38,6 +41,8 @@ cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+mkdir -p %{buildroot}%{_tmpfilesdir}
+cp iml-mailbox.conf %{buildroot} %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 
@@ -175,6 +180,7 @@ systemctl preset iml-mailbox.service
 %files mailbox
 %{_bindir}/iml-mailbox
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
+%attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %changelog
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

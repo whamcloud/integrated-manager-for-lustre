@@ -45,6 +45,7 @@ class Command(BaseCommand):
                 ("API_USER", API_USER),
                 ("API_KEY", API_KEY),
                 ("SOURCE_MAP_PATH", SOURCE_MAP_PATH),
+                ("MAILBOX_PATH", settings.MAILBOX_PATH),
                 ("PROXY_HOST", settings.PROXY_HOST),
                 ("DB_HOST", DB.get("HOST")),
                 ("DB_NAME", DB.get("NAME")),
