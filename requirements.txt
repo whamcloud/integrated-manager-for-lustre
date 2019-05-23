@@ -1,5 +1,5 @@
 amqp==1.4.9
-Django==1.6.11
+Django==1.11.20
 django-extensions
 django-picklefield==0.1.9
 django-tastypie==0.12.2
