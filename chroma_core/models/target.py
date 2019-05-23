@@ -1439,7 +1439,7 @@ class UpdateManagedTargetMount(Step):
             mtm.volume_node = util.wait_for_result(
                 lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
                 logger=job_log,
-                timeout=60 * 60,
+                timeout=60 * 10,
                 expected_exception_classes=[VolumeNode.DoesNotExist],
             )
 
