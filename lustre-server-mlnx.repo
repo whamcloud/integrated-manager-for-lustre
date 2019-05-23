@@ -1,0 +1,14 @@
+[lustre]
+name=Lustre Server
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.1-ib/MOFED-4.5-1.0.1.0/el7/server/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+
+[e2fsprogs]
+name=Lustre e2fsprogs
+baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+
