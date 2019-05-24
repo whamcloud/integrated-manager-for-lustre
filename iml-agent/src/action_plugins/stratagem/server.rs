@@ -147,21 +147,27 @@ pub fn trigger_scan(
     data: StratagemData,
 ) -> impl Future<Item = (StratagemResult, String), Error = ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
-    let id2 = id.clone();
-    let id3 = id.clone();
+
+    let tmp_dir = format!("/tmp/{}/", id);
+    let tmp_dir2 = tmp_dir.clone();
+
+    let result_file = format!("{}result.json", tmp_dir);
 
     serde_json::to_vec(&data)
         .into_future()
         .from_err()
         .and_then(write_tempfile)
         .and_then(move |f| {
-            cmd_output_success("lipe_scan", &["-c", &f.path().to_str().unwrap(), "-W", &id])
-                .map(|x| (x, f))
+            cmd_output_success(
+                "lipe_scan",
+                &["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir],
+            )
+            .map(|x| (x, f))
         })
         .map(|(output, _f)| String::from_utf8_lossy(&output.stdout).into_owned())
-        .and_then(move |_| read_file_to_end(format!("/tmp/{}/result.json", id2)))
+        .and_then(move |_| read_file_to_end(result_file))
         .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
-        .map(move |x| (x, format!("/tmp/{}/", id3)))
+        .map(move |x| (x, tmp_dir2))
 }
 
 // pub fn start_scan_stratagem(

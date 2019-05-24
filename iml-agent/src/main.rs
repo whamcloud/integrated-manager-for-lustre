@@ -14,7 +14,7 @@ use iml_agent::{
 };
 
 fn main() -> Result<()> {
-    env_logger::init();
+    env_logger::builder().default_format_timestamp(false).init();
 
     log::info!("Starting Rust agent_daemon");
 
