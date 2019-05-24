@@ -705,11 +705,12 @@ class ResourceManager(object):
         ]
 
         self.balance_unweighted_volume_nodes(volumes_for_affinity_checks, volume_to_volume_nodes)
+
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
         # the VolumeNode
+        usable_node_resource_ids = [nr.id for nr in usable_node_resources]
         for volume_node in scope_volume_nodes:
-            usable_node_resource_ids = [nr.id for nr in usable_node_resources]
             log.debug(
                 "volume node %s (%s) usable %s"
                 % (
