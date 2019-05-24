@@ -3,20 +3,90 @@
 // license that can be found in the LICENSE file.
 
 use bytes::buf::FromBuf;
-use futures::Stream;
-use warp::{body::BodyStream, Filter};
+use futures::{sync::mpsc, Future, Stream};
+use std::{collections::HashMap, path::PathBuf};
+use tokio::{fs::OpenOptions, io};
+use warp::{body::BodyStream, filters::BoxedFilter, Filter};
 
-pub trait LineStream: Stream<Item = String, Error = warp::Rejection> {}
-impl<T: Stream<Item = String, Error = warp::Rejection>> LineStream for T {}
+pub trait LineStream: Stream<Item = Vec<u8>, Error = warp::Rejection> {}
+impl<T: Stream<Item = Vec<u8>, Error = warp::Rejection>> LineStream for T {}
 
-fn streamer(s: BodyStream) -> impl LineStream {
-    let s = s.map(|c| Vec::from_buf(c)).map_err(warp::reject::custom);
+fn streamer(s: BodyStream) -> Box<LineStream + Send> {
+    let s = s.map(Vec::from_buf).map_err(warp::reject::custom);
 
-    stream_lines::Lines::new(s, |xs| String::from_utf8(xs).map_err(warp::reject::custom))
+    let ls = stream_lines::Lines::<_, _, warp::Rejection>::new(s, Ok);
+
+    Box::new(ls) as Box<LineStream + Send>
 }
 
-pub fn line_stream() -> impl Filter<Extract = (impl LineStream,), Error = warp::Rejection> + Copy {
-    warp::body::stream().map(streamer)
+/// Warp Filter that streams a newline delimited body
+pub fn line_stream() -> BoxedFilter<(Box<LineStream + Send>,)> {
+    warp::body::stream().map(streamer).boxed()
+}
+
+/// Holds all active streams that are currently writing to an address.
+pub struct MailboxSenders(HashMap<PathBuf, mpsc::UnboundedSender<Vec<u8>>>);
+
+impl Default for MailboxSenders {
+    fn default() -> Self {
+        MailboxSenders(HashMap::new())
+    }
+}
+
+impl MailboxSenders {
+    /// Adds a new address and tx handle to write lines with
+    pub fn insert(&mut self, address: PathBuf, tx: mpsc::UnboundedSender<Vec<u8>>) {
+        self.0.insert(address, tx);
+    }
+    /// Removes an address.
+    ///
+    /// Usually called when the associated rx stream has finished.
+    pub fn remove(&mut self, address: &PathBuf) {
+        self.0.remove(address);
+    }
+    /// Returns a cloned reference to a tx handle matching the provided address, if one exists.
+    pub fn get(&mut self, address: &PathBuf) -> Option<mpsc::UnboundedSender<Vec<u8>>> {
+        self.0.get(address).cloned()
+    }
+    /// Creates a new sender entry.
+    ///
+    /// Returns a pair of tx handle and a future that will write to a file.
+    /// The returned future must be used, and should be spawned as a new task
+    /// so it won't block the current task.
+    #[must_use]
+    pub fn create(
+        &mut self,
+        address: PathBuf,
+    ) -> (
+        mpsc::UnboundedSender<Vec<u8>>,
+        impl Future<Item = (), Error = std::io::Error>,
+    ) {
+        let (tx, rx) = mpsc::unbounded();
+
+        self.insert(address.clone(), tx.clone());
+
+        (tx, ingest_data(address.clone(), rx))
+    }
+}
+
+/// Given an address and `mpsc::UnboundedReceiver` handle,
+/// this fn will create or open an existing file in append mode.
+///
+/// It will then write any incoming lines from the passed `mpsc::UnboundedReceiver`
+/// to that file.
+pub fn ingest_data(
+    address: PathBuf,
+    rx: mpsc::UnboundedReceiver<Vec<u8>>,
+) -> impl Future<Item = (), Error = std::io::Error> {
+    OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(address)
+        .and_then(|f| {
+            rx.map_err(|_| unreachable!("mpsc::Receiver should never return Err"))
+                .fold(f, |file, line| io::write_all(file, line).map(|(f, _)| f))
+                .map(|_| {})
+        })
 }
 
 #[cfg(test)]
