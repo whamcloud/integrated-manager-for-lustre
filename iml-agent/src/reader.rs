@@ -48,11 +48,10 @@ pub fn create_reader(
                 .clone()
                 .get()
                 .map(|x| x.messages)
-                .into_stream()
                 .map(stream::iter_ok)
-                .flatten()
+                .flatten_stream()
                 .and_then(move |x| {
-                    log::debug!("Reader: {:?}", x);
+                    log::debug!("--> Delivery from manager {:?}", x);
 
                     match x {
                         ManagerMessage::SessionCreateResponse {

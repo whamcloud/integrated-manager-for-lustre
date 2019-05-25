@@ -4,8 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%{?!version: %global version @VERSION@}
-%{?!package_release: %global package_release @RELEASE@}
+%global version 5.0.0
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -15,7 +14,9 @@ BuildRequires: systemd
 
 Name:           python-%{pypi_name}
 Version:        %{version}
-Release:        %{package_release}%{?dist}
+# Release Start
+Release:    7%{?dist}
+# Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
 URL:            https://pypi.python.org/pypi/%{pypi_name}
@@ -72,7 +73,7 @@ Requires:       python-psycopg2
 Requires:       rabbitmq-server
 Requires:       ntp
 Requires:       Django >= 1.6, Django < 1.7
-Requires:       Django-south >= 0.7.4
+Requires:       Django-south >= 1.0.2
 Requires:       python2-django-tastypie = 0.12.2
 Requires:       django-picklefield
 Requires:       python2-iml-manager-cli = %{version}-%{release}
@@ -98,10 +99,6 @@ Conflicts:      chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes:      chroma-manager
 Provides:       chroma-manager
-Obsoletes:      httpd
-Obsoletes:      mod_proxy_wstunnel
-Obsoletes:      mod_wsgi
-Obsoletes:      mod_ssl
 Obsoletes:      nodejs-active-x-obfuscator
 Obsoletes:      nodejs-bunyan
 Obsoletes:      nodejs-commander
@@ -138,6 +135,9 @@ Obsoletes:      nodejs-mv
 Obsoletes:      nodejs-json-mask
 Obsoletes:      nodejs-zeparser
 Obsoletes:      django-celery
+Obsoletes:      django-tastypie
+Obsoletes:      python2-dse
+Obsoletes:      Django-south
 
 Requires:      fence-agents
 Requires:      fence-agents-virsh
@@ -194,7 +194,7 @@ done
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
 %build
-%{__python} setup.py -q build
+%{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
 cp -a wsgi.py build/lib
 cp -a chroma-manager.conf.template build/lib

@@ -61,13 +61,22 @@ jobs:
         - pip install black
       script:
         - black --check ./
-    - stage: cd
-      git:
-        depth: 999999
-      name: "Continuous Deployment (Copr)"
+    - stage: test
+      name: "copr build test"
       script:
-        - include/travis/copr-deploy.sh prepare
-        - ./travis_wait "./include/travis/run_in_centos7_docker.sh include/travis/copr-deploy.sh build_srpm"
+        - export SPEC=python-iml-manager.spec
+        - export SRPM_TASK=iml-srpm
+        - docker run -it -e SPEC="$SPEC" -e SRPM_TASK="$SRPM_TASK" -e LOCAL_ONLY="True" -v $(pwd):/build:rw imlteam/copr
+        - ((`find _topdir/RPMS -name *.rpm | wc -l` > 0))
+    - stage: cd
+      name: "Continuous Deployment"
+      script:
+        - export OWNER=managerforlustre
+        - export PROJECT=manager-for-lustre-devel
+        - export PACKAGE=python-iml-manager
+        - export SPEC=python-iml-manager.spec
+        - export SRPM_TASK=iml-srpm
+        - docker run -it -e OWNER="$OWNER" -e PROJECT="$PROJECT" -e PACKAGE="$PACKAGE" -e SPEC="$SPEC" -e SRPM_TASK="$SRPM_TASK" -e KEY="$encrypted_253525cedcf6_key" -e IV="$encrypted_253525cedcf6_iv" -v $(pwd):/build:rw imlteam/copr
     - stage: cd
       git:
         depth: 999999
@@ -87,7 +96,18 @@ jobs:
         - docker push imlteam/manager-nginx
         - docker-compose build
         - docker-compose push
+    - stage: deploy-copr-r5.0
+      name: "Copr 5.0 deploy"
+      script:
+        - export OWNER=managerforlustre
+        - export PROJECT=manager-for-lustre-5.0
+        - export PACKAGE=python-iml-manager
+        - export SPEC=python-iml-manager.spec
+        - export SRPM_TASK=iml-srpm
+        - docker run -it -e PROD="true" -e OWNER="$OWNER" -e PROJECT="$PROJECT" -e PACKAGE="$PACKAGE" -e SPEC="$SPEC" -e SRPM_TASK="$SRPM_TASK" -e KEY="$encrypted_253525cedcf6_key" -e IV="$encrypted_253525cedcf6_iv" -v $(pwd):/build:rw imlteam/copr
 stages:
   - test
   - name: cd
     if: branch = master AND type = push AND fork = false
+  - name: deploy-copr-r5.0
+    if: branch =~ ^v\d+\.\d+\.\d+-.+-r5\.0$

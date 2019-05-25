@@ -35,6 +35,7 @@ uuid = { version = "0.7", features = ["v4"] }
 parking_lot = "0.7"
 iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
+stream-lines = { git = "https://github.com/softprops/stream-lines" }
 
 [dev-dependencies]
 mockito = "0.17.1"

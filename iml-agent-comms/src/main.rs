@@ -181,7 +181,7 @@ fn main() {
                     })
                 })
                 .map_err(|e| {
-                    let _ = tx.send(());
+                    tx.send(());
                     log::error!("{:?}", e)
                 })
         }));
@@ -200,10 +200,9 @@ fn main() {
             .and_then(
                 |fqdn: Fqdn, hosts: SharedHosts, client: TcpClient, envelope: Envelope| {
                     log::debug!(
-                        "MessageView.post: {:?}, {:?} Messages, Envelope: {:?}",
+                        "<-- Delivery from agent {}: Messages: {:?}",
                         fqdn,
-                        envelope.messages.len(),
-                        envelope
+                        envelope.messages,
                     );
 
                     let sessions = {
@@ -259,22 +258,33 @@ fn main() {
             .and(warp::header::<String>("x-ssl-client-name").map(Fqdn))
             .and(warp::query::<GetArgs>())
             .and(hosts_filter)
-            .and_then(move |fqdn, args: GetArgs, hosts: SharedHosts| {
-                // If we are not dealing with the same agent anymore, terminate all existing sessions.
-                if host::is_stale(&hosts.lock(), &fqdn, &args.client_start_time) {
-                    log::info!(
-                        "Terminating all sessions on {:?} because start time has changed",
-                        fqdn
+            .and_then(move |fqdn: Fqdn, args: GetArgs, hosts: SharedHosts| {
+                {
+                    let mut hosts = hosts.lock();
+                    let mut host = host::get_or_insert(
+                        &mut hosts,
+                        fqdn.clone(),
+                        args.client_start_time.clone(),
                     );
 
-                    if let Some(host) = hosts.lock().get_mut(&fqdn) {
-                        host.client_start_time = args.client_start_time
-                    };
+                    host.stop();
 
-                    return Either::A(future::ok(ManagerMessages {
-                        messages: vec![ManagerMessage::SessionTerminateAll { fqdn }],
-                    }));
+                    // If we are not dealing with the same agent anymore, terminate all existing sessions.
+                    if host.client_start_time != args.client_start_time {
+                        log::info!(
+                            "Terminating all sessions on {:?} because start time has changed",
+                            fqdn
+                        );
+
+                        host.client_start_time = args.client_start_time;
+
+                        return Either::A(future::ok(ManagerMessages {
+                            messages: vec![ManagerMessage::SessionTerminateAll { fqdn }],
+                        }));
+                    }
                 }
+
+                let (tx, rx) = oneshot::channel();
 
                 let (sessions, queue) = {
                     let mut hosts = hosts.lock();
@@ -285,10 +295,12 @@ fn main() {
                         args.client_start_time.clone(),
                     );
 
+                    host.stop_reading = Some(tx);
+
                     (Arc::clone(&host.sessions), Arc::clone(&host.queue))
                 };
 
-                let fut = flush_queue::flush(queue, Duration::from_secs(30))
+                let fut = flush_queue::flush(queue, Duration::from_secs(30), rx)
                     .and_then(|xs| -> Result<Vec<ManagerMessage>, failure::Error> {
                         xs.into_iter()
                             .map(|x| serde_json::from_slice(&x).map_err(failure::Error::from))
@@ -299,17 +311,14 @@ fn main() {
 
                         xs
                     })
-                    .map(move |xs| {
-                        let envelope = ManagerMessages { messages: xs };
-
+                    .map(move |xs| ManagerMessages { messages: xs })
+                    .inspect(move |x| {
                         log::debug!(
-                            "MessageView.get: responding to {:?} with {:?} messages ({:?})",
-                            fqdn,
-                            envelope.messages.len(),
-                            args.client_start_time
+                            "--> Delivery to agent {}({:?}): {:?}",
+                            &fqdn,
+                            &args.client_start_time,
+                            x.messages,
                         );
-
-                        envelope
                     })
                     .map_err(warp::reject::custom);
 

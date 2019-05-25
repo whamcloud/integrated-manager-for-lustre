@@ -207,7 +207,11 @@ class TestCorosync(ChromaIntegrationTestCase):
         self._add_corosync_hosts(2)
 
         # Ensure no alerts, so that means they are talking.
-        self.wait_for_assert(lambda: self.assertNoAlerts(self.server_configs[0]["corosync_configuration"]))
+        self.wait_for_assert(
+            lambda: self.assertNoAlerts(
+                self.server_configs[0]["corosync_configuration"], of_type="CorosyncNoPeersAlert"
+            )
+        )
 
         corosync_ports = [self.remote_operations.get_corosync_port(server["fqdn"]) for server in self.server_configs]
 

@@ -1,0 +1,33 @@
+trigger:
+  branches:
+    include:
+      - master
+    exclude:
+      - refs/pulls
+  tags:
+    include:
+      - v*r5.0
+
+jobs:
+  # Release to production Copr
+  - template: template/azure-release.yml
+    parameters:
+      name: copr_push
+      displayName: Copr Push
+      project: manager-for-lustre-5.0
+      package: rust-iml
+      spec: rust-iml.spec
+      release: true
+      branchref: refs/tags/v*r5.0
+
+  # Wasm-Components Continuous Release to Prod Copr
+  - template: template/azure-release.yml
+    parameters:
+      name: wasm_components_copr_push
+      displayName: Wasm Components Copr Push
+      project: manager-for-lustre-5.0
+      package: iml-wasm-components
+      spec: iml-wasm-components.spec
+      crate: iml-wasm-components
+      release: true
+      branchref: refs/tags/v*r5.0

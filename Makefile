@@ -1,13 +1,10 @@
 NAME          := iml-manager
-#SUBPACKAGES   := management
-#TEST_DEPS     := python2-tablib python2-iml-common1.4 python-netaddr \
-#                 python2-toolz python-django
 MODULE_SUBDIR  = chroma_manager
 DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
-DIST_DEPS     := base.repo version $(COPR_REPO_TARGETS)
+DIST_DEPS     := version $(COPR_REPO_TARGETS)
 
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
+MFL_COPR_REPO=managerforlustre/manager-for-lustre-5.0
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
@@ -17,18 +14,6 @@ TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 	          --exclude=chroma-manager/chroma_test_env \
 	          --exclude=chroma_unit_test_env           \
 	          --exclude=workspace
-
-
-#include ../include/Makefile.version
-include include/python-localsrc.mk
-
-# Fixup proxies if needed
-PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
-	export HTTP_PROXY=http://$(HTTP_PROXY); \
-	export http_proxy=http://$(HTTP_PROXY); \
-	export HTTPS_PROXY=http://$(HTTPS_PROXY); \
-	export https_proxy=http://$(HTTPS_PROXY); \
-fi;
 
 # Always nuke the DB when running tests?
 ALWAYS_NUKE_DB ?= false
@@ -55,25 +40,23 @@ ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo '
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
 
-COPR_REPO_TARGETS := base.repo tests/framework/utils/defaults.sh tests/framework/chroma_support.repo
+COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
 all: copr-rpms rpms
+
+rpms:
+	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
+	rpmbuild -D "_topdir $(CURDIR)/_topdir" -bb _topdir/SPECS/python-iml-manager.spec
 
 copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
 	rpmbuild -D "_topdir $(pwd)/_topdir" -bb _topdir/SPECS/rust-iml.spec
 
 cleandist:
-	rm -rf  dist
+	rm -rf dist
 	mkdir dist
-
-version:
-	echo 'VERSION = "$(VERSION)"' > scm_version.py
-	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> scm_version.py
-	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
-	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -128,8 +111,6 @@ feature_tests:
 	exit $$brc
 
 tests test: unit_tests feature_tests integration_tests service_tests
-
-base.repo: base.repo.in Makefile
 
 tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
 
@@ -268,7 +249,7 @@ tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in: substs
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 # set NOSE_ARGS="-x" to stop on the first failure
 ssi_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
-	CHROMA_DIR=$$PWD tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
+	tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
 upgrade_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
