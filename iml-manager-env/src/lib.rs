@@ -5,7 +5,7 @@
 use std::{
     env,
     path::PathBuf,
-    net::{SocketAddr, ToSocketAddrs},
+        net::{SocketAddr, ToSocketAddrs},
 };
 
 /// Get the environment variable or panic
@@ -89,7 +89,7 @@ pub fn get_mailbox_port() -> String {
 }
 /// Get the mailbox address from the env or panic
 pub fn get_mailbox_addr() -> SocketAddr {
-    to_socket_addr(&get_host(), &get_mailbox_port())
+    to_socket_addr(&get_server_host(), &get_mailbox_port())
 }
 
 /// Get the path to the mailbox from the env or panic

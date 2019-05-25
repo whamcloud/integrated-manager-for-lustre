@@ -42,7 +42,7 @@ cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
-cp iml-mailbox.conf %{buildroot} %{buildroot}%{_tmpfilesdir}
+cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 
