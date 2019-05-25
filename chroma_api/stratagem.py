@@ -39,3 +39,23 @@ class StratagemConfigurationResource(ChromaModelResource):
         stratagem_data = bundle.data.get("objects", [bundle.data])
 
         command_id = JobSchedulerClient.configure_stratagem(stratagem_data[0])
+
+
+class RunStratagemValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        # Need to verify that stratagem is configured.
+        return {}
+
+
+class RunStratagemResource(Resource):
+    class Meta:
+        list_allowed_methods = ["post"]
+        detail_allowed_methods = []
+        resource_name = "run_stratagem"
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        validation = RunStratagemValidation()
+        object_class = dict
+
+    def obj_create(self, bundle, **kwargs):
+        JobSchedulerClient.run_stratagem()

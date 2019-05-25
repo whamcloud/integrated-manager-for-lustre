@@ -103,5 +103,6 @@ api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.action.ActionResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
+api.register(chroma_api.stratagem.RunStratagemResource())
 
 urlpatterns = patterns("", (r"^", include(api.urls)))

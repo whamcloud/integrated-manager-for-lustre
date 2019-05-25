@@ -1780,3 +1780,20 @@ class JobScheduler(object):
             "Configuring Stratagem",
             True
         )
+
+    def run_stratagem(self):
+        with self._lock:
+            with transaction.atomic():
+                command = self.CommandPlan.command_run_jobs(
+                    [
+                        {
+                            "class_name": "RunStratagemJob",
+                            "args": {}
+                        }
+                    ],
+                    help_text["run_stratagem"],
+                )
+
+        self.progress.advance()
+
+        return command

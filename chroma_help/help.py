@@ -20,6 +20,7 @@ help_text = {
     "configure_stratagem_long": "Configure's Stratagem on the selected node.",
     # Fixme: Need official text
     "configure_stratagem_description": "Configure Stratagem description",
+    "run_stratagem": "Kicks off the stratagem scanner on all mdts",
     "remove_copytool": "Deconfigure and remove this copytool from the manager database.",
     "force_remove_copytool": "Remove this copytool from the manager database without any attempt to deconfigure the copytool on the worker node.",
     "add_copytool_filesystem": "The filesystem for which this copytool will perform HSM actions.",
