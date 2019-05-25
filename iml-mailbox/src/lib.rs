@@ -84,6 +84,13 @@ pub fn ingest_data(
         .open(address)
         .and_then(|f| {
             rx.map_err(|_| unreachable!("mpsc::Receiver should never return Err"))
+                .map(|mut line| {
+                    if !line.ends_with(&[b'\n']) {
+                        line.extend([b'\n'].iter());
+                    }
+
+                    line
+                })
                 .fold(f, |file, line| io::write_all(file, line).map(|(f, _)| f))
                 .map(|_| {})
         })
@@ -94,6 +101,8 @@ mod tests {
     use super::*;
     use futures::Async;
 
+    use std::fs;
+    use tempdir::TempDir;
     #[test]
     fn test_line_stream() {
         let mut stream = warp::test::request()
@@ -105,5 +114,36 @@ mod tests {
         assert_eq!(stream.poll().unwrap(), Async::Ready(Some("bar".into())));
         assert_eq!(stream.poll().unwrap(), Async::Ready(Some("baz".into())));
         assert_eq!(stream.poll().unwrap(), Async::Ready(None));
+    }
+
+    #[test]
+    fn test_mailbox_senders() {
+        let tmp_dir = TempDir::new("test_mailbox_dir").unwrap();
+        let address = tmp_dir.path().join("test_message_1");
+
+        let mut mailbox_sender = MailboxSenders::default();
+
+        let (tx, fut) = mailbox_sender.create(address.clone());
+
+        tx.unbounded_send(b"foo\n".to_vec()).unwrap();
+        mailbox_sender
+            .get(&address)
+            .unwrap()
+            .unbounded_send(b"bar".to_vec())
+            .unwrap();
+
+        tx.unbounded_send(b"baz\n".to_vec()).unwrap();
+
+
+        mailbox_sender.remove(&address);
+
+        drop(tx);
+
+
+        tokio::run(fut.map_err(|e| panic!(e)));
+
+        let contents = fs::read_to_string(&address).unwrap();
+
+        assert_eq!(contents, "foo\nbar\nbaz\n");
     }
 }
