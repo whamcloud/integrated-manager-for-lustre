@@ -11,6 +11,8 @@
 //! concurrently
 
 use futures::{Future as _, Stream as _};
+use http::Response;
+use hyper::Body;
 use iml_mailbox::{LineStream, MailboxSenders};
 use parking_lot::Mutex;
 use std::{fs, path::PathBuf, sync::Arc};
@@ -29,11 +31,27 @@ fn main() {
 
     fs::create_dir_all(&mailbox_path).expect("could not create mailbox path");
 
-    let routes = warp::path("mailbox")
+    let mailbox = warp::path("mailbox");
+
+    let mailbox_path2 = mailbox_path.clone();
+
+    let get = warp::get2()
+        .and(mailbox)
+        .and(warp::path::param().map(move |x| [&mailbox_path2, &x].iter().collect()))
+        .map(|address: PathBuf| {
+            let stream = iml_mailbox::stream_file(address);
+
+            let body = Body::wrap_stream(stream);
+
+            Response::new(body)
+        });
+
+    let post = warp::post2()
+        .and(mailbox)
         .and(shared_senders_filter)
         .and(
             warp::header::<PathBuf>("mailbox-message-name")
-                .map(move |x| [mailbox_path.clone(), x].iter().collect()),
+                .map(move |x| [&mailbox_path.clone(), &x].iter().collect()),
         )
         .and(iml_mailbox::line_stream())
         .and_then(
@@ -61,8 +79,9 @@ fn main() {
                 s.for_each(move |l| tx.unbounded_send(l).map_err(warp::reject::custom))
             },
         )
-        .map(|_| warp::reply())
-        .with(warp::log("mailbox"));
+        .map(|_| warp::reply());
+
+    let routes = get.or(post).with(warp::log("mailbox"));
 
     log::info!("Starting on {:?}", addr);
 

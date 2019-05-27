@@ -4,8 +4,15 @@
 
 use bytes::buf::FromBuf;
 use futures::{sync::mpsc, Future, Stream};
-use std::{collections::HashMap, path::PathBuf};
-use tokio::{fs::OpenOptions, io};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+use tokio::{
+    codec::{BytesCodec, Framed},
+    fs::OpenOptions,
+    io,
+};
 use warp::{body::BodyStream, filters::BoxedFilter, Filter};
 
 pub trait LineStream: Stream<Item = Vec<u8>, Error = warp::Rejection> {}
@@ -22,6 +29,22 @@ fn streamer(s: BodyStream) -> Box<LineStream + Send> {
 /// Warp Filter that streams a newline delimited body
 pub fn line_stream() -> BoxedFilter<(Box<LineStream + Send>,)> {
     warp::body::stream().map(streamer).boxed()
+}
+
+/// Given a path, streams the file till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a file.
+pub fn stream_file<P>(p: P) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::File::open(p)
+        .map(|file| Framed::new(file, BytesCodec::new()))
+        .flatten_stream()
+        .map(bytes::BytesMut::freeze)
+        .from_err()
 }
 
 /// Holds all active streams that are currently writing to an address.
@@ -99,10 +122,11 @@ pub fn ingest_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::buf::IntoBuf as _;
     use futures::Async;
-
-    use std::fs;
+    use std::{fs, io::Write as _};
     use tempdir::TempDir;
+
     #[test]
     fn test_line_stream() {
         let mut stream = warp::test::request()
@@ -118,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_mailbox_senders() {
-        let tmp_dir = TempDir::new("test_mailbox_dir").unwrap();
+        let tmp_dir = TempDir::new("test_mailbox").unwrap();
         let address = tmp_dir.path().join("test_message_1");
 
         let mut mailbox_sender = MailboxSenders::default();
@@ -134,16 +158,39 @@ mod tests {
 
         tx.unbounded_send(b"baz\n".to_vec()).unwrap();
 
-
         mailbox_sender.remove(&address);
 
         drop(tx);
-
 
         tokio::run(fut.map_err(|e| panic!(e)));
 
         let contents = fs::read_to_string(&address).unwrap();
 
         assert_eq!(contents, "foo\nbar\nbaz\n");
+    }
+
+    #[test]
+    fn test_stream_file() -> Result<(), std::io::Error> {
+        let tmp_dir = TempDir::new("test_stream_file").unwrap();
+
+        let file_path = tmp_dir.path().join("test_file.txt");
+        let mut tmp_file = fs::File::create(&file_path)?;
+        writeln!(tmp_file, "Here's \nsome file\n content")?;
+
+        let s: String = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on_all(
+                stream_file(file_path)
+                    .map(|x| x.into_buf())
+                    .map(Vec::from_buf)
+                    .map(|x| String::from_utf8(x).unwrap())
+                    .collect(),
+            )
+            .unwrap()
+            .join("");
+
+        assert_eq!(s, "Here's \nsome file\n content\n");
+
+        Ok(())
     }
 }

@@ -14,6 +14,8 @@ stream-lines = { git = "https://github.com/softprops/stream-lines" }
 tokio = "0.1.20"
 warp = "0.1" 
 parking_lot = "0.8"
+hyper = "0.12"
+http = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"

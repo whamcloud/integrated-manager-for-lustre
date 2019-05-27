@@ -4,8 +4,8 @@
 
 use std::{
     env,
+    net::{SocketAddr, ToSocketAddrs},
     path::PathBuf,
-        net::{SocketAddr, ToSocketAddrs},
 };
 
 /// Get the environment variable or panic
