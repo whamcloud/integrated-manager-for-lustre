@@ -14,6 +14,7 @@ Wants=iml-realtime.service
 Wants=iml-view-server.service
 Wants=iml-agent-comms.service
 Wants=iml-stratagem.service
+Wants=iml-mailbox.service
 Wants=iml-action-runner.service
 Wants=iml-update-handler.socket
 Wants=iml-srcmap-reverse.socket

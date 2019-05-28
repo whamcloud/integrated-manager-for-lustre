@@ -1,3 +1,6 @@
+%{?systemd_requires}
+BuildRequires: systemd
+
 %global crate iml
 
 Name: rust-%{crate}
@@ -30,12 +33,16 @@ cp iml-stratagem %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-warp-drive %{buildroot}%{_bindir}
+cp iml-mailbox %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp iml-stratagem.service %{buildroot}%{_unitdir}
 cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
 cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp iml-mailbox.service %{buildroot}%{_unitdir}
+mkdir -p %{buildroot}%{_tmpfilesdir}
+cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 
@@ -152,6 +159,28 @@ systemctl preset iml-warp-drive.service
 %files warp-drive
 %{_bindir}/iml-warp-drive
 %attr(0644,root,root)%{_unitdir}/iml-warp-drive.service
+
+%package mailbox
+Summary: Performs bidirectional streaming of large datasets
+License: MIT
+Group: System Environment/Libraries
+
+%description mailbox
+%{summary}
+
+%post mailbox
+systemctl preset iml-mailbox.service
+
+%preun mailbox
+%systemd_preun mailbox.service
+
+%postun mailbox
+%systemd_postun_with_restart mailbox.service
+
+%files mailbox
+%{_bindir}/iml-mailbox
+%attr(0644,root,root)%{_unitdir}/iml-mailbox.service
+%attr(0644,root,root)%{_tmpfilesdir}/iml-mailbox.conf
 
 %changelog
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

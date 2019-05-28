@@ -23,6 +23,8 @@ APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
 
+MAILBOX_PATH = "/var/spool/iml/mailbox"
+
 HTTP_FRONTEND_PORT = 80
 
 HTTPS_FRONTEND_PORT = os.getenv("HTTPS_FRONTEND_PORT", 443)
@@ -52,6 +54,10 @@ VIEW_SERVER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, VIEW_SERVER_PORT)
 WARP_DRIVE_PORT = 8890
 
 WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
+
+MAILBOX_PORT = 8891
+
+MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
 SSL_PATH = "/var/lib/chroma"
 

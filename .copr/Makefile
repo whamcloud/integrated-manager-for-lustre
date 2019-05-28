@@ -20,13 +20,15 @@ srpm:
 		yum -y -q install lustre-client;\
 	fi
 	cargo build --release
-	cp target/release/iml-{action-runner,agent,agent-comms,agent-daemon,stratagem,warp-drive} \
+	cp target/release/iml-{action-runner,agent,agent-comms,mailbox,agent-daemon,stratagem,warp-drive} \
 		iml-agent-comms.service \
+		iml-mailbox.service \
 		iml-stratagem.service \
 		iml-action-runner.service \
 		iml-action-runner.socket \
 		iml-agent/systemd-units/* \
 		iml-warp-drive/systemd-units/* \
+		iml-mailbox.conf \
 		${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/

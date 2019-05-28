@@ -1,0 +1,22 @@
+[package]
+name = "iml-mailbox"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+bytes = "0.4"
+env_logger = "0.6"
+futures = "0.1"
+log = "0.4"
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+stream-lines = { git = "https://github.com/softprops/stream-lines" }
+tokio = "0.1.20"
+warp = "0.1" 
+parking_lot = "0.8"
+hyper = "0.12"
+http = "0.1"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
+tempdir = "0.3"
