@@ -23,8 +23,8 @@ pub fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
 }
 
-/// Gets the manager url or panics
 lazy_static! {
+    // Gets the manager url or panics
     pub static ref MANAGER_URL: Url =
         Url::parse(&get_var("IML_MANAGER_URL")).expect("Could not parse manager url");
 }
@@ -45,9 +45,9 @@ fn get_authority_cert_path() -> String {
     get_var("AUTHORITY_CRT_PATH")
 }
 
-/// Gets the pfx file.
-/// If pfx is not found it will be created.
 lazy_static! {
+    // Gets the pfx file.
+    // If pfx is not found it will be created.
     pub static ref PFX: Vec<u8> = {
         let private_pem_path = get_private_pem_path();
 

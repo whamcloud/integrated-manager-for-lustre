@@ -33,10 +33,9 @@ where
             .then(|x| {
                 Ok(match x {
                     Ok(x) => x.to_json_value(),
-                    Err(e) => e.to_json_value(),
+                    Err(e) => Err(format!("{}", e)),
                 })
-            })
-            .map_err(|_: ImlAgentError| ()),
+            }),
     ) as BoxedFuture
 }
 
