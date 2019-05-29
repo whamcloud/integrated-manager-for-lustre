@@ -166,11 +166,11 @@ pub fn get_mailbox_files(
                 .map(move |(idx, counter)| {
                     let group = stratagem_data
                         .get_group_by_name(&group.name)
-                        .expect("did not find group by name");
+                        .expect(&format!("did not find group by name {}", group.name));
 
                     let rule = group
                         .get_rule_by_idx(idx - 1)
-                        .expect("did not find rule by idx");
+                        .expect(&format!("did not find rule by idx {}", idx - 1));
 
                     let p = [base_dir, &group.name, &counter.name]
                         .iter()
