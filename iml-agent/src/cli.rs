@@ -189,7 +189,7 @@ fn main() {
                 println!("{}", termion::clear::BeforeCursor);
 
                 match result {
-                    Ok((output, results_dir)) => {
+                    Ok((output, results_dir, _)) => {
                         println!(
                             "{}✔ Scan finished{}. Results located in {}",
                             green, reset, results_dir
