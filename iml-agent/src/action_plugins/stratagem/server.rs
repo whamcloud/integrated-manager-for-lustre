@@ -168,9 +168,6 @@ pub fn get_mailbox_files(
                         .get_group_by_name(&group.name)
                         .expect("did not find group by name");
 
-                    eprintln!("idx {:?}", idx);
-                    eprintln!("group {:?}", group);
-
                     let rule = group
                         .get_rule_by_idx(idx - 1)
                         .expect("did not find rule by idx");
@@ -180,7 +177,7 @@ pub fn get_mailbox_files(
                         .cloned()
                         .collect::<PathBuf>();
 
-                    (p, rule.argument.clone())
+                    (p, format!("{}-{}", group.name, rule.argument))
                 })
         })
         .flatten()
@@ -345,18 +342,18 @@ mod tests {
             ],
         };
 
-        let actual = get_fid_dirs("foo_bar", &stratagem_data, &stratagem_result);
+        let actual = get_mailbox_files("foo_bar", &stratagem_data, &stratagem_result);
 
         assert_eq!(
             actual,
             vec![
                 (
                     PathBuf::from("foo_bar/warn_purge_times/shell_cmd_of_rule_0"),
-                    "fids_expiring_soon".into()
+                    "warn_purge_times-fids_expiring_soon".into()
                 ),
                 (
                     PathBuf::from("foo_bar/warn_purge_times/shell_cmd_of_rule_1"),
-                    "fids_expired".into()
+                    "warn_purge_times-fids_expired".into()
                 )
             ]
         );
