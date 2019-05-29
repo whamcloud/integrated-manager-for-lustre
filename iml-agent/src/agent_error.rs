@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::{PluginName, ToJsonValue};
+use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -235,8 +235,11 @@ impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     }
 }
 
-impl ToJsonValue for ImlAgentError {
-    fn to_json_value(&self) -> std::result::Result<serde_json::Value, String> {
-        Ok(serde_json::Value::String(format!("{:?}", self)))
+impl serde::Serialize for ImlAgentError {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{:?}", self))
     }
 }
