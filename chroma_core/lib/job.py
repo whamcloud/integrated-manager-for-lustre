@@ -6,6 +6,7 @@
 import django.db.models
 
 from chroma_core.services import log_register
+from chroma_core.lib.util import invoke_rust_agent
 from iml_common.lib.agent_rpc import agent_result
 
 job_log = log_register("job")
@@ -190,7 +191,11 @@ class Step(object):
             raise
 
     def invoke_rust_agent(self, host, command, args={}):
-        pass
+        """
+        Talks to the iml-action-runner service
+        """
+
+        return invoke_rust_agent(host, command, args, self._cancel_event)
 
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
