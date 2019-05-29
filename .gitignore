@@ -39,8 +39,9 @@ id_rsa
 id_rsa.pub
 install_build_deps-stamp
 localenv
-storage_server.repo
 base.repo
+chroma_support.repo
+storage_server.repo
 copr-local.mk
 target
 **/*.rs.bk

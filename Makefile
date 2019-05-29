@@ -38,7 +38,7 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo tests/framework/services/runner.sh base.repo tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
+COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo tests/framework/services/runner.sh base.repo chroma_support.repo tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
@@ -111,6 +111,8 @@ feature_tests:
 tests test: unit_tests feature_tests integration_tests service_tests
 
 base.repo: base.repo.in Makefile
+
+chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
 
 tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
 
