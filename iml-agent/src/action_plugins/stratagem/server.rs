@@ -151,9 +151,9 @@ type MailboxFiles = Vec<(PathBuf, String)>;
 pub fn get_mailbox_files(
     base_dir: &str,
     stratagem_data: &StratagemData,
-    stratagen_result: &StratagemResult,
+    stratagem_result: &StratagemResult,
 ) -> MailboxFiles {
-    stratagen_result
+    stratagem_result
         .group_counters
         .iter()
         .filter(|x| has_flists(&x.counters))
