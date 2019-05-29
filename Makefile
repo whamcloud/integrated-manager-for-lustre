@@ -38,9 +38,11 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo tests/framework/services/runner.sh base.repo chroma_support.repo tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
+# Files needing substitutions for MFL_COPR/REPO_*
+SUBSTS_SHELL := tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup tests/framework/utils/defaults.sh tests/framework/services/runner.sh
+SUBSTS_REPOS := base.repo chroma_support.repo tests/framework/chroma_support.repo
 
-SUBSTS := $(COPR_REPO_TARGETS)
+SUBSTS := $(SUBSTS_SHELL) $(SUBSTS_REPOS)
 
 all: copr-rpms rpms
 
@@ -122,7 +124,7 @@ tests/framework/services/runner.sh: tests/framework/services/runner.sh.in Makefi
 
 tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup: tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup.in Makefile
 
-$(COPR_REPO_TARGETS):
+$(SUBSTS):
 	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
 	    -e 's/@MFL_COPR_NAME@/$(MFL_COPR_NAME)/g'               \
 	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
@@ -138,6 +140,7 @@ install_requirements: requirements.txt
 download: install_requirements
 
 substs: $(SUBSTS)
+	chmod +x $(SUBSTS_SHELL)
 
 clean_substs:
 	if [ -n "$(SUBSTS)" ]; then \
