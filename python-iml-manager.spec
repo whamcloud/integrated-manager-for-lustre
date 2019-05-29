@@ -90,7 +90,11 @@ Requires:       iml-device-scanner-aggregator
 Requires:       iml-realtime
 Requires:       iml-view-server
 Requires:       iml-socket-worker
+Requires:       python2-requests-unixsocket
 Requires:       rust-iml-warp-drive
+Requires:       rust-iml-action-runner
+Requires:       rust-iml-agent-comms
+Requires:       rust-iml-stratagem
 Requires:       createrepo
 Requires:       python2-toolz
 Requires:       iml-update-handler < 2

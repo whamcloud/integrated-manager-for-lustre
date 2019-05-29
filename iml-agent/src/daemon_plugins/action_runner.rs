@@ -54,7 +54,7 @@ impl DaemonPlugin for ActionRunner {
                     Some(p) => p,
                     None => {
                         let err = RequiredError(
-                            format!("Could not find action {:?} in registry", action).to_string(),
+                            format!("Could not find action {} in registry", action).to_string(),
                         );
 
                         let result = ActionResult {
