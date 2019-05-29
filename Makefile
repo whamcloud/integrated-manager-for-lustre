@@ -4,9 +4,10 @@ DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
 DIST_DEPS     := version $(COPR_REPO_TARGETS)
 
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-5.0
+MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
+MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
 
 TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 	          --exclude=chroma-\*/myenv\*              \
@@ -37,10 +38,7 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
-MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
-
-COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo
+COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo tests/framework/services/runner.sh base.repo tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
 
 SUBSTS := $(COPR_REPO_TARGETS)
 
@@ -112,12 +110,19 @@ feature_tests:
 
 tests test: unit_tests feature_tests integration_tests service_tests
 
+base.repo: base.repo.in Makefile
+
 tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
 
 tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
 
+tests/framework/services/runner.sh: tests/framework/services/runner.sh.in Makefile
+
+tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup: tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup.in Makefile
+
 $(COPR_REPO_TARGETS):
 	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
+	    -e 's/@MFL_COPR_NAME@/$(MFL_COPR_NAME)/g'               \
 	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
 	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
 
@@ -242,8 +247,6 @@ reset_cluster: destroy_cluster create_cluster
 
 install_production: reset_cluster
 	bash -x scripts/install_dev_cluster
-
-tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in: substs
 
 # To run a specific test:
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
