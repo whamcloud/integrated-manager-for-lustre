@@ -253,13 +253,13 @@ install_production: reset_cluster
 # To run a specific test:
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 # set NOSE_ARGS="-x" to stop on the first failure
-ssi_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+ssi_tests: substs
 	tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
-upgrade_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+upgrade_tests: substs
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
 
-efs_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+efs_tests: substs
 	tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 chroma_test_env: chroma_test_env/bin/activate
