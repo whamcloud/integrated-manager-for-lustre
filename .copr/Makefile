@@ -1,12 +1,14 @@
 BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
 
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-5.0
+MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
+MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
 
 base.repo: base.repo.in
 	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
+	    -e 's/@MFL_COPR_NAME@/$(MFL_COPR_NAME)/g'               \
 	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
 	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
 
@@ -59,7 +61,7 @@ iml-srpm: iml-deps base.repo
 
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	
+
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-iml-manager.spec
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/

@@ -4,6 +4,7 @@ DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
 DIST_DEPS     := version $(COPR_REPO_TARGETS)
 
+# Ensure this matches .copr/Makefile
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
 MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
