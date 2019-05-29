@@ -4,4 +4,6 @@
 
 pub mod agent_client;
 pub mod crypto_client;
+pub mod hyper_client;
+pub mod mailbox_client;
 pub mod session;

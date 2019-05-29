@@ -19,7 +19,7 @@ iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 tokio-runtime-shutdown = { path = "../tokio-runtime-shutdown", version = "0.1.0" }
-parking_lot = "0.7"
+parking_lot = "0.8"
 
 [dev-dependencies]
 iml-agent-comms = { path = "../iml-agent-comms", version = "0.1.0"}
