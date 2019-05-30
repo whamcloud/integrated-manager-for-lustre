@@ -12,7 +12,17 @@ from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock
 from chroma_help.help import help_text
-from chroma_core.models import AlertStateBase, AlertEvent, ManagedHost, ManagedMdt, ManagedTargetMount
+from chroma_core.models import (
+    AlertStateBase,
+    AlertEvent,
+    ManagedHost,
+    ManagedMdt,
+    ManagedTarget,
+    ManagedTargetMount,
+    Volume,
+    VolumeNode,
+    StorageResourceRecord,
+)
 
 
 class StratagemConfiguration(StatefulObject):
@@ -93,13 +103,14 @@ class ConfigureStratagemJob(StateChangeJob):
 
 
 class RunStratagemStep(Step):
-    database = True
+    def run(self, args):
+        host = args["host"]
+        path = args["path"]
 
-    def run(self, kwargs):
         def _get_body(mount_point):
             return {
                 "dump_flist": False,
-                "device": {"path": mount_point, "groups": ["size_distribution", "warn_purge_times"]},
+                "device": {"path": path, "groups": ["size_distribution", "warn_purge_times"]},
                 "groups": [
                     {
                         "rules": [
@@ -144,31 +155,54 @@ class RunStratagemStep(Step):
                 ],
             }
 
-        for mdt in ManagedMdt.objects.all():
-            target = ManagedTargetMount.objects.get(id=mdt.active_mount_id)
-            host = ManagedHost.objects.get(id=target.host_id)
-
-            body = _get_body(target.mount_point)
-
-            result = self.invoke_rust_agent(host.fqdn, "start_scan_stratagem", body)
-            # Was the result an error? If so, handle it.
-            job_log.warning("Run stratagem result: {}".format(result))
-
-            # next step is to stream the results to the mailbox
+        body = _get_body(path)
+        result = self.invoke_rust_agent(host, "start_scan_stratagem", body)
+        self.log("result: {}".format(result))
 
 
 class RunStratagemJob(Job):
+    mdt_id = models.IntegerField()
+    fqdn = models.CharField(max_length=255, null=False, default="")
+    target_name = models.CharField(max_length=64, null=False, default="")
+    filesystem_type = models.CharField(max_length=32, null=False, default="")
+    target_mount_point = models.CharField(max_length=512, null=False, default="")
+    device_path = models.CharField(max_length=512, null=False, default="")
+
+    def __init__(self, *args, **kwargs):
+        if "mdt_id" not in kwargs:
+            super(RunStratagemJob, self).__init__(*args, **kwargs)
+        else:
+            mdt = ManagedMdt.objects.get(id=kwargs["mdt_id"])
+            target_mount = ManagedTargetMount.objects.get(id=mdt.active_mount_id)
+            volume_node = VolumeNode.objects.get(id=target_mount.volume_node_id)
+            volume = Volume.objects.get(id=mdt.volume_id)
+            host = ManagedHost.objects.get(id=target_mount.host_id)
+
+            kwargs["fqdn"] = host.fqdn
+            kwargs["target_name"] = mdt.name
+            kwargs["filesystem_type"] = volume.filesystem_type
+            kwargs["target_mount_point"] = target_mount.mount_point
+            kwargs["device_path"] = volume_node.path
+
+            super(RunStratagemJob, self).__init__(*args, **kwargs)
+
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
 
     @classmethod
-    def long_description(cls):
-        return help_text["run_stratagem"]
+    def long_description(cls, self):
+        return help_text["run_stratagem"].format(self.target_name)
 
     def description(self):
-        return self.long_description()
+        return self.long_description(self)
 
     def get_steps(self):
-        return [(RunStratagemStep, {})]
+
+        if self.filesystem_type.lower() == "zfs":
+            path = self.target_mount_point
+        else:
+            path = self.device_path
+
+        return [(RunStratagemStep, {"host": self.fqdn, "path": path})]
 

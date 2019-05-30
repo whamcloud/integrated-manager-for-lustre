@@ -6,7 +6,7 @@ from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_core.models import StratagemConfiguration
+from chroma_core.models import StratagemConfiguration, ManagedHost, ManagedMdt, ManagedTargetMount
 
 from chroma_api.chroma_model_resource import ChromaModelResource
 
@@ -58,4 +58,5 @@ class RunStratagemResource(Resource):
         object_class = dict
 
     def obj_create(self, bundle, **kwargs):
-        JobSchedulerClient.run_stratagem()
+        mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.all())
+        JobSchedulerClient.run_stratagem(mdts)

@@ -872,9 +872,11 @@ class JobScheduler(object):
 
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            result = self.CommandPlan.command_run_jobs(job_dicts, message)
-            self.progress.advance()
-            return result
+            with transaction.atomic():
+                result = self.CommandPlan.command_run_jobs(job_dicts, message)
+        
+        self.progress.advance()
+        return result
 
     def get_transition_consequences(cls, stateful_object_class, stateful_object_id, new_state):
         """Query what the side effects of a state transition are.  Effectively does
@@ -1781,19 +1783,16 @@ class JobScheduler(object):
             True
         )
 
-    def run_stratagem(self):
-        with self._lock:
-            with transaction.atomic():
-                command = self.CommandPlan.command_run_jobs(
-                    [
-                        {
-                            "class_name": "RunStratagemJob",
-                            "args": {}
-                        }
-                    ],
-                    help_text["run_stratagem"],
-                )
+    def run_stratagem(self, mdts):
+        run_stratagem_list = map(lambda mdt_id: { 
+            "class_name": "RunStratagemJob", 
+            "args": {
+                "mdt_id": mdt_id, 
+            }
+        }, mdts)
 
-        self.progress.advance()
+        command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
+        # Put json results of (results.json, file_path) and push into time series database
+        # Stream filepath to the manager on the mailbox
         return command
