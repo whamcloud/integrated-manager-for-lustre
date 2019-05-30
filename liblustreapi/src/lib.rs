@@ -128,7 +128,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
 
     if rc != 0 {
         log::error!(
-            "Error: llapi_serach_rootpath({}) => {}",
+            "Error: llapi_search_rootpath({}) => {}",
             fsc.into_string()?,
             rc
         );

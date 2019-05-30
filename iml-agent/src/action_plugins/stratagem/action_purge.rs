@@ -2,12 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, env, http_comms::crypto_client};
-use futures::future::Future;
-use futures::stream::Stream;
+use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
+use futures::{future::Future, stream::Stream};
 
 pub fn purge_files(
-    device: &str,
+    device: &String,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
     liblustreapi::rmfids(&device, args).map_err(ImlAgentError::LiblustreError)
@@ -19,18 +18,13 @@ pub fn read_mailbox(device: &str, mailbox: &str) -> Result<(), ImlAgentError> {
         e
     })?;
 
-    let query: Vec<(String, String)> = Vec::new();
-    let message_endpoint = env::MANAGER_URL.join("/mailbox/")?.join(mailbox)?;
-    let identity = crypto_client::get_id(&env::PFX)?;
-    let client = crypto_client::create_client(identity)?;
-
     // Spawn off an expensive computation
     tokio::spawn(
-        stream_lines::strings(crypto_client::get_stream(&client, message_endpoint, &query))
+        mailbox_client::get(mailbox.to_string())
             // @@ add multithreading here - chunking?
-            // @@ .map json -> fid
-            .for_each(move |fid| {
-                liblustreapi::rmfid(&mntpt, &fid).map_err(ImlAgentError::LiblustreError)
+            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
+            .for_each(move |fli: fidlist::FidListItem| {
+                liblustreapi::rmfid(&mntpt, &fli.fid).map_err(ImlAgentError::LiblustreError)
             })
             .map_err(|e| {
                 log::error!("Failed {:?}", e);

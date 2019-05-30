@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, env, http_comms::crypto_client};
+use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
 use csv;
 use futures::future::Future;
 use futures::stream::Stream;
@@ -24,11 +24,11 @@ struct Record {
     fid: String,
 }
 
-fn fid2record(mntpt: &String, fid: &String) -> Result<Record, ImlAgentError> {
-    let path = match liblustreapi::fid2path(&mntpt, &fid) {
+fn fid2record(mntpt: &String, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
+    let path = match liblustreapi::fid2path(&mntpt, &fli.fid) {
         Ok(p) => p,
         Err(e) => {
-            log::error!("Failed to fid2path: {}: {}", fid, e);
+            log::error!("Failed to fid2path: {}: {}", fli.fid, e);
             return Err(e.into());
         }
     };
@@ -56,7 +56,7 @@ fn fid2record(mntpt: &String, fid: &String) -> Result<Record, ImlAgentError> {
         atime: stat.st_atime,
         mtime: stat.st_mtime,
         ctime: stat.st_ctime,
-        fid: fid.to_string(),
+        fid: fli.fid.to_string(),
     })
 }
 
@@ -73,7 +73,7 @@ pub fn write_records(
     let mut wtr = csv::Writer::from_writer(out);
 
     for fid in args {
-        let rec = match fid2record(&mntpt, &fid) {
+        let rec = match fid2record(&mntpt, &fidlist::FidListItem::new(fid)) {
             Ok(r) => r,
             Err(_) => continue,
         };
@@ -91,21 +91,17 @@ pub fn read_mailbox(device: &str, mailbox: &str, out: impl io::Write) -> Result<
         e
     })?;
 
-    let query: Vec<(String, String)> = Vec::new();
     let mut wtr = csv::Writer::from_writer(out);
-    let message_endpoint = env::MANAGER_URL.join("/mailbox/")?.join(mailbox)?;
-    let identity = crypto_client::get_id(&env::PFX)?;
-    let client = crypto_client::create_client(identity)?;
 
     let (sender, recv) = channel();
 
     // Spawn off an expensive computation
     tokio::spawn(
-        stream_lines::strings(crypto_client::get_stream(&client, message_endpoint, &query))
-            // @@ add multithreading here
-            // @@ .map json -> fid
-            .for_each(move |fid| {
-                if let Ok(rec) = fid2record(&mntpt, &fid) {
+        mailbox_client::get(mailbox.to_string())
+            // @@ add multithreading here - chunking?
+            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
+            .for_each(move |fli: fidlist::FidListItem| {
+                if let Ok(rec) = fid2record(&mntpt, &fli) {
                     sender.send(rec).map_err(|_| ImlAgentError::SendError)?;
                 }
                 Ok(())
