@@ -71,6 +71,11 @@ pub enum ImlAgentError {
     CsvError(csv::Error),
     CmdOutputError(Output),
     SendError,
+    InvalidUriParts(http::uri::InvalidUriParts),
+    InvalidUri(http::uri::InvalidUri),
+    InvalidHeaderValue(http::header::InvalidHeaderValue),
+    HyperError(hyper::error::Error),
+    NativeTls(native_tls::Error),
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -99,6 +104,11 @@ impl std::fmt::Display for ImlAgentError {
                 String::from_utf8_lossy(&err.stderr)
             ),
             ImlAgentError::SendError => write!(f, "Rx went away"),
+            ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
+            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -123,6 +133,11 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::CsvError(ref err) => Some(err),
             ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
+            ImlAgentError::InvalidUriParts(ref err) => Some(err),
+            ImlAgentError::InvalidUri(ref err) => Some(err),
+            ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
+            ImlAgentError::HyperError(ref err) => Some(err),
+            ImlAgentError::NativeTls(ref err) => Some(err),
         }
     }
 }
@@ -232,6 +247,36 @@ impl From<futures::sync::oneshot::Canceled> for ImlAgentError {
 impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     fn from(_: futures::sync::mpsc::SendError<T>) -> Self {
         ImlAgentError::SendError
+    }
+}
+
+impl From<http::uri::InvalidUriParts> for ImlAgentError {
+    fn from(err: http::uri::InvalidUriParts) -> Self {
+        ImlAgentError::InvalidUriParts(err)
+    }
+}
+
+impl From<http::uri::InvalidUri> for ImlAgentError {
+    fn from(err: http::uri::InvalidUri) -> Self {
+        ImlAgentError::InvalidUri(err)
+    }
+}
+
+impl From<hyper::error::Error> for ImlAgentError {
+    fn from(err: hyper::error::Error) -> Self {
+        ImlAgentError::HyperError(err)
+    }
+}
+
+impl From<native_tls::Error> for ImlAgentError {
+    fn from(err: native_tls::Error) -> Self {
+        ImlAgentError::NativeTls(err)
+    }
+}
+
+impl From<http::header::InvalidHeaderValue> for ImlAgentError {
+    fn from(err: http::header::InvalidHeaderValue) -> Self {
+        ImlAgentError::InvalidHeaderValue(err)
     }
 }
 

@@ -4,9 +4,11 @@
 
 use dns_lookup;
 use lazy_static::lazy_static;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::net::ToSocketAddrs;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    net::ToSocketAddrs,
+};
 
 lazy_static! {
     // Gets the hostname for the node or panics
