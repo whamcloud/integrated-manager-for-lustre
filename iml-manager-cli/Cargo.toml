@@ -1,0 +1,26 @@
+[package]
+name = "iml-manager-cli"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+dotenv = "0.14"
+env_logger = "0.6.1"
+futures = "0.1"
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
+log = "0.4.6"
+prettytable-rs = "0.8"
+reqwest = { version = "0.9", features = ["default-tls", "tls"] }
+serde = { version = "1", features = ["derive"] }
+spinners = "1.0.0"
+structopt = "0.2"
+termion = "1"
+tokio = "0.1"
+url = "1.7"
+exitcode = "1.1"
+
+[[bin]]
+name = "iml"
+path = "src/main.rs"

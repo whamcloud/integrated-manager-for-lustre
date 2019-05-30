@@ -257,3 +257,69 @@ impl<T: serde::Serialize> ToBytes for T {
         serde_json::to_vec(&self)
     }
 }
+
+/// Meta is the metadata object returned by a fetch call
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct Meta {
+    pub limit: u32,
+    pub next: Option<u32>,
+    pub offset: u32,
+    pub previous: Option<u32>,
+    pub total_count: u32,
+}
+
+/// ApiList contains the metadata and the `Vec` of objects returned by a fetch call
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct ApiList<T> {
+    pub meta: Meta,
+    pub objects: Vec<T>,
+}
+
+/// A Host record from api/host/
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Host {
+    pub address: String,
+    pub boot_time: String,
+    pub client_mounts: Vec<String>,
+    pub content_type_id: u64,
+    pub corosync_configuration: String,
+    pub corosync_ring0: String,
+    pub fqdn: String,
+    pub id: u64,
+    pub immutable_state: bool,
+    pub install_method: String,
+    pub label: String,
+    pub lnet_configuration: String,
+    pub member_of_active_filesystem: bool,
+    pub needs_update: bool,
+    pub nids: Vec<String>,
+    pub nodename: String,
+    pub pacemaker_configuration: String,
+    pub private_key: Option<String>,
+    pub private_key_passphrase: Option<String>,
+    pub properties: String,
+    pub resource_uri: String,
+    pub root_pw: Option<String>,
+    pub server_profile: ServerProfile,
+    pub state: String,
+    pub state_modified_at: String,
+}
+
+/// A server profile record from api/server_profile/
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct ServerProfile {
+    pub corosync: bool,
+    pub corosync2: bool,
+    pub default: bool,
+    pub initial_state: String,
+    pub managed: bool,
+    pub name: String,
+    pub ntp: bool,
+    pub pacemaker: bool,
+    pub repolist: Vec<String>,
+    pub resource_uri: String,
+    pub ui_description: String,
+    pub ui_name: String,
+    pub user_selectable: bool,
+    pub worker: bool,
+}

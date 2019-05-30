@@ -30,6 +30,7 @@ srpm:
 		iml-warp-drive/systemd-units/* \
 		iml-mailbox.conf \
 		${TMPDIR}/release/rust-iml
+	cp target/release/iml ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
