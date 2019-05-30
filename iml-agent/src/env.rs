@@ -23,6 +23,10 @@ pub fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
 }
 
+pub fn get_var_else(name: &str, default: &str) -> String {
+    env::var(name).unwrap_or_else(|_| default.to_string())
+}
+
 lazy_static! {
     // Gets the manager url or panics
     pub static ref MANAGER_URL: Url =

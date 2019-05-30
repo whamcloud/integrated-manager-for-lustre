@@ -18,7 +18,7 @@ impl FidListItem {
     pub fn new(fid: String) -> Self {
         FidListItem {
             fid: fid,
-            linkea: Vec::new(),
+            linkea: vec![],
         }
     }
 }

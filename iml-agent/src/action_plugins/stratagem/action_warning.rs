@@ -2,14 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
+use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
 use csv;
-use futures::future::Future;
-use futures::stream::Stream;
+use futures::sync::mpsc::channel;
+use futures::{Future, Sink, Stream};
 use libc;
 use std::ffi::CStr;
 use std::io;
-use std::sync::mpsc::channel;
+use std::path::PathBuf;
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
@@ -85,44 +85,57 @@ pub fn write_records(
     Ok(())
 }
 
-pub fn read_mailbox(device: &str, mailbox: &str, out: impl io::Write) -> Result<(), ImlAgentError> {
-    let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
-        e
-    })?;
+// Read mailbox and build a csv of files. return pathname of generated csv
+//
+pub fn read_mailbox(
+    device: &str,
+    mailbox: &str,
+) -> impl Future<Item = String, Error = ImlAgentError> {
+    let mntpt = match liblustreapi::search_rootpath(&device) {
+        Ok(m) => m,
+        Err(e) => {
+            panic!("Failed to find rootpath({}) -> {:?}", device, e);
+            //return futures::future::err(ImlAgentError::LiblustreError(e));
+        }
+    };
 
-    let mut wtr = csv::Writer::from_writer(out);
+    let mbox = mailbox.to_string();
 
-    let (sender, recv) = channel();
+    let mut fpath = PathBuf::from(env::get_var_else("REPORT_DIR", "/tmp"));
+    fpath.push(mailbox);
+    fpath.set_extension("csv");
+    let name = fpath.into_os_string().into_string().unwrap();
 
-    // Spawn off an expensive computation
-    tokio::spawn(
-        mailbox_client::get(mailbox.to_string())
-            // @@ add multithreading here - chunking?
+    let mut wtr = match csv::Writer::from_path(&name) {
+        Ok(w) => w,
+        Err(e) => {
+            panic!("Failed open writer ({}) -> {:?}", name, e);
+            //return futures::future::err(ImlAgentError::CsvError(e));
+        }
+    };
+    let (sender, recv) = channel(4096);
+
+    recv.for_each(move |rec: Record| {
+        if let Err(err) = wtr.serialize(&rec) {
+            log::error!("Failed to write record for fid {}: {}", rec.fid, err);
+        }
+        Ok(())
+    })
+    .join(
+        mailbox_client::get(mbox)
             .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
-            .for_each(move |fli: fidlist::FidListItem| {
-                if let Ok(rec) = fid2record(&mntpt, &fli) {
-                    sender.send(rec).map_err(|_| ImlAgentError::SendError)?;
-                }
-                Ok(())
-            })
+            .and_then(move |fli: fidlist::FidListItem| fid2record(&mntpt, &fli))
             .map_err(|e| {
                 log::error!("Failed {:?}", e);
                 ()
+            })
+            .for_each(move |rec| {
+                tokio::spawn(sender.clone().send(rec).map(|_| ()).map_err(|e| {
+                    log::error!("Failed to send fid: {}", e);
+                    ()
+                }))
             }),
-    );
-
-    loop {
-        match recv.recv() {
-            Ok(rec) => {
-                if let Err(err) = wtr.serialize(&rec) {
-                    log::error!("Failed to write record for fid {}: {}", rec.fid, err);
-                }
-            }
-            Err(_) => break,
-        }
-    }
-    wtr.flush()?;
-
-    Ok(())
+    )
+    .map(move |_| name)
+    .map_err(|_| ImlAgentError::SendError)
 }
