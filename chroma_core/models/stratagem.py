@@ -3,6 +3,7 @@
 # license that can be found in the LICENSE file.
 
 import logging
+import json
 
 from django.db import models
 
@@ -157,7 +158,12 @@ class RunStratagemStep(Step):
 
         body = _get_body(path)
         result = self.invoke_rust_agent(host, "start_scan_stratagem", body)
-        self.log("result: {}".format(result))
+        result = json.loads(result)
+
+        if "Err" in result:
+            self.log("Error Scanning {}: \n{}".format(path, json.dumps(result["Err"], indent=2)))
+        else:
+            self.log("Successfully scanned {}:\n{}".format(path, json.dumps(result["Ok"], indent=2)))
 
 
 class RunStratagemJob(Job):
