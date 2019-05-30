@@ -5,9 +5,10 @@
 use crate::{
     agent_error::ImlAgentError,
     cmd::cmd_output_success,
-    fs::{read_file_to_end, write_tempfile},
+    fs::{read_file_to_end, stream_dir, write_tempfile},
+    http_comms::mailbox_client,
 };
-use futures::prelude::{Future, IntoFuture};
+use futures::{future, Future, IntoFuture};
 use std::{collections::HashMap, convert::Into, path::PathBuf};
 use uuid::Uuid;
 
@@ -166,11 +167,11 @@ pub fn get_mailbox_files(
                 .map(move |(idx, counter)| {
                     let group = stratagem_data
                         .get_group_by_name(&group.name)
-                        .expect(&format!("did not find group by name {}", group.name));
+                        .unwrap_or_else(|| panic!("did not find group by name {}", group.name));
 
                     let rule = group
                         .get_rule_by_idx(idx - 1)
-                        .expect(&format!("did not find rule by idx {}", idx - 1));
+                        .unwrap_or_else(|| panic!("did not find rule by idx {}", idx - 1));
 
                     let p = [base_dir, &group.name, &counter.name]
                         .iter()
@@ -185,12 +186,12 @@ pub fn get_mailbox_files(
 }
 
 /// Triggers a scan with Stratagem.
-/// This will only trigger a scan and return a triple of `(StratagemResult, String, MailboxFiles)`
+/// This will only trigger a scan and return a triple of `(String, StratagemResult, MailboxFiles)`
 ///
 /// It will *not* stream data for processing
 pub fn trigger_scan(
     data: StratagemData,
-) -> impl Future<Item = (StratagemResult, String, MailboxFiles), Error = ImlAgentError> {
+) -> impl Future<Item = (String, StratagemResult, MailboxFiles), Error = ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
 
     let tmp_dir = format!("/tmp/{}/", id);
@@ -219,8 +220,21 @@ pub fn trigger_scan(
         .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
         .map(move |x| {
             let mailbox_files = get_mailbox_files(&tmp_dir2, &data, &x);
-            (x, tmp_dir2, mailbox_files)
+            (tmp_dir2, x, mailbox_files)
         })
+}
+
+/// Streams output for all given mailbox files
+///
+/// This fn will stream all files in parallel and return once they have all finished.
+pub fn stream_fidlists(
+    mailbox_files: MailboxFiles,
+) -> impl Future<Item = (), Error = ImlAgentError> {
+    let mailbox_files = mailbox_files
+        .into_iter()
+        .map(|(file, address)| mailbox_client::send(address, stream_dir(file)));
+
+    future::join_all(mailbox_files).map(|_| ())
 }
 
 #[cfg(test)]

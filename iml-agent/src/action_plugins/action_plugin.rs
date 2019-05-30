@@ -61,6 +61,11 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         mk_callback(&server::trigger_scan),
     );
 
+    map.insert(
+        "stream_fidlists_stratagem".into(),
+        mk_callback(&server::stream_fidlists),
+    );
+
     log::info!("Loaded the following ActionPlugins:");
 
     for ActionName(key) in map.keys() {
