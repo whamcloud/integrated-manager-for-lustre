@@ -872,8 +872,7 @@ class JobScheduler(object):
 
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            with transaction.atomic():
-                result = self.CommandPlan.command_run_jobs(job_dicts, message)
+            result = self.CommandPlan.command_run_jobs(job_dicts, message)
         
         self.progress.advance()
         return result
@@ -1751,10 +1750,9 @@ class JobScheduler(object):
 
     def configure_stratagem(self, stratagem_data):
         with self._lock:
-            with transaction.atomic():
-                configuration_data = {
+            configuration_data = {
                     'state': "unconfigured",
-                    'id': 1,
+                    'filesystem_id': stratagem_data.get('filesystem_id'),
                     'interval': stratagem_data.get('interval'),
                     'report_duration': stratagem_data.get('report_duration'),
                     'report_duration_active': stratagem_data.get('report_duration_active'),
@@ -1762,9 +1760,11 @@ class JobScheduler(object):
                     'purge_duration_active': stratagem_data.get('purge_duration_active')
                 }
 
-                if StratagemConfiguration.objects.exists() == True:
-                    StratagemConfiguration.objects.update(**configuration_data)
-                    stratagem_configuration = StratagemConfiguration.objects.all()[0]
+            with transaction.atomic():
+                matches = StratagemConfiguration.objects.filter(filesystem_id=configuration_data.get('filesystem_id'))
+                if len(matches) == 1:
+                    matches.update(**configuration_data)
+                    stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=configuration_data.get('filesystem_id'))
                 else:
                     stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
 
@@ -1793,6 +1793,4 @@ class JobScheduler(object):
 
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
-        # Put json results of (results.json, file_path) and push into time series database
-        # Stream filepath to the manager on the mailbox
         return command

@@ -27,7 +27,9 @@ from chroma_core.models import (
 
 
 class StratagemConfiguration(StatefulObject):
-    id = models.IntegerField(primary_key=True, default=1, null=False)
+    filesystem_id = models.IntegerField(
+        help_text="The filesystem id associated with the stratagem configuration", null=False
+    )
     interval = models.IntegerField(help_text="Interval value in seconds between each stratagem execution", null=False)
     report_duration = models.IntegerField(
         help_text="Interval value in seconds between stratagem report execution", null=False

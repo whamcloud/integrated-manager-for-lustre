@@ -261,4 +261,4 @@ class JobSchedulerClient(object):
 
     @classmethod
     def run_stratagem(cls, mdts):
-        JobSchedulerRpc().run_stratagem(mdts)
+        return JobSchedulerRpc().run_stratagem(mdts)
