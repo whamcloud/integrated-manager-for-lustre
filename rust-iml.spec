@@ -27,6 +27,7 @@ ExclusiveArch: x86_64
 
 %install
 mkdir -p %{buildroot}%{_bindir}
+cp iml %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-stratagem %{buildroot}%{_bindir}
@@ -45,6 +46,17 @@ mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-mailbox.conf %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
+
+%package cli
+Summary: IML manager CLI
+License: MIT
+Group: System Environment/Libraries
+
+%description cli
+%{summary}
+
+%files cli
+%{_bindir}/iml
 
 %package agent
 Summary: IML Agent Daemon and CLI

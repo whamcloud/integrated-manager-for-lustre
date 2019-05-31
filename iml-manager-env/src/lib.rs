@@ -96,3 +96,17 @@ pub fn get_mailbox_addr() -> SocketAddr {
 pub fn get_mailbox_path() -> PathBuf {
     get_var("MAILBOX_PATH").into()
 }
+
+/// Get the api key from the env or panic
+pub fn get_api_key() -> String {
+    get_var("API_KEY")
+}
+
+/// Get the api user from the env or panic
+pub fn get_api_user() -> String {
+    get_var("API_USER")
+}
+
+pub fn get_manager_url() -> String {
+    get_var("SERVER_HTTP_URL")
+}
