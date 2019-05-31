@@ -872,7 +872,7 @@ class JobScheduler(object):
 
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            result = self.CommandPlan.command_run_jobs(job_dicts, message)
+                result = self.CommandPlan.command_run_jobs(job_dicts, message)
         
         self.progress.advance()
         return result
@@ -1763,8 +1763,9 @@ class JobScheduler(object):
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
             fs_identifier = configuration_data.get('filesystem_id')
             fs_id = ManagedFilesystem.objects.filter(Q(id=fs_identifier) | Q(name=fs_identifier)).get().id
-            configuration_data.filesystem_id = fs_id
             
+            configuration_data['filesystem_id'] = fs_id
+
             with transaction.atomic():
                 matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
                 if len(matches) == 1:

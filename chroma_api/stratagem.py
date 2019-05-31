@@ -59,7 +59,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(ChromaModelResource):
-    filesystem_id = fields.CharField(attribute="filesystem_id", max_length=8, null=False)
+    filesystem_id = fields.CharField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
     report_duration = fields.IntegerField(attribute="report_duration", null=False)
     report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
@@ -80,7 +80,7 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 
 class RunStratagemResource(Resource):
-    filesystem_id = fields.CharField(attribute="filesystem_id", max_length=8, null=False)
+    filesystem_id = fields.CharField(attribute="filesystem_id", null=False)
 
     class Meta:
         list_allowed_methods = ["post"]
@@ -90,6 +90,9 @@ class RunStratagemResource(Resource):
         authentication = AnonymousAuthentication()
         object_class = dict
         validation = RunStratagemValidation()
+
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
 
     @validate
     def obj_create(self, bundle, **kwargs):
