@@ -165,6 +165,8 @@ class RunStratagemStep(Step):
         else:
             self.log("Successfully scanned {}:\n{}".format(path, json.dumps(result["Ok"], indent=2)))
 
+        return result
+
 
 class RunStratagemJob(Job):
     mdt_id = models.IntegerField()
