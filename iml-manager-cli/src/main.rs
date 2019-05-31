@@ -70,6 +70,18 @@ where
     table
 }
 
+fn start_spinner(msg: &str) -> impl FnOnce() -> () {
+    let cyan = termion::color::Fg(termion::color::Cyan);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    let sp = Spinner::new(Spinners::Dots9, format!("{}{}{}", cyan, msg, reset));
+
+    move || {
+        sp.stop();
+        println!("{}", termion::clear::CurrentLine);
+    }
+}
+
 fn main() {
     env_logger::builder().default_format_timestamp(false).init();
 
@@ -77,19 +89,22 @@ fn main() {
 
     let matches = App::from_args();
 
-    let cyan = termion::color::Fg(termion::color::Cyan);
-    let reset = termion::color::Fg(termion::color::Reset);
-
-    let sp = Spinner::new(
-        Spinners::Dots9,
-        format!("{}Running command{}...", cyan, reset),
-    );
+    let stop_spinner = start_spinner("Running command...");
 
     log::debug!("Matching args {:?}", matches);
 
     match matches {
         App::Stratagem { command } => match command {
-            StratagemCommand::Scan => {}
+            StratagemCommand::Scan => {
+                let fut = {
+                    let client = api_client::get_client().expect("Could not create API client");
+                    api_client::post(client, "run_stratagem", serde_json::json!({}))
+                };
+
+                let result: Result<(), _> = run_cmd(fut);
+
+                stop_spinner();
+            }
         },
         App::Server { command } => match command {
             ServerCommand::List => {
@@ -100,8 +115,7 @@ fn main() {
 
                 let result: Result<ApiList<Host>, _> = run_cmd(fut);
 
-                sp.stop();
-                println!("{}", termion::clear::CurrentLine);
+                stop_spinner();
 
                 match result {
                     Ok(hosts) => {

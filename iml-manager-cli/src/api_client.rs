@@ -64,3 +64,22 @@ pub fn get<T: DeserializeOwned + Debug>(
             .inspect(|x| log::debug!("Resp: {:?}", x))
     })
 }
+
+/// Performs a POST to the given API path
+pub fn post<T: DeserializeOwned + Debug>(
+    client: Client,
+    path: &str,
+    body: impl serde::Serialize,
+) -> impl Future<Item = T, Error = ImlManagerCliError> {
+    create_api_url(path).into_future().and_then(move |url| {
+        client
+            .post(url)
+            .header(header::CONTENT_TYPE, "application/json")
+            .json(&body)
+            .send()
+            .from_err()
+            .and_then(|mut res| res.json())
+            .from_err()
+            .inspect(|x| log::debug!("Resp: {:?}", x))
+    })
+}
