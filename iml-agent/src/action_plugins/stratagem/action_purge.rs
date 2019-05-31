@@ -4,26 +4,52 @@
 
 use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
 use futures::{Future, Stream};
+use futures::future::poll_fn;
+use tokio_threadpool::blocking;
 
 pub fn purge_files(
     device: &String,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
-    liblustreapi::rmfids(&device, args).map_err(ImlAgentError::LiblustreError)
-}
-
-pub fn read_mailbox(device: &str, mailbox: &str) -> impl Future<Item = (), Error = ImlAgentError> {
     let mntpt = match liblustreapi::search_rootpath(&device) {
         Ok(m) => m,
-        Err(e) => {
-            panic!("Failed to find rootpath({}) -> {:?}", device, e);
-            //return futures::future::err(ImlAgentError::LiblustreError(e));
-        }
+        Err(e) => return Err(ImlAgentError::LiblustreError(e))
     };
+    liblustreapi::rmfids(&mntpt, args).map_err(ImlAgentError::LiblustreError)
+}
 
-    mailbox_client::get(mailbox.to_string())
-        .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
-        .for_each(move |fli: fidlist::FidListItem| {
-            liblustreapi::rmfid(&mntpt, &fli.fid).map_err(ImlAgentError::LiblustreError)
-        })
+fn search_rootpath(device: String) -> impl Future<Item = String, Error = ImlAgentError> {
+    poll_fn(move || {
+        blocking(|| liblustreapi::search_rootpath(&device))
+            .map_err(|_| panic!("the threadpool shut down"))
+    })
+    .and_then(std::convert::identity)
+    .from_err()
+}
+
+fn rm_fids(mntpt: String, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
+    poll_fn(move || {
+        blocking(|| liblustreapi::rmfids(&mntpt, fids.clone()))
+            .map_err(|_| panic!("the threadpool shut down"))
+    })
+    .and_then(std::convert::identity)
+    .from_err()
+}
+
+pub fn read_mailbox(
+    (device, mailbox): (String, String),
+) -> impl Future<Item = (), Error = ImlAgentError> {
+    search_rootpath(device).and_then(move |mntpt| {
+        mailbox_client::get(mailbox)
+            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
+            .map(|fli: fidlist::FidListItem| fli.fid)
+            .chunks(10) // @@ Get number from liblustreapi
+            .for_each(move |fids| {
+                tokio::spawn(
+                    rm_fids(mntpt.clone(), fids)
+                        .map_err(|e| log::warn!("Error removing fid {:?}", e)),
+                );
+                Ok(())
+            })
+    })
 }

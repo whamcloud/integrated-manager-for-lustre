@@ -204,14 +204,9 @@ pub fn rmfid(mntpt: &str, fidstr: &str) -> Result<(), LiblustreError> {
 }
 
 pub fn rmfids(
-    device: &str,
+    mntpt: &str,
     fidlist: impl IntoIterator<Item = String>,
 ) -> Result<(), LiblustreError> {
-    let mntpt = search_rootpath(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
-        e
-    })?;
-
     // @TODO replace with sys::llapi_rmfid once LU-12090 lands
     for fidstr in fidlist {
         rmfid(&mntpt, &fidstr)?;
