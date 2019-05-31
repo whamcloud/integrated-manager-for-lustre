@@ -63,18 +63,9 @@ impl Default for TooltipSize {
 }
 
 /// A tooltip
-pub fn tooltip<T>(
-    message: &str,
-    Model { placement, size }: &Model
-) -> El<T> {
-    
-
+pub fn tooltip<T>(message: &str, Model { placement, size }: &Model) -> El<T> {
     div![
-        class![
-            "tooltip inferno-tt",
-            placement.into(),
-            size.into()
-        ],
+        class!["tooltip inferno-tt", placement.into(), size.into()],
         div![class!["tooltip-arrow"]],
         div![class!["tooltip-inner"], span![El::from_html(&message)]]
     ]

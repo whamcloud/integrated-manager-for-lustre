@@ -242,12 +242,7 @@ fn view(
 
     let has_locks = lock_list(&locks, &records).next().is_some();
 
-    let record_els = get_record_els(
-        available_actions,
-        records,
-        flag,
-        tooltip
-    );
+    let record_els = get_record_els(available_actions, records, flag, tooltip);
 
     let open_class = open_class(open);
 
