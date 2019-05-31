@@ -53,8 +53,7 @@ impl Sleep {
 impl Drop for Sleep {
     fn drop(&mut self) {
         if let Some(t) = self.token {
-            let window = web_sys::window().expect("Could not obtain window ref");
-            window.clear_timeout_with_handle(t);
+            window().clear_timeout_with_handle(t);
         }
     }
 }
