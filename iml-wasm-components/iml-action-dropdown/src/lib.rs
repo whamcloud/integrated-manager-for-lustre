@@ -8,7 +8,6 @@ mod button;
 mod dispatch_custom_event;
 mod fetch_actions;
 mod hsm;
-mod sleep;
 
 use action_items::get_record_els;
 use api_transforms::{lock_list, record_to_composite_id_string};
