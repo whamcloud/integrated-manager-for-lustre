@@ -5,15 +5,13 @@
 use crate::{
     dispatch_custom_event::dispatch_custom_event,
     hsm::{contains_hsm_params, RecordAndHsmControlParam},
-    tooltip::{tooltip_component, TooltipPlacement, TooltipSize},
     ActionMap, AvailableActionAndRecord, Msg, RecordMap,
 };
 use seed::{a, class, li, prelude::*, style};
 
 fn get_record_els_from_hsm_control_params(
     records: &RecordMap,
-    tooltip_placement: &TooltipPlacement,
-    tooltip_size: &TooltipSize,
+    tooltip_config: &iml_tooltip::Model,
 ) -> Vec<El<Msg>> {
     let record_els: Vec<El<Msg>> = records
         .iter()
@@ -41,12 +39,7 @@ fn get_record_els_from_hsm_control_params(
                             dispatch_custom_event("hsm_action_selected", &record_and_param);
                             Msg::Open(false)
                         }),
-                        tooltip_component(
-                            &y.long_description,
-                            tooltip_placement,
-                            tooltip_size,
-                            None
-                        )
+                        iml_tooltip::tooltip(&y.long_description, tooltip_config)
                     ]
                 })
                 .collect();
@@ -73,8 +66,7 @@ fn get_record_els_from_available_actions(
     available_actions: &ActionMap,
     records: &RecordMap,
     flag: &Option<String>,
-    tooltip_placement: &TooltipPlacement,
-    tooltip_size: &TooltipSize,
+    tooltip_config: &iml_tooltip::Model,
 ) -> Vec<El<Msg>> {
     let mut record_els: Vec<El<Msg>> = available_actions
         .iter()
@@ -102,12 +94,7 @@ fn get_record_els_from_available_actions(
                             dispatch_custom_event("action_selected", &available_action_and_record);
                             Msg::Open(false)
                         }),
-                        tooltip_component(
-                            &x.long_description,
-                            tooltip_placement,
-                            tooltip_size,
-                            None
-                        )
+                        iml_tooltip::tooltip(&x.long_description, tooltip_config)
                     ]
                 })
                 .collect();
@@ -139,24 +126,18 @@ pub fn get_record_els(
     available_actions: &ActionMap,
     records: &RecordMap,
     flag: &Option<String>,
-    tooltip_placement: &TooltipPlacement,
-    tooltip_size: &TooltipSize,
+    tooltip_config: &iml_tooltip::Model,
 ) -> Vec<El<Msg>> {
     let mut els: Vec<El<Msg>> = Vec::new();
     if contains_hsm_params(records) {
         let mut hsm_els: Vec<El<Msg>> =
-            get_record_els_from_hsm_control_params(records, tooltip_placement, tooltip_size);
+            get_record_els_from_hsm_control_params(records, tooltip_config);
         els.append(&mut hsm_els);
     }
 
     if !available_actions.is_empty() {
-        let mut action_els = get_record_els_from_available_actions(
-            available_actions,
-            records,
-            flag,
-            tooltip_placement,
-            tooltip_size,
-        );
+        let mut action_els =
+            get_record_els_from_available_actions(available_actions, records, flag, tooltip_config);
         els.append(&mut action_els);
     }
 

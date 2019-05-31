@@ -1,0 +1,13 @@
+[package]
+name = "iml-tooltip"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+seed = "=0.3.5"
+serde = { version = "1", features = ['derive'] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+insta = "0.8.1"

@@ -9,7 +9,6 @@ mod dispatch_custom_event;
 mod fetch_actions;
 mod hsm;
 mod sleep;
-mod tooltip;
 
 use action_items::get_record_els;
 use api_transforms::{lock_list, record_to_composite_id_string};
@@ -22,7 +21,6 @@ use seed::{
     spawn_local, ul,
 };
 use std::collections::{HashMap, HashSet};
-use tooltip::{TooltipPlacement, TooltipSize};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
@@ -63,8 +61,8 @@ pub struct Data {
     records: Records,
     locks: Locks,
     flag: Option<String>,
-    tooltip_placement: Option<TooltipPlacement>,
-    tooltip_size: Option<TooltipSize>,
+    tooltip_placement: Option<iml_tooltip::TooltipPlacement>,
+    tooltip_size: Option<iml_tooltip::TooltipSize>,
 }
 
 /// Metadata is the metadata object returned by a fetch call
@@ -156,8 +154,7 @@ pub struct Model {
     button_activated: bool,
     first_fetch_active: bool,
     flag: Option<String>,
-    tooltip_placement: TooltipPlacement,
-    tooltip_size: TooltipSize,
+    tooltip: iml_tooltip::Model,
     destroyed: bool,
 }
 
@@ -233,8 +230,7 @@ fn view(
         button_activated,
         first_fetch_active,
         flag,
-        tooltip_placement,
-        tooltip_size,
+        tooltip,
         destroyed,
     }: &Model,
 ) -> Vec<El<Msg>> {
@@ -246,13 +242,7 @@ fn view(
 
     let has_locks = lock_list(&locks, &records).next().is_some();
 
-    let record_els = get_record_els(
-        available_actions,
-        records,
-        flag,
-        tooltip_placement,
-        tooltip_size,
-    );
+    let record_els = get_record_els(available_actions, records, flag, tooltip);
 
     let open_class = open_class(open);
 
@@ -347,8 +337,10 @@ pub fn init(x: &JsValue, el: Element) -> Callbacks {
         records,
         locks,
         flag,
-        tooltip_placement: tooltip_placement.unwrap_or_default(),
-        tooltip_size: tooltip_size.unwrap_or_default(),
+        tooltip: iml_tooltip::Model {
+            placement: tooltip_placement.unwrap_or_default(),
+            size: tooltip_size.unwrap_or_default(),
+        },
         ..Default::default()
     };
 
