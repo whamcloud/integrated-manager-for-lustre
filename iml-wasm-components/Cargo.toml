@@ -1,5 +1,5 @@
 [workspace]
-members = ['iml-action-dropdown', 'iml-tooltip']
+members = ['iml-action-dropdown', 'iml-tooltip', 'iml-sleep']
 
 [profile.release]
 opt-level = "z"

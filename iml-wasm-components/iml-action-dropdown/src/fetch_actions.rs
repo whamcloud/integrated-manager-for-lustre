@@ -4,7 +4,7 @@
 
 use crate::{
     api_transforms::{composite_ids_to_query_string, group_actions_by_label, sort_actions},
-    sleep, AvailableActionsApiData, Model, Msg, RecordMap,
+    AvailableActionsApiData, Model, Msg, RecordMap,
 };
 use futures::{
     future::{loop_fn, Either, Loop},
@@ -53,7 +53,7 @@ pub fn get_actions(
                 .map(move |actions| {
                     state2.update(Msg::AvailableActions(actions));
                 })
-                .and_then(|_| sleep::Sleep::new(10000));
+                .and_then(|_| iml_sleep::Sleep::new(10000));
 
                 req.select2(rx)
                     .map(|r| match r {

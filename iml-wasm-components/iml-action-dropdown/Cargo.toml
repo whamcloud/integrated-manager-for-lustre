@@ -19,6 +19,7 @@ js-sys = "0.3"
 cfg-if = "0.1"
 log = "0.4"
 iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
+iml-sleep = { path = "../iml-sleep", version = "0.1.0" }
 console_log = { version = "0.1", optional = true }
 
 
