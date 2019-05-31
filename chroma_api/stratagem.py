@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 
 from tastypie import fields
 from tastypie.resources import Resource
@@ -20,7 +21,7 @@ class RunStratagemValidation(Validation):
             filesystem_id = bundle.data.get("filesystem_id")
 
             try:
-                ManagedFilesystem.objects.get(id=filesystem_id)
+                ManagedFilesystem.objects.filter(Q(id=filesystem_id) | Q(name=filesystem_id)).get()
             except ManagedFilesystem.DoesNotExist:
                 return {"__all__": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id"))}
 
@@ -58,7 +59,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(ChromaModelResource):
-    filesystem_id = fields.IntegerField(attribute="filesystem_id", null=False)
+    filesystem_id = fields.CharField(attribute="filesystem_id", max_length=8, null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
     report_duration = fields.IntegerField(attribute="report_duration", null=False)
     report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
@@ -79,7 +80,7 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 
 class RunStratagemResource(Resource):
-    filesystem_id = fields.IntegerField(attribute="filesystem_id", null=False)
+    filesystem_id = fields.CharField(attribute="filesystem_id", max_length=8, null=False)
 
     class Meta:
         list_allowed_methods = ["post"]
@@ -92,5 +93,7 @@ class RunStratagemResource(Resource):
 
     @validate
     def obj_create(self, bundle, **kwargs):
-        mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=bundle.data.get("filesystem_id")))
+        fs_identifier = bundle.data.get("filesystem_id")
+        fs_id = ManagedFilesystem.objects.filter(Q(id=fs_identifier) | Q(name=fs_identifier)).get().id
+        mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
         return JobSchedulerClient.run_stratagem(mdts)

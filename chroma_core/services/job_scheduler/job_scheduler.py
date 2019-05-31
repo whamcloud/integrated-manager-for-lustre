@@ -1760,11 +1760,16 @@ class JobScheduler(object):
                     'purge_duration_active': stratagem_data.get('purge_duration_active')
                 }
 
+            # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
+            fs_identifier = configuration_data.get('filesystem_id')
+            fs_id = ManagedFilesystem.objects.filter(Q(id=fs_identifier) | Q(name=fs_identifier)).get().id
+            configuration_data.filesystem_id = fs_id
+            
             with transaction.atomic():
-                matches = StratagemConfiguration.objects.filter(filesystem_id=configuration_data.get('filesystem_id'))
+                matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
                 if len(matches) == 1:
                     matches.update(**configuration_data)
-                    stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=configuration_data.get('filesystem_id'))
+                    stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
                 else:
                     stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
 
