@@ -15,7 +15,12 @@ use action_items::get_record_els;
 use api_transforms::{lock_list, record_to_composite_id_string};
 use cfg_if::cfg_if;
 use hsm::{contains_hsm_params, HsmControlParam};
-use seed::{class, div, prelude::*, spawn_local, ul};
+use seed::{
+    class, div,
+    dom_types::{mouse_ev, El, Ev, UpdateEl},
+    prelude::{wasm_bindgen, Orders},
+    spawn_local, ul,
+};
 use std::collections::{HashMap, HashSet};
 use tooltip::{TooltipPlacement, TooltipSize};
 use wasm_bindgen::JsValue;
@@ -157,7 +162,6 @@ pub struct Model {
 }
 
 // Update
-
 #[derive(Clone)]
 pub enum Msg {
     Open(bool),
@@ -168,8 +172,8 @@ pub enum Msg {
     Destroy,
 }
 
-/// The sole source of updating the model; returns a fresh one.
-fn update(msg: Msg, model: &mut Model) -> Update<Msg> {
+/// The sole source of updating the model
+fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
     match msg {
         Msg::Open(open) => {
             model.open = open;
@@ -208,7 +212,6 @@ fn update(msg: Msg, model: &mut Model) -> Update<Msg> {
             model.first_fetch_active = true;
         }
     };
-    Render.into()
 }
 
 // View
@@ -288,7 +291,7 @@ fn window_events(_model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
 
 #[wasm_bindgen]
 pub struct Callbacks {
-    app: seed::App<Msg, Model>,
+    app: seed::App<Msg, Model, Vec<El<Msg>>>,
 }
 
 #[wasm_bindgen]
@@ -351,7 +354,7 @@ pub fn init(x: &JsValue, el: Element) -> Callbacks {
 
     let app = seed::App::build(model, update, view)
         .window_events(window_events)
-        .mount_el(el)
+        .mount(el)
         .finish()
         .run();
 

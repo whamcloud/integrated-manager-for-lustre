@@ -10,10 +10,12 @@ use futures::{
     future::{loop_fn, Either, Loop},
     Future, Stream,
 };
-use seed::{prelude::JsValue, Method, Request};
+use seed::{dom_types::El, prelude::JsValue, Method, Request};
 
 /// Fetches the actions for the given composite ids
-pub fn get_actions(state: seed::App<Msg, Model>) -> impl Future<Item = (), Error = JsValue> {
+pub fn get_actions(
+    state: seed::App<Msg, Model, Vec<El<Msg>>>,
+) -> impl Future<Item = (), Error = JsValue> {
     let (start_tx, start_rx) = futures::sync::mpsc::unbounded::<RecordMap>();
     let (stop_tx, stop_rx) = futures::sync::mpsc::unbounded::<()>();
 
