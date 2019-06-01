@@ -18,18 +18,23 @@ class RunStratagemValidation(Validation):
         if "filesystem_id" not in bundle.data:
             return {"__all__": "filesystem_id required when running stratagem."}
         else:
-            filesystem_id = bundle.data.get("filesystem_id")
+            fs_identifier = str(bundle.data.get("filesystem_id"))
 
-            try:
-                ManagedFilesystem.objects.filter(Q(id=filesystem_id) | Q(name=filesystem_id)).get()
-            except ManagedFilesystem.DoesNotExist:
+            if not any(
+                map(
+                    lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+                    ManagedFilesystem.objects.values("id", "name"),
+                )
+            ):
                 return {"__all__": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id"))}
 
+            fs_id = filter(
+                lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+                ManagedFilesystem.objects.values("id", "name"),
+            )[0].get("id")
+
             # Each MDT associated with the fielsystem must be installed on a server that has the stratagem profile installed
-            target_mount_ids = map(
-                lambda mdt: mdt.active_mount_id,
-                ManagedMdt.objects.filter(filesystem_id=bundle.data.get("filesystem_id")),
-            )
+            target_mount_ids = map(lambda mdt: mdt.active_mount_id, ManagedMdt.objects.filter(filesystem_id=fs_id))
             host_ids = map(
                 lambda target_mount: target_mount.host_id, ManagedTargetMount.objects.filter(id__in=target_mount_ids)
             )
@@ -96,7 +101,11 @@ class RunStratagemResource(Resource):
 
     @validate
     def obj_create(self, bundle, **kwargs):
-        fs_identifier = bundle.data.get("filesystem_id")
-        fs_id = ManagedFilesystem.objects.filter(Q(id=fs_identifier) | Q(name=fs_identifier)).get().id
+        fs_identifier = str(bundle.data.get("filesystem_id"))
+        fs_id = filter(
+            lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+            ManagedFilesystem.objects.values("id", "name"),
+        )[0].get("id")
+
         mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
         return JobSchedulerClient.run_stratagem(mdts)

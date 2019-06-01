@@ -1761,8 +1761,11 @@ class JobScheduler(object):
                 }
 
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
-            fs_identifier = configuration_data.get('filesystem_id')
-            fs_id = ManagedFilesystem.objects.filter(Q(id=fs_identifier) | Q(name=fs_identifier)).get().id
+            fs_identifier = str(configuration_data.get('filesystem_id'))
+            fs_id = filter(
+                    lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+                    ManagedFilesystem.objects.values("id", "name"),
+                )[0].get('id')
             
             configuration_data['filesystem_id'] = fs_id
 
