@@ -8,6 +8,7 @@ use seed::{class, div, prelude::*, span};
 pub struct Model {
     pub placement: TooltipPlacement,
     pub size: TooltipSize,
+    pub error_tooltip: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -63,9 +64,18 @@ impl Default for TooltipSize {
 }
 
 /// A tooltip
-pub fn tooltip<T>(message: &str, Model { placement, size }: &Model) -> El<T> {
+pub fn tooltip<T>(
+    message: &str,
+    Model {
+        placement,
+        size,
+        error_tooltip,
+    }: &Model,
+) -> El<T> {
+    let class = if *error_tooltip { "error-tooltip" } else { "" };
+
     div![
-        class!["tooltip inferno-tt", placement.into(), size.into()],
+        class!["tooltip inferno-tt", placement.into(), size.into(), class],
         div![class!["tooltip-arrow"]],
         div![class!["tooltip-inner"], span![El::from_html(&message)]]
     ]
