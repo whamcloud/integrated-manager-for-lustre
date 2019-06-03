@@ -64,7 +64,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(ChromaModelResource):
-    filesystem_id = fields.CharField(attribute="filesystem_id", null=False)
+    filesystem_id = fields.IntegerField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
     report_duration = fields.IntegerField(attribute="report_duration", null=False)
     report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
@@ -85,7 +85,7 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 
 class RunStratagemResource(Resource):
-    filesystem_id = fields.CharField(attribute="filesystem_id", null=False)
+    filesystem_id = fields.IntegerField(attribute="filesystem_id", null=False)
 
     class Meta:
         list_allowed_methods = ["post"]

@@ -28,10 +28,11 @@ class Migration(SchemaMigration):
 
         # Adding model 'StratagemConfiguration'
         db.create_table(u'chroma_core_stratagemconfiguration', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('state_modified_at', self.gf('django.db.models.fields.DateTimeField')()),
             ('state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('id', self.gf('django.db.models.fields.IntegerField')(default=1, primary_key=True)),
+            ('filesystem_id', self.gf('django.db.models.fields.IntegerField')()),
             ('interval', self.gf('django.db.models.fields.IntegerField')()),
             ('report_duration', self.gf('django.db.models.fields.IntegerField')()),
             ('report_duration_active', self.gf('django.db.models.fields.BooleanField')(default=False)),
@@ -938,10 +939,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 5, 24, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 5, 30, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'BA1B077F94B9F33DE891D62BDB531EF2'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'8D53DFE62E76E1F19DD791B45FBA4AE5'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1354,7 +1355,8 @@ class Migration(SchemaMigration):
         },
         'chroma_core.stratagemconfiguration': {
             'Meta': {'ordering': "['id']", 'object_name': 'StratagemConfiguration'},
-            'id': ('django.db.models.fields.IntegerField', [], {'default': '1', 'primary_key': 'True'}),
+            'filesystem_id': ('django.db.models.fields.IntegerField', [], {}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'interval': ('django.db.models.fields.IntegerField', [], {}),
             'purge_duration': ('django.db.models.fields.IntegerField', [], {}),
