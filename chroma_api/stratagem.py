@@ -15,10 +15,10 @@ from chroma_api.chroma_model_resource import ChromaModelResource
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
-        if "filesystem_id" not in bundle.data:
-            return {"__all__": "filesystem_id required when running stratagem."}
+        if "filesystem" not in bundle.data:
+            return {"__all__": "filesystem required when running stratagem."}
         else:
-            fs_identifier = str(bundle.data.get("filesystem_id"))
+            fs_identifier = str(bundle.data.get("filesystem"))
 
             if not any(
                 map(

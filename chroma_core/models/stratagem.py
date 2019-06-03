@@ -109,6 +109,9 @@ class RunStratagemStep(Step):
     def run(self, args):
         host = args["host"]
         path = args["path"]
+        prev_result = args["prev_result"]
+
+        job_log.warning("prev_result: {}".format(prev_result))
 
         def _get_body(mount_point):
             return {
