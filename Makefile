@@ -4,12 +4,7 @@ DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
 DIST_DEPS     := version $(COPR_REPO_TARGETS)
 
-# Ensure this matches .copr/Makefile
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
-MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
-MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
-MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
-
+# SET MFL_COPR_REPO in .copr/Makefile
 TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 	          --exclude=chroma-\*/myenv\*              \
 	          --exclude=chroma_test_env                \
@@ -38,12 +33,6 @@ BEHAVE_ARGS ?= -q --stop
 NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
-
-# Files needing substitutions for MFL_COPR/REPO_*
-SUBSTS_SHELL := tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup tests/framework/utils/defaults.sh tests/framework/services/runner.sh
-SUBSTS_REPOS := base.repo chroma_support.repo tests/framework/chroma_support.repo
-
-SUBSTS := $(SUBSTS_SHELL) $(SUBSTS_REPOS)
 
 all: copr-rpms rpms
 
@@ -113,24 +102,6 @@ feature_tests:
 
 tests test: unit_tests feature_tests integration_tests service_tests
 
-base.repo: base.repo.in Makefile
-
-chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
-
-tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
-
-tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
-
-tests/framework/services/runner.sh: tests/framework/services/runner.sh.in Makefile
-
-tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup: tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup.in Makefile
-
-$(SUBSTS):
-	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
-	    -e 's/@MFL_COPR_NAME@/$(MFL_COPR_NAME)/g'               \
-	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
-	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
-
 install_requirements: requirements.txt
 	echo "jenkins_fold:start:Install Python requirements"
 	pip install --upgrade pip;                              \
@@ -140,8 +111,8 @@ install_requirements: requirements.txt
 
 download: install_requirements
 
-substs: $(SUBSTS)
-	chmod +x $(SUBSTS_SHELL)
+substs:
+	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
 
 clean_substs:
 	if [ -n "$(SUBSTS)" ]; then \
