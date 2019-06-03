@@ -1752,7 +1752,7 @@ class JobScheduler(object):
         with self._lock:
             configuration_data = {
                     'state': "unconfigured",
-                    'filesystem_id': stratagem_data.get('filesystem_id'),
+                    'filesystem_id': stratagem_data.get('filesystem'),
                     'interval': stratagem_data.get('interval'),
                     'report_duration': stratagem_data.get('report_duration'),
                     'report_duration_active': stratagem_data.get('report_duration_active'),
