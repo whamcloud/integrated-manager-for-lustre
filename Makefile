@@ -112,7 +112,7 @@ install_requirements: requirements.txt
 download: install_requirements
 
 substs:
-	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
+	$(MAKE) -f .copr/Makefile substs outdir=.
 
 clean_substs:
 	if [ -n "$(SUBSTS)" ]; then \
