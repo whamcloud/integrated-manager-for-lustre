@@ -1,0 +1,15 @@
+[package]
+name = "iml-duration-picker"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+seed = "=0.3.5"
+log = "0.4"
+web-sys = { version = "0.3", features = ["Event", "EventTarget", "Element", "HtmlInputElement", "ValidityState"]}
+iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+insta = "0.8.1"

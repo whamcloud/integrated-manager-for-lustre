@@ -339,6 +339,7 @@ pub fn init(x: &JsValue, el: Element) -> Callbacks {
         tooltip: iml_tooltip::Model {
             placement: tooltip_placement.unwrap_or_default(),
             size: tooltip_size.unwrap_or_default(),
+            ..Default::default()
         },
         ..Default::default()
     };

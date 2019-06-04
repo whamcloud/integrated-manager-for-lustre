@@ -3,6 +3,6 @@ jobs:
     displayName: ${{ parameters.displayName }}
     steps:
       - script: |
-          docker run -i -e SPEC="${{parameters.spec}}" -e LOCAL_ONLY="True" -v $(pwd):/build:rw imlteam/copr
+          docker run -i -e SPEC="${{parameters.spec}}" -e LOCAL_ONLY="True" -v $(pwd):/build:rw ${{ parameters.image }}
         ${{ if parameters.crate }}:
           workingDirectory: $(Build.SourcesDirectory)/${{ parameters.crate }}
