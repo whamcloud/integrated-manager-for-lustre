@@ -5,10 +5,12 @@
 use iml_tooltip::tooltip;
 use seed::{
     a, attrs, button, class, div, input, li,
-    prelude::{mouse_ev, raw_ev, At, El, Ev, Orders, UpdateEl},
+    prelude::{keyboard_ev, mouse_ev, raw_ev, At, El, Ev, Orders, UpdateEl},
     span, style, ul,
 };
 use std::fmt;
+
+const ESCAPE_KEY: u32 = 27;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Unit {
@@ -35,16 +37,40 @@ pub struct Model {
     pub value: String,
     pub validation_message: Option<String>,
     pub unit: Unit,
-    pub open: bool,
+    pub open: OpenState,
     pub exclude_units: Vec<Unit>,
 }
 
 #[derive(Clone)]
 pub enum Msg {
-    Open(bool),
+    Open(OpenState),
     SetUnit(Unit),
     InputChange(web_sys::Event),
     SetValidationMessage(Option<String>),
+    KeyPress(u32),
+}
+
+#[derive(Clone, Debug)]
+pub enum OpenState {
+    Opening,
+    Open,
+    Close,
+}
+
+impl Default for OpenState {
+    fn default() -> Self {
+        OpenState::Close
+    }
+}
+
+impl OpenState {
+    fn next(&self) -> OpenState {
+        match self {
+            OpenState::Opening => OpenState::Open,
+            OpenState::Open => OpenState::Close,
+            OpenState::Close => OpenState::Opening,
+        }
+    }
 }
 
 pub fn update<T>(msg: Msg, model: &mut Model, orders: &mut Orders<T>, parent_msg: fn(Msg) -> T) {
@@ -54,7 +80,7 @@ pub fn update<T>(msg: Msg, model: &mut Model, orders: &mut Orders<T>, parent_msg
         }
         Msg::SetUnit(unit) => {
             model.unit = unit;
-            model.open = false;
+            model.open = OpenState::Close;
         }
         Msg::InputChange(ev) => {
             let target = ev.target().unwrap();
@@ -69,19 +95,23 @@ pub fn update<T>(msg: Msg, model: &mut Model, orders: &mut Orders<T>, parent_msg
         Msg::SetValidationMessage(msg) => {
             model.validation_message = msg;
         }
+        Msg::KeyPress(code) => {
+            if code == ESCAPE_KEY {
+                model.open = OpenState::Close;
+            }
+        }
     }
 }
 
-fn open_class(open: &bool) -> &str {
-    if *open {
-        "open"
-    } else {
-        ""
+fn open_class(open: &OpenState) -> &str {
+    match open {
+        OpenState::Close => "",
+        _ => "open",
     }
 }
 
 /// A duration picker
-pub fn duration_picker<T: Clone>(
+pub fn duration_picker(
     Model {
         open,
         unit,
@@ -89,11 +119,10 @@ pub fn duration_picker<T: Clone>(
         validation_message,
         exclude_units,
     }: &Model,
-    msg: fn(Msg) -> T,
-) -> El<T> {
+) -> El<Msg> {
     let units = vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds];
 
-    let next: bool = !open;
+    let next = open.next();
 
     let mut items = vec![li![
         class!["dropdown-header"],
@@ -109,11 +138,7 @@ pub fn duration_picker<T: Clone>(
             .map(|x| {
                 li![a![
                     x.to_string(),
-                    mouse_ev(Ev::Click, move |ev| {
-                        ev.stop_propagation();
-                        ev.prevent_default();
-                        msg(Msg::SetUnit(x))
-                    })
+                    mouse_ev(Ev::Click, move |_| { Msg::SetUnit(x) })
                 ]]
             }),
     );
@@ -134,19 +159,20 @@ pub fn duration_picker<T: Clone>(
         class!["input-group", "tooltip-container", err_class],
         input![
             attrs! { At::Class => "form-control"; At::Type => "number"; At::Min => "1"; At::Value => value; At::Required => true },
-            raw_ev(Ev::Input, move |ev| msg(Msg::InputChange(ev))),
+            raw_ev(Ev::Input, Msg::InputChange),
         ],
         el,
         div![
             class!["input-group-btn", "dropdown", open_class(&open)],
+            keyboard_ev(Ev::KeyDown, move |ev| { Msg::KeyPress(ev.key_code()) }),
             button![
                 class!["btn", "btn-default", "dropdown-toggle"],
                 unit.to_string(),
                 span![class!["caret"], style! {"margin-left" => "3px"}],
                 mouse_ev(Ev::Click, move |ev| {
-                    ev.stop_propagation();
                     ev.prevent_default();
-                    msg(Msg::Open(next))
+                    log::info!("button clicked setting open to {:?}", next);
+                    Msg::Open(next.clone())
                 })
             ],
             ul![class!["dropdown-menu pull-right"], items]
