@@ -8,6 +8,7 @@ import threading
 import sys
 import traceback
 import time
+import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -1793,10 +1794,12 @@ class JobScheduler(object):
         )
 
     def run_stratagem(self, mdts):
+        unique_id = uuid.uuid4()
         run_stratagem_list = map(lambda mdt_id: { 
             "class_name": "RunStratagemJob", 
             "args": {
-                "mdt_id": mdt_id, 
+                "mdt_id": mdt_id,
+                "uuid": unique_id
             }
         }, mdts)
 

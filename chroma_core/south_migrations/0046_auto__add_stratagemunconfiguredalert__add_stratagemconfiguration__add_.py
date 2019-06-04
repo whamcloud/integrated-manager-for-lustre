@@ -45,6 +45,7 @@ class Migration(SchemaMigration):
         db.create_table(u'chroma_core_runstratagemjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('mdt_id', self.gf('django.db.models.fields.IntegerField')()),
+            ('uuid', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
             ('fqdn', self.gf('django.db.models.fields.CharField')(default='', max_length=255)),
             ('target_name', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
             ('filesystem_type', self.gf('django.db.models.fields.CharField')(default='', max_length=32)),
@@ -939,10 +940,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 5, 30, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 4, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'8D53DFE62E76E1F19DD791B45FBA4AE5'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'D56154FB69200B6EFC02E2DE9926A631'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1011,7 +1012,8 @@ class Migration(SchemaMigration):
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt_id': ('django.db.models.fields.IntegerField', [], {}),
             'target_mount_point': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '512'}),
-            'target_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'})
+            'target_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'})
         },
         u'chroma_core.sample_10': {
             'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_10'},

@@ -147,12 +147,12 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time 18000000",
+                                "expression": "< atime - sys_time 0",
                                 "argument": "fids_expiring_soon",
                             },
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time 5184000000",
+                                "expression": "< atime - sys_time 0",
                                 "argument": "fids_expired",
                             },
                         ],
@@ -173,8 +173,24 @@ class RunStratagemStep(Step):
         return result
 
 
+class StreamFidlistStep(Step):
+    def run(self, args):
+        scan_result = args["prev_result"]
+        host = args["host"]
+        unique_id = args["uuid"]
+
+        fid_dir, stratagem_result, mailbox_files = scan_result["Ok"]
+
+        mailbox_files = map(lambda (path, label): (path, "{}-{}".format(unique_id, label)) , mailbox_files)
+        result = self.invoke_rust_agent(host, "stream_fidlists_stratagem", mailbox_files)
+
+        self.log("Called stream_fidlists_stratagem with:\n{}\nResult:\n{}".format(mailbox_files, result))
+        return result
+
+
 class RunStratagemJob(Job):
     mdt_id = models.IntegerField()
+    uuid = models.CharField(max_length=64, null=False, default="")
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -182,7 +198,7 @@ class RunStratagemJob(Job):
     device_path = models.CharField(max_length=512, null=False, default="")
 
     def __init__(self, *args, **kwargs):
-        if "mdt_id" not in kwargs:
+        if "mdt_id" not in kwargs or "uuid" not in kwargs:
             super(RunStratagemJob, self).__init__(*args, **kwargs)
         else:
             mdt = ManagedMdt.objects.get(id=kwargs["mdt_id"])
@@ -217,5 +233,5 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        return [(RunStratagemStep, {"host": self.fqdn, "path": path})]
+        return [(RunStratagemStep, {"host": self.fqdn, "path": path}), (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid})]
 
