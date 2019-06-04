@@ -15,7 +15,7 @@ srpm:
 	rustup default stable
 	rustup target add wasm32-unknown-unknown
 	cargo build --target wasm32-unknown-unknown --release
-	cargo install wasm-bindgen-cli
+	cargo install -f wasm-bindgen-cli
 	wasm-bindgen target/wasm32-unknown-unknown/release/iml_action_dropdown.wasm --target no-modules --out-dir ${TMPDIR}/package --out-name package
 	tar cvf ${TMPDIR}/_topdir/SOURCES/iml-wasm-components.tar -C ${TMPDIR}/package .
 	cp iml-wasm-components.spec ${TMPDIR}/_topdir/SPECS/

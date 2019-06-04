@@ -2,8 +2,5 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub mod agent_client;
-pub mod crypto_client;
-pub mod hyper_client;
-pub mod mailbox_client;
-pub mod session;
+pub mod api_client;
+pub mod manager_cli_error;

@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 stream-cancel = "0.4.4"
-parking_lot = "0.7"
-futures = "0.1.26"
+parking_lot = "0.8"
+futures = "0.1"
 
 [dev-dependencies]
-tokio = "0.1.19"
+tokio = "0.1"

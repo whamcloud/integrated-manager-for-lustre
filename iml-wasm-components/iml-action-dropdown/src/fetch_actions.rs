@@ -4,16 +4,18 @@
 
 use crate::{
     api_transforms::{composite_ids_to_query_string, group_actions_by_label, sort_actions},
-    sleep, AvailableActionsApiData, Model, Msg, RecordMap,
+    AvailableActionsApiData, Model, Msg, RecordMap,
 };
 use futures::{
     future::{loop_fn, Either, Loop},
     Future, Stream,
 };
-use seed::{prelude::JsValue, Method, Request};
+use seed::{dom_types::El, prelude::JsValue, Method, Request};
 
 /// Fetches the actions for the given composite ids
-pub fn get_actions(state: seed::App<Msg, Model>) -> impl Future<Item = (), Error = JsValue> {
+pub fn get_actions(
+    state: seed::App<Msg, Model, Vec<El<Msg>>>,
+) -> impl Future<Item = (), Error = JsValue> {
     let (start_tx, start_rx) = futures::sync::mpsc::unbounded::<RecordMap>();
     let (stop_tx, stop_rx) = futures::sync::mpsc::unbounded::<()>();
 
@@ -51,7 +53,7 @@ pub fn get_actions(state: seed::App<Msg, Model>) -> impl Future<Item = (), Error
                 .map(move |actions| {
                     state2.update(Msg::AvailableActions(actions));
                 })
-                .and_then(|_| sleep::Sleep::new(10000));
+                .and_then(|_| iml_sleep::Sleep::new(10000));
 
                 req.select2(rx)
                     .map(|r| match r {

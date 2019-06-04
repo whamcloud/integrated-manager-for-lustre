@@ -5,10 +5,11 @@
 use crate::{
     agent_error::ImlAgentError,
     cmd::cmd_output_success,
-    fs::{read_file_to_end, stream_dirs, write_tempfile},
+    fs::{read_file_to_end, stream_dir, write_tempfile},
+    http_comms::mailbox_client,
 };
-use futures::prelude::*;
-use std::{collections::HashMap, convert::Into};
+use futures::{future, Future, IntoFuture};
+use std::{collections::HashMap, convert::Into, path::PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -23,6 +24,12 @@ pub struct StratagemGroup {
     pub name: String,
 }
 
+impl StratagemGroup {
+    pub fn get_rule_by_idx(&self, idx: usize) -> Option<&StratagemRule> {
+        self.rules.get(idx)
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemRule {
     pub action: String,
@@ -35,6 +42,12 @@ pub struct StratagemData {
     pub dump_flist: bool,
     pub groups: Vec<StratagemGroup>,
     pub device: StratagemDevice,
+}
+
+impl StratagemData {
+    pub fn get_group_by_name(&self, name: &str) -> Option<&StratagemGroup> {
+        self.groups.iter().find(|g| g.name == name)
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -62,6 +75,12 @@ trait HaveFlist {
 }
 
 impl HaveFlist for StratagemCounter {
+    fn have_flist(&self) -> bool {
+        self.have_flist
+    }
+}
+
+impl HaveFlist for &StratagemCounter {
     fn have_flist(&self) -> bool {
         self.have_flist
     }
@@ -126,26 +145,53 @@ fn has_flists<T: HaveFlist>(xs: &[T]) -> bool {
     xs.iter().any(HaveFlist::have_flist)
 }
 
+type MailboxFiles = Vec<(PathBuf, String)>;
+
 /// Given a results.json
 /// Returns all the directories that contain fid files.
-pub fn get_fid_dirs(results: &StratagemResult) -> Vec<String> {
-    results
+pub fn get_mailbox_files(
+    base_dir: &str,
+    stratagem_data: &StratagemData,
+    stratagem_result: &StratagemResult,
+) -> MailboxFiles {
+    stratagem_result
         .group_counters
         .iter()
         .filter(|x| has_flists(&x.counters))
-        .map(|x| &x.counters)
+        .map(|group| {
+            group
+                .counters
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| HaveFlist::have_flist(x))
+                .map(move |(idx, counter)| {
+                    let group = stratagem_data
+                        .get_group_by_name(&group.name)
+                        .unwrap_or_else(|| panic!("did not find group by name {}", group.name));
+
+                    let rule = group
+                        .get_rule_by_idx(idx - 1)
+                        .unwrap_or_else(|| panic!("did not find rule by idx {}", idx - 1));
+
+                    let p = [base_dir, &group.name, &counter.name]
+                        .iter()
+                        .cloned()
+                        .collect::<PathBuf>();
+
+                    (p, format!("{}-{}", group.name, rule.argument))
+                })
+        })
         .flatten()
-        .map(|x| x.name.clone())
         .collect()
 }
 
 /// Triggers a scan with Stratagem.
-/// This will only trigger a scan and return `results.json`
+/// This will only trigger a scan and return a triple of `(String, StratagemResult, MailboxFiles)`
 ///
 /// It will *not* stream data for processing
 pub fn trigger_scan(
     data: StratagemData,
-) -> impl Future<Item = (StratagemResult, String), Error = ImlAgentError> {
+) -> impl Future<Item = (String, StratagemResult, MailboxFiles), Error = ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
 
     let tmp_dir = format!("/tmp/{}/", id);
@@ -172,33 +218,158 @@ pub fn trigger_scan(
         .map(|(output, _f)| String::from_utf8_lossy(&output.stdout).into_owned())
         .and_then(move |_| read_file_to_end(result_file))
         .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
-        .map(move |x| (x, tmp_dir2))
+        .map(move |x| {
+            let mailbox_files = get_mailbox_files(&tmp_dir2, &data, &x);
+            (tmp_dir2, x, mailbox_files)
+        })
 }
 
-// pub fn start_scan_stratagem(
-//     data: StratagemData,
-// ) -> impl Future<Item = (StratagemResult, Vec<String>), Error = ImlAgentError> {
-//     let id = Uuid::new_v4().to_hyphenated().to_string();
-//     let id2 = id.clone();
+/// Streams output for all given mailbox files
+///
+/// This fn will stream all files in parallel and return once they have all finished.
+pub fn stream_fidlists(
+    mailbox_files: MailboxFiles,
+) -> impl Future<Item = (), Error = ImlAgentError> {
+    let mailbox_files = mailbox_files
+        .into_iter()
+        .map(|(file, address)| mailbox_client::send(address, stream_dir(file)));
 
-//     serde_json::to_vec(&data)
-//         .into_future()
-//         .from_err()
-//         .and_then(write_tempfile)
-//         .and_then(move |f| {
-//             cmd_output_success("lipe_scan", &["-c", &f.path().to_str().unwrap(), "-W", &id])
-//                 .map(|x| (x, f))
-//         })
-//         .map(|(output, _f)| String::from_utf8_lossy(&output.stdout).into_owned())
-//         .and_then(move |_| read_file_to_end(format!("/tmp/{}/result.json", id2)))
-//         .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
-//         .and_then(|x: StratagemResult| {
-//             let dirs = get_fid_dirs(&x);
+    future::join_all(mailbox_files).map(|_| ())
+}
 
-//             eprintln!("{:?}", dirs);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//             // stream_dirs(dirs).collect().map(move |xs| (x, xs))
+    #[test]
+    fn test_get_fid_dirs() {
+        let stratagem_data = StratagemData {
+            dump_flist: false,
+            device: StratagemDevice {
+                path: "/dev/mapper/mpathb".into(),
+                groups: vec!["size_distribution".into(), "warn_purge_times".into()],
+            },
+            groups: vec![
+                StratagemGroup {
+                    rules: vec![
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "< size 1048576".into(),
+                            argument: "smaller_than_1M".into(),
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "&& >= size 1048576 < size 1048576000".into(),
+                            argument: "not_smaller_than_1M_and_smaller_than_1G".into(),
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: ">= size 1048576000".into(),
+                            argument: "not_smaller_than_1G".into(),
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: ">= size 1048576000000".into(),
+                            argument: "not_smaller_than_1T".into(),
+                        },
+                    ],
+                    name: "size_distribution".into(),
+                },
+                StratagemGroup {
+                    rules: vec![
+                        StratagemRule {
+                            action: "LAT_SHELL_CMD_FID".into(),
+                            expression: "< atime - sys_time 18000000".into(),
+                            argument: "fids_expiring_soon".into(),
+                        },
+                        StratagemRule {
+                            action: "LAT_SHELL_CMD_FID".into(),
+                            expression: "< atime - sys_time 5184000000".into(),
+                            argument: "fids_expired".into(),
+                        },
+                    ],
+                    name: "warn_purge_times".into(),
+                },
+            ],
+        };
 
-//             Ok((x, vec![]))
-//         })
-// }
+        let stratagem_result = StratagemResult {
+            group_counters: vec![
+                StratagemGroupResult {
+                    name: "size_distribution".into(),
+                    counters: vec![
+                        StratagemCounter {
+                            count: 1,
+                            have_flist: false,
+                            name: "Other".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 0,
+                            have_flist: false,
+                            name: "smaller_than_1M".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 0,
+                            have_flist: false,
+                            name: "not_smaller_than_1M_and_smaller_than_1G".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 1,
+                            have_flist: false,
+                            name: "not_smaller_than_1G".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 0,
+                            have_flist: false,
+                            name: "not_smaller_than_1T".into(),
+                            extra: HashMap::new(),
+                        },
+                    ],
+                },
+                StratagemGroupResult {
+                    name: "warn_purge_times".into(),
+                    counters: vec![
+                        StratagemCounter {
+                            count: 2,
+                            have_flist: false,
+                            name: "Other".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 0,
+                            have_flist: true,
+                            name: "shell_cmd_of_rule_0".into(),
+                            extra: HashMap::new(),
+                        },
+                        StratagemCounter {
+                            count: 0,
+                            have_flist: true,
+                            name: "shell_cmd_of_rule_1".into(),
+                            extra: HashMap::new(),
+                        },
+                    ],
+                },
+            ],
+        };
+
+        let actual = get_mailbox_files("foo_bar", &stratagem_data, &stratagem_result);
+
+        assert_eq!(
+            actual,
+            vec![
+                (
+                    PathBuf::from("foo_bar/warn_purge_times/shell_cmd_of_rule_0"),
+                    "warn_purge_times-fids_expiring_soon".into()
+                ),
+                (
+                    PathBuf::from("foo_bar/warn_purge_times/shell_cmd_of_rule_1"),
+                    "warn_purge_times-fids_expired".into()
+                )
+            ]
+        );
+    }
+}

@@ -2,8 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::Msg;
 use seed::{class, div, prelude::*, span};
+
+#[derive(Default)]
+pub struct Model {
+    pub placement: TooltipPlacement,
+    pub size: TooltipSize,
+}
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -57,25 +62,10 @@ impl Default for TooltipSize {
     }
 }
 
-/// A tooltip component
-pub fn tooltip_component(
-    message: &str,
-    placement: &TooltipPlacement,
-    size: &TooltipSize,
-    more_classes: Option<Vec<&str>>,
-) -> El<Msg> {
-    let more_classes = match more_classes {
-        Some(classes) => classes.join(" "),
-        None => "".to_string(),
-    };
-
+/// A tooltip
+pub fn tooltip<T>(message: &str, Model { placement, size }: &Model) -> El<T> {
     div![
-        class![
-            "tooltip inferno-tt",
-            placement.into(),
-            size.into(),
-            more_classes.as_str()
-        ],
+        class!["tooltip inferno-tt", placement.into(), size.into()],
         div![class!["tooltip-arrow"]],
         div![class!["tooltip-inner"], span![El::from_html(&message)]]
     ]
