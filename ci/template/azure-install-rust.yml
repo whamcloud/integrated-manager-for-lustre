@@ -19,6 +19,8 @@ steps:
     displayName: "Install rust (windows)"
     condition: eq(variables['Agent.OS'], 'Windows_NT')
   # All platforms.
+  - script: rustup update
+    displayName: Update rust if needed
   - script: |
       rustc -Vv
       cargo -V
