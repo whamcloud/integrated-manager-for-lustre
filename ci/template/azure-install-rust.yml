@@ -4,7 +4,6 @@ steps:
       set -e
       curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
       echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-      rustup update
     env:
       RUSTUP_TOOLCHAIN: ${{parameters.rust_version}}
     displayName: "Install rust (*nix)"
@@ -20,6 +19,8 @@ steps:
     displayName: "Install rust (windows)"
     condition: eq(variables['Agent.OS'], 'Windows_NT')
   # All platforms.
+  - script: rustup update
+    displayName: Update rust if needed
   - script: |
       rustc -Vv
       cargo -V
