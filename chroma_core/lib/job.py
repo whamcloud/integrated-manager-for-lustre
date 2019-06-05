@@ -200,7 +200,7 @@ class Step(object):
     def invoke_rust_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
-        result = self.invoke_agent(host, command, args)
+        result = json.loads(self.invoke_rust_agent(host, command, args))
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
