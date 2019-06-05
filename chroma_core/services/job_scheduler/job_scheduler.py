@@ -296,8 +296,11 @@ class RunJobThread(threading.Thread):
 
         step_index = 0
         finish_step = -1
+        prev_result = None
+
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
+            args['prev_result'] = prev_result
 
             # Do not persist any sensitive arguments (prefixed with __)
             clean_args = dict([(k, v) for k, v in args.items() if not k.startswith("__")])
@@ -324,6 +327,7 @@ class RunJobThread(threading.Thread):
 
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
                 result = step.run(args)
+                prev_result = result
                 log.debug("Job %d step %d successful result %s" % (self.job.id, step_index, result))
 
                 self._job_progress.step_success(self.job.id, result)
