@@ -2,7 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
+import json
 import django.db.models
 
 from chroma_core.services import log_register
@@ -196,6 +196,17 @@ class Step(object):
         """
 
         return invoke_rust_agent(host, command, args, self._cancel_event)
+
+    def invoke_rust_agent_expect_result(self, host, command, args={}):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        result = json.loads(self.invoke_rust_agent(host, command, args))
+
+        if "Err" in result:
+            self.log(json.dumps(result["Err"], indent=2))
+            raise AgentException(host.fqdn, command, args, result["Err"])
+
+        return result["Ok"]
 
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
