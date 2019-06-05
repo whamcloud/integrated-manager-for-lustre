@@ -1,5 +1,8 @@
 from django.db import models
 from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
+
+import tastypie.http as http
 
 from tastypie import fields
 from tastypie.resources import Resource
@@ -8,7 +11,15 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.validation_utils import validate
-from chroma_core.models import StratagemConfiguration, ManagedHost, ManagedMdt, ManagedTargetMount, ManagedFilesystem
+from chroma_api.utils import custom_response, dehydrate_command
+from chroma_core.models import (
+    StratagemConfiguration,
+    ManagedHost,
+    ManagedMdt,
+    ManagedTargetMount,
+    ManagedFilesystem,
+    Command,
+)
 
 from chroma_api.chroma_model_resource import ChromaModelResource
 
@@ -108,4 +119,13 @@ class RunStratagemResource(Resource):
         )[0].get("id")
 
         mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
-        return JobSchedulerClient.run_stratagem(mdts)
+
+        command_id = JobSchedulerClient.run_stratagem(mdts)
+
+        try:
+            command = Command.objects.get(pk=command_id)
+        except ObjectDoesNotExist:
+            command = None
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
+
