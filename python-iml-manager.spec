@@ -95,6 +95,7 @@ Requires:       rust-iml-warp-drive
 Requires:       rust-iml-action-runner
 Requires:       rust-iml-agent-comms
 Requires:       rust-iml-stratagem
+Requires:       rust-iml-mailbox
 Requires:       createrepo
 Requires:       python2-toolz
 Requires:       iml-update-handler < 2
