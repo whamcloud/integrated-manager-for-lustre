@@ -177,6 +177,8 @@ server {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
         }
+        
+        client_max_body_size 0m;
 
         proxy_set_header X-SSL-Client-On $ssl_client_verify;
         proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
