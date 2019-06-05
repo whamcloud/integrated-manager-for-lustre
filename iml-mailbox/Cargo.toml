@@ -10,6 +10,7 @@ env_logger = "0.6"
 futures = "0.1"
 log = "0.4"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+iml-fs = { path = "../iml-fs", version = "0.1" }
 stream-lines = { git = "https://github.com/softprops/stream-lines" }
 tokio = "0.1.20"
 warp = "0.1" 

@@ -14,7 +14,11 @@ use structopt::StructOpt;
 pub enum StratagemCommand {
     /// Kickoff a Stratagem scan
     #[structopt(name = "scan")]
-    Scan,
+    Scan {
+        /// The name of the filesystem to scan
+        #[structopt(short = "fs", long = "filesystem")]
+        fs: String,
+    },
 }
 
 #[derive(Debug, StructOpt)]
@@ -95,10 +99,14 @@ fn main() {
 
     match matches {
         App::Stratagem { command } => match command {
-            StratagemCommand::Scan => {
+            StratagemCommand::Scan { fs } => {
                 let fut = {
                     let client = api_client::get_client().expect("Could not create API client");
-                    api_client::post(client, "run_stratagem", serde_json::json!({}))
+                    api_client::post(
+                        client,
+                        "run_stratagem",
+                        serde_json::json!({ "filesystem": fs }),
+                    )
                 };
 
                 let result: Result<(), _> = run_cmd(fut);

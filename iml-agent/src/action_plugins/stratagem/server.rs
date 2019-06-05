@@ -2,13 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::ImlAgentError,
-    cmd::cmd_output_success,
-    fs::{read_file_to_end, stream_dir, write_tempfile},
-    http_comms::mailbox_client,
-};
-use futures::{future, Future, IntoFuture};
+use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
+use futures::{future, Future, IntoFuture, Stream as _};
+use iml_fs::{read_file_to_end, stream_dir, write_tempfile};
 use std::{collections::HashMap, convert::Into, path::PathBuf};
 use uuid::Uuid;
 
@@ -202,7 +198,7 @@ pub fn trigger_scan(
     serde_json::to_vec(&data)
         .into_future()
         .from_err()
-        .and_then(write_tempfile)
+        .and_then(|x| write_tempfile(x).from_err())
         .and_then(move |f| {
             cmd_output_success(
                 "/usr/bin/lipe_scan",
@@ -216,7 +212,7 @@ pub fn trigger_scan(
             .map(|x| (x, f))
         })
         .map(|(output, _f)| String::from_utf8_lossy(&output.stdout).into_owned())
-        .and_then(move |_| read_file_to_end(result_file))
+        .and_then(move |_| read_file_to_end(result_file).from_err())
         .and_then(|xs| serde_json::from_slice(&xs).map_err(Into::into))
         .map(move |x| {
             let mailbox_files = get_mailbox_files(&tmp_dir2, &data, &x);
@@ -232,7 +228,7 @@ pub fn stream_fidlists(
 ) -> impl Future<Item = (), Error = ImlAgentError> {
     let mailbox_files = mailbox_files
         .into_iter()
-        .map(|(file, address)| mailbox_client::send(address, stream_dir(file)));
+        .map(|(file, address)| mailbox_client::send(address, stream_dir(file).from_err()));
 
     future::join_all(mailbox_files).map(|_| ())
 }
