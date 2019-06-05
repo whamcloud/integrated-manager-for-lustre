@@ -1,4 +1,4 @@
-[@MFL_REPO_OWNER@@MFL_REPO_NAME@]
+[@MFL_COPR_NAME@]
 name=Copr repo for @MFL_REPO_NAME@ owned by @MFL_REPO_OWNER@
 baseurl=https://copr-be.cloud.fedoraproject.org/results/@MFL_COPR_REPO@/epel-7-$basearch/
 type=rpm-md
