@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
-use futures::{Future, Stream};
 use futures::future::poll_fn;
+use futures::{Future, Stream};
 use tokio_threadpool::blocking;
 
 pub fn purge_files(
@@ -13,7 +13,7 @@ pub fn purge_files(
 ) -> Result<(), ImlAgentError> {
     let mntpt = match liblustreapi::search_rootpath(&device) {
         Ok(m) => m,
-        Err(e) => return Err(ImlAgentError::LiblustreError(e))
+        Err(e) => return Err(ImlAgentError::LiblustreError(e)),
     };
     liblustreapi::rmfids(&mntpt, args).map_err(ImlAgentError::LiblustreError)
 }

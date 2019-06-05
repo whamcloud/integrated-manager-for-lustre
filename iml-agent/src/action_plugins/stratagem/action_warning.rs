@@ -4,12 +4,14 @@
 
 use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
 use csv;
+use futures::future::poll_fn;
 use futures::sync::mpsc::channel;
 use futures::{Future, Sink, Stream};
 use libc;
 use std::ffi::CStr;
 use std::io;
 use std::path::PathBuf;
+use tokio_threadpool::blocking;
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
@@ -60,6 +62,15 @@ fn fid2record(mntpt: &String, fli: &fidlist::FidListItem) -> Result<Record, ImlA
     })
 }
 
+fn search_rootpath(device: String) -> impl Future<Item = String, Error = ImlAgentError> {
+    poll_fn(move || {
+        blocking(|| liblustreapi::search_rootpath(&device))
+            .map_err(|_| panic!("the threadpool shut down"))
+    })
+    .and_then(std::convert::identity)
+    .from_err()
+}
+
 pub fn write_records(
     device: &str,
     args: impl IntoIterator<Item = String>,
@@ -87,18 +98,7 @@ pub fn write_records(
 
 // Read mailbox and build a csv of files. return pathname of generated csv
 //
-pub fn read_mailbox(
-    device: &str,
-    mailbox: &str,
-) -> impl Future<Item = String, Error = ImlAgentError> {
-    let mntpt = match liblustreapi::search_rootpath(&device) {
-        Ok(m) => m,
-        Err(e) => {
-            panic!("Failed to find rootpath({}) -> {:?}", device, e);
-            //return futures::future::err(ImlAgentError::LiblustreError(e));
-        }
-    };
-
+pub fn read_mailbox(device: &str, mailbox: &str) -> impl Future<Item = String, Error = ()> {
     let mbox = mailbox.to_string();
 
     let mut fpath = PathBuf::from(env::get_var_else("REPORT_DIR", "/tmp"));
@@ -113,6 +113,7 @@ pub fn read_mailbox(
             //return futures::future::err(ImlAgentError::CsvError(e));
         }
     };
+
     let (sender, recv) = channel(4096);
 
     recv.for_each(move |rec: Record| {
@@ -122,20 +123,38 @@ pub fn read_mailbox(
         Ok(())
     })
     .join(
-        mailbox_client::get(mbox)
-            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
-            .and_then(move |fli: fidlist::FidListItem| fid2record(&mntpt, &fli))
+        search_rootpath(device.to_string())
             .map_err(|e| {
-                log::error!("Failed {:?}", e);
+                log::error!("Failed to find rootpath: {}", e);
                 ()
             })
-            .for_each(move |rec| {
-                tokio::spawn(sender.clone().send(rec).map(|_| ()).map_err(|e| {
-                    log::error!("Failed to send fid: {}", e);
-                    ()
-                }))
+            .and_then(move |mntpt| {
+                mailbox_client::get(mbox)
+                    .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
+                    .map_err(|e| {
+                        log::error!("Failed to convert string to json: {}", e);
+                        ()
+                    })
+                    .for_each(move |fli: fidlist::FidListItem| {
+                        let sender2 = sender.clone();
+                        let mntpt2 = mntpt.clone();
+                        tokio::spawn(
+                            poll_fn(move || {
+                                blocking(|| fid2record(&mntpt2, &fli))
+                                    .map_err(|_| panic!("the threadpool shut down"))
+                            })
+                            .and_then(std::convert::identity)
+                            .map_err(|_| ())
+                            .and_then(|rec| {
+                                sender2.send(rec).map_err(|e| {
+                                    log::error!("Failed to send fid: {}", e);
+                                    ()
+                                })
+                            })
+                            .map(|_| ()),
+                        )
+                    })
             }),
     )
     .map(move |_| name)
-    .map_err(|_| ImlAgentError::SendError)
 }
