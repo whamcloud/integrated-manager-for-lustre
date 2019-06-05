@@ -34,8 +34,7 @@ substs: $(SUBSTS)
 	chmod +x $(SUBSTS_SHELL)
 
 srpm:
-	mkdir -p ${TMPDIR}/_topdir/SOURCES
-	mkdir -p ${TMPDIR}/_topdir/SPECS
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
 	rm -rf ${BUILDROOT}/_topdir
 	if ! rpm -q lustre-client 2> /dev/null; then \

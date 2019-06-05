@@ -2,13 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::ImlAgentError;
 use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
-    io::{BufReader, Write},
+    io::{self, Write},
     path::Path,
 };
 use tempfile::NamedTempFile;
+use tokio::codec::{BytesCodec, Framed};
 use tokio_threadpool::blocking;
 
 /// Given a path, attempts to do an async read to the end of the file.
@@ -16,29 +16,28 @@ use tokio_threadpool::blocking;
 /// # Arguments
 ///
 /// * `p` - The `Path` to a file.
-pub fn read_file_to_end<P>(p: P) -> impl Future<Item = Vec<u8>, Error = ImlAgentError>
-where
-    P: AsRef<Path> + Send + 'static,
-{
-    tokio::fs::File::open(p).from_err().and_then(|file| {
-        tokio::io::read_to_end(file, vec![])
-            .map(|(_, d)| d)
-            .from_err()
-    })
-}
-
-/// Given a path, streams the file line by line till EOF
-///
-/// # Arguments
-///
-/// * `p` - The `Path` to a file.
-pub fn stream_file<P>(p: P) -> impl Stream<Item = String, Error = ImlAgentError>
+pub fn read_file_to_end<P>(p: P) -> impl Future<Item = Vec<u8>, Error = io::Error>
 where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::File::open(p)
-        .map(|file| tokio::io::lines(BufReader::new(file)))
+        .from_err()
+        .and_then(|file| tokio::io::read_to_end(file, vec![]).map(|(_, d)| d))
+}
+
+/// Given a path, streams the file till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a file.
+pub fn stream_file<P>(p: P) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::File::open(p)
+        .map(|file| Framed::new(file, BytesCodec::new()))
         .flatten_stream()
+        .map(bytes::BytesMut::freeze)
         .from_err()
 }
 
@@ -48,7 +47,7 @@ where
 /// # Arguments
 ///
 /// * `p` - The `Path` to a directory.
-pub fn stream_dir<P>(p: P) -> impl Stream<Item = String, Error = ImlAgentError>
+pub fn stream_dir<P>(p: P) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
 where
     P: AsRef<Path> + Send + 'static,
 {
@@ -67,19 +66,17 @@ where
 /// * `ps` - An `Iterator` of directory `Path`s.
 pub fn stream_dirs<P>(
     ps: impl IntoIterator<Item = P>,
-) -> impl Stream<Item = String, Error = ImlAgentError>
+) -> impl Stream<Item = bytes::Bytes, Error = std::io::Error>
 where
     P: AsRef<Path> + Send + 'static,
 {
-    stream::iter_ok::<_, ImlAgentError>(ps)
+    stream::iter_ok::<_, std::io::Error>(ps)
         .map(stream_dir)
         .flatten()
 }
 
 /// Creates a temporary file and writes some bytes to it.
-pub fn write_tempfile(
-    contents: Vec<u8>,
-) -> impl Future<Item = NamedTempFile, Error = ImlAgentError> {
+pub fn write_tempfile(contents: Vec<u8>) -> impl Future<Item = NamedTempFile, Error = io::Error> {
     poll_fn(move || {
         blocking(|| {
             let mut f = NamedTempFile::new()?;
@@ -96,15 +93,15 @@ pub fn write_tempfile(
 #[cfg(test)]
 mod tests {
     use super::{stream_dir, stream_file, write_tempfile};
-    use crate::agent_error::Result;
+    use bytes::Bytes;
     use futures::{Future, Stream as _};
-    use std::{fs::File, io::Write as _};
+    use std::{fs::File, io, io::Write as _};
     use tempdir::TempDir;
     use tempfile::NamedTempFile;
 
     fn run<R: Send + 'static, E: Send + 'static>(
         fut: impl Future<Item = R, Error = E> + Send + 'static,
-    ) -> std::result::Result<R, E> {
+    ) -> Result<R, E> {
         tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
     }
 
@@ -120,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stream_file() -> Result<()> {
+    fn test_stream_file() -> io::Result<()> {
         let mut f = NamedTempFile::new()?;
 
         f.write_all(b"some\nawesome\nfile")?;
@@ -131,13 +128,13 @@ mod tests {
 
         let result = run(fut)?;
 
-        assert_eq!(result, vec!["some", "awesome", "file"]);
+        assert_eq!(result, vec![Bytes::from(&b"some\nawesome\nfile"[..])]);
 
         Ok(())
     }
 
     #[test]
-    fn test_stream_dir() -> Result<()> {
+    fn test_stream_dir() -> io::Result<()> {
         let tmp_dir = TempDir::new("test_stream_dir")?;
 
         for i in 1..=5 {
@@ -146,7 +143,7 @@ mod tests {
             writeln!(tmp_file, "file{}\nwas{}\nhere{}", i, i, i)?;
         }
 
-        let fut = stream_dir(tmp_dir.path().to_path_buf()).chunks(3).collect();
+        let fut = stream_dir(tmp_dir.path().to_path_buf()).collect();
 
         let mut result = run(fut)?;
         result.sort();
@@ -154,11 +151,11 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                vec!["file1", "was1", "here1"],
-                vec!["file2", "was2", "here2"],
-                vec!["file3", "was3", "here3"],
-                vec!["file4", "was4", "here4"],
-                vec!["file5", "was5", "here5"]
+                Bytes::from(&b"file1\nwas1\nhere1\n"[..]),
+                Bytes::from(&b"file2\nwas2\nhere2\n"[..]),
+                Bytes::from(&b"file3\nwas3\nhere3\n"[..]),
+                Bytes::from(&b"file4\nwas4\nhere4\n"[..]),
+                Bytes::from(&b"file5\nwas5\nhere5\n"[..])
             ]
         );
 

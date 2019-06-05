@@ -312,6 +312,10 @@ class ServiceConfig(CommandLine):
         "iml-warp-drive.service",
         "device-aggregator.socket",
         "iml-srcmap-reverse.socket",
+        "iml-mailbox.service",
+        "iml-action-runner.service",
+        "iml-agent-comms.service",
+        "iml-stratagem.service",
     ]
 
     def _enable_services(self):

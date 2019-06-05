@@ -8,16 +8,18 @@ use crate::{
     http_comms::{crypto_client, hyper_client},
 };
 use futures::{Future, IntoFuture, Stream};
-use hyper::{header::HeaderValue, Body, Method, Request};
+use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
 
 /// Streams the given data to the manager mailbox.
 pub fn send(
     message_name: String,
-    stream: impl Stream<Item = String, Error = ImlAgentError> + Send + 'static,
+    stream: impl Stream<Item = bytes::Bytes, Error = ImlAgentError> + Send + 'static,
 ) -> impl Future<Item = (), Error = ImlAgentError> {
     let body = Body::wrap_stream(stream);
     let mut req = Request::new(body);
     *req.method_mut() = Method::POST;
+
+    log::debug!("Sending mailbox message to {}", message_name);
 
     hyper_client::build_https_client(&env::PFX)
         .into_future()
@@ -31,7 +33,14 @@ pub fn send(
             Ok((c, req))
         })
         .and_then(|(c, req)| c.request(req).from_err())
-        .map(|_| ())
+        .and_then(|resp| {
+            if resp.status() != StatusCode::CREATED {
+                Err(ImlAgentError::UnexpectedStatusError)
+            } else {
+                log::debug!("Mailbox message sent");
+                Ok(())
+            }
+        })
 }
 
 /// Retrieves the given data from the manager mailbox as a `Stream`

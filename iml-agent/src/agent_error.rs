@@ -76,6 +76,7 @@ pub enum ImlAgentError {
     InvalidHeaderValue(http::header::InvalidHeaderValue),
     HyperError(hyper::error::Error),
     NativeTls(native_tls::Error),
+    UnexpectedStatusError,
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -109,6 +110,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
             ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
+            ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
         }
     }
 }
@@ -138,6 +140,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
             ImlAgentError::HyperError(ref err) => Some(err),
             ImlAgentError::NativeTls(ref err) => Some(err),
+            ImlAgentError::UnexpectedStatusError => None,
         }
     }
 }

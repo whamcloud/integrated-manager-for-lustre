@@ -39,7 +39,7 @@ fn main() {
         .and(mailbox)
         .and(warp::path::param().map(move |x| [&mailbox_path2, &x].iter().collect()))
         .map(|address: PathBuf| {
-            let stream = iml_mailbox::stream_file(address);
+            let stream = iml_fs::stream_file(address);
 
             let body = Body::wrap_stream(stream);
 
@@ -76,10 +76,14 @@ fn main() {
                     tx
                 });
 
-                s.for_each(move |l| tx.unbounded_send(l).map_err(warp::reject::custom))
+                s.for_each(move |l| {
+                    log::debug!("Sending line {:?}", l);
+
+                    tx.unbounded_send(l).map_err(warp::reject::custom)
+                })
             },
         )
-        .map(|_| warp::reply());
+        .map(|_| warp::reply::with_status(warp::reply(), warp::http::StatusCode::CREATED));
 
     let routes = get.or(post).with(warp::log("mailbox"));
 
