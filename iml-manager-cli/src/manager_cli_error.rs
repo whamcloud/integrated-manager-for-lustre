@@ -8,6 +8,7 @@ pub type Result<T> = std::result::Result<T, ImlManagerCliError>;
 pub enum ImlManagerCliError {
     Reqwest(reqwest::Error),
     InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
+    TokioTimerError(tokio::timer::Error),
     UrlParseError(url::ParseError),
 }
 
@@ -16,6 +17,7 @@ impl std::fmt::Display for ImlManagerCliError {
         match *self {
             ImlManagerCliError::Reqwest(ref err) => write!(f, "{}", err),
             ImlManagerCliError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::UrlParseError(ref err) => write!(f, "{}", err),
         }
     }
@@ -26,8 +28,15 @@ impl std::error::Error for ImlManagerCliError {
         match *self {
             ImlManagerCliError::Reqwest(ref err) => Some(err),
             ImlManagerCliError::InvalidHeaderValue(ref err) => Some(err),
+            ImlManagerCliError::TokioTimerError(ref err) => Some(err),
             ImlManagerCliError::UrlParseError(ref err) => Some(err),
         }
+    }
+}
+
+impl From<tokio::timer::Error> for ImlManagerCliError {
+    fn from(err: tokio::timer::Error) -> Self {
+        ImlManagerCliError::TokioTimerError(err)
     }
 }
 
