@@ -105,7 +105,7 @@ fn display_cmd_state(cmd: &Command) {
     } else if cmd.cancelled {
         println!("🚫 {} cancelled", cmd.message);
     } else if cmd.complete {
-        println!("{}✔{} {} completed", green, reset, cmd.message);
+        println!("{}✔{} {} successful", green, reset, cmd.message);
     }
 }
 
