@@ -1806,7 +1806,7 @@ class JobScheduler(object):
         run_stratagem_list.append({
             "class_name": "SendStratagemResultsToClientJob",
             "args": {
-                "depends_on_job_range": str(range(len(mdts)))
+                "depends_on_job_range": range(len(mdts))
             }
         })
 

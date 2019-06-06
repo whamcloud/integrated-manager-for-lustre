@@ -26,6 +26,12 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['StratagemUnconfiguredAlert'])
 
+        # Adding model 'SendStratagemResultsToClientJob'
+        db.create_table(u'chroma_core_sendstratagemresultstoclientjob', (
+            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal('chroma_core', ['SendStratagemResultsToClientJob'])
+
         # Adding model 'StratagemConfiguration'
         db.create_table(u'chroma_core_stratagemconfiguration', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -66,6 +72,9 @@ class Migration(SchemaMigration):
     def backwards(self, orm):
         # Deleting model 'StratagemUnconfiguredAlert'
         db.delete_table(u'chroma_core_stratagemunconfiguredalert')
+
+        # Deleting model 'SendStratagemResultsToClientJob'
+        db.delete_table(u'chroma_core_sendstratagemresultstoclientjob')
 
         # Deleting model 'StratagemConfiguration'
         db.delete_table(u'chroma_core_stratagemconfiguration')
@@ -940,10 +949,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 4, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 6, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'D56154FB69200B6EFC02E2DE9926A631'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'6D8984B987408648CAFB4228D26B65C0'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1049,6 +1058,10 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
             'len': ('django.db.models.fields.IntegerField', [], {}),
             'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sendstratagemresultstoclientjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'SendStratagemResultsToClientJob', '_ormbases': ['chroma_core.Job']},
+            u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.series': {
             'Meta': {'unique_together': "(('content_type', 'object_id', 'name'),)", 'object_name': 'Series'},

@@ -232,3 +232,16 @@ class RunStratagemJob(Job):
 
         return [(RunStratagemStep, {"host": self.fqdn, "path": path}), (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid})]
 
+
+class SendStratagemResultsToClientJob(Job):
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, self):
+        return "Sending stratagem results to client"
+
+    def description(self):
+        return "Sending stratagem results to client"
