@@ -1803,6 +1803,13 @@ class JobScheduler(object):
             }
         }, mdts)
 
+        run_stratagem_list.append({
+            "class_name": "SendStratagemResultsToClientJob",
+            "args": {
+                "depends_on_job_range": str(range(len(mdts)))
+            }
+        })
+
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
         return command
