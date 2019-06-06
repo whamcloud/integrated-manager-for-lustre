@@ -234,7 +234,7 @@ class CommandPlan(object):
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job.id)
 
-        wait_fors = list(wait_fors)
+        wait_fors = list(wait_fors) + json.loads(job.depends_on_job_range)
         job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
@@ -489,6 +489,11 @@ class CommandPlan(object):
             job_klass = ContentType.objects.get_by_natural_key("chroma_core", job["class_name"].lower()).model_class()
             job_instance = job_klass(**job["args"])
             jobs.append(job_instance)
+
+        for job in jobs:
+            job_ids = map(lambda idx: jobs[idx].id, json.loads(job.depends_on_job_range))
+            job.depends_on_job_range = str(job_ids)
+            job.save()
 
         with transaction.atomic():
             command = Command.objects.create(message=message)
