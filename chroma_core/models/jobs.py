@@ -331,6 +331,9 @@ class Job(models.Model):
     states = ("pending", "tasked", "complete")
     state = models.CharField(max_length=16, default="pending", help_text="One of %s" % (states,))
 
+    depends_on_job_range = models.CharField(max_length=64, default="[]", help_text="Range of jobs in list that must\
+        complete before this job can execute.")
+
     errored = models.BooleanField(
         default=False,
         help_text="True if the job has completed\
