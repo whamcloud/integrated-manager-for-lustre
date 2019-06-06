@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use iml_manager_cli::api_client;
-use iml_wire_types::{ApiList, Host};
+use iml_manager_cli::{api_client, api_utils};
+use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
 use std::process::exit;
@@ -74,16 +74,44 @@ where
     table
 }
 
-fn start_spinner(msg: &str) -> impl FnOnce() -> () {
-    let cyan = termion::color::Fg(termion::color::Cyan);
+fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
+    let grey = termion::color::Fg(termion::color::LightBlack);
     let reset = termion::color::Fg(termion::color::Reset);
 
-    let sp = Spinner::new(Spinners::Dots9, format!("{}{}{}", cyan, msg, reset));
+    let s = format!("{}{}{}", grey, reset, msg);
+    let s_len = s.len();
 
-    move || {
-        sp.stop();
-        println!("{}", termion::clear::CurrentLine);
+    let sp = Spinner::new(Spinners::Dots9, s);
+
+    move |msg_opt| match msg_opt {
+        Some(msg) => {
+            sp.message(msg);
+        }
+        None => {
+            sp.stop();
+            print!("{}", termion::clear::CurrentLine);
+            print!("{}", termion::cursor::Left(s_len as u16));
+        }
     }
+}
+
+fn display_cmd_state(cmd: &Command) {
+    let green = termion::color::Fg(termion::color::Green);
+    let red = termion::color::Fg(termion::color::Red);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    if cmd.errored {
+        println!("{}✗{} {} errored", red, reset, cmd.message);
+    } else if cmd.cancelled {
+        println!("🚫 {} cancelled", cmd.message);
+    } else if cmd.complete {
+        println!("{}✔{} {} successful", green, reset, cmd.message);
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct CmdWrapper {
+    command: Command,
 }
 
 fn main() {
@@ -92,8 +120,6 @@ fn main() {
     dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
 
     let matches = App::from_args();
-
-    let stop_spinner = start_spinner("Running command...");
 
     log::debug!("Matching args {:?}", matches);
 
@@ -109,13 +135,24 @@ fn main() {
                     )
                 };
 
-                let result: Result<(), _> = run_cmd(fut);
+                let CmdWrapper { command }: CmdWrapper = run_cmd(fut).expect("Could not run cmd");
 
-                stop_spinner();
+                let stop_spinner = start_spinner(&command.message);
+
+                let command =
+                    run_cmd(api_utils::wait_for_cmd(command)).expect("Could not poll command");
+
+                stop_spinner(None);
+
+                display_cmd_state(&command);
+
+                exit(exitcode::OK)
             }
         },
         App::Server { command } => match command {
             ServerCommand::List => {
+                let stop_spinner = start_spinner("Running command...");
+
                 let fut = {
                     let client = api_client::get_client().expect("Could not create API client");
                     api_client::get(client, "host")
@@ -123,7 +160,7 @@ fn main() {
 
                 let result: Result<ApiList<Host>, _> = run_cmd(fut);
 
-                stop_spinner();
+                stop_spinner(None);
 
                 match result {
                     Ok(hosts) => {

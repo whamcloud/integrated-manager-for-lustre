@@ -3,4 +3,5 @@
 // license that can be found in the LICENSE file.
 
 pub mod api_client;
+pub mod api_utils;
 pub mod manager_cli_error;

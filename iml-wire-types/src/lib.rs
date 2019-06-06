@@ -323,3 +323,16 @@ pub struct ServerProfile {
     pub user_selectable: bool,
     pub worker: bool,
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Command {
+    pub cancelled: bool,
+    pub complete: bool,
+    pub created_at: String,
+    pub errored: bool,
+    pub id: u64,
+    pub jobs: Vec<String>,
+    pub logs: String,
+    pub message: String,
+    pub resource_uri: String,
+}
