@@ -300,7 +300,7 @@ class RunJobThread(threading.Thread):
 
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
-            args['prev_result'] = prev_result
+            args["prev_result"] = prev_result
 
             # Do not persist any sensitive arguments (prefixed with __)
             clean_args = dict([(k, v) for k, v in args.items() if not k.startswith("__")])
