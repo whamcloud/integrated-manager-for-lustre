@@ -239,7 +239,6 @@ class CommandPlan(object):
             job_deps_list = job_deps_map[job]
 
         wait_fors = list(wait_fors) + map(lambda job: job.id, job_deps_list)
-
         job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
