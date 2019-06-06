@@ -286,6 +286,10 @@ class ServiceConfig(CommandLine):
         # Enable use of the management plugin if its available, else this tag is just ignored.
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
+    def _setup_influxdb(self):
+        # Setup influx chroma DB
+        self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
+
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
             os.makedirs(settings.CRYPTO_FOLDER)
@@ -727,6 +731,8 @@ proxy=_none_
         self._setup_rabbitmq_service()
         self._setup_rabbitmq_credentials()
 
+        self._setup_influxdb()
+
         self._enable_services()
         self._start_services()
 
@@ -766,7 +772,9 @@ proxy=_none_
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server"]
+        interesting_services = (
+            self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server", "influxdb"]
+        )
 
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
