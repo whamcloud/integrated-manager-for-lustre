@@ -111,7 +111,7 @@ class CommandPlan(object):
 
         return locks
 
-    def add_jobs(self, jobs, command):
+    def add_jobs(self, jobs, command, job_deps_map=None):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
         # Important: the Job must not be committed until all
         # its dependencies and locks are in.
@@ -128,7 +128,7 @@ class CommandPlan(object):
             log.info("add_jobs: done checking dependencies")
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
-            self._create_dependencies(job, locks)
+            self._create_dependencies(job, locks, job_deps_map)
             job.save()
 
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
@@ -196,7 +196,7 @@ class CommandPlan(object):
 
         return {"transition_job": transition_job, "dependency_jobs": depended_jobs}
 
-    def _create_dependencies(self, job, locks):
+    def _create_dependencies(self, job, locks, job_deps_map=[]):
         """Examine overlaps between a job's locks and those of
            earlier jobs which are still pending, and generate wait_for
            dependencies when we have a write lock and they have a read lock
@@ -234,7 +234,9 @@ class CommandPlan(object):
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job.id)
 
-        wait_fors = list(wait_fors) + json.loads(job.depends_on_job_range)
+        job_deps_list = dict(filter(lambda (k,v): k == job.id, job_deps_map.items())).get(job.id) or []
+        wait_fors = list(wait_fors) + job_deps_list
+        
         job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
@@ -485,22 +487,26 @@ class CommandPlan(object):
         assert len(job_dicts) > 0
 
         jobs = []
+        job_deps_map = {}
         for job in job_dicts:
             job_klass = ContentType.objects.get_by_natural_key("chroma_core", job["class_name"].lower()).model_class()
+            depends_on_job_range = None
+            if "depends_on_job_range" in job["args"]:
+                depends_on_job_range = job["args"].depends_on_job_range
+                del job["args"]["depends_on_job_range"]
+            
             job_instance = job_klass(**job["args"])
+            job_deps_map[job_instance.id] = depends_on_job_range
             jobs.append(job_instance)
 
-        for job in jobs:
-            job_ids = map(lambda idx: jobs[idx].id, json.loads(job.depends_on_job_range))
-            job.depends_on_job_range = str(job_ids)
-            job.save()
+        job_deps_map = {k:v for k,v in job_deps_map.items() if v != None}
 
         with transaction.atomic():
             command = Command.objects.create(message=message)
             log.debug("command_run_jobs: command %s" % command.id)
             for job in jobs:
                 log.debug("command_run_jobs:  job %s" % job)
-            self.add_jobs(jobs, command)
+            self.add_jobs(jobs, command, job_deps_map)
 
         return command.id
 
