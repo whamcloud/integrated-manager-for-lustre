@@ -138,7 +138,6 @@ pub fn read_mailbox(
                     .and_then(|rec| {
                         sender2.send(rec).map_err(|e| {
                             log::error!("Failed to send fid: {}", e);
-                            ()
                         })
                     })
                     .map(|_| ()),

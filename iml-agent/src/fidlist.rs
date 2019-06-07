@@ -17,7 +17,7 @@ pub struct FidListItem {
 impl FidListItem {
     pub fn new(fid: String) -> Self {
         FidListItem {
-            fid: fid,
+            fid,
             linkea: vec![],
         }
     }
