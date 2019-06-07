@@ -98,22 +98,22 @@ pub fn generate_cooked_config(path: String) -> StratagemData {
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
                         expression: "< size 1048576".into(),
-                        argument: "smaller_than_1M".into(),
+                        argument: "SIZE_<_1M".into(),
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
                         expression: "&& >= size 1048576 < size 1048576000".into(),
-                        argument: "not_smaller_than_1M_and_smaller_than_1G".into(),
+                        argument: "1M_<=_SIZE_<_1G".into(),
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
                         expression: ">= size 1048576000".into(),
-                        argument: "not_smaller_than_1G".into(),
+                        argument: "SIZE_>=_1G".into(),
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
                         expression: ">= size 1048576000000".into(),
-                        argument: "not_smaller_than_1T".into(),
+                        argument: "SIZE_>=_1T".into(),
                     },
                 ],
                 name: "size_distribution".into(),
@@ -251,22 +251,22 @@ mod tests {
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: "< size 1048576".into(),
-                            argument: "smaller_than_1M".into(),
+                            argument: "SIZE_<_1M".into(),
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: "&& >= size 1048576 < size 1048576000".into(),
-                            argument: "not_smaller_than_1M_and_smaller_than_1G".into(),
+                            argument: "1M_<=_SIZE_<_1G".into(),
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: ">= size 1048576000".into(),
-                            argument: "not_smaller_than_1G".into(),
+                            argument: "SIZE_>=_1G".into(),
                         },
                         StratagemRule {
                             action: "LAT_COUNTER_INC".into(),
                             expression: ">= size 1048576000000".into(),
-                            argument: "not_smaller_than_1T".into(),
+                            argument: "SIZE_>=_1T".into(),
                         },
                     ],
                     name: "size_distribution".into(),

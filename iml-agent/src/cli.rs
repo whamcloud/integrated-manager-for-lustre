@@ -169,24 +169,25 @@ fn main() {
                 let green = termion::color::Fg(termion::color::Green);
                 let reset = termion::color::Fg(termion::color::Reset);
 
-                let sp = Spinner::new(
-                    Spinners::Dots9,
-                    format!(
-                        "{}Scanning{} {}{}{}...",
-                        cyan,
-                        reset,
-                        termion::style::Bold,
-                        device_path,
-                        reset,
-                    ),
+                let s = format!(
+                    "{}Scanning{} {}{}{}...",
+                    cyan,
+                    reset,
+                    termion::style::Bold,
+                    device_path,
+                    reset,
                 );
+                let s_len = s.len();
+
+                let sp = Spinner::new(Spinners::Dots9, s);
 
                 let data = generate_cooked_config(device_path);
 
                 let result = run_cmd(trigger_scan(data));
 
                 sp.stop();
-                println!("{}", termion::clear::BeforeCursor);
+                println!("{}", termion::clear::CurrentLine);
+                print!("{}", termion::cursor::Left(s_len as u16));
 
                 match result {
                     Ok((results_dir, output, _)) => {
@@ -204,6 +205,7 @@ fn main() {
                             );
 
                             let mut h = v_hist::init();
+                            h.max_width = 50;
 
                             let mut table = Table::new();
 
