@@ -4,6 +4,7 @@
 
 import logging
 import json
+from toolz.functoolz import pipe, partial
 
 from django.db import models
 
@@ -104,11 +105,11 @@ class ConfigureStratagemJob(StateChangeJob):
 
         return steps
 
-
 class RunStratagemStep(Step):
     def run(self, args):
         host = args["host"]
         path = args["path"]
+        target_name = args["target_name"]
         prev_result = args["prev_result"]
 
         job_log.warning("prev_result: {}".format(prev_result))
@@ -123,22 +124,22 @@ class RunStratagemStep(Step):
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": "< size 1048576",
-                                "argument": "smaller_than_1M",
+                                "argument": "SIZE < 1M",
                             },
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": "&& >= size 1048576 < size 1048576000",
-                                "argument": "not_smaller_than_1M_and_smaller_than_1G",
+                                "argument": "1M <= SIZE < 1G",
                             },
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": ">= size 1048576000",
-                                "argument": "not_smaller_than_1G",
+                                "argument": "SIZE >= 1G",
                             },
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": ">= size 1048576000000",
-                                "argument": "not_smaller_than_1T",
+                                "argument": "SIZE >= 1T",
                             },
                         ],
                         "name": "size_distribution",
@@ -161,10 +162,62 @@ class RunStratagemStep(Step):
                 ],
             }
 
+        def get_column_length(rows, col_name):
+            return pipe(
+                rows,
+                partial(map, lambda row, col_name=col_name: len(str(row.get(col_name)))),
+                max
+            )
+
+        def generate_border(max_name_length, max_count_length):
+            return '+' + ("-" * (max_name_length + 2)) + '+' + ("-" * (max_count_length + 2)) + '+'
+
+        def generate_row(max_name_length, max_count_length, row):
+            name = row.get('name')
+            count = str(row.get('count'))
+
+            return "| {}{} | {}{} |\n{}".format(
+                name,  
+                " " * (max_name_length - len(name)), 
+                count, 
+                " " * (max_count_length - len(count)), 
+                generate_border(max_name_length, max_count_length)
+            )
+            
+
+        def generate_rows(rows):
+            max_name_length = get_column_length(rows, 'name')
+            max_count_length = get_column_length(rows, 'count')
+
+            return "{}\n{}".format(
+                generate_border(max_name_length, max_count_length), 
+                "\n".join(
+                    map(partial(generate_row, max_name_length, max_count_length), rows)
+                )
+            )
+
+        def generate_group_counter_output(group):
+            group_name = group.get('name')
+            table = generate_rows(group.get('counters'))
+
+            return "<strong>Group</strong>: <span class='text-warning'>{}</span>\n\n{}".format(group_name, table)
+
+
+        def generate_output_from_results(result):
+            results_path = result[0]
+            group_counters_output = map(generate_group_counter_output, result[1].get('group_counters'))
+
+            return "<span class='text-success'><i class='fa fa-check'></i> Scan finished for target {}.</span>\nResults located in {}\n\n{}".format(
+                target_name, 
+                results_path, 
+                "\n\n".join(group_counters_output)
+            )
+
+
         body = _get_body(path)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
-        self.log("Successfully scanned {}:\n{}".format(path, json.dumps(result, indent=2)))
+        self.log(generate_output_from_results(result))
 
         return result
 
@@ -230,7 +283,7 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        return [(RunStratagemStep, {"host": self.fqdn, "path": path}), (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid})]
+        return [(RunStratagemStep, {"host": self.fqdn, "path": path, "target_name": self.target_name}), (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid})]
 
 
 class SendStratagemResultsToClientJob(Job):
