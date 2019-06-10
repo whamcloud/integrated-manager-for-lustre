@@ -239,7 +239,7 @@ class CommandPlan(object):
             job_deps_list = job_deps_map[job]
 
         wait_fors = list(wait_fors) + map(lambda job: job.id, job_deps_list)
-        
+
         job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
@@ -495,14 +495,14 @@ class CommandPlan(object):
             job_klass = ContentType.objects.get_by_natural_key("chroma_core", job["class_name"].lower()).model_class()
             depends_on_job_range = None
             if "depends_on_job_range" in job["args"]:
-                depends_on_job_range = job["args"].get('depends_on_job_range')
+                depends_on_job_range = job["args"].get("depends_on_job_range")
                 del job["args"]["depends_on_job_range"]
-            
+
             job_instance = job_klass(**job["args"])
             job_deps_map[job_instance] = depends_on_job_range
             jobs.append(job_instance)
 
-        job_deps_map = {k:map(lambda idx: jobs[idx], v) for k,v in job_deps_map.items() if v != None}
+        job_deps_map = {k: map(lambda idx: jobs[idx], v) for k, v in job_deps_map.items() if v != None}
 
         with transaction.atomic():
             command = Command.objects.create(message=message)
