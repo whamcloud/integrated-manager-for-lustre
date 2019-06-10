@@ -317,7 +317,7 @@ fn records_to_map(xs: Records) -> RecordMap {
 }
 
 #[wasm_bindgen]
-pub fn init(x: &JsValue, el: Element) -> Callbacks {
+pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
     init_log();
 
     log::debug!("Incoming value is: {:?}", x);
