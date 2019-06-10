@@ -286,7 +286,7 @@ class ServiceConfig(CommandLine):
         # Enable use of the management plugin if its available, else this tag is just ignored.
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
-    def _setup_influxdb(self):
+    def _setup_influxdb_service(self):
         influx_service = ServiceControlEL7("influxdb")
 
         log.info("Starting InfluxDB...")
@@ -303,6 +303,7 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
+    def _setup_influxdb_db(self):
         log.info("Creating InfluxDB databse...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
 
@@ -744,10 +745,12 @@ proxy=_none_
         self._setup_ntp(ntp_server)
         self._setup_crypto()
 
+        self._setup_influxdb_service()
         self._setup_rabbitmq_service()
+
         self._setup_rabbitmq_credentials()
 
-        self._setup_influxdb()
+        self._setup_influxdb_db()
 
         self._enable_services()
         self._start_services()
