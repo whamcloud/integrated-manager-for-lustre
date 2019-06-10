@@ -19,6 +19,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  influxdb:
+    image: "influxdb:1.7.6-alpine"
+    hostname: "influxdb"
+    deploy: *default-deploy
+    volumes:
+      - influxdb:/var/lib/influxdb/
+    healthcheck:
+      test: ["CMD-SHELL", "influx -execute 'quit'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - 8086:8086
   rabbit:
     image: "rabbitmq:3.6-management"
     hostname: "rabbit"
