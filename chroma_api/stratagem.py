@@ -97,6 +97,11 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 class RunStratagemResource(Resource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
+    interval = fields.IntegerField(attribute="interval", null=False)
+    report_duration = fields.IntegerField(attribute="report_duration", null=False)
+    report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
+    purge_duration = fields.IntegerField(attribute="purge_duration", null=False)
+    purge_duration_active = fields.BooleanField(attribute="purge_duration_active", null=False)
 
     class Meta:
         list_allowed_methods = ["post"]
@@ -120,7 +125,7 @@ class RunStratagemResource(Resource):
 
         mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
 
-        command_id = JobSchedulerClient.run_stratagem(mdts)
+        command_id = JobSchedulerClient.run_stratagem(mdts, bundle.data)
 
         try:
             command = Command.objects.get(pk=command_id)

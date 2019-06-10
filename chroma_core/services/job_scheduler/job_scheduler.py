@@ -1793,13 +1793,18 @@ class JobScheduler(object):
             True
         )
 
-    def run_stratagem(self, mdts):
+    def run_stratagem(self, mdts, stratagem_data):
         unique_id = uuid.uuid4()
         run_stratagem_list = map(lambda mdt_id: { 
             "class_name": "RunStratagemJob", 
             "args": {
                 "mdt_id": mdt_id,
-                "uuid": unique_id
+                "uuid": unique_id,
+                "interval": stratagem_data.get("interval"),
+                "report_duration": stratagem_data.get("report_duration"),
+                "report_duration_active": stratagem_data.get("report_duration_active"),
+                "purge_duration": stratagem_data.get("purge_duration"),
+                "purge_duration_active": stratagem_data.get("purge_duration_active")
             }
         }, mdts)
 

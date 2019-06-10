@@ -107,14 +107,38 @@ class ConfigureStratagemJob(StateChangeJob):
 
 class RunStratagemStep(Step):
     def run(self, args):
+        prev_result = args["prev_result"]
         host = args["host"]
         path = args["path"]
         target_name = args["target_name"]
-        prev_result = args["prev_result"]
+        report_duration = args["report_duration"]
+        report_duration_active = args["report_duration_active"].lower() == 'true'
+        purge_duration = args["purge_duration"]
+        purge_duration_active = args["purge_duration_active"].lower() == 'true'
 
-        job_log.warning("prev_result: {}".format(prev_result))
+        def _get_body(mount_point, report_duration, report_duration_active, purge_duration, purge_duration_active):
 
-        def _get_body(mount_point):
+            rule_map = {
+                "fids_expiring_soon": report_duration_active,
+                "fids_expired": purge_duration_active
+            }
+
+            warn_purge_times = {
+                "rules": map(lambda rule, rule_map=rule_map: rule_map[rule.get("argument")], [
+                    {
+                        "action": "LAT_SHELL_CMD_FID",
+                        "expression": "< atime - sys_time {}".format(report_duration),
+                        "argument": "fids_expiring_soon",
+                    },
+                    {
+                        "action": "LAT_SHELL_CMD_FID",
+                        "expression": "< atime - sys_time {}".format(purge_duration),
+                        "argument": "fids_expired",
+                    }
+                ]),
+                "name": "warn_purge_times",
+            }
+
             return {
                 "dump_flist": False,
                 "device": {"path": path, "groups": ["size_distribution", "warn_purge_times"]},
@@ -144,22 +168,8 @@ class RunStratagemStep(Step):
                         ],
                         "name": "size_distribution",
                     },
-                    {
-                        "rules": [
-                            {
-                                "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time 0",
-                                "argument": "fids_expiring_soon",
-                            },
-                            {
-                                "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time 0",
-                                "argument": "fids_expired",
-                            },
-                        ],
-                        "name": "warn_purge_times",
-                    },
-                ],
+                    warn_purge_times
+                ]
             }
 
         def get_column_length(rows, col_name):
@@ -214,7 +224,7 @@ class RunStratagemStep(Step):
             )
 
 
-        body = _get_body(path)
+        body = _get_body(path, report_duration, report_duration_active, purge_duration, purge_duration_active))
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))
@@ -241,6 +251,11 @@ class StreamFidlistStep(Step):
 class RunStratagemJob(Job):
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
+    interval = models.IntegerField()
+    report_duration = models.IntegerField()
+    report_duration_active = models.BooleanField(default=False, help_text="Report duration active")
+    purge_duration = models.IntegerField()
+    purge_duration_active = models.BooleanField(default=False, help_text="Purge duration active")
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -283,7 +298,21 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        return [(RunStratagemStep, {"host": self.fqdn, "path": path, "target_name": self.target_name}), (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid})]
+        return [
+            (RunStratagemStep, {
+                "host": self.fqdn,
+                "path": path, 
+                "target_name": self.target_name,
+                "report_duration": self.report_duration,
+                "report_duration_active": self.report_duration_active,
+                "purge_duration": self.purge_duration,
+                "purge_duration_active": self.purge_duration_active
+            }), 
+            (StreamFidlistStep, {
+                "host": self.fqdn, 
+                "uuid": self.uuid
+            })
+        ]
 
 
 class SendStratagemResultsToClientJob(Job):
