@@ -112,9 +112,9 @@ class RunStratagemStep(Step):
         path = args["path"]
         target_name = args["target_name"]
         report_duration = args["report_duration"]
-        report_duration_active = args["report_duration_active"].lower() == 'true'
+        report_duration_active = args["report_duration_active"]
         purge_duration = args["purge_duration"]
-        purge_duration_active = args["purge_duration_active"].lower() == 'true'
+        purge_duration_active = args["purge_duration_active"]
 
         def _get_body(mount_point, report_duration, report_duration_active, purge_duration, purge_duration_active):
 
@@ -124,7 +124,7 @@ class RunStratagemStep(Step):
             }
 
             warn_purge_times = {
-                "rules": map(lambda rule, rule_map=rule_map: rule_map[rule.get("argument")], [
+                "rules": filter(lambda rule, rule_map=rule_map: rule_map.get(rule.get("argument")), [
                     {
                         "action": "LAT_SHELL_CMD_FID",
                         "expression": "< atime - sys_time {}".format(report_duration),
@@ -223,8 +223,7 @@ class RunStratagemStep(Step):
                 "\n\n".join(group_counters_output)
             )
 
-
-        body = _get_body(path, report_duration, report_duration_active, purge_duration, purge_duration_active))
+        body = _get_body(path, report_duration, report_duration_active, purge_duration, purge_duration_active)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))
