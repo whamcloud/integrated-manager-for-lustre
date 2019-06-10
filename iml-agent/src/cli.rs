@@ -5,11 +5,12 @@
 use futures::Future;
 use iml_agent::action_plugins::stratagem::{
     action_purge, action_warning,
-    server::{generate_cooked_config, trigger_scan},
+    server::{generate_cooked_config, trigger_scan, Counter, StratagemCounters},
 };
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
+    convert::TryInto,
     fs::File,
     io::{self, BufRead, BufReader},
     process::exit,
@@ -132,6 +133,53 @@ fn humanize(s: &str) -> String {
     s.replace('_', " ")
 }
 
+/// Takes a `Vec` of `StratagemCounters` and
+/// prints a histogram and table for each one.
+///
+/// If a `StratagemClassifyCounter` is encountered, this
+/// fn will recurse and print the nested counter before the parent.
+fn print_counters(xs: Vec<StratagemCounters>) {
+    log::info!("Looking at: {:?}", xs);
+
+    let mut table = Table::new();
+    table.add_row(row!["Name", "Count"]);
+
+    let mut h = v_hist::init();
+    h.max_width = 50;
+
+    for x in xs {
+        add_counter_entry(&x, &mut table, &mut h);
+
+        if let StratagemCounters::StratagemClassifyCounter(x) = x {
+            print_counters(
+                x.classify
+                    .counters
+                    .into_iter()
+                    .map(StratagemCounters::StratagemCounter)
+                    .collect(),
+            );
+        }
+    }
+
+    h.draw();
+
+    println!("\n\n");
+
+    table.printstd();
+}
+
+fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) {
+    let name = humanize(&x.name());
+    let count: usize = x
+        .count()
+        .try_into()
+        .expect("Conversion to usize for counter failed");
+
+    t.add_row(row![name.clone(), count]);
+
+    h.add_entry(name, count);
+}
+
 fn main() {
     env_logger::init();
 
@@ -198,34 +246,14 @@ fn main() {
 
                         for x in output.group_counters {
                             println!(
-                                "\n\n\n{}Group:{} {}\n",
+                                "\n\n\n{}{}Group:{} {}\n",
+                                cyan,
                                 termion::style::Bold,
                                 reset,
                                 humanize(&x.name)
                             );
 
-                            let mut h = v_hist::init();
-                            h.max_width = 50;
-
-                            let mut table = Table::new();
-
-                            table.add_row(row!["Name", "Count"]);
-
-                            for y in x.counters {
-                                let count = unsafe { std::mem::transmute(y.count) };
-
-                                let name = humanize(&y.name);
-
-                                h.add_entry(name.clone(), count);
-
-                                table.add_row(row![name, y.count]);
-                            }
-
-                            h.draw();
-
-                            println!("\n\n");
-
-                            table.printstd();
+                            print_counters(x.counters);
                         }
                     }
                     Err(e) => {
