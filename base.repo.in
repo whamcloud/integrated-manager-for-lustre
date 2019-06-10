@@ -17,10 +17,3 @@ enabled=1
 gpgcheck=1
 #gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
 gpgkey=https://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-
-[influxdb]
-name = InfluxDB Repository - RHEL $releasever
-baseurl = https://repos.influxdata.com/centos/$releasever/$basearch/stable
-enabled = 1
-gpgcheck = 1
-gpgkey = https://repos.influxdata.com/influxdb.key
