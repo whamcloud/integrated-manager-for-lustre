@@ -209,6 +209,7 @@ services:
 volumes:
   manager-config:
   db-data:
+  influxdb:
   static-config1:
   static-config2:
 secrets:
