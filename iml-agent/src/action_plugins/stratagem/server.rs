@@ -324,7 +324,6 @@ pub fn stream_fidlists(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
     #[test]
     fn test_get_fid_dirs() {
@@ -383,36 +382,31 @@ mod tests {
                 StratagemGroupResult {
                     name: "size_distribution".into(),
                     counters: vec![
-                        StratagemCounter {
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
                             have_flist: false,
                             name: "Other".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "smaller_than_1M".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "not_smaller_than_1M_and_smaller_than_1G".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
                             have_flist: false,
                             name: "not_smaller_than_1G".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "not_smaller_than_1T".into(),
-                            extra: HashMap::new(),
-                        },
+                        }),
                     ],
                 },
                 StratagemGroupResult {
