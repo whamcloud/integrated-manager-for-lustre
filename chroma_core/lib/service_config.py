@@ -287,7 +287,23 @@ class ServiceConfig(CommandLine):
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
     def _setup_influxdb(self):
-        # Setup influx chroma DB
+        influx_service = ServiceControlEL7("influxdb")
+
+        log.info("Starting InfluxDB...")
+        error = influx_service.enable()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = influx_service._stop()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = influx_service._start()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+
+        log.info("Creating InfluxDB databse...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
 
     def _setup_crypto(self):
