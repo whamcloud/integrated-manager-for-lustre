@@ -147,6 +147,7 @@ Obsoletes:      Django-south
 Requires:      fence-agents
 Requires:      fence-agents-virsh
 Requires:      nginx >= 1:1.11.6
+Requires:      influxdb
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
 %description -n python2-%{pypi_name}

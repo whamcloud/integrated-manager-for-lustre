@@ -2,6 +2,8 @@ version: "3.7"
 services:
   postgres:
     restart: on-failure
+  influxdb:
+    restart: on-failure
   rabbit:
     restart: on-failure
   nginx:
