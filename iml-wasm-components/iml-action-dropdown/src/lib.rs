@@ -4,7 +4,6 @@
 
 mod action_dropdown_error;
 mod action_items;
-mod api_transforms;
 mod button;
 mod dispatch_custom_event;
 mod fetch_actions;
@@ -14,9 +13,10 @@ mod update;
 
 use crate::{
     action_items::get_record_els,
-    api_transforms::{lock_list, record_to_composite_id_string},
     hsm::contains_hsm_params,
-    model::{Data, Locks, Model, Record, RecordMap, Records},
+    model::{
+        lock_list, record_to_composite_id_string, Data, Locks, Model, Record, RecordMap, Records,
+    },
     update::{update, Msg},
 };
 use cfg_if::cfg_if;

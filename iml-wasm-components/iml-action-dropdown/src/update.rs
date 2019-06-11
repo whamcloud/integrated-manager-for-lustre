@@ -4,8 +4,8 @@
 
 use crate::{
     action_dropdown_error::ActionDropdownError,
-    api_transforms::{group_actions_by_label, sort_actions},
     fetch_actions, model,
+    model::{group_actions_by_label, sort_actions},
 };
 use futures::Future;
 use seed::prelude::Orders;
