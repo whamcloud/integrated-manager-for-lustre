@@ -5,10 +5,10 @@
 use crate::{
     action_dropdown_error::ActionDropdownError,
     fetch_actions, model,
-    model::{group_actions_by_label, sort_actions},
+    model::{group_actions_by_label, record_to_map, sort_actions},
 };
 use futures::Future;
-use seed::prelude::Orders;
+use seed::{fetch::FetchObject, prelude::Orders};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -16,9 +16,10 @@ pub enum Msg {
     Open(bool),
     StartFetch,
     FetchActions,
-    ActionsFetched(seed::fetch::FetchObject<model::AvailableActions>),
+    FetchUrls,
+    UrlsFetched(Vec<FetchObject<model::Record>>),
+    ActionsFetched(FetchObject<model::AvailableActions>),
     UpdateHsmRecords(model::RecordMap),
-    SetRecords(model::RecordMap),
     SetLocks(model::Locks),
     Destroy,
     Error(ActionDropdownError),
@@ -27,6 +28,10 @@ pub enum Msg {
 
 /// The sole source of updating the model
 pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
+    if model.destroyed {
+        return;
+    }
+
     match msg {
         Msg::Noop => {
             orders.skip();
@@ -37,6 +42,27 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
         }
         Msg::Open(open) => {
             model.open = open;
+        }
+        Msg::FetchUrls => {
+            if let Some(urls) = model.urls.take() {
+                orders.skip().perform_cmd(fetch_actions::fetch_urls(urls));
+            }
+        }
+        Msg::UrlsFetched(xs) => {
+            model.records = xs
+                .into_iter()
+                .filter_map(|x| match x.response() {
+                    Ok(resp) => Some(resp.data),
+                    Err(e) => {
+                        orders.send_msg(Msg::Error(e.into()));
+
+                        None
+                    }
+                })
+                .map(record_to_map)
+                .collect();
+
+            orders.skip().send_msg(Msg::FetchActions);
         }
         Msg::FetchActions => {
             model.cancel = None;
@@ -97,9 +123,6 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
 
             model.button_activated = true;
         }
-        Msg::SetRecords(records) => {
-            model.records = records;
-        }
         Msg::SetLocks(locks) => {
             model.locks = locks;
         }
@@ -121,7 +144,13 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
             model.button_activated = true;
             model.first_fetch_active = true;
 
-            orders.send_msg(Msg::FetchActions);
+            let msg = if model.urls.is_some() {
+                Msg::FetchUrls
+            } else {
+                Msg::FetchActions
+            };
+
+            orders.send_msg(msg);
         }
     };
 }

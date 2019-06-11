@@ -27,6 +27,7 @@ pub type Records = Vec<Record>;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Data {
     pub records: Records,
+    pub urls: Option<Vec<String>>,
     pub locks: Locks,
     pub flag: Option<String>,
     pub tooltip_placement: Option<iml_tooltip::TooltipPlacement>,
@@ -79,6 +80,7 @@ pub struct LockChange {
 // Model
 #[derive(Default)]
 pub struct Model {
+    pub urls: Option<Vec<String>>,
     pub records: RecordMap,
     pub available_actions: ActionMap,
     pub request_controller: Option<seed::fetch::RequestController>,
@@ -139,6 +141,16 @@ pub fn sort_actions(mut actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
     actions.sort_by(|a, b| a.display_group.cmp(&b.display_group));
     actions.sort_by(|a, b| a.display_order.cmp(&b.display_order));
     actions
+}
+
+pub fn record_to_map(x: Record) -> (String, Record) {
+    let id = record_to_composite_id_string(x.content_type_id, x.id);
+
+    (id, x)
+}
+
+pub fn records_to_map(xs: Records) -> RecordMap {
+    xs.into_iter().map(record_to_map).collect()
 }
 
 #[cfg(test)]

@@ -14,9 +14,7 @@ mod update;
 use crate::{
     action_items::get_record_els,
     hsm::contains_hsm_params,
-    model::{
-        lock_list, record_to_composite_id_string, Data, Locks, Model, Record, RecordMap, Records,
-    },
+    model::{lock_list, records_to_map, Data, Locks, Model, Record, RecordMap},
     update::{update, Msg},
 };
 use cfg_if::cfg_if;
@@ -44,15 +42,6 @@ cfg_if! {
 }
 
 // View
-fn open_class(open: &bool) -> &str {
-    if *open {
-        "open"
-    } else {
-        ""
-    }
-}
-
-/// The top-level component we pass to the virtual dom.
 fn view(
     Model {
         records,
@@ -64,6 +53,7 @@ fn view(
         flag,
         tooltip,
         destroyed,
+        urls,
         ..
     }: &Model,
 ) -> Vec<El<Msg>> {
@@ -77,7 +67,7 @@ fn view(
 
     let record_els = get_record_els(available_actions, records, flag, tooltip);
 
-    let open_class = open_class(open);
+    let open_class = if *open { "open" } else { "" };
 
     let has_hsm_params = contains_hsm_params(&records);
 
@@ -88,7 +78,7 @@ fn view(
         next_open,
     );
 
-    if !has_hsm_params && !records.is_empty() && !button_activated {
+    if !has_hsm_params && (!records.is_empty() || urls.is_some()) && !button_activated {
         btn.listeners.push(mouse_ev(Ev::MouseMove, move |ev| {
             ev.stop_propagation();
             ev.prevent_default();
@@ -125,29 +115,12 @@ impl Callbacks {
         let locks: Locks = locks.into_serde().unwrap();
         self.app.update(Msg::SetLocks(locks));
     }
-    pub fn set_records(&self, records: JsValue) {
-        let records: Vec<Record> = records.into_serde().unwrap();
-        let records = records_to_map(records);
-
-        self.app.update(Msg::SetRecords(records));
-        self.app.update(Msg::StartFetch);
-    }
     pub fn set_hsm_records(&self, records: JsValue) {
         let records: Vec<Record> = records.into_serde().unwrap();
         let records = records_to_map(records);
 
         self.app.update(Msg::UpdateHsmRecords(records));
     }
-}
-
-fn records_to_map(xs: Records) -> RecordMap {
-    xs.into_iter()
-        .map(|r| {
-            let id = record_to_composite_id_string(r.content_type_id, r.id);
-
-            (id, r)
-        })
-        .collect()
 }
 
 #[wasm_bindgen]
@@ -162,10 +135,11 @@ pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
         flag,
         tooltip_placement,
         tooltip_size,
+        urls,
     } = x.into_serde().expect("Could not parse incoming data");
 
     let records: RecordMap = records_to_map(records);
-    let has_hsm_params = contains_hsm_params(&records);
+    // let has_hsm_params = contains_hsm_params(&records);
     let model = Model {
         records,
         locks,
@@ -175,6 +149,7 @@ pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
             size: tooltip_size.unwrap_or_default(),
             ..Default::default()
         },
+        urls,
         ..Default::default()
     };
 
