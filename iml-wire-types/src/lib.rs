@@ -277,8 +277,8 @@ pub struct ApiList<T> {
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ActionArgs {
-    host_id: Option<u64>,
-    target_id: Option<u64>,
+    pub host_id: Option<u64>,
+    pub target_id: Option<u64>,
 }
 
 // An available action from `/api/action/`
