@@ -5,7 +5,8 @@
 use crate::{
     dispatch_custom_event::dispatch_custom_event,
     hsm::{contains_hsm_params, RecordAndHsmControlParam},
-    ActionMap, AvailableActionAndRecord, Msg, RecordMap,
+    model::{ActionMap, AvailableActionAndRecord},
+    Msg, RecordMap,
 };
 use seed::{a, class, li, prelude::*, style};
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{ActionMap, AvailableAction, LockChange, LockType, Locks, RecordMap};
+use crate::model::{ActionMap, AvailableAction, LockChange, LockType, Locks, RecordMap};
 use std::collections::HashMap;
 
 pub fn record_to_composite_id_string(c: i64, i: i64) -> String {

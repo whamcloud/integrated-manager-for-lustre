@@ -2,27 +2,30 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod action_dropdown_error;
 mod action_items;
 mod api_transforms;
 mod button;
 mod dispatch_custom_event;
 mod fetch_actions;
 mod hsm;
+mod model;
+mod update;
 
-use action_items::get_record_els;
-use api_transforms::{
-    group_actions_by_label, lock_list, record_to_composite_id_string, sort_actions,
+use crate::{
+    action_items::get_record_els,
+    api_transforms::{lock_list, record_to_composite_id_string},
+    hsm::contains_hsm_params,
+    model::{Data, Locks, Model, Record, RecordMap, Records},
+    update::{update, Msg},
 };
 use cfg_if::cfg_if;
-use futures::Future;
-use hsm::{contains_hsm_params, HsmControlParam};
 use seed::{
     class, div,
     dom_types::{mouse_ev, At, El, Ev, UpdateEl},
-    prelude::{wasm_bindgen, Orders},
+    prelude::wasm_bindgen,
     ul,
 };
-use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
@@ -38,272 +41,6 @@ cfg_if! {
     } else {
         fn init_log() {}
     }
-}
-
-/// A record
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-pub struct Record {
-    content_type_id: i64,
-    id: i64,
-    label: String,
-    hsm_control_params: Option<Vec<HsmControlParam>>,
-    #[serde(flatten)]
-    extra: Option<HashMap<String, serde_json::Value>>,
-}
-
-/// A record map is a map of composite id's to labels
-pub type RecordMap = HashMap<String, Record>;
-
-/// Records is a vector of Record items
-pub type Records = Vec<Record>;
-
-/// Data is what is being passed into the component.
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-pub struct Data {
-    records: Records,
-    locks: Locks,
-    flag: Option<String>,
-    tooltip_placement: Option<iml_tooltip::TooltipPlacement>,
-    tooltip_size: Option<iml_tooltip::TooltipSize>,
-}
-
-/// Metadata is the metadata object returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct MetaData {
-    limit: u32,
-    next: Option<u32>,
-    offset: u32,
-    previous: Option<u32>,
-    total_count: u32,
-}
-
-/// AvailableActionsApiData contains the metadata and the `Vec` of objects returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct AvailableActionsApiData {
-    meta: MetaData,
-    objects: Vec<AvailableAction>,
-}
-
-/// ActionArgs contains the arguments to an action. It is currently not being used.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct ActionArgs {
-    host_id: Option<u64>,
-    target_id: Option<u64>,
-}
-
-/// AvailableAction represents an action that will be displayed on the dropdown.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct AvailableAction {
-    args: Option<ActionArgs>,
-    composite_id: String,
-    class_name: Option<String>,
-    confirmation: Option<String>,
-    display_group: u64,
-    display_order: u64,
-    long_description: String,
-    state: Option<String>,
-    verb: String,
-}
-
-/// Combines the AvailableAction and Label
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct AvailableActionAndRecord {
-    available_action: AvailableAction,
-    record: Record,
-    flag: Option<String>,
-}
-
-/// The ActionMap is a map consisting of actions grouped by the composite_id
-pub type ActionMap = HashMap<String, Vec<AvailableAction>>;
-
-/// Locks is a map of locks in which the key is a composite id string in the form `composite_id:id`
-pub type Locks = HashMap<String, HashSet<LockChange>>;
-
-/// The type of lock
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum LockType {
-    Read,
-    Write,
-}
-
-/// The Action associated with a `LockChange`
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum LockAction {
-    Add,
-    Remove,
-}
-
-/// A change to be applied to `Locks`
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-pub struct LockChange {
-    pub job_id: u64,
-    pub content_type_id: u64,
-    pub item_id: u64,
-    pub description: String,
-    pub lock_type: LockType,
-    pub action: LockAction,
-}
-
-// Model
-#[derive(Default)]
-pub struct Model {
-    records: RecordMap,
-    available_actions: ActionMap,
-    request_controller: Option<seed::fetch::RequestController>,
-    cancel: Option<futures::sync::oneshot::Sender<()>>,
-    locks: Locks,
-    open: bool,
-    button_activated: bool,
-    first_fetch_active: bool,
-    flag: Option<String>,
-    tooltip: iml_tooltip::Model,
-    destroyed: bool,
-}
-
-#[derive(Debug, Clone)]
-pub enum ActionDropdownError {
-    Cancelled(futures::sync::oneshot::Canceled),
-}
-
-impl std::fmt::Display for ActionDropdownError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            ActionDropdownError::Cancelled(ref err) => write!(f, "{}", err),
-        }
-    }
-}
-
-impl std::error::Error for ActionDropdownError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            ActionDropdownError::Cancelled(ref err) => Some(err),
-        }
-    }
-}
-
-impl From<futures::sync::oneshot::Canceled> for ActionDropdownError {
-    fn from(err: futures::sync::oneshot::Canceled) -> Self {
-        ActionDropdownError::Cancelled(err)
-    }
-}
-
-// Update
-#[derive(Clone)]
-pub enum Msg {
-    Open(bool),
-    StartFetch,
-    FetchActions,
-    ActionsFetched(seed::fetch::FetchObject<AvailableActionsApiData>),
-    UpdateHsmRecords(RecordMap),
-    SetRecords(RecordMap),
-    SetLocks(Locks),
-    Destroy,
-    Error(ActionDropdownError),
-    Noop,
-}
-
-/// The sole source of updating the model
-fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
-    match msg {
-        Msg::Noop => {}
-        Msg::Error(e) => log::error!("An error has occurred {}", e),
-        Msg::Open(open) => {
-            model.open = open;
-        }
-        Msg::FetchActions => {
-            model.cancel = None;
-
-            let (fut, request_controller) = fetch_actions::fetch_actions(&model.records);
-
-            model.request_controller = request_controller;
-
-            orders.skip().perform_cmd(fut);
-        }
-        Msg::ActionsFetched(fetch_object) => {
-            model.request_controller = None;
-            model.first_fetch_active = false;
-
-            match fetch_object.response() {
-                Ok(resp) => {
-                    let AvailableActionsApiData { objects, .. } = resp.data;
-
-                    model.available_actions = group_actions_by_label(objects, &model.records)
-                        .into_iter()
-                        .map(|(k, xs)| (k, sort_actions(xs)))
-                        .collect();
-                }
-                Err(fail_reason) => {
-                    log::error!("Fetch failed: {:?}", fail_reason);
-                }
-            }
-
-            let sleep = iml_sleep::Sleep::new(10000)
-                .map(|_| Msg::FetchActions)
-                .map_err(|_| unreachable!());
-
-            let (p, c) = futures::sync::oneshot::channel::<()>();
-
-            model.cancel = Some(p);
-
-            let c = c
-                .inspect(|_| log::info!("action poll timeout dropped"))
-                .map(|_| Msg::Noop)
-                .map_err(|e| Msg::Error(e.into()));
-
-            let fut = sleep
-                .select2(c)
-                .map(futures::future::Either::split)
-                .map(|(x, _)| x)
-                .map_err(futures::future::Either::split)
-                .map_err(|(x, _)| x);
-
-            orders.perform_cmd(fut);
-        }
-        Msg::UpdateHsmRecords(hsm_records) => {
-            model.records = model
-                .records
-                .drain()
-                .filter(|(_, x)| x.hsm_control_params == None)
-                .chain(hsm_records)
-                .collect();
-
-            model.button_activated = true;
-        }
-        Msg::SetRecords(records) => {
-            model.records = records;
-        }
-        Msg::SetLocks(locks) => {
-            model.locks = locks;
-        }
-        Msg::Destroy => {
-            if let Some(p) = model.cancel.take() {
-                let _ = p.send(()).is_ok();
-            };
-
-            if let Some(c) = model.request_controller.take() {
-                c.abort();
-            }
-
-            model.records = HashMap::new();
-            model.available_actions = HashMap::new();
-            model.locks = HashMap::new();
-            model.destroyed = true;
-        }
-        Msg::StartFetch => {
-            // model.records = model
-            //     .records
-            //     .drain()
-            //     .filter(|(_, x)| x.hsm_control_params.is_some())
-            //     .chain(action_records)
-            //     .collect();
-            model.button_activated = true;
-            model.first_fetch_active = true;
-
-            orders.send_msg(Msg::FetchActions);
-        }
-    };
 }
 
 // View
