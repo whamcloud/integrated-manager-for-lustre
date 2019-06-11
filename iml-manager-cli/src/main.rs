@@ -18,7 +18,99 @@ pub enum StratagemCommand {
         /// The name of the filesystem to scan
         #[structopt(short = "fs", long = "filesystem")]
         fs: String,
+        /// The report duration
+        #[structopt(short = "rd", long = "report", parse(try_from_str = "parse_duration"))]
+        rd: Option<u32>,
+        /// The purge duration
+        #[structopt(short = "pd", long = "purge", parse(try_from_str = "parse_duration"))]
+        pd: Option<u32>,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct StratagemCommandData {
+    filesystem: String,
+    report_duration: Option<u32>,
+    purge_duration: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DurationErrorKind {
+    /// No unit provided
+    NoUnit,
+    /// Invalid Unit provided
+    InvalidUnit,
+    /// Invalid value
+    InvalidValue,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DurationParseError {
+    kind: DurationErrorKind,
+}
+
+impl DurationParseError {
+    pub fn to_string(&self) -> String {
+        match self.kind {
+            DurationErrorKind::NoUnit => String::from("No unit was specified."),
+            DurationErrorKind::InvalidUnit => {
+                String::from("Invalid unit provided. Valid units include: h, d")
+            }
+            DurationErrorKind::InvalidValue => String::from(
+                "Invalid value provided. Duration must be in the form of '<u32 value>{h|d}'",
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DurationUnit {
+    /// Duration in hours
+    Hours,
+    /// Duration in days
+    Days,
+}
+
+fn parse_duration(src: &str) -> Result<u32, DurationParseError> {
+    if src.len() < 2 {
+        return Err(DurationParseError {
+            kind: DurationErrorKind::InvalidValue,
+        });
+    }
+
+    let val = &src[0..src.len() - 1];
+    let unit = &src[src.len() - 1..];
+
+    let original_val: u32;
+    if let Ok(i) = val.parse::<u32>() {
+        original_val = i
+    } else {
+        return Err(DurationParseError {
+            kind: DurationErrorKind::InvalidValue,
+        });
+    }
+
+    let duration_unit: DurationUnit = match unit.chars().last() {
+        Some('h') => DurationUnit::Hours,
+        Some('d') => DurationUnit::Days,
+        Some('1'...'9') => {
+            return Err(DurationParseError {
+                kind: DurationErrorKind::NoUnit,
+            })
+        }
+        _ => {
+            return Err(DurationParseError {
+                kind: DurationErrorKind::InvalidUnit,
+            })
+        }
+    };
+
+    let interval = match (original_val, duration_unit) {
+        (original_value, DurationUnit::Hours) => original_value * 3600,
+        (original_value, DurationUnit::Days) => original_value * 86400,
+    };
+
+    Ok(interval)
 }
 
 #[derive(Debug, StructOpt)]
@@ -125,13 +217,17 @@ fn main() {
 
     match matches {
         App::Stratagem { command } => match command {
-            StratagemCommand::Scan { fs } => {
+            StratagemCommand::Scan { fs, rd, pd } => {
                 let fut = {
                     let client = api_client::get_client().expect("Could not create API client");
                     api_client::post(
                         client,
                         "run_stratagem",
-                        serde_json::json!({ "filesystem": fs }),
+                        serde_json::json!(StratagemCommandData {
+                            filesystem: fs,
+                            report_duration: rd,
+                            purge_duration: pd
+                        }),
                     )
                 };
 
@@ -186,5 +282,60 @@ fn main() {
                 }
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_duration_with_days() {
+        assert_eq!(parse_duration("273d"), Ok(23587200))
+    }
+
+    #[test]
+    fn test_parse_duration_with_hours() {
+        assert_eq!(parse_duration("273h"), Ok(982800))
+    }
+
+    #[test]
+    fn test_parse_duration_with_invalid_unit() {
+        assert_eq!(
+            parse_duration("273x"),
+            Err(DurationParseError {
+                kind: DurationErrorKind::InvalidUnit
+            })
+        )
+    }
+
+    #[test]
+    fn test_parse_duration_without_unit() {
+        assert_eq!(
+            parse_duration("273"),
+            Err(DurationParseError {
+                kind: DurationErrorKind::NoUnit
+            })
+        )
+    }
+
+    #[test]
+    fn test_parse_duration_with_insufficient_data() {
+        assert_eq!(
+            parse_duration("2"),
+            Err(DurationParseError {
+                kind: DurationErrorKind::InvalidValue
+            })
+        )
+    }
+
+    #[test]
+    fn test_parse_duration_with_invalid_data() {
+        assert_eq!(
+            parse_duration("abch"),
+            Err(DurationParseError {
+                kind: DurationErrorKind::InvalidValue
+            })
+        )
     }
 }
