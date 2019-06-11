@@ -287,6 +287,7 @@ dependencies = [
  "futures 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-sleep 0.1.0",
  "iml-tooltip 0.1.0",
+ "iml-wire-types 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "js-sys 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -324,6 +325,15 @@ name = "iml-wasm"
 version = "0.1.0"
 dependencies = [
  "iml-action-dropdown 0.1.0",
+]
+
+[[package]]
+name = "iml-wire-types"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.39 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1126,6 +1136,7 @@ dependencies = [
 "checksum getopts 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)" = "72327b15c228bfe31f1390f93dd5e9279587f0463836393c9df719ce62a3e450"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
 "checksum humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ca7e5f2e110db35f93b837c81797f3714500b81d517bf20c431b16d3ca4f114"
+"checksum iml-wire-types 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "70fba89ad5bd23bfa5e5f0e563978f73d76a69809e1b80a5b0462734b47ca6ae"
 "checksum indexmap 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7e81a7c05f79578dbc15793d8b619db9ba32b4577003ef3af1a91c416798c58d"
 "checksum insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8bbbb69ec4557c37b2bf4d525d106d828e0c2fbd6c44bc98cd3798da13c73b9f"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"

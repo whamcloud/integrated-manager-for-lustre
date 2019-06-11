@@ -3,8 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::hsm::HsmControlParam;
-use std::collections::{HashMap, HashSet};
 
+use iml_wire_types::{ApiList, AvailableAction};
+use std::collections::{HashMap, HashSet};
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct Record {
@@ -32,43 +33,7 @@ pub struct Data {
     pub tooltip_size: Option<iml_tooltip::TooltipSize>,
 }
 
-/// Metadata is the metadata object returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct MetaData {
-    limit: u32,
-    next: Option<u32>,
-    offset: u32,
-    previous: Option<u32>,
-    total_count: u32,
-}
-
-/// AvailableActionsApiData contains the metadata and the `Vec` of objects returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct AvailableActionsApiData {
-    pub meta: MetaData,
-    pub objects: Vec<AvailableAction>,
-}
-
-/// ActionArgs contains the arguments to an action. It is currently not being used.
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-pub struct ActionArgs {
-    host_id: Option<u64>,
-    target_id: Option<u64>,
-}
-
-/// AvailableAction represents an action that will be displayed on the dropdown.
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-pub struct AvailableAction {
-    pub args: Option<ActionArgs>,
-    pub composite_id: String,
-    pub class_name: Option<String>,
-    pub confirmation: Option<String>,
-    pub display_group: u64,
-    pub display_order: u64,
-    pub long_description: String,
-    pub state: Option<String>,
-    pub verb: String,
-}
+pub type AvailableActions = ApiList<AvailableAction>;
 
 /// Combines the AvailableAction and Label
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
@@ -179,7 +144,8 @@ pub fn sort_actions(mut actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ActionArgs, LockAction, Record};
+    use crate::model::{LockAction, Record};
+    use iml_wire_types::ActionArgs;
     use insta::assert_debug_snapshot_matches;
     use std::collections::HashMap;
 

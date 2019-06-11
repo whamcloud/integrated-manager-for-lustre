@@ -16,7 +16,7 @@ pub enum Msg {
     Open(bool),
     StartFetch,
     FetchActions,
-    ActionsFetched(seed::fetch::FetchObject<model::AvailableActionsApiData>),
+    ActionsFetched(seed::fetch::FetchObject<model::AvailableActions>),
     UpdateHsmRecords(model::RecordMap),
     SetRecords(model::RecordMap),
     SetLocks(model::Locks),
@@ -53,7 +53,7 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
 
             match fetch_object.response() {
                 Ok(resp) => {
-                    let model::AvailableActionsApiData { objects, .. } = resp.data;
+                    let model::AvailableActions { objects, .. } = resp.data;
 
                     model.available_actions = group_actions_by_label(objects, &model.records)
                         .into_iter()
