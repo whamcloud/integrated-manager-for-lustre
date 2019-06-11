@@ -52,11 +52,8 @@ class Migration(SchemaMigration):
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('mdt_id', self.gf('django.db.models.fields.IntegerField')()),
             ('uuid', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
-            ('interval', self.gf('django.db.models.fields.IntegerField')()),
-            ('report_duration', self.gf('django.db.models.fields.IntegerField')()),
-            ('report_duration_active', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('purge_duration', self.gf('django.db.models.fields.IntegerField')()),
-            ('purge_duration_active', self.gf('django.db.models.fields.BooleanField')(default=False)),
+            ('report_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('purge_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
             ('fqdn', self.gf('django.db.models.fields.CharField')(default='', max_length=255)),
             ('target_name', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
             ('filesystem_type', self.gf('django.db.models.fields.CharField')(default='', max_length=32)),
@@ -957,7 +954,7 @@ class Migration(SchemaMigration):
             'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 8, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'96224A914C9D9DBDC1C3BCA957DFDCDD'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'8DC987736F935F2E7F00848F294BC921'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1023,13 +1020,10 @@ class Migration(SchemaMigration):
             'device_path': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '512'}),
             'filesystem_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '32'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '255'}),
-            'interval': ('django.db.models.fields.IntegerField', [], {}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt_id': ('django.db.models.fields.IntegerField', [], {}),
-            'purge_duration': ('django.db.models.fields.IntegerField', [], {}),
-            'purge_duration_active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'report_duration': ('django.db.models.fields.IntegerField', [], {}),
-            'report_duration_active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'purge_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'report_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
             'target_mount_point': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '512'}),
             'target_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'}),
             'uuid': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'})

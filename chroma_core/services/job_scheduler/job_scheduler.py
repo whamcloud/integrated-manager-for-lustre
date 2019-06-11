@@ -1800,11 +1800,8 @@ class JobScheduler(object):
             "args": {
                 "mdt_id": mdt_id,
                 "uuid": unique_id,
-                "interval": stratagem_data.get("interval"),
                 "report_duration": stratagem_data.get("report_duration"),
-                "report_duration_active": stratagem_data.get("report_duration_active"),
-                "purge_duration": stratagem_data.get("purge_duration"),
-                "purge_duration_active": stratagem_data.get("purge_duration_active")
+                "purge_duration": stratagem_data.get("purge_duration")
             }
         }, mdts)
 

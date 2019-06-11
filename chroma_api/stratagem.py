@@ -97,11 +97,8 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 class RunStratagemResource(Resource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
-    interval = fields.IntegerField(attribute="interval", null=False)
-    report_duration = fields.IntegerField(attribute="report_duration", null=False)
-    report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
-    purge_duration = fields.IntegerField(attribute="purge_duration", null=False)
-    purge_duration_active = fields.BooleanField(attribute="purge_duration_active", null=False)
+    report_duration = fields.IntegerField(attribute="report_duration", null=True)
+    purge_duration = fields.IntegerField(attribute="purge_duration", null=True)
 
     class Meta:
         list_allowed_methods = ["post"]

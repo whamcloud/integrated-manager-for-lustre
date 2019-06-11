@@ -112,15 +112,13 @@ class RunStratagemStep(Step):
         path = args["path"]
         target_name = args["target_name"]
         report_duration = args["report_duration"]
-        report_duration_active = args["report_duration_active"]
         purge_duration = args["purge_duration"]
-        purge_duration_active = args["purge_duration_active"]
 
-        def _get_body(mount_point, report_duration, report_duration_active, purge_duration, purge_duration_active):
+        def _get_body(mount_point, report_duration, purge_duration):
 
             rule_map = {
-                "fids_expiring_soon": report_duration_active,
-                "fids_expired": purge_duration_active
+                "fids_expiring_soon": report_duration != None,
+                "fids_expired": purge_duration != None
             }
 
             warn_purge_times = {
@@ -223,7 +221,7 @@ class RunStratagemStep(Step):
                 "\n\n".join(group_counters_output)
             )
 
-        body = _get_body(path, report_duration, report_duration_active, purge_duration, purge_duration_active)
+        body = _get_body(path, report_duration, purge_duration)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))
@@ -250,11 +248,8 @@ class StreamFidlistStep(Step):
 class RunStratagemJob(Job):
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
-    interval = models.IntegerField()
-    report_duration = models.IntegerField()
-    report_duration_active = models.BooleanField(default=False, help_text="Report duration active")
-    purge_duration = models.IntegerField()
-    purge_duration_active = models.BooleanField(default=False, help_text="Purge duration active")
+    report_duration = models.IntegerField(null=True)
+    purge_duration = models.IntegerField(null=True)
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -303,9 +298,7 @@ class RunStratagemJob(Job):
                 "path": path, 
                 "target_name": self.target_name,
                 "report_duration": self.report_duration,
-                "report_duration_active": self.report_duration_active,
-                "purge_duration": self.purge_duration,
-                "purge_duration_active": self.purge_duration_active
+                "purge_duration": self.purge_duration
             }), 
             (StreamFidlistStep, {
                 "host": self.fqdn, 
