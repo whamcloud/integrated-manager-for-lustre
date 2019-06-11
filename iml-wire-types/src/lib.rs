@@ -259,7 +259,7 @@ impl<T: serde::Serialize> ToBytes for T {
 }
 
 /// Meta is the metadata object returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Meta {
     pub limit: u32,
     pub next: Option<u32>,
@@ -275,7 +275,27 @@ pub struct ApiList<T> {
     pub objects: Vec<T>,
 }
 
-/// A Host record from api/host/
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ActionArgs {
+    host_id: Option<u64>,
+    target_id: Option<u64>,
+}
+
+// An available action from `/api/action/`
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct AvailableAction {
+    pub args: Option<ActionArgs>,
+    pub composite_id: String,
+    pub class_name: Option<String>,
+    pub confirmation: Option<String>,
+    pub display_group: u64,
+    pub display_order: u64,
+    pub long_description: String,
+    pub state: Option<String>,
+    pub verb: String,
+}
+
+/// A Host record from `/api/host/`
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Host {
     pub address: String,
