@@ -3,10 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::{task, Async, Future, Poll};
-use seed::{
-    prelude::{Closure, JsValue},
-    window,
-};
+use seed::{prelude::Closure, window};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -60,8 +57,8 @@ impl Drop for Sleep {
 
 impl Future for Sleep {
     type Item = ();
-    type Error = JsValue;
-    fn poll(&mut self) -> Poll<(), JsValue> {
+    type Error = ();
+    fn poll(&mut self) -> Poll<(), ()> {
         if self.token.is_none() {
             self.run(task::current());
         }

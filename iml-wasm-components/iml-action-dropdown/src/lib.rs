@@ -10,35 +10,35 @@ mod fetch_actions;
 mod hsm;
 
 use action_items::get_record_els;
-use api_transforms::{lock_list, record_to_composite_id_string};
+use api_transforms::{
+    group_actions_by_label, lock_list, record_to_composite_id_string, sort_actions,
+};
 use cfg_if::cfg_if;
+use futures::Future;
 use hsm::{contains_hsm_params, HsmControlParam};
 use seed::{
     class, div,
-    dom_types::{mouse_ev, El, Ev, UpdateEl},
+    dom_types::{mouse_ev, At, El, Ev, UpdateEl},
     prelude::{wasm_bindgen, Orders},
-    spawn_local, ul,
+    ul,
 };
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
 cfg_if! {
-    if #[cfg(feature = "console-log")] {
+    if #[cfg(feature = "console_log")] {
         fn init_log() {
             use log::Level;
-            match console_log::init_with_level(Level::Trace) {
-                Ok(_) => (),
-                Err(e) => log::info!("{:?}", e)
-            };
+
+            if let Err(e) = console_log::init_with_level(Level::Trace) {
+                log::info!("Error initializing logger (it may have already been initialized): {:?}", e)
+            }
         }
     } else {
         fn init_log() {}
     }
 }
-
-/// A record map is a map of composite id's to labels
-pub type RecordMap = HashMap<String, Record>;
 
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -50,6 +50,9 @@ pub struct Record {
     #[serde(flatten)]
     extra: Option<HashMap<String, serde_json::Value>>,
 }
+
+/// A record map is a map of composite id's to labels
+pub type RecordMap = HashMap<String, Record>;
 
 /// Records is a vector of Record items
 pub type Records = Vec<Record>;
@@ -113,7 +116,7 @@ pub struct AvailableActionAndRecord {
 /// The ActionMap is a map consisting of actions grouped by the composite_id
 pub type ActionMap = HashMap<String, Vec<AvailableAction>>;
 
-/// Locks is a map of locks in which the key is a composite id string in the form `composit_id:id`
+/// Locks is a map of locks in which the key is a composite id string in the form `composite_id:id`
 pub type Locks = HashMap<String, HashSet<LockChange>>;
 
 /// The type of lock
@@ -148,6 +151,8 @@ pub struct LockChange {
 pub struct Model {
     records: RecordMap,
     available_actions: ActionMap,
+    request_controller: Option<seed::fetch::RequestController>,
+    cancel: Option<futures::sync::oneshot::Sender<()>>,
     locks: Locks,
     open: bool,
     button_activated: bool,
@@ -157,26 +162,104 @@ pub struct Model {
     destroyed: bool,
 }
 
+#[derive(Debug, Clone)]
+pub enum ActionDropdownError {
+    Cancelled(futures::sync::oneshot::Canceled),
+}
+
+impl std::fmt::Display for ActionDropdownError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ActionDropdownError::Cancelled(ref err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl std::error::Error for ActionDropdownError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            ActionDropdownError::Cancelled(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<futures::sync::oneshot::Canceled> for ActionDropdownError {
+    fn from(err: futures::sync::oneshot::Canceled) -> Self {
+        ActionDropdownError::Cancelled(err)
+    }
+}
+
 // Update
 #[derive(Clone)]
 pub enum Msg {
     Open(bool),
-    AvailableActions(ActionMap),
+    StartFetch,
+    FetchActions,
+    ActionsFetched(seed::fetch::FetchObject<AvailableActionsApiData>),
     UpdateHsmRecords(RecordMap),
-    StartFetch(RecordMap),
+    SetRecords(RecordMap),
     SetLocks(Locks),
     Destroy,
+    Error(ActionDropdownError),
+    Noop,
 }
 
 /// The sole source of updating the model
-fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
+        Msg::Noop => {}
+        Msg::Error(e) => log::error!("An error has occurred {}", e),
         Msg::Open(open) => {
             model.open = open;
         }
-        Msg::AvailableActions(available_actions) => {
-            model.available_actions = available_actions;
+        Msg::FetchActions => {
+            model.cancel = None;
+
+            let (fut, request_controller) = fetch_actions::fetch_actions(&model.records);
+
+            model.request_controller = request_controller;
+
+            orders.skip().perform_cmd(fut);
+        }
+        Msg::ActionsFetched(fetch_object) => {
+            model.request_controller = None;
             model.first_fetch_active = false;
+
+            match fetch_object.response() {
+                Ok(resp) => {
+                    let AvailableActionsApiData { objects, .. } = resp.data;
+
+                    model.available_actions = group_actions_by_label(objects, &model.records)
+                        .into_iter()
+                        .map(|(k, xs)| (k, sort_actions(xs)))
+                        .collect();
+                }
+                Err(fail_reason) => {
+                    log::error!("Fetch failed: {:?}", fail_reason);
+                }
+            }
+
+            let sleep = iml_sleep::Sleep::new(10000)
+                .map(|_| Msg::FetchActions)
+                .map_err(|_| unreachable!());
+
+            let (p, c) = futures::sync::oneshot::channel::<()>();
+
+            model.cancel = Some(p);
+
+            let c = c
+                .inspect(|_| log::info!("action poll timeout dropped"))
+                .map(|_| Msg::Noop)
+                .map_err(|e| Msg::Error(e.into()));
+
+            let fut = sleep
+                .select2(c)
+                .map(futures::future::Either::split)
+                .map(|(x, _)| x)
+                .map_err(futures::future::Either::split)
+                .map_err(|(x, _)| x);
+
+            orders.perform_cmd(fut);
         }
         Msg::UpdateHsmRecords(hsm_records) => {
             model.records = model
@@ -188,24 +271,37 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
 
             model.button_activated = true;
         }
+        Msg::SetRecords(records) => {
+            model.records = records;
+        }
         Msg::SetLocks(locks) => {
             model.locks = locks;
         }
         Msg::Destroy => {
+            if let Some(p) = model.cancel.take() {
+                let _ = p.send(()).is_ok();
+            };
+
+            if let Some(c) = model.request_controller.take() {
+                c.abort();
+            }
+
             model.records = HashMap::new();
             model.available_actions = HashMap::new();
             model.locks = HashMap::new();
             model.destroyed = true;
         }
-        Msg::StartFetch(action_records) => {
-            model.records = model
-                .records
-                .drain()
-                .filter(|(_, x)| x.hsm_control_params.is_some())
-                .chain(action_records)
-                .collect();
+        Msg::StartFetch => {
+            // model.records = model
+            //     .records
+            //     .drain()
+            //     .filter(|(_, x)| x.hsm_control_params.is_some())
+            //     .chain(action_records)
+            //     .collect();
             model.button_activated = true;
             model.first_fetch_active = true;
+
+            orders.send_msg(Msg::FetchActions);
         }
     };
 }
@@ -231,6 +327,7 @@ fn view(
         flag,
         tooltip,
         destroyed,
+        ..
     }: &Model,
 ) -> Vec<El<Msg>> {
     if *destroyed {
@@ -246,6 +343,7 @@ fn view(
     let open_class = open_class(open);
 
     let has_hsm_params = contains_hsm_params(&records);
+
     let mut btn = button::get_button(
         has_locks,
         !button_activated || !available_actions.is_empty() || has_hsm_params,
@@ -254,13 +352,11 @@ fn view(
     );
 
     if !has_hsm_params && !records.is_empty() && !button_activated {
-        let records = records.clone();
-
         btn.listeners.push(mouse_ev(Ev::MouseMove, move |ev| {
             ev.stop_propagation();
             ev.prevent_default();
 
-            Msg::StartFetch(records.clone())
+            Msg::StartFetch
         }));
     }
 
@@ -296,7 +392,8 @@ impl Callbacks {
         let records: Vec<Record> = records.into_serde().unwrap();
         let records = records_to_map(records);
 
-        self.app.update(Msg::StartFetch(records));
+        self.app.update(Msg::SetRecords(records));
+        self.app.update(Msg::StartFetch);
     }
     pub fn set_hsm_records(&self, records: JsValue) {
         let records: Vec<Record> = records.into_serde().unwrap();
@@ -320,7 +417,7 @@ fn records_to_map(xs: Records) -> RecordMap {
 pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
     init_log();
 
-    log::debug!("Incoming value is: {:?}", x);
+    log::info!("Incoming value is: {:?}", x);
 
     let Data {
         records,
@@ -350,9 +447,9 @@ pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
         .finish()
         .run();
 
-    if !has_hsm_params {
-        spawn_local(fetch_actions::get_actions(app.clone()));
-    }
+    // if !has_hsm_params {
+    //     spawn_local(fetch_actions::get_actions(app.clone()));
+    // }
 
     Callbacks { app: app.clone() }
 }

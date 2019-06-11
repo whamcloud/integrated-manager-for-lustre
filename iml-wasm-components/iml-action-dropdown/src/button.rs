@@ -13,7 +13,13 @@ pub fn get_button(has_locks: bool, has_actions: bool, waiting: bool, next_open: 
             attrs! {At::Disabled => true; At::Class => BTN_CLASSES},
             "Disabled"
         ]
-    } else if has_actions && !waiting {
+    } else if waiting {
+        button![
+            attrs! {At::Class => BTN_CLASSES; At::Disabled => true},
+            "Waiting",
+            i![class!["fa", "fa-spinner", "fa-spin"]]
+        ]
+    } else if has_actions {
         button![
             attrs! {At::Class => BTN_CLASSES},
             mouse_ev(Ev::Click, move |ev| {
@@ -23,12 +29,6 @@ pub fn get_button(has_locks: bool, has_actions: bool, waiting: bool, next_open: 
             }),
             "Actions",
             i![class!["fa", "fa-caret-down", "icon-caret-down"]]
-        ]
-    } else if waiting {
-        button![
-            attrs! {At::Class => BTN_CLASSES; At::Disabled => true},
-            "Waiting",
-            i![class!["fa", "fa-spinner", "fa-spin"]]
         ]
     } else {
         button![

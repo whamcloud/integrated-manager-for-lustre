@@ -30,7 +30,7 @@ pub fn composite_ids_to_query_string(x: &RecordMap) -> String {
     xs.join("&")
 }
 
-pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: RecordMap) -> ActionMap {
+pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: &RecordMap) -> ActionMap {
     objects
         .into_iter()
         .fold(HashMap::new(), |mut obj: ActionMap, action| {
