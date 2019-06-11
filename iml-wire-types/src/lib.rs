@@ -259,7 +259,7 @@ impl<T: serde::Serialize> ToBytes for T {
 }
 
 /// Meta is the metadata object returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Meta {
     pub limit: u32,
     pub next: Option<u32>,
@@ -269,14 +269,34 @@ pub struct Meta {
 }
 
 /// ApiList contains the metadata and the `Vec` of objects returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct ApiList<T> {
     pub meta: Meta,
     pub objects: Vec<T>,
 }
 
-/// A Host record from api/host/
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct ActionArgs {
+    pub host_id: Option<u64>,
+    pub target_id: Option<u64>,
+}
+
+// An available action from `/api/action/`
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
+pub struct AvailableAction {
+    pub args: Option<ActionArgs>,
+    pub composite_id: String,
+    pub class_name: Option<String>,
+    pub confirmation: Option<String>,
+    pub display_group: u64,
+    pub display_order: u64,
+    pub long_description: String,
+    pub state: Option<String>,
+    pub verb: String,
+}
+
+/// A Host record from `/api/host/`
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Host {
     pub address: String,
     pub boot_time: String,
@@ -306,7 +326,7 @@ pub struct Host {
 }
 
 /// A server profile record from api/server_profile/
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ServerProfile {
     pub corosync: bool,
     pub corosync2: bool,
@@ -324,7 +344,7 @@ pub struct ServerProfile {
     pub worker: bool,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Command {
     pub cancelled: bool,
     pub complete: bool,
