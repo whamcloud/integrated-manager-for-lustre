@@ -1,5 +1,7 @@
 [package]
 name = "iml-wire-types"
+description = "Shared types for the IML project"
+license = "MIT"
 version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
