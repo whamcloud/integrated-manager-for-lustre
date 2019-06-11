@@ -28,8 +28,13 @@ pub enum Msg {
 /// The sole source of updating the model
 pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
     match msg {
-        Msg::Noop => {}
-        Msg::Error(e) => log::error!("An error has occurred {}", e),
+        Msg::Noop => {
+            orders.skip();
+        }
+        Msg::Error(e) => {
+            log::error!("An error has occurred {}", e);
+            orders.skip();
+        }
         Msg::Open(open) => {
             model.open = open;
         }
@@ -56,7 +61,7 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
                         .collect();
                 }
                 Err(fail_reason) => {
-                    log::error!("Fetch failed: {:?}", fail_reason);
+                    orders.send_msg(Msg::Error(fail_reason.into()));
                 }
             }
 
@@ -113,12 +118,6 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
             model.destroyed = true;
         }
         Msg::StartFetch => {
-            // model.records = model
-            //     .records
-            //     .drain()
-            //     .filter(|(_, x)| x.hsm_control_params.is_some())
-            //     .chain(action_records)
-            //     .collect();
             model.button_activated = true;
             model.first_fetch_active = true;
 

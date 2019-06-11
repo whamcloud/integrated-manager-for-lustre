@@ -23,7 +23,7 @@ pub type RecordMap = HashMap<String, Record>;
 pub type Records = Vec<Record>;
 
 /// Data is what is being passed into the component.
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Data {
     pub records: Records,
     pub locks: Locks,
@@ -50,14 +50,14 @@ pub struct AvailableActionsApiData {
 }
 
 /// ActionArgs contains the arguments to an action. It is currently not being used.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub struct ActionArgs {
     host_id: Option<u64>,
     target_id: Option<u64>,
 }
 
 /// AvailableAction represents an action that will be displayed on the dropdown.
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
 pub struct AvailableAction {
     pub args: Option<ActionArgs>,
     pub composite_id: String,
