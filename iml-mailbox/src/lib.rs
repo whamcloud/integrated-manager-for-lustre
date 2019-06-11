@@ -102,9 +102,8 @@ pub fn ingest_data(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::buf::IntoBuf as _;
     use futures::Async;
-    use std::{fs, io::Write as _};
+    use std::fs;
     use tempdir::TempDir;
 
     #[test]

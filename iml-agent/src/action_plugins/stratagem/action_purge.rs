@@ -8,7 +8,7 @@ use futures::{Future, Stream};
 use tokio_threadpool::blocking;
 
 pub fn purge_files(
-    device: &String,
+    device: &str,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
     let mntpt = match liblustreapi::search_rootpath(&device) {

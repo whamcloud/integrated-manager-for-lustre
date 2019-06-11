@@ -4,9 +4,11 @@
 
 use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
 use csv;
-use futures::future::{poll_fn, IntoFuture};
-use futures::sync::mpsc::channel;
-use futures::{Future, Sink, Stream};
+use futures::{
+    future::{self, poll_fn, Either, IntoFuture},
+    sync::mpsc::channel,
+    Future, Sink, Stream,
+};
 use libc;
 use std::ffi::CStr;
 use std::io;
@@ -26,7 +28,7 @@ struct Record {
     fid: String,
 }
 
-fn fid2record(mntpt: &String, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
+fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
     let path = match liblustreapi::fid2path(&mntpt, &fli.fid) {
         Ok(p) => p,
         Err(e) => {
@@ -35,7 +37,7 @@ fn fid2record(mntpt: &String, fli: &fidlist::FidListItem) -> Result<Record, ImlA
         }
     };
 
-    let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
+    let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
     let fullpath = pb.to_str().unwrap();
     let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
         log::error!("Failed to mdc_stat({}) => {:?}", fullpath, e);
@@ -101,19 +103,18 @@ pub fn write_records(
 pub fn read_mailbox(
     device: &str,
     mailbox: &str,
-) -> impl Future<Item = String, Error = ImlAgentError> {
+) -> impl Future<Item = PathBuf, Error = ImlAgentError> {
     let mbox = mailbox.to_string();
 
     let mut fpath = PathBuf::from(env::get_var_else("REPORT_DIR", "/tmp"));
     fpath.push(mailbox);
     fpath.set_extension("csv");
-    let name = fpath.into_os_string().into_string().unwrap();
 
-    let mut wtr = match csv::Writer::from_path(&name) {
+    let mut wtr = match csv::Writer::from_path(&fpath) {
         Ok(w) => w,
         Err(e) => {
-            panic!("Failed open writer ({}) -> {:?}", name, e);
-            //return futures::future::err(ImlAgentError::CsvError(e));
+            log::error!("Failed open writer ({:?}) -> {:?}", fpath, e);
+            return Either::B(future::err(ImlAgentError::CsvError(e)));
         }
     };
 
@@ -122,6 +123,7 @@ pub fn read_mailbox(
     let f1 = recv
         .map_err(|()| ImlAgentError::UnexpectedStatusError)
         .for_each(move |rec: Record| wtr.serialize(&rec).map_err(ImlAgentError::CsvError));
+
     let f2 = search_rootpath(device.to_string()).and_then(move |mntpt| {
         mailbox_client::get(mbox)
             .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
@@ -146,5 +148,6 @@ pub fn read_mailbox(
                 .map_err(|()| ImlAgentError::UnexpectedStatusError)
             })
     });
-    f1.join(f2).map(move |_| name)
+
+    Either::A(f1.join(f2).map(move |_| fpath))
 }

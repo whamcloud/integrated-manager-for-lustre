@@ -5,15 +5,17 @@
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
 use futures::{future, Future, IntoFuture, Stream as _};
 use iml_fs::{read_file_to_end, stream_dir, write_tempfile};
-use std::{collections::HashMap, convert::Into, path::PathBuf};
+use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
 
+/// The device that is scanned for matching rules.
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemDevice {
     pub path: String,
     pub groups: Vec<String>,
 }
 
+/// A list of rules + a name for the group of rules.
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemGroup {
     pub rules: Vec<StratagemRule>,
@@ -26,6 +28,7 @@ impl StratagemGroup {
     }
 }
 
+/// A rule to match over.
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemRule {
     pub action: String,
@@ -33,32 +36,63 @@ pub struct StratagemRule {
     pub argument: String,
 }
 
+/// The top-level config
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct StratagemData {
+pub struct StratagemConfig {
     pub dump_flist: bool,
     pub groups: Vec<StratagemGroup>,
     pub device: StratagemDevice,
 }
 
-impl StratagemData {
+impl StratagemConfig {
     pub fn get_group_by_name(&self, name: &str) -> Option<&StratagemGroup> {
         self.groups.iter().find(|g| g.name == name)
     }
 }
 
+/// Contains matching results.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct StratagemCounter {
     pub name: String,
     pub count: u64,
     pub have_flist: bool,
-    #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
 }
 
+/// A result for a `LAT_ATTR_CLASSIFY` rule.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct StratagemClassifyResult {
+    pub attr_type: String,
+    pub have_flist: bool,
+    pub counters: Vec<StratagemCounter>,
+}
+
+/// A nested Counter used for matches to `LAT_ATTR_CLASSIFY`.
+/// This is nested within `StratagemClassifyResult` and considerably
+/// complicates the type hierarchy.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct StratagemClassifyCounter {
+    pub name: String,
+    pub count: u64,
+    pub have_flist: bool,
+    pub expression: String,
+    pub classify: StratagemClassifyResult,
+}
+
+/// A result for a given rule group.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct StratagemGroupResult {
     pub name: String,
-    pub counters: Vec<StratagemCounter>,
+    pub counters: Vec<StratagemCounters>,
+}
+
+/// Possible counter results.
+/// `StratagemClassifyCounter` matches `LAT_ATTR_CLASSIFY`.
+/// `StratagemCounter` matches everything else.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+pub enum StratagemCounters {
+    StratagemClassifyCounter(StratagemClassifyCounter),
+    StratagemCounter(StratagemCounter),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -66,31 +100,81 @@ pub struct StratagemResult {
     pub group_counters: Vec<StratagemGroupResult>,
 }
 
-trait HaveFlist {
+/// Abstracts over the fact that `StratagemClassifyCounter`
+/// and `StratagemCounter` are mostly the same.
+///
+/// Exposes their common properties as trait methods.
+pub trait Counter {
+    fn name(&self) -> &str;
+    fn count(&self) -> u64;
     fn have_flist(&self) -> bool;
 }
 
-impl HaveFlist for StratagemCounter {
+impl Counter for &StratagemCounter {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn count(&self) -> u64 {
+        self.count
+    }
     fn have_flist(&self) -> bool {
         self.have_flist
     }
 }
 
-impl HaveFlist for &StratagemCounter {
+impl Counter for &StratagemClassifyCounter {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn count(&self) -> u64 {
+        self.count
+    }
     fn have_flist(&self) -> bool {
         self.have_flist
+    }
+}
+
+impl Counter for &StratagemCounters {
+    fn have_flist(&self) -> bool {
+        match self {
+            StratagemCounters::StratagemCounter(StratagemCounter { have_flist, .. })
+            | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
+                have_flist,
+                ..
+            }) => *have_flist,
+        }
+    }
+    fn name(&self) -> &str {
+        match self {
+            StratagemCounters::StratagemCounter(StratagemCounter { name, .. })
+            | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
+                name, ..
+            }) => name,
+        }
+    }
+    fn count(&self) -> u64 {
+        match self {
+            StratagemCounters::StratagemCounter(StratagemCounter { count, .. })
+            | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
+                count, ..
+            }) => *count,
+        }
     }
 }
 
 /// Pre-cooked config. This is a V1
 /// thing, Future versions will expand to
 /// expose the whole config to the user.
-pub fn generate_cooked_config(path: String) -> StratagemData {
-    StratagemData {
+pub fn generate_cooked_config(path: String) -> StratagemConfig {
+    StratagemConfig {
         dump_flist: false,
         device: StratagemDevice {
             path,
-            groups: vec!["size_distribution".into(), "warn_purge_times".into()],
+            groups: vec![
+                "size_distribution".into(),
+                "warn_purge_times".into(),
+                "user_distribution".into(),
+            ],
         },
         groups: vec![
             StratagemGroup {
@@ -133,12 +217,16 @@ pub fn generate_cooked_config(path: String) -> StratagemData {
                 ],
                 name: "warn_purge_times".into(),
             },
+            StratagemGroup {
+                rules: vec![StratagemRule {
+                    action: "LAT_ATTR_CLASSIFY".into(),
+                    expression: "1".into(),
+                    argument: "uid".into(),
+                }],
+                name: "user_distribution".into(),
+            },
         ],
     }
-}
-
-fn has_flists<T: HaveFlist>(xs: &[T]) -> bool {
-    xs.iter().any(HaveFlist::have_flist)
 }
 
 type MailboxFiles = Vec<(PathBuf, String)>;
@@ -147,19 +235,19 @@ type MailboxFiles = Vec<(PathBuf, String)>;
 /// Returns all the directories that contain fid files.
 pub fn get_mailbox_files(
     base_dir: &str,
-    stratagem_data: &StratagemData,
+    stratagem_data: &StratagemConfig,
     stratagem_result: &StratagemResult,
 ) -> MailboxFiles {
     stratagem_result
         .group_counters
         .iter()
-        .filter(|x| has_flists(&x.counters))
+        .filter(|x| x.counters.iter().any(|x| Counter::have_flist(&x)))
         .map(|group| {
             group
                 .counters
                 .iter()
                 .enumerate()
-                .filter(|(_, x)| HaveFlist::have_flist(x))
+                .filter(|(_, x)| Counter::have_flist(x))
                 .map(move |(idx, counter)| {
                     let group = stratagem_data
                         .get_group_by_name(&group.name)
@@ -169,7 +257,7 @@ pub fn get_mailbox_files(
                         .get_rule_by_idx(idx - 1)
                         .unwrap_or_else(|| panic!("did not find rule by idx {}", idx - 1));
 
-                    let p = [base_dir, &group.name, &counter.name]
+                    let p = [base_dir, &group.name, &counter.name()]
                         .iter()
                         .cloned()
                         .collect::<PathBuf>();
@@ -186,7 +274,7 @@ pub fn get_mailbox_files(
 ///
 /// It will *not* stream data for processing
 pub fn trigger_scan(
-    data: StratagemData,
+    data: StratagemConfig,
 ) -> impl Future<Item = (String, StratagemResult, MailboxFiles), Error = ImlAgentError> {
     let id = Uuid::new_v4().to_hyphenated().to_string();
 
@@ -239,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_get_fid_dirs() {
-        let stratagem_data = StratagemData {
+        let stratagem_data = StratagemConfig {
             dump_flist: false,
             device: StratagemDevice {
                 path: "/dev/mapper/mpathb".into(),
@@ -294,59 +382,51 @@ mod tests {
                 StratagemGroupResult {
                     name: "size_distribution".into(),
                     counters: vec![
-                        StratagemCounter {
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
                             have_flist: false,
                             name: "Other".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "smaller_than_1M".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "not_smaller_than_1M_and_smaller_than_1G".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
                             have_flist: false,
                             name: "not_smaller_than_1G".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: false,
                             name: "not_smaller_than_1T".into(),
-                            extra: HashMap::new(),
-                        },
+                        }),
                     ],
                 },
                 StratagemGroupResult {
                     name: "warn_purge_times".into(),
                     counters: vec![
-                        StratagemCounter {
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 2,
                             have_flist: false,
                             name: "Other".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: true,
                             name: "shell_cmd_of_rule_0".into(),
-                            extra: HashMap::new(),
-                        },
-                        StratagemCounter {
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             have_flist: true,
                             name: "shell_cmd_of_rule_1".into(),
-                            extra: HashMap::new(),
-                        },
+                        }),
                     ],
                 },
             ],
