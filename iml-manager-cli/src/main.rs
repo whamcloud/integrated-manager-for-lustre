@@ -19,7 +19,7 @@ pub enum StratagemCommand {
     #[structopt(name = "scan")]
     Scan {
         /// The name of the filesystem to scan
-        #[structopt(short = "fs", long = "filesystem")]
+        #[structopt(short = "f", long = "filesystem")]
         fs: String,
         /// The report duration
         #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
