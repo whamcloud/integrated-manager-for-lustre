@@ -164,8 +164,6 @@ impl HsmCallbacks {
 
 #[wasm_bindgen]
 pub fn hsm_action_dropdown_component(x: &JsValue, el: Element) -> HsmCallbacks {
-    // init_log();
-
     log::info!("Incoming value is: {:?}", x);
 
     let HsmData {
