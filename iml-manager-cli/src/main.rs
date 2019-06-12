@@ -1,6 +1,9 @@
 // Copyright (c) 2019 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+mod manager_cli_error;
+
+use manager_cli_error::{DurationParseError, ImlManagerCliError};
 
 use futures::Future;
 use iml_manager_cli::{api_client, api_utils};
@@ -34,83 +37,22 @@ struct StratagemCommandData {
     purge_duration: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DurationErrorKind {
-    /// No unit provided
-    NoUnit,
-    /// Invalid Unit provided
-    InvalidUnit,
-    /// Invalid value
-    InvalidValue,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct DurationParseError {
-    kind: DurationErrorKind,
-}
-
-impl DurationParseError {
-    pub fn to_string(&self) -> String {
-        match self.kind {
-            DurationErrorKind::NoUnit => String::from("No unit was specified."),
-            DurationErrorKind::InvalidUnit => {
-                String::from("Invalid unit provided. Valid units include: h, d")
-            }
-            DurationErrorKind::InvalidValue => String::from(
-                "Invalid value provided. Duration must be in the form of '<u32 value>{h|d}'",
-            ),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DurationUnit {
-    /// Duration in hours
-    Hours,
-    /// Duration in days
-    Days,
-}
-
-fn parse_duration(src: &str) -> Result<u32, DurationParseError> {
+fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
     if src.len() < 2 {
-        return Err(DurationParseError {
-            kind: DurationErrorKind::InvalidValue,
-        });
+        return Err(DurationParseError::InvalidValue.into());
     }
 
-    let val = &src[0..src.len() - 1];
-    let unit = &src[src.len() - 1..];
+    let mut val = String::from(src);
+    let unit = val.pop();
 
-    let original_val: u32;
-    if let Ok(i) = val.parse::<u32>() {
-        original_val = i
-    } else {
-        return Err(DurationParseError {
-            kind: DurationErrorKind::InvalidValue,
-        });
+    let val = val.parse::<u32>()?;
+
+    match unit {
+        Some('h') => Ok(val * 3_600),
+        Some('d') => Ok(val * 86_400),
+        Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
+        _ => Err(DurationParseError::InvalidUnit.into()),
     }
-
-    let duration_unit: DurationUnit = match unit.chars().last() {
-        Some('h') => DurationUnit::Hours,
-        Some('d') => DurationUnit::Days,
-        Some('1'...'9') => {
-            return Err(DurationParseError {
-                kind: DurationErrorKind::NoUnit,
-            })
-        }
-        _ => {
-            return Err(DurationParseError {
-                kind: DurationErrorKind::InvalidUnit,
-            })
-        }
-    };
-
-    let interval = match (original_val, duration_unit) {
-        (original_value, DurationUnit::Hours) => original_value * 3600,
-        (original_value, DurationUnit::Days) => original_value * 86400,
-    };
-
-    Ok(interval)
 }
 
 #[derive(Debug, StructOpt)]
@@ -291,51 +233,55 @@ mod tests {
 
     #[test]
     fn test_parse_duration_with_days() {
-        assert_eq!(parse_duration("273d"), Ok(23587200))
+        match parse_duration("273d") {
+            Ok(x) => assert_eq!(x, 23587200),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
     }
 
     #[test]
     fn test_parse_duration_with_hours() {
-        assert_eq!(parse_duration("273h"), Ok(982800))
+        match parse_duration("273h") {
+            Ok(x) => assert_eq!(x, 982800),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
     }
 
     #[test]
     fn test_parse_duration_with_invalid_unit() {
-        assert_eq!(
-            parse_duration("273x"),
-            Err(DurationParseError {
-                kind: DurationErrorKind::InvalidUnit
-            })
-        )
+        match parse_duration("273x") {
+            Ok(_) => panic!("Duration should have Errored with InvalidUnit"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "Invalid unit. Valid units include 'h' and 'd'."
+            ),
+        }
     }
 
     #[test]
     fn test_parse_duration_without_unit() {
-        assert_eq!(
-            parse_duration("273"),
-            Err(DurationParseError {
-                kind: DurationErrorKind::NoUnit
-            })
-        )
+        match parse_duration("273") {
+            Ok(_) => panic!("Duration should have Errored with NoUnit"),
+            Err(e) => assert_eq!(e.to_string(), "No unit specified."),
+        }
     }
 
     #[test]
     fn test_parse_duration_with_insufficient_data() {
-        assert_eq!(
-            parse_duration("2"),
-            Err(DurationParseError {
-                kind: DurationErrorKind::InvalidValue
-            })
-        )
+        match parse_duration("2") {
+            Ok(_) => panic!("Duration should have Errored with InvalidValue"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "Invalid value specified. Must be a valid integer."
+            ),
+        }
     }
 
     #[test]
     fn test_parse_duration_with_invalid_data() {
-        assert_eq!(
-            parse_duration("abch"),
-            Err(DurationParseError {
-                kind: DurationErrorKind::InvalidValue
-            })
-        )
+        match parse_duration("abch") {
+            Ok(_) => panic!("Duration should have Errored with invalid digit"),
+            Err(e) => assert_eq!(e.to_string(), "invalid digit found in string"),
+        }
     }
 }
