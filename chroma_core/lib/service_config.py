@@ -286,7 +286,7 @@ class ServiceConfig(CommandLine):
         # Enable use of the management plugin if its available, else this tag is just ignored.
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
-    def _setup_influxdb_service(self):
+    def _setup_influxdb(self):
         influx_service = ServiceControlEL7("influxdb")
 
         log.info("Starting InfluxDB...")
@@ -303,9 +303,20 @@ class ServiceConfig(CommandLine):
             log.error(error)
             raise RuntimeError(error)
 
-    def _setup_influxdb_db(self):
+        # Wait for influx to finish starting
+        wait_for_result(
+            lambda: self.try_shell(["influx", "-execute", "exit"]),
+            logger=log,
+            timeout=60,
+            expected_exception_classes=[CommandError],
+        )
+
         log.info("Creating InfluxDB databse...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
+
+    def _setup_grafana(self):
+        # @@ set CONF_FILE
+        return
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
@@ -386,8 +397,7 @@ class ServiceConfig(CommandLine):
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
                 raise CommandError("service postgresql initdb", rc, out, err)
-            return
-        # Only mess with auth if we've freshly initialized the db
+        # Always reset Postgres auth
         self._config_pgsql_auth(database)
 
     @staticmethod
@@ -397,10 +407,18 @@ class ServiceConfig(CommandLine):
         with open(auth_cfg_file, "w") as cfg:
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
+            # Allow our django user to connect with no password via localhost
+            cfg.write("host\tall\t%s\t::1/128\ttrust\n" % database["USER"])
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
 
     PathStats = namedtuple("PathStats", ["total", "used", "free"])
+
+    def _try_psql_sql(self, sql):
+        return self.try_shell(["su", "postgres", "-c", 'psql -tAc "{}"' % sql])
+
+    def _psql_sql(self, sql):
+        return self.shell(["su", "postgres", "-c", 'psql -tAc "{}"' % sql])
 
     def _path_space(self, path):
         """Returns the disk statistics of the given path.
@@ -429,17 +447,20 @@ class ServiceConfig(CommandLine):
             log.error(error_msg)
             return error_msg
 
+    def _restart_pgsql(self):
+        postgresql_service = ServiceControl.create("postgresql")
+        postgresql_service.restart()
+        postgresql_service.enable()
+
     def _setup_pgsql(self, database, check_db_space):
         log.info("Setting up PostgreSQL service...")
 
         self._init_pgsql(database)
 
-        postgresql_service = ServiceControl.create("postgresql")
-        postgresql_service.restart()
-        postgresql_service.enable()
+        self._restart_pgsql()
 
         tries = 0
-        while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
+        while self._psql_sql("\\d")[0] != 0:
             if tries >= 4:
                 raise RuntimeError("Timed out waiting for PostgreSQL service to start")
             tries += 1
@@ -454,19 +475,13 @@ class ServiceConfig(CommandLine):
             log.info("Creating database owner '%s'...\n" % database["USER"])
 
             # Enumerate existing roles
-            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select " "rolname from pg_roles;'"])
+            _, roles_str, _ = self._try_psql_sql("select rolname from pg_roles")
             roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
 
             # Create database['USER'] role if not found
             if not database["USER"] in roles:
-                self.try_shell(
-                    [
-                        "su",
-                        "postgres",
-                        "-c",
-                        "psql -c 'CREATE ROLE %s NOSUPERUSER "
-                        "CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database["USER"],
-                    ]
+                self._try_psql_sql(
+                    "CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database["USER"]
                 )
 
             log.info("Creating database '%s'...\n" % database["NAME"])
@@ -554,17 +569,25 @@ class ServiceConfig(CommandLine):
 
     def _setup_database(self, check_db_space):
         error = None
-        if not self._db_accessible():
-            # For the moment use the builtin configuration
-            # TODO: this is where we would establish DB name and credentials
-            databases = settings.DATABASES
+        # For the moment use the builtin configuration
+        # TODO: this is where we would establish DB name and credentials
+        databases = settings.DATABASES
 
+        if not self._db_accessible():
             error = self._setup_pgsql(databases["default"], check_db_space)
+
         else:
-            log.info("DB already accessible")
+            # Postgres auth needs rewrite for upgrade with grafana
+            self._config_pgsql_auth(databases["default"])
+            self._restart_pgsql()
+            log.info("Postgres already accessible")
 
         if error:
             return error
+
+        _, out, _ = self._try_psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
+        if "grafana" not in out:
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (database["USER"])])
 
         self._syncdb()
 
@@ -733,6 +756,8 @@ proxy=_none_
 
         self.set_nginx_config()
 
+        self._setup_influxdb()
+
         error = self._setup_database(check_db_space)
         if check_db_space and error:
             return [error]
@@ -745,12 +770,11 @@ proxy=_none_
         self._setup_ntp(ntp_server)
         self._setup_crypto()
 
-        self._setup_influxdb_service()
         self._setup_rabbitmq_service()
 
         self._setup_rabbitmq_credentials()
 
-        self._setup_influxdb_db()
+        self._setup_grafana()
 
         self._enable_services()
         self._start_services()
@@ -792,7 +816,9 @@ proxy=_none_
 
         # Check services are active
         interesting_services = (
-            self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server", "influxdb"]
+            self.MANAGER_SERVICES
+            + self.CONTROLLED_SERVICES
+            + ["postgresql", "rabbitmq-server", "influxdb", "grafana-server"]
         )
 
         service_config = self._service_config(interesting_services)
