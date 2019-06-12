@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum DurationParseError {
     NoUnit,
     InvalidUnit,
@@ -23,15 +23,7 @@ impl std::fmt::Display for DurationParseError {
     }
 }
 
-impl std::error::Error for DurationParseError {
-    fn description(&self) -> &str {
-        match self {
-            DurationParseError::NoUnit => "No unit specified.",
-            DurationParseError::InvalidUnit => "Invalid unit. Valid units include 'h' and 'd'.",
-            DurationParseError::InvalidValue => "Invalid value specified. Must be a valid integer.",
-        }
-    }
-}
+impl std::error::Error for DurationParseError {}
 
 #[derive(Debug)]
 pub enum ImlManagerCliError {

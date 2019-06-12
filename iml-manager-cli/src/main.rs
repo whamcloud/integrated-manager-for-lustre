@@ -1,12 +1,12 @@
 // Copyright (c) 2019 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
-mod manager_cli_error;
-
-use manager_cli_error::{DurationParseError, ImlManagerCliError};
 
 use futures::Future;
-use iml_manager_cli::{api_client, api_utils};
+use iml_manager_cli::{
+    api_client, api_utils,
+    manager_cli_error::{DurationParseError, ImlManagerCliError},
+};
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
