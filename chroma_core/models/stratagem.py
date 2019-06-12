@@ -208,14 +208,14 @@ class RunStratagemStep(Step):
             group_name = group.get('name')
             table = generate_rows(group.get('counters'))
 
-            return "<strong>Group</strong>: <span class='text-warning'>{}</span>\n\n{}".format(group_name, table)
+            return "Group: {}\n\n{}".format(group_name, table)
 
 
         def generate_output_from_results(result):
             results_path = result[0]
             group_counters_output = map(generate_group_counter_output, result[1].get('group_counters'))
 
-            return "<span class='text-success'><i class='fa fa-check'></i> Scan finished for target {}.</span>\nResults located in {}\n\n{}".format(
+            return u"\u2713 Scan finished for target {}.\nResults located in {}\n\n{}".format(
                 target_name, 
                 results_path, 
                 "\n\n".join(group_counters_output)
