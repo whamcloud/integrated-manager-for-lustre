@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{Record, RecordMap};
+use crate::Record;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct MdtConfParams {
@@ -54,12 +54,4 @@ pub struct HsmControlParam {
 pub struct RecordAndHsmControlParam {
     pub record: Record,
     pub hsm_control_param: HsmControlParam,
-}
-
-pub fn contains_hsm_params(records: &RecordMap) -> bool {
-    records
-        .iter()
-        .filter(|(_, v)| v.hsm_control_params != None)
-        .count()
-        > 0
 }

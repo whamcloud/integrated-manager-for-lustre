@@ -2,27 +2,26 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod action_dropdown;
 mod action_dropdown_error;
 mod action_items;
-mod button;
 mod dispatch_custom_event;
-mod fetch_actions;
+mod fetch;
 mod hsm;
+pub mod hsm_dropdown;
 mod model;
 mod update;
 
 use crate::{
+    action_dropdown::action_dropdown,
     action_items::get_record_els,
-    hsm::contains_hsm_params,
     model::{lock_list, records_to_map, Data, Locks, Model, Record, RecordMap},
     update::{update, Msg},
 };
 use cfg_if::cfg_if;
 use seed::{
-    class, div,
-    dom_types::{mouse_ev, At, El, Ev, UpdateEl},
+    dom_types::{mouse_ev, El, Ev, MessageMapper as _},
     prelude::wasm_bindgen,
-    ul,
 };
 use wasm_bindgen::JsValue;
 use web_sys::Element;
@@ -56,30 +55,32 @@ fn view(
         urls,
         ..
     }: &Model,
-) -> Vec<El<Msg>> {
+) -> El<Msg> {
     if *destroyed {
-        return vec![seed::empty()];
+        return seed::empty();
     }
-
-    let next_open = Msg::Open(!open);
 
     let has_locks = lock_list(&locks, &records).next().is_some();
 
     let record_els = get_record_els(available_actions, records, flag, tooltip);
 
-    let open_class = if *open { "open" } else { "" };
+    if *first_fetch_active {
+        return action_dropdown(action_dropdown::State::Waiting).map_message(Msg::ActionDropdown);
+    }
 
-    let has_hsm_params = contains_hsm_params(&records);
+    if has_locks {
+        return action_dropdown(action_dropdown::State::Disabled).map_message(Msg::ActionDropdown);
+    }
 
-    let mut btn = button::get_button(
-        has_locks,
-        !button_activated || !available_actions.is_empty() || has_hsm_params,
-        *first_fetch_active,
-        next_open,
-    );
+    if *button_activated && available_actions.is_empty() {
+        return action_dropdown(action_dropdown::State::Empty).map_message(Msg::ActionDropdown);
+    }
 
-    if !has_hsm_params && (!records.is_empty() || urls.is_some()) && !button_activated {
-        btn.listeners.push(mouse_ev(Ev::MouseMove, move |ev| {
+    let mut el = action_dropdown(action_dropdown::State::Populated(*open, record_els))
+        .map_message(Msg::ActionDropdown);
+
+    if (!records.is_empty() || urls.is_some()) && !button_activated {
+        el.listeners.push(mouse_ev(Ev::MouseMove, move |ev| {
             ev.stop_propagation();
             ev.prevent_default();
 
@@ -87,23 +88,18 @@ fn view(
         }));
     }
 
-    vec![div![
-        class!["action-dropdown"],
-        div![
-            class!["btn-group dropdown", &open_class],
-            btn,
-            ul![class!["dropdown-menu", &open_class], record_els],
-        ]
-    ]]
+    el
 }
 
 fn window_events(_model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
-    vec![mouse_ev(Ev::Click, move |_ev| Msg::Open(false))]
+    vec![mouse_ev(Ev::Click, move |_ev| {
+        Msg::ActionDropdown(action_dropdown::Msg::Open(false))
+    })]
 }
 
 #[wasm_bindgen]
 pub struct Callbacks {
-    app: seed::App<Msg, Model, Vec<El<Msg>>>,
+    app: seed::App<Msg, Model, El<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -115,16 +111,10 @@ impl Callbacks {
         let locks: Locks = locks.into_serde().unwrap();
         self.app.update(Msg::SetLocks(locks));
     }
-    pub fn set_hsm_records(&self, records: JsValue) {
-        let records: Vec<Record> = records.into_serde().unwrap();
-        let records = records_to_map(records);
-
-        self.app.update(Msg::UpdateHsmRecords(records));
-    }
 }
 
 #[wasm_bindgen]
-pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
+pub fn action_dropdown_component(x: &JsValue, el: Element) -> Callbacks {
     init_log();
 
     log::info!("Incoming value is: {:?}", x);
@@ -139,7 +129,7 @@ pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
     } = x.into_serde().expect("Could not parse incoming data");
 
     let records: RecordMap = records_to_map(records);
-    // let has_hsm_params = contains_hsm_params(&records);
+
     let model = Model {
         records,
         locks,
@@ -158,10 +148,6 @@ pub fn action_dropdown(x: &JsValue, el: Element) -> Callbacks {
         .mount(el)
         .finish()
         .run();
-
-    // if !has_hsm_params {
-    //     spawn_local(fetch_actions::get_actions(app.clone()));
-    // }
 
     Callbacks { app: app.clone() }
 }

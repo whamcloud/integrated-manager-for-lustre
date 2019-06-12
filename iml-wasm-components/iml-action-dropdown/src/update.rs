@@ -3,8 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
+    action_dropdown,
     action_dropdown_error::ActionDropdownError,
-    fetch_actions, model,
+    fetch, model,
     model::{group_actions_by_label, record_to_map, sort_actions},
 };
 use futures::Future;
@@ -13,13 +14,12 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub enum Msg {
-    Open(bool),
+    ActionDropdown(action_dropdown::Msg),
     StartFetch,
     FetchActions,
     FetchUrls,
     UrlsFetched(Vec<FetchObject<model::Record>>),
     ActionsFetched(FetchObject<model::AvailableActions>),
-    UpdateHsmRecords(model::RecordMap),
     SetLocks(model::Locks),
     Destroy,
     Error(ActionDropdownError),
@@ -40,12 +40,14 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
             log::error!("An error has occurred {}", e);
             orders.skip();
         }
-        Msg::Open(open) => {
-            model.open = open;
-        }
+        Msg::ActionDropdown(msg) => match msg {
+            action_dropdown::Msg::Open(open) => {
+                model.open = open;
+            }
+        },
         Msg::FetchUrls => {
             if let Some(urls) = model.urls.take() {
-                orders.skip().perform_cmd(fetch_actions::fetch_urls(urls));
+                orders.skip().perform_cmd(fetch::fetch_urls(urls));
             }
         }
         Msg::UrlsFetched(xs) => {
@@ -67,7 +69,7 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
         Msg::FetchActions => {
             model.cancel = None;
 
-            let (fut, request_controller) = fetch_actions::fetch_actions(&model.records);
+            let (fut, request_controller) = fetch::fetch_actions(&model.records);
 
             model.request_controller = request_controller;
 
@@ -112,16 +114,6 @@ pub fn update(msg: Msg, model: &mut model::Model, orders: &mut Orders<Msg>) {
                 .map_err(|(x, _)| x);
 
             orders.perform_cmd(fut);
-        }
-        Msg::UpdateHsmRecords(hsm_records) => {
-            model.records = model
-                .records
-                .drain()
-                .filter(|(_, x)| x.hsm_control_params == None)
-                .chain(hsm_records)
-                .collect();
-
-            model.button_activated = true;
         }
         Msg::SetLocks(locks) => {
             model.locks = locks;
