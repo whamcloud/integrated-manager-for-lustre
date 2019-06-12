@@ -22,10 +22,10 @@ pub enum StratagemCommand {
         #[structopt(short = "fs", long = "filesystem")]
         fs: String,
         /// The report duration
-        #[structopt(short = "rd", long = "report", parse(try_from_str = "parse_duration"))]
+        #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
         rd: Option<u32>,
         /// The purge duration
-        #[structopt(short = "pd", long = "purge", parse(try_from_str = "parse_duration"))]
+        #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
         pd: Option<u32>,
     },
 }
