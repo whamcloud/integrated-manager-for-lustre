@@ -70,7 +70,7 @@ Requires:       python-gunicorn
 Requires:       pygobject2
 Requires:       postgresql-server
 Requires:       python-psycopg2
-Requires:       rabbitmq-server
+Requires:       rabbitmq-server >= 3.3.5-34
 Requires:       ntp
 Requires:       Django >= 1.6, Django < 1.7
 Requires:       Django-south >= 1.0.2
