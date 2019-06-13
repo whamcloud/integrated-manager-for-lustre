@@ -15,15 +15,11 @@ type BoxedFuture = Box<
 
 type Callback = Box<Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
-fn mk_boxed_future<T: 'static, F: 'static, R, Fut: 'static>(
-    v: serde_json::value::Value,
-    f: F,
-) -> BoxedFuture
+fn mk_boxed_future<T, R, Fut>(v: serde_json::value::Value, f: fn(T) -> Fut) -> BoxedFuture
 where
-    T: serde::de::DeserializeOwned + Send,
+    T: serde::de::DeserializeOwned + Send + 'static,
     R: serde::Serialize + 'static + Send,
-    F: Fn(T) -> Fut + Send,
-    Fut: Future<Item = R, Error = ImlAgentError> + Send,
+    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
 {
     Box::new(
         serde_json::from_value(v)
@@ -39,12 +35,11 @@ where
     ) as BoxedFuture
 }
 
-fn mk_callback<Fut: 'static, F: 'static, T: 'static, R: 'static>(f: &'static F) -> Callback
+fn mk_callback<Fut, T, R>(f: fn(T) -> Fut) -> Callback
 where
-    Fut: Future<Item = R, Error = ImlAgentError> + Send,
-    F: Fn(T) -> Fut + Send + Sync,
-    T: serde::de::DeserializeOwned + Send,
-    R: serde::Serialize + Send,
+    Fut: Future<Item = R, Error = ImlAgentError> + Send + 'static,
+    T: serde::de::DeserializeOwned + Send + 'static,
+    R: serde::Serialize + Send + 'static,
 {
     Box::new(move |v| mk_boxed_future(v, f))
 }
@@ -58,12 +53,12 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
 
     map.insert(
         "start_scan_stratagem".into(),
-        mk_callback(&server::trigger_scan),
+        mk_callback(server::trigger_scan),
     );
 
     map.insert(
         "stream_fidlists_stratagem".into(),
-        mk_callback(&server::stream_fidlists),
+        mk_callback(server::stream_fidlists),
     );
 
     log::info!("Loaded the following ActionPlugins:");
