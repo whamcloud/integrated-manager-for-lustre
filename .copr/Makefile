@@ -60,8 +60,10 @@ srpm:
 	cp -f _topdir/SRPMS/*.rpm $(outdir)
 
 iml-deps:
-	yum copr enable -y managerforlustre/buildtools
-	yum install -y python2-devel python2-setuptools ed
+	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
+		yum copr enable -y managerforlustre/buildtools; \
+		yum install -y python2-devel python2-setuptools ed; \
+	fi
 
 iml-srpm: iml-deps substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
@@ -78,6 +80,7 @@ iml-srpm: iml-deps substs
 		${BUILDROOT}/chroma-config.1 \
 		${BUILDROOT}/logrotate.cfg \
 		${BUILDROOT}/chroma-host-discover-init.sh \
+		${BUILDROOT}/grafana-iml.ini \
 		${TMPDIR}/_topdir/SOURCES
 
 	cd ${TMPDIR}/scratch; \
