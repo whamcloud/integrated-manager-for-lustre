@@ -315,7 +315,12 @@ class ServiceConfig(CommandLine):
         self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
 
     def _setup_grafana(self):
-        # @@ set CONF_FILE
+        cfg_file = "/etc/sysconfig/grafana-server"
+        if os.path.exists("%s.dist" % cfg_file):
+            return
+        shutil.copystat(cfg_file, "%s.dist" % auth_cfg_file)
+        with open(cfg_file, "a") as fn:
+            fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
         return
 
     def _setup_crypto(self):
@@ -403,7 +408,8 @@ class ServiceConfig(CommandLine):
     @staticmethod
     def _config_pgsql_auth(database):
         auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
-        os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
+        if not os.path.exists("%s.dist" % auth_cfg_file):
+            os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
         with open(auth_cfg_file, "w") as cfg:
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
