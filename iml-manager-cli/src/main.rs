@@ -3,7 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-use iml_manager_cli::{api_client, api_utils};
+use iml_manager_cli::{
+    api_client, api_utils,
+    manager_cli_error::{DurationParseError, ImlManagerCliError},
+};
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
@@ -16,9 +19,40 @@ pub enum StratagemCommand {
     #[structopt(name = "scan")]
     Scan {
         /// The name of the filesystem to scan
-        #[structopt(short = "fs", long = "filesystem")]
+        #[structopt(short = "f", long = "filesystem")]
         fs: String,
+        /// The report duration
+        #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
+        rd: Option<u32>,
+        /// The purge duration
+        #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
+        pd: Option<u32>,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct StratagemCommandData {
+    filesystem: String,
+    report_duration: Option<u32>,
+    purge_duration: Option<u32>,
+}
+
+fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
+    if src.len() < 2 {
+        return Err(DurationParseError::InvalidValue.into());
+    }
+
+    let mut val = String::from(src);
+    let unit = val.pop();
+
+    let val = val.parse::<u32>()?;
+
+    match unit {
+        Some('h') => Ok(val * 3_600),
+        Some('d') => Ok(val * 86_400),
+        Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
+        _ => Err(DurationParseError::InvalidUnit.into()),
+    }
 }
 
 #[derive(Debug, StructOpt)]
@@ -125,13 +159,17 @@ fn main() {
 
     match matches {
         App::Stratagem { command } => match command {
-            StratagemCommand::Scan { fs } => {
+            StratagemCommand::Scan { fs, rd, pd } => {
                 let fut = {
                     let client = api_client::get_client().expect("Could not create API client");
                     api_client::post(
                         client,
                         "run_stratagem",
-                        serde_json::json!({ "filesystem": fs }),
+                        serde_json::json!(StratagemCommandData {
+                            filesystem: fs,
+                            report_duration: rd,
+                            purge_duration: pd
+                        }),
                     )
                 };
 
@@ -186,5 +224,64 @@ fn main() {
                 }
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_duration_with_days() {
+        match parse_duration("273d") {
+            Ok(x) => assert_eq!(x, 23587200),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_hours() {
+        match parse_duration("273h") {
+            Ok(x) => assert_eq!(x, 982800),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_invalid_unit() {
+        match parse_duration("273x") {
+            Ok(_) => panic!("Duration should have Errored with InvalidUnit"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "Invalid unit. Valid units include 'h' and 'd'."
+            ),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_without_unit() {
+        match parse_duration("273") {
+            Ok(_) => panic!("Duration should have Errored with NoUnit"),
+            Err(e) => assert_eq!(e.to_string(), "No unit specified."),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_insufficient_data() {
+        match parse_duration("2") {
+            Ok(_) => panic!("Duration should have Errored with InvalidValue"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "Invalid value specified. Must be a valid integer."
+            ),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_invalid_data() {
+        match parse_duration("abch") {
+            Ok(_) => panic!("Duration should have Errored with invalid digit"),
+            Err(e) => assert_eq!(e.to_string(), "invalid digit found in string"),
+        }
     }
 }

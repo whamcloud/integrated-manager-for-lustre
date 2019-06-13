@@ -2,7 +2,28 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub type Result<T> = std::result::Result<T, ImlManagerCliError>;
+#[derive(Debug)]
+pub enum DurationParseError {
+    NoUnit,
+    InvalidUnit,
+    InvalidValue,
+}
+
+impl std::fmt::Display for DurationParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            DurationParseError::NoUnit => write!(f, "No unit specified."),
+            DurationParseError::InvalidUnit => {
+                write!(f, "Invalid unit. Valid units include 'h' and 'd'.")
+            }
+            DurationParseError::InvalidValue => {
+                write!(f, "Invalid value specified. Must be a valid integer.")
+            }
+        }
+    }
+}
+
+impl std::error::Error for DurationParseError {}
 
 #[derive(Debug)]
 pub enum ImlManagerCliError {
@@ -10,6 +31,8 @@ pub enum ImlManagerCliError {
     InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
     TokioTimerError(tokio::timer::Error),
     UrlParseError(url::ParseError),
+    IntParseError(std::num::ParseIntError),
+    ParseDurationError(DurationParseError),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -19,6 +42,8 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::UrlParseError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -30,7 +55,21 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::InvalidHeaderValue(ref err) => Some(err),
             ImlManagerCliError::TokioTimerError(ref err) => Some(err),
             ImlManagerCliError::UrlParseError(ref err) => Some(err),
+            ImlManagerCliError::IntParseError(ref err) => Some(err),
+            ImlManagerCliError::ParseDurationError(ref err) => Some(err),
         }
+    }
+}
+
+impl From<std::num::ParseIntError> for ImlManagerCliError {
+    fn from(err: std::num::ParseIntError) -> Self {
+        ImlManagerCliError::IntParseError(err)
+    }
+}
+
+impl From<DurationParseError> for ImlManagerCliError {
+    fn from(err: DurationParseError) -> Self {
+        ImlManagerCliError::ParseDurationError(err)
     }
 }
 
