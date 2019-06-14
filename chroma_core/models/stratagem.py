@@ -307,34 +307,34 @@ class RunStratagemJob(Job):
 
 class SendResultsToClientStep(Step):
     def run(self, args):
-        path_results = args["path_results"]
+        host, mount_point, uuid, report_duration, purge_duration = args["client_args"]
 
-        def send_to_client(host, mount_point, uuid, report_duration, purge_duration):
-            if report_duration is None and purge_duration is None:
-                return;
+        if report_duration is None and purge_duration is None:
+            return;
 
-            action_list = []
-            if report_duration:
-                action_list.insert("warn_purge_times-fids_expiring_soon")
-            if purge_duration:
-                action_list.insert("warn_purge_times-fids_expired")
+        action_list = [label for (duration, label) in [
+            (report_duration, "warn_purge_times-fids_expiring_soon"), 
+            (purge_duration, "warn_purge_times-fids_expired")
+        ] if duration is not None]
 
-            action_map = {
-                "warn_purge_times-fids_expiring_soon": partial(
-                    self.invoke_rust_agent_expect_result, 
-                    host, 
-                    "action_warning_stratagem"
-                ),
-                "warn_purge_times-fids_expired": partial(
-                    self.invoke_rust_agent_expect_result, 
-                    host, 
-                    "action_purge_stratagem"
-                )
-            }
+        action_args = (mount_point, "{}-{}".format(uuid, label))
 
-            return map(lambda label, action_map=action_map, uuid=uuid, mount_point=mount_point: action_map[label]((mount_point, "{}-{}".format(uuid, label))), action_list)
+        action_map = {
+            "warn_purge_times-fids_expiring_soon": partial(
+                self.invoke_rust_agent_expect_result, 
+                host, 
+                "action_warning_stratagem",
+                action_args
+            ),
+            "warn_purge_times-fids_expired": partial(
+                self.invoke_rust_agent_expect_result, 
+                host, 
+                "action_purge_stratagem",
+                action_args
+            )
+        }
 
-        results = map(lambda data: send_to_client(*data), path_results)
+        results = map(lambda label: action_map[label](), action_list)
 
         self.log("Sent scan results to client with result:\n{}".format(results))
 
@@ -357,16 +357,11 @@ class SendStratagemResultsToClientJob(Job):
         return "Sending stratagem results to client"
 
     def get_steps(self):
-        scan_jobs = json.loads(self.wait_for_json)
-        def get_step_result(job_id):
-            client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
-            client_mount = LustreClientMount.objects.get(host_id=client_host.id)
-            return (client_host.fqdn, client_mount.mountpoint, self.uuid, self.report_duration, self.purge_duration)
-
-        path_results = map(partial(get_step_result), scan_jobs)
+        client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
 
         return [
             (SendResultsToClientStep, {
-                "path_results": path_results
+                "client_args": (client_host.fqdn, client_mount.mountpoint, self.uuid, self.report_duration, self.purge_duration)
             })
         ];
