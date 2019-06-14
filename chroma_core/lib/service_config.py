@@ -322,6 +322,9 @@ class ServiceConfig(CommandLine):
         shutil.copy2(cfg_file, "%s.dist" % cfg_file)
         with open(cfg_file, "a") as fn:
             fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
+
+        # grafana needs daemon-reload before enable and start
+        self.try_shell(["systemctl", "daemon-reload"])
         service = ServiceControlEL7("grafana-server")
         error = service.enable()
         if error:
