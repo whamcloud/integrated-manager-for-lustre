@@ -42,6 +42,7 @@ from chroma_core.lib.util import CommandLine, CommandError
 from iml_common.lib.ntp import NTPConfig
 from iml_common.lib.firewall_control import FirewallControl
 from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
+from iml_common.lib.util import wait_for_result
 
 log = logging.getLogger("installation")
 try:
@@ -318,9 +319,18 @@ class ServiceConfig(CommandLine):
         cfg_file = "/etc/sysconfig/grafana-server"
         if os.path.exists("%s.dist" % cfg_file):
             return
-        shutil.copystat(cfg_file, "%s.dist" % auth_cfg_file)
+        shutil.copy2(cfg_file, "%s.dist" % cfg_file)
         with open(cfg_file, "a") as fn:
             fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
+        service = ServiceControlEL7("grafana-server")
+        error = service.enable()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = service._start()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
         return
 
     def _setup_crypto(self):
@@ -421,10 +431,10 @@ class ServiceConfig(CommandLine):
     PathStats = namedtuple("PathStats", ["total", "used", "free"])
 
     def _try_psql_sql(self, sql):
-        return self.try_shell(["su", "postgres", "-c", 'psql -tAc "{}"' % sql])
+        return self.try_shell(["su", "postgres", "-c", 'psql -tAc "%s"' % sql])
 
     def _psql_sql(self, sql):
-        return self.shell(["su", "postgres", "-c", 'psql -tAc "{}"' % sql])
+        return self.shell(["su", "postgres", "-c", 'psql -tAc "%s"' % sql])
 
     def _path_space(self, path):
         """Returns the disk statistics of the given path.
@@ -486,9 +496,7 @@ class ServiceConfig(CommandLine):
 
             # Create database['USER'] role if not found
             if not database["USER"] in roles:
-                self._try_psql_sql(
-                    "CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database["USER"]
-                )
+                self._try_psql_sql("CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;" % database["USER"])
 
             log.info("Creating database '%s'...\n" % database["NAME"])
             self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database["USER"], database["NAME"])])
@@ -593,7 +601,7 @@ class ServiceConfig(CommandLine):
 
         _, out, _ = self._try_psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
         if "grafana" not in out:
-            self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (database["USER"])])
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (databases["default"]["USER"])])
 
         self._syncdb()
 
