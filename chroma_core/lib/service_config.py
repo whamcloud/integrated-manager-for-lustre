@@ -415,7 +415,8 @@ class ServiceConfig(CommandLine):
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
                 raise CommandError("service postgresql initdb", rc, out, err)
-        # Always reset Postgres auth
+            return
+        # Only mess with auth if we've freshly initialized the db
         self._config_pgsql_auth(database)
 
     @staticmethod
@@ -426,8 +427,6 @@ class ServiceConfig(CommandLine):
         with open(auth_cfg_file, "w") as cfg:
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
-            # Allow our django user to connect with no password via localhost
-            cfg.write("host\tall\t%s\t::1/128\ttrust\n" % database["USER"])
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
 
@@ -594,9 +593,6 @@ class ServiceConfig(CommandLine):
             error = self._setup_pgsql(databases["default"], check_db_space)
 
         else:
-            # Postgres auth needs rewrite for upgrade with grafana
-            self._config_pgsql_auth(databases["default"])
-            self._restart_pgsql()
             log.info("Postgres already accessible")
 
         if error:
