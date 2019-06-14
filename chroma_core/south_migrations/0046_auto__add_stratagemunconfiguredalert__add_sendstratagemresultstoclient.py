@@ -29,6 +29,9 @@ class Migration(SchemaMigration):
         # Adding model 'SendStratagemResultsToClientJob'
         db.create_table(u'chroma_core_sendstratagemresultstoclientjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('uuid', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
+            ('report_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('purge_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
         ))
         db.send_create_signal('chroma_core', ['SendStratagemResultsToClientJob'])
 
@@ -951,10 +954,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 8, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 14, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'8DC987736F935F2E7F00848F294BC921'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'1ED49C7267B87C637E17E66F41676707'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1065,7 +1068,10 @@ class Migration(SchemaMigration):
         },
         'chroma_core.sendstratagemresultstoclientjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'SendStratagemResultsToClientJob', '_ormbases': ['chroma_core.Job']},
-            u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+            u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'purge_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'report_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'})
         },
         'chroma_core.series': {
             'Meta': {'unique_together': "(('content_type', 'object_id', 'name'),)", 'object_name': 'Series'},

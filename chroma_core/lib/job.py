@@ -215,7 +215,7 @@ class Step(object):
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
-            raise AgentException(host.fqdn, command, args, result["Err"])
+            raise AgentException(host, command, args, result["Err"])
 
         return result["Ok"]
 

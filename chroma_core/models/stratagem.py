@@ -12,7 +12,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.models import Job
-from chroma_core.models import StateChangeJob, StateLock
+from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
 from chroma_help.help import help_text
 from chroma_core.models import (
     AlertStateBase,
@@ -107,7 +107,6 @@ class ConfigureStratagemJob(StateChangeJob):
 
 class RunStratagemStep(Step):
     def run(self, args):
-        prev_result = args["prev_result"]
         host = args["host"]
         path = args["path"]
         target_name = args["target_name"]
@@ -306,8 +305,45 @@ class RunStratagemJob(Job):
             })
         ]
 
+class SendResultsToClientStep(Step):
+    def run(self, args):
+        path_results = args["path_results"]
+
+        def send_to_client(host, mount_point, uuid, report_duration, purge_duration):
+            if report_duration is None and purge_duration is None:
+                return;
+
+            action_list = []
+            if report_duration:
+                action_list.insert("warn_purge_times-fids_expiring_soon")
+            if purge_duration:
+                action_list.insert("warn_purge_times-fids_expired")
+
+            action_map = {
+                "warn_purge_times-fids_expiring_soon": partial(
+                    self.invoke_rust_agent_expect_result, 
+                    host, 
+                    "action_warning_stratagem"
+                ),
+                "warn_purge_times-fids_expired": partial(
+                    self.invoke_rust_agent_expect_result, 
+                    host, 
+                    "action_purge_stratagem"
+                )
+            }
+
+            return map(lambda label, action_map=action_map, uuid=uuid, mount_point=mount_point: action_map[label]((mount_point, "{}-{}".format(uuid, label))), action_list)
+
+        results = map(lambda data: send_to_client(*data), path_results)
+
+        self.log("Sent scan results to client with result:\n{}".format(results))
+
+        return results
 
 class SendStratagemResultsToClientJob(Job):
+    uuid = models.CharField(max_length=64, null=False, default="")
+    report_duration = models.IntegerField(null=True)
+    purge_duration = models.IntegerField(null=True)
 
     class Meta:
         app_label = "chroma_core"
@@ -319,3 +355,18 @@ class SendStratagemResultsToClientJob(Job):
 
     def description(self):
         return "Sending stratagem results to client"
+
+    def get_steps(self):
+        scan_jobs = json.loads(self.wait_for_json)
+        def get_step_result(job_id):
+            client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
+            client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+            return (client_host.fqdn, client_mount.mountpoint, self.uuid, self.report_duration, self.purge_duration)
+
+        path_results = map(partial(get_step_result), scan_jobs)
+
+        return [
+            (SendResultsToClientStep, {
+                "path_results": path_results
+            })
+        ];
