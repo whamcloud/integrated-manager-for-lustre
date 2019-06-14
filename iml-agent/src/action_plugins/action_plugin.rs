@@ -66,11 +66,11 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
 
     map.insert(
         "action_warning_stratagem".into(),
-        mk_callback(&action_warning::read_mailbox),
+        mk_callback(action_warning::read_mailbox),
     );
     map.insert(
         "action_purge_stratagem".into(),
-        mk_callback(&action_purge::read_mailbox),
+        mk_callback(action_purge::read_mailbox),
     );
 
     log::info!("Loaded the following ActionPlugins:");

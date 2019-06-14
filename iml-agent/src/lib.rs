@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+#![recursion_limit = "128"]
+
 pub mod action_plugins;
 pub mod agent_error;
 pub mod cmd;
