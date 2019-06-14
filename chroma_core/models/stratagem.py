@@ -312,29 +312,15 @@ class SendResultsToClientStep(Step):
         if report_duration is None and purge_duration is None:
             return;
 
-        action_list = [label for (duration, label) in [
-            (report_duration, "warn_purge_times-fids_expiring_soon"), 
-            (purge_duration, "warn_purge_times-fids_expired")
+        action_list = [(label, args) for (duration, label, args) in [
+            (report_duration, "action_warning_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon"))), 
+            (purge_duration, "action_purge_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired")))
         ] if duration is not None]
 
-        action_args = (mount_point, "{}-{}".format(uuid, label))
-
-        action_map = {
-            "warn_purge_times-fids_expiring_soon": partial(
-                self.invoke_rust_agent_expect_result, 
-                host, 
-                "action_warning_stratagem",
-                action_args
-            ),
-            "warn_purge_times-fids_expired": partial(
-                self.invoke_rust_agent_expect_result, 
-                host, 
-                "action_purge_stratagem",
-                action_args
-            )
-        }
-
-        results = map(lambda label: action_map[label](), action_list)
+        results = map(lambda (label, args), host=host: 
+            self.invoke_rust_agent_expect_result(host, label, args), 
+            action_list
+        )
 
         self.log("Sent scan results to client with result:\n{}".format(results))
 
