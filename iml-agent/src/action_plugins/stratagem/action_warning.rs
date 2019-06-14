@@ -101,8 +101,7 @@ pub fn write_records(
 // Read mailbox and build a csv of files. return pathname of generated csv
 //
 pub fn read_mailbox(
-    device: &str,
-    mailbox: &str,
+    (device, mailbox): (String, String),
 ) -> impl Future<Item = PathBuf, Error = ImlAgentError> {
     let mbox = mailbox.to_string();
 

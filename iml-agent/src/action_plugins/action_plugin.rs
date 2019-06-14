@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{action_plugins::stratagem::server, agent_error::ImlAgentError};
+use crate::{
+    action_plugins::stratagem::{action_purge, action_warning, server},
+    agent_error::ImlAgentError,
+};
 use futures::{future::IntoFuture, Future};
 use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
@@ -59,6 +62,15 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
     map.insert(
         "stream_fidlists_stratagem".into(),
         mk_callback(server::stream_fidlists),
+    );
+
+    map.insert(
+        "action_warning_stratagem".into(),
+        mk_callback(action_warning::read_mailbox),
+    );
+    map.insert(
+        "action_purge_stratagem".into(),
+        mk_callback(action_purge::read_mailbox),
     );
 
     log::info!("Loaded the following ActionPlugins:");
