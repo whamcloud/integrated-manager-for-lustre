@@ -40,7 +40,7 @@ fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgen
     let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
     let fullpath = pb.to_str().unwrap();
     let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
-        log::error!("Failed to mdc_stat({}) => {:?}", fullpath, e);
+        log::error!("Failed to mdc_stat({}) => {}", fullpath, e);
         e
     })?;
     let user = unsafe {
@@ -101,7 +101,7 @@ pub fn write_records(
 // Read mailbox and build a csv of files. return pathname of generated csv
 //
 pub fn read_mailbox(
-    (device, mailbox): (String, String),
+    (fsname_or_mntpath, mailbox): (String, String),
 ) -> impl Future<Item = PathBuf, Error = ImlAgentError> {
     let mbox = mailbox.to_string();
 
@@ -123,10 +123,16 @@ pub fn read_mailbox(
         .map_err(|()| ImlAgentError::UnexpectedStatusError)
         .for_each(move |rec: Record| wtr.serialize(&rec).map_err(ImlAgentError::CsvError));
 
-    let f2 = search_rootpath(device.to_string()).and_then(move |mntpt| {
+    let f2 = search_rootpath(fsname_or_mntpath).and_then(move |mntpt| {
         mailbox_client::get(mbox)
-            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
-            .for_each(move |fli: fidlist::FidListItem| {
+            .filter_map(|x| {
+                x.trim()
+                    .split(' ')
+                    .filter(|x| x != &"")
+                    .last()
+                    .map(|x| fidlist::FidListItem::new(x.into()))
+            })
+            .for_each(move |fli| {
                 let sender2 = sender.clone();
                 let mntpt2 = mntpt.clone();
                 tokio::spawn(
