@@ -33,6 +33,16 @@ services:
       start_period: 10s
     ports:
       - 8086:8086
+  grafana:
+    image: "grafana/grafana"
+    hostname: "grafana"
+    deploy: *default-deploy
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-influx-flux-datasource
+    ports:
+      - 3000:3000
   rabbit:
     image: "rabbitmq:3.6-management"
     hostname: "rabbit"
@@ -210,6 +220,7 @@ volumes:
   manager-config:
   db-data:
   influxdb:
+  grafana-storage:
   static-config1:
   static-config2:
 secrets:

@@ -4,6 +4,8 @@ services:
     restart: on-failure
   influxdb:
     restart: on-failure
+  grafana:
+    restart: on-failure
   rabbit:
     restart: on-failure
   nginx:

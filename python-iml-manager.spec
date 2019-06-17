@@ -37,7 +37,7 @@ Source13:       iml-stats.service
 Source14:       iml-syslog.service
 Source16:       iml-manager-redirect.conf
 Source17:       rabbitmq-env.conf
-
+Source18:	grafana-iml.ini
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -148,6 +148,7 @@ Requires:      fence-agents
 Requires:      fence-agents-virsh
 Requires:      nginx >= 1:1.11.6
 Requires:      influxdb
+Requires:	grafana
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
 %description -n python2-%{pypi_name}
@@ -215,16 +216,18 @@ install -d -p $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
-mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf,nginx/default}.d
-mkdir -p $RPM_BUILD_ROOT/etc/rabbitmq
-touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
-mkdir -p $RPM_BUILD_ROOT/etc/rabbitmq
-cp %{SOURCE16} $RPM_BUILD_ROOT/etc/nginx/default.d/iml-manager-redirect.conf
-cp %{SOURCE17} $RPM_BUILD_ROOT/etc/rabbitmq/rabbitmq-env.conf
-cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/{init,logrotate,nginx/conf,nginx/default}.d
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
+touch $RPM_BUILD_ROOT%{_sysconfdir}/nginx/conf.d/chroma-manager.conf
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana
+install -m 644 %{SOURCE18} $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
+cp %{SOURCE16} $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
+cp %{SOURCE17} $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
+cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install %{SOURCE3}.gz $RPM_BUILD_ROOT%{_mandir}/man1
-install -m 644 %{SOURCE2} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
+install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
@@ -331,12 +334,13 @@ fi
 %attr(0700,root,root)%{_bindir}/chroma-config
 %dir %attr(0755,nginx,nginx)%{manager_root}
 %dir %attr(0755,nginx,nginx)/var/log/chroma
-%ghost /etc/nginx/conf.d/chroma-manager.conf
-/etc/nginx/default.d/iml-manager-redirect.conf
-/etc/rabbitmq/rabbitmq-env.conf
-%attr(0755,root,root)/etc/init.d/chroma-host-discover
+%ghost %{_sysconfdir}/nginx/conf.d/chroma-manager.conf
+%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
+%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
+%{_sysconfdir}/grafana/grafana-iml.ini
+%attr(0755,root,root)%{_sysconfdir}/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
-%attr(0644,root,root)/etc/logrotate.d/chroma-manager
+%attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,root)%{_unitdir}/iml-corosync.service
 %attr(0644,root,root)%{_unitdir}/iml-gunicorn.service
 %attr(0644,root,root)%{_unitdir}/iml-http-agent.service
