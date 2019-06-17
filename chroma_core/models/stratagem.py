@@ -313,8 +313,8 @@ class SendResultsToClientStep(Step):
             return;
 
         action_list = [(label, args) for (duration, label, args) in [
-            (report_duration, "action_warning_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon"))), 
-            (purge_duration, "action_purge_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired")))
+            (purge_duration, "action_purge_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired"))),
+            (report_duration, "action_warning_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon")))
         ] if duration is not None]
 
         results = map(lambda (label, args), host=host: 
