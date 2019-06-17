@@ -29,6 +29,13 @@ fn to_socket_addr(host: &str, port: &str) -> SocketAddr {
         .expect("Could not convert to a SocketAddr")
 }
 
+fn empty_str_to_none(x: String) -> Option<String> {
+    match x.as_ref() {
+        "" => None,
+        _ => Some(x),
+    }
+}
+
 /// Get the broker user from the env or panic
 pub fn get_user() -> String {
     get_var("AMQP_BROKER_USER")
@@ -109,4 +116,20 @@ pub fn get_api_user() -> String {
 
 pub fn get_manager_url() -> String {
     get_var("SERVER_HTTP_URL")
+}
+
+pub fn get_db_user() -> String {
+    get_var("DB_USER")
+}
+
+pub fn get_db_host() -> Option<String> {
+    empty_str_to_none(get_var("DB_HOST"))
+}
+
+pub fn get_db_name() -> Option<String> {
+    empty_str_to_none(get_var("DB_NAME"))
+}
+
+pub fn get_db_password() -> Option<String> {
+    empty_str_to_none(get_var("DB_PASSWORD"))
 }
