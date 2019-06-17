@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, fidlist, http_comms::mailbox_client};
+use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::future::poll_fn;
 use futures::{Future, Stream};
 use tokio_threadpool::blocking;
@@ -37,12 +37,17 @@ fn rm_fids(mntpt: String, fids: Vec<String>) -> impl Future<Item = (), Error = I
 }
 
 pub fn read_mailbox(
-    (device, mailbox): (String, String),
+    (fsname_or_mntpath, mailbox): (String, String),
 ) -> impl Future<Item = (), Error = ImlAgentError> {
-    search_rootpath(device).and_then(move |mntpt| {
+    search_rootpath(fsname_or_mntpath).and_then(move |mntpt| {
         mailbox_client::get(mailbox)
-            .and_then(|s| serde_json::from_str(&s).map_err(ImlAgentError::Serde))
-            .map(|fli: fidlist::FidListItem| fli.fid)
+            .filter_map(|x| {
+                x.trim()
+                    .split(' ')
+                    .filter(|x| x != &"")
+                    .last()
+                    .map(String::from)
+            })
             .chunks(10) // @@ Get number from liblustreapi
             .for_each(move |fids| {
                 tokio::spawn(
