@@ -10,7 +10,7 @@ use crate::{
 };
 use seed::{
     a, class,
-    dom_types::{mouse_ev, At, El, Ev, MessageMapper, UpdateEl},
+    dom_types::{mouse_ev, At, El, Ev, MessageMapper as _, UpdateEl},
     li,
     prelude::{wasm_bindgen, Orders},
 };
@@ -135,7 +135,11 @@ fn view(
         .map_message(Msg::ActionDropdown)
 }
 
-fn window_events(_model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+fn window_events(model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+    if model.destroyed {
+        return vec![];
+    }
+
     vec![mouse_ev(Ev::Click, move |_| {
         Msg::ActionDropdown(action_dropdown::Msg::Open(false))
     })]

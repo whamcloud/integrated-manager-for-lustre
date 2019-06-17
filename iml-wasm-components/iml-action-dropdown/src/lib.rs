@@ -91,7 +91,11 @@ fn view(
     el
 }
 
-fn window_events(_model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+fn window_events(model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+    if model.destroyed {
+        return vec![];
+    }
+
     vec![mouse_ev(Ev::Click, move |_ev| {
         Msg::ActionDropdown(action_dropdown::Msg::Open(false))
     })]
