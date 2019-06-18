@@ -313,7 +313,7 @@ class ServiceConfig(CommandLine):
         )
 
         log.info("Creating InfluxDB databse...")
-        self.try_shell(["influx", "-execute", "CREATE DATABASE iml"])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE iml_stratagem_scans"])
 
     def _setup_grafana(self):
         cfg_file = "/etc/sysconfig/grafana-server"
