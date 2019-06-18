@@ -11,7 +11,7 @@ from django.db import models
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
-from chroma_core.lib.stratagem import parse_stratagem_results_to_influx, record_stratagem_point
+from chroma_core.lib.stratagem import parse_stratagem_results_to_influx, record_stratagem_point, clear_scan_results
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
 from chroma_help.help import help_text
@@ -250,7 +250,7 @@ class StreamFidlistStep(Step):
         influx_entries = parse_stratagem_results_to_influx(stratagem_result)
         job_log.debug("influx_entries: {}".format(influx_entries))
 
-        map(record_stratagem_point, influx_entries)
+        record_stratagem_point("\n".join(influx_entries))
 
         mailbox_files = map(lambda (path, label): (path, "{}-{}".format(unique_id, label)) , mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
@@ -307,6 +307,7 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
+        clear_scan_results()
         return [
             (RunStratagemStep, {
                 "host": self.fqdn,
