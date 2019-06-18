@@ -2,8 +2,97 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{ActionMap, AvailableAction, LockChange, LockType, Locks, RecordMap};
-use std::collections::HashMap;
+use crate::hsm::HsmControlParam;
+
+use iml_wire_types::{ApiList, AvailableAction};
+use std::collections::{HashMap, HashSet};
+/// A record
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+pub struct Record {
+    pub content_type_id: i64,
+    pub id: i64,
+    pub label: String,
+    pub hsm_control_params: Option<Vec<HsmControlParam>>,
+    #[serde(flatten)]
+    extra: Option<HashMap<String, serde_json::Value>>,
+}
+
+/// A record map is a map of composite id's to labels
+pub type RecordMap = HashMap<String, Record>;
+
+/// Records is a vector of Record items
+pub type Records = Vec<Record>;
+
+/// Data is what is being passed into the component.
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct Data {
+    pub records: Records,
+    pub urls: Option<Vec<String>>,
+    pub locks: Locks,
+    pub flag: Option<String>,
+    pub tooltip_placement: Option<iml_tooltip::TooltipPlacement>,
+    pub tooltip_size: Option<iml_tooltip::TooltipSize>,
+}
+
+pub type AvailableActions = ApiList<AvailableAction>;
+
+/// Combines the AvailableAction and Label
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct AvailableActionAndRecord {
+    pub available_action: AvailableAction,
+    pub record: Record,
+    pub flag: Option<String>,
+}
+
+/// The ActionMap is a map consisting of actions grouped by the composite_id
+pub type ActionMap = HashMap<String, Vec<AvailableAction>>;
+
+/// Locks is a map of locks in which the key is a composite id string in the form `composite_id:id`
+pub type Locks = HashMap<String, HashSet<LockChange>>;
+
+/// The type of lock
+#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum LockType {
+    Read,
+    Write,
+}
+
+/// The Action associated with a `LockChange`
+#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum LockAction {
+    Add,
+    Remove,
+}
+
+/// A change to be applied to `Locks`
+#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
+pub struct LockChange {
+    pub job_id: u64,
+    pub content_type_id: u64,
+    pub item_id: u64,
+    pub description: String,
+    pub lock_type: LockType,
+    pub action: LockAction,
+}
+
+// Model
+#[derive(Default)]
+pub struct Model {
+    pub urls: Option<Vec<String>>,
+    pub records: RecordMap,
+    pub available_actions: ActionMap,
+    pub request_controller: Option<seed::fetch::RequestController>,
+    pub cancel: Option<futures::sync::oneshot::Sender<()>>,
+    pub locks: Locks,
+    pub open: bool,
+    pub button_activated: bool,
+    pub first_fetch_active: bool,
+    pub flag: Option<String>,
+    pub tooltip: iml_tooltip::Model,
+    pub destroyed: bool,
+}
 
 pub fn record_to_composite_id_string(c: i64, i: i64) -> String {
     format!("{}:{}", c, i)
@@ -30,7 +119,7 @@ pub fn composite_ids_to_query_string(x: &RecordMap) -> String {
     xs.join("&")
 }
 
-pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: RecordMap) -> ActionMap {
+pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: &RecordMap) -> ActionMap {
     objects
         .into_iter()
         .fold(HashMap::new(), |mut obj: ActionMap, action| {
@@ -54,10 +143,21 @@ pub fn sort_actions(mut actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
     actions
 }
 
+pub fn record_to_map(x: Record) -> (String, Record) {
+    let id = record_to_composite_id_string(x.content_type_id, x.id);
+
+    (id, x)
+}
+
+pub fn records_to_map(xs: Records) -> RecordMap {
+    xs.into_iter().map(record_to_map).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ActionArgs, LockAction, Record};
+    use crate::model::{LockAction, Record};
+    use iml_wire_types::ActionArgs;
     use insta::assert_debug_snapshot_matches;
     use std::collections::HashMap;
 
@@ -225,7 +325,7 @@ mod tests {
             },
         );
 
-        let groups: ActionMap = group_actions_by_label(objects, records)
+        let groups: ActionMap = group_actions_by_label(objects, &records)
             .into_iter()
             .map(|(k, xs)| (k, sort_actions(xs)))
             .collect();

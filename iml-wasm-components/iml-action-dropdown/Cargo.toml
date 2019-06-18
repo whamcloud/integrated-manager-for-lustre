@@ -5,7 +5,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "=0.3.5"
+seed = "=0.3.6"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0"
 futures = "0.1"
@@ -16,6 +16,7 @@ cfg-if = "0.1"
 log = "0.4"
 iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
 iml-sleep = { path = "../iml-sleep", version = "0.1.0" }
+iml-wire-types = "0.1.2"
 console_log = { version = "0.1", optional = true }
 
 
@@ -24,4 +25,4 @@ wasm-bindgen-test = "0.2"
 insta = "0.8.1"
 
 [features]
-console-log = ["console_log"]
+default = ["console_log"]
