@@ -11,6 +11,7 @@ from django.db import models
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
+from chroma_core.lib.stratagem import parse_stratagem_results_to_influx, record_stratagem_point
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
 from chroma_help.help import help_text
@@ -138,7 +139,7 @@ class RunStratagemStep(Step):
 
             return {
                 "dump_flist": False,
-                "device": {"path": path, "groups": ["size_distribution", "warn_purge_times"]},
+                "device": {"path": path, "groups": ["size_distribution", "user_distribution", "warn_purge_times"]},
                 "groups": [
                     {
                         "rules": [
@@ -164,6 +165,16 @@ class RunStratagemStep(Step):
                             },
                         ],
                         "name": "size_distribution",
+                    },
+                    {
+                        "rules": [
+                            {
+                                "action": "LAT_ATTR_CLASSIFY",
+                                "expression": "1",
+                                "argument": "uid"
+                            }
+                        ],
+                        "name": "user_distribution"
                     },
                     warn_purge_times
                 ]
@@ -227,7 +238,6 @@ class RunStratagemStep(Step):
 
         return result
 
-
 class StreamFidlistStep(Step):
     def run(self, args):
         scan_result = args["prev_result"]
@@ -235,6 +245,12 @@ class StreamFidlistStep(Step):
         unique_id = args["uuid"]
 
         fid_dir, stratagem_result, mailbox_files = scan_result
+
+        # Send stratagem_results to time series database
+        influx_entries = parse_stratagem_results_to_influx(stratagem_result)
+        job_log.debug("influx_entries: {}".format(influx_entries))
+
+        map(record_stratagem_point, influx_entries)
 
         mailbox_files = map(lambda (path, label): (path, "{}-{}".format(unique_id, label)) , mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)

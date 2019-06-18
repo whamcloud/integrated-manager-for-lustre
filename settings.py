@@ -61,6 +61,8 @@ INFLUXDB_IML_DB = "iml"
 
 INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
 
+INFLUXDB_PORT = 8086
+
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
 SSL_PATH = "/var/lib/chroma"
