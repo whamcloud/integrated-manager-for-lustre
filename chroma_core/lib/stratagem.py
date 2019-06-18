@@ -92,7 +92,7 @@ def parse_stratagem_results_to_influx(stratagem_results_json):
 
 def record_stratagem_point(point):
     response = requests.post(
-      "http://{}:{}/write?db=iml".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT),
+      "http://{}:{}/write?db={}".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT, settings.INFLUXDB_STRATAGEM_SCAN_DB),
       data=point
     )
 
