@@ -42,20 +42,7 @@ def parse_size_distribution(epoch, counters):
 
 
 def parse_user_distribution(epoch, counters):
-    user_entries = pipe(
-        counters,
-        filter_out_other_counter,
-        partial(
-          map,
-          lambda x: create_stratagem_influx_point(
-            [("group_name", "user_distribution"), ("counter_name", x.get("name"))],
-            [("count", x.get("count")), ("expression", x.get("expression"))],
-            epoch
-          )
-        )
-    )
-
-    classify_entries = pipe(
+    return pipe(
         counters,
         partial(filter, lambda x: "classify" in x),
         partial(map, lambda x: x.get("classify")),
@@ -70,8 +57,6 @@ def parse_user_distribution(epoch, counters):
           )
         )
     )
-
-    return user_entries + classify_entries
 
 def get_epoch():
   t = datetime.datetime.now()
