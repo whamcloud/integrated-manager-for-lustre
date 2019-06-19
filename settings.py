@@ -57,6 +57,10 @@ WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
 
 MAILBOX_PORT = 8891
 
+INFLUXDB_IML_DB = "iml"
+
+INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
+
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
 SSL_PATH = "/var/lib/chroma"
