@@ -325,7 +325,7 @@ class ServiceConfig(CommandLine):
             fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
 
         # grafana needs daemon-reload before enable and start
-        self.try_shell(["systemctl", "daemon-reload"])
+        ServiceControlEL7.daemon_reload()
         service = ServiceControlEL7("grafana-server")
         error = service.enable()
         if error:
