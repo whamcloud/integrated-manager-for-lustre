@@ -27,10 +27,8 @@ impl std::error::Error for DurationParseError {}
 
 #[derive(Debug)]
 pub enum ImlManagerCliError {
-    Reqwest(reqwest::Error),
-    InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
+    ClientRequestError(iml_manager_client::ImlManagerClientError),
     TokioTimerError(tokio::timer::Error),
-    UrlParseError(url::ParseError),
     IntParseError(std::num::ParseIntError),
     ParseDurationError(DurationParseError),
 }
@@ -38,10 +36,8 @@ pub enum ImlManagerCliError {
 impl std::fmt::Display for ImlManagerCliError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ImlManagerCliError::Reqwest(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
         }
@@ -51,10 +47,8 @@ impl std::fmt::Display for ImlManagerCliError {
 impl std::error::Error for ImlManagerCliError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            ImlManagerCliError::Reqwest(ref err) => Some(err),
-            ImlManagerCliError::InvalidHeaderValue(ref err) => Some(err),
+            ImlManagerCliError::ClientRequestError(ref err) => Some(err),
             ImlManagerCliError::TokioTimerError(ref err) => Some(err),
-            ImlManagerCliError::UrlParseError(ref err) => Some(err),
             ImlManagerCliError::IntParseError(ref err) => Some(err),
             ImlManagerCliError::ParseDurationError(ref err) => Some(err),
         }
@@ -79,20 +73,8 @@ impl From<tokio::timer::Error> for ImlManagerCliError {
     }
 }
 
-impl From<reqwest::Error> for ImlManagerCliError {
-    fn from(err: reqwest::Error) -> Self {
-        ImlManagerCliError::Reqwest(err)
-    }
-}
-
-impl From<reqwest::header::InvalidHeaderValue> for ImlManagerCliError {
-    fn from(err: reqwest::header::InvalidHeaderValue) -> Self {
-        ImlManagerCliError::InvalidHeaderValue(err)
-    }
-}
-
-impl From<url::ParseError> for ImlManagerCliError {
-    fn from(err: url::ParseError) -> Self {
-        ImlManagerCliError::UrlParseError(err)
+impl From<iml_manager_client::ImlManagerClientError> for ImlManagerCliError {
+    fn from(err: iml_manager_client::ImlManagerClientError) -> Self {
+        ImlManagerCliError::ClientRequestError(err)
     }
 }

@@ -4,7 +4,7 @@
 
 use futures::Future;
 use iml_manager_cli::{
-    api_client, api_utils,
+    api_utils,
     manager_cli_error::{DurationParseError, ImlManagerCliError},
 };
 use iml_wire_types::{ApiList, Command, Host};
@@ -161,8 +161,9 @@ fn main() {
         App::Stratagem { command } => match command {
             StratagemCommand::Scan { fs, rd, pd } => {
                 let fut = {
-                    let client = api_client::get_client().expect("Could not create API client");
-                    api_client::post(
+                    let client =
+                        iml_manager_client::get_client().expect("Could not create API client");
+                    iml_manager_client::post(
                         client,
                         "run_stratagem",
                         serde_json::json!(StratagemCommandData {
@@ -192,8 +193,9 @@ fn main() {
                 let stop_spinner = start_spinner("Running command...");
 
                 let fut = {
-                    let client = api_client::get_client().expect("Could not create API client");
-                    api_client::get(client, "host")
+                    let client =
+                        iml_manager_client::get_client().expect("Could not create API client");
+                    iml_manager_client::get(client, "host")
                 };
 
                 let result: Result<ApiList<Host>, _> = run_cmd(fut);
