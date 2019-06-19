@@ -12,13 +12,13 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.lib.stratagem import (
-    parse_stratagem_results_to_influx, 
-    record_stratagem_point, 
-    clear_scan_results, 
-    temp_stratagem_measurement, 
+    parse_stratagem_results_to_influx,
+    record_stratagem_point,
+    clear_scan_results,
+    temp_stratagem_measurement,
     stratagem_measurement,
     aggregate_points,
-    submit_aggregated_data
+    submit_aggregated_data,
 )
 
 from chroma_core.models import Job
@@ -115,6 +115,7 @@ class ConfigureStratagemJob(StateChangeJob):
 
         return steps
 
+
 class RunStratagemStep(Step):
     def run(self, args):
         host = args["host"]
@@ -125,24 +126,24 @@ class RunStratagemStep(Step):
 
         def _get_body(mount_point, report_duration, purge_duration):
 
-            rule_map = {
-                "fids_expiring_soon": report_duration != None,
-                "fids_expired": purge_duration != None
-            }
+            rule_map = {"fids_expiring_soon": report_duration != None, "fids_expired": purge_duration != None}
 
             warn_purge_times = {
-                "rules": filter(lambda rule, rule_map=rule_map: rule_map.get(rule.get("argument")), [
-                    {
-                        "action": "LAT_SHELL_CMD_FID",
-                        "expression": "< atime - sys_time {}".format(report_duration),
-                        "argument": "fids_expiring_soon",
-                    },
-                    {
-                        "action": "LAT_SHELL_CMD_FID",
-                        "expression": "< atime - sys_time {}".format(purge_duration),
-                        "argument": "fids_expired",
-                    }
-                ]),
+                "rules": filter(
+                    lambda rule, rule_map=rule_map: rule_map.get(rule.get("argument")),
+                    [
+                        {
+                            "action": "LAT_SHELL_CMD_FID",
+                            "expression": "< atime - sys_time {}".format(report_duration),
+                            "argument": "fids_expiring_soon",
+                        },
+                        {
+                            "action": "LAT_SHELL_CMD_FID",
+                            "expression": "< atime - sys_time {}".format(purge_duration),
+                            "argument": "fids_expired",
+                        },
+                    ],
+                ),
                 "name": "warn_purge_times",
             }
 
@@ -152,21 +153,13 @@ class RunStratagemStep(Step):
                 "groups": [
                     {
                         "rules": [
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "< size 1048576",
-                                "argument": "SIZE < 1M",
-                            },
+                            {"action": "LAT_COUNTER_INC", "expression": "< size 1048576", "argument": "SIZE < 1M"},
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": "&& >= size 1048576 < size 1048576000",
                                 "argument": "1M <= SIZE < 1G",
                             },
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": ">= size 1048576000",
-                                "argument": "SIZE >= 1G",
-                            },
+                            {"action": "LAT_COUNTER_INC", "expression": ">= size 1048576000", "argument": "SIZE >= 1G"},
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": ">= size 1048576000000",
@@ -176,24 +169,15 @@ class RunStratagemStep(Step):
                         "name": "size_distribution",
                     },
                     {
-                        "rules": [
-                            {
-                                "action": "LAT_ATTR_CLASSIFY",
-                                "expression": "1",
-                                "argument": "uid"
-                            }
-                        ],
-                        "name": "user_distribution"
+                        "rules": [{"action": "LAT_ATTR_CLASSIFY", "expression": "1", "argument": "uid"}],
+                        "name": "user_distribution",
                     },
-                    warn_purge_times
-                ]
+                    warn_purge_times,
+                ],
             }
 
         def generate_output_from_results(result):
-            return u"\u2713 Scan finished for target {}.\nResults located in {}".format(
-                target_name, 
-                result[0]
-            )
+            return u"\u2713 Scan finished for target {}.\nResults located in {}".format(target_name, result[0])
 
         body = _get_body(path, report_duration, purge_duration)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
@@ -201,6 +185,7 @@ class RunStratagemStep(Step):
         self.log(generate_output_from_results(result))
 
         return result
+
 
 class StreamFidlistStep(Step):
     def run(self, args):
@@ -216,7 +201,7 @@ class StreamFidlistStep(Step):
 
         record_stratagem_point("\n".join(influx_entries))
 
-        mailbox_files = map(lambda (path, label): (path, "{}-{}".format(unique_id, label)) , mailbox_files)
+        mailbox_files = map(lambda xs: (xs[0], "{}-{}".format(unique_id, xs[1])), mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
 
         return result
@@ -271,18 +256,19 @@ class RunStratagemJob(Job):
 
         clear_scan_results(temp_stratagem_measurement)
         return [
-            (RunStratagemStep, {
-                "host": self.fqdn,
-                "path": path, 
-                "target_name": self.target_name,
-                "report_duration": self.report_duration,
-                "purge_duration": self.purge_duration
-            }), 
-            (StreamFidlistStep, {
-                "host": self.fqdn, 
-                "uuid": self.uuid
-            })
+            (
+                RunStratagemStep,
+                {
+                    "host": self.fqdn,
+                    "path": path,
+                    "target_name": self.target_name,
+                    "report_duration": self.report_duration,
+                    "purge_duration": self.purge_duration,
+                },
+            ),
+            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid}),
         ]
+
 
 class AggregateStratagemResultsStep(Step):
     def run(self, args):
@@ -294,6 +280,7 @@ class AggregateStratagemResultsStep(Step):
         self.log(u"\u2713 Aggregated Stratagem counts and submitted to time series database.")
 
         return influx_entries
+
 
 class AggregateStratagemResultsJob(Job):
     class Meta:
@@ -309,32 +296,43 @@ class AggregateStratagemResultsJob(Job):
 
     def get_steps(self):
         return [
-            (AggregateStratagemResultsStep, {
-                "temp_measurement": temp_stratagem_measurement,
-                "measurement": stratagem_measurement
-            })
-        ];
+            (
+                AggregateStratagemResultsStep,
+                {"temp_measurement": temp_stratagem_measurement, "measurement": stratagem_measurement},
+            )
+        ]
+
 
 class SendResultsToClientStep(Step):
     def run(self, args):
         host, mount_point, uuid, report_duration, purge_duration = args["client_args"]
 
         if report_duration is None and purge_duration is None:
-            return;
+            return
 
-        action_list = [(label, args) for (duration, label, args) in [
-            (purge_duration, "action_purge_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired"))),
-            (report_duration, "action_warning_stratagem", (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon")))
-        ] if duration is not None]
+        action_list = [
+            (label, args)
+            for (duration, label, args) in [
+                (
+                    purge_duration,
+                    "action_purge_stratagem",
+                    (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired")),
+                ),
+                (
+                    report_duration,
+                    "action_warning_stratagem",
+                    (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon")),
+                ),
+            ]
+            if duration is not None
+        ]
 
-        results = map(lambda (label, args), host=host: 
-            self.invoke_rust_agent_expect_result(host, label, args), 
-            action_list
-        )
+        results = map(lambda xs, host=host: self.invoke_rust_agent_expect_result(host, xs[0], xs[1]), action_list)
 
         self.log(u"\u2713 Scan results sent to client under:\n{}".format([r for r in results if r is not None][0]))
 
         return results
+
 
 class SendStratagemResultsToClientJob(Job):
     uuid = models.CharField(max_length=64, null=False, default="")
@@ -357,7 +355,16 @@ class SendStratagemResultsToClientJob(Job):
         client_mount = LustreClientMount.objects.get(host_id=client_host.id)
 
         return [
-            (SendResultsToClientStep, {
-                "client_args": (client_host.fqdn, client_mount.mountpoint, self.uuid, self.report_duration, self.purge_duration)
-            })
-        ];
+            (
+                SendResultsToClientStep,
+                {
+                    "client_args": (
+                        client_host.fqdn,
+                        client_mount.mountpoint,
+                        self.uuid,
+                        self.report_duration,
+                        self.purge_duration,
+                    )
+                },
+            )
+        ]
