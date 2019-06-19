@@ -130,4 +130,3 @@ class RunStratagemResource(Resource):
             command = None
 
         raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
-

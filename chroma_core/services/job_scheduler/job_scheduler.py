@@ -873,8 +873,8 @@ class JobScheduler(object):
 
     def run_jobs(self, job_dicts, message):
         with self._lock:
-                result = self.CommandPlan.command_run_jobs(job_dicts, message)
-        
+            result = self.CommandPlan.command_run_jobs(job_dicts, message)
+
         self.progress.advance()
         return result
 
@@ -1752,23 +1752,23 @@ class JobScheduler(object):
     def configure_stratagem(self, stratagem_data):
         with self._lock:
             configuration_data = {
-                    'state': "unconfigured",
-                    'filesystem_id': stratagem_data.get('filesystem'),
-                    'interval': stratagem_data.get('interval'),
-                    'report_duration': stratagem_data.get('report_duration'),
-                    'report_duration_active': stratagem_data.get('report_duration_active'),
-                    'purge_duration': stratagem_data.get('purge_duration'),
-                    'purge_duration_active': stratagem_data.get('purge_duration_active')
-                }
+                "state": "unconfigured",
+                "filesystem_id": stratagem_data.get("filesystem"),
+                "interval": stratagem_data.get("interval"),
+                "report_duration": stratagem_data.get("report_duration"),
+                "report_duration_active": stratagem_data.get("report_duration_active"),
+                "purge_duration": stratagem_data.get("purge_duration"),
+                "purge_duration_active": stratagem_data.get("purge_duration_active"),
+            }
 
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
-            fs_identifier = str(configuration_data.get('filesystem_id'))
+            fs_identifier = str(configuration_data.get("filesystem_id"))
             fs_id = filter(
-                    lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-                    ManagedFilesystem.objects.values("id", "name"),
-                )[0].get('id')
-            
-            configuration_data['filesystem_id'] = fs_id
+                lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+                ManagedFilesystem.objects.values("id", "name"),
+            )[0].get("id")
+
+            configuration_data["filesystem_id"] = fs_id
 
             with transaction.atomic():
                 matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
@@ -1780,47 +1780,48 @@ class JobScheduler(object):
 
             ObjectCache.add(StratagemConfiguration, stratagem_configuration)
 
-        
         return self.set_state(
             [
                 (
                     ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
                     stratagem_configuration.id,
-                    'configured',
+                    "configured",
                 )
             ],
             "Configuring Stratagem",
-            True
+            True,
         )
 
     def run_stratagem(self, mdts, stratagem_data):
         unique_id = uuid.uuid4()
-        run_stratagem_list = map(lambda mdt_id: { 
-            "class_name": "RunStratagemJob", 
-            "args": {
-                "mdt_id": mdt_id,
-                "uuid": unique_id,
-                "report_duration": stratagem_data.get("report_duration"),
-                "purge_duration": stratagem_data.get("purge_duration")
-            }
-        }, mdts)
+        run_stratagem_list = map(
+            lambda mdt_id: {
+                "class_name": "RunStratagemJob",
+                "args": {
+                    "mdt_id": mdt_id,
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
+            },
+            mdts,
+        )
 
-        run_stratagem_list.append({
-            "class_name": "AggregateStratagemResultsJob",
-            "args": {
-                "depends_on_job_range": range(len(mdts))
+        run_stratagem_list.append(
+            {"class_name": "AggregateStratagemResultsJob", "args": {"depends_on_job_range": range(len(mdts))}}
+        )
+
+        run_stratagem_list.append(
+            {
+                "class_name": "SendStratagemResultsToClientJob",
+                "args": {
+                    "depends_on_job_range": [len(run_stratagem_list) - 1],
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
             }
-        });
-        
-        run_stratagem_list.append({
-            "class_name": "SendStratagemResultsToClientJob",
-            "args": {
-                "depends_on_job_range": [len(run_stratagem_list) - 1],
-                "uuid": unique_id,
-                "report_duration": stratagem_data.get("report_duration"),
-                "purge_duration": stratagem_data.get("purge_duration")
-            }
-        })
+        )
 
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
