@@ -1806,9 +1806,16 @@ class JobScheduler(object):
         }, mdts)
 
         run_stratagem_list.append({
+            "class_name": "AggregateStratagemResultsJob",
+            "args": {
+                "depends_on_job_range": range(len(mdts))
+            }
+        });
+        
+        run_stratagem_list.append({
             "class_name": "SendStratagemResultsToClientJob",
             "args": {
-                "depends_on_job_range": range(len(mdts)),
+                "depends_on_job_range": [len(run_stratagem_list) - 1],
                 "uuid": unique_id,
                 "report_duration": stratagem_data.get("report_duration"),
                 "purge_duration": stratagem_data.get("purge_duration")

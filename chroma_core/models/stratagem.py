@@ -11,7 +11,16 @@ from django.db import models
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
-from chroma_core.lib.stratagem import parse_stratagem_results_to_influx, record_stratagem_point, clear_scan_results
+from chroma_core.lib.stratagem import (
+    parse_stratagem_results_to_influx, 
+    record_stratagem_point, 
+    clear_scan_results, 
+    temp_stratagem_measurement, 
+    stratagem_measurement,
+    aggregate_points,
+    submit_aggregated_data
+)
+
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
 from chroma_help.help import help_text
@@ -180,55 +189,10 @@ class RunStratagemStep(Step):
                 ]
             }
 
-        def get_column_length(rows, col_name):
-            return pipe(
-                rows,
-                partial(map, lambda row, col_name=col_name: len(str(row.get(col_name)))),
-                max
-            )
-
-        def generate_border(max_name_length, max_count_length):
-            return '+' + ("-" * (max_name_length + 2)) + '+' + ("-" * (max_count_length + 2)) + '+'
-
-        def generate_row(max_name_length, max_count_length, row):
-            name = row.get('name')
-            count = str(row.get('count'))
-
-            return "| {}{} | {}{} |\n{}".format(
-                name,  
-                " " * (max_name_length - len(name)), 
-                count, 
-                " " * (max_count_length - len(count)), 
-                generate_border(max_name_length, max_count_length)
-            )
-            
-
-        def generate_rows(rows):
-            max_name_length = get_column_length(rows, 'name')
-            max_count_length = get_column_length(rows, 'count')
-
-            return "{}\n{}".format(
-                generate_border(max_name_length, max_count_length), 
-                "\n".join(
-                    map(partial(generate_row, max_name_length, max_count_length), rows)
-                )
-            )
-
-        def generate_group_counter_output(group):
-            group_name = group.get('name')
-            table = generate_rows(group.get('counters'))
-
-            return "Group: {}\n\n{}".format(group_name, table)
-
-
         def generate_output_from_results(result):
-            results_path = result[0]
-            group_counters_output = map(generate_group_counter_output, result[1].get('group_counters'))
-
-            return u"\u2713 Scan finished for target {}.\nResults located in {}\n\n{}".format(
+            return u"\u2713 Scan finished for target {}.\nResults located in {}".format(
                 target_name, 
-                results_path, 
-                "\n\n".join(group_counters_output)
+                result[0]
             )
 
         body = _get_body(path, report_duration, purge_duration)
@@ -247,15 +211,13 @@ class StreamFidlistStep(Step):
         fid_dir, stratagem_result, mailbox_files = scan_result
 
         # Send stratagem_results to time series database
-        influx_entries = parse_stratagem_results_to_influx(stratagem_result)
+        influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, stratagem_result)
         job_log.debug("influx_entries: {}".format(influx_entries))
 
         record_stratagem_point("\n".join(influx_entries))
 
         mailbox_files = map(lambda (path, label): (path, "{}-{}".format(unique_id, label)) , mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
-
-        self.log("Called stream_fidlists_stratagem with:\n{}\nResult:\n{}".format(mailbox_files, result))
 
         return result
 
@@ -307,7 +269,7 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        clear_scan_results()
+        clear_scan_results(temp_stratagem_measurement)
         return [
             (RunStratagemStep, {
                 "host": self.fqdn,
@@ -321,6 +283,37 @@ class RunStratagemJob(Job):
                 "uuid": self.uuid
             })
         ]
+
+class AggregateStratagemResultsStep(Step):
+    def run(self, args):
+        clear_scan_results(args["measurement"])
+        aggregated = aggregate_points(args["temp_measurement"], args["measurement"])
+        influx_entries = submit_aggregated_data(args["measurement"], aggregated)
+        clear_scan_results(args["temp_measurement"])
+
+        self.log(u"\u2713 Aggregated Stratagem counts and submitted to time series database.")
+
+        return influx_entries
+
+class AggregateStratagemResultsJob(Job):
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(self):
+        return "Aggregating stratagem scan results in influxdb."
+
+    def description(self):
+        return "Aggregating stratagem scan results in influxdb."
+
+    def get_steps(self):
+        return [
+            (AggregateStratagemResultsStep, {
+                "temp_measurement": temp_stratagem_measurement,
+                "measurement": stratagem_measurement
+            })
+        ];
 
 class SendResultsToClientStep(Step):
     def run(self, args):
@@ -339,7 +332,7 @@ class SendResultsToClientStep(Step):
             action_list
         )
 
-        self.log("Sent scan results to client with result:\n{}".format(results))
+        self.log(u"\u2713 Scan results sent to client under:\n{}".format([r for r in results if r is not None][0]))
 
         return results
 
@@ -353,7 +346,7 @@ class SendStratagemResultsToClientJob(Job):
         ordering = ["id"]
 
     @classmethod
-    def long_description(cls, self):
+    def long_description(self):
         return "Sending stratagem results to client"
 
     def description(self):
