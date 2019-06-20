@@ -254,7 +254,7 @@ class RunStratagemJob(Job):
         else:
             path = self.device_path
 
-        clear_scan_results(temp_stratagem_measurement)
+        clear_scan_results("DROP MEASUREMENT temp_stratagem_scan")
         return [
             (
                 RunStratagemStep,
@@ -272,10 +272,10 @@ class RunStratagemJob(Job):
 
 class AggregateStratagemResultsStep(Step):
     def run(self, args):
-        clear_scan_results(args["measurement"])
-        aggregated = aggregate_points(args["temp_measurement"], args["measurement"])
+        clear_scan_results(args["clear_measurement_query"])
+        aggregated = aggregate_points(args["aggregate_query"])
         influx_entries = submit_aggregated_data(args["measurement"], aggregated)
-        clear_scan_results(args["temp_measurement"])
+        clear_scan_results(args["clear_temp_measurement_query"])
 
         self.log(u"\u2713 Aggregated Stratagem counts and submitted to time series database.")
 
@@ -298,7 +298,12 @@ class AggregateStratagemResultsJob(Job):
         return [
             (
                 AggregateStratagemResultsStep,
-                {"temp_measurement": temp_stratagem_measurement, "measurement": stratagem_measurement},
+                {
+                    "aggregate_query": "SELECT * FROM temp_stratagem_scan",
+                    "clear_measurement_query": "DROP MEASUREMENT stratagem_scan",
+                    "clear_temp_measurement_query": "DROP MEASUREMENT temp_stratagem_scan",
+                    "measurement": "stratagem_scan",
+                },
             )
         ]
 

@@ -52,8 +52,8 @@ class RunStratagemValidation(Validation):
             installed_profiles = map(lambda host: host.server_profile_id, ManagedHost.objects.filter(id__in=host_ids))
             if all(map(lambda name: name == "stratagem_server", installed_profiles)):
                 return {}
-            else:
-                return {"__all__": "'stratagem_servers' profile must be installed on all MDT servers."}
+
+            return {"__all__": "'stratagem_servers' profile must be installed on all MDT servers."}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
@@ -68,10 +68,10 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
         difference = set(required_args) - set(bundle.data.keys())
 
-        if len(difference) == 0:
+        if not difference:
             return super(StratagemConfigurationValidation, self).is_valid(bundle, request)
-        else:
-            return {"__all__": "Required fields are missing: {}".format(", ".join(difference))}
+
+        return {"__all__": "Required fields are missing: {}".format(", ".join(difference))}
 
 
 class StratagemConfigurationResource(ChromaModelResource):

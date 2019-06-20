@@ -88,10 +88,10 @@ def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     )
 
 
-def clear_scan_results(measurement):
+def clear_scan_results(clear_measurement_query):
     response = requests.post(
         "http://{}:{}/query".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT),
-        params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "q": "DROP MEASUREMENT {}".format(measurement)},
+        params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "q": clear_measurement_query},
     )
 
     response.raise_for_status()
@@ -108,18 +108,15 @@ def record_stratagem_point(point):
     response.raise_for_status()
 
 
-def aggregate_points(temp_measurement, measurement):
+def aggregate_points(measurement_query):
     response = requests.get(
         "http://{}:{}/query".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT),
-        params={
-            "db": settings.INFLUXDB_STRATAGEM_SCAN_DB,
-            "epoch": 0,
-            "q": "SELECT * FROM {}".format(temp_measurement),
-        },
+        params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "epoch": 0, "q": measurement_query},
     )
 
-    values = json.loads(response._content).get("results")[0].get("series")[0].get("values")
-    columns = json.loads(response._content).get("results")[0].get("series")[0].get("columns")
+    results = json.loads(response._content).get("results")[0]
+    values = results.get("series")[0].get("values")
+    columns = results.get("series")[0].get("columns")
 
     points = map(lambda xs, columns=columns: pipe(zip(columns, xs), dict), values)
 
@@ -164,6 +161,6 @@ def submit_aggregated_data(measurement, aggregated):
     return pipe(
         points,
         partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1], xs[2])),
-        partial(lambda entries: "\n".join(entries)),
+        lambda entries: "\n".join(entries),
         partial(record_stratagem_point),
     )
