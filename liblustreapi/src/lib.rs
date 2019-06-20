@@ -138,53 +138,69 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     buf2string(page)
 }
 
-pub fn mdc_stat(pathname: &str) -> Result<sys::lstat_t, LiblustreError> {
-    let page = Vec::with_capacity(PATH_BYTES);
-    let path = PathBuf::from(pathname);
-
+pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
     let file_name = path
         .file_name()
-        .ok_or_else(|| LiblustreError::not_found(format!("No String for: {}", pathname)))?;
-
-    let file = file_name
+        .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {:?}", path)))?
         .to_str()
-        .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {}", pathname)))?;
+        .ok_or_else(|| LiblustreError::not_found(format!("No string for File: {:?}", path)))?;
 
-    let dir = path
+    let dirstr = path
         .parent()
-        .ok_or_else(|| LiblustreError::not_found(format!("No Parent directory: {}", pathname)))?;
-
-    let dirstr = dir
+        .ok_or_else(|| LiblustreError::not_found(format!("No Parent directory: {:?}", path)))?
         .to_str()
-        .ok_or_else(|| LiblustreError::not_found(format!("No string for Parent: {}", pathname)))?;
+        .ok_or_else(|| LiblustreError::not_found(format!("No string for Parent: {:?}", path)))?;
 
-    let rc = unsafe {
+    let dircstr = CString::new(dirstr)?;
+
+    let page = Vec::with_capacity(PATH_BYTES);
+
+    unsafe {
         libc::memcpy(
             page.as_ptr() as *mut libc::c_void,
-            file.as_ptr() as *const libc::c_void,
-            file.len(),
+            file_name.as_ptr() as *const libc::c_void,
+            file_name.len(),
         );
+    }
 
-        let dircstr = CString::new(dirstr)?;
-        let dirptr = dircstr.as_ptr() as *const i8;
-        let dirhandle = libc::opendir(dirptr);
-        if dirhandle.is_null() {
-            let err: i32 = errno::errno().into();
-            log::error!("Failed top opendir({:?}) -> {}", dircstr, err);
-            return Err(LiblustreError::os_error(err));
-        }
-        let rc = libc::ioctl(
-            libc::dirfd(dirhandle),
+    let dirhandle = unsafe { libc::opendir(dircstr.as_ptr() as *const i8) };
+
+    if dirhandle.is_null() {
+        let e = errno::errno();
+        log::error!("Failed top opendir({:?}) -> {}", dircstr, e);
+        return Err(LiblustreError::os_error(e.into()));
+    }
+
+    let fd = unsafe { libc::dirfd(dirhandle) };
+
+    if fd < 0 {
+        let e = errno::errno();
+        log::error!("Failed dirfd({:?}) => {}", dirhandle, e);
+        return Err(LiblustreError::os_error(e.into()));
+    }
+
+    let rc = unsafe {
+        libc::ioctl(
+            fd,
             sys::IOC_MDC_GETFILEINFO as u64,
             page.as_ptr() as *mut sys::lov_user_mds_data_v1,
-        );
-        libc::closedir(dirhandle);
-        rc
+        )
     };
-    if rc != 0 {
-        log::error!("Failed ioctl({}) => {}", dirstr, rc);
-        return Err(LiblustreError::os_error(rc.abs()));
+
+    if rc < 0 {
+        let e = errno::errno();
+        log::error!("Failed ioctl({:?}) => {}", path, e);
+        return Err(LiblustreError::os_error(e.into()));
     }
+
+    let rc = unsafe { libc::closedir(dirhandle) };
+
+    if rc < 0 {
+        let e = errno::errno();
+        log::error!("Failed closedir({:?}) => {}", dirhandle, e);
+        return Err(LiblustreError::os_error(e.into()));
+    }
+
     let statptr: *const sys::lstat_t = page.as_ptr();
     let stat: sys::lstat_t = unsafe { *statptr };
 

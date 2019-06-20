@@ -29,20 +29,17 @@ struct Record {
 }
 
 fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
-    let path = match liblustreapi::fid2path(&mntpt, &fli.fid) {
-        Ok(p) => p,
-        Err(e) => {
-            log::error!("Failed to fid2path: {}: {}", fli.fid, e);
-            return Err(e.into());
-        }
-    };
-
-    let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
-    let fullpath = pb.to_str().unwrap();
-    let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
-        log::error!("Failed to mdc_stat({}) => {}", fullpath, e);
+    let path = liblustreapi::fid2path(&mntpt, &fli.fid).map_err(|e| {
+        log::error!("Failed to fid2path: {}: {}", fli.fid, e);
         e
     })?;
+
+    let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
+    let stat = liblustreapi::mdc_stat(&pb).map_err(|e| {
+        log::error!("Failed to mdc_stat({:?}) => {}", pb, e);
+        e
+    })?;
+
     let user = unsafe {
         let pwent = libc::getpwuid(stat.st_uid);
         if pwent.is_null() {
@@ -52,6 +49,7 @@ fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgen
         }
         CStr::from_ptr((*pwent).pw_name).to_str()?
     };
+
     Ok(Record {
         path: path.to_string(),
         user: user.to_string(),
