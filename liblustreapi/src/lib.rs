@@ -145,6 +145,8 @@ pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
         .to_str()
         .ok_or_else(|| LiblustreError::not_found(format!("No string for File: {:?}", path)))?;
 
+    let file_namec = CString::new(file_name)?;
+
     let dirstr = path
         .parent()
         .ok_or_else(|| LiblustreError::not_found(format!("No Parent directory: {:?}", path)))?
@@ -158,8 +160,8 @@ pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
     unsafe {
         libc::memcpy(
             page.as_ptr() as *mut libc::c_void,
-            file_name.as_ptr() as *const libc::c_void,
-            file_name.len(),
+            file_namec.as_ptr() as *const libc::c_void,
+            file_namec.as_bytes_with_nul().len(),
         );
     }
 
