@@ -1815,22 +1815,22 @@ class JobScheduler(object):
         client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
 
         if not client_mount_exists:
-            filesystem = ManagedFilesystem.objects.get(id = ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
+            filesystem = ManagedFilesystem.objects.get(id=ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
             mountpoint = "/mnt/{}".format(filesystem.name)
             self._create_client_mount(client_host, filesystem, mountpoint)
 
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id)      
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
         client_mount.state = "unmounted"
         client_mount.save()
-          
+
         run_stratagem_list.append(
             {
                 "class_name": "MountLustreClientJob",
                 "args": {
                     "depends_on_job_range": [len(run_stratagem_list) - 1],
                     "lustre_client_mount": client_mount,
-                    "old_state": "unmounted"
-                }
+                    "old_state": "unmounted",
+                },
             }
         )
 
