@@ -6,7 +6,7 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-libc = "0.2.51"
+libc = "0.2.58"
 
 [build-dependencies]
 bindgen = "0.49.0"
