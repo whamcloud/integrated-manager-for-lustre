@@ -21,8 +21,8 @@ filter_out_other_counter = partial(filter, lambda counter: counter.get("name").l
 flatten = lambda xs: [item for l in xs for item in l]
 
 
-def tuple_to_equals(a, b):
-    "=".join((str(a), str(b)))
+def tuple_to_equals(xs):
+    return "=".join((str(xs[0]), str(xs[1])))
 
 
 def create_stratagem_influx_point(measurement, tags, fields, time):
