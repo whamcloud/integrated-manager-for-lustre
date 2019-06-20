@@ -145,6 +145,10 @@ def aggregate_points(measurement_query):
     return aggregated
 
 
+def join_entries_with_new_line(entries):
+    return "\n".join(entries)
+
+
 def submit_aggregated_data(measurement, aggregated):
     points = map(
         lambda point: (
@@ -158,9 +162,10 @@ def submit_aggregated_data(measurement, aggregated):
         ),
         aggregated,
     )
+
     return pipe(
         points,
         partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1], xs[2])),
-        lambda entries: "\n".join(entries),
+        join_entries_with_new_line,
         partial(record_stratagem_point),
     )
