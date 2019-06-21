@@ -25,7 +25,41 @@ pub enum StratagemCommand {
         /// The full path of the device to scan
         #[structopt(short = "d", long = "device")]
         device_path: String,
+        /// The report duration
+        #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
+        rd: Option<u32>,
+        /// The purge duration
+        #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
+        pd: Option<u32>,
     },
+}
+
+fn invalid_input_err(msg: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, msg)
+}
+
+fn parse_duration(src: &str) -> Result<u32, io::Error> {
+    if src.len() < 2 {
+        return Err(invalid_input_err(
+            "Invalid value specified. Must be a valid integer.",
+        ));
+    }
+
+    let mut val = String::from(src);
+    let unit = val.pop();
+
+    let val = val
+        .parse::<u32>()
+        .map_err(|_| invalid_input_err(&format!("Could not parse {} to u32", val)))?;
+
+    match unit {
+        Some('h') => Ok(val * 3_600),
+        Some('d') => Ok(val * 86_400),
+        Some('1'...'9') => Err(invalid_input_err("No unit specified.")),
+        _ => Err(invalid_input_err(
+            "Invalid unit. Valid units include 'h' and 'd'.",
+        )),
+    }
 }
 
 #[derive(Debug, StructOpt)]
@@ -212,7 +246,11 @@ fn main() {
             }
         },
         App::StratagemServer { command } => match command {
-            StratagemCommand::Scan { device_path } => {
+            StratagemCommand::Scan {
+                device_path,
+                rd,
+                pd,
+            } => {
                 let cyan = termion::color::Fg(termion::color::Cyan);
                 let green = termion::color::Fg(termion::color::Green);
                 let reset = termion::color::Fg(termion::color::Reset);
@@ -229,7 +267,7 @@ fn main() {
 
                 let sp = Spinner::new(Spinners::Dots9, s);
 
-                let data = generate_cooked_config(device_path);
+                let data = generate_cooked_config(device_path, rd, pd);
 
                 let result = run_cmd(trigger_scan(data));
 
