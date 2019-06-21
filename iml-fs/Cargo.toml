@@ -1,0 +1,16 @@
+[package]
+name = "iml-fs"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures = "0.1"
+tokio = "0.1"
+tempfile = "3.0"
+tokio-threadpool = "0.1"
+bytes = "0.4"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
+tempdir = "0.3"

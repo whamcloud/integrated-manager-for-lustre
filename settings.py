@@ -8,6 +8,8 @@ import os
 import socket
 import logging
 
+from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
+
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -20,6 +22,8 @@ TEMPLATE_DEBUG = DEBUG
 APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
+
+MAILBOX_PATH = "/var/spool/iml/mailbox"
 
 HTTP_FRONTEND_PORT = 80
 
@@ -50,6 +54,14 @@ VIEW_SERVER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, VIEW_SERVER_PORT)
 WARP_DRIVE_PORT = 8890
 
 WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
+
+MAILBOX_PORT = 8891
+
+INFLUXDB_IML_DB = "iml"
+
+INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
+
+MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
 SSL_PATH = "/var/lib/chroma"
 
@@ -331,14 +343,6 @@ SSH_CONFIG = None
 TASTYPIE_DEFAULT_FORMATS = ["json"]
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
-
-try:
-    from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
-except ImportError:
-    PACKAGE_VERSION = "0.0.0"
-    VERSION = "dev"
-    BUILD = 0
-    IS_RELEASE = False
 
 try:
     LOCAL_SETTINGS

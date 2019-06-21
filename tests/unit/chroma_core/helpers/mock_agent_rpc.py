@@ -188,6 +188,8 @@ class MockAgentRpc(object):
                 CsrfAuthentication.is_authenticated = old_is_authenticated
         elif cmd == "kernel_status":
             return {"running": "fake_kernel-0.1", "required": "fake_kernel-0.1", "available": ["fake_kernel-0.1"]}
+        elif cmd == "selinux_status":
+            return {"status": "Disabled"}
         elif cmd == "reboot_server":
             now = IMLDateTime.utcnow()
             log.info("rebooting %s; updating boot_time to %s" % (host, now))

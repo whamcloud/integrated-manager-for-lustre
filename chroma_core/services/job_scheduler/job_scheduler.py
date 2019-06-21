@@ -296,8 +296,11 @@ class RunJobThread(threading.Thread):
 
         step_index = 0
         finish_step = -1
+        prev_result = None
+
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
+            args["prev_result"] = prev_result
 
             # Do not persist any sensitive arguments (prefixed with __)
             clean_args = dict([(k, v) for k, v in args.items() if not k.startswith("__")])
@@ -324,6 +327,7 @@ class RunJobThread(threading.Thread):
 
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
                 result = step.run(args)
+                prev_result = result
                 log.debug("Job %d step %d successful result %s" % (self.job.id, step_index, result))
 
                 self._job_progress.step_success(self.job.id, result)
@@ -714,7 +718,7 @@ class JobScheduler(object):
                                 command = Command.objects.create(
                                     message="Updating configuration parameters on %s" % mgs
                                 )
-                            self.CommandPlan.add_jobs([job], command)
+                            self.CommandPlan.add_jobs([job], command, {})
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
@@ -730,7 +734,7 @@ class JobScheduler(object):
                 job = ConfigureHostFencingJob(host=changed_item.host)
                 if not command:
                     command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
-                self.CommandPlan.add_jobs([job], command)
+                self.CommandPlan.add_jobs([job], command, {})
 
     def _drain_notification_buffer(self):
         # Give any buffered notifications a chance to drain out
@@ -1676,7 +1680,7 @@ class JobScheduler(object):
 
             with transaction.atomic():
                 command = Command.objects.create(message="Configuring NIDS for hosts")
-                self.CommandPlan.add_jobs(jobs, command)
+                self.CommandPlan.add_jobs(jobs, command, {})
 
         self.progress.advance()
 
@@ -1707,7 +1711,7 @@ class JobScheduler(object):
                         message="%s triggering updates from agents"
                         % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn
                     )
-                    self.CommandPlan.add_jobs(jobs, command)
+                    self.CommandPlan.add_jobs(jobs, command, {})
 
             self.progress.advance()
 

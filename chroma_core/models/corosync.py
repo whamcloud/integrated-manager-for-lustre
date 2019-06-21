@@ -135,11 +135,13 @@ class AutoConfigureCorosyncStep(Step):
 
         config = self.invoke_agent_expect_result(corosync_configuration.host, "get_corosync_autoconfig")
 
+        # Select dedicated line as ring0 to carry all the traffic by default - this
+        # prevents congestion on managment network
         ring0_name, ring0_config = next(
-            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == True
         )
         ring1_name, ring1_config = next(
-            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == True
+            (interface, config) for interface, config in config["interfaces"].items() if config["dedicated"] == False
         )
 
         self.invoke_agent_expect_result(

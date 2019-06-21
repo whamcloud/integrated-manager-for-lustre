@@ -7,32 +7,21 @@ use std::collections::{HashMap, HashSet};
 
 use crate::request::Request;
 use iml_rabbit::{
-    basic_consume, basic_publish, create_channel, declare_queue, exchange_declare, queue_bind,
-    queue_purge, TcpChannel, TcpChannelFuture, TcpClient,
+    basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
+    declare_transient_queue, purge_queue, TcpChannel, TcpChannelFuture, TcpClient,
 };
-use lapin_futures::{
-    channel::{BasicConsumeOptions, ExchangeDeclareOptions},
-    queue::Queue,
-};
+use lapin_futures::{channel::BasicConsumeOptions, queue::Queue};
 
 /// Declares the exchange for rpc comms
 fn declare_rpc_exchange(c: TcpChannel) -> impl TcpChannelFuture {
-    exchange_declare(
-        c,
-        "rpc",
-        "topic",
-        Some(ExchangeDeclareOptions {
-            durable: false,
-            ..Default::default()
-        }),
-    )
+    declare_transient_exchange(c, "rpc", "topic")
 }
 
 /// Declares the queue used for locks
 fn declare_locks_queue(
     c: TcpChannel,
 ) -> impl Future<Item = (TcpChannel, Queue), Error = failure::Error> {
-    declare_queue("locks".to_string(), c)
+    declare_transient_queue(c, "locks")
 }
 
 /// Creates a consumer for the locks queue.
@@ -48,13 +37,13 @@ pub fn create_locks_consumer(
     create_channel(client)
         .and_then(declare_rpc_exchange)
         .and_then(declare_locks_queue)
-        .and_then(|(c, q)| queue_bind(c, "rpc", "locks").map(move |c2| (c2, q)))
-        .and_then(|(c, q)| queue_purge(c, "locks").map(move |c2| (c2, q)))
+        .and_then(|(c, q)| bind_queue(c, "rpc", "locks", "locks").map(move |c2| (c2, q)))
+        .and_then(|(c, q)| purge_queue(c, "locks").map(move |c2| (c2, q)))
         .and_then(|(c, q)| {
             basic_publish(
+                c,
                 "rpc",
                 "JobSchedulerRpc.requests",
-                c,
                 Request::new("get_locks", "locks"),
             )
             .map(move |c2| (c2, q))
@@ -67,7 +56,7 @@ pub fn create_locks_consumer(
                 Some(BasicConsumeOptions {
                     no_ack: true,
                     exclusive: true,
-                    ..Default::default()
+                    ..BasicConsumeOptions::default()
                 }),
             )
         })
@@ -107,7 +96,7 @@ impl LockChange {
     }
 }
 
-/// Need to wrap LockChange with this, because it's how
+/// Need to wrap `LockChange` with this, because it's how
 /// the RPC layer in IML returns RPC calls.
 #[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
 pub struct Response {

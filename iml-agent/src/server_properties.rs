@@ -4,12 +4,14 @@
 
 use dns_lookup;
 use lazy_static::lazy_static;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::net::ToSocketAddrs;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    net::ToSocketAddrs,
+};
 
-/// Gets the hostname for the node or panics
 lazy_static! {
+    // Gets the hostname for the node or panics
     pub static ref HOSTNAME: std::net::SocketAddr = {
         let host = dns_lookup::get_hostname().expect("Could not lookup hostname");
 
@@ -21,15 +23,15 @@ lazy_static! {
     };
 }
 
-/// Gets the FQDN or panics
 lazy_static! {
+    // Gets the FQDN or panics
     pub static ref FQDN: String = dns_lookup::getnameinfo(&HOSTNAME, 0)
         .map(|(x, _)| x)
         .unwrap();
 }
 
-/// Gets the server boot time or panics.
 lazy_static! {
+    // Gets the server boot time or panics.
     pub static ref BOOT_TIME: String = {
         let input = File::open("/proc/stat").expect("Could not open /proc/stat");
         let buffered = BufReader::new(input);

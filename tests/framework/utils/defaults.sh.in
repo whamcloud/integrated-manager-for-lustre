@@ -17,11 +17,7 @@ set_distro_vars() {
 
     if [ "$distro" = "el7" ]; then
         if ${upgrade_test}; then
-            if ${UPGRADE_FROM_3:-false}; then
-                export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.3"}
-            else
-                export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.4"}
-            fi
+            export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.5"}
             export UPGRADE_DISTRO_VERSION=${UPGRADE_DISTRO_VERSION:-"7.6"}
         else
             export TEST_DISTRO_VERSION=${TEST_DISTRO_VERSION:-"7.6"}
@@ -39,19 +35,13 @@ set_distro_vars() {
 set_defaults() {
     upgrade_test="$1"
 
-    export CHROMA_DIR=${CHROMA_DIR:-"$PWD/integrated-manager-for-lustre/"}
+    export CHROMA_DIR=${CHROMA_DIR:-"$PWD/"}
 
-    d=${0%/*}
-    if [[ $d != /* ]]; then
-        d=${PWD}/$d
-    fi
-    while [ ! -f $d/include/Makefile.version ]; do
-        d=${d%/*}
-    done
-    export IEEL_VERSION=$(make -s -f $d/include/Makefile.version .ieel_version)
-    export SHORT_ARCHIVE_NAME="$(make -s -f $d/include/Makefile.version .short_archive_name)"
-    export BUILD_VERSION="$(make -s -f $d/include/Makefile.version .build_version)"
-    export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-*$IEEL_VERSION-$BUILD_VERSION.el7.noarch.rpm"
+    SPEC=${CHROMA_DIR}/python-iml-manager.spec
+
+    export IEEL_VERSION="$(rpm -q --qf "%{VERSION}\n" --specfile ${SPEC} | sed -n '2p')"
+    export SHORT_ARCHIVE_NAME="$(rpm -q --qf "%{NAME}\n" --specfile ${SPEC} | sed -n '2p')"
+    export ARCHIVE_NAME="$SHORT_ARCHIVE_NAME-*$IEEL_VERSION-*.rpm"
 
     if $JENKINS && ! ${VAGRANT_PROVISION:-false}; then
         export PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
@@ -114,21 +104,21 @@ set_defaults() {
     export COPR_PROJECT="@MFL_REPO_NAME@"
 
     # to build a job from a jenkins branch
-    #JENKINS_JOB=lustre-b2_10
+    #JENKINS_JOB=lustre-b2_12
     #JENKINS_BUILD=111
     # or to just build the latest from that branch
     #JENKINS_BUILD=lastSuccessfulBuild
     # or to build a Lustre Review job:
-    #LUSTRE_REVIEW_BUILD="56451"
+    # LUSTRE_REVIEW_BUILD="63547"
     # or build a GA release
-    LUSTRE_VERSION=2.10.6
+    LUSTRE_VERSION=2.12.1
 
     if [ -n "$LUSTRE_REVIEW_BUILD" ]; then
         JENKINS_JOB="lustre-reviews"
         JENKINS_BUILD="$LUSTRE_REVIEW_BUILD"
     fi
     if [ -n "$JENKINS_JOB" ]; then
-        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
+        BASE_URL="https://build.whamcloud.com/jobs-pub/$JENKINS_JOB/configurations/axis-arch/\\\$basearch/axis-build_type/@CLIENT_OR_SERVER@/axis-distro/el7.6/axis-ib_stack/inkernel/builds/$JENKINS_BUILD/archive/artifacts/"
     elif [ -n "$LUSTRE_VERSION" ]; then
         # To use a GA release of Lustre:
         BASE_URL="https://downloads.whamcloud.com/public/lustre/lustre-$LUSTRE_VERSION/el7/@CLIENT_OR_SERVER@"

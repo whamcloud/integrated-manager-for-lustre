@@ -1,6 +1,6 @@
 ---
-created: "2019-03-28T21:17:34.568960Z"
-creator: insta@0.7.4
+created: "2019-05-29T12:46:13.582337Z"
+creator: insta@0.8.1
 source: iml-action-dropdown/src/api_transforms.rs
 expression: xs
 ---
@@ -11,6 +11,6 @@ expression: xs
         item_id: 1,
         description: "Shut down the LNet networking layer and stop any targets running on this server.",
         lock_type: Write,
-        action: Add
-    }
+        action: Add,
+    },
 ]

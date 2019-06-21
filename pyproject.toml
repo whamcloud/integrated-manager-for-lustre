@@ -6,9 +6,11 @@ exclude = '''
     \.git
   | \.tox
   | \.venv
+  | \.cargo
   | _build
   | build
   | dist
   | south_migrations
+  | target
 )/
 '''

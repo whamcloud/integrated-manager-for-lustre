@@ -2,10 +2,11 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
+import json
 import django.db.models
 
 from chroma_core.services import log_register
+from chroma_core.lib.util import invoke_rust_agent
 from iml_common.lib.agent_rpc import agent_result
 
 job_log = log_register("job")
@@ -189,6 +190,24 @@ class Step(object):
             self._log_subprocesses(e.subprocesses)
             raise
 
+    def invoke_rust_agent(self, host, command, args={}):
+        """
+        Talks to the iml-action-runner service
+        """
+
+        return invoke_rust_agent(host, command, args, self._cancel_event)
+
+    def invoke_rust_agent_expect_result(self, host, command, args={}):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        result = json.loads(self.invoke_rust_agent(host, command, args))
+
+        if "Err" in result:
+            self.log(json.dumps(result["Err"], indent=2))
+            raise AgentException(host.fqdn, command, args, result["Err"])
+
+        return result["Ok"]
+
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
@@ -196,7 +215,7 @@ class Step(object):
 
         # This case is to deal with upgrades, once every installation is using the new protocol then we should not allow this.
         # Once everything is 3.0 or later we will also have version information in the wrapper header.
-        if (result == None) or ((type(result) == dict) and ("error" not in result) and ("result" not in result)):
+        if (result is None) or ((type(result) == dict) and ("error" not in result) and ("result" not in result)):
             job_log.info("Invalid result %s fixed up on called to %s with args %s" % (result, command, args))
 
             # Prior to 3.0 update_packages returned {'update_packages': data} so fix this up. This code is here so that all

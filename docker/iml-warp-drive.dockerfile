@@ -1,9 +1,9 @@
-FROM rust:1.32 as builder
+FROM rust:1.33 as builder
 WORKDIR /build
 COPY . .
-RUN cargo build --release
+RUN cargo build -p iml-warp-drive --release
 
-FROM rust:1.32
+FROM rust:1.33
 COPY --from=builder /build/target/release/iml-warp-drive /usr/local/bin
 RUN apt-get update \
     && apt install -y postgresql-client

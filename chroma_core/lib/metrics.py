@@ -72,7 +72,8 @@ class MetricStore(object):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
-        end = Stats[0].floor(end)  # exclude points from a partial sample
+        begin = Stats[0].round(begin)  # exclude points from a partial sample
+        end = Stats[0].round(end)  # exclude points from a partial sample
         for series in Series.filter(self.measured_object, name__in=fetch_metrics):
             types.add(series.type)
             minimum = 0.0 if series.type == "Counter" else float("-inf")
@@ -98,7 +99,8 @@ class MetricStore(object):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
-        end = Stats[0].floor(end)  # exclude points from a partial sample
+        begin = Stats[0].round(begin)  # exclude points from a partial sample
+        end = Stats[0].round(end)  # exclude points from a partial sample
         series_ids = Series.filter(self.measured_object, name__startswith="job_" + metric).values("id")
         series_ids = Stats[0].objects.filter(id__in=series_ids, dt__gte=begin).values("id").distinct("id")
         for series in Series.filter(self.measured_object, id__in=series_ids):

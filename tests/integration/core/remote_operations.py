@@ -303,8 +303,8 @@ class RealRemoteOperations(RemoteOperations):
     def inject_log_message(self, fqdn, message):
         self._ssh_fqdn(fqdn, 'logger "%s"' % message)
 
-    def read_proc(self, address, path):
-        result = self._ssh_address(address, "cat %s" % path)
+    def lctl_get_param(self, address, path):
+        result = self._ssh_address(address, "lctl get_param {}".format(path))
         return result.stdout.strip()
 
     def read_file(self, address, file_path):
@@ -450,16 +450,26 @@ class RealRemoteOperations(RemoteOperations):
             return False
 
         def has_primitive(items, fs_name):
+
             for p in items:
-                if (
-                    p.attrib["id"].startswith("%s-" % fs_name)
-                    and p.attrib["class"] == "ocf"
-                    and (
-                        (p.attrib["provider"] in ["chroma", "heartbeat"] and p.attrib["type"] == "ZFS")
-                        or (p.attrib["provider"] == "lustre" and p.attrib["type"] == "Lustre")
-                    )
-                ):
-                    return True
+                if os.environ.get("IML_4_INSTALLED", False):
+                    if (
+                        p.attrib["class"] == "ocf"
+                        and p.attrib["provider"] == "chroma"
+                        and p.attrib["type"] == "Target"
+                        and p.attrib["id"].startswith("{}-".format(fs_name))
+                    ):
+                        return True
+                else:
+                    if (
+                        p.attrib["id"].startswith("{}-".format(fs_name))
+                        and p.attrib["class"] == "ocf"
+                        and (
+                            (p.attrib["provider"] in ["chroma", "heartbeat"] and p.attrib["type"] == "ZFS")
+                            or (p.attrib["provider"] == "lustre" and p.attrib["type"] == "Lustre")
+                        )
+                    ):
+                        return True
             return False
 
         for host in hosts:
@@ -928,7 +938,7 @@ class RealRemoteOperations(RemoteOperations):
 
             with open(clear_ha_script_file, "r") as clear_ha_script:
                 result = self._ssh_address(
-                    address, "ring1_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
+                    address, "ring0_iface=%s\n%s" % (server["corosync_config"]["ring1_iface"], clear_ha_script.read())
                 )
                 logger.info(
                     "clear_ha script on %s results... exit code %s.  stdout:\n%s\nstderr:\n%s"
@@ -951,26 +961,18 @@ class RealRemoteOperations(RemoteOperations):
     def clear_lnet_config(self, server_list):
         """
         Removes the lnet configuration file for the server list passed.
-         """
+        """
 
-        # This isn't really that bad because the file will not be recreated if I delete it so probably ammounts
-        # to at most an extra reboot cycle per test session.
-        # Note the sleep ensures the reboot really happens otherwise it might look alive in the await_server_boot
         for server in server_list:
             self._ssh_address(
                 server["address"],
                 """
                               [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
                               rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
-                              reboot &&
-                              sleep 20
+                              lustre_rmmod
                               """,
                 expected_return_code=None,
             )  # Keep going if it failed - may be none there.
-
-        # Now ensure they have all comeback to life
-        for server in server_list:
-            self.await_server_boot(server["fqdn"], restart=True)
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
