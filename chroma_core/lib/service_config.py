@@ -471,7 +471,7 @@ class ServiceConfig(CommandLine):
             return error_msg
 
     def _restart_pgsql(self):
-        postgresql_service = ServiceControlEL7.create("postgresql")
+        postgresql_service = ServiceControl.create("postgresql")
         postgresql_service.restart()
         postgresql_service.enable()
 
