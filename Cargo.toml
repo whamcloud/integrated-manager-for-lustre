@@ -12,6 +12,7 @@ members = [
     'iml-warp-drive',
     'iml-mailbox',
     'iml-manager-cli',
+    'iml-manager-client',
     'iml-fs',
     'iml-postgres'
 ]

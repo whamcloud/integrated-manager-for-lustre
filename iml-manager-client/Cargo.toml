@@ -1,0 +1,14 @@
+[package]
+name = "iml-manager-client"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures = "0.1"
+iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
+log = "0.4.6"
+reqwest = { version = "0.9", features = ["default-tls", "tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "1.7"
