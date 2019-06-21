@@ -124,7 +124,13 @@ class RunStratagemStep(Step):
         report_duration = args["report_duration"]
         purge_duration = args["purge_duration"]
 
-        def _get_body(mount_point, report_duration, purge_duration):
+        def calc_purge_duration(report_duration, purge_duration):
+            if isinstance(report_duration, int) and isinstance(purge_duration, int):
+                return "(atime < sys_time - {} && atime > sys_time - {})".format(report_duration, purge_duration)
+            else:
+                return "< atime - sys_time {}".format(purge_duration or 0)
+
+        def get_body(mount_point, report_duration, purge_duration):
             rule_map = {
                 "fids_expiring_soon": report_duration != None and "warn_fids",
                 "fids_expired": purge_duration != None and "purge_fids",
@@ -150,7 +156,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time {}".format(purge_duration),
+                                "expression": calc_purge_duration(report_duration, purge_duration),
                                 "argument": "fids_expired",
                             }
                         ],
@@ -190,7 +196,7 @@ class RunStratagemStep(Step):
         def generate_output_from_results(result):
             return u"\u2713 Scan finished for target {}.\nResults located in {}".format(target_name, result[0])
 
-        body = _get_body(path, report_duration, purge_duration)
+        body = get_body(path, report_duration, purge_duration)
         result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
 
         self.log(generate_output_from_results(result))

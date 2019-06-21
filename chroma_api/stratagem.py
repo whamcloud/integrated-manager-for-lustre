@@ -26,34 +26,39 @@ from chroma_api.chroma_model_resource import ChromaModelResource
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
+        purge_duration = bundle.data.get("purge_duration")
+        report_duration = bundle.data.get("report_duration")
+
         if "filesystem" not in bundle.data:
             return {"__all__": "filesystem required when running stratagem."}
-        else:
-            fs_identifier = str(bundle.data.get("filesystem"))
+        elif isinstance(purge_duration, int) and isinstance(report_duration, int) and report_duration >= purge_duration:
+            return {"__all__": "Report duration must be less than purge duration."}
 
-            if not any(
-                map(
-                    lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-                    ManagedFilesystem.objects.values("id", "name"),
-                )
-            ):
-                return {"__all__": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id"))}
+        fs_identifier = str(bundle.data.get("filesystem"))
 
-            fs_id = filter(
+        if not any(
+            map(
                 lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
                 ManagedFilesystem.objects.values("id", "name"),
-            )[0].get("id")
-
-            # Each MDT associated with the fielsystem must be installed on a server that has the stratagem profile installed
-            target_mount_ids = map(lambda mdt: mdt.active_mount_id, ManagedMdt.objects.filter(filesystem_id=fs_id))
-            host_ids = map(
-                lambda target_mount: target_mount.host_id, ManagedTargetMount.objects.filter(id__in=target_mount_ids)
             )
-            installed_profiles = map(lambda host: host.server_profile_id, ManagedHost.objects.filter(id__in=host_ids))
-            if all(map(lambda name: name == "stratagem_server", installed_profiles)):
-                return {}
+        ):
+            return {"__all__": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id"))}
 
-            return {"__all__": "'stratagem_servers' profile must be installed on all MDT servers."}
+        fs_id = filter(
+            lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
+            ManagedFilesystem.objects.values("id", "name"),
+        )[0].get("id")
+
+        # Each MDT associated with the fielsystem must be installed on a server that has the stratagem profile installed
+        target_mount_ids = map(lambda mdt: mdt.active_mount_id, ManagedMdt.objects.filter(filesystem_id=fs_id))
+        host_ids = map(
+            lambda target_mount: target_mount.host_id, ManagedTargetMount.objects.filter(id__in=target_mount_ids)
+        )
+        installed_profiles = map(lambda host: host.server_profile_id, ManagedHost.objects.filter(id__in=host_ids))
+        if all(map(lambda name: name == "stratagem_server", installed_profiles)):
+            return {}
+
+        return {"__all__": "'stratagem_servers' profile must be installed on all MDT servers."}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
