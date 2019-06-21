@@ -82,7 +82,7 @@ def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     return pipe(
         [],
         partial(reduce, lambda out, cur: out + [(cur.get("name"), cur.get("counters"))], group_counters),
-        partial(filter, lambda xs: xs[0] != "warn_purge_times"),
+        partial(filter, lambda xs: xs[0] not in ["warn_fids", "purge_fids"]),
         partial(map, lambda xs, parse_fns=parse_fns: parse_fns[xs[0]](xs[1])),
         partial(flatten),
     )

@@ -4,7 +4,7 @@
 
 import logging
 import json
-from toolz.functoolz import pipe, partial
+from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
 
@@ -125,31 +125,42 @@ class RunStratagemStep(Step):
         purge_duration = args["purge_duration"]
 
         def _get_body(mount_point, report_duration, purge_duration):
-
-            rule_map = {"fids_expiring_soon": report_duration != None, "fids_expired": purge_duration != None}
-
-            warn_purge_times = {
-                "rules": filter(
-                    lambda rule, rule_map=rule_map: rule_map.get(rule.get("argument")),
-                    [
-                        {
-                            "action": "LAT_SHELL_CMD_FID",
-                            "expression": "< atime - sys_time {}".format(report_duration),
-                            "argument": "fids_expiring_soon",
-                        },
-                        {
-                            "action": "LAT_SHELL_CMD_FID",
-                            "expression": "< atime - sys_time {}".format(purge_duration),
-                            "argument": "fids_expired",
-                        },
-                    ],
-                ),
-                "name": "warn_purge_times",
+            rule_map = {
+                "fids_expiring_soon": report_duration != None and "warn_fids",
+                "fids_expired": purge_duration != None and "purge_fids",
             }
+
+            groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
+
+            additional_groups = filter(
+                lambda group, rule_map=rule_map: rule_map.get(group.get("rules")[0].get("argument")),
+                [
+                    {
+                        "name": "warn_fids",
+                        "rules": [
+                            {
+                                "action": "LAT_SHELL_CMD_FID",
+                                "expression": "< atime - sys_time {}".format(report_duration),
+                                "argument": "fids_expiring_soon",
+                            }
+                        ],
+                    },
+                    {
+                        "name": "purge_fids",
+                        "rules": [
+                            {
+                                "action": "LAT_SHELL_CMD_FID",
+                                "expression": "< atime - sys_time {}".format(purge_duration),
+                                "argument": "fids_expired",
+                            }
+                        ],
+                    },
+                ],
+            )
 
             return {
                 "dump_flist": False,
-                "device": {"path": path, "groups": ["size_distribution", "user_distribution", "warn_purge_times"]},
+                "device": {"path": path, "groups": groups},
                 "groups": [
                     {
                         "rules": [
@@ -172,8 +183,8 @@ class RunStratagemStep(Step):
                         "rules": [{"action": "LAT_ATTR_CLASSIFY", "expression": "1", "argument": "uid"}],
                         "name": "user_distribution",
                     },
-                    warn_purge_times,
-                ],
+                ]
+                + additional_groups,
             }
 
         def generate_output_from_results(result):
@@ -193,7 +204,7 @@ class StreamFidlistStep(Step):
         host = args["host"]
         unique_id = args["uuid"]
 
-        fid_dir, stratagem_result, mailbox_files = scan_result
+        _, stratagem_result, mailbox_files = scan_result
 
         # Send stratagem_results to time series database
         influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, stratagem_result)
@@ -321,22 +332,29 @@ class SendResultsToClientStep(Step):
                 (
                     purge_duration,
                     "action_purge_stratagem",
-                    (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expired")),
+                    (mount_point, "{}-{}".format(uuid, "purge_fids-fids_expired")),
                 ),
                 (
                     report_duration,
                     "action_warning_stratagem",
-                    (mount_point, "{}-{}".format(uuid, "warn_purge_times-fids_expiring_soon")),
+                    (mount_point, "{}-{}".format(uuid, "warn_fids-fids_expiring_soon")),
                 ),
             ]
             if duration is not None
         ]
 
-        results = map(lambda xs, host=host: self.invoke_rust_agent_expect_result(host, xs[0], xs[1]), action_list)
+        file_location = pipe(
+            action_list,
+            partial(map, lambda xs, host=host: self.invoke_rust_agent_expect_result(host, xs[0], xs[1])),
+            partial(filter, bool),
+            iter,
+            partial(flip, next, None),
+        )
 
-        self.log(u"\u2713 Scan results sent to client under:\n{}".format([r for r in results if r is not None][0]))
+        if file_location:
+            self.log(u"\u2713 Scan results sent to client under:\n{}".format(file_location))
 
-        return results
+        return file_location
 
 
 class SendStratagemResultsToClientJob(Job):
