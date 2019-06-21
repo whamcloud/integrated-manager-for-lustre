@@ -165,16 +165,12 @@ impl Counter for &StratagemCounters {
 /// Pre-cooked config. This is a V1
 /// thing, Future versions will expand to
 /// expose the whole config to the user.
-pub fn generate_cooked_config(path: String) -> StratagemConfig {
-    StratagemConfig {
+pub fn generate_cooked_config(path: String, rd: Option<u32>, pd: Option<u32>) -> StratagemConfig {
+    let mut conf = StratagemConfig {
         dump_flist: false,
         device: StratagemDevice {
             path,
-            groups: vec![
-                "size_distribution".into(),
-                "warn_purge_times".into(),
-                "user_distribution".into(),
-            ],
+            groups: vec!["size_distribution".into(), "user_distribution".into()],
         },
         groups: vec![
             StratagemGroup {
@@ -203,21 +199,6 @@ pub fn generate_cooked_config(path: String) -> StratagemConfig {
                 name: "size_distribution".into(),
             },
             StratagemGroup {
-                rules: vec![
-                    StratagemRule {
-                        action: "LAT_SHELL_CMD_FID".into(),
-                        expression: "< atime - sys_time 18000000".into(),
-                        argument: "fids_expiring_soon".into(),
-                    },
-                    StratagemRule {
-                        action: "LAT_SHELL_CMD_FID".into(),
-                        expression: "< atime - sys_time 5184000000".into(),
-                        argument: "fids_expired".into(),
-                    },
-                ],
-                name: "warn_purge_times".into(),
-            },
-            StratagemGroup {
                 rules: vec![StratagemRule {
                     action: "LAT_ATTR_CLASSIFY".into(),
                     expression: "1".into(),
@@ -226,7 +207,39 @@ pub fn generate_cooked_config(path: String) -> StratagemConfig {
                 name: "user_distribution".into(),
             },
         ],
+    };
+
+    if let Some(rd) = rd {
+        let name = "purge_fids";
+
+        conf.device.groups.push(name.into());
+
+        conf.groups.push(StratagemGroup {
+            name: name.into(),
+            rules: vec![StratagemRule {
+                action: "LAT_SHELL_CMD_FID".into(),
+                expression: format!("< atime - sys_time {}", rd),
+                argument: "fids_expired".into(),
+            }],
+        });
     }
+
+    if let Some(pd) = pd {
+        let name = "warn_fids";
+
+        conf.device.groups.push(name.into());
+
+        conf.groups.push(StratagemGroup {
+            name: name.into(),
+            rules: vec![StratagemRule {
+                action: "LAT_SHELL_CMD_FID".into(),
+                expression: format!("< atime - sys_time {}", pd),
+                argument: "fids_expiring_soon".into(),
+            }],
+        });
+    }
+
+    conf
 }
 
 type MailboxFiles = Vec<(PathBuf, String)>;
