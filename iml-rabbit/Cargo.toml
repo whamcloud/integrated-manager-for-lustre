@@ -10,5 +10,5 @@ tokio = "0.1"
 failure = "0.1.5"
 futures = "0.1"
 log = "0.4.6"
-iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.1.3" }
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
