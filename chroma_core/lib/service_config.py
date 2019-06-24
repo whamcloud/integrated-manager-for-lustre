@@ -508,7 +508,10 @@ class ServiceConfig(CommandLine):
 
     def _restart_pgsql(self):
         postgresql_service = ServiceControl.create("postgresql")
-        postgresql_service.restart()
+        if postgresql_service.running:
+            postgresql_service.reload()
+        else:
+            postgresql_service.start()
         postgresql_service.enable()
 
     def _setup_pgsql(self, database, check_db_space):
@@ -635,7 +638,7 @@ class ServiceConfig(CommandLine):
 
         else:
             log.info("Postgres already accessible")
-            self._config_pgsql_auth(database)
+            self._config_pgsql_auth(databases["default"])
             self._restart_pgsql()
 
         if error:
