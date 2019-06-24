@@ -9,8 +9,9 @@ use crate::{
     model::{record_to_composite_id_string, LockType, Locks, Record},
 };
 use seed::{
+    events::{mouse_ev, Ev},
     a, class,
-    dom_types::{mouse_ev, At, El, Ev, MessageMapper as _, UpdateEl},
+    dom_types::{At, El, MessageMapper as _, UpdateEl},
     li,
     prelude::{wasm_bindgen, Orders},
 };
@@ -135,7 +136,7 @@ fn view(
         .map_message(Msg::ActionDropdown)
 }
 
-fn window_events(model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
     if model.destroyed {
         return vec![];
     }

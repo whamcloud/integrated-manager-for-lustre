@@ -20,7 +20,8 @@ use crate::{
 };
 use cfg_if::cfg_if;
 use seed::{
-    dom_types::{mouse_ev, El, Ev, MessageMapper as _},
+    events::{mouse_ev, Ev},
+    dom_types::{El, MessageMapper as _},
     prelude::wasm_bindgen,
 };
 use wasm_bindgen::JsValue;
@@ -91,7 +92,7 @@ fn view(
     el
 }
 
-fn window_events(model: &Model) -> Vec<seed::dom_types::Listener<Msg>> {
+fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
     if model.destroyed {
         return vec![];
     }
