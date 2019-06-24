@@ -443,6 +443,7 @@ pub struct OstConfParams {
     ost_writethrough_cache_enable: Option<String>,
 }
 
+/// A Volume record from api/volume/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Volume {
     pub filesystem_type: String,
@@ -454,11 +455,11 @@ pub struct Volume {
     pub status: Option<String>,
     pub storage_resource: String,
     pub usable_for_lustre: bool,
-    pub volume_nodes: Vec<VolumeNodes>,
+    pub volume_nodes: Vec<VolumeNode>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct VolumeNodes {
+pub struct VolumeNode {
     pub host: String,
     pub host_id: u64,
     pub host_label: String,
