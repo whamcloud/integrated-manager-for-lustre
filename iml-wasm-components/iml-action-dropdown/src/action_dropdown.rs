@@ -3,9 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use seed::{
-    events::{mouse_ev, Ev},
     attrs, button, class, div,
     dom_types::{At, El, UpdateEl},
+    events::{mouse_ev, Ev},
     i, li,
     prelude::IndexMap,
     style, ul,

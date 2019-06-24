@@ -20,8 +20,8 @@ use crate::{
 };
 use cfg_if::cfg_if;
 use seed::{
-    events::{mouse_ev, Ev},
     dom_types::{El, MessageMapper as _},
+    events::{mouse_ev, Ev},
     prelude::wasm_bindgen,
 };
 use wasm_bindgen::JsValue;

@@ -9,9 +9,9 @@ use crate::{
     model::{record_to_composite_id_string, LockType, Locks, Record},
 };
 use seed::{
-    events::{mouse_ev, Ev},
     a, class,
     dom_types::{At, El, MessageMapper as _, UpdateEl},
+    events::{mouse_ev, Ev},
     li,
     prelude::{wasm_bindgen, Orders},
 };
