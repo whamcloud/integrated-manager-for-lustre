@@ -1,0 +1,12 @@
+[package]
+name = "iml-utils"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+regex = "1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+insta = "0.8.1"
