@@ -541,15 +541,15 @@ pub struct HsmControlParam {
 /// A Filesystem record from /api/filesystem/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Filesystem {
-    pub bytes_free: f64,
-    pub bytes_total: f64,
+    pub bytes_free: Option<f64>,
+    pub bytes_total: Option<f64>,
     pub cdt_mdt: String,
     pub cdt_status: Option<String>,
     pub client_count: f64,
     pub conf_params: FilesystemConfParams,
     pub content_type_id: u64,
-    pub files_free: f64,
-    pub files_total: f64,
+    pub files_free: Option<f64>,
+    pub files_total: Option<f64>,
     pub hsm_control_params: Vec<HsmControlParam>,
     pub id: u32,
     pub immutable_state: bool,
@@ -569,4 +569,69 @@ pub struct Filesystem {
 pub struct FilesystemShort {
     pub id: u32,
     pub name: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum AlertType {
+    AlertState,
+    LearnEvent,
+    AlertEvent,
+    SyslogEvent,
+    ClientConnectEvent,
+    CommandRunningAlert,
+    CommandSuccessfulAlert,
+    CommandCancelledAlert,
+    CommandErroredAlert,
+    CorosyncUnknownPeersAlert,
+    CorosyncToManyPeersAlert,
+    CorosyncNoPeersAlert,
+    CorosyncStoppedAlert,
+    StonithNotEnabledAlert,
+    PacemakerStoppedAlert,
+    HostContactAlert,
+    HostOfflineAlert,
+    HostRebootEvent,
+    UpdatesAvailableAlert,
+    TargetOfflineAlert,
+    TargetFailoverAlert,
+    TargetRecoveryAlert,
+    StorageResourceOffline,
+    StorageResourceAlert,
+    StorageResourceLearnEvent,
+    PowerControlDeviceUnavailableAlert,
+    IpmiBmcUnavailableAlert,
+    LNetOfflineAlert,
+    LNetNidsChangedAlert,
+    StratagemUnconfiguredAlert,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum AlertSeverity {
+    INFO,
+    DEBUG,
+    CRITICAL,
+    WARNING,
+    ERROR,
+}
+
+/// An Alert record from /api/alert/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Alert {
+    pub _message: Option<String>,
+    pub active: Option<bool>,
+    pub affected: Option<Vec<String>>,
+    pub alert_item: String,
+    pub alert_item_id: Option<i32>,
+    pub alert_item_str: String,
+    pub alert_type: String,
+    pub begin: String,
+    pub dismissed: bool,
+    pub end: Option<String>,
+    pub id: i32,
+    pub lustre_pid: Option<i32>,
+    pub message: String,
+    pub record_type: AlertType,
+    pub resource_uri: String,
+    pub severity: AlertSeverity,
+    pub variant: String,
 }
