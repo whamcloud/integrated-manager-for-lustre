@@ -17,6 +17,7 @@ pub enum ImlManagerClientError {
     InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
     UrlParseError(url::ParseError),
     SerdeJsonError(serde_json::error::Error),
+    RunStratagemValidationError(RunStratagemValidationError),
 }
 
 impl std::fmt::Display for ImlManagerClientError {
@@ -26,6 +27,7 @@ impl std::fmt::Display for ImlManagerClientError {
             ImlManagerClientError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlManagerClientError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlManagerClientError::SerdeJsonError(ref err) => write!(f, "{}", err),
+            ImlManagerClientError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -37,6 +39,7 @@ impl std::error::Error for ImlManagerClientError {
             ImlManagerClientError::InvalidHeaderValue(ref err) => Some(err),
             ImlManagerClientError::UrlParseError(ref err) => Some(err),
             ImlManagerClientError::SerdeJsonError(ref err) => Some(err),
+            ImlManagerClientError::RunStratagemValidationError(ref err) => Some(err),
         }
     }
 }
@@ -65,6 +68,12 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
     }
 }
 
+impl From<RunStratagemValidationError> for ImlManagerClientError {
+    fn from(err: RunStratagemValidationError) -> Self {
+        ImlManagerClientError::RunStratagemValidationError(err)
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum RunStratagemCommandResult {
@@ -73,7 +82,7 @@ pub enum RunStratagemCommandResult {
     FilesystemDoesNotExist,
     StratagemServerProfileNotInstalled,
     ServerError,
-    UnknownError
+    UnknownError,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -88,7 +97,7 @@ impl std::fmt::Display for RunStratagemValidationError {
     }
 }
 
-impl std::error::Error for  RunStratagemValidationError {
+impl std::error::Error for RunStratagemValidationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         None
     }
