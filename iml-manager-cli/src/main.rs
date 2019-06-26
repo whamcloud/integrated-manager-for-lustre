@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
+
 use iml_manager_cli::{
     api_utils,
     manager_cli_error::{
@@ -10,8 +11,10 @@ use iml_manager_cli::{
         RunStratagemValidationError,
     },
 };
+
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
+use reqwest as _;
 use spinners::{Spinner, Spinners};
 use std::{fmt::Display, process::exit};
 use structopt::StructOpt;
@@ -159,6 +162,22 @@ fn display_error(message: impl Display) {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct CmdWrapper {
     command: Command,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+enum RunStratagemCommandResult {
+    FilesystemRequired,
+    DurationOrderError,
+    FilesystemDoesNotExist,
+    StratagemServerProfileNotInstalled,
+    ServerError,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct ValidationMessage {
+    code: RunStratagemCommandResult,
+    message: String,
 }
 
 fn main() {
