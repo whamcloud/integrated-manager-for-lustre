@@ -2,10 +2,10 @@
 name = "iml-wire-types"
 description = "Shared types for the IML project"
 license = "MIT"
-version = "0.1.2"
+version = "0.1.4"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1.0.39"
+serde_json = "1.0"

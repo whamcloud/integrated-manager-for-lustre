@@ -217,15 +217,19 @@ class ServiceConfig(CommandLine):
                 log.error("firewall command failed:\n%s" % error)
                 raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
 
+        log.info("Disabling chrony if active")
+        chrony_service = ServiceControl.create("chronyd")
+        chrony_service.stop(validate_time=0.5)
+        chrony_service.disable()
+
         log.info("Restarting ntp")
         ntp_service = ServiceControl.create("ntpd")
-
+        ntp_service.enable()
         error = ntp_service.restart()
+
         if error:
             log.error(error)
             raise RuntimeError(error)
-
-        ntp_service.enable()
 
     def _rabbit_configured(self):
         # Data message should be forwarded to AMQP
@@ -432,7 +436,7 @@ class ServiceConfig(CommandLine):
                 else:
                     error = controller.reload()
             else:
-                error = controller.start()
+                error = controller.start(validate_time=0.5)
             if error:
                 log.error(error)
                 raise RuntimeError(error)
@@ -442,7 +446,7 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             controller = ServiceControl.create(service)
 
-            error = controller.stop()
+            error = controller.stop(validate_time=0.5)
             if error:
                 log.error(error)
                 raise RuntimeError(error)
@@ -851,9 +855,7 @@ proxy=_none_
 
     @staticmethod
     def _service_config(interesting_services=None):
-        """Interrogate the current status of services, it should be noted that el7 calls to
-        systemctl through ServiceControl will redirect to chkconfig if the specified service is
-        not native (SysV style init as opposed to systemd unit init file)
+        """Interrogate the current status of services
         """
         log.info("Checking service configuration...")
 

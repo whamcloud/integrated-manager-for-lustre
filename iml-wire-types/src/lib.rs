@@ -305,7 +305,7 @@ pub struct Host {
     pub corosync_configuration: String,
     pub corosync_ring0: String,
     pub fqdn: String,
-    pub id: u64,
+    pub id: u32,
     pub immutable_state: bool,
     pub install_method: String,
     pub label: String,
@@ -350,9 +350,288 @@ pub struct Command {
     pub complete: bool,
     pub created_at: String,
     pub errored: bool,
-    pub id: u64,
+    pub id: u32,
     pub jobs: Vec<String>,
     pub logs: String,
     pub message: String,
     pub resource_uri: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct FilesystemConfParams {
+    #[serde(rename = "llite.max_cached_mb")]
+    pub llite_max_cached_mb: Option<String>,
+    #[serde(rename = "llite.max_read_ahead_mb")]
+    pub llite_max_read_ahead_mb: Option<String>,
+    #[serde(rename = "llite.max_read_ahead_whole_mb")]
+    pub llite_max_read_ahead_whole_mb: Option<String>,
+    #[serde(rename = "llite.statahead_max")]
+    pub llite_statahead_max: Option<String>,
+    #[serde(rename = "sys.at_early_margin")]
+    pub sys_at_early_margin: Option<String>,
+    #[serde(rename = "sys.at_extra")]
+    pub sys_at_extra: Option<String>,
+    #[serde(rename = "sys.at_history")]
+    pub sys_at_history: Option<String>,
+    #[serde(rename = "sys.at_max")]
+    pub sys_at_max: Option<String>,
+    #[serde(rename = "sys.at_min")]
+    pub sys_at_min: Option<String>,
+    #[serde(rename = "sys.ldlm_timeout")]
+    pub sys_ldlm_timeout: Option<String>,
+    #[serde(rename = "sys.timeout")]
+    pub sys_timeout: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+pub struct MdtConfParams {
+    #[serde(rename = "lov.qos_prio_free")]
+    lov_qos_prio_free: Option<String>,
+    #[serde(rename = "lov.qos_threshold_rr")]
+    lov_qos_threshold_rr: Option<String>,
+    #[serde(rename = "lov.stripecount")]
+    lov_stripecount: Option<String>,
+    #[serde(rename = "lov.stripesize")]
+    lov_stripesize: Option<String>,
+    #[serde(rename = "mdt.MDS.mds.threads_max")]
+    mdt_mds_mds_threads_max: Option<String>,
+    #[serde(rename = "mdt.MDS.mds.threads_min")]
+    mdt_mds_mds_threads_min: Option<String>,
+    #[serde(rename = "mdt.MDS.mds_readpage.threads_max")]
+    mdt_mds_mds_readpage_threads_max: Option<String>,
+    #[serde(rename = "mdt.MDS.mds_readpage.threads_min")]
+    mdt_mds_mds_readpage_threads_min: Option<String>,
+    #[serde(rename = "mdt.MDS.mds_setattr.threads_max")]
+    mdt_mds_mds_setattr_threads_max: Option<String>,
+    #[serde(rename = "mdt.MDS.mds_setattr.threads_min")]
+    mdt_mds_mds_setattr_threads_min: Option<String>,
+    #[serde(rename = "mdt.hsm_control")]
+    mdt_hsm_control: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+pub struct OstConfParams {
+    #[serde(rename = "osc.active")]
+    osc_active: Option<String>,
+    #[serde(rename = "osc.max_dirty_mb")]
+    osc_max_dirty_mb: Option<String>,
+    #[serde(rename = "osc.max_pages_per_rpc")]
+    osc_max_pages_per_rpc: Option<String>,
+    #[serde(rename = "osc.max_rpcs_in_flight")]
+    osc_max_rpcs_in_flight: Option<String>,
+    #[serde(rename = "ost.OSS.ost.threads_max")]
+    ost_oss_ost_threads_max: Option<String>,
+    #[serde(rename = "ost.OSS.ost.threads_min")]
+    ost_oss_ost_threads_min: Option<String>,
+    #[serde(rename = "ost.OSS.ost_create.threads_max")]
+    ost_oss_ost_create_threads_max: Option<String>,
+    #[serde(rename = "ost.OSS.ost_create.threads_min")]
+    ost_oss_ost_create_threads_min: Option<String>,
+    #[serde(rename = "ost.OSS.ost_io.threads_max")]
+    ost_oss_ost_io_threads_max: Option<String>,
+    #[serde(rename = "ost.OSS.ost_io.threads_min")]
+    ost_oss_ost_io_threads_min: Option<String>,
+    #[serde(rename = "ost.read_cache_enable")]
+    ost_read_cache_enable: Option<String>,
+    #[serde(rename = "ost.readcache_max_filesize")]
+    ost_readcache_max_filesize: Option<String>,
+    #[serde(rename = "ost.sync_journal")]
+    ost_sync_journal: Option<String>,
+    #[serde(rename = "ost.sync_on_lock_cancel")]
+    ost_sync_on_lock_cancel: Option<String>,
+    #[serde(rename = "ost.writethrough_cache_enable")]
+    ost_writethrough_cache_enable: Option<String>,
+}
+
+/// A Volume record from api/volume/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Volume {
+    pub filesystem_type: String,
+    pub id: u32,
+    pub kind: String,
+    pub label: String,
+    pub resource_uri: String,
+    pub size: String,
+    pub status: Option<String>,
+    pub storage_resource: String,
+    pub usable_for_lustre: bool,
+    pub volume_nodes: Vec<VolumeNode>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct VolumeNode {
+    pub host: String,
+    pub host_id: u64,
+    pub host_label: String,
+    pub id: u32,
+    pub path: String,
+    pub primary: bool,
+    pub resource_uri: String,
+    #[serde(rename = "use")]
+    pub _use: bool,
+    pub volume_id: i64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum TargetConfParam {
+    MdtConfParam(MdtConfParams),
+    OstConfParam(OstConfParams),
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum VolumeOrResourceUri {
+    ResourceUri(String),
+    Volume(Volume),
+}
+
+/// A Target record from /api/target/
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct Target<T> {
+    pub active_host: Option<String>,
+    pub active_host_name: String,
+    pub conf_params: Option<T>,
+    pub content_type_id: u32,
+    pub failover_server_name: String,
+    pub failover_servers: Vec<String>,
+    pub filesystem: Option<String>,
+    pub filesystem_id: Option<u32>,
+    pub filesystem_name: Option<String>,
+    pub filesystems: Option<Vec<FilesystemShort>>,
+    pub ha_label: Option<String>,
+    pub id: u32,
+    pub immutable_state: bool,
+    pub index: Option<u32>,
+    pub inode_count: Option<String>,
+    pub inode_size: Option<u32>,
+    pub kind: String,
+    pub label: String,
+    pub name: String,
+    pub primary_server: String,
+    pub primary_server_name: String,
+    pub resource_uri: String,
+    pub state: String,
+    pub state_modified_at: String,
+    pub uuid: Option<String>,
+    pub volume: VolumeOrResourceUri,
+    pub volume_name: String,
+}
+
+type Mdt = Target<MdtConfParams>;
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct HsmControlParamMdt {
+    pub id: String,
+    pub kind: String,
+    pub resource: String,
+    pub conf_params: MdtConfParams,
+}
+
+/// HsmControlParams used for hsm actions
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct HsmControlParam {
+    pub long_description: String,
+    pub param_key: String,
+    pub param_value: String,
+    pub verb: String,
+    pub mdt: HsmControlParamMdt,
+}
+
+/// A Filesystem record from /api/filesystem/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Filesystem {
+    pub bytes_free: Option<f64>,
+    pub bytes_total: Option<f64>,
+    pub cdt_mdt: String,
+    pub cdt_status: Option<String>,
+    pub client_count: f64,
+    pub conf_params: FilesystemConfParams,
+    pub content_type_id: u64,
+    pub files_free: Option<f64>,
+    pub files_total: Option<f64>,
+    pub hsm_control_params: Vec<HsmControlParam>,
+    pub id: u32,
+    pub immutable_state: bool,
+    pub label: String,
+    pub mdts: Vec<Mdt>,
+    pub mgt: String,
+    pub mount_command: String,
+    pub mount_path: String,
+    pub name: String,
+    pub osts: Vec<String>,
+    pub resource_uri: String,
+    pub state: String,
+    pub state_modified_at: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct FilesystemShort {
+    pub id: u32,
+    pub name: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum AlertType {
+    AlertState,
+    LearnEvent,
+    AlertEvent,
+    SyslogEvent,
+    ClientConnectEvent,
+    CommandRunningAlert,
+    CommandSuccessfulAlert,
+    CommandCancelledAlert,
+    CommandErroredAlert,
+    CorosyncUnknownPeersAlert,
+    CorosyncToManyPeersAlert,
+    CorosyncNoPeersAlert,
+    CorosyncStoppedAlert,
+    StonithNotEnabledAlert,
+    PacemakerStoppedAlert,
+    HostContactAlert,
+    HostOfflineAlert,
+    HostRebootEvent,
+    UpdatesAvailableAlert,
+    TargetOfflineAlert,
+    TargetFailoverAlert,
+    TargetRecoveryAlert,
+    StorageResourceOffline,
+    StorageResourceAlert,
+    StorageResourceLearnEvent,
+    PowerControlDeviceUnavailableAlert,
+    IpmiBmcUnavailableAlert,
+    LNetOfflineAlert,
+    LNetNidsChangedAlert,
+    StratagemUnconfiguredAlert,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub enum AlertSeverity {
+    INFO,
+    DEBUG,
+    CRITICAL,
+    WARNING,
+    ERROR,
+}
+
+/// An Alert record from /api/alert/
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Alert {
+    pub _message: Option<String>,
+    pub active: Option<bool>,
+    pub affected: Option<Vec<String>>,
+    pub alert_item: String,
+    pub alert_item_id: Option<i32>,
+    pub alert_item_str: String,
+    pub alert_type: String,
+    pub begin: String,
+    pub dismissed: bool,
+    pub end: Option<String>,
+    pub id: i32,
+    pub lustre_pid: Option<i32>,
+    pub message: String,
+    pub record_type: AlertType,
+    pub resource_uri: String,
+    pub severity: AlertSeverity,
+    pub variant: String,
 }

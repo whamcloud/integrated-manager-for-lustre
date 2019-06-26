@@ -227,7 +227,14 @@ pub fn rmfids(
 ) -> Result<(), LiblustreError> {
     // @TODO replace with sys::llapi_rmfid once LU-12090 lands
     for fidstr in fidlist {
-        rmfid(&mntpt, &fidstr)?;
+        rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
+            log::error!(
+                "Couldn't remove fid {} with mountpoint {}: {}.",
+                fidstr,
+                mntpt,
+                x
+            )
+        });
     }
 
     Ok(())

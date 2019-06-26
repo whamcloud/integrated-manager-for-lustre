@@ -1,13 +1,13 @@
 [package]
-name = "iml-sleep"
+name = "iml-environment"
 version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
 seed = "=0.3.7"
-futures = "0.1"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
+web-sys = "0.3"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

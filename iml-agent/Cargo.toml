@@ -37,7 +37,7 @@ url = "1.7.2"
 v_hist = "0.1.1"
 uuid = { version = "0.7", features = ["v4"] }
 parking_lot = "0.8"
-iml-wire-types = { path = "../iml-wire-types", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.1.4" }
 liblustreapi = { path = "../liblustreapi", version = "0.1" }
 iml-fs = { path = "../iml-fs", version = "0.1.0" }
 stream-lines = { git = "https://github.com/softprops/stream-lines" }

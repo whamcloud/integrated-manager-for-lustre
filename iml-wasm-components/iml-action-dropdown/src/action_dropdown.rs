@@ -4,7 +4,8 @@
 
 use seed::{
     attrs, button, class, div,
-    dom_types::{mouse_ev, At, El, Ev, UpdateEl},
+    dom_types::{At, El, UpdateEl},
+    events::{mouse_ev, Ev},
     i, li,
     prelude::IndexMap,
     style, ul,
