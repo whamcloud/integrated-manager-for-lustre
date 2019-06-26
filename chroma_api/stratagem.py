@@ -45,7 +45,7 @@ class RunStratagemValidation(Validation):
         ):
             return {
                 "code": "filesystem_does_not_exist",
-                "message": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id")),
+                "message": "Filesystem {} does not exist.".format(fs_identifier),
             }
 
         fs_id = filter(
