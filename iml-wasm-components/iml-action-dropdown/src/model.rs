@@ -128,8 +128,8 @@ pub fn records_to_map(xs: Records) -> RecordMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{LockAction, Record};
-    use iml_wire_types::ActionArgs;
+    use crate::model::Record;
+    use iml_wire_types::{ActionArgs, LockAction};
     use insta::assert_debug_snapshot_matches;
     use std::collections::HashMap;
 
