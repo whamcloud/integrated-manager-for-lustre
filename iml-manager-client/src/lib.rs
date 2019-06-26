@@ -65,6 +65,35 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStratagemCommandResult {
+    FilesystemRequired,
+    DurationOrderError,
+    FilesystemDoesNotExist,
+    StratagemServerProfileNotInstalled,
+    ServerError,
+    UnknownError
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct RunStratagemValidationError {
+    pub code: RunStratagemCommandResult,
+    pub message: String,
+}
+
+impl std::fmt::Display for RunStratagemValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for  RunStratagemValidationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
 /// Get a client that is able to make authenticated requests
 /// against the API
 pub fn get_client() -> Result<Client, ImlManagerClientError> {
