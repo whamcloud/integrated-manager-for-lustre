@@ -3,12 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
+
 use iml_manager_cli::{
     api_utils,
     manager_cli_error::{DurationParseError, ImlManagerCliError},
 };
+
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
+use reqwest as _;
 use spinners::{Spinner, Spinners};
 use std::process::exit;
 use structopt::StructOpt;
@@ -148,6 +151,22 @@ struct CmdWrapper {
     command: Command,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+enum RunStratagemCommandResult {
+    FilesystemRequired,
+    DurationOrderError,
+    FilesystemDoesNotExist,
+    StratagemServerProfileNotInstalled,
+    ServerError,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct ValidationMessage {
+    code: RunStratagemCommandResult,
+    message: String,
+}
+
 fn main() {
     env_logger::builder().default_format_timestamp(false).init();
 
@@ -172,20 +191,60 @@ fn main() {
                             purge_duration: pd
                         }),
                     )
+                    .and_then(|resp| iml_manager_client::concat_body(resp))
+                    .map(|(resp, chunk)| {
+                        let status = resp.status();
+                        match status.as_u16() {
+                            200...299 => Ok(serde_json::from_slice::<CmdWrapper>(&chunk)
+                                .expect("Couldn't parse CmdWrapper.")),
+                            400...499 => {
+                                let validation_message: ValidationMessage =
+                                    serde_json::from_slice(&chunk).expect("Could not parse chunk.");
+
+                                Err(validation_message)
+                            }
+                            _ => Err(ValidationMessage {
+                                code: RunStratagemCommandResult::ServerError,
+                                message: "Internal server error.".to_string(),
+                            }),
+                        }
+                    })
                 };
 
-                let CmdWrapper { command }: CmdWrapper = run_cmd(fut).expect("Could not run cmd");
+                let command: Result<CmdWrapper, ValidationMessage> =
+                    run_cmd(fut).expect("Could not run command.");
 
-                let stop_spinner = start_spinner(&command.message);
+                match command {
+                    Ok(CmdWrapper { command }) => {
+                        let stop_spinner = start_spinner(&command.message);
 
-                let command =
-                    run_cmd(api_utils::wait_for_cmd(command)).expect("Could not poll command");
+                        let command = run_cmd(api_utils::wait_for_cmd(command))
+                            .expect("Could not poll command");
 
-                stop_spinner(None);
+                        stop_spinner(None);
 
-                display_cmd_state(&command);
+                        display_cmd_state(&command);
 
-                exit(exitcode::OK)
+                        exit(exitcode::OK)
+                    }
+                    Err(validation_message) => {
+                        let command = Command {
+                            cancelled: false,
+                            complete: false,
+                            created_at: "".to_string(),
+                            errored: true,
+                            id: 0,
+                            jobs: vec![],
+                            message: validation_message.message,
+                            logs: "".to_string(),
+                            resource_uri: "".to_string(),
+                        };
+
+                        display_cmd_state(&command);
+
+                        exit(exitcode::CANTCREAT)
+                    }
+                }
             }
         },
         App::Server { command } => match command {
