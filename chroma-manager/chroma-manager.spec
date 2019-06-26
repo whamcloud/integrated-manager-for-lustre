@@ -132,6 +132,7 @@ Obsoletes: nodejs-zeparser
 Obsoletes: django-celery
 Obsoletes: django-tastypie
 Obsoletes: python2-dse
+Obsoletes: Django-south
 
 %description
 This is the Integrated Manager for Lustre Monitoring and Administration Interface
