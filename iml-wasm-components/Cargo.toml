@@ -1,5 +1,11 @@
 [workspace]
-members = ['iml-wasm', 'iml-action-dropdown', 'iml-tooltip', 'iml-sleep']
+members = [
+    'iml-wasm',
+    'iml-action-dropdown',
+    'iml-tooltip',
+    'iml-sleep',
+    'iml-popover'
+]
 
 [profile.release]
 opt-level = "z"
