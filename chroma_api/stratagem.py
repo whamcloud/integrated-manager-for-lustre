@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
+from toolz.functoolz import pipe
 
 import tastypie.http as http
 
@@ -57,14 +58,15 @@ class RunStratagemValidation(Validation):
         host_ids = map(
             lambda target_mount: target_mount.host_id, ManagedTargetMount.objects.filter(id__in=target_mount_ids)
         )
+        host_ids = pipe(host_ids, set, list)
         installed_profiles = map(lambda host: host.server_profile_id, ManagedHost.objects.filter(id__in=host_ids))
-        if all(map(lambda name: name == "stratagem_server", installed_profiles)):
-            return {}
+        if not all(map(lambda name: name == "stratagem_server", installed_profiles)):
+            return {
+                "code": "stratagem_server_profile_not_installed",
+                "message": "'stratagem_servers' profile must be installed on all MDT servers.",
+            }
 
-        return {
-            "code": "stratagem_server_profile_not_installed",
-            "message": "'stratagem_servers' profile must be installed on all MDT servers.",
-        }
+        return {}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
