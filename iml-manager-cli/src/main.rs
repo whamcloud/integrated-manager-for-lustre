@@ -3,15 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use futures::Future;
-
 use iml_manager_cli::{
     api_utils,
     manager_cli_error::{DurationParseError, ImlManagerCliError},
 };
-
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
-use reqwest as _;
 use spinners::{Spinner, Spinners};
 use std::process::exit;
 use structopt::StructOpt;
@@ -132,39 +129,30 @@ fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
     }
 }
 
-fn display_cmd_state(cmd: &Command) {
+fn display_cmd_state(cmd: &Result<Command, iml_manager_client::RunStratagemValidationError>) {
     let green = termion::color::Fg(termion::color::Green);
     let red = termion::color::Fg(termion::color::Red);
     let reset = termion::color::Fg(termion::color::Reset);
 
-    if cmd.errored {
-        println!("{}✗{} {} errored", red, reset, cmd.message);
-    } else if cmd.cancelled {
-        println!("🚫 {} cancelled", cmd.message);
-    } else if cmd.complete {
-        println!("{}✔{} {} successful", green, reset, cmd.message);
+    match cmd {
+        Ok(cmd) => {
+            if cmd.errored {
+                println!("{}✗{} {} errored", red, reset, cmd.message);
+            } else if cmd.cancelled {
+                println!("🚫 {} cancelled", cmd.message);
+            } else if cmd.complete {
+                println!("{}✔{} {} successful", green, reset, cmd.message);
+            }
+        }
+        Err(validation_error) => {
+            println!("{}✗{} {} errored", red, reset, validation_error);
+        }
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct CmdWrapper {
     command: Command,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
-enum RunStratagemCommandResult {
-    FilesystemRequired,
-    DurationOrderError,
-    FilesystemDoesNotExist,
-    StratagemServerProfileNotInstalled,
-    ServerError,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct ValidationMessage {
-    code: RunStratagemCommandResult,
-    message: String,
 }
 
 fn main() {
@@ -192,26 +180,30 @@ fn main() {
                         }),
                     )
                     .and_then(|resp| iml_manager_client::concat_body(resp))
-                    .map(|(resp, chunk)| {
+                    .map(|(resp, body)| {
                         let status = resp.status();
-                        match status.as_u16() {
-                            200...299 => Ok(serde_json::from_slice::<CmdWrapper>(&chunk)
-                                .expect("Couldn't parse CmdWrapper.")),
-                            400...499 => {
-                                let validation_message: ValidationMessage =
-                                    serde_json::from_slice(&chunk).expect("Could not parse chunk.");
+                        if status.is_success() {
+                            Ok(serde_json::from_slice::<CmdWrapper>(&body).expect("Couldn't parse CmdWrapper."))
+                        } else if status.is_client_error() {
+                            let validation_message: iml_manager_client::RunStratagemValidationError =
+                                    serde_json::from_slice(&body).expect("Could not parse chunk.");
 
-                                Err(validation_message)
-                            }
-                            _ => Err(ValidationMessage {
-                                code: RunStratagemCommandResult::ServerError,
+                            Err(validation_message)
+                        } else if status.is_server_error() {
+                            Err(iml_manager_client::RunStratagemValidationError {
+                                code: iml_manager_client::RunStratagemCommandResult::ServerError,
                                 message: "Internal server error.".to_string(),
-                            }),
+                            })
+                        } else {
+                            Err(iml_manager_client::RunStratagemValidationError {
+                                code: iml_manager_client::RunStratagemCommandResult::UnknownError,
+                                message: "Unknown error.".to_string(),
+                            })
                         }
                     })
                 };
 
-                let command: Result<CmdWrapper, ValidationMessage> =
+                let command: Result<CmdWrapper, iml_manager_client::RunStratagemValidationError> =
                     run_cmd(fut).expect("Could not run command.");
 
                 match command {
@@ -223,24 +215,12 @@ fn main() {
 
                         stop_spinner(None);
 
-                        display_cmd_state(&command);
+                        display_cmd_state(&Ok(command));
 
                         exit(exitcode::OK)
                     }
                     Err(validation_message) => {
-                        let command = Command {
-                            cancelled: false,
-                            complete: false,
-                            created_at: "".to_string(),
-                            errored: true,
-                            id: 0,
-                            jobs: vec![],
-                            message: validation_message.message,
-                            logs: "".to_string(),
-                            resource_uri: "".to_string(),
-                        };
-
-                        display_cmd_state(&command);
+                        display_cmd_state(&Err(validation_message));
 
                         exit(exitcode::CANTCREAT)
                     }
