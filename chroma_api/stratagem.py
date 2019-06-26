@@ -30,9 +30,9 @@ class RunStratagemValidation(Validation):
         report_duration = bundle.data.get("report_duration")
 
         if "filesystem" not in bundle.data:
-            return {"__all__": "filesystem required when running stratagem."}
+            return {"code": "filesystem_required", "message": "filesystem required when running stratagem."}
         elif isinstance(purge_duration, int) and isinstance(report_duration, int) and report_duration >= purge_duration:
-            return {"__all__": "Report duration must be less than purge duration."}
+            return {"code": "duration_order_error", "message": "Report duration must be less than purge duration."}
 
         fs_identifier = str(bundle.data.get("filesystem"))
 
@@ -42,7 +42,10 @@ class RunStratagemValidation(Validation):
                 ManagedFilesystem.objects.values("id", "name"),
             )
         ):
-            return {"__all__": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id"))}
+            return {
+                "code": "filesystem_does_not_exist",
+                "message": "Filesystem {} does not exist.".format(bundle.data.get("filesystem_id")),
+            }
 
         fs_id = filter(
             lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
@@ -58,7 +61,10 @@ class RunStratagemValidation(Validation):
         if all(map(lambda name: name == "stratagem_server", installed_profiles)):
             return {}
 
-        return {"__all__": "'stratagem_servers' profile must be installed on all MDT servers."}
+        return {
+            "code": "stratagem_server_profile_not_installed",
+            "message": "'stratagem_servers' profile must be installed on all MDT servers.",
+        }
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):

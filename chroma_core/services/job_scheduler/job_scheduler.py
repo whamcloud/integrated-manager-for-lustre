@@ -1822,6 +1822,7 @@ class JobScheduler(object):
         client_mount = LustreClientMount.objects.get(host_id=client_host.id)
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
+        client_mount.filesystem_id = filesystem.id
         client_mount.save()
 
         run_stratagem_list.append(
