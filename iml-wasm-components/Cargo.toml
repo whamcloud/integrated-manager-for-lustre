@@ -1,6 +1,7 @@
 [workspace]
 members = [
     'iml-wasm',
+    'iml-alert-indicator',
     'iml-action-dropdown',
     'iml-tooltip',
     'iml-sleep',

@@ -1,0 +1,12 @@
+[package]
+name = "iml-alert-indicator"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+seed = "=0.3.7"
+log = "0.4"
+iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
+iml-wire-types = "0.1.4"
+iml-popover = { path = "../iml-popover", version = "0.1" }
