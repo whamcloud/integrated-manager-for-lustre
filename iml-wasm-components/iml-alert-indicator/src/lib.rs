@@ -5,7 +5,7 @@
 use iml_popover::{popover, popover_content, popover_title};
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
 use iml_wire_types::Alert;
-use seed::{class, events::mouse_ev, i, li, prelude::*, span, ul};
+use seed::{class, events::mouse_ev, i, li, prelude::*, span, style, ul};
 use std::collections::HashMap;
 
 fn get_message(alerts: &[&Alert]) -> String {
@@ -103,6 +103,8 @@ pub fn alert_indicator(
         })
         .collect();
 
+    let msg = get_message(&alerts);
+
     span![
         class!["record-state"],
         span![
@@ -131,7 +133,7 @@ pub fn alert_indicator(
                 ]
             },
             tooltip(
-                &get_message(&alerts),
+                &msg,
                 &iml_tooltip::Model {
                     placement: TooltipPlacement::Top,
                     size: if alerts.is_empty() {
@@ -142,6 +144,11 @@ pub fn alert_indicator(
                     ..Default::default()
                 }
             )
+        ],
+        span![
+            class!["state-label"],
+            style! { "padding-left" => "10px" },
+            &msg
         ]
     ]
 }
