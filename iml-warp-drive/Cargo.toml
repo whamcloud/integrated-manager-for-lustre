@@ -10,8 +10,7 @@ futures = "0.1"
 tokio = "0.1"
 env_logger = "0.6.1"
 log = "0.4.6"
-serde = "1.0"
-serde_derive = "1.0"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 failure = "0.1.5"
 uuid = { version = "0.7", features = ["v4"] }
@@ -19,3 +18,4 @@ warp = "0.1"
 parking_lot = "0.8"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.1" }

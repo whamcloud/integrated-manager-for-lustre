@@ -267,7 +267,7 @@ dependencies = [
  "futures 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-sleep 0.1.0",
  "iml-tooltip 0.1.0",
- "iml-wire-types 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iml-wire-types 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "js-sys 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -285,7 +285,7 @@ version = "0.1.0"
 dependencies = [
  "iml-popover 0.1.0",
  "iml-tooltip 0.1.0",
- "iml-wire-types 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "iml-wire-types 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -329,7 +329,7 @@ dependencies = [
 
 [[package]]
 name = "iml-wire-types"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.93 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1103,7 +1103,7 @@ dependencies = [
 "checksum generic-array 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
 "checksum getopts 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)" = "72327b15c228bfe31f1390f93dd5e9279587f0463836393c9df719ce62a3e450"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
-"checksum iml-wire-types 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8fc029c387b5c05178e1a782e6b002309a53c1aa99e45a074f6477643c2d444a"
+"checksum iml-wire-types 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a1b158926ddad003744d6444e41581c058b20af14fbb355e9e44e5c75adea483"
 "checksum indexmap 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7e81a7c05f79578dbc15793d8b619db9ba32b4577003ef3af1a91c416798c58d"
 "checksum insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8bbbb69ec4557c37b2bf4d525d106d828e0c2fbd6c44bc98cd3798da13c73b9f"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"
