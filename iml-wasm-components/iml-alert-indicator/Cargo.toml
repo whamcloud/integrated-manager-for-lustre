@@ -6,18 +6,7 @@ edition = "2018"
 
 [dependencies]
 seed = "=0.3.7"
-serde = { version = "1", features = ['derive'] }
-serde_json = "1.0"
-futures = "0.1"
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
-web-sys = { version = "0.3", features = ["CustomEvent", "CustomEventInit", "Event", "EventTarget", "Element"]}
-js-sys = "0.3"
 log = "0.4"
 iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
 iml-wire-types = "0.1.4"
 iml-popover = { path = "../iml-popover", version = "0.1" }
-
-
-[dev-dependencies]
-wasm-bindgen-test = "0.2"
-insta = "0.8.1"
