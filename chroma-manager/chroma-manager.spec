@@ -74,18 +74,18 @@ Requires(post): selinux-policy-targeted
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: django-picklefield >= 0.1.9
 Requires: iml_sos_plugin >= 2.2.0
-Requires: iml-gui >= 6.3.3
+Requires: iml-gui >= 6.5.1
 Requires: iml-old-gui >= 3.1.2
-Requires: iml-online-help >= 2.5.2
+Requires: iml-online-help >= 2.5.4
 Requires: iml-realtime >= 7.0.1
 Requires: iml-socket-worker >= 4.0.2
 Requires: iml-srcmap-reverse >= 3.0.6
 Requires: iml-view-server >= 8.0.4
 Requires: iml-wasm-components >= 0.1.0
-Requires: python2-gevent >= 1.0
+Requires: python2-gevent >= 1.0.1
 Requires: python2-httpagentparser >= 1.5
 Requires: python2-jsonschema < 0.9.0
-Requires: python2-massiviu >= 0.1
+Requires: python2-massiviu >= 0.1.0-2
 Requires: rust-iml-warp-drive >= 0.1.1
 
 Conflicts: chroma-agent
