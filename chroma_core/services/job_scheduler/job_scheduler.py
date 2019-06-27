@@ -36,7 +36,7 @@ from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
 from chroma_core.models import StepResult
-from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
+from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration, get_fs_id_from_identifier
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
@@ -1763,10 +1763,10 @@ class JobScheduler(object):
 
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
             fs_identifier = str(configuration_data.get("filesystem_id"))
-            fs_id = filter(
-                lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-                ManagedFilesystem.objects.values("id", "name"),
-            )[0].get("id")
+            fs_id = get_fs_id_from_identifier(fs_identifier)
+
+            if not fs_id:
+                return None
 
             configuration_data["filesystem_id"] = fs_id
 

@@ -20,6 +20,7 @@ from chroma_core.models import (
     ManagedTargetMount,
     ManagedFilesystem,
     Command,
+    get_fs_id_from_identifier,
 )
 
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -36,22 +37,12 @@ class RunStratagemValidation(Validation):
             return {"code": "duration_order_error", "message": "Report duration must be less than purge duration."}
 
         fs_identifier = str(bundle.data.get("filesystem"))
-
-        if not any(
-            map(
-                lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-                ManagedFilesystem.objects.values("id", "name"),
-            )
-        ):
+        fs_id = get_fs_id_from_identifier(fs_identifier)
+        if not fs_id:
             return {
                 "code": "filesystem_does_not_exist",
                 "message": "Filesystem {} does not exist.".format(fs_identifier),
             }
-
-        fs_id = filter(
-            lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-            ManagedFilesystem.objects.values("id", "name"),
-        )[0].get("id")
 
         # Each MDT associated with the fielsystem must be installed on a server that has the stratagem profile installed
         target_mount_ids = map(lambda mdt: mdt.active_mount_id, ManagedMdt.objects.filter(filesystem_id=fs_id))
@@ -128,10 +119,7 @@ class RunStratagemResource(Resource):
     @validate
     def obj_create(self, bundle, **kwargs):
         fs_identifier = str(bundle.data.get("filesystem"))
-        fs_id = filter(
-            lambda x: str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier,
-            ManagedFilesystem.objects.values("id", "name"),
-        )[0].get("id")
+        fs_id = get_fs_id_from_identifier(fs_identifier)
 
         mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
 
