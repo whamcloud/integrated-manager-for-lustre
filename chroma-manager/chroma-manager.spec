@@ -45,7 +45,7 @@ Requires: createrepo
 Requires: fence-agents
 Requires: fence-agents-virsh
 Requires: nginx >= 1:1.11.6
-Requires: nodejs >= 1:6.9.4-2
+Requires: nodejs = 1:6.14.2-1
 Requires: ntp
 Requires: system-config-firewall-base
 Requires: policycoreutils-python
