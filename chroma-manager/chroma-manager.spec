@@ -65,7 +65,7 @@ Requires: python2-kombu >= 3.0.19
 Requires: python2-mimeparse
 Requires: python2-toolz
 Requires: python-psycopg2
- Requires: rabbitmq-server >= 3.3.5
+Requires: rabbitmq-server >= 3.3.5
 Requires: Django >= 1.6, Django < 1.7
 Requires: Django-south >= 1.0.2
 Requires: python2-django-tastypie = 0.12.2
