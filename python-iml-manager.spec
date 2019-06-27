@@ -92,7 +92,7 @@ Requires:       iml-realtime >= 7.0.1
 Requires:       iml_sos_plugin >= 2.3
 Requires:       iml-socket-worker >= 4.0.3
 Requires:       iml-srcmap-reverse >= 3.0.8
-Requires:       iml-update-handler < 2
+Requires:       iml-update-handler >= 1.0.2, iml-update-handler < 2
 Requires:       iml-view-server >= 8.0.4
 Requires:       iml-wasm-components >= 0.1.0
 Requires:       python2-dateutil >= 1.5
