@@ -129,25 +129,25 @@ fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
     }
 }
 
-fn display_cmd_state(cmd: &Result<Command, iml_manager_client::ImlManagerClientError>) {
+fn display_cmd_state(cmd: &Command) {
     let green = termion::color::Fg(termion::color::Green);
     let red = termion::color::Fg(termion::color::Red);
     let reset = termion::color::Fg(termion::color::Reset);
 
-    match cmd {
-        Ok(cmd) => {
-            if cmd.errored {
-                println!("{}✗{} {} errored", red, reset, cmd.message);
-            } else if cmd.cancelled {
-                println!("🚫 {} cancelled", cmd.message);
-            } else if cmd.complete {
-                println!("{}✔{} {} successful", green, reset, cmd.message);
-            }
-        }
-        Err(validation_error) => {
-            println!("{}✗{} {} errored", red, reset, validation_error);
-        }
+    if cmd.errored {
+        println!("{}✗{} {} errored", red, reset, cmd.message);
+    } else if cmd.cancelled {
+        println!("🚫 {} cancelled", cmd.message);
+    } else if cmd.complete {
+        println!("{}✔{} {} successful", green, reset, cmd.message);
     }
+}
+
+fn display_validation_error(validation_error: &iml_manager_client::ImlManagerClientError) {
+    let red = termion::color::Fg(termion::color::Red);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✗{} {}", red, reset, validation_error);
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -214,12 +214,12 @@ fn main() {
 
                         stop_spinner(None);
 
-                        display_cmd_state(&Ok(command));
+                        display_cmd_state(&command);
 
                         exit(exitcode::OK)
                     }
                     Err(validation_message) => {
-                        display_cmd_state(&Err(validation_message));
+                        display_validation_error(&validation_message);
 
                         exit(exitcode::CANTCREAT)
                     }
