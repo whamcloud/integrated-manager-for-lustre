@@ -49,7 +49,7 @@ Requires: nodejs = 1:6.14.2-1
 Requires: ntp
 Requires: system-config-firewall-base
 Requires: policycoreutils-python
-Requires: postgresql-server
+Requires: postgresql-server >= 9.2.24
 Requires: pygobject2
 Requires: python-daemon
 Requires: python-dateutil
