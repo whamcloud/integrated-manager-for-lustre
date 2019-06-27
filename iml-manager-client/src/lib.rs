@@ -17,7 +17,6 @@ pub enum ImlManagerClientError {
     InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
     UrlParseError(url::ParseError),
     SerdeJsonError(serde_json::error::Error),
-    RunStratagemValidationError(RunStratagemValidationError),
 }
 
 impl std::fmt::Display for ImlManagerClientError {
@@ -27,7 +26,6 @@ impl std::fmt::Display for ImlManagerClientError {
             ImlManagerClientError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlManagerClientError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlManagerClientError::SerdeJsonError(ref err) => write!(f, "{}", err),
-            ImlManagerClientError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -39,7 +37,6 @@ impl std::error::Error for ImlManagerClientError {
             ImlManagerClientError::InvalidHeaderValue(ref err) => Some(err),
             ImlManagerClientError::UrlParseError(ref err) => Some(err),
             ImlManagerClientError::SerdeJsonError(ref err) => Some(err),
-            ImlManagerClientError::RunStratagemValidationError(ref err) => Some(err),
         }
     }
 }
@@ -65,41 +62,6 @@ impl From<url::ParseError> for ImlManagerClientError {
 impl From<serde_json::error::Error> for ImlManagerClientError {
     fn from(err: serde_json::error::Error) -> Self {
         ImlManagerClientError::SerdeJsonError(err)
-    }
-}
-
-impl From<RunStratagemValidationError> for ImlManagerClientError {
-    fn from(err: RunStratagemValidationError) -> Self {
-        ImlManagerClientError::RunStratagemValidationError(err)
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum RunStratagemCommandResult {
-    FilesystemRequired,
-    DurationOrderError,
-    FilesystemDoesNotExist,
-    StratagemServerProfileNotInstalled,
-    ServerError,
-    UnknownError,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct RunStratagemValidationError {
-    pub code: RunStratagemCommandResult,
-    pub message: String,
-}
-
-impl std::fmt::Display for RunStratagemValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for RunStratagemValidationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
     }
 }
 

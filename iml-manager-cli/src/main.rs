@@ -5,12 +5,15 @@
 use futures::Future;
 use iml_manager_cli::{
     api_utils,
-    manager_cli_error::{DurationParseError, ImlManagerCliError},
+    manager_cli_error::{
+        DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
+        RunStratagemValidationError,
+    },
 };
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
-use std::process::exit;
+use std::{fmt::Display, process::exit};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -130,24 +133,27 @@ fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
 }
 
 fn display_cmd_state(cmd: &Command) {
-    let green = termion::color::Fg(termion::color::Green);
-    let red = termion::color::Fg(termion::color::Red);
-    let reset = termion::color::Fg(termion::color::Reset);
-
     if cmd.errored {
-        println!("{}✗{} {} errored", red, reset, cmd.message);
+        display_error(format!("{} errored", cmd.message));
     } else if cmd.cancelled {
         println!("🚫 {} cancelled", cmd.message);
     } else if cmd.complete {
-        println!("{}✔{} {} successful", green, reset, cmd.message);
+        display_success(format!("{} successful", cmd.message));
     }
 }
 
-fn display_validation_error(validation_error: &iml_manager_client::ImlManagerClientError) {
+fn display_success(message: impl Display) {
+    let green = termion::color::Fg(termion::color::Green);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✔{} {}", green, reset, message);
+}
+
+fn display_error(message: impl Display) {
     let red = termion::color::Fg(termion::color::Red);
     let reset = termion::color::Fg(termion::color::Reset);
 
-    println!("{}✗{} {}", red, reset, validation_error);
+    println!("{}✗{} {}", red, reset, message);
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -180,30 +186,32 @@ fn main() {
                         }),
                     )
                     .and_then(|resp| iml_manager_client::concat_body(resp))
+                    .from_err()
                     .and_then(|(resp, body)| {
                         let status = resp.status();
                         if status.is_success() {
-                            Ok(serde_json::from_slice::<CmdWrapper>(&body))
+                            Ok(serde_json::from_slice::<CmdWrapper>(&body)?)
                         } else if status.is_client_error() {
-                            let validation_message: iml_manager_client::RunStratagemValidationError =
-                                    serde_json::from_slice(&body)
-
-                            Err(validation_message)?
+                            serde_json::from_slice::<RunStratagemValidationError>(&body)
+                                .map(std::convert::Into::into)
+                                .map(Err)?
                         } else if status.is_server_error() {
-                            Err(iml_manager_client::RunStratagemValidationError {
-                                code: iml_manager_client::RunStratagemCommandResult::ServerError,
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::ServerError,
                                 message: "Internal server error.".into(),
-                            })?
+                            }
+                            .into())
                         } else {
-                            Err(iml_manager_client::RunStratagemValidationError {
-                                code: iml_manager_client::RunStratagemCommandResult::UnknownError,
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::UnknownError,
                                 message: "Unknown error.".into(),
-                            })?
+                            }
+                            .into())
                         }
                     })
                 };
 
-                let command = run_cmd(fut);
+                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
                 match command {
                     Ok(CmdWrapper { command }) => {
@@ -218,8 +226,8 @@ fn main() {
 
                         exit(exitcode::OK)
                     }
-                    Err(validation_message) => {
-                        display_validation_error(&validation_message);
+                    Err(validation_error) => {
+                        display_error(validation_error);
 
                         exit(exitcode::CANTCREAT)
                     }
