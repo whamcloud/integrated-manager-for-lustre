@@ -183,21 +183,21 @@ fn main() {
                     .and_then(|(resp, body)| {
                         let status = resp.status();
                         if status.is_success() {
-                            Ok(serde_json::from_slice::<CmdWrapper>(&body).expect("Couldn't parse CmdWrapper."))
+                            Ok(serde_json::from_slice::<CmdWrapper>(&body))
                         } else if status.is_client_error() {
                             let validation_message: iml_manager_client::RunStratagemValidationError =
-                                    serde_json::from_slice(&body).expect("Could not parse chunk.");
+                                    serde_json::from_slice(&body)
 
                             Err(validation_message)?
                         } else if status.is_server_error() {
                             Err(iml_manager_client::RunStratagemValidationError {
                                 code: iml_manager_client::RunStratagemCommandResult::ServerError,
-                                message: "Internal server error.".to_string(),
+                                message: "Internal server error.".into(),
                             })?
                         } else {
                             Err(iml_manager_client::RunStratagemValidationError {
                                 code: iml_manager_client::RunStratagemCommandResult::UnknownError,
-                                message: "Unknown error.".to_string(),
+                                message: "Unknown error.".into(),
                             })?
                         }
                     })
