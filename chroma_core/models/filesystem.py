@@ -26,7 +26,7 @@ HSM_CONTROL_PARAMS = {
 ### Given a filesystem id or name, this function will return the id of the filesystem associated
 ### with the identifier or None if it cannot be found.
 def get_fs_id_from_identifier(fs_identifier):
-    def filter_fs(fs_identifier, x): 
+    def filter_fs(fs_identifier, x):
         return str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier
 
     return pipe(
@@ -34,7 +34,7 @@ def get_fs_id_from_identifier(fs_identifier):
         partial(filter, partial(filter_fs, fs_identifier)),
         partial(map, lambda fs: fs.get("id")),
         iter,
-        partial(flip, next, None)
+        partial(flip, next, None),
     )
 
 

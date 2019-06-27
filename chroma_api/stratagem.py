@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
-from toolz.functoolz import pipe
+from toolz.functoolz import pipe, partial, flip, compose
 
 import tastypie.http as http
 
@@ -25,15 +25,26 @@ from chroma_core.models import (
 
 from chroma_api.chroma_model_resource import ChromaModelResource
 
+get_bundle_int_val = compose(partial(flip, int, 10), str)
+
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
-        purge_duration = bundle.data.get("purge_duration")
-        report_duration = bundle.data.get("report_duration")
+        try:
+            purge_duration = bundle.data.get("purge_duration") and get_bundle_int_val(bundle.data.get("purge_duration"))
+        except ValueError:
+            return {"code": "invalid_argument", "message": "Purge duration must be an integer value."}
+
+        try:
+            report_duration = bundle.data.get("report_duration") and get_bundle_int_val(
+                bundle.data.get("report_duration")
+            )
+        except ValueError:
+            return {"code": "invalid_argument", "message": "Report duration must be an integer value."}
 
         if "filesystem" not in bundle.data:
-            return {"code": "filesystem_required", "message": "filesystem required when running stratagem."}
-        elif isinstance(purge_duration, int) and isinstance(report_duration, int) and report_duration >= purge_duration:
+            return {"code": "filesystem_required", "message": "Filesystem required."}
+        elif purge_duration and report_duration and report_duration >= purge_duration:
             return {"code": "duration_order_error", "message": "Report duration must be less than purge duration."}
 
         fs_identifier = str(bundle.data.get("filesystem"))

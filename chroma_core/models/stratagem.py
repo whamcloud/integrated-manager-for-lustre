@@ -127,7 +127,7 @@ class RunStratagemStep(Step):
         def calc_purge_duration(report_duration, purge_duration):
             if isinstance(report_duration, int) and isinstance(purge_duration, int):
                 return "(atime < sys_time - {} && atime > sys_time - {})".format(report_duration, purge_duration)
-            
+
             return "< atime - sys_time {}".format(purge_duration or 0)
 
         def get_body(mount_point, report_duration, purge_duration):
