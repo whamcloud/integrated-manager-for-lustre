@@ -26,16 +26,11 @@ HSM_CONTROL_PARAMS = {
 ### Given a filesystem id or name, this function will return the id of the filesystem associated
 ### with the identifier or None if it cannot be found.
 def get_fs_id_from_identifier(fs_identifier):
-    def filter_fs(fs_identifier, x):
-        return str(x.get("id")) == fs_identifier or str(x.get("name")) == fs_identifier
-
-    return pipe(
-        ManagedFilesystem.objects.values("id", "name"),
-        partial(filter, partial(filter_fs, fs_identifier)),
-        partial(map, lambda fs: fs.get("id")),
-        iter,
-        partial(flip, next, None),
-    )
+    try:
+        id = int(str(fs_identifier), 10)
+        return ManagedFilesystem.objects.filter(id=id).values_list("id", flat=True).first()
+    except ValueError:
+        return ManagedFilesystem.objects.filter(name=fs_identifier).values_list("id", flat=True).first()
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):

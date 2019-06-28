@@ -45,23 +45,33 @@ class RunStratagemValidation(Validation):
         if "filesystem" not in bundle.data:
             return {"code": "filesystem_required", "message": "Filesystem required."}
         elif purge_duration and report_duration and report_duration >= purge_duration:
-            return {"code": "duration_order_error", "message": "Report duration must be less than purge duration."}
+            return {"code": "duration_order_error", "message": "Report time must be less than purge time."}
 
         fs_identifier = str(bundle.data.get("filesystem"))
         fs_id = get_fs_id_from_identifier(fs_identifier)
-        if not fs_id:
+        if fs_id is None:
             return {
                 "code": "filesystem_does_not_exist",
                 "message": "Filesystem {} does not exist.".format(fs_identifier),
             }
 
-        # Each MDT associated with the fielsystem must be installed on a server that has the stratagem profile installed
-        target_mount_ids = map(lambda mdt: mdt.active_mount_id, ManagedMdt.objects.filter(filesystem_id=fs_id))
-        host_ids = map(
-            lambda target_mount: target_mount.host_id, ManagedTargetMount.objects.filter(id__in=target_mount_ids)
+        # Each MDT associated with the filesystem must be mounted on a server that has the stratagem profile installed
+        target_mount_ids = (
+            ManagedMdt.objects.filter(filesystem_id=fs_id).values_list("active_mount_id", flat=True).distinct()
         )
-        host_ids = pipe(host_ids, set, list)
-        installed_profiles = map(lambda host: host.server_profile_id, ManagedHost.objects.filter(id__in=host_ids))
+        target_mount_ids = [x for x in target_mount_ids if x is not None]
+
+        if not target_mount_ids:
+            return {"code": "no_mounted_mdts", "message": "MDT's must be mounted to run stratagem."}
+
+        host_ids = (
+            ManagedTargetMount.objects.filter(id__in=target_mount_ids).values_list("host_id", flat=True).distinct()
+        )
+
+        installed_profiles = (
+            ManagedHost.objects.filter(id__in=host_ids).values_list("server_profile_id", flat=True).distinct()
+        )
+
         if not all(map(lambda name: name == "stratagem_server", installed_profiles)):
             return {
                 "code": "stratagem_server_profile_not_installed",
@@ -73,13 +83,7 @@ class RunStratagemValidation(Validation):
 
 class StratagemConfigurationValidation(RunStratagemValidation):
     def is_valid(self, bundle, request=None):
-        required_args = [
-            "interval",
-            "report_duration",
-            "report_duration_active",
-            "purge_duration",
-            "purge_duration_active",
-        ]
+        required_args = ["interval", "filesystem"]
 
         difference = set(required_args) - set(bundle.data.keys())
 
@@ -92,10 +96,8 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 class StratagemConfigurationResource(ChromaModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
-    report_duration = fields.IntegerField(attribute="report_duration", null=False)
-    report_duration_active = fields.BooleanField(attribute="report_duration_active", null=False)
-    purge_duration = fields.IntegerField(attribute="purge_duration", null=False)
-    purge_duration_active = fields.BooleanField(attribute="purge_duration_active", null=False)
+    report_duration = fields.IntegerField(attribute="report_duration", null=True)
+    purge_duration = fields.IntegerField(attribute="purge_duration", null=True)
 
     class Meta:
         resource_name = "stratagem_configuration"
@@ -129,10 +131,10 @@ class RunStratagemResource(Resource):
 
     @validate
     def obj_create(self, bundle, **kwargs):
-        fs_identifier = str(bundle.data.get("filesystem"))
+        fs_identifier = bundle.data.get("filesystem")
         fs_id = get_fs_id_from_identifier(fs_identifier)
 
-        mdts = map(lambda mdt: mdt.id, ManagedMdt.objects.filter(filesystem_id=fs_id))
+        mdts = list(ManagedMdt.objects.filter(filesystem_id=fs_id).values_list("id", flat=True))
 
         command_id = JobSchedulerClient.run_stratagem(mdts, bundle.data)
 

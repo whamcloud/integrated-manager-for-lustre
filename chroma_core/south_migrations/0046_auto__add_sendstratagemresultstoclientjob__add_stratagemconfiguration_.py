@@ -8,24 +8,6 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'StratagemUnconfiguredAlert'
-        db.create_table(u'chroma_core_stratagemunconfiguredalert', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('record_type', self.gf('django.db.models.fields.CharField')(default='', max_length=128)),
-            ('variant', self.gf('django.db.models.fields.CharField')(default='{}', max_length=512)),
-            ('alert_item_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
-            ('alert_item_id', self.gf('django.db.models.fields.PositiveIntegerField')(null=True)),
-            ('alert_type', self.gf('django.db.models.fields.CharField')(max_length=128)),
-            ('begin', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime.now)),
-            ('end', self.gf('django.db.models.fields.DateTimeField')(null=True)),
-            ('_message', self.gf('django.db.models.fields.TextField')(null=True, db_column='message')),
-            ('active', self.gf('django.db.models.fields.NullBooleanField')(null=True, blank=True)),
-            ('dismissed', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('severity', self.gf('django.db.models.fields.IntegerField')(default=20)),
-            ('lustre_pid', self.gf('django.db.models.fields.IntegerField')(null=True)),
-        ))
-        db.send_create_signal('chroma_core', ['StratagemUnconfiguredAlert'])
-
         # Adding model 'SendStratagemResultsToClientJob'
         db.create_table(u'chroma_core_sendstratagemresultstoclientjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
@@ -43,10 +25,8 @@ class Migration(SchemaMigration):
             ('immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('filesystem_id', self.gf('django.db.models.fields.IntegerField')()),
             ('interval', self.gf('django.db.models.fields.IntegerField')()),
-            ('report_duration', self.gf('django.db.models.fields.IntegerField')()),
-            ('report_duration_active', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('purge_duration', self.gf('django.db.models.fields.IntegerField')()),
-            ('purge_duration_active', self.gf('django.db.models.fields.BooleanField')(default=False)),
+            ('report_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('purge_duration', self.gf('django.db.models.fields.IntegerField')(null=True)),
         ))
         db.send_create_signal('chroma_core', ['StratagemConfiguration'])
 
@@ -81,9 +61,6 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
-        # Deleting model 'StratagemUnconfiguredAlert'
-        db.delete_table(u'chroma_core_stratagemunconfiguredalert')
-
         # Deleting model 'SendStratagemResultsToClientJob'
         db.delete_table(u'chroma_core_sendstratagemresultstoclientjob')
 
@@ -967,10 +944,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 18, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 6, 27, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'99D8270F7C3B43E112AF2894EAE3A2B5'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'70B7B08EEAE2E7CF6983FA7435181B0F'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1397,28 +1374,10 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'interval': ('django.db.models.fields.IntegerField', [], {}),
-            'purge_duration': ('django.db.models.fields.IntegerField', [], {}),
-            'purge_duration_active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'report_duration': ('django.db.models.fields.IntegerField', [], {}),
-            'report_duration_active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'purge_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'report_duration': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
-        },
-        'chroma_core.stratagemunconfiguredalert': {
-            'Meta': {'object_name': 'StratagemUnconfiguredAlert'},
-            '_message': ('django.db.models.fields.TextField', [], {'null': 'True', 'db_column': "'message'"}),
-            'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
-            'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
-            'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']", 'null': 'True'}),
-            'alert_type': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'begin': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'end': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
-            'record_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '128'}),
-            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'}),
-            'variant': ('django.db.models.fields.CharField', [], {'default': "'{}'", 'max_length': '512'})
         },
         'chroma_core.syslogevent': {
             'Meta': {'object_name': 'SyslogEvent', 'db_table': "'chroma_core_alertstate'"},

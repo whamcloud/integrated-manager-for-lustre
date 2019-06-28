@@ -1762,9 +1762,7 @@ class JobScheduler(object):
                 "filesystem_id": stratagem_data.get("filesystem"),
                 "interval": stratagem_data.get("interval"),
                 "report_duration": stratagem_data.get("report_duration"),
-                "report_duration_active": stratagem_data.get("report_duration_active"),
                 "purge_duration": stratagem_data.get("purge_duration"),
-                "purge_duration_active": stratagem_data.get("purge_duration_active"),
             }
 
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
@@ -1776,13 +1774,12 @@ class JobScheduler(object):
 
             configuration_data["filesystem_id"] = fs_id
 
-            with transaction.atomic():
-                matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
-                if len(matches) == 1:
-                    matches.update(**configuration_data)
-                    stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
-                else:
-                    stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
+            matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
+            else:
+                stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
 
             ObjectCache.add(StratagemConfiguration, stratagem_configuration)
 

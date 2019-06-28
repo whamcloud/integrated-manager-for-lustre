@@ -43,15 +43,9 @@ class StratagemConfiguration(StatefulObject):
     )
     interval = models.IntegerField(help_text="Interval value in seconds between each stratagem execution", null=False)
     report_duration = models.IntegerField(
-        help_text="Interval value in seconds between stratagem report execution", null=False
+        help_text="Interval value in seconds between stratagem report execution", null=True
     )
-    report_duration_active = models.BooleanField(
-        default=False, help_text="Indicates if the report should execute at the given interval"
-    )
-    purge_duration = models.IntegerField(help_text="Interval value in seconds between stratagem purges", null=False)
-    purge_duration_active = models.BooleanField(
-        default=False, help_text="Indicates if the purge should execute at the given interval"
-    )
+    purge_duration = models.IntegerField(help_text="Interval value in seconds between stratagem purges", null=True)
 
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
@@ -59,27 +53,6 @@ class StratagemConfiguration(StatefulObject):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
-
-
-class StratagemUnconfiguredAlert(AlertStateBase):
-    default_severity = logging.ERROR
-
-    def alert_message(self):
-        return "Stratagem did not configure correctly"
-
-    class Meta:
-        app_label = "chroma_core"
-
-    def end_event(self):
-        return AlertEvent(
-            message_str="%s started" % self.alert_item,
-            alert_item=self.alert_item.primary_host,
-            alert=self,
-            severity=logging.INFO,
-        )
-
-    def affected_targets(self, affect_target):
-        affect_target(self.alert_item)
 
 
 class ConfigureStratagemTimerStep(Step):
@@ -125,7 +98,7 @@ class RunStratagemStep(Step):
         purge_duration = args["purge_duration"]
 
         def calc_purge_duration(report_duration, purge_duration):
-            if isinstance(report_duration, int) and isinstance(purge_duration, int):
+            if report_duration is not None and purge_duration is not None:
                 return "(atime < sys_time - {} && atime > sys_time - {})".format(report_duration, purge_duration)
 
             return "< atime - sys_time {}".format(purge_duration or 0)
