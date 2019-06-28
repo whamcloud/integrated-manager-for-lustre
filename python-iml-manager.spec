@@ -4,7 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%global version 5.0.0
+%global version 5.0.1
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    8%{?dist}
+Release:    1%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
