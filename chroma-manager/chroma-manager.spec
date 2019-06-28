@@ -82,7 +82,7 @@ Requires: iml-socket-worker >= 4.0.2
 Requires: iml-srcmap-reverse >= 3.0.6
 Requires: iml-view-server >= 8.0.4
 Requires: iml-wasm-components >= 0.1.0
-Requires: python2-gevent >= 1.0.1
+Requires: python-gevent >= 1.0.1
 Requires: python2-httpagentparser >= 1.5
 Requires: python2-jsonschema < 0.9.0
 Requires: python2-massiviu >= 0.1.0-2
