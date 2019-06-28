@@ -39,49 +39,57 @@ Vendor: whamCloud <iml@whamcloud.com>
 Url: http://whamcloud.com/
 BuildRequires: python-setuptools
 BuildRequires: ed
-Requires: python-setuptools
-Requires: python-prettytable
-Requires: python2-massiviu
-Requires: python2-jsonschema < 0.9.0
-Requires: python-ordereddict
-Requires: python-uuid
-Requires: python-paramiko
-Requires: python2-kombu >= 3.0.19
+
+# Base / EPEL repos
+Requires: createrepo
+Requires: fence-agents
+Requires: fence-agents-virsh
+Requires: nginx >= 1:1.11.6
+Requires: nodejs = 1:6.14.2
+Requires: ntp
+Requires: system-config-firewall-base
+Requires: policycoreutils-python
+Requires: postgresql-server >= 9.2.24
+Requires: pygobject2
 Requires: python-daemon
 Requires: python-dateutil
-Requires: python2-mimeparse
-Requires: python-requests >= 2.6.0
-Requires: python-networkx
-Requires: python2-httpagentparser
 Requires: python-gunicorn
-Requires: pygobject2
-Requires: postgresql-server
+Requires: python-ordereddict
+Requires: python-networkx
+Requires: python-paramiko
+Requires: python-prettytable
+Requires: python-setuptools
+Requires: python-uuid
+Requires: python-requests >= 2.6.0
+Requires: python2-kombu >= 3.0.19
+Requires: python2-mimeparse
+Requires: python2-toolz
 Requires: python-psycopg2
-Requires: rabbitmq-server
-Requires: ntp
+Requires: rabbitmq-server >= 3.3.5
 Requires: Django >= 1.6, Django < 1.7
 Requires: Django-south >= 1.0.2
 Requires: python2-django-tastypie = 0.12.2
-Requires: django-picklefield
-Requires: chroma-manager-cli = %{version}-%{release}
-Requires: iml_sos_plugin
-Requires: policycoreutils-python
-Requires: python-gevent >= 1.0
-Requires: system-config-firewall-base
-Requires: nodejs >= 1:6.9.4-2
-Requires: iml-gui >= 6.3.3
-Requires: iml-old-gui
-Requires: iml-srcmap-reverse
-Requires: iml-online-help >= 2.5.2
-Requires: iml-realtime
-Requires: iml-view-server
-Requires: iml-socket-worker
-Requires: rust-iml-warp-drive
-Requires: createrepo
-Requires: python2-toolz
-Requires: iml-wasm-components
-Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
+# IML Repo
+Requires: chroma-manager-cli = %{version}-%{release}
+Requires: django-picklefield >= 0.1.9
+Requires: iml_sos_plugin >= 2.2.0
+Requires: iml-gui >= 6.5.1
+Requires: iml-old-gui >= 3.1.2
+Requires: iml-online-help >= 2.5.4
+Requires: iml-realtime = 7.0.1-2.el7
+Requires: iml-socket-worker >= 4.0.2
+Requires: iml-srcmap-reverse >= 3.0.6
+Requires: iml-view-server >= 8.0.4
+Requires: iml-wasm-components >= 0.1.0
+Requires: python-gevent >= 1.0.1
+Requires: python2-httpagentparser >= 1.5
+Requires: python2-jsonschema < 0.9.0
+Requires: python2-massiviu >= 0.1.0-2
+Requires: rust-iml-warp-drive >= 0.1.1
+
+Conflicts: chroma-agent
+
 Obsoletes: httpd
 Obsoletes: mod_proxy_wstunnel
 Obsoletes: mod_wsgi
@@ -124,10 +132,7 @@ Obsoletes: nodejs-zeparser
 Obsoletes: django-celery
 Obsoletes: django-tastypie
 Obsoletes: python2-dse
-
-Requires: fence-agents
-Requires: fence-agents-virsh
-Requires: nginx >= 1:1.11.6
+Obsoletes: Django-south
 
 %description
 This is the Integrated Manager for Lustre Monitoring and Administration Interface
@@ -135,7 +140,7 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 %package libs
 Summary: Common libraries for Chroma Server
 Group: System/Libraries
-Requires: python2-iml-common1.3
+Requires: python2-iml-common1.3 >= 1.3.3
 %description libs
 This package contains libraries for Chroma CLI and Chroma Server.
 

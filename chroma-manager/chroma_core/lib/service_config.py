@@ -236,8 +236,11 @@ class ServiceConfig(CommandLine):
             raise RuntimeError(error)
         error = rabbit_service._start()
         if error:
-            log.error(error)
-            raise RuntimeError(error)
+            # retry start service, once
+            error = rabbit_service._start()
+            if error:
+                log.error(error)
+                raise RuntimeError(error)
 
     def _setup_rabbitmq_credentials(self):
         # Enable use from dev_setup as a nonroot user on linux
@@ -281,7 +284,7 @@ class ServiceConfig(CommandLine):
         # The server_cert attribute is created on read
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ['iml-manager.target', 'nginx']
+    CONTROLLED_SERVICES = ["iml-manager.target", "nginx"]
 
     MANAGER_SERVICES = [
         "iml-corosync.service",
@@ -637,9 +640,7 @@ class ServiceConfig(CommandLine):
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + [
-            'postgresql', 'rabbitmq-server'
-        ]
+        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server"]
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
