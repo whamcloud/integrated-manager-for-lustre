@@ -15,6 +15,7 @@ import json
 import glob
 import shutil
 import errno
+import requests
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -329,17 +330,55 @@ class ServiceConfig(CommandLine):
             fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
 
         # grafana needs daemon-reload before enable and start
-        self.try_shell(["systemctl", "daemon-reload"])
-        service = ServiceControlEL7("grafana-server")
+        ServiceControlEL7.daemon_reload()
+        service = ServiceControl.create("grafana-server")
         error = service.enable()
         if error:
             log.error(error)
             raise RuntimeError(error)
-        error = service._start()
+        error = service.start()
         if error:
             log.error(error)
             raise RuntimeError(error)
-        return
+
+        # Add Datasources
+        url = "http://localhost:3000/api/datasources"
+        headers = {"X-WEBAUTH-USER": "admin"}
+        urlname = "{}/id/{}".format(url, "iml-postgres")
+        r = requests.get(urlname, headers=headers)
+        if not r.ok:
+            db = settings.DATABASES["default"]
+            resp = requests.post(
+                url,
+                headers=headers,
+                json={
+                    "name": "iml-postgres",
+                    "type": "postgres",
+                    "access": "proxy",
+                    "user": db["USER"],
+                    "password": db["PASSWORD"],
+                    "database": db["NAME"],
+                    "url": ":".join((x for x in [db["HOST"], db["PORT"]] if x)) or "localhost",
+                    "jsonData": {"sslmode": "disable"},
+                },
+            )
+        for db in [settings.INFLUXDB_IML_DB, settings.INFLUXDB_STRATAGEM_SCAN_DB]:
+            name = "iml-influx-{}".format(db)
+            urlname = "{}/id/{}".format(url, name)
+            r = requests.get(urlname, headers=headers)
+            if not r.ok:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "name": name,
+                        "type": "influxdb",
+                        "database": db,
+                        "url": "http://localhost:8086",
+                        "jsonData": {"httpMode": "GET"},
+                        "access": "proxy",
+                    },
+                )
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
@@ -420,8 +459,7 @@ class ServiceConfig(CommandLine):
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
                 raise CommandError("service postgresql initdb", rc, out, err)
-            return
-        # Only mess with auth if we've freshly initialized the db
+        # Always fixup postgres auth
         self._config_pgsql_auth(database)
 
     @staticmethod
@@ -434,6 +472,8 @@ class ServiceConfig(CommandLine):
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
+            # Allow grafana to connect (as chroma) with no password
+            cfg.write("host\tall\t%s\tlocalhost\ttrust\n" % database["USER"])
 
     PathStats = namedtuple("PathStats", ["total", "used", "free"])
 
@@ -472,7 +512,10 @@ class ServiceConfig(CommandLine):
 
     def _restart_pgsql(self):
         postgresql_service = ServiceControl.create("postgresql")
-        postgresql_service.restart()
+        if postgresql_service.running:
+            postgresql_service.reload()
+        else:
+            postgresql_service.start()
         postgresql_service.enable()
 
     def _setup_pgsql(self, database, check_db_space):
@@ -599,6 +642,8 @@ class ServiceConfig(CommandLine):
 
         else:
             log.info("Postgres already accessible")
+            self._config_pgsql_auth(databases["default"])
+            self._restart_pgsql()
 
         if error:
             return error
