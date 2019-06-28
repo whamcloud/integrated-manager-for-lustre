@@ -58,7 +58,7 @@ Requires:       fence-agents
 Requires:       fence-agents-virsh
 Requires:       ntp
 Requires:       pygobject2
-Requires:       postgresql-server
+Requires:       postgresql-server >= 9.2.24
 Requires:       python-daemon
 Requires:       python-gunicorn
 Requires:       python-networkx
@@ -79,7 +79,7 @@ Requires:       Django >= 1.6, Django < 1.7
 Requires:       Django-south >= 1.0.2
 Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
-Requires:       nginx >= 1:1.11.6
+Requires:       nginx >= 1:1.12.2
 Requires:       nodejs >= 1:6.9.4-2
 Requires(post): selinux-policy-targeted
 # IML Repo
@@ -107,7 +107,7 @@ Requires:       rust-iml-mailbox
 Requires:       rust-iml-stratagem
 Requires:       rust-iml-warp-drive
 # Other Repos
-Requires:       influxdb
+Requires:      influxdb
 Requires:	grafana
 
 Conflicts:      chroma-agent
