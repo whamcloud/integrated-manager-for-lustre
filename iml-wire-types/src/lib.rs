@@ -258,6 +258,39 @@ impl<T: serde::Serialize> ToBytes for T {
     }
 }
 
+/// The type of lock
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum LockType {
+    Read,
+    Write,
+}
+
+/// The Action associated with a `LockChange`
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum LockAction {
+    Add,
+    Remove,
+}
+
+/// A change to be applied to `Locks`
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct LockChange {
+    pub job_id: u64,
+    pub content_type_id: u64,
+    pub item_id: u64,
+    pub description: String,
+    pub lock_type: LockType,
+    pub action: LockAction,
+}
+
+impl LockChange {
+    pub fn id(&self) -> String {
+        format!("{}:{}", self.content_type_id, self.item_id)
+    }
+}
+
 /// Meta is the metadata object returned by a fetch call
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Meta {

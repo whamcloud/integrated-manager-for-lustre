@@ -6,8 +6,9 @@ use crate::{
     action_dropdown::{self, action_dropdown, dropdown_header},
     dispatch_custom_event::dispatch_custom_event,
     hsm::{HsmControlParam, RecordAndHsmControlParam},
-    model::{record_to_composite_id_string, LockType, Locks, Record},
+    model::{record_to_composite_id_string, Locks, Record},
 };
+use iml_wire_types::LockType;
 use seed::{
     a, class,
     dom_types::{At, El, MessageMapper as _, UpdateEl},

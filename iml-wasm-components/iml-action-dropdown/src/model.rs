@@ -3,8 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::hsm::HsmControlParam;
-
-use iml_wire_types::{ApiList, AvailableAction};
+use iml_wire_types::{ApiList, AvailableAction, LockChange, LockType};
 use std::collections::{HashMap, HashSet};
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -49,33 +48,6 @@ pub type ActionMap = HashMap<String, Vec<AvailableAction>>;
 
 /// Locks is a map of locks in which the key is a composite id string in the form `composite_id:id`
 pub type Locks = HashMap<String, HashSet<LockChange>>;
-
-/// The type of lock
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum LockType {
-    Read,
-    Write,
-}
-
-/// The Action associated with a `LockChange`
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum LockAction {
-    Add,
-    Remove,
-}
-
-/// A change to be applied to `Locks`
-#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq, Hash, Clone)]
-pub struct LockChange {
-    pub job_id: u64,
-    pub content_type_id: u64,
-    pub item_id: u64,
-    pub description: String,
-    pub lock_type: LockType,
-    pub action: LockAction,
-}
 
 // Model
 #[derive(Default)]
@@ -156,8 +128,8 @@ pub fn records_to_map(xs: Records) -> RecordMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{LockAction, Record};
-    use iml_wire_types::ActionArgs;
+    use crate::model::Record;
+    use iml_wire_types::{ActionArgs, LockAction};
     use insta::assert_debug_snapshot_matches;
     use std::collections::HashMap;
 
