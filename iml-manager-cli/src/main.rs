@@ -5,12 +5,15 @@
 use futures::Future;
 use iml_manager_cli::{
     api_utils,
-    manager_cli_error::{DurationParseError, ImlManagerCliError},
+    manager_cli_error::{
+        DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
+        RunStratagemValidationError,
+    },
 };
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
-use std::process::exit;
+use std::{fmt::Display, process::exit};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -130,17 +133,27 @@ fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
 }
 
 fn display_cmd_state(cmd: &Command) {
-    let green = termion::color::Fg(termion::color::Green);
-    let red = termion::color::Fg(termion::color::Red);
-    let reset = termion::color::Fg(termion::color::Reset);
-
     if cmd.errored {
-        println!("{}✗{} {} errored", red, reset, cmd.message);
+        display_error(format!("{} errored", cmd.message));
     } else if cmd.cancelled {
         println!("🚫 {} cancelled", cmd.message);
     } else if cmd.complete {
-        println!("{}✔{} {} successful", green, reset, cmd.message);
+        display_success(format!("{} successful", cmd.message));
     }
+}
+
+fn display_success(message: impl Display) {
+    let green = termion::color::Fg(termion::color::Green);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✔{} {}", green, reset, message);
+}
+
+fn display_error(message: impl Display) {
+    let red = termion::color::Fg(termion::color::Red);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✗{} {}", red, reset, message);
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -172,20 +185,53 @@ fn main() {
                             purge_duration: pd
                         }),
                     )
+                    .and_then(|resp| iml_manager_client::concat_body(resp))
+                    .from_err()
+                    .and_then(|(resp, body)| {
+                        let status = resp.status();
+                        if status.is_success() {
+                            Ok(serde_json::from_slice::<CmdWrapper>(&body)?)
+                        } else if status.is_client_error() {
+                            serde_json::from_slice::<RunStratagemValidationError>(&body)
+                                .map(std::convert::Into::into)
+                                .map(Err)?
+                        } else if status.is_server_error() {
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::ServerError,
+                                message: "Internal server error.".into(),
+                            }
+                            .into())
+                        } else {
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::UnknownError,
+                                message: "Unknown error.".into(),
+                            }
+                            .into())
+                        }
+                    })
                 };
 
-                let CmdWrapper { command }: CmdWrapper = run_cmd(fut).expect("Could not run cmd");
+                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
-                let stop_spinner = start_spinner(&command.message);
+                match command {
+                    Ok(CmdWrapper { command }) => {
+                        let stop_spinner = start_spinner(&command.message);
 
-                let command =
-                    run_cmd(api_utils::wait_for_cmd(command)).expect("Could not poll command");
+                        let command = run_cmd(api_utils::wait_for_cmd(command))
+                            .expect("Could not poll command");
 
-                stop_spinner(None);
+                        stop_spinner(None);
 
-                display_cmd_state(&command);
+                        display_cmd_state(&command);
 
-                exit(exitcode::OK)
+                        exit(exitcode::OK)
+                    }
+                    Err(validation_error) => {
+                        display_error(validation_error);
+
+                        exit(exitcode::CANTCREAT)
+                    }
+                }
             }
         },
         App::Server { command } => match command {

@@ -9,6 +9,23 @@ pub enum DurationParseError {
     InvalidValue,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStratagemCommandResult {
+    FilesystemRequired,
+    DurationOrderError,
+    FilesystemDoesNotExist,
+    StratagemServerProfileNotInstalled,
+    ServerError,
+    UnknownError,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct RunStratagemValidationError {
+    pub code: RunStratagemCommandResult,
+    pub message: String,
+}
+
 impl std::fmt::Display for DurationParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -31,6 +48,8 @@ pub enum ImlManagerCliError {
     TokioTimerError(tokio::timer::Error),
     IntParseError(std::num::ParseIntError),
     ParseDurationError(DurationParseError),
+    RunStratagemValidationError(RunStratagemValidationError),
+    SerdeJsonError(serde_json::error::Error),
 }
 
 impl std::fmt::Display for ImlManagerCliError {
@@ -40,7 +59,15 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
         }
+    }
+}
+
+impl std::fmt::Display for RunStratagemValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.message)
     }
 }
 
@@ -51,7 +78,15 @@ impl std::error::Error for ImlManagerCliError {
             ImlManagerCliError::TokioTimerError(ref err) => Some(err),
             ImlManagerCliError::IntParseError(ref err) => Some(err),
             ImlManagerCliError::ParseDurationError(ref err) => Some(err),
+            ImlManagerCliError::RunStratagemValidationError(ref err) => Some(err),
+            ImlManagerCliError::SerdeJsonError(ref err) => Some(err),
         }
+    }
+}
+
+impl std::error::Error for RunStratagemValidationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
     }
 }
 
@@ -76,5 +111,17 @@ impl From<tokio::timer::Error> for ImlManagerCliError {
 impl From<iml_manager_client::ImlManagerClientError> for ImlManagerCliError {
     fn from(err: iml_manager_client::ImlManagerClientError) -> Self {
         ImlManagerCliError::ClientRequestError(err)
+    }
+}
+
+impl From<RunStratagemValidationError> for ImlManagerCliError {
+    fn from(err: RunStratagemValidationError) -> Self {
+        ImlManagerCliError::RunStratagemValidationError(err)
+    }
+}
+
+impl From<serde_json::error::Error> for ImlManagerCliError {
+    fn from(err: serde_json::error::Error) -> Self {
+        ImlManagerCliError::SerdeJsonError(err)
     }
 }
