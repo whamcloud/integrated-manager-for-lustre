@@ -80,7 +80,7 @@ Requires:       Django-south >= 1.0.2
 Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
 Requires:       nginx >= 1:1.12.2
-Requires:       nodejs >= 1:6.9.4-2
+Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       django-picklefield >= 0.1.9
