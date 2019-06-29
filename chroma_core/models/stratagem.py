@@ -97,11 +97,11 @@ class RunStratagemStep(Step):
         report_duration = args["report_duration"]
         purge_duration = args["purge_duration"]
 
-        def calc_purge_duration(report_duration, purge_duration):
+        def calc_warn_duration(report_duration, purge_duration):
             if report_duration is not None and purge_duration is not None:
-                return "(atime < sys_time - {} && atime > sys_time - {})".format(report_duration, purge_duration)
+                return "(&& < atime - sys_time {} > atime - sys_time {})".format(report_duration, purge_duration)
 
-            return "< atime - sys_time {}".format(purge_duration or 0)
+            return "< atime - sys_time {}".format(report_duration or 0)
 
         def get_body(mount_point, report_duration, purge_duration):
             rule_map = {
@@ -119,7 +119,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time {}".format(report_duration),
+                                "expression": calc_warn_duration(report_duration, purge_duration),
                                 "argument": "fids_expiring_soon",
                             }
                         ],
@@ -129,7 +129,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": calc_purge_duration(report_duration, purge_duration),
+                                "expression": "< atime - sys_time {}".format(purge_duration),
                                 "argument": "fids_expired",
                             }
                         ],

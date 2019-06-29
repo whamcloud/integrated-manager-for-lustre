@@ -54,12 +54,15 @@ class RunStratagemValidation(Validation):
                 "code": "filesystem_does_not_exist",
                 "message": "Filesystem {} does not exist.".format(fs_identifier),
             }
+        elif ManagedFilesystem.objects.get(id=fs_id).state != "available":
+            return {"code": "filesystem_unavailable", "message": "Filesystem {} is unavailable.".format(fs_identifier)}
 
         # Each MDT associated with the filesystem must be mounted on a server that has the stratagem profile installed
         target_mount_ids = (
-            ManagedMdt.objects.filter(filesystem_id=fs_id).values_list("active_mount_id", flat=True).distinct()
+            ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False)
+            .values_list("active_mount_id", flat=True)
+            .distinct()
         )
-        target_mount_ids = [x for x in target_mount_ids if x is not None]
 
         if not target_mount_ids:
             return {"code": "no_mounted_mdts", "message": "MDT's must be mounted to run stratagem."}
@@ -134,7 +137,9 @@ class RunStratagemResource(Resource):
         fs_identifier = bundle.data.get("filesystem")
         fs_id = get_fs_id_from_identifier(fs_identifier)
 
-        mdts = list(ManagedMdt.objects.filter(filesystem_id=fs_id).values_list("id", flat=True))
+        mdts = list(
+            ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False).values_list("id", flat=True)
+        )
 
         command_id = JobSchedulerClient.run_stratagem(mdts, bundle.data)
 
