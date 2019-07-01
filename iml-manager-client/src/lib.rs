@@ -2,22 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{Future, IntoFuture as _, Stream as _};
-use reqwest::{
-    header,
-    r#async::{Chunk, Client, Decoder, Response},
-    Url,
-};
+use futures::{Future, IntoFuture as _};
+use reqwest::{header, r#async::Client, Url};
 use serde::de::DeserializeOwned;
-use std::{fmt::Debug, mem, time::Duration};
+use std::{fmt::Debug, time::Duration};
 
 #[derive(Debug)]
 pub enum ImlManagerClientError {
     Reqwest(reqwest::Error),
     InvalidHeaderValue(reqwest::header::InvalidHeaderValue),
     UrlParseError(url::ParseError),
-    SerdeJsonError(serde_json::error::Error),
-    RunStratagemValidationError(RunStratagemValidationError),
 }
 
 impl std::fmt::Display for ImlManagerClientError {
@@ -26,8 +20,6 @@ impl std::fmt::Display for ImlManagerClientError {
             ImlManagerClientError::Reqwest(ref err) => write!(f, "{}", err),
             ImlManagerClientError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
             ImlManagerClientError::UrlParseError(ref err) => write!(f, "{}", err),
-            ImlManagerClientError::SerdeJsonError(ref err) => write!(f, "{}", err),
-            ImlManagerClientError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -38,8 +30,6 @@ impl std::error::Error for ImlManagerClientError {
             ImlManagerClientError::Reqwest(ref err) => Some(err),
             ImlManagerClientError::InvalidHeaderValue(ref err) => Some(err),
             ImlManagerClientError::UrlParseError(ref err) => Some(err),
-            ImlManagerClientError::SerdeJsonError(ref err) => Some(err),
-            ImlManagerClientError::RunStratagemValidationError(ref err) => Some(err),
         }
     }
 }
@@ -59,47 +49,6 @@ impl From<reqwest::header::InvalidHeaderValue> for ImlManagerClientError {
 impl From<url::ParseError> for ImlManagerClientError {
     fn from(err: url::ParseError) -> Self {
         ImlManagerClientError::UrlParseError(err)
-    }
-}
-
-impl From<serde_json::error::Error> for ImlManagerClientError {
-    fn from(err: serde_json::error::Error) -> Self {
-        ImlManagerClientError::SerdeJsonError(err)
-    }
-}
-
-impl From<RunStratagemValidationError> for ImlManagerClientError {
-    fn from(err: RunStratagemValidationError) -> Self {
-        ImlManagerClientError::RunStratagemValidationError(err)
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum RunStratagemCommandResult {
-    FilesystemRequired,
-    DurationOrderError,
-    FilesystemDoesNotExist,
-    StratagemServerProfileNotInstalled,
-    ServerError,
-    UnknownError,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct RunStratagemValidationError {
-    pub code: RunStratagemCommandResult,
-    pub message: String,
-}
-
-impl std::fmt::Display for RunStratagemValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for RunStratagemValidationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
     }
 }
 
@@ -160,25 +109,21 @@ pub fn get<T: DeserializeOwned + Debug>(
     })
 }
 
-/// Handles an incoming response. Returns a future of the buffered body
-///
-/// # Arguments
-///
-/// * - `resp` - The Response to handle
-pub fn concat_body(
-    mut resp: Response,
-) -> impl Future<Item = (Response, Chunk), Error = ImlManagerClientError> {
-    let body = mem::replace(resp.body_mut(), Decoder::empty());
-    body.concat2().map(move |chunk| (resp, chunk)).from_err()
-}
-
 /// Performs a POST to the given API path
-pub fn post(
+pub fn post<T: DeserializeOwned + Debug>(
     client: Client,
     path: &str,
     body: impl serde::Serialize,
-) -> impl Future<Item = Response, Error = ImlManagerClientError> {
-    create_api_url(path)
-        .into_future()
-        .and_then(move |url| client.post(url).json(&body).send().from_err())
+) -> impl Future<Item = T, Error = ImlManagerClientError> {
+    create_api_url(path).into_future().and_then(move |url| {
+        client
+            .post(url)
+            .header(header::CONTENT_TYPE, "application/json")
+            .json(&body)
+            .send()
+            .from_err()
+            .and_then(|mut res| res.json())
+            .from_err()
+            .inspect(|x| log::debug!("Resp: {:?}", x))
+    })
 }
