@@ -1,11 +1,15 @@
 [workspace]
 members = [
-    'iml-wasm',
-    'iml-alert-indicator',
     'iml-action-dropdown',
-    'iml-tooltip',
+    'iml-alert-indicator',
+    'iml-duration-picker',
+    'iml-environment',
+    'iml-pie-chart',
+    'iml-popover',
     'iml-sleep',
-    'iml-popover'
+    'iml-tooltip',
+    'iml-utils',
+    'iml-wasm'
 ]
 
 [profile.release]
