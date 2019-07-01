@@ -204,8 +204,6 @@ class Step(object):
             result = self.invoke_rust_agent(host, command, args)
         except RustAgentCancellation as e:
             raise AgentException(host, command, args, "Cancelled: {}".format(e))
-        except ValueError as e:
-            raise AgentException(host, command, args, result)
         except Exception as e:
             raise AgentException(host, command, args, "Unexpected error: {}".format(e))
 
