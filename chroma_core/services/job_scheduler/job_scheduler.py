@@ -881,7 +881,7 @@ class JobScheduler(object):
         with self._lock:
             result = self.CommandPlan.command_run_jobs(job_dicts, message)
 
-            self.progress.advance()
+        self.progress.advance()
 
         return result
 
