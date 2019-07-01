@@ -202,13 +202,19 @@ class Step(object):
 
         try:
             result = self.invoke_rust_agent(host, command, args)
-            result = json.loads(result)
         except RustAgentCancellation as e:
             raise AgentException(host, command, args, "Cancelled: {}".format(e))
-        except ValueError:
+        except ValueError as e:
             raise AgentException(host, command, args, result)
         except Exception as e:
             raise AgentException(host, command, args, "Unexpected error: {}".format(e))
+
+        try:
+            result = json.loads(result)
+        except ValueError as e:
+            raise AgentException(host, command, args, "Error parsing json: {}".format(e))
+        except Exception as e:
+            raise AgentException(host, command, args, "Unexpected error while parsing json: {}".format(e))
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
