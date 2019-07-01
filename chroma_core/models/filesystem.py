@@ -30,8 +30,8 @@ def get_fs_id_from_identifier(fs_identifier):
         return None
 
     try:
-        id = int(str(fs_identifier), 10)
-        return ManagedFilesystem.objects.filter(id=id).values_list("id", flat=True).first()
+        fs_id = int(str(fs_identifier), 10)
+        return ManagedFilesystem.objects.filter(id=fs_id).values_list("id", flat=True).first()
     except ValueError:
         return ManagedFilesystem.objects.filter(name=fs_identifier).values_list("id", flat=True).first()
 
