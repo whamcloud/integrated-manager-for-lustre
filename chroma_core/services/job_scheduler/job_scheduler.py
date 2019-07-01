@@ -1771,8 +1771,7 @@ class JobScheduler(object):
             fs_id = get_fs_id_from_identifier(fs_identifier)
 
             if not fs_id:
-                from tastypie.exceptions import NotFound
-                raise NotFound("No matching filesystem for {}".format(fs_identifier))
+                raise Exception("No matching filesystem for {}".format(fs_identifier))
 
             configuration_data["filesystem_id"] = fs_id
 
