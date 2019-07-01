@@ -44,7 +44,7 @@ class RunStratagemValidation(Validation):
 
         if "filesystem" not in bundle.data:
             return {"code": "filesystem_required", "message": "Filesystem required."}
-        elif purge_duration and report_duration and report_duration >= purge_duration:
+        elif purge_duration is not None and report_duration is not None and report_duration >= purge_duration:
             return {"code": "duration_order_error", "message": "Report time must be less than purge time."}
 
         fs_identifier = str(bundle.data.get("filesystem"))
