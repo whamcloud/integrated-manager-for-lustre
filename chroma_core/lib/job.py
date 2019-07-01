@@ -84,6 +84,7 @@ class DependOn(Dependable):
             depended_object = self.get_stateful_object()
         except:
             self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
+
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning(
@@ -214,7 +215,7 @@ class Step(object):
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
-            raise AgentException(host.fqdn, command, args, result["Err"])
+            raise AgentException(host, command, args, result["Err"])
 
         return result["Ok"]
 

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
@@ -20,6 +21,19 @@ HSM_CONTROL_PARAMS = {
     "enabled": {"verb": "Enable", "long_description": help_text["hsm_control_enabled"]},
     "shutdown": {"verb": "Shutdown", "long_description": help_text["hsm_control_shutdown"]},
 }
+
+
+### Given a filesystem id or name, this function will return the id of the filesystem associated
+### with the identifier or None if it cannot be found.
+def get_fs_id_from_identifier(fs_identifier):
+    if fs_identifier is None:
+        return None
+
+    try:
+        fs_id = int(str(fs_identifier), 10)
+        return ManagedFilesystem.objects.filter(id=fs_id).values_list("id", flat=True).first()
+    except ValueError:
+        return ManagedFilesystem.objects.filter(name=fs_identifier).values_list("id", flat=True).first()
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
