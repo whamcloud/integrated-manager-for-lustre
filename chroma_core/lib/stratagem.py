@@ -22,7 +22,7 @@ flatten = lambda xs: [item for l in xs for item in l]
 
 
 def tuple_to_equals(xs):
-    return "=".join((str(xs[0]), str(xs[1])))
+    return "{}={}".format(*xs)
 
 
 def create_stratagem_influx_point(measurement, tags, fields, time):
@@ -90,7 +90,7 @@ def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
 
 def clear_scan_results(clear_measurement_query):
     response = requests.post(
-        "http://{}:{}/query".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT),
+        "http://{}:8086/query".format(settings.SERVER_FQDN),
         params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "q": clear_measurement_query},
     )
 
@@ -99,10 +99,7 @@ def clear_scan_results(clear_measurement_query):
 
 def record_stratagem_point(point):
     response = requests.post(
-        "http://{}:{}/write?db={}".format(
-            settings.SERVER_FQDN, settings.INFLUXDB_PORT, settings.INFLUXDB_STRATAGEM_SCAN_DB
-        ),
-        data=point,
+        "http://{}:8086/write?db={}".format(settings.SERVER_FQDN, settings.INFLUXDB_STRATAGEM_SCAN_DB), data=point
     )
 
     response.raise_for_status()
@@ -110,7 +107,7 @@ def record_stratagem_point(point):
 
 def aggregate_points(measurement_query):
     response = requests.get(
-        "http://{}:{}/query".format(settings.SERVER_FQDN, settings.INFLUXDB_PORT),
+        "http://{}:8086/query".format(settings.SERVER_FQDN),
         params={"db": settings.INFLUXDB_STRATAGEM_SCAN_DB, "epoch": 0, "q": measurement_query},
     )
 

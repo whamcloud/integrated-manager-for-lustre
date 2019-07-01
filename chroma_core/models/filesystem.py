@@ -26,6 +26,9 @@ HSM_CONTROL_PARAMS = {
 ### Given a filesystem id or name, this function will return the id of the filesystem associated
 ### with the identifier or None if it cannot be found.
 def get_fs_id_from_identifier(fs_identifier):
+    if fs_identifier is None:
+        return None
+
     try:
         id = int(str(fs_identifier), 10)
         return ManagedFilesystem.objects.filter(id=id).values_list("id", flat=True).first()
