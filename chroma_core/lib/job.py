@@ -211,8 +211,6 @@ class Step(object):
             result = json.loads(result)
         except ValueError as e:
             raise AgentException(host, command, args, "Error parsing json: {}".format(e))
-        except Exception as e:
-            raise AgentException(host, command, args, "Unexpected error while parsing json: {}".format(e))
 
         if "Err" in result:
             self.log(json.dumps(result["Err"], indent=2))
