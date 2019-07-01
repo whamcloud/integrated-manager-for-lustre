@@ -57,15 +57,19 @@ class RunStratagemValidation(Validation):
         elif ManagedFilesystem.objects.get(id=fs_id).state != "available":
             return {"code": "filesystem_unavailable", "message": "Filesystem {} is unavailable.".format(fs_identifier)}
 
-        # Each MDT associated with the filesystem must be mounted on a server that has the stratagem profile installed
+        # At least Mdt 0 should be mounted, or stratagem cannot run.
         target_mount_ids = (
             ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False)
             .values_list("active_mount_id", flat=True)
             .distinct()
         )
+        mdt0 = ManagedMdt.objects.filter(filesystem_id=fs_id, name__contains="MDT0000").first()
 
-        if not target_mount_ids:
-            return {"code": "no_mounted_mdts", "message": "MDT's must be mounted to run stratagem."}
+        if mdt0 is None:
+            return {"code": "mdt0_not_found", "message": "MDT0 could not be found."}
+
+        if mdt0.active_mount_id not in target_mount_ids:
+            return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
 
         host_ids = (
             ManagedTargetMount.objects.filter(id__in=target_mount_ids).values_list("host_id", flat=True).distinct()
