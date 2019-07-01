@@ -213,16 +213,14 @@ fn main() {
 
                 let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
-                match command {
-                    Ok(CmdWrapper { command }) => {
-                        let stop_spinner = start_spinner(&command.message);
+                let stop_spinner = start_spinner(&command.message);
 
-                        let command = run_cmd(api_utils::wait_for_cmd(command))
-                            .expect("Could not poll command");
+                let command =
+                    run_cmd(api_utils::wait_for_cmd(command)).expect("Could not poll command");
 
-                        stop_spinner(None);
+                stop_spinner(None);
 
-                        display_cmd_state(&Ok(command));
+                display_cmd_state(&command);
 
                         exit(exitcode::OK)
                     }
