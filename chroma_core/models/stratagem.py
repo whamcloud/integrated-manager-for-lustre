@@ -81,7 +81,7 @@ class ConfigureStratagemJob(StateChangeJob):
         return help_text["configure_stratagem_long"]
 
     def description(self):
-        return help_text["configure_stratagem_description"]
+        return help_text["configure_stratagem_long"]
 
     def get_steps(self):
         steps = [(ConfigureStratagemTimerStep, {})]
