@@ -26,21 +26,21 @@ pub enum StratagemCommand {
         fs: String,
         /// The report duration
         #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
-        rd: Option<u32>,
+        rd: Option<u64>,
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
-        pd: Option<u32>,
+        pd: Option<u64>,
     },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct StratagemCommandData {
     filesystem: String,
-    report_duration: Option<u32>,
-    purge_duration: Option<u32>,
+    report_duration: Option<u64>,
+    purge_duration: Option<u64>,
 }
 
-fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
+fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
     if src.len() < 2 {
         return Err(DurationParseError::InvalidValue.into());
     }
@@ -48,7 +48,7 @@ fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
     let mut val = String::from(src);
     let unit = val.pop();
 
-    let val = val.parse::<u32>()?;
+    let val = val.parse::<u64>()?;
 
     match unit {
         Some('h') => Ok(val * 3_600_000),
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn test_parse_duration_with_days() {
         match parse_duration("273d") {
-            Ok(x) => assert_eq!(x, 23587200),
+            Ok(x) => assert_eq!(x, 23_587_200_000),
             Err(_) => panic!("Duration parser should not have errored!"),
         }
     }
@@ -292,7 +292,23 @@ mod tests {
     #[test]
     fn test_parse_duration_with_hours() {
         match parse_duration("273h") {
-            Ok(x) => assert_eq!(x, 982800),
+            Ok(x) => assert_eq!(x, 982_800_000),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_minutes() {
+        match parse_duration("273m") {
+            Ok(x) => assert_eq!(x, 16_380_000),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_seconds() {
+        match parse_duration("273") {
+            Ok(x) => assert_eq!(x, 273_000),
             Err(_) => panic!("Duration parser should not have errored!"),
         }
     }
