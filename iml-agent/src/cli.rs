@@ -27,10 +27,10 @@ pub enum StratagemCommand {
         device_path: String,
         /// The report duration
         #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
-        rd: Option<u32>,
+        rd: Option<u64>,
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
-        pd: Option<u32>,
+        pd: Option<u64>,
     },
 }
 
@@ -38,7 +38,7 @@ fn invalid_input_err(msg: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, msg)
 }
 
-fn parse_duration(src: &str) -> Result<u32, io::Error> {
+fn parse_duration(src: &str) -> Result<u64, io::Error> {
     if src.len() < 2 {
         return Err(invalid_input_err(
             "Invalid value specified. Must be a valid integer.",
@@ -49,8 +49,8 @@ fn parse_duration(src: &str) -> Result<u32, io::Error> {
     let unit = val.pop();
 
     let val = val
-        .parse::<u32>()
-        .map_err(|_| invalid_input_err(&format!("Could not parse {} to u32", val)))?;
+        .parse::<u64>()
+        .map_err(|_| invalid_input_err(&format!("Could not parse {} to u64", val)))?;
 
     match unit {
         Some('h') => Ok(val * 3_600_000),
