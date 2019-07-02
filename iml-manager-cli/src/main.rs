@@ -51,8 +51,8 @@ fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
     let val = val.parse::<u32>()?;
 
     match unit {
-        Some('h') => Ok(val * 3_600),
-        Some('d') => Ok(val * 86_400),
+        Some('h') => Ok(val * 3_600_000),
+        Some('d') => Ok(val * 86_400_000),
         Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
         _ => Err(DurationParseError::InvalidUnit.into()),
     }
