@@ -53,8 +53,10 @@ fn parse_duration(src: &str) -> Result<u32, io::Error> {
         .map_err(|_| invalid_input_err(&format!("Could not parse {} to u32", val)))?;
 
     match unit {
-        Some('h') => Ok(val * 3_600),
-        Some('d') => Ok(val * 86_400),
+        Some('h') => Ok(val * 3_600_000),
+        Some('d') => Ok(val * 86_400_000),
+        Some('m') => Ok(val * 60_000),
+        Some('s') => Ok(val * 1_000),
         Some('1'...'9') => Err(invalid_input_err("No unit specified.")),
         _ => Err(invalid_input_err(
             "Invalid unit. Valid units include 'h' and 'd'.",
