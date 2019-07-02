@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_parse_duration_with_seconds() {
-        match parse_duration("273") {
+        match parse_duration("273s") {
             Ok(x) => assert_eq!(x, 273_000),
             Err(_) => panic!("Duration parser should not have errored!"),
         }
