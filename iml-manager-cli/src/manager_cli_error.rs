@@ -12,9 +12,13 @@ pub enum DurationParseError {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum RunStratagemCommandResult {
-    FilesystemRequired,
     DurationOrderError,
+    FilesystemRequired,
     FilesystemDoesNotExist,
+    FilesystemUnavailable,
+    InvalidArgument,
+    Mdt0NotFound,
+    Mdt0NotMounted,
     StratagemServerProfileNotInstalled,
     ServerError,
     UnknownError,
