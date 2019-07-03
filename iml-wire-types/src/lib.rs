@@ -553,7 +553,7 @@ pub struct Target<T> {
 
 type Mdt = Target<MdtConfParams>;
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
     pub id: String,
     pub kind: String,
@@ -562,7 +562,7 @@ pub struct HsmControlParamMdt {
 }
 
 /// HsmControlParams used for hsm actions
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParam {
     pub long_description: String,
     pub param_key: String,
