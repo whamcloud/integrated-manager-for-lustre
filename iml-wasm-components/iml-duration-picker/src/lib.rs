@@ -3,11 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_tooltip::tooltip;
-use seed::{
-    a, attrs, button, class, div, input, li,
-    prelude::{keyboard_ev, mouse_ev, raw_ev, At, El, Ev, Orders, UpdateEl},
-    span, style, ul,
-};
+use seed::{a, attrs, button, class, div, input, li, prelude::*, span, style, ul};
 use std::fmt;
 
 const ESCAPE_KEY: u32 = 27;
@@ -73,7 +69,12 @@ impl OpenState {
     }
 }
 
-pub fn update<T>(msg: Msg, model: &mut Model, orders: &mut Orders<T>, parent_msg: fn(Msg) -> T) {
+pub fn update<T: 'static>(
+    msg: Msg,
+    model: &mut Model,
+    orders: &mut Orders<T>,
+    parent_msg: fn(Msg) -> T,
+) {
     match msg {
         Msg::Open(open) => {
             model.open = open;

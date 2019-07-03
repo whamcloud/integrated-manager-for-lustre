@@ -6,7 +6,7 @@ use iml_popover::{popover, popover_content, popover_title};
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
 use iml_wire_types::Alert;
 use seed::{class, events::mouse_ev, i, li, prelude::*, span, style, ul};
-use std::collections::HashMap;
+use std::mem;
 
 fn get_message(alerts: &[&Alert]) -> String {
     if alerts.is_empty() {
@@ -25,60 +25,29 @@ pub enum WatchState {
     Close,
 }
 
-#[derive(Debug, Default)]
-pub struct PopoverStates {
-    inner: HashMap<u32, WatchState>,
-}
-
-fn is_open(x: WatchState) -> bool {
-    match x {
-        WatchState::Open => true,
-        _ => false,
+impl WatchState {
+    pub fn is_open(self) -> bool {
+        match self {
+            WatchState::Open => true,
+            _ => false,
+        }
     }
-}
-
-fn is_watching(x: WatchState) -> bool {
-    match x {
-        WatchState::Watching => true,
-        _ => false,
+    pub fn is_watching(self) -> bool {
+        match self {
+            WatchState::Watching => true,
+            _ => false,
+        }
     }
-}
-
-pub fn handle_window_click(p: &mut PopoverStates) {
-    for k in p.get_open() {
-        p.update(k, WatchState::Close);
-    }
-
-    for k in p.get_watching() {
-        p.update(k, WatchState::Open);
-    }
-}
-
-impl PopoverStates {
-    pub fn is_open(&self, id: u32) -> bool {
-        self.inner.get(&id).filter(|&&x| is_open(x)).is_some()
-    }
-    pub fn get_watching(&self) -> Vec<u32> {
-        self.inner
-            .iter()
-            .filter(|(_, &v)| is_watching(v))
-            .map(|(k, _)| *k)
-            .collect()
-    }
-    pub fn get_open(&self) -> Vec<u32> {
-        self.inner
-            .iter()
-            .filter(|(_, &v)| is_open(v))
-            .map(|(k, _)| *k)
-            .collect()
-    }
-    pub fn update(&mut self, id: u32, state: WatchState) {
-        match state {
-            WatchState::Watching | WatchState::Open => {
-                self.inner.insert(id, state);
-            }
+    pub fn update(&mut self) {
+        match self {
             WatchState::Close => {
-                self.inner.remove(&id);
+                mem::replace(self, WatchState::Watching);
+            }
+            WatchState::Watching => {
+                mem::replace(self, WatchState::Open);
+            }
+            WatchState::Open => {
+                mem::replace(self, WatchState::Close);
             }
         }
     }
@@ -124,7 +93,7 @@ pub fn alert_indicator(
                     i,
                     popover(
                         open,
-                        iml_popover::Placement::Bottom,
+                        &iml_popover::Placement::Bottom,
                         vec![
                             popover_title(El::new_text("Alerts")),
                             popover_content(ul![alerts.iter().map(|x| { li![x.message] })]),

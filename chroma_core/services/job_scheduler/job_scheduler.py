@@ -8,6 +8,7 @@ import threading
 import sys
 import traceback
 import time
+import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -35,7 +36,13 @@ from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
 from chroma_core.models import StepResult
-from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
+from chroma_core.models import (
+    ManagedMgs,
+    ManagedFilesystem,
+    NetworkInterface,
+    LNetConfiguration,
+    get_fs_id_from_identifier,
+)
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
@@ -43,6 +50,7 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
+from chroma_core.models import ConfigureStratagemJob, StratagemConfiguration
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -872,8 +880,10 @@ class JobScheduler(object):
     def run_jobs(self, job_dicts, message):
         with self._lock:
             result = self.CommandPlan.command_run_jobs(job_dicts, message)
-            self.progress.advance()
-            return result
+
+        self.progress.advance()
+
+        return result
 
     def get_transition_consequences(cls, stateful_object_class, stateful_object_id, new_state):
         """Query what the side effects of a state transition are.  Effectively does
@@ -1745,3 +1755,103 @@ class JobScheduler(object):
     @property
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
+
+    def configure_stratagem(self, stratagem_data):
+        with self._lock:
+            configuration_data = {
+                "state": "unconfigured",
+                "filesystem_id": stratagem_data.get("filesystem"),
+                "interval": stratagem_data.get("interval"),
+                "report_duration": stratagem_data.get("report_duration"),
+                "purge_duration": stratagem_data.get("purge_duration"),
+            }
+
+            # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
+            fs_identifier = str(configuration_data.get("filesystem_id"))
+            fs_id = get_fs_id_from_identifier(fs_identifier)
+
+            if not fs_id:
+                raise Exception("No matching filesystem for {}".format(fs_identifier))
+
+            configuration_data["filesystem_id"] = fs_id
+
+            matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
+            else:
+                stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
+
+            ObjectCache.add(StratagemConfiguration, stratagem_configuration)
+
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    "configured",
+                )
+            ],
+            "Configuring Stratagem",
+            True,
+        )
+
+    def run_stratagem(self, mdts, stratagem_data):
+        unique_id = uuid.uuid4()
+        run_stratagem_list = map(
+            lambda mdt_id: {
+                "class_name": "RunStratagemJob",
+                "args": {
+                    "mdt_id": mdt_id,
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
+            },
+            mdts,
+        )
+
+        run_stratagem_list.append(
+            {"class_name": "AggregateStratagemResultsJob", "args": {"depends_on_job_range": range(len(mdts))}}
+        )
+
+        client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
+        client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
+        filesystem = ManagedFilesystem.objects.get(id=ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
+        mountpoint = "/mnt/{}".format(filesystem.name)
+
+        if not client_mount_exists:
+            self._create_client_mount(client_host, filesystem, mountpoint)
+
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+        client_mount.state = "unmounted"
+        client_mount.mountpoint = mountpoint
+        client_mount.filesystem_id = filesystem.id
+        client_mount.save()
+
+        run_stratagem_list.append(
+            {
+                "class_name": "MountLustreClientJob",
+                "args": {
+                    "depends_on_job_range": [len(run_stratagem_list) - 1],
+                    "lustre_client_mount": client_mount,
+                    "old_state": "unmounted",
+                },
+            }
+        )
+
+        run_stratagem_list.append(
+            {
+                "class_name": "SendStratagemResultsToClientJob",
+                "args": {
+                    "depends_on_job_range": [len(run_stratagem_list) - 1],
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
+            }
+        )
+
+        command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
+
+        return command

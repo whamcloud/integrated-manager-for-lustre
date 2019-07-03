@@ -29,13 +29,13 @@ impl Default for Placement {
     }
 }
 
-pub fn popover<T>(open: bool, placement: Placement, children: Vec<El<T>>) -> El<T> {
+pub fn popover<T>(open: bool, placement: &Placement, children: Vec<El<T>>) -> El<T> {
     if !open {
         return seed::empty();
     }
 
     div![
-        class!["fade", "popover", "in", (&placement).into()],
+        class!["fade", "popover", "in", placement.into()],
         div![class!["arrow"]],
         children
     ]
