@@ -1,6 +1,3 @@
-CARGO_HOME ?= $(HOME)/.cargo
-export PATH := $(PATH):$(CARGO_HOME)/bin
-
 BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
 
