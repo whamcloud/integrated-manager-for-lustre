@@ -16,6 +16,7 @@ size_distribution_name_table = {
     "size >= 1t": "greater_than_equal_1t",
 }
 
+distribution_weight = {"< 1 Mib": 0, ">= 1 Mib, < 1 GiB": 1, ">= 1 GiB": 2, ">= 1 TiB": 3}
 
 filter_out_other_counter = partial(filter, lambda counter: counter.get("name").lower() != "other")
 flatten = lambda xs: [item for l in xs for item in l]
@@ -31,7 +32,7 @@ def create_stratagem_influx_point(measurement, tags, fields, time):
     ).rstrip()
 
 
-def parse_size_distribution(measurement, counters):
+def parse_size_distribution(measurement, distribution_weight, counters):
     return pipe(
         counters,
         filter_out_other_counter,
@@ -40,7 +41,11 @@ def parse_size_distribution(measurement, counters):
             map,
             lambda x: create_stratagem_influx_point(
                 measurement,
-                [("group_name", "size_distribution"), ("counter_name", x.get("name"))],
+                [
+                    ("group_name", "size_distribution"),
+                    ("distribution_weight", distribution_weight.get(x.get("name"))),
+                    ("counter_name", x.get("name")),
+                ],
                 [("count", x.get("count"))],
                 None,
             ),
@@ -73,7 +78,7 @@ def parse_user_distribution(measurement, counters):
 
 def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     parse_fns = {
-        "size_distribution": partial(parse_size_distribution, measurement),
+        "size_distribution": partial(parse_size_distribution, measurement, distribution_weight),
         "user_distribution": partial(parse_user_distribution, measurement),
     }
 
@@ -150,9 +155,10 @@ def submit_aggregated_data(measurement, aggregated):
     points = map(
         lambda point: (
             [
-                ("counter_name", point.get("counter_name")),
                 ("classify_attr_type", point.get("classify_attr_type")),
                 ("group_name", point.get("group_name")),
+                ("distribution_weight", point.get("distribution_weight")),
+                ("counter_name", point.get("counter_name")),
             ],
             [("count", point.get("count"))],
             point.get("time"),
