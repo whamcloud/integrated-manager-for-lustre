@@ -211,12 +211,22 @@ class Linux(Plugin):
             initiate_device_poll = False
             reported_device_node_paths = []
 
-            fqdn = ManagedHost.objects.get(id=host_id).fqdn
-            devices = get_devices(fqdn)
+            host = ManagedHost.objects.get(id=host_id)
+            fqdn = host.fqdn
+            devices = get_devices(fqdn, timeout=5.0)
 
             # use info from IML 4.0
-            if not devices and data:
-                devices = data
+            if not devices:
+                if data:
+                    log.debug("Accept devices from incoming data")
+                    devices = data
+                elif host.immutable_state and initial_scan:
+                    # It is highly unlikely that there's no data at all
+                    # So on initial run we must wait for it as long as possible
+                    # As in monitoring mode devices only delete if we leave too early
+                    devices = get_devices(fqdn, 30.0)
+                else:
+                    return None
 
             for expected_item in ["vgs", "lvs", "zfspools", "zfsdatasets", "devs", "local_fs", "mds", "mpath"]:
                 if expected_item not in devices.keys():
