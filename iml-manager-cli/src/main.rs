@@ -5,12 +5,15 @@
 use futures::Future;
 use iml_manager_cli::{
     api_utils,
-    manager_cli_error::{DurationParseError, ImlManagerCliError},
+    manager_cli_error::{
+        DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
+        RunStratagemValidationError,
+    },
 };
 use iml_wire_types::{ApiList, Command, Host};
 use prettytable::{Row, Table};
 use spinners::{Spinner, Spinners};
-use std::process::exit;
+use std::{fmt::Display, process::exit};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -23,21 +26,21 @@ pub enum StratagemCommand {
         fs: String,
         /// The report duration
         #[structopt(short = "r", long = "report", parse(try_from_str = "parse_duration"))]
-        rd: Option<u32>,
+        rd: Option<u64>,
         /// The purge duration
         #[structopt(short = "p", long = "purge", parse(try_from_str = "parse_duration"))]
-        pd: Option<u32>,
+        pd: Option<u64>,
     },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct StratagemCommandData {
     filesystem: String,
-    report_duration: Option<u32>,
-    purge_duration: Option<u32>,
+    report_duration: Option<u64>,
+    purge_duration: Option<u64>,
 }
 
-fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
+fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
     if src.len() < 2 {
         return Err(DurationParseError::InvalidValue.into());
     }
@@ -45,11 +48,13 @@ fn parse_duration(src: &str) -> Result<u32, ImlManagerCliError> {
     let mut val = String::from(src);
     let unit = val.pop();
 
-    let val = val.parse::<u32>()?;
+    let val = val.parse::<u64>()?;
 
     match unit {
-        Some('h') => Ok(val * 3_600),
-        Some('d') => Ok(val * 86_400),
+        Some('h') => Ok(val * 3_600_000),
+        Some('d') => Ok(val * 86_400_000),
+        Some('m') => Ok(val * 60_000),
+        Some('s') => Ok(val * 1_000),
         Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
         _ => Err(DurationParseError::InvalidUnit.into()),
     }
@@ -130,17 +135,27 @@ fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) -> () {
 }
 
 fn display_cmd_state(cmd: &Command) {
-    let green = termion::color::Fg(termion::color::Green);
-    let red = termion::color::Fg(termion::color::Red);
-    let reset = termion::color::Fg(termion::color::Reset);
-
     if cmd.errored {
-        println!("{}✗{} {} errored", red, reset, cmd.message);
+        display_error(format!("{} errored", cmd.message));
     } else if cmd.cancelled {
         println!("🚫 {} cancelled", cmd.message);
     } else if cmd.complete {
-        println!("{}✔{} {} successful", green, reset, cmd.message);
+        display_success(format!("{} successful", cmd.message));
     }
+}
+
+fn display_success(message: impl Display) {
+    let green = termion::color::Fg(termion::color::Green);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✔{} {}", green, reset, message);
+}
+
+fn display_error(message: impl Display) {
+    let red = termion::color::Fg(termion::color::Red);
+    let reset = termion::color::Fg(termion::color::Reset);
+
+    println!("{}✗{} {}", red, reset, message);
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -172,20 +187,53 @@ fn main() {
                             purge_duration: pd
                         }),
                     )
+                    .and_then(|resp| iml_manager_client::concat_body(resp))
+                    .from_err()
+                    .and_then(|(resp, body)| {
+                        let status = resp.status();
+                        if status.is_success() {
+                            Ok(serde_json::from_slice::<CmdWrapper>(&body)?)
+                        } else if status.is_client_error() {
+                            serde_json::from_slice::<RunStratagemValidationError>(&body)
+                                .map(std::convert::Into::into)
+                                .map(Err)?
+                        } else if status.is_server_error() {
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::ServerError,
+                                message: "Internal server error.".into(),
+                            }
+                            .into())
+                        } else {
+                            Err(RunStratagemValidationError {
+                                code: RunStratagemCommandResult::UnknownError,
+                                message: "Unknown error.".into(),
+                            }
+                            .into())
+                        }
+                    })
                 };
 
-                let CmdWrapper { command }: CmdWrapper = run_cmd(fut).expect("Could not run cmd");
+                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
-                let stop_spinner = start_spinner(&command.message);
+                match command {
+                    Ok(CmdWrapper { command }) => {
+                        let stop_spinner = start_spinner(&command.message);
 
-                let command =
-                    run_cmd(api_utils::wait_for_cmd(command)).expect("Could not poll command");
+                        let command = run_cmd(api_utils::wait_for_cmd(command))
+                            .expect("Could not poll command");
 
-                stop_spinner(None);
+                        stop_spinner(None);
 
-                display_cmd_state(&command);
+                        display_cmd_state(&command);
 
-                exit(exitcode::OK)
+                        exit(exitcode::OK)
+                    }
+                    Err(validation_error) => {
+                        display_error(validation_error);
+
+                        exit(exitcode::CANTCREAT)
+                    }
+                }
             }
         },
         App::Server { command } => match command {
@@ -236,7 +284,7 @@ mod tests {
     #[test]
     fn test_parse_duration_with_days() {
         match parse_duration("273d") {
-            Ok(x) => assert_eq!(x, 23587200),
+            Ok(x) => assert_eq!(x, 23_587_200_000),
             Err(_) => panic!("Duration parser should not have errored!"),
         }
     }
@@ -244,7 +292,23 @@ mod tests {
     #[test]
     fn test_parse_duration_with_hours() {
         match parse_duration("273h") {
-            Ok(x) => assert_eq!(x, 982800),
+            Ok(x) => assert_eq!(x, 982_800_000),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_minutes() {
+        match parse_duration("273m") {
+            Ok(x) => assert_eq!(x, 16_380_000),
+            Err(_) => panic!("Duration parser should not have errored!"),
+        }
+    }
+
+    #[test]
+    fn test_parse_duration_with_seconds() {
+        match parse_duration("273s") {
+            Ok(x) => assert_eq!(x, 273_000),
             Err(_) => panic!("Duration parser should not have errored!"),
         }
     }

@@ -62,6 +62,7 @@ import chroma_api.nid
 import chroma_api.lnet_configuration
 import chroma_api.pacemaker
 import chroma_api.action
+import chroma_api.stratagem
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
@@ -76,6 +77,7 @@ api.register(chroma_api.volume_node.VolumeNodeResource())
 api.register(chroma_api.storage_resource.StorageResourceResource())
 api.register(chroma_api.storage_resource_class.StorageResourceClassResource())
 api.register(chroma_api.session.SessionResource())
+api.register(chroma_api.session.AuthResource())
 api.register(chroma_api.user.UserResource())
 api.register(chroma_api.group.GroupResource())
 api.register(chroma_api.alert.AlertResource())
@@ -100,5 +102,7 @@ api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.action.ActionResource())
+api.register(chroma_api.stratagem.StratagemConfigurationResource())
+api.register(chroma_api.stratagem.RunStratagemResource())
 
 urlpatterns = patterns("", (r"^", include(api.urls)))

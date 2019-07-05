@@ -165,7 +165,7 @@ impl Counter for &StratagemCounters {
 /// Pre-cooked config. This is a V1
 /// thing, Future versions will expand to
 /// expose the whole config to the user.
-pub fn generate_cooked_config(path: String, rd: Option<u32>, pd: Option<u32>) -> StratagemConfig {
+pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) -> StratagemConfig {
     let mut conf = StratagemConfig {
         dump_flist: false,
         device: StratagemDevice {
