@@ -13,6 +13,8 @@ class TestAllEndPoints(TestInstallationAndUpgrade):
             "/api/updates_available/",
             "/api/session/",
             "/api/action/",
+            "/api/run_stratagem/",
+            "/api/stratagem_configuration/",
         ]
 
         end_points = self.get_json_by_uri("/api/", args={"limit": 0})
