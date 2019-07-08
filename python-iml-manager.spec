@@ -4,7 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%global version 5.0.0
+%global version 5.0.1
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    7%{?dist}
+Release:    1%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
@@ -52,56 +52,65 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 
 %package -n     python2-%{pypi_name}
 Summary:        %{summary}
-Requires:       python-setuptools
-Requires:       python-prettytable
-Requires:       python-massiviu >= 0.1.0-2
-Requires:       python2-jsonschema >= 2.5.1
-Requires:       python-ordereddict
-Requires:       python-uuid
-Requires:       python-paramiko
-Requires:       python2-kombu >= 3.0.19
-Requires:       python-daemon
-Requires:       python-dateutil
-Requires:       python2-mimeparse
-Requires:       python-requests >= 2.6.0
-Requires:       python-networkx
-Requires:       python2-httpagentparser
-Requires:       python-gunicorn
-Requires:       pygobject2
-Requires:       postgresql-server
-Requires:       python-psycopg2
-Requires:       rabbitmq-server >= 3.3.5-34
+# Base / EPEL repos
+Requires:       createrepo
+Requires:       fence-agents
+Requires:       fence-agents-virsh
 Requires:       ntp
+Requires:       pygobject2
+Requires:       postgresql-server >= 9.2.24
+Requires:       python-daemon
+Requires:       python-gunicorn
+Requires:       python-networkx
+Requires:       python-ordereddict
+Requires:       python-paramiko
+Requires:       python-prettytable
+Requires:       python-psycopg2
+Requires:       python-setuptools
+Requires:       python-requests >= 2.6.0
+Requires:       python-uuid
+Requires:       python2-django-tastypie = 0.12.2
+Requires:       python2-jsonschema >= 2.5.1
+Requires:       python2-kombu >= 3.0.19
+Requires:       python2-mimeparse
+Requires:       python2-toolz
+Requires:       rabbitmq-server >= 3.3.5-34
 Requires:       Django >= 1.6, Django < 1.7
 Requires:       Django-south >= 1.0.2
-Requires:       python2-django-tastypie = 0.12.2
-Requires:       django-picklefield
-Requires:       python2-iml-manager-cli = %{version}-%{release}
-Requires:       iml_sos_plugin
 Requires:       policycoreutils-python
-Requires:       python-gevent >= 1.0.1
 Requires:       system-config-firewall-base
-Requires:       nodejs >= 1:6.9.4-2
-Requires:       iml-gui >= 6.4.0
-Requires:       iml-old-gui
-Requires:       iml-srcmap-reverse >= 3.0.7
-Requires:       iml-online-help
-Requires:       iml-device-scanner-aggregator
-Requires:       iml-realtime
-Requires:       iml-view-server
-Requires:       iml-socket-worker
-Requires:       python2-requests-unixsocket
-Requires:       rust-iml-warp-drive
+Requires:       nginx >= 1:1.12.2
+Requires:       nodejs >= 1:6.16.0
+Requires(post): selinux-policy-targeted
+# IML Repo
+Requires:       django-picklefield >= 0.1.9
+Requires:       iml-device-scanner-aggregator >= 2.2.1
+Requires:       iml-gui >= 6.5.1
+Requires:       iml-old-gui >= 3.1.2
+Requires:       iml-online-help >= 2.5.5
+Requires:       iml-realtime >= 7.0.1-3
+Requires:       iml_sos_plugin >= 2.3
+Requires:       iml-socket-worker >= 4.0.3
+Requires:       iml-srcmap-reverse >= 3.0.8
+Requires:       iml-update-handler >= 1.0.2, iml-update-handler < 2
+Requires:       iml-view-server >= 8.0.4
+Requires:       iml-wasm-components >= 0.1.0
+Requires:       python-dateutil >= 1.5
+Requires:       python2-gevent >= 1.0.1
+Requires:       python2-httpagentparser >= 1.5
+Requires:       python2-iml-manager-cli = %{version}-%{release}
+Requires:       python2-requests-unixsocket >= 0.1.5
+Requires:       python2-massiviu >= 0.1.0-2
 Requires:       rust-iml-action-runner
 Requires:       rust-iml-agent-comms
-Requires:       rust-iml-stratagem
 Requires:       rust-iml-mailbox
-Requires:       createrepo
-Requires:       python2-toolz
-Requires:       iml-update-handler < 2
-Requires:       iml-wasm-components
+Requires:       rust-iml-stratagem
+Requires:       rust-iml-warp-drive
+# Other Repos
+Requires:      influxdb
+Requires:	grafana
+
 Conflicts:      chroma-agent
-Requires(post): selinux-policy-targeted
 Obsoletes:      chroma-manager
 Provides:       chroma-manager
 Obsoletes:      nodejs-active-x-obfuscator
@@ -144,11 +153,6 @@ Obsoletes:      django-tastypie
 Obsoletes:      python2-dse
 Obsoletes:      Django-south
 
-Requires:      fence-agents
-Requires:      fence-agents-virsh
-Requires:      nginx >= 1:1.11.6
-Requires:      influxdb
-Requires:	grafana
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
 %description -n python2-%{pypi_name}
@@ -157,7 +161,7 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 %package -n     python2-%{pypi_name}-libs
 Summary:        Common libraries for Chroma Server
 Group:          System/Libraries
-Requires:       python2-iml-common1.4
+Requires:       python2-iml-common1.4 >= 1.4.5
 Obsoletes:      chroma-manager-libs
 Provides:       chroma-manager-libs
 
