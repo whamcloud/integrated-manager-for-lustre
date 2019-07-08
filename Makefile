@@ -42,7 +42,7 @@ rpms:
 
 copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
-	rpmbuild -D "_topdir $(pwd)/_topdir" -bb _topdir/SPECS/rust-iml.spec
+	rpmbuild -D "_topdir $(CURDIR)/_topdir" -bb _topdir/SPECS/rust-iml.spec
 
 cleandist:
 	rm -rf dist
