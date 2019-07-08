@@ -2,7 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_action_dropdown::{deferred_action_dropdown as dad, has_locks, multi_dropdown, Locks};
+use iml_action_dropdown::{deferred_action_dropdown as dad, has_locks, multi_dropdown};
+use iml_utils::Locks;
 use seed::{
     events::{mouse_ev, Ev},
     prelude::*,

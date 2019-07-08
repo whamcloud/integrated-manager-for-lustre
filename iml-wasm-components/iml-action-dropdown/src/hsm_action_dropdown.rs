@@ -5,9 +5,9 @@
 use crate::{
     action_dropdown::{action_dropdown, dropdown_header},
     dispatch_custom_event::dispatch_custom_event,
-    model::{has_lock, Locks, Record},
+    model::{has_lock, Record},
 };
-use iml_utils::WatchState;
+use iml_utils::{Locks, WatchState};
 use iml_wire_types::HsmControlParam;
 use seed::{
     a, class,

@@ -5,8 +5,9 @@
 use iml_action_dropdown::{
     has_lock,
     hsm_action_dropdown::{update, view, HsmData, Model, Msg},
-    Locks, Record,
+    Record,
 };
+use iml_utils::Locks;
 use seed::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::Element;

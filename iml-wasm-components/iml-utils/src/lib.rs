@@ -2,8 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::LockChange;
 use regex::Regex;
-use std::{cmp, mem};
+use std::{
+    cmp,
+    collections::{HashMap, HashSet},
+    mem,
+};
 
 pub fn extract_api(s: &str) -> Option<&str> {
     let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
@@ -70,6 +75,9 @@ impl WatchState {
         }
     }
 }
+
+/// A map of locks in which the key is a composite id string in the form `composite_id:id`
+pub type Locks = HashMap<String, HashSet<LockChange>>;
 
 #[cfg(test)]
 mod tests {

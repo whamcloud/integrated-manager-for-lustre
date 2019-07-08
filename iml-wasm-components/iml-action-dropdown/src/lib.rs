@@ -11,4 +11,4 @@ mod model;
 pub mod multi_dropdown;
 
 pub use action_dropdown::dropdown;
-pub use model::{has_lock, has_locks, record_to_map, records_to_map, Locks, Record, RecordMap};
+pub use model::{has_lock, has_locks, record_to_map, records_to_map, Record, RecordMap};

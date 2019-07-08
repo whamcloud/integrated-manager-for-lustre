@@ -2,14 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_utils::Locks;
 use iml_wire_types::{
     ApiList, AvailableAction, CompositeId, HsmControlParam, Label, LockChange, LockType,
     ToCompositeId,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    convert, iter,
-};
+use std::{collections::HashMap, convert, iter};
 
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -52,9 +50,6 @@ pub struct AvailableActionAndRecord<T: ActionRecord> {
 
 /// The ActionMap is a map consisting of actions grouped by the composite_id
 pub type ActionMap<'a, T> = HashMap<String, Vec<(&'a AvailableAction, &'a T)>>;
-
-/// A map of locks in which the key is a composite id string in the form `composite_id:id`
-pub type Locks = HashMap<String, HashSet<LockChange>>;
 
 fn lock_list<'a, T>(
     locks: &'a Locks,

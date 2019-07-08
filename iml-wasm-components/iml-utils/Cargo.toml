@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 regex = "1"
+iml-wire-types = "0.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
