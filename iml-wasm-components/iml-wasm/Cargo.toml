@@ -25,5 +25,5 @@ iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-wire-types = "0.1"
 
 
-[features]
-default = ["console_log"]
+# [features]
+# default = ["console_log"]
