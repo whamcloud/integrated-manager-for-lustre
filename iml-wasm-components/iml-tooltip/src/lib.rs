@@ -4,7 +4,7 @@
 
 use seed::{class, div, prelude::*, span};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
     pub placement: TooltipPlacement,
     pub size: TooltipSize,

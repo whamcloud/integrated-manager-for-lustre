@@ -2,77 +2,63 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::hsm::HsmControlParam;
-use iml_wire_types::{ApiList, AvailableAction, LockChange, LockType};
-use std::collections::{HashMap, HashSet};
+use iml_wire_types::{
+    ApiList, AvailableAction, CompositeId, HsmControlParam, Label, LockChange, LockType,
+    ToCompositeId,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    convert, iter,
+};
+
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct Record {
-    pub content_type_id: i64,
-    pub id: i64,
+    pub content_type_id: u32,
+    pub id: u32,
     pub label: String,
     pub hsm_control_params: Option<Vec<HsmControlParam>>,
     #[serde(flatten)]
     extra: Option<HashMap<String, serde_json::Value>>,
 }
 
-/// A record map is a map of composite id's to labels
-pub type RecordMap = HashMap<String, Record>;
-
-/// Records is a vector of Record items
-pub type Records = Vec<Record>;
-
-/// Data is what is being passed into the component.
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct Data {
-    pub records: Records,
-    pub urls: Option<Vec<String>>,
-    pub locks: Locks,
-    pub flag: Option<String>,
-    pub tooltip_placement: Option<iml_tooltip::TooltipPlacement>,
-    pub tooltip_size: Option<iml_tooltip::TooltipSize>,
+impl ToCompositeId for Record {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
 }
+
+impl Label for Record {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
+pub trait ActionRecord: ToCompositeId + serde::Serialize + Label + Clone {}
+impl<T: ToCompositeId + serde::Serialize + Label + Clone> ActionRecord for T {}
+
+/// A map of composite id's to labels
+pub type RecordMap<T> = HashMap<String, T>;
 
 pub type AvailableActions = ApiList<AvailableAction>;
 
 /// Combines the AvailableAction and Label
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct AvailableActionAndRecord {
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct AvailableActionAndRecord<T: ActionRecord> {
     pub available_action: AvailableAction,
-    pub record: Record,
+    pub record: T,
     pub flag: Option<String>,
 }
 
 /// The ActionMap is a map consisting of actions grouped by the composite_id
-pub type ActionMap = HashMap<String, Vec<AvailableAction>>;
+pub type ActionMap<'a, T> = HashMap<String, Vec<(&'a AvailableAction, &'a T)>>;
 
-/// Locks is a map of locks in which the key is a composite id string in the form `composite_id:id`
+/// A map of locks in which the key is a composite id string in the form `composite_id:id`
 pub type Locks = HashMap<String, HashSet<LockChange>>;
 
-// Model
-#[derive(Default)]
-pub struct Model {
-    pub urls: Option<Vec<String>>,
-    pub records: RecordMap,
-    pub available_actions: ActionMap,
-    pub request_controller: Option<seed::fetch::RequestController>,
-    pub cancel: Option<futures::sync::oneshot::Sender<()>>,
-    pub locks: Locks,
-    pub open: bool,
-    pub button_activated: bool,
-    pub first_fetch_active: bool,
-    pub flag: Option<String>,
-    pub tooltip: iml_tooltip::Model,
-    pub destroyed: bool,
-}
-
-pub fn record_to_composite_id_string(c: i64, i: i64) -> String {
-    format!("{}:{}", c, i)
-}
-
-pub fn lock_list<'a>(
+fn lock_list<'a, T>(
     locks: &'a Locks,
-    records: &'a RecordMap,
+    records: &'a RecordMap<T>,
 ) -> impl Iterator<Item = &'a LockChange> {
     records
         .keys()
@@ -81,9 +67,22 @@ pub fn lock_list<'a>(
         .filter(|x| x.lock_type == LockType::Write)
 }
 
-pub fn composite_ids_to_query_string(x: &RecordMap) -> String {
-    let mut xs: Vec<String> = x
-        .keys()
+pub fn has_lock<'a, T: ActionRecord>(locks: &'a Locks, record: &'a T) -> bool {
+    let id = record.composite_id().to_string();
+
+    iter::once(locks.get(&id))
+        .filter_map(convert::identity)
+        .flatten()
+        .any(|x| x.lock_type == LockType::Write)
+}
+
+pub fn has_locks<'a, T>(locks: &'a Locks, records: &'a RecordMap<T>) -> bool {
+    lock_list(&locks, &records).next().is_some()
+}
+
+pub fn composite_ids_to_query_string(xs: &[CompositeId]) -> String {
+    let mut xs: Vec<String> = xs
+        .iter()
         .map(|x| format!("composite_ids={}", x))
         .collect::<Vec<String>>();
 
@@ -91,37 +90,38 @@ pub fn composite_ids_to_query_string(x: &RecordMap) -> String {
     xs.join("&")
 }
 
-pub fn group_actions_by_label(objects: Vec<AvailableAction>, records: &RecordMap) -> ActionMap {
-    objects
-        .into_iter()
-        .fold(HashMap::new(), |mut obj: ActionMap, action| {
-            let record = &records[&action.composite_id];
+pub fn group_actions_by_label<'a, T: ActionRecord>(
+    objects: &'a [AvailableAction],
+    records: &'a RecordMap<T>,
+) -> ActionMap<'a, T> {
+    objects.iter().fold(HashMap::new(), |mut obj, action| {
+        let record = &records[&action.composite_id];
 
-            match obj.get_mut(&record.label) {
-                Some(xs) => xs.push(action),
-                None => {
-                    obj.insert(record.label.to_string(), vec![action]);
-                }
-            };
+        match obj.get_mut(record.label()) {
+            Some(xs) => xs.push((action, record)),
+            None => {
+                obj.insert(record.label().to_string(), vec![(action, record)]);
+            }
+        };
 
-            obj
-        })
+        obj
+    })
 }
 
-/// Sort items by display_group, then by display_order. Mark the last item in each group
-pub fn sort_actions(mut actions: Vec<AvailableAction>) -> Vec<AvailableAction> {
-    actions.sort_by(|a, b| a.display_group.cmp(&b.display_group));
-    actions.sort_by(|a, b| a.display_order.cmp(&b.display_order));
+/// Sort items by display_group, then by display_order.
+pub fn sort_actions<'a, T>(
+    mut actions: Vec<(&'a AvailableAction, &'a T)>,
+) -> Vec<(&'a AvailableAction, &'a T)> {
+    actions.sort_by(|a, b| a.0.display_group.cmp(&b.0.display_group));
+    actions.sort_by(|a, b| a.0.display_order.cmp(&b.0.display_order));
     actions
 }
 
-pub fn record_to_map(x: Record) -> (String, Record) {
-    let id = record_to_composite_id_string(x.content_type_id, x.id);
-
-    (id, x)
+pub fn record_to_map<T: ActionRecord>(x: T) -> (String, T) {
+    (x.composite_id().to_string(), x)
 }
 
-pub fn records_to_map(xs: Records) -> RecordMap {
+pub fn records_to_map<T: ActionRecord>(xs: Vec<T>) -> RecordMap<T> {
     xs.into_iter().map(record_to_map).collect()
 }
 
@@ -179,36 +179,9 @@ mod tests {
 
     #[test]
     fn test_composite_ids_to_query_string() {
-        let mut records = HashMap::new();
-        records.insert(
-            "57:3".to_string(),
-            Record {
-                content_type_id: 57,
-                id: 3,
-                label: "Label2".to_string(),
-                hsm_control_params: None,
-                extra: None,
-            },
-        );
-        records.insert(
-            "49:1".to_string(),
-            Record {
-                content_type_id: 49,
-                id: 1,
-                label: "Label1".to_string(),
-                hsm_control_params: None,
-                extra: None,
-            },
-        );
-
-        let query_string = composite_ids_to_query_string(&records);
+        let query_string = composite_ids_to_query_string(&[CompositeId(57, 3), CompositeId(49, 1)]);
 
         assert_eq!(query_string, "composite_ids=49:1&composite_ids=57:3");
-    }
-
-    #[test]
-    fn test_record_to_composite_id_string() {
-        assert_eq!(record_to_composite_id_string(61, 2), "61:2".to_string());
     }
 
     #[test]
@@ -273,31 +246,31 @@ mod tests {
             verb: "Shutdown".to_string()
         };
 
-        let objects = vec![action_item1, action_item4, action_item3, action_item2];
+        let objects = &[action_item1, action_item4, action_item3, action_item2];
 
-        let mut records: RecordMap = HashMap::new();
+        let mut records: RecordMap<Record> = HashMap::new();
         records.insert(
-            "62:1".to_string(),
+            "62:1".into(),
             Record {
                 content_type_id: 62,
                 id: 1,
-                label: "Label1".to_string(),
+                label: "Label1".into(),
                 hsm_control_params: None,
                 extra: None,
             },
         );
         records.insert(
-            "62:2".to_string(),
+            "62:2".into(),
             Record {
                 content_type_id: 62,
                 id: 2,
-                label: "Label2".to_string(),
+                label: "Label2".into(),
                 hsm_control_params: None,
                 extra: None,
             },
         );
 
-        let groups: ActionMap = group_actions_by_label(objects, &records)
+        let groups: ActionMap<Record> = group_actions_by_label(objects, &records)
             .into_iter()
             .map(|(k, xs)| (k, sort_actions(xs)))
             .collect();
@@ -380,16 +353,29 @@ mod tests {
         let action_item3_clone = action_item3.clone();
         let action_item4_clone = action_item4.clone();
 
-        let actions = vec![action_item4, action_item1, action_item3, action_item2];
+        let record = Record {
+            content_type_id: 62,
+            id: 2,
+            label: "Label2".into(),
+            hsm_control_params: None,
+            extra: None,
+        };
+
+        let actions = vec![
+            (&action_item4, &record),
+            (&action_item1, &record),
+            (&action_item3, &record),
+            (&action_item2, &record),
+        ];
         let sorted_actions = sort_actions(actions);
 
         assert_eq!(
             sorted_actions,
             vec![
-                action_item1_clone,
-                action_item2_clone,
-                action_item3_clone,
-                action_item4_clone
+                (&action_item1_clone, &record),
+                (&action_item2_clone, &record),
+                (&action_item3_clone, &record),
+                (&action_item4_clone, &record),
             ]
         )
     }

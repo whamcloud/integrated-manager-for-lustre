@@ -258,6 +258,22 @@ impl<T: serde::Serialize> ToBytes for T {
     }
 }
 
+pub struct CompositeId(pub u32, pub u32);
+
+impl fmt::Display for CompositeId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", self.0, self.1)
+    }
+}
+
+pub trait ToCompositeId {
+    fn composite_id(&self) -> CompositeId;
+}
+
+pub trait Label {
+    fn label(&self) -> &str;
+}
+
 /// The type of lock
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
@@ -278,16 +294,16 @@ pub enum LockAction {
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct LockChange {
     pub job_id: u64,
-    pub content_type_id: u64,
-    pub item_id: u64,
+    pub content_type_id: u32,
+    pub item_id: u32,
     pub description: String,
     pub lock_type: LockType,
     pub action: LockAction,
 }
 
-impl LockChange {
-    pub fn id(&self) -> String {
-        format!("{}:{}", self.content_type_id, self.item_id)
+impl ToCompositeId for LockChange {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.item_id)
     }
 }
 
@@ -334,7 +350,7 @@ pub struct Host {
     pub address: String,
     pub boot_time: String,
     pub client_mounts: Vec<String>,
-    pub content_type_id: u64,
+    pub content_type_id: u32,
     pub corosync_configuration: String,
     pub corosync_ring0: String,
     pub fqdn: String,
@@ -356,6 +372,18 @@ pub struct Host {
     pub server_profile: ServerProfile,
     pub state: String,
     pub state_modified_at: String,
+}
+
+impl ToCompositeId for Host {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
+impl Label for Host {
+    fn label(&self) -> &str {
+        &self.label
+    }
 }
 
 /// A server profile record from api/server_profile/
@@ -491,6 +519,12 @@ pub struct Volume {
     pub volume_nodes: Vec<VolumeNode>,
 }
 
+impl Label for Volume {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct VolumeNode {
     pub host: String,
@@ -551,6 +585,18 @@ pub struct Target<T> {
     pub volume_name: String,
 }
 
+impl<T> ToCompositeId for Target<T> {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
+impl<T> Label for Target<T> {
+    fn label(&self) -> &str {
+        &self.label
+    }
+}
+
 type Mdt = Target<MdtConfParams>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
@@ -580,7 +626,7 @@ pub struct Filesystem {
     pub cdt_status: Option<String>,
     pub client_count: f64,
     pub conf_params: FilesystemConfParams,
-    pub content_type_id: u64,
+    pub content_type_id: u32,
     pub files_free: Option<f64>,
     pub files_total: Option<f64>,
     pub hsm_control_params: Vec<HsmControlParam>,
@@ -596,6 +642,18 @@ pub struct Filesystem {
     pub resource_uri: String,
     pub state: String,
     pub state_modified_at: String,
+}
+
+impl ToCompositeId for Filesystem {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id, self.id)
+    }
+}
+
+impl Label for Filesystem {
+    fn label(&self) -> &str {
+        &self.label
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
