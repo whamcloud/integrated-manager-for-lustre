@@ -85,6 +85,12 @@ class RunStratagemValidation(Validation):
                 "message": "'stratagem_servers' profile must be installed on all MDT servers.",
             }
 
+        if not ManagedHost.objects.filter(server_profile_id="stratagem_client").exists():
+            return {
+                "code": "stratagem_client_profile_not_installed",
+                "message": "A client must be added with the 'Stratagem Client' profile to run this command.",
+            }
+
         return {}
 
 
