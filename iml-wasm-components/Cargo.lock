@@ -352,6 +352,7 @@ dependencies = [
 name = "iml-utils"
 version = "0.1.0"
 dependencies = [
+ "iml-wire-types 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen-test 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -366,6 +367,7 @@ dependencies = [
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-action-dropdown 0.1.0",
  "iml-tooltip 0.1.0",
+ "iml-utils 0.1.0",
  "iml-wire-types 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "js-sys 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
