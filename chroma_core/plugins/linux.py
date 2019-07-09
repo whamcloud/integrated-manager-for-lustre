@@ -215,8 +215,8 @@ class Linux(Plugin):
             fqdn = host.fqdn
             devices = get_devices(fqdn, timeout=5.0)
 
-            # use info from IML 4.0
             if not devices:
+                # use info from IML 4.0
                 if data:
                     log.debug("Accept devices from incoming data")
                     devices = data
