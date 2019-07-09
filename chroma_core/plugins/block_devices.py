@@ -24,7 +24,7 @@ def _fetch_aggregator(timeout):
         summary += resp.elapsed.microseconds / 10.0 ** 6
 
         try:
-            return resp.json()
+            return resp.json(), summary
         except ValueError as e:
             # This error might be casused by device-aggregator not being ready
             # yet or communication breakdown inside IML server side
