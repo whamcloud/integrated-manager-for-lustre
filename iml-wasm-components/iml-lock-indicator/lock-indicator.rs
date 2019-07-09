@@ -49,9 +49,13 @@ fn lock_panel<T>(title: &str, locks: &HashSet<&LockChange>) -> El<T> {
     if locks.is_empty() {
         seed::empty()
     } else {
+        let mut items: Vec<&String> = locks.iter().map(|x| &x.description).collect();
+
+        items.sort_unstable();
+
         panel(vec![
             panel_heading(El::new_text(title)),
-            panel_body(ul![locks.iter().map(|x| li![x.description])]),
+            panel_body(ul![items.iter().map(|x| li![x])]),
         ])
     }
 }
