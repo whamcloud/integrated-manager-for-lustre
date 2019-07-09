@@ -4,6 +4,7 @@ members = [
     'iml-alert-indicator',
     'iml-duration-picker',
     'iml-environment',
+    'iml-lock-indicator',
     'iml-pie-chart',
     'iml-popover',
     'iml-sleep',
