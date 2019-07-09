@@ -111,10 +111,13 @@ pub fn update<T: ActionRecord + 'static>(
 
             model.cancel = Some(p);
 
-            let c = c
-                .inspect(|_| log::info!("action poll timeout dropped"))
-                .map(move |_| IdMsg(id, Msg::Noop))
-                .map_err(move |e| IdMsg(id, Msg::Error(e.into())));
+            // We depend on the producer being dropped to signal
+            // completion of the loop
+            let c = c.map(move |_| IdMsg(id, Msg::Noop)).map_err(move |_| {
+                log::info!("action poll timeout dropped");
+
+                IdMsg(id, Msg::Noop)
+            });
 
             let fut = sleep
                 .select2(c)
@@ -126,9 +129,7 @@ pub fn update<T: ActionRecord + 'static>(
             orders.perform_cmd(fut);
         }
         Msg::Destroy => {
-            if let Some(p) = model.cancel.take() {
-                let _ = p.send(()).is_ok();
-            };
+            model.cancel = None;
 
             if let Some(c) = model.request_controller.take() {
                 c.abort();
@@ -142,9 +143,7 @@ pub fn update<T: ActionRecord + 'static>(
             dispatch_custom_event("action_selected", &available_action_and_record);
         }
         Msg::StartFetch => {
-            if model.composite_ids.is_empty() {
-                orders.send_msg(IdMsg(id, Msg::Noop));
-            } else {
+            if !model.composite_ids.is_empty() {
                 model.activated = true;
                 model.first_fetch_activated = true;
 

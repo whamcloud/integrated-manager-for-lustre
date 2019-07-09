@@ -39,10 +39,12 @@ pub fn update(msg: Msg, mut model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
         Msg::DeferredActionDropdown(dad::IdMsg(id, msg)) => match msg {
             dad::Msg::StartFetch => {
-                model.dropdown.activated = true;
-                model.dropdown.first_fetch_activated = true;
+                if !model.dropdown.first_fetch_activated {
+                    model.dropdown.activated = true;
+                    model.dropdown.first_fetch_activated = true;
 
-                orders.skip().send_msg(Msg::FetchUrls);
+                    orders.send_msg(Msg::FetchUrls);
+                }
             }
             x => {
                 *orders = call_update(dad::update, dad::IdMsg(id, x), &mut model.dropdown)
