@@ -52,9 +52,8 @@ def get_devices(fqdn, timeout=0):
             # This error might be caused by fact that device-aggregator
             # hasn't yet received device information update on startup
             log.error(
-                "iml-device-aggregator is not providing expected data, ensure "
-                "iml-device-scanner package is installed and relevant "
-                "services are running on storage servers (%s)" % e
+                "iml-device-aggregator is not providing expected data for fqdn {}. Waited: {},"
+                "Trying again for: {}, Error: {}".format(fqdn, summary, timeout - summary, e)
             )
             # So it is better to wait for it if possible
             if summary < timeout:
