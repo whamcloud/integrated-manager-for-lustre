@@ -2,11 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use bootstrap_components::{bs_button, bs_dropdown, bs_input};
 use iml_tooltip::tooltip;
-use seed::{a, attrs, button, class, div, input, li, prelude::*, span, style, ul};
+use iml_utils::WatchState;
+use seed::{a, attrs, class, input, li, prelude::*};
 use std::fmt;
-
-const ESCAPE_KEY: u32 = 27;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Unit {
@@ -28,60 +28,30 @@ impl Default for Unit {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Model {
+    pub disabled: bool,
     pub value: String,
     pub validation_message: Option<String>,
     pub unit: Unit,
-    pub open: OpenState,
+    pub watching: WatchState,
     pub exclude_units: Vec<Unit>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
-    Open(OpenState),
+    SetWatchState(WatchState),
     SetUnit(Unit),
     InputChange(web_sys::Event),
-    SetValidationMessage(Option<String>),
-    KeyPress(u32),
 }
 
-#[derive(Clone, Debug)]
-pub enum OpenState {
-    Opening,
-    Open,
-    Close,
-}
-
-impl Default for OpenState {
-    fn default() -> Self {
-        OpenState::Close
-    }
-}
-
-impl OpenState {
-    fn next(&self) -> OpenState {
-        match self {
-            OpenState::Opening => OpenState::Open,
-            OpenState::Open => OpenState::Close,
-            OpenState::Close => OpenState::Opening,
-        }
-    }
-}
-
-pub fn update<T: 'static>(
-    msg: Msg,
-    model: &mut Model,
-    orders: &mut Orders<T>,
-    parent_msg: fn(Msg) -> T,
-) {
+pub fn update(msg: Msg, model: &mut Model) {
     match msg {
-        Msg::Open(open) => {
-            model.open = open;
-        }
         Msg::SetUnit(unit) => {
             model.unit = unit;
-            model.open = OpenState::Close;
+        }
+        Msg::SetWatchState(watching) => {
+            model.watching = watching;
         }
         Msg::InputChange(ev) => {
             let target = ev.target().unwrap();
@@ -91,92 +61,88 @@ pub fn update<T: 'static>(
 
             let validation_message = input_el.validation_message().ok().filter(|x| x != "");
 
-            orders.send_msg(parent_msg(Msg::SetValidationMessage(validation_message)));
+            model.validation_message = validation_message;
         }
-        Msg::SetValidationMessage(msg) => {
-            model.validation_message = msg;
-        }
-        Msg::KeyPress(code) => {
-            if code == ESCAPE_KEY {
-                model.open = OpenState::Close;
-            }
-        }
-    }
-}
-
-fn open_class(open: &OpenState) -> &str {
-    match open {
-        OpenState::Close => "",
-        _ => "open",
     }
 }
 
 /// A duration picker
-pub fn duration_picker(
-    Model {
-        open,
-        unit,
-        value,
-        validation_message,
-        exclude_units,
-    }: &Model,
-) -> El<Msg> {
-    let units = vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds];
+pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
+    let items: Vec<_> = std::iter::once(bs_dropdown::header("Units"))
+        .chain(
+            vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds]
+                .into_iter()
+                .filter(|x| x != &model.unit)
+                .filter(|x| !model.exclude_units.contains(x))
+                .map(|x| {
+                    li![a![
+                        x.to_string(),
+                        mouse_ev(Ev::Click, move |_| { Msg::SetUnit(x) })
+                    ]]
+                }),
+        )
+        .collect();
 
-    let next = open.next();
-
-    let mut items = vec![li![
-        class!["dropdown-header"],
-        style! {"user-select" => "none"},
-        "Units"
-    ]];
-
-    items.extend(
-        units
-            .into_iter()
-            .filter(|x| x != unit)
-            .filter(|x| !exclude_units.contains(x))
-            .map(|x| {
-                li![a![
-                    x.to_string(),
-                    mouse_ev(Ev::Click, move |_| { Msg::SetUnit(x) })
-                ]]
-            }),
-    );
-
-    let (err_class, el) = if let Some(msg) = validation_message {
+    let el = if let (Some(msg), false) = (&model.validation_message, model.disabled) {
         let tt_model = iml_tooltip::Model {
             placement: iml_tooltip::TooltipPlacement::Bottom,
             error_tooltip: true,
+            open: true,
             ..Default::default()
         };
 
-        ("has-error", tooltip(&msg, &tt_model))
+        tooltip(&msg, &tt_model)
     } else {
-        ("", seed::empty())
+        seed::empty()
     };
 
-    div![
-        class!["input-group", "tooltip-container", err_class],
-        input![
-            attrs! { At::Class => "form-control"; At::Type => "number"; At::Min => "1"; At::Value => value; At::Required => true },
-            raw_ev(Ev::Input, Msg::InputChange),
+    let btn_class = if model.validation_message.is_some() {
+        bs_button::BTN_DANGER
+    } else {
+        bs_button::BTN_DEFAULT
+    };
+
+    let disabled_attrs = if model.disabled {
+        attrs! {At::Disabled => true}
+    } else {
+        attrs! {}
+    };
+
+    let mut input_attrs = attrs! {
+        At::Class => "form-control";
+        At::Type => "number"; At::Min => "1";
+        At::Value => model.value;
+        At::Required => true
+    };
+
+    input_attrs.merge(disabled_attrs.clone());
+
+    let mut attrs = class![btn_class];
+    attrs.merge(disabled_attrs);
+
+    let open = model.watching.is_open();
+
+    let mut btn = bs_dropdown::btn(&model.unit.to_string());
+    btn.attrs.merge(attrs);
+
+    let mut dropdown = bs_dropdown::wrapper(
+        class![bs_input::INPUT_GROUP_BTN],
+        open,
+        vec![
+            btn,
+            bs_dropdown::menu(items).add_class(bs_dropdown::DROPDOWN_MENU_RIGHT),
         ],
+    );
+
+    if !open && !model.disabled {
+        dropdown.listeners.push(mouse_ev(Ev::Click, move |_| {
+            Msg::SetWatchState(WatchState::Watching)
+        }));
+    }
+
+    vec![
+        input![input_attrs, raw_ev(Ev::Input, Msg::InputChange)],
         el,
-        div![
-            class!["input-group-btn", "dropdown", open_class(&open)],
-            keyboard_ev(Ev::KeyDown, move |ev| { Msg::KeyPress(ev.key_code()) }),
-            button![
-                class!["btn", "btn-default", "dropdown-toggle"],
-                unit.to_string(),
-                span![class!["caret"], style! {"margin-left" => "3px"}],
-                mouse_ev(Ev::Click, move |ev| {
-                    ev.prevent_default();
-                    log::info!("button clicked setting open to {:?}", next);
-                    Msg::Open(next.clone())
-                })
-            ],
-            ul![class!["dropdown-menu pull-right"], items]
-        ],
+        dropdown,
     ]
 }

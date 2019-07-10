@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_popover::{popover, popover_content, popover_title};
+use bootstrap_components::popover;
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
 use iml_utils::WatchState;
 use iml_wire_types::Alert;
@@ -56,12 +56,12 @@ pub fn alert_indicator(
 
                 vec![
                     i,
-                    popover(
+                    popover::wrapper(
                         open,
-                        &iml_popover::Placement::Bottom,
+                        &bootstrap_components::BOTTOM,
                         vec![
-                            popover_title(El::new_text("Alerts")),
-                            popover_content(ul![alerts.iter().map(|x| { li![x.message] })]),
+                            popover::title(El::new_text("Alerts")),
+                            popover::content(ul![alerts.iter().map(|x| { li![x.message] })]),
                         ],
                     ),
                 ]
