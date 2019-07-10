@@ -182,6 +182,7 @@ pub fn get_record_els<'a, T: ActionRecord + 'static>(
 ) -> Vec<El<IdMsg<T>>> {
     actions
         .into_iter()
+        .filter(|(_, xs)| !xs.is_empty())
         .map(|(k, xs)| (k, sort_actions(xs)))
         .flat_map(|(label, xs)| {
             let ys = xs.into_iter().map(|(action, record)| {
