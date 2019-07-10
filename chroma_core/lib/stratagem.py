@@ -16,7 +16,19 @@ size_distribution_name_table = {
     "size >= 1t": "greater_than_equal_1t",
 }
 
-distribution_weight = {"< 1 Mib": 0, ">= 1 Mib, < 1 GiB": 1, ">= 1 GiB": 2, ">= 1 TiB": 3}
+labels = {
+    "less_than_1m": "<\\\ 1\\\ Mib",
+    "greater_than_equal_1m_less_than_1g": ">\\\=\\\ 1\\\ Mib\\\,\\\ <\\\ 1\\\ GiB",
+    "greater_than_equal_1g": ">\\\=\\\ 1\\\ GiB",
+    "greater_than_equal_1t": ">\\\=\\\ 1\\\ TiB",
+}
+
+distribution_weight = {
+    "less_than_1m": 0,
+    "greater_than_equal_1m_less_than_1g": 1,
+    "greater_than_equal_1g": 2,
+    "greater_than_equal_1t": 3,
+}
 
 filter_out_other_counter = partial(filter, lambda counter: counter.get("name").lower() != "other")
 flatten = lambda xs: [item for l in xs for item in l]
@@ -32,7 +44,7 @@ def create_stratagem_influx_point(measurement, tags, fields, time):
     ).rstrip()
 
 
-def parse_size_distribution(measurement, distribution_weight, counters):
+def parse_size_distribution(measurement, distribution_weight, labels, counters):
     return pipe(
         counters,
         filter_out_other_counter,
@@ -45,6 +57,7 @@ def parse_size_distribution(measurement, distribution_weight, counters):
                     ("group_name", "size_distribution"),
                     ("distribution_weight", distribution_weight.get(x.get("name"))),
                     ("counter_name", x.get("name")),
+                    ("label", labels.get(x.get("name"))),
                 ],
                 [("count", x.get("count"))],
                 None,
@@ -78,7 +91,7 @@ def parse_user_distribution(measurement, counters):
 
 def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     parse_fns = {
-        "size_distribution": partial(parse_size_distribution, measurement, distribution_weight),
+        "size_distribution": partial(parse_size_distribution, measurement, distribution_weight, labels),
         "user_distribution": partial(parse_user_distribution, measurement),
     }
 
@@ -158,6 +171,7 @@ def submit_aggregated_data(measurement, aggregated):
                 ("classify_attr_type", point.get("classify_attr_type")),
                 ("group_name", point.get("group_name")),
                 ("distribution_weight", point.get("distribution_weight")),
+                ("label", point.get("label")),
                 ("counter_name", point.get("counter_name")),
             ],
             [("count", point.get("count"))],

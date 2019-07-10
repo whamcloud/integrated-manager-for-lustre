@@ -37,7 +37,8 @@ Source13:       iml-stats.service
 Source14:       iml-syslog.service
 Source16:       iml-manager-redirect.conf
 Source17:       rabbitmq-env.conf
-Source18:	grafana-iml.ini
+Source18:       grafana-iml.ini
+Source19:       grafana
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -107,8 +108,8 @@ Requires:       rust-iml-mailbox
 Requires:       rust-iml-stratagem
 Requires:       rust-iml-warp-drive
 # Other Repos
-Requires:      influxdb
-Requires:	grafana
+Requires:       influxdb
+Requires:       grafana
 
 Conflicts:      chroma-agent
 Obsoletes:      chroma-manager
@@ -224,8 +225,10 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/{init,logrotate,nginx/conf,nginx/default}
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
 touch $RPM_BUILD_ROOT%{_sysconfdir}/nginx/conf.d/chroma-manager.conf
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
 install -m 644 %{SOURCE18} $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
+cp -r %{SOURCE19} $RPM_BUILD_ROOT%{manager_root}
+mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
 cp %{SOURCE16} $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp %{SOURCE17} $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
@@ -345,6 +348,8 @@ fi
 %attr(0755,root,root)%{_sysconfdir}/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
+%attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
+%attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
 %attr(0644,root,root)%{_unitdir}/iml-corosync.service
 %attr(0644,root,root)%{_unitdir}/iml-gunicorn.service
 %attr(0644,root,root)%{_unitdir}/iml-http-agent.service
