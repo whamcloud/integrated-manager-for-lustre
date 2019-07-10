@@ -76,6 +76,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bootstrap-components"
+version = "0.1.0"
+dependencies = [
+ "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "bumpalo"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -280,7 +287,7 @@ dependencies = [
 name = "iml-alert-indicator"
 version = "0.1.0"
 dependencies = [
- "iml-popover 0.1.0",
+ "bootstrap-components 0.1.0",
  "iml-tooltip 0.1.0",
  "iml-utils 0.1.0",
  "iml-wire-types 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -292,7 +299,9 @@ dependencies = [
 name = "iml-duration-picker"
 version = "0.1.0"
 dependencies = [
+ "bootstrap-components 0.1.0",
  "iml-tooltip 0.1.0",
+ "iml-utils 0.1.0",
  "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -315,7 +324,7 @@ dependencies = [
 name = "iml-lock-indicator"
 version = "0.1.0"
 dependencies = [
- "iml-popover 0.1.0",
+ "bootstrap-components 0.1.0",
  "iml-tooltip 0.1.0",
  "iml-utils 0.1.0",
  "iml-wire-types 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -328,15 +337,6 @@ name = "iml-pie-chart"
 version = "0.1.0"
 dependencies = [
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "iml-popover"
-version = "0.1.0"
-dependencies = [
- "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "wasm-bindgen-test 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

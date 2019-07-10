@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 seed = "=0.3.7"
 log = "0.4"
+bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-wire-types = "0.1"
-iml-popover = { path = "../iml-popover", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }

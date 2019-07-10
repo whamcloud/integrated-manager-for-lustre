@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_popover::{popover, popover_content, popover_title};
+use bootstrap_components::popover;
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
 use iml_utils::Locks;
 use iml_utils::WatchState;
@@ -79,12 +79,12 @@ pub fn lock_indicator(
             span![
                 class!["job-status", "tooltip-container", "tooltip-hover"],
                 i,
-                popover(
+                popover::wrapper(
                     open,
-                    &iml_popover::Placement::Bottom,
+                    &bootstrap_components::BOTTOM,
                     vec![
-                        popover_title(El::new_text("Active Locks")),
-                        popover_content(div![
+                        popover::title(El::new_text("Active Locks")),
+                        popover::content(div![
                             lock_panel("Read Locks", &read_locks),
                             lock_panel("Write Locks", &write_locks)
                         ])
