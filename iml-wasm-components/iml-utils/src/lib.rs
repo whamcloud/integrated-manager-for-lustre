@@ -2,8 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use iml_wire_types::LockChange;
 use regex::Regex;
-use std::cmp;
+use std::{
+    cmp,
+    collections::{HashMap, HashSet},
+    mem,
+};
 
 pub fn extract_api(s: &str) -> Option<&str> {
     let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
@@ -26,6 +31,53 @@ pub fn format_bytes(bytes: f64, precision: Option<usize>) -> String {
 
     format!("{} {}", bytes, units[pwr as usize])
 }
+
+#[derive(Debug, Copy, Clone)]
+pub enum WatchState {
+    Watching,
+    Open,
+    Close,
+}
+
+impl Default for WatchState {
+    fn default() -> Self {
+        WatchState::Close
+    }
+}
+
+impl WatchState {
+    pub fn is_open(self) -> bool {
+        match self {
+            WatchState::Open => true,
+            _ => false,
+        }
+    }
+    pub fn is_watching(self) -> bool {
+        match self {
+            WatchState::Watching => true,
+            _ => false,
+        }
+    }
+    pub fn should_update(self) -> bool {
+        self.is_watching() || self.is_open()
+    }
+    pub fn update(&mut self) {
+        match self {
+            WatchState::Close => {
+                mem::replace(self, WatchState::Watching);
+            }
+            WatchState::Watching => {
+                mem::replace(self, WatchState::Open);
+            }
+            WatchState::Open => {
+                mem::replace(self, WatchState::Close);
+            }
+        }
+    }
+}
+
+/// A map of locks in which the key is a composite id string in the form `composite_id:id`
+pub type Locks = HashMap<String, HashSet<LockChange>>;
 
 #[cfg(test)]
 mod tests {

@@ -8,7 +8,7 @@ use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
     declare_transient_queue, purge_queue, TcpChannel, TcpChannelFuture, TcpClient,
 };
-use iml_wire_types::{LockAction, LockChange};
+use iml_wire_types::{LockAction, LockChange, ToCompositeId};
 use lapin_futures::{channel::BasicConsumeOptions, queue::Queue};
 use std::collections::{HashMap, HashSet};
 
@@ -88,7 +88,7 @@ pub type Locks = HashMap<String, HashSet<LockChange>>;
 /// Add a new lock to `Locks`
 pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
     locks
-        .entry(lock_change.id())
+        .entry(lock_change.composite_id().to_string())
         .or_insert_with(HashSet::new)
         .insert(lock_change);
 
@@ -98,7 +98,7 @@ pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
 /// Remove a lock from `Locks` if it exists
 pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
     locks
-        .entry(lock_change.id())
+        .entry(lock_change.composite_id().to_string())
         .and_modify(|xs: &mut HashSet<LockChange>| {
             xs.retain(|x| x.description != lock_change.description)
         });

@@ -1,7 +1,6 @@
 BUILDROOT:=$(shell [ -d "/build" ] && echo "/build" || echo ".")
 TMPDIR:=$(shell mktemp -d)
 
-
 srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/package

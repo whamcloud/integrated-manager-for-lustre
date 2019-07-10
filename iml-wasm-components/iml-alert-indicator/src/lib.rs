@@ -4,9 +4,9 @@
 
 use iml_popover::{popover, popover_content, popover_title};
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
+use iml_utils::WatchState;
 use iml_wire_types::Alert;
 use seed::{class, events::mouse_ev, i, li, prelude::*, span, style, ul};
-use std::mem;
 
 fn get_message(alerts: &[&Alert]) -> String {
     if alerts.is_empty() {
@@ -15,41 +15,6 @@ fn get_message(alerts: &[&Alert]) -> String {
         alerts[0].message.clone()
     } else {
         format!("{} Issues", alerts.len())
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum WatchState {
-    Watching,
-    Open,
-    Close,
-}
-
-impl WatchState {
-    pub fn is_open(self) -> bool {
-        match self {
-            WatchState::Open => true,
-            _ => false,
-        }
-    }
-    pub fn is_watching(self) -> bool {
-        match self {
-            WatchState::Watching => true,
-            _ => false,
-        }
-    }
-    pub fn update(&mut self) {
-        match self {
-            WatchState::Close => {
-                mem::replace(self, WatchState::Watching);
-            }
-            WatchState::Watching => {
-                mem::replace(self, WatchState::Open);
-            }
-            WatchState::Open => {
-                mem::replace(self, WatchState::Close);
-            }
-        }
     }
 }
 
