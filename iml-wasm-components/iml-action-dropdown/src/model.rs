@@ -7,7 +7,7 @@ use iml_wire_types::{
     ApiList, AvailableAction, CompositeId, HsmControlParam, Label, LockChange, LockType,
     ToCompositeId,
 };
-use std::{collections::HashMap, convert, iter};
+use std::collections::HashMap;
 
 /// A record
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -65,10 +65,10 @@ fn lock_list<'a, T>(
 pub fn has_lock<'a, T: ActionRecord>(locks: &'a Locks, record: &'a T) -> bool {
     let id = record.composite_id().to_string();
 
-    iter::once(locks.get(&id))
-        .filter_map(convert::identity)
-        .flatten()
-        .any(|x| x.lock_type == LockType::Write)
+    locks
+        .get(&id)
+        .filter(|xs| xs.iter().any(|x| x.lock_type == LockType::Write))
+        .is_some()
 }
 
 pub fn has_locks<'a, T>(locks: &'a Locks, records: &'a RecordMap<T>) -> bool {
