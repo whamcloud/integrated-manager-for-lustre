@@ -26,12 +26,18 @@ from chroma_core.models import (
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 get_bundle_int_val = compose(partial(flip, int, 10), str)
+MAX_SAFE_INTEGER = 9007199254740991
 
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
         try:
             purge_duration = bundle.data.get("purge_duration") and get_bundle_int_val(bundle.data.get("purge_duration"))
+            if purge_duration > MAX_SAFE_INTEGER:
+                return {
+                    "code": "purge_duration_too_big",
+                    "message": "Purge duration cannot be larger than {}.".format(MAX_SAFE_INTEGER),
+                }
         except ValueError:
             return {"code": "invalid_argument", "message": "Purge duration must be an integer value."}
 
@@ -39,6 +45,11 @@ class RunStratagemValidation(Validation):
             report_duration = bundle.data.get("report_duration") and get_bundle_int_val(
                 bundle.data.get("report_duration")
             )
+            if report_duration > MAX_SAFE_INTEGER:
+                return {
+                    "code": "report_duration_too_big",
+                    "message": "Report duration cannot be larger than {}.".format(MAX_SAFE_INTEGER),
+                }
         except ValueError:
             return {"code": "invalid_argument", "message": "Report duration must be an integer value."}
 
@@ -109,8 +120,23 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 class StratagemConfigurationResource(ChromaModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
-    report_duration = fields.IntegerField(attribute="report_duration", null=True)
-    purge_duration = fields.IntegerField(attribute="purge_duration", null=True)
+    report_duration = fields.CharField("report_duration", null=True)
+    purge_duration = fields.CharField(attribute="purge_duration", null=True)
+
+    def hydrate_report_duration(self, val):
+        return long(val)
+
+    def hydrate_purge_duration(self, val):
+        return long(val)
+
+    def dehydrate_report_duration(self, bundle):
+        return long(bundle.data.get("report_duration"))
+
+    def dehydrate_purge_duration(self, bundle):
+        return long(bundle.data.get("purge_duration"))
+
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
 
     class Meta:
         resource_name = "stratagem_configuration"
@@ -127,8 +153,14 @@ class StratagemConfigurationResource(ChromaModelResource):
 
 class RunStratagemResource(Resource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
-    report_duration = fields.IntegerField(attribute="report_duration", null=True)
-    purge_duration = fields.IntegerField(attribute="purge_duration", null=True)
+    report_duration = fields.CharField(attribute="report_duration", null=True)
+    purge_duration = fields.CharField(attribute="purge_duration", null=True)
+
+    def hydrate_report_duration(self, val):
+        return long(val)
+
+    def hydrate_purge_duration(self, val):
+        return long(val)
 
     class Meta:
         list_allowed_methods = ["post"]
