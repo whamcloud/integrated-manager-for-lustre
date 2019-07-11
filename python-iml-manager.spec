@@ -222,6 +222,8 @@ install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 *.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 *.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
