@@ -4,7 +4,6 @@ import operator
 import json
 
 from toolz.functoolz import pipe, partial
-from requests.exceptions import ConnectionError
 
 temp_stratagem_measurement = "temp_stratagem_scan"
 stratagem_measurement = "stratagem_scan"
@@ -16,6 +15,12 @@ size_distribution_name_table = {
     "size >= 1t": "greater_than_equal_1t",
 }
 
+labels = {
+    "less_than_1m": "<\\\ 1\\\ Mib",
+    "greater_than_equal_1m_less_than_1g": ">\\\=\\\ 1\\\ Mib\\\,\\\ <\\\ 1\\\ GiB",
+    "greater_than_equal_1g": ">\\\=\\\ 1\\\ GiB",
+    "greater_than_equal_1t": ">\\\=\\\ 1\\\ TiB",
+}
 
 filter_out_other_counter = partial(filter, lambda counter: counter.get("name").lower() != "other")
 flatten = lambda xs: [item for l in xs for item in l]
@@ -25,13 +30,13 @@ def tuple_to_equals(xs):
     return "{}={}".format(*xs)
 
 
-def create_stratagem_influx_point(measurement, tags, fields, time):
+def create_stratagem_influx_point(measurement, tags, fields):
     return "{},{} {} {}".format(
-        measurement, ",".join(map(tuple_to_equals, tags)), ",".join(map(tuple_to_equals, fields)), time or ""
+        measurement, ",".join(map(tuple_to_equals, tags)), ",".join(map(tuple_to_equals, fields)), ""
     ).rstrip()
 
 
-def parse_size_distribution(measurement, counters):
+def parse_size_distribution(measurement, labels, counters):
     return pipe(
         counters,
         filter_out_other_counter,
@@ -40,9 +45,12 @@ def parse_size_distribution(measurement, counters):
             map,
             lambda x: create_stratagem_influx_point(
                 measurement,
-                [("group_name", "size_distribution"), ("counter_name", x.get("name"))],
+                [
+                    ("group_name", "size_distribution"),
+                    ("counter_name", x.get("name")),
+                    ("label", labels.get(x.get("name"))),
+                ],
                 [("count", x.get("count"))],
-                None,
             ),
         ),
     )
@@ -65,7 +73,6 @@ def parse_user_distribution(measurement, counters):
                     ("counter_name", x.get("name")),
                 ],
                 [("count", x.get("count"))],
-                None,
             ),
         ),
     )
@@ -73,7 +80,7 @@ def parse_user_distribution(measurement, counters):
 
 def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     parse_fns = {
-        "size_distribution": partial(parse_size_distribution, measurement),
+        "size_distribution": partial(parse_size_distribution, measurement, labels),
         "user_distribution": partial(parse_user_distribution, measurement),
     }
 
@@ -150,19 +157,19 @@ def submit_aggregated_data(measurement, aggregated):
     points = map(
         lambda point: (
             [
-                ("counter_name", point.get("counter_name")),
                 ("classify_attr_type", point.get("classify_attr_type")),
                 ("group_name", point.get("group_name")),
+                ("label", point.get("label")),
+                ("counter_name", point.get("counter_name")),
             ],
             [("count", point.get("count"))],
-            point.get("time"),
         ),
         aggregated,
     )
 
     return pipe(
         points,
-        partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1], xs[2])),
+        partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1])),
         join_entries_with_new_line,
         partial(record_stratagem_point),
     )
