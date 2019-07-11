@@ -30,7 +30,7 @@ MAX_SAFE_INTEGER = 9007199254740991
 
 
 class RunStratagemValidation(Validation):
-    def _check_duration(duration_key, bundle):
+    def _check_duration(self, duration_key, bundle):
             duration_type = duration_key.split("_")[0].capitalize()
             try:
                 duration = bundle.data.get(duration_key) and get_bundle_int_val(bundle.data.get(duration_key))
