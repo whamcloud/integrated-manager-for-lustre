@@ -2,11 +2,8 @@ import requests
 import settings
 import operator
 import json
-import calendar
-import time
 
 from toolz.functoolz import pipe, partial
-from requests.exceptions import ConnectionError
 
 temp_stratagem_measurement = "temp_stratagem_scan"
 stratagem_measurement = "stratagem_scan"
