@@ -64,14 +64,18 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         mk_callback(server::stream_fidlists),
     );
 
-    map.insert(
-        "action_warning_stratagem".into(),
-        mk_callback(action_warning::read_mailbox),
-    );
-    map.insert(
-        "action_purge_stratagem".into(),
-        mk_callback(action_purge::read_mailbox),
-    );
+    if action_warning::is_ok() {
+        map.insert(
+            "action_warning_stratagem".into(),
+            mk_callback(action_warning::read_mailbox),
+        );
+    }
+    if action_purge::is_ok() {
+        map.insert(
+            "action_purge_stratagem".into(),
+            mk_callback(action_purge::read_mailbox),
+        );
+    }
 
     log::info!("Loaded the following ActionPlugins:");
 

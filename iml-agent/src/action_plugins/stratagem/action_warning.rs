@@ -15,6 +15,8 @@ use std::io;
 use std::path::PathBuf;
 use tokio_threadpool::blocking;
 
+pub use liblustreapi::is_ok;
+
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 struct Record {

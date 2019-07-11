@@ -79,9 +79,8 @@ fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
     Ok(CString::new(buf)?.into_string()?)
 }
 
-pub fn is_ok() -> Result<(), LiblustreError> {
-    let _ = lib::Library::new(LIBLUSTRE)?; // @@
-    Ok(())
+pub fn is_ok() -> bool {
+    lib::Library::new(LIBLUSTRE).is_ok()
 }
 
 pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {

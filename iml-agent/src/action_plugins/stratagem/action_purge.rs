@@ -7,6 +7,8 @@ use futures::future::poll_fn;
 use futures::{Future, Stream};
 use tokio_threadpool::blocking;
 
+pub use liblustreapi::is_ok;
+
 pub fn purge_files(
     device: &str,
     args: impl IntoIterator<Item = String>,
