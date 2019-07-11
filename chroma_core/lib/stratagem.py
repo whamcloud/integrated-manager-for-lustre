@@ -2,6 +2,8 @@ import requests
 import settings
 import operator
 import json
+import calendar
+import time
 
 from toolz.functoolz import pipe, partial
 from requests.exceptions import ConnectionError
@@ -23,13 +25,6 @@ labels = {
     "greater_than_equal_1t": ">\\\=\\\ 1\\\ TiB",
 }
 
-distribution_weight = {
-    "less_than_1m": 0,
-    "greater_than_equal_1m_less_than_1g": 1,
-    "greater_than_equal_1g": 2,
-    "greater_than_equal_1t": 3,
-}
-
 filter_out_other_counter = partial(filter, lambda counter: counter.get("name").lower() != "other")
 flatten = lambda xs: [item for l in xs for item in l]
 
@@ -38,13 +33,13 @@ def tuple_to_equals(xs):
     return "{}={}".format(*xs)
 
 
-def create_stratagem_influx_point(measurement, tags, fields, time):
+def create_stratagem_influx_point(measurement, tags, fields):
     return "{},{} {} {}".format(
-        measurement, ",".join(map(tuple_to_equals, tags)), ",".join(map(tuple_to_equals, fields)), time or ""
+        measurement, ",".join(map(tuple_to_equals, tags)), ",".join(map(tuple_to_equals, fields)), ""
     ).rstrip()
 
 
-def parse_size_distribution(measurement, distribution_weight, labels, counters):
+def parse_size_distribution(measurement, labels, counters):
     return pipe(
         counters,
         filter_out_other_counter,
@@ -55,12 +50,10 @@ def parse_size_distribution(measurement, distribution_weight, labels, counters):
                 measurement,
                 [
                     ("group_name", "size_distribution"),
-                    ("distribution_weight", distribution_weight.get(x.get("name"))),
                     ("counter_name", x.get("name")),
                     ("label", labels.get(x.get("name"))),
                 ],
                 [("count", x.get("count"))],
-                None,
             ),
         ),
     )
@@ -83,7 +76,6 @@ def parse_user_distribution(measurement, counters):
                     ("counter_name", x.get("name")),
                 ],
                 [("count", x.get("count"))],
-                None,
             ),
         ),
     )
@@ -91,7 +83,7 @@ def parse_user_distribution(measurement, counters):
 
 def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
     parse_fns = {
-        "size_distribution": partial(parse_size_distribution, measurement, distribution_weight, labels),
+        "size_distribution": partial(parse_size_distribution, measurement, labels),
         "user_distribution": partial(parse_user_distribution, measurement),
     }
 
@@ -170,19 +162,17 @@ def submit_aggregated_data(measurement, aggregated):
             [
                 ("classify_attr_type", point.get("classify_attr_type")),
                 ("group_name", point.get("group_name")),
-                ("distribution_weight", point.get("distribution_weight")),
                 ("label", point.get("label")),
                 ("counter_name", point.get("counter_name")),
             ],
             [("count", point.get("count"))],
-            point.get("time"),
         ),
         aggregated,
     )
 
     return pipe(
         points,
-        partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1], xs[2])),
+        partial(map, lambda xs: create_stratagem_influx_point(measurement, xs[0], xs[1])),
         join_entries_with_new_line,
         partial(record_stratagem_point),
     )
