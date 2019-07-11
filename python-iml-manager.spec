@@ -21,24 +21,7 @@ Summary:        The Integrated Manager for Lustre Monitoring and Administration 
 License:        MIT
 URL:            https://pypi.python.org/pypi/%{pypi_name}
 Source0:        %{source}
-Source1:        chroma-host-discover-init.sh
-Source2:        logrotate.cfg
-Source3:        chroma-config.1
-Source4:        iml-corosync.service
-Source5:        iml-gunicorn.service
-Source6:        iml-http-agent.service
-Source7:        iml-job-scheduler.service
-Source8:        iml-lustre-audit.service
-Source9:        iml-manager.target
-Source10:       iml-plugin-runner.service
-Source11:       iml-power-control.service
-Source12:       iml-settings-populator.service
-Source13:       iml-stats.service
-Source14:       iml-syslog.service
-Source16:       iml-manager-redirect.conf
-Source17:       rabbitmq-env.conf
-Source18:       grafana-iml.ini
-Source19:       grafana
+Source1:        configuration.tar.gz
 
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -204,6 +187,7 @@ done
 %setup -n %{pypi_name}-%{version}
 %endif
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
+%setup -c 1
 
 %build
 %{__python} setup.py build
@@ -213,7 +197,7 @@ cp -a chroma-manager.conf.template build/lib
 cp -a agent-bootstrap-script.template build/lib
 cp -a *.profile build/lib
 cp -a *.repo build/lib
-gzip -9 %{SOURCE3}
+gzip -9 chroma-config.1
 
 %install
 %{__python} setup.py -q install --skip-build --root=%{buildroot}
@@ -226,27 +210,27 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
 touch $RPM_BUILD_ROOT%{_sysconfdir}/nginx/conf.d/chroma-manager.conf
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
-install -m 644 %{SOURCE18} $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
-cp -r %{SOURCE19} $RPM_BUILD_ROOT%{manager_root}
+cp -r grafana $RPM_BUILD_ROOT%{manager_root}
+mv $RPM_BUILD_ROOT%{manager_root}/grafana/grafana-iml.ini $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
-cp %{SOURCE16} $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
-cp %{SOURCE17} $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
-cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
+cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
+cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
+cp chroma-host-discover-init.sh $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
-install %{SOURCE3}.gz $RPM_BUILD_ROOT%{_mandir}/man1
-install -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
+install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
+install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE8} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE9} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE11} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package

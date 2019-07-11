@@ -67,13 +67,15 @@ iml-deps:
 
 iml-srpm: iml-deps substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
-	mkdir -p ${TMPDIR}/scratch
+	mkdir -p ${TMPDIR}/{scratch,configuration}
 	rm -rf ${BUILDROOT}/_topdir
 
 	cp -r ${BUILDROOT}/{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
 	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
+
 	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
-	cp -r ${BUILDROOT}/grafana ${TMPDIR}/_topdir/SOURCES
+
+	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
 	cp ${BUILDROOT}/iml-*.service \
 		${BUILDROOT}/rabbitmq-env.conf \
 		${BUILDROOT}/iml-manager-redirect.conf \
@@ -81,8 +83,9 @@ iml-srpm: iml-deps substs
 		${BUILDROOT}/chroma-config.1 \
 		${BUILDROOT}/logrotate.cfg \
 		${BUILDROOT}/chroma-host-discover-init.sh \
-		${BUILDROOT}/grafana-iml.ini \
-		${TMPDIR}/_topdir/SOURCES
+		${TMPDIR}/configuration
+
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .
 
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
