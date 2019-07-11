@@ -31,6 +31,29 @@ MAX_SAFE_INTEGER = 9007199254740991
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
+        def check_duration(duration_key, bundle):
+            duration_type = duration_key.split("_")[0].capitalize()
+            try:
+                duration = bundle.data.get(duration_key) and get_bundle_int_val(bundle.data.get(duration_key))
+                if duration > MAX_SAFE_INTEGER:
+                    return {
+                        "code": "{}_too_big".format(duration_key),
+                        "message": "{} duration cannot be larger than {}.".format(duration_type, MAX_SAFE_INTEGER),
+                    }
+            except ValueError:
+                return {
+                    "code": "invalid_argument",
+                    "message": "{} duration must be an integer value.".format(duration_type),
+                }
+
+        purge_check = check_duration("purge_duration", bundle)
+        if purge_check:
+            return purge_check
+
+        report_check = check_duration("report_duration", bundle)
+        if report_check:
+            return report_check
+
         try:
             purge_duration = bundle.data.get("purge_duration") and get_bundle_int_val(bundle.data.get("purge_duration"))
             if purge_duration > MAX_SAFE_INTEGER:
