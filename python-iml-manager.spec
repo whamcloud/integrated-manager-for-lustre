@@ -181,13 +181,13 @@ for port in 80 443; do
 done
 
 %prep
+%setup -c 1
 %if %{?dist_version:1}%{!?dist_version:0}
 %setup -n %{pypi_name}-%(echo %{archive_version} | sed -Ee '/^v([0-9]+\.)[0-9]+/s/^v(.*)/\1/')
 %else
 %setup -n %{pypi_name}-%{version}
 %endif
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
-%setup -c 1
 
 %build
 %{__python} setup.py build
