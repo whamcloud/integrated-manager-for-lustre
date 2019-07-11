@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    1%{?dist}
+Release:    1.1562857065.1562856836%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
@@ -181,11 +181,12 @@ for port in 80 443; do
 done
 
 %prep
-%setup -c 1
 %if %{?dist_version:1}%{!?dist_version:0}
 %setup -n %{pypi_name}-%(echo %{archive_version} | sed -Ee '/^v([0-9]+\.)[0-9]+/s/^v(.*)/\1/')
+%setup -T -D -a 1 -n %{pypi_name}-%(echo %{archive_version} | sed -Ee '/^v([0-9]+\.)[0-9]+/s/^v(.*)/\1/')
 %else
 %setup -n %{pypi_name}-%{version}
+%setup -T -D -a 1 -n %{pypi_name}-%{version}
 %endif
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 
@@ -220,17 +221,7 @@ mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 *.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
