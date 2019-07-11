@@ -15,7 +15,7 @@ BuildRequires: systemd
 Name:           python-%{pypi_name}
 Version:        %{version}
 # Release Start
-Release:    1.1562857065.1562856836%{?dist}
+Release:    1.%{?dist}
 # Release End
 Summary:        The Integrated Manager for Lustre Monitoring and Administration Interface
 License:        MIT
@@ -221,9 +221,17 @@ mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 *.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 *.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
@@ -327,17 +335,8 @@ fi
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager
 %attr(0644,root,grafana)%{_sysconfdir}/grafana/provisioning/dashboards/iml-dashboards.yaml
 %attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
-%attr(0644,root,root)%{_unitdir}/iml-corosync.service
-%attr(0644,root,root)%{_unitdir}/iml-gunicorn.service
-%attr(0644,root,root)%{_unitdir}/iml-http-agent.service
-%attr(0644,root,root)%{_unitdir}/iml-job-scheduler.service
-%attr(0644,root,root)%{_unitdir}/iml-lustre-audit.service
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
-%attr(0644,root,root)%{_unitdir}/iml-plugin-runner.service
-%attr(0644,root,root)%{_unitdir}/iml-power-control.service
-%attr(0644,root,root)%{_unitdir}/iml-settings-populator.service
-%attr(0644,root,root)%{_unitdir}/iml-stats.service
-%attr(0644,root,root)%{_unitdir}/iml-syslog.service
+%attr(0644,root,root)%{_unitdir}/*.service
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
