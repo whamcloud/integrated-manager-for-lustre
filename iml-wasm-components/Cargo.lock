@@ -351,6 +351,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-toggle"
+version = "0.1.0"
+dependencies = [
+ "bootstrap-components 0.1.0",
+ "insta 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasm-bindgen-test 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "iml-tooltip"
 version = "0.1.0"
 dependencies = [

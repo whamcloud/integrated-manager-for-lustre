@@ -8,6 +8,7 @@ members = [
     'iml-lock-indicator',
     'iml-pie-chart',
     'iml-sleep',
+    'iml-toggle',
     'iml-tooltip',
     'iml-utils',
     'iml-wasm'
