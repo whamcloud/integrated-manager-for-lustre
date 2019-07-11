@@ -7,7 +7,8 @@ pub mod error;
 use errno;
 use error::LiblustreError;
 use libc;
-use liblustreapi_sys as sys;
+use libloading as lib;
+use liblustreapi_types as types;
 use log;
 use std::{
     convert::From,
@@ -19,6 +20,8 @@ use std::{
 };
 
 const PATH_BYTES: usize = 4096;
+
+const LIBLUSTRE: &'static str = "lustreapi.so.1";
 
 // FID
 
@@ -56,8 +59,8 @@ impl From<[u8; 40_usize]> for Fid {
             .unwrap()
     }
 }
-impl From<sys::lu_fid> for Fid {
-    fn from(fid: sys::lu_fid) -> Self {
+impl From<types::lu_fid> for Fid {
+    fn from(fid: types::lu_fid) -> Self {
         Self {
             seq: fid.f_seq,
             oid: fid.f_oid,
@@ -76,6 +79,11 @@ fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
     Ok(CString::new(buf)?.into_string()?)
 }
 
+pub fn is_ok() -> Result<(), LiblustreError> {
+    let _ = lib::Library::new(LIBLUSTRE)?; // @@
+    Ok(())
+}
+
 pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     if !fidstr.starts_with('[') {
         return Err(LiblustreError::invalid_input(format!(
@@ -83,6 +91,8 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
             fidstr
         )));
     }
+
+    let lib = lib::Library::new(LIBLUSTRE)?; // @@
 
     let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
     let ptr = buf.as_mut_ptr() as *mut libc::c_char;
@@ -93,14 +103,29 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
     let rc = unsafe {
         let mut recno: i64 = -1;
         let mut linkno: i32 = 0;
-        let rc = sys::llapi_fid2path(
-            devptr,
-            fidptr,
-            ptr,
-            buf.len() as i32,
-            &mut recno as *mut std::os::raw::c_longlong,
-            &mut linkno as *mut std::os::raw::c_int,
-        );
+        let rc = match lib.get(b"llapi_fid2path\0") {
+            Ok(f) => {
+                let func: lib::Symbol<
+                    extern "C" fn(
+                        *const libc::c_char,
+                        *const libc::c_char,
+                        *mut libc::c_char,
+                        libc::c_int,
+                        *mut libc::c_longlong,
+                        *mut libc::c_int,
+                    ) -> libc::c_int,
+                > = f;
+                func(
+                    devptr,
+                    fidptr,
+                    ptr,
+                    buf.len() as i32,
+                    &mut recno as *mut std::os::raw::c_longlong,
+                    &mut linkno as *mut std::os::raw::c_int,
+                )
+            }
+            Err(_) => 1, // @@
+        };
         // Ensure CStrings are freed
         let _ = CString::from_raw(devptr);
         let _ = CString::from_raw(fidptr);
@@ -119,12 +144,23 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     if fsname.starts_with('/') {
         return Ok(fsname.to_string());
     }
+    let lib = lib::Library::new(LIBLUSTRE)?; // @@
     let fsc = CString::new(fsname.as_bytes())?;
 
     let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
     let ptr = page.as_mut_ptr() as *mut libc::c_char;
 
-    let rc = unsafe { sys::llapi_search_rootpath(ptr, fsc.as_ptr()) };
+    let rc = unsafe {
+        match lib.get(b"llapi_search_rootpath\0") {
+            Ok(f) => {
+                let func: lib::Symbol<
+                    extern "C" fn(*mut libc::c_char, *const libc::c_char) -> libc::c_int,
+                > = f;
+                func(ptr, fsc.as_ptr())
+            }
+            Err(_) => 1, // @@
+        }
+    };
 
     if rc != 0 {
         log::error!(
@@ -138,7 +174,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     buf2string(page)
 }
 
-pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
+pub fn mdc_stat(path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
     let file_name = path
         .file_name()
         .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {:?}", path)))?
@@ -184,8 +220,8 @@ pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
     let rc = unsafe {
         libc::ioctl(
             fd,
-            sys::IOC_MDC_GETFILEINFO as u64,
-            page.as_ptr() as *mut sys::lov_user_mds_data_v1,
+            types::IOC_MDC_GETFILEINFO as u64,
+            page.as_ptr() as *mut types::lov_user_mds_data_v1,
         )
     };
 
@@ -203,8 +239,8 @@ pub fn mdc_stat(path: &PathBuf) -> Result<sys::lstat_t, LiblustreError> {
         return Err(LiblustreError::os_error(e.into()));
     }
 
-    let statptr: *const sys::lstat_t = page.as_ptr();
-    let stat: sys::lstat_t = unsafe { *statptr };
+    let statptr: *const types::lstat_t = page.as_ptr();
+    let stat: types::lstat_t = unsafe { *statptr };
 
     Ok(stat)
 }
@@ -256,7 +292,7 @@ mod tests {
 
     #[test]
     fn lu_fid2fid() {
-        let fid = sys::lu_fid {
+        let fid = types::lu_fid {
             f_ver: 1,
             f_oid: 4,
             f_seq: 64,

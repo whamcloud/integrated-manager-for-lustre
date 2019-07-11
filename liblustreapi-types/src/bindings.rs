@@ -292,25 +292,3 @@ impl Default for lov_user_mds_data_v1 {
         unsafe { ::std::mem::zeroed() }
     }
 }
-extern "C" {
-    pub fn llapi_search_rootpath(
-        pathname: *mut ::std::os::raw::c_char,
-        fsname: *const ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn llapi_fid2path(
-        device: *const ::std::os::raw::c_char,
-        fidstr: *const ::std::os::raw::c_char,
-        path: *mut ::std::os::raw::c_char,
-        pathlen: ::std::os::raw::c_int,
-        recno: *mut ::std::os::raw::c_longlong,
-        linkno: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn llapi_path2fid(
-        path: *const ::std::os::raw::c_char,
-        fid: *mut lu_fid,
-    ) -> ::std::os::raw::c_int;
-}

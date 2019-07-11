@@ -6,7 +6,7 @@ members = [
     'iml-manager-env',
     'iml-agent',
     'iml-services',
-    'liblustreapi-sys',
+    'liblustreapi-types',
     'liblustreapi',
     'tokio-runtime-shutdown',
     'iml-warp-drive',
