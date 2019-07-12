@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
-from toolz.functoolz import pipe, partial, flip, compose
+from toolz.functoolz import partial, flip, compose
 
 import tastypie.http as http
 
