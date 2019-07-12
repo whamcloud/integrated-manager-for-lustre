@@ -26,106 +26,159 @@ from chroma_core.models import (
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 get_bundle_int_val = compose(partial(flip, int, 10), str)
+
 MAX_SAFE_INTEGER = 9007199254740991
 
 
+def get_duration_type(duration_key):
+    return duration_key.split("_")[0].capitalize()
+
+
+def get_duration(duration_key, bundle):
+    try:
+        duration = bundle.data.get(duration_key) and get_bundle_int_val(bundle.data.get(duration_key))
+    except ValueError:
+        return {
+            "code": "invalid_argument",
+            "message": "{} duration must be an integer value.".format(get_duration_type(duration_key)),
+        }
+
+    return duration
+
+
+def validate_duration(bundle, result):
+    def check_duration(duration_key, bundle):
+        duration = get_duration(duration_key, bundle)
+        if isinstance(duration, dict):
+            return duration
+
+        if duration > MAX_SAFE_INTEGER:
+            return {
+                "code": "{}_too_big".format(duration_key),
+                "message": "{} duration cannot be larger than {}.".format(
+                    get_duration_type(duration_key), MAX_SAFE_INTEGER
+                ),
+            }
+
+        return duration
+
+    if result:
+        return result
+
+    purge_duration = check_duration("purge_duration", bundle)
+    if isinstance(purge_duration, dict):
+        return purge_duration
+
+    report_duration = check_duration("report_duration", bundle)
+    if isinstance(report_duration, dict):
+        return report_duration
+
+    if purge_duration is not None and report_duration is not None and report_duration >= purge_duration:
+        return {"code": "duration_order_error", "message": "Report duration must be less than Purge duration."}
+
+
+def get_fs_id(bundle):
+    if "filesystem" not in bundle.data:
+        return ({"code": "filesystem_required", "message": "Filesystem required."}, None)
+
+    fs_identifier = str(bundle.data.get("filesystem"))
+    fs_id = get_fs_id_from_identifier(fs_identifier)
+
+    return (fs_identifier, fs_id)
+
+
+def validate_filesystem(bundle, result):
+    if result:
+        return result
+
+    (fs_identifier, fs_id) = get_fs_id(bundle)
+    if isinstance(fs_identifier, dict):
+        return fs_identifier
+
+    if fs_id is None:
+        return {"code": "filesystem_does_not_exist", "message": "Filesystem {} does not exist.".format(fs_identifier)}
+    elif ManagedFilesystem.objects.get(id=fs_id).state != "available":
+        return {"code": "filesystem_unavailable", "message": "Filesystem {} is unavailable.".format(fs_identifier)}
+
+
+def get_target_mount_ids(fs_id, bundle):
+    # At least Mdt 0 should be mounted, or stratagem cannot run.
+    target_mount_ids = (
+        ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False)
+        .values_list("active_mount_id", flat=True)
+        .distinct()
+    )
+
+    return target_mount_ids
+
+
+def validate_target_mount(bundle, result):
+    if result:
+        return result
+
+    (r, fs_id) = get_fs_id(bundle)
+    if isinstance(r, dict):
+        return r
+
+    # At least Mdt 0 should be mounted, or stratagem cannot run.
+    target_mount_ids = get_target_mount_ids(fs_id, bundle)
+    mdt0 = ManagedMdt.objects.filter(filesystem_id=fs_id, name__contains="MDT0000").first()
+
+    if mdt0 is None:
+        return {"code": "mdt0_not_found", "message": "MDT0 could not be found."}
+
+    if mdt0.active_mount_id not in target_mount_ids:
+        return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
+
+
+def validate_mdt_profile(bundle, result):
+    if result:
+        return result
+
+    (r, fs_id) = get_fs_id(bundle)
+    if isinstance(r, dict):
+        return r
+
+    # At least Mdt 0 should be mounted, or stratagem cannot run.
+    target_mount_ids = get_target_mount_ids(fs_id, bundle)
+
+    host_ids = ManagedTargetMount.objects.filter(id__in=target_mount_ids).values_list("host_id", flat=True).distinct()
+
+    installed_profiles = (
+        ManagedHost.objects.filter(id__in=host_ids).values_list("server_profile_id", flat=True).distinct()
+    )
+
+    if not all(map(lambda name: name == "stratagem_server", installed_profiles)):
+        return {
+            "code": "stratagem_server_profile_not_installed",
+            "message": "'stratagem_server' profile must be installed on all MDT servers.",
+        }
+
+
+def validate_client_profile(bundle, result):
+    if result:
+        return result
+
+    if not ManagedHost.objects.filter(server_profile_id="stratagem_client").exists():
+        return {
+            "code": "stratagem_client_profile_not_installed",
+            "message": "A client must be added with the 'Stratagem Client' profile to run this command.",
+        }
+
+
 class RunStratagemValidation(Validation):
-    def _check_duration(self, duration_key, bundle):
-            duration_type = duration_key.split("_")[0].capitalize()
-            try:
-                duration = bundle.data.get(duration_key) and get_bundle_int_val(bundle.data.get(duration_key))
-                if duration > MAX_SAFE_INTEGER:
-                    return {
-                        "code": "{}_too_big".format(duration_key),
-                        "message": "{} duration cannot be larger than {}.".format(duration_type, MAX_SAFE_INTEGER),
-                    }
-            except ValueError:
-                return {
-                    "code": "invalid_argument",
-                    "message": "{} duration must be an integer value.".format(duration_type),
-                }
-
     def is_valid(self, bundle, request=None):
-        purge_check = self._check_duration("purge_duration", bundle)
-        if purge_check:
-            return purge_check
-
-        report_check = self._check_duration("report_duration", bundle)
-        if report_check:
-            return report_check
-
-        try:
-            purge_duration = bundle.data.get("purge_duration") and get_bundle_int_val(bundle.data.get("purge_duration"))
-            if purge_duration > MAX_SAFE_INTEGER:
-                return {
-                    "code": "purge_duration_too_big",
-                    "message": "Purge duration cannot be larger than {}.".format(MAX_SAFE_INTEGER),
-                }
-        except ValueError:
-            return {"code": "invalid_argument", "message": "Purge duration must be an integer value."}
-
-        try:
-            report_duration = bundle.data.get("report_duration") and get_bundle_int_val(
-                bundle.data.get("report_duration")
+        return (
+            pipe(
+                None,
+                partial(validate_duration, bundle),
+                partial(validate_filesystem, bundle),
+                partial(validate_target_mount, bundle),
+                partial(validate_mdt_profile, bundle),
+                partial(validate_client_profile, bundle),
             )
-            if report_duration > MAX_SAFE_INTEGER:
-                return {
-                    "code": "report_duration_too_big",
-                    "message": "Report duration cannot be larger than {}.".format(MAX_SAFE_INTEGER),
-                }
-        except ValueError:
-            return {"code": "invalid_argument", "message": "Report duration must be an integer value."}
-
-        if "filesystem" not in bundle.data:
-            return {"code": "filesystem_required", "message": "Filesystem required."}
-        elif purge_duration is not None and report_duration is not None and report_duration >= purge_duration:
-            return {"code": "duration_order_error", "message": "Report time must be less than purge time."}
-
-        fs_identifier = str(bundle.data.get("filesystem"))
-        fs_id = get_fs_id_from_identifier(fs_identifier)
-        if fs_id is None:
-            return {
-                "code": "filesystem_does_not_exist",
-                "message": "Filesystem {} does not exist.".format(fs_identifier),
-            }
-        elif ManagedFilesystem.objects.get(id=fs_id).state != "available":
-            return {"code": "filesystem_unavailable", "message": "Filesystem {} is unavailable.".format(fs_identifier)}
-
-        # At least Mdt 0 should be mounted, or stratagem cannot run.
-        target_mount_ids = (
-            ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False)
-            .values_list("active_mount_id", flat=True)
-            .distinct()
+            or {}
         )
-        mdt0 = ManagedMdt.objects.filter(filesystem_id=fs_id, name__contains="MDT0000").first()
-
-        if mdt0 is None:
-            return {"code": "mdt0_not_found", "message": "MDT0 could not be found."}
-
-        if mdt0.active_mount_id not in target_mount_ids:
-            return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
-
-        host_ids = (
-            ManagedTargetMount.objects.filter(id__in=target_mount_ids).values_list("host_id", flat=True).distinct()
-        )
-
-        installed_profiles = (
-            ManagedHost.objects.filter(id__in=host_ids).values_list("server_profile_id", flat=True).distinct()
-        )
-
-        if not all(map(lambda name: name == "stratagem_server", installed_profiles)):
-            return {
-                "code": "stratagem_server_profile_not_installed",
-                "message": "'stratagem_servers' profile must be installed on all MDT servers.",
-            }
-
-        if not ManagedHost.objects.filter(server_profile_id="stratagem_client").exists():
-            return {
-                "code": "stratagem_client_profile_not_installed",
-                "message": "A client must be added with the 'Stratagem Client' profile to run this command.",
-            }
-
-        return {}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
@@ -199,8 +252,7 @@ class RunStratagemResource(Resource):
 
     @validate
     def obj_create(self, bundle, **kwargs):
-        fs_identifier = bundle.data.get("filesystem")
-        fs_id = get_fs_id_from_identifier(fs_identifier)
+        (_, fs_id) = get_fs_id(bundle)
 
         mdts = list(
             ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False).values_list("id", flat=True)
