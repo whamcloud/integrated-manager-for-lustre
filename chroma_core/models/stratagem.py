@@ -42,10 +42,10 @@ class StratagemConfiguration(StatefulObject):
         help_text="The filesystem id associated with the stratagem configuration", null=False
     )
     interval = models.IntegerField(help_text="Interval value in seconds between each stratagem execution", null=False)
-    report_duration = models.IntegerField(
+    report_duration = models.BigIntegerField(
         help_text="Interval value in seconds between stratagem report execution", null=True
     )
-    purge_duration = models.IntegerField(help_text="Interval value in seconds between stratagem purges", null=True)
+    purge_duration = models.BigIntegerField(help_text="Interval value in seconds between stratagem purges", null=True)
 
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
@@ -200,8 +200,8 @@ class StreamFidlistStep(Step):
 class RunStratagemJob(Job):
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
-    report_duration = models.IntegerField(null=True)
-    purge_duration = models.IntegerField(null=True)
+    report_duration = models.BigIntegerField(null=True)
+    purge_duration = models.BigIntegerField(null=True)
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
@@ -338,8 +338,8 @@ class SendResultsToClientStep(Step):
 
 class SendStratagemResultsToClientJob(Job):
     uuid = models.CharField(max_length=64, null=False, default="")
-    report_duration = models.IntegerField(null=True)
-    purge_duration = models.IntegerField(null=True)
+    report_duration = models.BigIntegerField(null=True)
+    purge_duration = models.BigIntegerField(null=True)
 
     class Meta:
         app_label = "chroma_core"

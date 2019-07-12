@@ -17,10 +17,13 @@ pub enum RunStratagemCommandResult {
     FilesystemDoesNotExist,
     FilesystemUnavailable,
     InvalidArgument,
+    PurgeDurationTooBig,
+    ReportDurationTooBig,
     Mdt0NotFound,
     Mdt0NotMounted,
     StratagemServerProfileNotInstalled,
     StratagemClientProfileNotInstalled,
+    RequiredFieldsMissing,
     ServerError,
     UnknownError,
 }
