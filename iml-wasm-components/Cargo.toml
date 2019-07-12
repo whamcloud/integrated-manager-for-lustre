@@ -7,6 +7,8 @@ members = [
     'iml-environment',
     'iml-lock-indicator',
     'iml-pie-chart',
+    'iml-grafana-chart',
+    'iml-stratagem',
     'iml-sleep',
     'iml-toggle',
     'iml-tooltip',
