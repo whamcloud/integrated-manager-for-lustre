@@ -15,7 +15,10 @@ pub fn purge_files(
 ) -> Result<(), ImlAgentError> {
     let mntpt = match liblustreapi::search_rootpath(&device) {
         Ok(m) => m,
-        Err(e) => return Err(ImlAgentError::LiblustreError(e)),
+        Err(e) => {
+            log::error!("Failed to find rootpath({}) -> {}", device, e);
+            return Err(ImlAgentError::LiblustreError(e))
+        },
     };
     liblustreapi::rmfids(&mntpt, args).map_err(ImlAgentError::LiblustreError)
 }

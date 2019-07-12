@@ -21,7 +21,7 @@ use std::{
 
 const PATH_BYTES: usize = 4096;
 
-const LIBLUSTRE: &'static str = "lustreapi.so.1";
+const LIBLUSTRE: &'static str = "liblustreapi.so.1";
 
 // FID
 
@@ -91,7 +91,7 @@ pub fn fid2path(device: &str, fidstr: &str) -> Result<String, LiblustreError> {
         )));
     }
 
-    let lib = lib::Library::new(LIBLUSTRE)?; // @@
+    let lib = lib::Library::new(LIBLUSTRE).map_err(LiblustreError::not_loaded)?;
 
     let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
     let ptr = buf.as_mut_ptr() as *mut libc::c_char;
@@ -143,7 +143,7 @@ pub fn search_rootpath(fsname: &str) -> Result<String, LiblustreError> {
     if fsname.starts_with('/') {
         return Ok(fsname.to_string());
     }
-    let lib = lib::Library::new(LIBLUSTRE)?; // @@
+    let lib = lib::Library::new(LIBLUSTRE).map_err(LiblustreError::not_loaded)?;
     let fsc = CString::new(fsname.as_bytes())?;
 
     let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];

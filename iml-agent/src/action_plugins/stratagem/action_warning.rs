@@ -79,7 +79,7 @@ pub fn write_records(
     out: impl io::Write,
 ) -> Result<(), ImlAgentError> {
     let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
+        log::error!("Failed to find rootpath({}) -> {}", device, e);
         e
     })?;
 
@@ -112,7 +112,7 @@ pub fn read_mailbox(
     let mut wtr = match csv::Writer::from_path(&fpath) {
         Ok(w) => w,
         Err(e) => {
-            log::error!("Failed open writer ({:?}) -> {:?}", fpath, e);
+            log::error!("Failed open writer ({:?}) -> {}", fpath, e);
             return Either::B(future::err(ImlAgentError::CsvError(e)));
         }
     };
