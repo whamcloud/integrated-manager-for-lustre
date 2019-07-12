@@ -324,6 +324,7 @@ dependencies = [
 name = "iml-grafana-chart"
 version = "0.1.0"
 dependencies = [
+ "iml-environment 0.1.0",
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

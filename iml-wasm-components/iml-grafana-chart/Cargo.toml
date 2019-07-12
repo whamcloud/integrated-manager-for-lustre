@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 seed = "=0.3.7"
+iml-environment = { path = "../iml-environment", version = "0.1" }
