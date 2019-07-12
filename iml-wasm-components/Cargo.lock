@@ -321,6 +321,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-grafana-chart"
+version = "0.1.0"
+dependencies = [
+ "iml-environment 0.1.0",
+ "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "iml-lock-indicator"
 version = "0.1.0"
 dependencies = [
@@ -348,6 +356,14 @@ dependencies = [
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen-test 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "iml-stratagem"
+version = "0.1.0"
+dependencies = [
+ "iml-grafana-chart 0.1.0",
+ "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

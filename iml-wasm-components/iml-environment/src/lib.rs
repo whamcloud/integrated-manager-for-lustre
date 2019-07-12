@@ -4,6 +4,12 @@
 
 use seed::document;
 
+/// Returns https://<domain>:<port>/ui/
 pub fn ui_root() -> String {
     document().base_uri().unwrap().unwrap_or_default()
+}
+
+/// Returns https://<domain>:<port>/grafana/
+pub fn grafana_root() -> String {
+    ui_root().replace("/ui/", "/grafana/")
 }
