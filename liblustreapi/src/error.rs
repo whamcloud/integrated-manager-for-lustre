@@ -2,13 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::{error, ffi::IntoStringError, io, io::Error};
 use crate::LIBLUSTRE;
+use std::{error, ffi::IntoStringError, io, io::Error};
 
 /// Error if liblustreapi.so fails to load
 #[derive(Debug)]
 pub struct LoadError {
-    err: Box<dyn error::Error+Send+Sync>,
+    err: Box<dyn error::Error + Send + Sync>,
 }
 
 impl std::fmt::Display for LoadError {
@@ -24,10 +24,11 @@ impl std::error::Error for LoadError {
 }
 
 impl LoadError {
-    pub fn new <E>(e: E) -> LoadError
-    where E: Into<Box<dyn error::Error+Send+Sync>>
+    pub fn new<E>(e: E) -> LoadError
+    where
+        E: Into<Box<dyn error::Error + Send + Sync>>,
     {
-        LoadError{ err: e.into() }
+        LoadError { err: e.into() }
     }
 }
 
