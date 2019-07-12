@@ -122,3 +122,11 @@ pub mod popover {
         div![class!["popover-content"], el]
     }
 }
+
+pub mod bs_table {
+    use seed::{class, prelude::*, table};
+
+    pub fn table<T>(children: Vec<El<T>>) -> El<T> {
+        table![class!["table"], children]
+    }
+}
