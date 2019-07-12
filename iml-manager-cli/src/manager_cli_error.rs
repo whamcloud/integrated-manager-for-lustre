@@ -23,6 +23,7 @@ pub enum RunStratagemCommandResult {
     Mdt0NotMounted,
     StratagemServerProfileNotInstalled,
     StratagemClientProfileNotInstalled,
+    RequiredFieldsMissing,
     ServerError,
     UnknownError,
 }

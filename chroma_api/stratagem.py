@@ -27,6 +27,9 @@ from chroma_api.chroma_model_resource import ChromaModelResource
 
 get_bundle_int_val = compose(partial(flip, int, 10), str)
 
+# Postgres can store numbers up to 8 bytes (+9,223,372,036,854,775,807). These values will ultimately be passed back to the web
+# interface, where they will be used by javascript. Therefore, the maximum size of an integer is limited to the
+# maximum size allowed by javascript, which is Number.MAX_SAFE_INTEGER (9,007,199,254,740,991).
 MAX_SAFE_INTEGER = 9007199254740991
 
 
@@ -46,7 +49,7 @@ def get_duration(duration_key, bundle):
     return duration
 
 
-def validate_duration(bundle, result):
+def validate_duration(bundle):
     def check_duration(duration_key, bundle):
         duration = get_duration(duration_key, bundle)
         if isinstance(duration, dict):
@@ -61,9 +64,6 @@ def validate_duration(bundle, result):
             }
 
         return duration
-
-    if result:
-        return result
 
     purge_duration = check_duration("purge_duration", bundle)
     if isinstance(purge_duration, dict):
@@ -87,10 +87,7 @@ def get_fs_id(bundle):
     return (fs_identifier, fs_id)
 
 
-def validate_filesystem(bundle, result):
-    if result:
-        return result
-
+def validate_filesystem(bundle):
     (fs_identifier, fs_id) = get_fs_id(bundle)
     if isinstance(fs_identifier, dict):
         return fs_identifier
@@ -112,10 +109,7 @@ def get_target_mount_ids(fs_id, bundle):
     return target_mount_ids
 
 
-def validate_target_mount(bundle, result):
-    if result:
-        return result
-
+def validate_target_mount(bundle):
     (r, fs_id) = get_fs_id(bundle)
     if isinstance(r, dict):
         return r
@@ -131,10 +125,7 @@ def validate_target_mount(bundle, result):
         return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
 
 
-def validate_mdt_profile(bundle, result):
-    if result:
-        return result
-
+def validate_mdt_profile(bundle):
     (r, fs_id) = get_fs_id(bundle)
     if isinstance(r, dict):
         return r
@@ -155,10 +146,7 @@ def validate_mdt_profile(bundle, result):
         }
 
 
-def validate_client_profile(bundle, result):
-    if result:
-        return result
-
+def validate_client_profile(bundle):
     if not ManagedHost.objects.filter(server_profile_id="stratagem_client").exists():
         return {
             "code": "stratagem_client_profile_not_installed",
@@ -169,14 +157,11 @@ def validate_client_profile(bundle, result):
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
         return (
-            pipe(
-                None,
-                partial(validate_duration, bundle),
-                partial(validate_filesystem, bundle),
-                partial(validate_target_mount, bundle),
-                partial(validate_mdt_profile, bundle),
-                partial(validate_client_profile, bundle),
-            )
+            validate_duration(bundle)
+            or validate_filesystem(bundle)
+            or validate_target_mount(bundle)
+            or validate_mdt_profile(bundle)
+            or validate_client_profile(bundle)
             or {}
         )
 
@@ -190,7 +175,10 @@ class StratagemConfigurationValidation(RunStratagemValidation):
         if not difference:
             return super(StratagemConfigurationValidation, self).is_valid(bundle, request)
 
-        return {"__all__": "Required fields are missing: {}".format(", ".join(difference))}
+        return {
+            "code": "required_fields_missing",
+            "message": "Required fields are missing: {}".format(", ".join(difference)),
+        }
 
 
 class StratagemConfigurationResource(ChromaModelResource):
