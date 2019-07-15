@@ -5,11 +5,9 @@
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::future::poll_fn;
 use futures::{Future, Stream};
-use liblustreapi::{LlapiFid, LMount};
+use liblustreapi::{LMount, LlapiFid};
 use std::clone::Clone;
 use tokio_threadpool::blocking;
-
-pub use liblustreapi::is_ok;
 
 pub fn purge_files(
     device: &str,
@@ -22,7 +20,9 @@ pub fn purge_files(
     llapi.rmfids(args).map_err(ImlAgentError::LiblustreError)
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
+fn search_rootpath(
+    device: String,
+) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
     poll_fn(move || {
         blocking(|| LMount::search(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
@@ -30,7 +30,10 @@ fn search_rootpath(device: String) -> impl Future<Item = impl LlapiFid + Clone, 
     .from_err()
 }
 
-fn rm_fids(llapi: impl LlapiFid + Clone, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
+fn rm_fids(
+    llapi: impl LlapiFid + Clone,
+    fids: Vec<String>,
+) -> impl Future<Item = (), Error = ImlAgentError> {
     poll_fn(move || {
         blocking(|| llapi.clone().rmfids(fids.clone()))
             .map_err(|_| panic!("the threadpool shut down"))

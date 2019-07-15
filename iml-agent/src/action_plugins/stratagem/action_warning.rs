@@ -10,14 +10,12 @@ use futures::{
     Future, Sink, Stream,
 };
 use libc;
-use liblustreapi::{LlapiFid, LMount};
+use liblustreapi::{LMount, LlapiFid};
 use std::clone::Clone;
 use std::ffi::CStr;
 use std::io;
 use std::path::PathBuf;
 use tokio_threadpool::blocking;
-
-pub use liblustreapi::is_ok;
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
@@ -32,7 +30,10 @@ struct Record {
     fid: String,
 }
 
-fn fid2record(llapi: &(impl LlapiFid + Clone), fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
+fn fid2record(
+    llapi: &(impl LlapiFid + Clone),
+    fli: &fidlist::FidListItem,
+) -> Result<Record, ImlAgentError> {
     let mntpt: &str = &*llapi.mntpt();
     let path = llapi.fid2path(&fli.fid).map_err(|e| {
         log::error!("Failed to fid2path: {}: {}", fli.fid, e);
@@ -67,7 +68,9 @@ fn fid2record(llapi: &(impl LlapiFid + Clone), fli: &fidlist::FidListItem) -> Re
     })
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
+fn search_rootpath(
+    device: String,
+) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
     poll_fn(move || {
         blocking(|| LMount::search(&device)).map_err(|_| panic!("the threadpool shut down"))
     })

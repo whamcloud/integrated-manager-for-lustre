@@ -70,10 +70,6 @@ impl From<types::lu_fid> for Fid {
     }
 }
 
-pub fn is_ok() -> bool {
-    lib::Library::new(LIBLUSTRE).is_ok()
-}
-
 fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
     unsafe {
         let s = CStr::from_ptr(buf.as_ptr() as *const i8);
@@ -90,7 +86,7 @@ pub trait Llapi {
     fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError>;
 }
 
-pub trait LlapiFid : Llapi {
+pub trait LlapiFid: Llapi {
     fn mntpt(&self) -> String;
     fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError>;
     fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError>;
