@@ -5,6 +5,7 @@
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::future::poll_fn;
 use futures::{Future, Stream};
+use liblustreapi::Llapi;
 use tokio_threadpool::blocking;
 
 pub use liblustreapi::is_ok;
@@ -13,28 +14,25 @@ pub fn purge_files(
     device: &str,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
-    let mntpt = match liblustreapi::search_rootpath(&device) {
-        Ok(m) => m,
-        Err(e) => {
+    let llapi = Llapi::search(&device).map_err(|e| {
             log::error!("Failed to find rootpath({}) -> {}", device, e);
-            return Err(ImlAgentError::LiblustreError(e));
-        }
-    };
-    liblustreapi::rmfids(&mntpt, args).map_err(ImlAgentError::LiblustreError)
+            ImlAgentError::LiblustreError(e)
+    })?;
+    llapi.rmfids(args).map_err(ImlAgentError::LiblustreError)
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = String, Error = ImlAgentError> {
+fn search_rootpath(device: String) -> impl Future<Item = Llapi, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| liblustreapi::search_rootpath(&device))
+        blocking(|| Llapi::search(&device))
             .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
     .from_err()
 }
 
-fn rm_fids(mntpt: String, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
+fn rm_fids(llapi: &Llapi, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> + '_ {
     poll_fn(move || {
-        blocking(|| liblustreapi::rmfids(&mntpt, fids.clone()))
+        blocking(|| llapi.rmfids(fids.clone()))
             .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
@@ -44,7 +42,7 @@ fn rm_fids(mntpt: String, fids: Vec<String>) -> impl Future<Item = (), Error = I
 pub fn read_mailbox(
     (fsname_or_mntpath, mailbox): (String, String),
 ) -> impl Future<Item = (), Error = ImlAgentError> {
-    search_rootpath(fsname_or_mntpath).and_then(move |mntpt| {
+    search_rootpath(fsname_or_mntpath).and_then(move |llapi| {
         mailbox_client::get(mailbox)
             .filter_map(|x| {
                 x.trim()
@@ -53,10 +51,10 @@ pub fn read_mailbox(
                     .last()
                     .map(String::from)
             })
-            .chunks(10) // @@ Get number from liblustreapi
+            .chunks(llapi.rmfids_size())
             .for_each(move |fids| {
                 tokio::spawn(
-                    rm_fids(mntpt.clone(), fids)
+                    rm_fids(&llapi, fids)
                         .map_err(|e| log::warn!("Error removing fid {:?}", e)),
                 );
                 Ok(())

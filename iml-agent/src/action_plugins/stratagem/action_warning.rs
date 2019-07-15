@@ -10,6 +10,7 @@ use futures::{
     Future, Sink, Stream,
 };
 use libc;
+use liblustreapi::Llapi;
 use std::ffi::CStr;
 use std::io;
 use std::path::PathBuf;
@@ -30,14 +31,15 @@ struct Record {
     fid: String,
 }
 
-fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
-    let path = liblustreapi::fid2path(&mntpt, &fli.fid).map_err(|e| {
+fn fid2record(llapi: &Llapi, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
+    let mntpt: &str = &*llapi.mntpt()?;
+    let path = llapi.fid2path(&fli.fid).map_err(|e| {
         log::error!("Failed to fid2path: {}: {}", fli.fid, e);
         e
     })?;
 
     let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
-    let stat = liblustreapi::mdc_stat(&pb).map_err(|e| {
+    let stat = llapi.mdc_stat(&pb).map_err(|e| {
         log::error!("Failed to mdc_stat({:?}) => {}", pb, e);
         e
     })?;
@@ -64,9 +66,9 @@ fn fid2record(mntpt: &str, fli: &fidlist::FidListItem) -> Result<Record, ImlAgen
     })
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = String, Error = ImlAgentError> {
+fn search_rootpath(device: String) -> impl Future<Item = Llapi, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| liblustreapi::search_rootpath(&device))
+        blocking(|| Llapi::search(&device))
             .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
@@ -78,7 +80,7 @@ pub fn write_records(
     args: impl IntoIterator<Item = String>,
     out: impl io::Write,
 ) -> Result<(), ImlAgentError> {
-    let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
+    let llapi = Llapi::search(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {}", device, e);
         e
     })?;
@@ -86,7 +88,7 @@ pub fn write_records(
     let mut wtr = csv::Writer::from_writer(out);
 
     for fid in args {
-        let rec = match fid2record(&mntpt, &fidlist::FidListItem::new(fid)) {
+        let rec = match fid2record(&llapi, &fidlist::FidListItem::new(fid)) {
             Ok(r) => r,
             Err(_) => continue,
         };
@@ -123,7 +125,7 @@ pub fn read_mailbox(
         .map_err(|()| ImlAgentError::UnexpectedStatusError)
         .for_each(move |rec: Record| wtr.serialize(&rec).map_err(ImlAgentError::CsvError));
 
-    let f2 = search_rootpath(fsname_or_mntpath).and_then(move |mntpt| {
+    let f2 = search_rootpath(fsname_or_mntpath).and_then(move |llapi| {
         mailbox_client::get(mbox)
             .filter_map(|x| {
                 x.trim()
@@ -134,10 +136,9 @@ pub fn read_mailbox(
             })
             .for_each(move |fli| {
                 let sender2 = sender.clone();
-                let mntpt2 = mntpt.clone();
                 tokio::spawn(
                     poll_fn(move || {
-                        blocking(|| fid2record(&mntpt2, &fli))
+                        blocking(|| fid2record(&llapi, &fli))
                             .map_err(|_| panic!("the threadpool shut down"))
                     })
                     .and_then(std::convert::identity)

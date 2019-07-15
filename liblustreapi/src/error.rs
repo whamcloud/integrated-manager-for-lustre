@@ -3,32 +3,42 @@
 // license that can be found in the LICENSE file.
 
 use crate::LIBLUSTRE;
+use libc;
 use std::{error, ffi::IntoStringError, io, io::Error};
 
 /// Error if liblustreapi.so fails to load
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LoadError {
-    err: Box<dyn error::Error + Send + Sync>,
+    msg: String,
 }
 
 impl std::fmt::Display for LoadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} failed to load", LIBLUSTRE)
+        write!(f, "{} failed to load: {}", LIBLUSTRE, self.msg)
     }
 }
 
 impl std::error::Error for LoadError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        self.err.source()
+        None
+    }
+}
+
+impl From<io::Error> for LoadError {
+    fn from(err: io::Error) -> Self {
+        LoadError::new(format!("{}", err))
     }
 }
 
 impl LoadError {
-    pub fn new<E>(e: E) -> LoadError
-    where
-        E: Into<Box<dyn error::Error + Send + Sync>>,
+    pub fn new(s: String) -> LoadError
     {
-        LoadError { err: e.into() }
+        LoadError { msg: s }
+    }
+
+    pub fn into_raw(&self) -> String
+    {
+        self.msg.clone()
     }
 }
 
@@ -57,11 +67,12 @@ impl LiblustreError {
     pub fn os_error(e: i32) -> Self {
         io::Error::from_raw_os_error(e).into()
     }
-    pub fn not_loaded<E>(e: E) -> Self
-    where
-        E: Into<Box<dyn error::Error + Send + Sync>>,
+    pub fn not_loaded(e: &io::Error) -> Self
     {
-        LoadError::new(e).into()
+        LoadError::new(format!("{}", e)).into()
+    }
+    pub fn no_mntpt() -> Self {
+        io::Error::from_raw_os_error(libc::ENXIO).into()
     }
 }
 
