@@ -5,7 +5,8 @@
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::future::poll_fn;
 use futures::{Future, Stream};
-use liblustreapi::Llapi;
+use liblustreapi::{LlapiFid, LMount};
+use std::clone::Clone;
 use tokio_threadpool::blocking;
 
 pub use liblustreapi::is_ok;
@@ -14,22 +15,22 @@ pub fn purge_files(
     device: &str,
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
-    let llapi = Llapi::search(&device).map_err(|e| {
+    let llapi = LMount::search(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {}", device, e);
         ImlAgentError::LiblustreError(e)
     })?;
     llapi.rmfids(args).map_err(ImlAgentError::LiblustreError)
 }
 
-fn search_rootpath(device: String) -> impl Future<Item = Llapi, Error = ImlAgentError> {
+fn search_rootpath(device: String) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| Llapi::search(&device)).map_err(|_| panic!("the threadpool shut down"))
+        blocking(|| LMount::search(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
     .from_err()
 }
 
-fn rm_fids(llapi: Llapi, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
+fn rm_fids(llapi: impl LlapiFid + Clone, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
     poll_fn(move || {
         blocking(|| llapi.clone().rmfids(fids.clone()))
             .map_err(|_| panic!("the threadpool shut down"))

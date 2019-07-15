@@ -86,8 +86,21 @@ fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
 
 // LLAPI
 
+pub trait Llapi {
+    fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError>;
+}
+
+pub trait LlapiFid : Llapi {
+    fn mntpt(&self) -> String;
+    fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError>;
+    fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError>;
+    fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError>;
+    fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError>;
+    fn rmfids_size(&self) -> usize;
+}
+
 #[derive(Clone, Debug)]
-pub struct Llapi {
+pub struct LMount {
     lib: Arc<lib::Library>,
     mntpt: String,
 }
@@ -127,22 +140,24 @@ fn search_rootpath(lib: &lib::Library, fsname: &str) -> Result<String, Liblustre
     buf2string(page)
 }
 
-impl Llapi {
+impl LMount {
     // Creation function - equivilent of liblustreapi::search_rootpath
-    pub fn search(fsname_or_mntpt: &str) -> Result<Llapi, LiblustreError> {
+    pub fn search(fsname_or_mntpt: &str) -> Result<LMount, LiblustreError> {
         let lib = lib::Library::new(LIBLUSTRE).map_err(LiblustreError::not_loaded)?;
         let mntpt = search_rootpath(&lib, fsname_or_mntpt)?;
-        Ok(Llapi {
+        Ok(LMount {
             lib: Arc::new(lib),
             mntpt: mntpt,
         })
     }
+}
 
-    pub fn mntpt(&self) -> String {
+impl LlapiFid for LMount {
+    fn mntpt(&self) -> String {
         self.mntpt.clone()
     }
 
-    pub fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError> {
+    fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError> {
         if !fidstr.starts_with('[') {
             return Err(LiblustreError::invalid_input(format!(
                 "FID is invalid format {}",
@@ -197,13 +212,48 @@ impl Llapi {
         buf2string(buf)
     }
 
-    pub fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError> {
+    fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError> {
         let s = search_rootpath(&self.lib, fsname)?;
         self.mntpt = s.clone();
         Ok(s)
     }
 
-    pub fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
+    fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError> {
+        use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
+        let path = self.fid2path(&fidstr)?;
+        let mntpt = &self.mntpt;
+        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
+        if let Err(e) = fs::remove_file(pb) {
+            log::error!("Failed to remove {}: {:?}", fidstr, e);
+        }
+
+        Ok(())
+    }
+
+    fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError> {
+        // @@TODO replace with sys::llapi_rmfid once LU-12090 lands
+        for fidstr in fidlist {
+            self.rmfid(&fidstr).unwrap_or_else(|x| {
+                log::error!(
+                    "Couldn't remove fid {} with mountpoint {}: {}.",
+                    fidstr,
+                    self.mntpt,
+                    x
+                )
+            });
+        }
+
+        Ok(())
+    }
+
+    fn rmfids_size(&self) -> usize {
+        // @@TODO determine size of llapi_rmfid() array
+        10
+    }
+}
+
+impl Llapi for LMount {
+    fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
         let file_name = path
             .file_name()
             .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {:?}", path)))?
@@ -274,39 +324,6 @@ impl Llapi {
         let stat: types::lstat_t = unsafe { *statptr };
 
         Ok(stat)
-    }
-
-    pub fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError> {
-        use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
-        let path = self.fid2path(&fidstr)?;
-        let mntpt = &self.mntpt;
-        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-        if let Err(e) = fs::remove_file(pb) {
-            log::error!("Failed to remove {}: {:?}", fidstr, e);
-        }
-
-        Ok(())
-    }
-
-    pub fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError> {
-        // @@TODO replace with sys::llapi_rmfid once LU-12090 lands
-        for fidstr in fidlist {
-            self.rmfid(&fidstr).unwrap_or_else(|x| {
-                log::error!(
-                    "Couldn't remove fid {} with mountpoint {}: {}.",
-                    fidstr,
-                    self.mntpt,
-                    x
-                )
-            });
-        }
-
-        Ok(())
-    }
-
-    pub fn rmfids_size(&self) -> usize {
-        // @@TODO determine size of llapi_rmfid() array
-        10
     }
 }
 
