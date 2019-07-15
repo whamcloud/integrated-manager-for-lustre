@@ -13,6 +13,10 @@ fn main() {
         .join("src")
         .join("bindings.rs");
 
+    if out_file.exists() {
+        return;
+    }
+
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
         .constified_enum_module("boolean")
