@@ -15,24 +15,23 @@ pub fn purge_files(
     args: impl IntoIterator<Item = String>,
 ) -> Result<(), ImlAgentError> {
     let llapi = Llapi::search(&device).map_err(|e| {
-            log::error!("Failed to find rootpath({}) -> {}", device, e);
-            ImlAgentError::LiblustreError(e)
+        log::error!("Failed to find rootpath({}) -> {}", device, e);
+        ImlAgentError::LiblustreError(e)
     })?;
     llapi.rmfids(args).map_err(ImlAgentError::LiblustreError)
 }
 
 fn search_rootpath(device: String) -> impl Future<Item = Llapi, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| Llapi::search(&device))
-            .map_err(|_| panic!("the threadpool shut down"))
+        blocking(|| Llapi::search(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
     .from_err()
 }
 
-fn rm_fids(llapi: &Llapi, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> + '_ {
+fn rm_fids(llapi: Llapi, fids: Vec<String>) -> impl Future<Item = (), Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| llapi.rmfids(fids.clone()))
+        blocking(|| llapi.clone().rmfids(fids.clone()))
             .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
@@ -54,7 +53,7 @@ pub fn read_mailbox(
             .chunks(llapi.rmfids_size())
             .for_each(move |fids| {
                 tokio::spawn(
-                    rm_fids(&llapi, fids)
+                    rm_fids(llapi.clone(), fids)
                         .map_err(|e| log::warn!("Error removing fid {:?}", e)),
                 );
                 Ok(())

@@ -31,13 +31,11 @@ impl From<io::Error> for LoadError {
 }
 
 impl LoadError {
-    pub fn new(s: String) -> LoadError
-    {
+    pub fn new(s: String) -> LoadError {
         LoadError { msg: s }
     }
 
-    pub fn into_raw(&self) -> String
-    {
+    pub fn into_raw(&self) -> String {
         self.msg.clone()
     }
 }
@@ -67,8 +65,7 @@ impl LiblustreError {
     pub fn os_error(e: i32) -> Self {
         io::Error::from_raw_os_error(e).into()
     }
-    pub fn not_loaded(e: &io::Error) -> Self
-    {
+    pub fn not_loaded(e: io::Error) -> Self {
         LoadError::new(format!("{}", e)).into()
     }
     pub fn no_mntpt() -> Self {

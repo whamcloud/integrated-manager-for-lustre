@@ -32,7 +32,7 @@ struct Record {
 }
 
 fn fid2record(llapi: &Llapi, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
-    let mntpt: &str = &*llapi.mntpt()?;
+    let mntpt: &str = &*llapi.mntpt();
     let path = llapi.fid2path(&fli.fid).map_err(|e| {
         log::error!("Failed to fid2path: {}: {}", fli.fid, e);
         e
@@ -68,8 +68,7 @@ fn fid2record(llapi: &Llapi, fli: &fidlist::FidListItem) -> Result<Record, ImlAg
 
 fn search_rootpath(device: String) -> impl Future<Item = Llapi, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| Llapi::search(&device))
-            .map_err(|_| panic!("the threadpool shut down"))
+        blocking(|| Llapi::search(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
     .from_err()
@@ -136,9 +135,10 @@ pub fn read_mailbox(
             })
             .for_each(move |fli| {
                 let sender2 = sender.clone();
+                let llapi2 = llapi.clone();
                 tokio::spawn(
                     poll_fn(move || {
-                        blocking(|| fid2record(&llapi, &fli))
+                        blocking(|| fid2record(&llapi2, &fli))
                             .map_err(|_| panic!("the threadpool shut down"))
                     })
                     .and_then(std::convert::identity)
