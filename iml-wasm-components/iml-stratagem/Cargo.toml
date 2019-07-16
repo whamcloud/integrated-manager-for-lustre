@@ -8,5 +8,25 @@ edition = "2018"
 seed = "=0.3.7"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0"
+iml-wire-types = "0.1"
 iml-grafana-chart = { path = "../iml-grafana-chart", version = "0.1" }
 bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
+wasm-bindgen = "0.2.48"
+log = "0.4"
+futures = "0.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+js-sys = "0.3.25"
+wasm-bindgen-futures = "0.3.25"
+lazy_static = "1.3.0"
+
+[dev-dependencies.web-sys]
+version = "0.3.25"
+features = [
+  "Response",
+  "Window",
+  "Document",
+  "Element",
+  "HtmlElement"
+]
