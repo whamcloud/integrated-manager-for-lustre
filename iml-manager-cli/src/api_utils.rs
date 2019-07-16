@@ -29,7 +29,12 @@ pub fn wait_for_cmd(cmd: Command) -> impl Future<Item = Command, Error = ImlMana
                 .and_then(move |_| {
                     let client =
                         iml_manager_client::get_client().expect("Could not create API client");
-                    iml_manager_client::get(client, &format!("command/{}", cmd.id)).from_err()
+                    iml_manager_client::get(
+                        client,
+                        &format!("command/{}", cmd.id),
+                        Vec::<(String, String)>::new(),
+                    )
+                    .from_err()
                 })
                 .map(Loop::Continue),
         )

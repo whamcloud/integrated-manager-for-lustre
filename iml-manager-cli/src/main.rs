@@ -243,7 +243,7 @@ fn main() {
                 let fut = {
                     let client =
                         iml_manager_client::get_client().expect("Could not create API client");
-                    iml_manager_client::get(client, "host")
+                    iml_manager_client::get(client, "host", vec![("limit", 0)])
                 };
 
                 let result: Result<ApiList<Host>, _> = run_cmd(fut);
@@ -256,10 +256,14 @@ fn main() {
 
                         let table = generate_table(
                             &["Id", "FQDN", "State", "Nids"],
-                            hosts
-                                .objects
-                                .into_iter()
-                                .map(|h| vec![h.id.to_string(), h.fqdn, h.state, h.nids.join(" ")]),
+                            hosts.objects.into_iter().map(|h| {
+                                vec![
+                                    h.id.to_string(),
+                                    h.fqdn,
+                                    h.state,
+                                    h.nids.unwrap_or_else(|| vec![]).join(" "),
+                                ]
+                            }),
                         );
 
                         table.printstd();

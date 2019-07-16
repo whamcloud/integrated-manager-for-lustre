@@ -46,3 +46,4 @@ copr-local.mk
 target
 **/*.rs.bk
 .cargo
+.vagrant/rgloader/loader.rb

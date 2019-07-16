@@ -5,7 +5,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-tokio-postgres = "0.4.0-rc.2"
+tokio-postgres = "0.4.0-rc.3"
 futures = "0.1"
 tokio = "0.1"
 log = "0.4.6"

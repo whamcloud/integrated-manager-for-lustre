@@ -18,4 +18,6 @@ warp = "0.1"
 parking_lot = "0.8"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }
 iml-rabbit = { path = "../iml-rabbit", version = "0.1.0" }
-iml-wire-types = { path = "../iml-wire-types", version = "0.1" }
+iml-postgres = { path = "../iml-postgres", version = "0.1.0" }
+iml-wire-types = { path = "../iml-wire-types", version = "0.1.4" }
+iml-manager-client = { path = "../iml-manager-client", version = "0.1" }
