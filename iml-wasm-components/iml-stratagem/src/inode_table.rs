@@ -161,16 +161,8 @@ mod tests {
   use super::*;
   use futures::sync::oneshot;
   use futures::sync::oneshot::*;
-  use futures::*;
-  use seed::{
-    div,
-    fetch::{DataResult, FetchResult, Request, ResponseWithDataResult, Status, StatusCategory},
-    log,
-    prelude::*,
-    span,
-  };
+  use seed::fetch::{Request, ResponseWithDataResult, Status, StatusCategory};
   use std::sync::{Arc, Mutex};
-  use std::thread;
   use wasm_bindgen_test::wasm_bindgen_test_configure;
 
   wasm_bindgen_test_configure!(run_in_browser);
@@ -196,7 +188,7 @@ mod tests {
         let td21 = tr2.children[0].children[0].clone().text;
         let td22 = tr2.children[1].children[0].clone().text;
 
-        assert_eq!(td11, Some("uid_1".into()));
+        assert_eq!(td11, Some("uid_0".into()));
         assert_eq!(td12, Some("26".into()));
         assert_eq!(td21, Some("uid_1".into()));
         assert_eq!(td22, Some("13".into()));
@@ -271,11 +263,5 @@ mod tests {
     }
 
     render()
-
-    // JsFuture::from(promise)
-    //   .map(|x| {
-    //     assert_eq!(x, 42);
-    //   })
-    //   .map_err(|_| unreachable!())
   }
 }
