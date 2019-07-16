@@ -10,7 +10,7 @@ use futures::{
     Future, Sink, Stream,
 };
 use libc;
-use liblustreapi::{LMount, LlapiFid};
+use liblustreapi::LlapiFid;
 use std::clone::Clone;
 use std::ffi::CStr;
 use std::io;
@@ -30,10 +30,7 @@ struct Record {
     fid: String,
 }
 
-fn fid2record(
-    llapi: &(impl LlapiFid + Clone),
-    fli: &fidlist::FidListItem,
-) -> Result<Record, ImlAgentError> {
+fn fid2record(llapi: &LlapiFid, fli: &fidlist::FidListItem) -> Result<Record, ImlAgentError> {
     let mntpt: &str = &*llapi.mntpt();
     let path = llapi.fid2path(&fli.fid).map_err(|e| {
         log::error!("Failed to fid2path: {}: {}", fli.fid, e);
@@ -68,11 +65,9 @@ fn fid2record(
     })
 }
 
-fn search_rootpath(
-    device: String,
-) -> impl Future<Item = impl LlapiFid + Clone, Error = ImlAgentError> {
+fn search_rootpath(device: String) -> impl Future<Item = LlapiFid, Error = ImlAgentError> {
     poll_fn(move || {
-        blocking(|| LMount::search(&device)).map_err(|_| panic!("the threadpool shut down"))
+        blocking(|| LlapiFid::create(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(std::convert::identity)
     .from_err()
@@ -83,7 +78,7 @@ pub fn write_records(
     args: impl IntoIterator<Item = String>,
     out: impl io::Write,
 ) -> Result<(), ImlAgentError> {
-    let llapi = LMount::search(&device).map_err(|e| {
+    let llapi = LlapiFid::create(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {}", device, e);
         e
     })?;

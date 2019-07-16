@@ -82,174 +82,18 @@ fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
 
 // LLAPI
 
-pub trait Llapi {
-    fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError>;
-}
-
-pub trait LlapiFid: Llapi {
-    fn mntpt(&self) -> String;
-    fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError>;
-    fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError>;
-    fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError>;
-    fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError>;
-    fn rmfids_size(&self) -> usize;
-}
-
 #[derive(Clone, Debug)]
-pub struct LMount {
+pub struct Llapi {
     lib: Arc<lib::Library>,
-    mntpt: String,
 }
 
-fn search_rootpath(lib: &lib::Library, fsname: &str) -> Result<String, LiblustreError> {
-    // @TODO this should do more validation
-    if fsname.starts_with('/') {
-        return Ok(fsname.to_string());
-    }
-
-    let fsc = CString::new(fsname.as_bytes())?;
-
-    let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
-    let ptr = page.as_mut_ptr() as *mut libc::c_char;
-
-    let rc = unsafe {
-        match lib.get(b"llapi_search_rootpath\0") {
-            Ok(f) => {
-                let func: lib::Symbol<
-                    extern "C" fn(*mut libc::c_char, *const libc::c_char) -> libc::c_int,
-                > = f;
-                func(ptr, fsc.as_ptr())
-            }
-            Err(_) => 1, // @@
-        }
-    };
-
-    if rc != 0 {
-        log::error!(
-            "Error: llapi_search_rootpath({}) => {}",
-            fsc.into_string()?,
-            rc
-        );
-        return Err(LiblustreError::os_error(rc.abs()));
-    }
-
-    buf2string(page)
-}
-
-impl LMount {
-    // Creation function - equivilent of liblustreapi::search_rootpath
-    pub fn search(fsname_or_mntpt: &str) -> Result<LMount, LiblustreError> {
+impl Llapi {
+    pub fn create() -> Result<Llapi, LiblustreError> {
         let lib = lib::Library::new(LIBLUSTRE).map_err(LiblustreError::not_loaded)?;
-        let mntpt = search_rootpath(&lib, fsname_or_mntpt)?;
-        Ok(LMount {
-            lib: Arc::new(lib),
-            mntpt: mntpt,
-        })
-    }
-}
-
-impl LlapiFid for LMount {
-    fn mntpt(&self) -> String {
-        self.mntpt.clone()
+        Ok(Llapi { lib: Arc::new(lib) })
     }
 
-    fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError> {
-        if !fidstr.starts_with('[') {
-            return Err(LiblustreError::invalid_input(format!(
-                "FID is invalid format {}",
-                fidstr
-            )));
-        }
-
-        let device: &str = &self.mntpt;
-
-        let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
-        let ptr = buf.as_mut_ptr() as *mut libc::c_char;
-
-        let devptr = CString::new(device)?.into_raw();
-        let fidptr = CString::new(fidstr)?.into_raw();
-
-        let rc = unsafe {
-            let mut recno: i64 = -1;
-            let mut linkno: i32 = 0;
-            let rc = match self.lib.get(b"llapi_fid2path\0") {
-                Ok(f) => {
-                    let func: lib::Symbol<
-                        extern "C" fn(
-                            *const libc::c_char,
-                            *const libc::c_char,
-                            *mut libc::c_char,
-                            libc::c_int,
-                            *mut libc::c_longlong,
-                            *mut libc::c_int,
-                        ) -> libc::c_int,
-                    > = f;
-                    func(
-                        devptr,
-                        fidptr,
-                        ptr,
-                        buf.len() as i32,
-                        &mut recno as *mut std::os::raw::c_longlong,
-                        &mut linkno as *mut std::os::raw::c_int,
-                    )
-                }
-                Err(_) => 1, // @@
-            };
-            // Ensure CStrings are freed
-            let _ = CString::from_raw(devptr);
-            let _ = CString::from_raw(fidptr);
-            rc
-        };
-
-        if rc != 0 {
-            return Err(LiblustreError::os_error(rc.abs()));
-        }
-
-        buf2string(buf)
-    }
-
-    fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError> {
-        let s = search_rootpath(&self.lib, fsname)?;
-        self.mntpt = s.clone();
-        Ok(s)
-    }
-
-    fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError> {
-        use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
-        let path = self.fid2path(&fidstr)?;
-        let mntpt = &self.mntpt;
-        let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-        if let Err(e) = fs::remove_file(pb) {
-            log::error!("Failed to remove {}: {:?}", fidstr, e);
-        }
-
-        Ok(())
-    }
-
-    fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError> {
-        // @@TODO replace with sys::llapi_rmfid once LU-12090 lands
-        for fidstr in fidlist {
-            self.rmfid(&fidstr).unwrap_or_else(|x| {
-                log::error!(
-                    "Couldn't remove fid {} with mountpoint {}: {}.",
-                    fidstr,
-                    self.mntpt,
-                    x
-                )
-            });
-        }
-
-        Ok(())
-    }
-
-    fn rmfids_size(&self) -> usize {
-        // @@TODO determine size of llapi_rmfid() array
-        10
-    }
-}
-
-impl Llapi for LMount {
-    fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
+    pub fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
         let file_name = path
             .file_name()
             .ok_or_else(|| LiblustreError::not_found(format!("File Not Found: {:?}", path)))?
@@ -320,6 +164,176 @@ impl Llapi for LMount {
         let stat: types::lstat_t = unsafe { *statptr };
 
         Ok(stat)
+    }
+
+    pub fn fid2path(&self, mntpt: &str, fidstr: &str) -> Result<String, LiblustreError> {
+        if !fidstr.starts_with('[') {
+            return Err(LiblustreError::invalid_input(format!(
+                "FID is invalid format {}",
+                fidstr
+            )));
+        }
+
+        let mut buf: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
+        let ptr = buf.as_mut_ptr() as *mut libc::c_char;
+
+        let devptr = CString::new(mntpt)?.into_raw();
+        let fidptr = CString::new(fidstr)?.into_raw();
+
+        let rc = unsafe {
+            let mut recno: i64 = -1;
+            let mut linkno: i32 = 0;
+            let rc = match self.lib.get(b"llapi_fid2path\0") {
+                Ok(f) => {
+                    let func: lib::Symbol<
+                        extern "C" fn(
+                            *const libc::c_char,
+                            *const libc::c_char,
+                            *mut libc::c_char,
+                            libc::c_int,
+                            *mut libc::c_longlong,
+                            *mut libc::c_int,
+                        ) -> libc::c_int,
+                    > = f;
+                    func(
+                        devptr,
+                        fidptr,
+                        ptr,
+                        buf.len() as i32,
+                        &mut recno as *mut std::os::raw::c_longlong,
+                        &mut linkno as *mut std::os::raw::c_int,
+                    )
+                }
+                Err(_) => 1, // @@
+            };
+            // Ensure CStrings are freed
+            let _ = CString::from_raw(devptr);
+            let _ = CString::from_raw(fidptr);
+            rc
+        };
+
+        if rc != 0 {
+            return Err(LiblustreError::os_error(rc.abs()));
+        }
+
+        buf2string(buf)
+    }
+
+    pub fn search_rootpath(&self, fsname: &str) -> Result<String, LiblustreError> {
+        // @TODO this should do more validation
+        if fsname.starts_with('/') {
+            return Ok(fsname.to_string());
+        }
+
+        let fsc = CString::new(fsname.as_bytes())?;
+
+        let mut page: Vec<u8> = vec![0; std::mem::size_of::<u8>() * PATH_BYTES];
+        let ptr = page.as_mut_ptr() as *mut libc::c_char;
+
+        let rc = unsafe {
+            match self.lib.get(b"llapi_search_rootpath\0") {
+                Ok(f) => {
+                    let func: lib::Symbol<
+                        extern "C" fn(*mut libc::c_char, *const libc::c_char) -> libc::c_int,
+                    > = f;
+                    func(ptr, fsc.as_ptr())
+                }
+                Err(_) => 1, // @@
+            }
+        };
+
+        if rc != 0 {
+            log::error!(
+                "Error: llapi_search_rootpath({}) => {}",
+                fsc.into_string()?,
+                rc
+            );
+            return Err(LiblustreError::os_error(rc.abs()));
+        }
+
+        buf2string(page)
+    }
+
+    pub fn rmfid(&self, mntpt: &str, fidstr: &str) -> Result<(), LiblustreError> {
+        use std::fs; // @TODO replace with sys::llapi_rmfid once LU-12090 lands
+        let path = self.fid2path(&mntpt, &fidstr)?;
+        let pb: std::path::PathBuf = [mntpt, &path].iter().collect();
+        if let Err(e) = fs::remove_file(pb) {
+            log::error!("Failed to remove {}: {:?}", fidstr, e);
+        }
+
+        Ok(())
+    }
+
+    pub fn rmfids(
+        &self,
+        mntpt: &str,
+        fidlist: impl IntoIterator<Item = String>,
+    ) -> Result<(), LiblustreError> {
+        // @@TODO replace with sys::llapi_rmfid once LU-12090 lands
+        for fidstr in fidlist {
+            self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
+                log::error!(
+                    "Couldn't remove fid {} with mountpoint {}: {}.",
+                    fidstr,
+                    mntpt,
+                    x
+                )
+            });
+        }
+
+        Ok(())
+    }
+
+    pub fn rmfids_size(&self) -> usize {
+        // @@TODO determine size of llapi_rmfid() array
+        10
+    }
+}
+
+// LLAPI + Mountpoint
+
+#[derive(Clone, Debug)]
+pub struct LlapiFid {
+    llapi: Llapi,
+    mntpt: String,
+}
+
+impl LlapiFid {
+    pub fn create(fsname_or_mntpt: &str) -> Result<LlapiFid, LiblustreError> {
+        let llapi = Llapi::create()?;
+        let mntpt = llapi.search_rootpath(fsname_or_mntpt)?;
+        Ok(LlapiFid {
+            llapi: llapi,
+            mntpt: mntpt,
+        })
+    }
+    pub fn mntpt(&self) -> String {
+        self.mntpt.clone()
+    }
+
+    // from llapi
+    pub fn mdc_stat(&self, path: &PathBuf) -> Result<types::lstat_t, LiblustreError> {
+        self.llapi.mdc_stat(path)
+    }
+    pub fn fid2path(&self, fidstr: &str) -> Result<String, LiblustreError> {
+        self.llapi.fid2path(&self.mntpt, fidstr)
+    }
+    pub fn search_rootpath(&mut self, fsname: &str) -> Result<String, LiblustreError> {
+        let s = self.llapi.search_rootpath(fsname)?;
+        self.mntpt = s.clone();
+        Ok(s)
+    }
+
+    pub fn rmfid(&self, fidstr: &str) -> Result<(), LiblustreError> {
+        self.llapi.rmfid(&self.mntpt, fidstr)
+    }
+
+    pub fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError> {
+        self.llapi.rmfids(&self.mntpt, fidlist)
+    }
+    pub fn rmfids_size(&self) -> usize {
+        self.llapi.rmfids_size()
     }
 }
 
