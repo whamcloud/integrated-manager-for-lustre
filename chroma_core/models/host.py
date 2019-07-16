@@ -1519,7 +1519,10 @@ class UpdateJob(Job):
 
         return [
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
-            (UpdatePackagesStep, {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent"]}),
+            (
+                UpdatePackagesStep,
+                {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent", "rust-iml-agent"]},
+            ),
             (RemovePackagesStep, {"host": self.host, "packages": ["lustre-all-dkms"]}),
             (
                 UpdatePackagesStep,
