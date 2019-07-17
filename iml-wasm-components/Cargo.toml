@@ -5,6 +5,7 @@ members = [
     'iml-alert-indicator',
     'iml-duration-picker',
     'iml-environment',
+    'iml-fs-page',
     'iml-lock-indicator',
     'iml-pie-chart',
     'iml-grafana-chart',
@@ -13,7 +14,7 @@ members = [
     'iml-toggle',
     'iml-tooltip',
     'iml-utils',
-    'iml-wasm'
+    'iml-wasm',
 ]
 
 [profile.release]

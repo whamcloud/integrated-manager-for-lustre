@@ -24,6 +24,7 @@ iml-action-dropdown = { path = "../iml-action-dropdown", version = "0.1" }
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }
 iml-wire-types = "0.1"
+iml-fs-page = { path = "../iml-fs-page", version = "0.1" }
 
 
 # [features]
