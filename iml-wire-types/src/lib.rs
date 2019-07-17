@@ -274,6 +274,10 @@ pub trait Label {
     fn label(&self) -> &str;
 }
 
+pub trait EndpointName {
+    fn endpoint_name() -> &'static str;
+}
+
 /// The type of lock
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
@@ -344,14 +348,21 @@ pub struct AvailableAction {
     pub verb: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct ClientMount {
+    pub filesystem_name: String,
+    pub mountpoint: Option<String>,
+    pub state: String,
+}
+
 /// A Host record from `/api/host/`
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Host {
     pub address: String,
-    pub boot_time: String,
-    pub client_mounts: Vec<String>,
+    pub boot_time: Option<String>,
+    pub client_mounts: Option<Vec<ClientMount>>,
     pub content_type_id: u32,
-    pub corosync_configuration: String,
+    pub corosync_configuration: Option<String>,
     pub corosync_ring0: String,
     pub fqdn: String,
     pub id: u32,
@@ -361,9 +372,9 @@ pub struct Host {
     pub lnet_configuration: String,
     pub member_of_active_filesystem: bool,
     pub needs_update: bool,
-    pub nids: Vec<String>,
+    pub nids: Option<Vec<String>>,
     pub nodename: String,
-    pub pacemaker_configuration: String,
+    pub pacemaker_configuration: Option<String>,
     pub private_key: Option<String>,
     pub private_key_passphrase: Option<String>,
     pub properties: String,
@@ -386,6 +397,12 @@ impl Label for Host {
     }
 }
 
+impl EndpointName for Host {
+    fn endpoint_name() -> &'static str {
+        "host"
+    }
+}
+
 /// A server profile record from api/server_profile/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ServerProfile {
@@ -405,6 +422,12 @@ pub struct ServerProfile {
     pub worker: bool,
 }
 
+impl EndpointName for ServerProfile {
+    fn endpoint_name() -> &'static str {
+        "server_profile"
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Command {
     pub cancelled: bool,
@@ -416,6 +439,12 @@ pub struct Command {
     pub logs: String,
     pub message: String,
     pub resource_uri: String,
+}
+
+impl EndpointName for Command {
+    fn endpoint_name() -> &'static str {
+        "command"
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -507,14 +536,14 @@ pub struct OstConfParams {
 /// A Volume record from api/volume/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Volume {
-    pub filesystem_type: String,
+    pub filesystem_type: Option<String>,
     pub id: u32,
     pub kind: String,
     pub label: String,
     pub resource_uri: String,
-    pub size: String,
+    pub size: Option<String>,
     pub status: Option<String>,
-    pub storage_resource: String,
+    pub storage_resource: Option<String>,
     pub usable_for_lustre: bool,
     pub volume_nodes: Vec<VolumeNode>,
 }
@@ -525,10 +554,16 @@ impl Label for Volume {
     }
 }
 
+impl EndpointName for Volume {
+    fn endpoint_name() -> &'static str {
+        "volume"
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct VolumeNode {
     pub host: String,
-    pub host_id: u64,
+    pub host_id: u32,
     pub host_label: String,
     pub id: u32,
     pub path: String,
@@ -536,7 +571,13 @@ pub struct VolumeNode {
     pub resource_uri: String,
     #[serde(rename = "use")]
     pub _use: bool,
-    pub volume_id: i64,
+    pub volume_id: u32,
+}
+
+impl EndpointName for VolumeNode {
+    fn endpoint_name() -> &'static str {
+        "volume_node"
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
@@ -597,6 +638,12 @@ impl<T> Label for Target<T> {
     }
 }
 
+impl<T> EndpointName for Target<T> {
+    fn endpoint_name() -> &'static str {
+        "target"
+    }
+}
+
 type Mdt = Target<MdtConfParams>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
@@ -622,9 +669,9 @@ pub struct HsmControlParam {
 pub struct Filesystem {
     pub bytes_free: Option<f64>,
     pub bytes_total: Option<f64>,
-    pub cdt_mdt: String,
+    pub cdt_mdt: Option<String>,
     pub cdt_status: Option<String>,
-    pub client_count: f64,
+    pub client_count: Option<f64>,
     pub conf_params: FilesystemConfParams,
     pub content_type_id: u32,
     pub files_free: Option<f64>,
@@ -653,6 +700,12 @@ impl ToCompositeId for Filesystem {
 impl Label for Filesystem {
     fn label(&self) -> &str {
         &self.label
+    }
+}
+
+impl EndpointName for Filesystem {
+    fn endpoint_name() -> &'static str {
+        "filesystem"
     }
 }
 
@@ -718,11 +771,17 @@ pub struct Alert {
     pub begin: String,
     pub dismissed: bool,
     pub end: Option<String>,
-    pub id: i32,
+    pub id: u32,
     pub lustre_pid: Option<i32>,
     pub message: String,
     pub record_type: AlertType,
     pub resource_uri: String,
     pub severity: AlertSeverity,
     pub variant: String,
+}
+
+impl EndpointName for Alert {
+    fn endpoint_name() -> &'static str {
+        "alert"
+    }
 }
