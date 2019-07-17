@@ -8,6 +8,6 @@ edition = "2018"
 tokio-postgres = "0.4.0-rc.3"
 futures = "0.1"
 tokio = "0.1"
-log = "0.4.6"
-parking_lot = "0.8"
+log = "0.4"
+parking_lot = "0.9"
 iml-manager-env = { path = "../iml-manager-env", version = "0.1.0" }

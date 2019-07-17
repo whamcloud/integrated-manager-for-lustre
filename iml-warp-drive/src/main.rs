@@ -21,6 +21,18 @@ use warp::Filter;
 
 type SharedLocks = Arc<Mutex<Locks>>;
 
+#[derive(Clone)]
+struct SharedOneshotSender(Arc<Mutex<Option<oneshot::Sender<()>>>>);
+
+impl SharedOneshotSender {
+    fn new(x: oneshot::Sender<()>) -> Self {
+        SharedOneshotSender(Arc::new(Mutex::new(Some(x))))
+    }
+    fn trigger(self) {
+        self.0.lock().take().map(|x| x.send(()));
+    }
+}
+
 fn main() {
     env_logger::builder().default_format_timestamp(false).init();
 
@@ -38,7 +50,15 @@ fn main() {
     let api_cache_state2 = Arc::clone(&api_cache_state);
 
     // Handle an error in locks by shutting down
+    let (mut exit, valve) = tokio_runtime_shutdown::shared_shutdown();
+    let mut exit2 = exit.clone();
+    let mut exit3 = exit.clone();
+    let valve2 = valve.clone();
+
     let (tx, rx) = oneshot::channel();
+    let tx = SharedOneshotSender::new(tx);
+    let tx2 = tx.clone();
+    let tx3 = tx.clone();
 
     let user_state3 = Arc::clone(&user_state);
     let rx = rx.inspect(move |_| users::disconnect_all_users(&user_state3));
@@ -63,13 +83,15 @@ fn main() {
                 .and_then(move |(client, stream)| {
                     let c2 = Arc::clone(&client);
 
+                    let stream = valve.wrap(stream);
+
                     log::debug!("Cache state {:?}", api_cache_state);
 
                     warp::spawn(
                         stream
                         .from_err()
                             .for_each(move |msg| -> Box<Future<Item = (), Error = failure::Error> + Send> {
-                                let c3 = &c2;
+                                let _c3 = &c2;
 
                                 let api_client = api_client.clone();
                                 let api_cache_state = Arc::clone(&api_cache_state);
@@ -110,12 +132,17 @@ fn main() {
                                         }
                                     }
                                     iml_postgres::AsyncMessage::Notice(err) => {
+                                        log::error!("Error from postgres {}", err);
                                         Box::new(future::err(err).from_err())
                                     }
                                     _ => unreachable!()
                                 }
                             })
-                            .map_err(|e| log::error!("{}", e)),
+                            .map_err(move |e| {
+                                exit.trigger();
+                                tx2.trigger();
+                                log::error!("Unhandled error {}", e)
+                            }),
                     );
 
                     let fut = {
@@ -133,7 +160,11 @@ fn main() {
                     })
                 })
                 .inspect(|_| log::info!("Started listening to NOTIFY events"))
-                .map_err(|e| log::error!("{}", e)),
+                .map_err(move |e| {
+                    exit2.trigger();
+                    tx3.trigger();
+                    log::error!("Unhandled error {}", e)
+                }),
         );
 
         warp::spawn(
@@ -141,6 +172,8 @@ fn main() {
                 .and_then(create_locks_consumer)
                 .and_then(move |stream| {
                     log::info!("Started consuming locks");
+
+                    let stream = valve2.wrap(stream);
 
                     stream
                         .for_each(move |message| {
@@ -181,9 +214,10 @@ fn main() {
                         })
                         .from_err()
                 })
-                .map_err(|err| {
-                    let _ = tx.send(());
-                    eprintln!("An error occurred: {}", err);
+                .map_err(move |err| {
+                    exit3.trigger();
+                    tx.trigger();
+                    log::error!("Unhandled error {}", err)
                 }),
         );
 

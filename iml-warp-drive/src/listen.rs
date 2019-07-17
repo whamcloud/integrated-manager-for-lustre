@@ -6,6 +6,7 @@ use crate::{db_record, DbRecord, TableName};
 use std::convert::TryFrom;
 
 #[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum MessageType {
     Update,
     Insert,
