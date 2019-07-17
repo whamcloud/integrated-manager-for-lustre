@@ -176,7 +176,6 @@ pub fn view(model: &Model) -> El<Msg> {
 mod tests {
     use super::*;
     use futures::sync::{oneshot, oneshot::Sender};
-    use seed::div;
     use seed::fetch::{Request, ResponseWithDataResult, Status, StatusCategory};
     use std::sync::{Arc, Mutex};
     use wasm_bindgen_test::wasm_bindgen_test_configure;
@@ -196,7 +195,18 @@ mod tests {
         #[derive(Debug)]
         pub struct TestModel {
             model: Model,
-            p: Arc<Mutex<Option<Sender<()>>>>,
+            p: Arc<
+                Mutex<
+                    Option<
+                        Sender<(
+                            Option<String>,
+                            Option<String>,
+                            Option<String>,
+                            Option<String>,
+                        )>,
+                    >,
+                >,
+            >,
         }
 
         pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
@@ -210,12 +220,10 @@ mod tests {
                 let td21 = tr2.children[0].children[0].clone().text;
                 let td22 = tr2.children[1].children[0].clone().text;
 
-                assert_eq!(td11, Some("uid_0".into()));
-                assert_eq!(td12, Some("26".into()));
-                assert_eq!(td21, Some("uid_1".into()));
-                assert_eq!(td22, Some("13".into()));
-
-                p.lock().unwrap().take().map(|p| p.send(()));
+                p.lock()
+                    .unwrap()
+                    .take()
+                    .map(|p| p.send((td11, td12, td21, td22)));
             }
 
             el
@@ -227,7 +235,12 @@ mod tests {
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<()>();
+            let (p, c) = oneshot::channel::<(
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            )>();
             let test_model = TestModel {
                 p: Arc::new(Mutex::new(Some(p))),
                 model: Model::default(),
@@ -282,7 +295,13 @@ mod tests {
 
             app.update(Msg::InodesFetched(fetch_object));
 
-            c.map_err(|_| unreachable!())
+            c.map(|(td11, td12, td21, td22)| {
+                assert_eq!(td11, Some("uid_0".into()));
+                assert_eq!(td12, Some("26".into()));
+                assert_eq!(td21, Some("uid_1".into()));
+                assert_eq!(td22, Some("13".into()));
+            })
+            .map_err(|_| unreachable!())
         }
 
         render()
@@ -293,15 +312,14 @@ mod tests {
         #[derive(Debug)]
         pub struct TestModel {
             model: Model,
-            p: Arc<Mutex<Option<Sender<()>>>>,
+            p: Arc<Mutex<Option<Sender<usize>>>>,
         }
 
         pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
             let el = view(&model);
 
             if let Some(_) = &model.cancel {
-                assert_eq!(el.children.is_empty(), true);
-                p.lock().unwrap().take().map(|p| p.send(()));
+                p.lock().unwrap().take().map(|p| p.send(el.children.len()));
             }
 
             el
@@ -313,7 +331,7 @@ mod tests {
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<()>();
+            let (p, c) = oneshot::channel::<usize>();
             let test_model = TestModel {
                 p: Arc::new(Mutex::new(Some(p))),
                 model: Model::default(),
@@ -342,7 +360,10 @@ mod tests {
 
             app.update(Msg::InodesFetched(fetch_object));
 
-            c.map_err(|_| unreachable!())
+            c.map(|len| {
+                assert_eq!(len, 0);
+            })
+            .map_err(|_| unreachable!())
         }
 
         render()
