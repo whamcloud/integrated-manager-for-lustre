@@ -1,0 +1,29 @@
+[package]
+name = "iml-fs-page"
+version = "0.1.0"
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+
+[dependencies]
+futures = "0.1"
+seed = "=0.3.7"
+serde = { version = "1", features = ['derive'] }
+cfg-if = "0.1"
+log = "0.4"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
+web-sys = "0.3"
+console_log = { version = "0.1", optional = true }
+iml-action-dropdown = { path = "../iml-action-dropdown", version = "0.1" }
+iml-environment = { path = "../iml-environment", version = "0.1" }
+iml-wire-types = "0.1"
+iml-utils = { path = "../iml-utils", version = "0.1" }
+iml-alert-indicator = { path = "../iml-alert-indicator", version = "0.1" }
+iml-lock-indicator = { path = "../iml-lock-indicator", version = "0.1" }
+iml-pie-chart = { path = "../iml-pie-chart", version = "0.1" }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+insta = "0.8.1"
+
+[lib]
+path = "fs-page.rs"
