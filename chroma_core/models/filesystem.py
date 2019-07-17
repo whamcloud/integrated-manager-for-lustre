@@ -277,6 +277,9 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
         deps = []
 
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
+            # Report filesystem available if MDTs other than 0 are unmounted
+            if t.target_type() == "mdt" and not t.get_label().ends_with("MDT0000"):
+                continue
             deps.append(DependOn(t, "mounted", fix_state="unavailable"))
         return DependAll(deps)
 
