@@ -16,7 +16,7 @@ pub struct INode {
 
 #[derive(Default, Debug)]
 pub struct Model {
-    inodes: Option<Vec<INode>>,
+    inodes: Vec<INode>,
     destroyed: bool,
     cancel: Option<futures::sync::oneshot::Sender<()>>,
     request_controller: Option<RequestController>,
@@ -72,29 +72,21 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
 
             match fetch_object.response() {
                 Ok(response) => {
-                    let data: InfluxResults = response.data;
+                    let mut data: InfluxResults = response.data;
                     model.inodes = data
                         .results
-                        .get(0)
-                        .map(move |result| result.series.clone().unwrap_or_default())
-                        .map(move |series| {
-                            let x = series.get(0);
-                            x.unwrap_or(&InfluxSeries {
-                                name: "".into(),
-                                columns: vec![],
-                                values: vec![],
-                            })
-                            .clone()
+                        .drain(..)
+                        .take(1)
+                        .filter_map(|result| result.series)
+                        .flatten()
+                        .take(1)
+                        .map(|v| v.values)
+                        .flatten()
+                        .map(|(_, counter_name, count)| INode {
+                            counter_name,
+                            count,
                         })
-                        .map(move |v| {
-                            v.values
-                                .into_iter()
-                                .map(|(_, counter_name, count)| INode {
-                                    counter_name,
-                                    count,
-                                })
-                                .collect()
-                        });
+                        .collect();
                 }
                 Err(fail_reason) => {
                     orders.send_msg(Msg::OnFetchError(fail_reason.into()));
@@ -140,7 +132,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             }
 
             model.destroyed = true;
-            model.inodes = None;
+            model.inodes = vec![];
         }
     }
 }
@@ -158,10 +150,10 @@ pub fn fetch_inodes() -> (
     (fut, request_controller)
 }
 
-fn get_inode_elements<T>(inodes: Vec<INode>) -> Vec<El<T>> {
+fn get_inode_elements<T>(inodes: &Vec<INode>) -> Vec<El<T>> {
     inodes
         .into_iter()
-        .map(move |x| tr![td![x.counter_name], td![x.count.to_string()]])
+        .map(|x| tr![td![x.counter_name], td![x.count.to_string()]])
         .collect()
 }
 
@@ -170,9 +162,9 @@ pub fn view(model: &Model) -> El<Msg> {
     if model.destroyed {
         seed::empty()
     } else {
-        let inodes = model.inodes.clone().map_or(vec![], get_inode_elements);
+        let inodes = get_inode_elements(&model.inodes);
 
-        if inodes.len() > 0 {
+        if !inodes.is_empty() {
             table(inodes)
         } else {
             seed::empty()
@@ -182,10 +174,9 @@ pub fn view(model: &Model) -> El<Msg> {
 
 #[cfg(test)]
 mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use futures::sync::oneshot;
-    use futures::sync::oneshot::*;
+    use futures::sync::{oneshot, oneshot::Sender};
+    use seed::div;
     use seed::fetch::{Request, ResponseWithDataResult, Status, StatusCategory};
     use std::sync::{Arc, Mutex};
     use wasm_bindgen_test::wasm_bindgen_test_configure;
@@ -195,7 +186,7 @@ mod tests {
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test(async)]
-    pub fn render() -> impl Future<Item = (), Error = JsValue> {
+    pub fn test_inodes_with_data() -> impl Future<Item = (), Error = JsValue> {
         #[derive(Debug)]
         pub struct TestModel {
             model: Model,
@@ -269,6 +260,68 @@ mod tests {
               }
             ]
           }"#;
+
+            let raw = web_sys::Response::new_with_opt_str(Some(results)).unwrap();
+            let data: InfluxResults = serde_json::from_str(results).unwrap();
+
+            let fetch_object: FetchObject<InfluxResults> = FetchObject {
+          request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
+          result: Ok(ResponseWithDataResult {
+            raw,
+            status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
+            data: Ok(data)
+          })
+        };
+
+            app.update(Msg::InodesFetched(fetch_object));
+
+            c.map_err(|_| unreachable!())
+        }
+
+        render()
+    }
+
+    #[wasm_bindgen_test(async)]
+    pub fn test_inodes_with_empty_results() -> impl Future<Item = (), Error = JsValue> {
+        #[derive(Debug)]
+        pub struct TestModel {
+            model: Model,
+            p: Arc<Mutex<Option<Sender<()>>>>,
+        }
+
+        pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
+            let mut el = view(&model);
+
+            if let Some(s) = &model.cancel {
+                seed::log!("Inside!");
+                assert_eq!(el.children.is_empty(), true);
+                p.lock().unwrap().take().map(|p| p.send(()));
+
+                el = div![will_unmount(|_| seed::log!("will unount!"))];
+            }
+
+            el
+        }
+
+        pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
+            update(msg, &mut model.model, orders);
+        }
+
+        pub fn render() -> impl Future<Item = (), Error = JsValue> {
+            let (p, c) = oneshot::channel::<()>();
+            let test_model = TestModel {
+                p: Arc::new(Mutex::new(Some(p))),
+                model: Model::default(),
+            };
+
+            let app = seed::App::build(test_model, test_update, assert_view)
+                .mount(seed::body())
+                .finish()
+                .run();
+
+            let results = r#"{
+                "results": []
+            }"#;
 
             let raw = web_sys::Response::new_with_opt_str(Some(results)).unwrap();
             let data: InfluxResults = serde_json::from_str(results).unwrap();
