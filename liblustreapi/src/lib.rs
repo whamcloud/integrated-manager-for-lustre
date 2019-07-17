@@ -22,7 +22,7 @@ use std::{
 
 const PATH_BYTES: usize = 4096;
 
-const LIBLUSTRE: &'static str = "liblustreapi.so.1";
+const LIBLUSTRE: &str = "liblustreapi.so.1";
 
 // FID
 

@@ -6,7 +6,6 @@ use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
 use futures::future::poll_fn;
 use futures::{Future, Stream};
 use liblustreapi::LlapiFid;
-use std::clone::Clone;
 use tokio_threadpool::blocking;
 
 pub fn purge_files(
