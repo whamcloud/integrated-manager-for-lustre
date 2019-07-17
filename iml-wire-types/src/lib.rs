@@ -536,14 +536,14 @@ pub struct OstConfParams {
 /// A Volume record from api/volume/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Volume {
-    pub filesystem_type: String,
+    pub filesystem_type: Option<String>,
     pub id: u32,
     pub kind: String,
     pub label: String,
     pub resource_uri: String,
-    pub size: String,
+    pub size: Option<String>,
     pub status: Option<String>,
-    pub storage_resource: String,
+    pub storage_resource: Option<String>,
     pub usable_for_lustre: bool,
     pub volume_nodes: Vec<VolumeNode>,
 }
@@ -563,7 +563,7 @@ impl EndpointName for Volume {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct VolumeNode {
     pub host: String,
-    pub host_id: u64,
+    pub host_id: u32,
     pub host_label: String,
     pub id: u32,
     pub path: String,
@@ -571,7 +571,7 @@ pub struct VolumeNode {
     pub resource_uri: String,
     #[serde(rename = "use")]
     pub _use: bool,
-    pub volume_id: i64,
+    pub volume_id: u32,
 }
 
 impl EndpointName for VolumeNode {

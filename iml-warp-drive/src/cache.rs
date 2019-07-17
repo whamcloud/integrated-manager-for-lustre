@@ -40,9 +40,9 @@ impl Cache {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
+            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::Volume(id) => self.volume.remove(&id).is_some(),
             RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
@@ -60,14 +60,14 @@ impl Cache {
             Record::Host(x) => {
                 self.host.insert(x.id, x);
             }
+            Record::LnetConfiguration(x) => {
+                self.lnet_configuration.insert(x.id(), x);
+            }
             Record::ManagedTargetMount(x) => {
                 self.managed_target_mount.insert(x.id(), x);
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), x);
-            }
-            Record::LnetConfiguration(x) => {
-                self.lnet_configuration.insert(x.id(), x);
             }
             Record::Target(x) => {
                 self.target.insert(x.id, x);
