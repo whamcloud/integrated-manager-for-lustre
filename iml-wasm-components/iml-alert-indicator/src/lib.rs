@@ -27,7 +27,7 @@ pub fn alert_indicator(
     resource_uri: &str,
     open: bool,
 ) -> El<AlertIndicatorPopoverState> {
-    log::debug!("Alerts {:#?}", alerts);
+    log::trace!("Alerts {:#?}", alerts);
 
     let alerts: Vec<&Alert> = alerts
         .iter()
