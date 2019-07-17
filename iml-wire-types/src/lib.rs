@@ -669,9 +669,9 @@ pub struct HsmControlParam {
 pub struct Filesystem {
     pub bytes_free: Option<f64>,
     pub bytes_total: Option<f64>,
-    pub cdt_mdt: String,
+    pub cdt_mdt: Option<String>,
     pub cdt_status: Option<String>,
-    pub client_count: f64,
+    pub client_count: Option<f64>,
     pub conf_params: FilesystemConfParams,
     pub content_type_id: u32,
     pub files_free: Option<f64>,
