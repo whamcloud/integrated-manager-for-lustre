@@ -185,6 +185,12 @@ mod tests {
 
     use wasm_bindgen_test::*;
 
+    fn destroy_after_delay() -> impl Future<Item = Msg, Error = Msg> {
+        iml_sleep::Sleep::new(1000)
+            .map(move |_| Msg::Destroy)
+            .map_err(|_| unreachable!())
+    }
+
     #[wasm_bindgen_test(async)]
     pub fn test_inodes_with_data() -> impl Future<Item = (), Error = JsValue> {
         #[derive(Debug)]
@@ -217,6 +223,7 @@ mod tests {
 
         pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
             update(msg, &mut model.model, orders);
+            orders.perform_cmd(destroy_after_delay());
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
@@ -265,13 +272,13 @@ mod tests {
             let data: InfluxResults = serde_json::from_str(results).unwrap();
 
             let fetch_object: FetchObject<InfluxResults> = FetchObject {
-          request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
-          result: Ok(ResponseWithDataResult {
-            raw,
-            status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
-            data: Ok(data)
-          })
-        };
+                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
+                result: Ok(ResponseWithDataResult {
+                    raw,
+                    status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
+                    data: Ok(data)
+                })
+            };
 
             app.update(Msg::InodesFetched(fetch_object));
 
@@ -290,21 +297,19 @@ mod tests {
         }
 
         pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
-            let mut el = view(&model);
+            let el = view(&model);
 
-            if let Some(s) = &model.cancel {
-                seed::log!("Inside!");
+            if let Some(_) = &model.cancel {
                 assert_eq!(el.children.is_empty(), true);
                 p.lock().unwrap().take().map(|p| p.send(()));
-
-                el = div![will_unmount(|_| seed::log!("will unount!"))];
             }
 
             el
         }
 
         pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
-            update(msg, &mut model.model, orders);
+            update(msg.clone(), &mut model.model, orders);
+            orders.perform_cmd(destroy_after_delay());
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
@@ -327,13 +332,13 @@ mod tests {
             let data: InfluxResults = serde_json::from_str(results).unwrap();
 
             let fetch_object: FetchObject<InfluxResults> = FetchObject {
-          request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
-          result: Ok(ResponseWithDataResult {
-            raw,
-            status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
-            data: Ok(data)
-          })
-        };
+                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
+                result: Ok(ResponseWithDataResult {
+                    raw,
+                    status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
+                    data: Ok(data)
+                })
+            };
 
             app.update(Msg::InodesFetched(fetch_object));
 
