@@ -15,6 +15,3 @@ pub type lstat_t = libc::stat;
 pub type lstat_t = libc::stat64;
 
 pub const IOC_MDC_GETFILEINFO: u32 = 0xc008_6916;
-
-#[cfg(test)]
-mod tests {}

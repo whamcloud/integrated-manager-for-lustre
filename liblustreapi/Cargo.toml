@@ -5,7 +5,8 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-liblustreapi-sys = { path = "../liblustreapi-sys", version = "0.1.0"}
-libc = "0.2.58"
+libc = "0.2.60"
 errno = "0.2.4"
-log = "0.4.6"
+log = "0.4.7"
+libloading = "0.5"
+liblustreapi-types = { path = "../liblustreapi-types", version = "0.1.0"}
