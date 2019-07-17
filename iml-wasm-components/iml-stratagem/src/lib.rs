@@ -1,3 +1,4 @@
+mod inode_error;
 mod inode_table;
 
 use iml_grafana_chart::grafana_chart;

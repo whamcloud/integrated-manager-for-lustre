@@ -1,8 +1,9 @@
+use crate::inode_error::InodeError;
 use bootstrap_components::bs_table::table;
 use futures::Future;
 use seed::{
     error,
-    fetch::{FailReason, FetchObject, Request, RequestController},
+    fetch::{FetchObject, Request, RequestController},
     prelude::*,
     td, tr,
 };
@@ -25,11 +26,9 @@ pub struct Model {
 pub enum Msg {
     FetchInodes,
     InodesFetched(FetchObject<InfluxResults>),
-    OnFetchError {
-        msg: String,
-        fail_reason: FailReason,
-    },
+    OnFetchError(InodeError),
     Destroy,
+    Noop,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -68,43 +67,69 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             model.request_controller = request_controller;
             orders.skip().perform_cmd(fut);
         }
-        Msg::InodesFetched(fetch_object) => match fetch_object.response() {
-            Ok(response) => {
-                let data: InfluxResults = response.data;
-                model.inodes = data
-                    .results
-                    .get(0)
-                    .map(move |result| result.series.clone().unwrap_or_default())
-                    .map(move |series| {
-                        let x = series.get(0);
-                        x.unwrap_or(&InfluxSeries {
-                            name: "".into(),
-                            columns: vec![],
-                            values: vec![],
-                        })
-                        .clone()
-                    })
-                    .map(move |v| {
-                        v.values
-                            .into_iter()
-                            .map(|(_, counter_name, count)| INode {
-                                counter_name,
-                                count,
+        Msg::InodesFetched(fetch_object) => {
+            model.request_controller = None;
+
+            match fetch_object.response() {
+                Ok(response) => {
+                    let data: InfluxResults = response.data;
+                    model.inodes = data
+                        .results
+                        .get(0)
+                        .map(move |result| result.series.clone().unwrap_or_default())
+                        .map(move |series| {
+                            let x = series.get(0);
+                            x.unwrap_or(&InfluxSeries {
+                                name: "".into(),
+                                columns: vec![],
+                                values: vec![],
                             })
-                            .collect()
-                    });
+                            .clone()
+                        })
+                        .map(move |v| {
+                            v.values
+                                .into_iter()
+                                .map(|(_, counter_name, count)| INode {
+                                    counter_name,
+                                    count,
+                                })
+                                .collect()
+                        });
+                }
+                Err(fail_reason) => {
+                    orders.send_msg(Msg::OnFetchError(fail_reason.into()));
+                }
             }
-            Err(fail_reason) => {
-                orders
-                    .send_msg(Msg::OnFetchError {
-                        msg: "Fetching User Inodes from influx failed.".into(),
-                        fail_reason,
-                    })
-                    .skip();
-            }
-        },
-        Msg::OnFetchError { msg, fail_reason } => {
-            error!(format!("Fetch Error: {} - {:?}", msg, fail_reason));
+
+            let sleep = iml_sleep::Sleep::new(60000)
+                .map(move |_| Msg::FetchInodes)
+                .map_err(|_| unreachable!());
+
+            let (p, c) = futures::sync::oneshot::channel::<()>();
+
+            model.cancel = Some(p);
+
+            let c = c.map(move |_| Msg::Noop).map_err(move |_| {
+                log::info!("Inodes poll timeout dropped");
+
+                Msg::Noop
+            });
+
+            // Fetch the inodes after 60 seconds unless the producer is dropped before
+            // it has an opportunity to fetch.
+            let fut = sleep
+                .select2(c)
+                .map(futures::future::Either::split)
+                .map(|(x, _)| x)
+                .map_err(futures::future::Either::split)
+                .map_err(|(x, _)| x);
+            orders.perform_cmd(fut);
+        }
+        Msg::OnFetchError(e) => {
+            error!(format!("Fetch Error: {}", e));
+            orders.skip();
+        }
+        Msg::Noop => {
             orders.skip();
         }
         Msg::Destroy => {
