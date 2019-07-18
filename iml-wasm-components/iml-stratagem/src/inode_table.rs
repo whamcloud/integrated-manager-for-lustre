@@ -2,21 +2,20 @@ use crate::inode_error::InodeError;
 use bootstrap_components::bs_table::table;
 use futures::Future;
 use seed::{
-    error,
     fetch::{FetchObject, Request, RequestController},
     prelude::*,
-    td, tr,
+    td, th, tr,
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-pub struct INode {
-    counter_name: String,
+pub struct INodeCount {
+    uid: String,
     count: u32,
 }
 
 #[derive(Default, Debug)]
 pub struct Model {
-    inodes: Vec<INode>,
+    inodes: Vec<INodeCount>,
     destroyed: bool,
     cancel: Option<futures::sync::oneshot::Sender<()>>,
     request_controller: Option<RequestController>,
@@ -82,10 +81,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
                         .take(1)
                         .map(|v| v.values)
                         .flatten()
-                        .map(|(_, counter_name, count)| INode {
-                            counter_name,
-                            count,
-                        })
+                        .map(|(_, uid, count)| INodeCount { uid, count })
                         .collect();
                 }
                 Err(fail_reason) => {
@@ -118,7 +114,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             orders.perform_cmd(fut);
         }
         Msg::OnFetchError(e) => {
-            error!(format!("Fetch Error: {}", e));
+            log::error!("Fetch Error: {}", e);
             orders.skip();
         }
         Msg::Noop => {
@@ -150,10 +146,10 @@ pub fn fetch_inodes() -> (
     (fut, request_controller)
 }
 
-fn get_inode_elements<T>(inodes: &Vec<INode>) -> Vec<El<T>> {
+fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<El<T>> {
     inodes
         .into_iter()
-        .map(|x| tr![td![x.counter_name], td![x.count.to_string()]])
+        .map(|x| tr![td![x.uid], td![x.count.to_string()]])
         .collect()
 }
 
@@ -162,9 +158,12 @@ pub fn view(model: &Model) -> El<Msg> {
     if model.destroyed {
         seed::empty()
     } else {
-        let inodes = get_inode_elements(&model.inodes);
+        let entries = get_inode_elements(&model.inodes);
 
-        if !inodes.is_empty() {
+        if !entries.is_empty() {
+            let mut inodes: Vec<El<Msg>> = vec![tr![th!["Uid"], th!["Count"]]];
+
+            inodes.extend(entries);
             table(inodes)
         } else {
             seed::empty()
@@ -195,35 +194,14 @@ mod tests {
         #[derive(Debug)]
         pub struct TestModel {
             model: Model,
-            p: Arc<
-                Mutex<
-                    Option<
-                        Sender<(
-                            Option<String>,
-                            Option<String>,
-                            Option<String>,
-                            Option<String>,
-                        )>,
-                    >,
-                >,
-            >,
+            p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
         }
 
         pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
             let el = view(&model);
 
             if !el.children.is_empty() {
-                let tr1 = el.children[0].clone();
-                let td11 = tr1.children[0].children[0].clone().text;
-                let td12 = tr1.children[1].children[0].clone().text;
-                let tr2 = el.children[1].clone();
-                let td21 = tr2.children[0].children[0].clone().text;
-                let td22 = tr2.children[1].children[0].clone().text;
-
-                p.lock()
-                    .unwrap()
-                    .take()
-                    .map(|p| p.send((td11, td12, td21, td22)));
+                p.lock().unwrap().take().map(|p| p.send(el.clone()));
             }
 
             el
@@ -235,12 +213,7 @@ mod tests {
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<(
-                Option<String>,
-                Option<String>,
-                Option<String>,
-                Option<String>,
-            )>();
+            let (p, c) = oneshot::channel::<El<Msg>>();
             let test_model = TestModel {
                 p: Arc::new(Mutex::new(Some(p))),
                 model: Model::default(),
@@ -295,11 +268,23 @@ mod tests {
 
             app.update(Msg::InodesFetched(fetch_object));
 
-            c.map(|(td11, td12, td21, td22)| {
-                assert_eq!(td11, Some("uid_0".into()));
-                assert_eq!(td12, Some("26".into()));
-                assert_eq!(td21, Some("uid_1".into()));
-                assert_eq!(td22, Some("13".into()));
+            c.map(|el| {
+                let tr1 = el.children[0].clone();
+                let th1 = tr1.children[0].children[0].clone().text;
+                let th2 = tr1.children[1].children[0].clone().text;
+                let tr2 = el.children[1].clone();
+                let td21 = tr2.children[0].children[0].clone().text;
+                let td22 = tr2.children[1].children[0].clone().text;
+                let tr3 = el.children[2].clone();
+                let td31 = tr3.children[0].children[0].clone().text;
+                let td32 = tr3.children[1].children[0].clone().text;
+
+                assert_eq!(th1, Some("Uid".into()));
+                assert_eq!(th2, Some("Count".into()));
+                assert_eq!(td21, Some("uid_0".into()));
+                assert_eq!(td22, Some("26".into()));
+                assert_eq!(td31, Some("uid_1".into()));
+                assert_eq!(td32, Some("13".into()));
             })
             .map_err(|_| unreachable!())
         }
@@ -312,14 +297,14 @@ mod tests {
         #[derive(Debug)]
         pub struct TestModel {
             model: Model,
-            p: Arc<Mutex<Option<Sender<usize>>>>,
+            p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
         }
 
         pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
             let el = view(&model);
 
             if let Some(_) = &model.cancel {
-                p.lock().unwrap().take().map(|p| p.send(el.children.len()));
+                p.lock().unwrap().take().map(|p| p.send(el.clone()));
             }
 
             el
@@ -331,7 +316,7 @@ mod tests {
         }
 
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<usize>();
+            let (p, c) = oneshot::channel::<El<Msg>>();
             let test_model = TestModel {
                 p: Arc::new(Mutex::new(Some(p))),
                 model: Model::default(),
@@ -360,8 +345,8 @@ mod tests {
 
             app.update(Msg::InodesFetched(fetch_object));
 
-            c.map(|len| {
-                assert_eq!(len, 0);
+            c.map(|el| {
+                assert_eq!(el.children.len(), 0);
             })
             .map_err(|_| unreachable!())
         }
