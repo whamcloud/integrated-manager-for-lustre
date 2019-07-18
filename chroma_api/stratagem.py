@@ -172,7 +172,7 @@ class RunStratagemValidation(Validation):
 
 class StratagemConfigurationValidation(RunStratagemValidation):
     def is_valid(self, bundle, request=None):
-        required_args = ["interval", "filesystem"]
+        required_args = ["filesystem"]
 
         difference = set(required_args) - set(bundle.data.keys())
 
