@@ -289,6 +289,9 @@ class DetectScan(object):
                             target=target, host=host, volume_node=volumenode
                         )
                         if created:
+                            if local_info["mounted"]:
+                                tm.mount_point = local_info.get("mount_point")
+
                             tm.immutable_state = True
                             tm.save()
                             log.info(
