@@ -192,7 +192,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 class StratagemConfigurationResource(StatefulModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
-    interval = fields.IntegerField(attribute="interval", null=False)
+    interval = fields.CharField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
 
@@ -228,6 +228,9 @@ class StratagemConfigurationResource(StatefulModelResource):
             return x
 
         return long(x)
+
+    def dehydrate_interval(self, bundle):
+        return long(bundle.data.get("interval"))
 
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)

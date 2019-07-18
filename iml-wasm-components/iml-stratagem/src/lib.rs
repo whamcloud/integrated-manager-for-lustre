@@ -38,14 +38,27 @@ cfg_if! {
     }
 }
 
+/// Record from the `chroma_core_stratagemconfiguration` table
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct StratagemConfiguration {
+    pub id: u32,
+    pub filesystem_id: u32,
+    pub interval: u64,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+    pub immutable_state: bool,
+    pub state: String,
+}
+
 #[derive(Debug)]
 struct Model {
     pub destroyed: bool,
     pub run_config: iml_duration_picker::Model,
     pub report_active: bool,
     pub report_config: iml_duration_picker::Model,
+    pub purge_active: bool,
     pub purge_config: iml_duration_picker::Model,
-    pub inode_table: inode_table::Model
+    pub inode_table: inode_table::Model,
 }
 
 impl Default for Model {
@@ -76,6 +89,7 @@ impl Default for Model {
                 ],
                 ..Default::default()
             },
+            purge_active: false,
             inode_table: inode_table::Model::default(),
             destroyed: false,
         }
@@ -90,6 +104,7 @@ enum Msg {
     TogglePurge(iml_toggle::Active),
     ToggleReport(iml_toggle::Active),
     RunConfig(iml_duration_picker::Msg),
+    SetConfig(StratagemConfiguration),
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
     InodeTable(inode_table::Msg),
@@ -112,6 +127,30 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
         },
         Msg::InodeTable(msg) => {
             *_orders = call_update(inode_table::update, msg, &mut model.inode_table).map_message(Msg::InodeTable);
+        }
+        Msg::SetConfig(config) => {
+            model.run_config.value = config.interval.to_string();
+            model.report_active = config.report_duration.is_some();
+            match config.report_duration {
+                None => {
+                    model.report_config.value = "".to_string();
+                    model.report_config.disabled = true;
+                }
+                Some(x) => model.report_config.value = x.to_string(),
+            }
+
+            model.purge_active = config.purge_duration.is_some();
+            match config.purge_duration {
+                None => {
+                    model.purge_config.value = "".to_string();
+                    model.purge_config.disabled = true;
+                }
+                Some(x) => model.purge_config.value = x.to_string(),
+            }
+        }
+        Msg::InodeTable(msg) => {
+            *_orders = call_update(inode_table::update, msg, &mut model.inode_table)
+                .map_message(Msg::InodeTable);
         }
         Msg::WindowClick => {
             if model.run_config.watching.should_update() {
@@ -202,6 +241,12 @@ pub struct StratagemCallbacks {
 impl StratagemCallbacks {
     pub fn destroy(&self) {
         self.app.update(Msg::Destroy);
+    }
+
+    pub fn set_config(&self, config: JsValue) {
+        let stratagem_configuration: StratagemConfiguration = config.into_serde().unwrap();
+        seed::log!("setting config to: {:?}", config);
+        self.app.update(Msg::SetConfig(stratagem_configuration));
     }
 }
 
