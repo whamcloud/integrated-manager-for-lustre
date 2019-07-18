@@ -249,7 +249,10 @@ fn fs_rows(model: &Model) -> Vec<El<Msg>> {
                     None => span!["---"],
                 }],
                 td![fs.mdts.len().to_string()],
-                td![fs.client_count.round().to_string()],
+                td![match fs.client_count {
+                    Some(x) => x.round().to_string(),
+                    None => "---".into(),
+                }],
                 td![space_usage(
                     Some(fs.bytes_total.unwrap() - fs.bytes_free.unwrap()),
                     fs.bytes_total
