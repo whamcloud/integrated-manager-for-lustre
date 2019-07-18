@@ -183,35 +183,35 @@ mod tests {
 
     use wasm_bindgen_test::*;
 
+    #[derive(Debug)]
+    pub struct TestModel {
+        model: Model,
+        p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
+    }
+
     fn destroy_after_delay() -> impl Future<Item = Msg, Error = Msg> {
         iml_sleep::Sleep::new(1000)
             .map(move |_| Msg::Destroy)
             .map_err(|_| unreachable!())
     }
 
+    pub fn test_view(TestModel { p, model }: &TestModel) -> El<Msg> {
+        let el = view(&model);
+
+        if let Some(_) = &model.cancel {
+            p.lock().unwrap().take().map(|p| p.send(el.clone()));
+        }
+
+        el
+    }
+
+    pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
+        update(msg.clone(), &mut model.model, orders);
+        orders.perform_cmd(destroy_after_delay());
+    }
+
     #[wasm_bindgen_test(async)]
     pub fn test_inodes_with_data() -> impl Future<Item = (), Error = JsValue> {
-        #[derive(Debug)]
-        pub struct TestModel {
-            model: Model,
-            p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
-        }
-
-        pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
-            let el = view(&model);
-
-            if !el.children.is_empty() {
-                p.lock().unwrap().take().map(|p| p.send(el.clone()));
-            }
-
-            el
-        }
-
-        pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
-            update(msg, &mut model.model, orders);
-            orders.perform_cmd(destroy_after_delay());
-        }
-
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
             let (p, c) = oneshot::channel::<El<Msg>>();
             let test_model = TestModel {
@@ -219,7 +219,7 @@ mod tests {
                 model: Model::default(),
             };
 
-            let app = seed::App::build(test_model, test_update, assert_view)
+            let app = seed::App::build(test_model, test_update, test_view)
                 .mount(seed::body())
                 .finish()
                 .run();
@@ -294,27 +294,6 @@ mod tests {
 
     #[wasm_bindgen_test(async)]
     pub fn test_inodes_with_empty_results() -> impl Future<Item = (), Error = JsValue> {
-        #[derive(Debug)]
-        pub struct TestModel {
-            model: Model,
-            p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
-        }
-
-        pub fn assert_view(TestModel { p, model }: &TestModel) -> El<Msg> {
-            let el = view(&model);
-
-            if let Some(_) = &model.cancel {
-                p.lock().unwrap().take().map(|p| p.send(el.clone()));
-            }
-
-            el
-        }
-
-        pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
-            update(msg.clone(), &mut model.model, orders);
-            orders.perform_cmd(destroy_after_delay());
-        }
-
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
             let (p, c) = oneshot::channel::<El<Msg>>();
             let test_model = TestModel {
@@ -322,7 +301,7 @@ mod tests {
                 model: Model::default(),
             };
 
-            let app = seed::App::build(test_model, test_update, assert_view)
+            let app = seed::App::build(test_model, test_update, test_view)
                 .mount(seed::body())
                 .finish()
                 .run();
