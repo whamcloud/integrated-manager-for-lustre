@@ -25,6 +25,7 @@ iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }
 iml-wire-types = "0.1"
 iml-fs = { path = "../iml-fs", version = "0.1" }
+iml-stratagem = { path = "../iml-stratagem", version = "0.1.0" }
 
 
 # [features]
