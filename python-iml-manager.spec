@@ -90,6 +90,7 @@ Requires:       rust-iml-agent-comms
 Requires:       rust-iml-mailbox
 Requires:       rust-iml-stratagem
 Requires:       rust-iml-warp-drive
+Requires:       rust-iml-cli
 # Other Repos
 Requires:       influxdb
 Requires:       grafana
