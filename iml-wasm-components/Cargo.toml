@@ -12,6 +12,7 @@ members = [
     'iml-grafana-chart',
     'iml-stratagem',
     'iml-sleep',
+    'iml-stratagem',
     'iml-toggle',
     'iml-tooltip',
     'iml-utils',

@@ -5,15 +5,21 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "=0.3.7"
+bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
+cfg-if = "0.1"
+console_log = { version = "0.1", optional = true }
+futures = "0.1"
 serde = { version = "1", features = ['derive'] }
 serde_json = "1.0"
-iml-wire-types = "0.1"
+iml-duration-picker = { path = "../iml-duration-picker", version = "0.1.0" }
 iml-grafana-chart = { path = "../iml-grafana-chart", version = "0.1" }
-bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 iml-sleep = { path = "../iml-sleep", version = "0.1" }
+iml-toggle = { path = "../iml-toggle", version = "0.1.0" }
+iml-wire-types = "0.1"
 log = "0.4"
-futures = "0.1"
+seed = "=0.3.7"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}
+web-sys = "0.3"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
