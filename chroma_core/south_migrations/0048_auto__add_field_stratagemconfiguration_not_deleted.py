@@ -8,73 +8,15 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'SendStratagemResultsToClientJob'
-        db.create_table(u'chroma_core_sendstratagemresultstoclientjob', (
-            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('uuid', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
-            ('report_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-            ('purge_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-        ))
-        db.send_create_signal('chroma_core', ['SendStratagemResultsToClientJob'])
-
-        # Adding model 'StratagemConfiguration'
-        db.create_table(u'chroma_core_stratagemconfiguration', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('state_modified_at', self.gf('django.db.models.fields.DateTimeField')()),
-            ('state', self.gf('django.db.models.fields.CharField')(max_length=32)),
-            ('immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('filesystem_id', self.gf('django.db.models.fields.IntegerField')()),
-            ('interval', self.gf('django.db.models.fields.BigIntegerField')()),
-            ('report_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-            ('purge_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-        ))
-        db.send_create_signal('chroma_core', ['StratagemConfiguration'])
-
-        # Adding model 'RunStratagemJob'
-        db.create_table(u'chroma_core_runstratagemjob', (
-            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('mdt_id', self.gf('django.db.models.fields.IntegerField')()),
-            ('uuid', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
-            ('report_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-            ('purge_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
-            ('fqdn', self.gf('django.db.models.fields.CharField')(default='', max_length=255)),
-            ('target_name', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
-            ('filesystem_type', self.gf('django.db.models.fields.CharField')(default='', max_length=32)),
-            ('target_mount_point', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
-            ('device_path', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
-        ))
-        db.send_create_signal('chroma_core', ['RunStratagemJob'])
-
-        # Adding model 'ConfigureStratagemJob'
-        db.create_table(u'chroma_core_configurestratagemjob', (
-            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
-            ('stratagem_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.StratagemConfiguration'])),
-        ))
-        db.send_create_signal('chroma_core', ['ConfigureStratagemJob'])
-
-        # Adding model 'AggregateStratagemResultsJob'
-        db.create_table(u'chroma_core_aggregatestratagemresultsjob', (
-            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-        ))
-        db.send_create_signal('chroma_core', ['AggregateStratagemResultsJob'])
+        # Adding field 'StratagemConfiguration.not_deleted'
+        db.add_column(u'chroma_core_stratagemconfiguration', 'not_deleted',
+                      self.gf('django.db.models.fields.NullBooleanField')(default=True, null=True, blank=True),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Deleting model 'SendStratagemResultsToClientJob'
-        db.delete_table(u'chroma_core_sendstratagemresultstoclientjob')
-
-        # Deleting model 'StratagemConfiguration'
-        db.delete_table(u'chroma_core_stratagemconfiguration')
-
-        # Deleting model 'RunStratagemJob'
-        db.delete_table(u'chroma_core_runstratagemjob')
-
-        # Deleting model 'ConfigureStratagemJob'
-        db.delete_table(u'chroma_core_configurestratagemjob')
-
-        # Deleting model 'AggregateStratagemResultsJob'
-        db.delete_table(u'chroma_core_aggregatestratagemresultsjob')
+        # Deleting field 'StratagemConfiguration.not_deleted'
+        db.delete_column(u'chroma_core_stratagemconfiguration', 'not_deleted')
 
 
     models = {
@@ -944,10 +886,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 7, 11, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 7, 19, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'5941B545140E441241410BE77D97EAD1'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'574FABC6C7AB6979E7FE79C4B9A44881'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1374,6 +1316,7 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'interval': ('django.db.models.fields.BigIntegerField', [], {}),
+            'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
             'purge_duration': ('django.db.models.fields.BigIntegerField', [], {'null': 'True'}),
             'report_duration': ('django.db.models.fields.BigIntegerField', [], {'null': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),

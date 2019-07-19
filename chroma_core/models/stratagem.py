@@ -10,6 +10,7 @@ from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
+from chroma_core.models.utils import DeletableMetaclass
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.lib.stratagem import (
     parse_stratagem_results_to_influx,
@@ -41,14 +42,20 @@ class StratagemConfiguration(StatefulObject):
     filesystem_id = models.IntegerField(
         help_text="The filesystem id associated with the stratagem configuration", null=False
     )
-    interval = models.IntegerField(help_text="Interval value in seconds between each stratagem execution", null=False)
-    report_duration = models.BigIntegerField(
-        help_text="Interval value in seconds between stratagem report execution", null=True
+    interval = models.BigIntegerField(
+        help_text="Interval value in milliseconds between each stratagem execution", null=False
     )
-    purge_duration = models.BigIntegerField(help_text="Interval value in seconds between stratagem purges", null=True)
+    report_duration = models.BigIntegerField(
+        help_text="Interval value in milliseconds between stratagem report execution", null=True
+    )
+    purge_duration = models.BigIntegerField(
+        help_text="Interval value in milliseconds between stratagem purges", null=True
+    )
 
     states = ["unconfigured", "configured"]
     initial_state = "unconfigured"
+
+    __metaclass__ = DeletableMetaclass
 
     class Meta:
         app_label = "chroma_core"

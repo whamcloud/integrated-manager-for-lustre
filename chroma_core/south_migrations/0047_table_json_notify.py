@@ -119,7 +119,7 @@ tables = map(
         "volumenode",
         "alertstate",
         "stratagemconfiguration",
-        "lnetconfiguration"
+        "lnetconfiguration",
     ],
 )
 
@@ -198,6 +198,18 @@ class Migration(SchemaMigration):
                 },
             ),
             "username": ("django.db.models.fields.CharField", [], {"unique": "True", "max_length": "30"}),
+        },
+        "chroma_core.aggregatestratagemresultsjob": {
+            "Meta": {
+                "ordering": "['id']",
+                "object_name": "AggregateStratagemResultsJob",
+                "_ormbases": ["chroma_core.Job"],
+            },
+            u"job_ptr": (
+                "django.db.models.fields.related.OneToOneField",
+                [],
+                {"to": "orm['chroma_core.Job']", "unique": "True", "primary_key": "True"},
+            ),
         },
         "chroma_core.alertemail": {
             "Meta": {"ordering": "['id']", "object_name": "AlertEmail"},
@@ -527,6 +539,20 @@ class Migration(SchemaMigration):
                 "django.db.models.fields.related.ForeignKey",
                 [],
                 {"to": "orm['chroma_core.PacemakerConfiguration']"},
+            ),
+        },
+        "chroma_core.configurestratagemjob": {
+            "Meta": {"ordering": "['id']", "object_name": "ConfigureStratagemJob"},
+            u"job_ptr": (
+                "django.db.models.fields.related.OneToOneField",
+                [],
+                {"to": "orm['chroma_core.Job']", "unique": "True", "primary_key": "True"},
+            ),
+            "old_state": ("django.db.models.fields.CharField", [], {"max_length": "32"}),
+            "stratagem_configuration": (
+                "django.db.models.fields.related.ForeignKey",
+                [],
+                {"to": "orm['chroma_core.StratagemConfiguration']"},
             ),
         },
         "chroma_core.configuretargetjob": {
@@ -1699,7 +1725,7 @@ class Migration(SchemaMigration):
             "expiry": (
                 "django.db.models.fields.DateTimeField",
                 [],
-                {"default": "datetime.datetime(2019, 3, 14, 0, 0)"},
+                {"default": "datetime.datetime(2019, 7, 11, 0, 0)"},
             ),
             u"id": ("django.db.models.fields.AutoField", [], {"primary_key": "True"}),
             "profile": (
@@ -1710,7 +1736,7 @@ class Migration(SchemaMigration):
             "secret": (
                 "django.db.models.fields.CharField",
                 [],
-                {"default": "'44EA9AF060C0F4CA820813DC5CD80F28'", "max_length": "32"},
+                {"default": "'5941B545140E441241410BE77D97EAD1'", "max_length": "32"},
             ),
         },
         "chroma_core.removeconfiguredtargetjob": {
@@ -1816,6 +1842,23 @@ class Migration(SchemaMigration):
             "location": ("django.db.models.fields.CharField", [], {"max_length": "255"}),
             "repo_name": ("django.db.models.fields.CharField", [], {"max_length": "50", "primary_key": "True"}),
         },
+        "chroma_core.runstratagemjob": {
+            "Meta": {"ordering": "['id']", "object_name": "RunStratagemJob", "_ormbases": ["chroma_core.Job"]},
+            "device_path": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "512"}),
+            "filesystem_type": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "32"}),
+            "fqdn": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "255"}),
+            u"job_ptr": (
+                "django.db.models.fields.related.OneToOneField",
+                [],
+                {"to": "orm['chroma_core.Job']", "unique": "True", "primary_key": "True"},
+            ),
+            "mdt_id": ("django.db.models.fields.IntegerField", [], {}),
+            "purge_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "report_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "target_mount_point": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "512"}),
+            "target_name": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "64"}),
+            "uuid": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "64"}),
+        },
         u"chroma_core.sample_10": {
             "Meta": {"unique_together": "(('id', 'dt'),)", "object_name": "Sample_10"},
             "dt": ("django.db.models.fields.DateTimeField", [], {"db_index": "True"}),
@@ -1850,6 +1893,21 @@ class Migration(SchemaMigration):
             "id": ("django.db.models.fields.IntegerField", [], {"primary_key": "True"}),
             "len": ("django.db.models.fields.IntegerField", [], {}),
             "sum": ("django.db.models.fields.FloatField", [], {}),
+        },
+        "chroma_core.sendstratagemresultstoclientjob": {
+            "Meta": {
+                "ordering": "['id']",
+                "object_name": "SendStratagemResultsToClientJob",
+                "_ormbases": ["chroma_core.Job"],
+            },
+            u"job_ptr": (
+                "django.db.models.fields.related.OneToOneField",
+                [],
+                {"to": "orm['chroma_core.Job']", "unique": "True", "primary_key": "True"},
+            ),
+            "purge_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "report_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "uuid": ("django.db.models.fields.CharField", [], {"default": "''", "max_length": "64"}),
         },
         "chroma_core.series": {
             "Meta": {"unique_together": "(('content_type', 'object_id', 'name'),)", "object_name": "Series"},
@@ -2426,6 +2484,17 @@ class Migration(SchemaMigration):
                 [],
                 {"to": "orm['chroma_core.StorageResourceRecord']", "on_delete": "models.PROTECT"},
             ),
+        },
+        "chroma_core.stratagemconfiguration": {
+            "Meta": {"ordering": "['id']", "object_name": "StratagemConfiguration"},
+            "filesystem_id": ("django.db.models.fields.IntegerField", [], {}),
+            u"id": ("django.db.models.fields.AutoField", [], {"primary_key": "True"}),
+            "immutable_state": ("django.db.models.fields.BooleanField", [], {"default": "False"}),
+            "interval": ("django.db.models.fields.BigIntegerField", [], {}),
+            "purge_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "report_duration": ("django.db.models.fields.BigIntegerField", [], {"null": "True"}),
+            "state": ("django.db.models.fields.CharField", [], {"max_length": "32"}),
+            "state_modified_at": ("django.db.models.fields.DateTimeField", [], {}),
         },
         "chroma_core.syslogevent": {
             "Meta": {"object_name": "SyslogEvent", "db_table": "'chroma_core_alertstate'"},
