@@ -12,7 +12,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.validation_utils import validate
-from chroma_api.utils import custom_response, dehydrate_command
+from chroma_api.utils import custom_response, dehydrate_command, StatefulModelResource
 from chroma_core.models import (
     StratagemConfiguration,
     ManagedHost,
@@ -190,7 +190,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
         return super(StratagemConfigurationValidation, self).is_valid(bundle, request)
 
 
-class StratagemConfigurationResource(ChromaModelResource):
+class StratagemConfigurationResource(StatefulModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)

@@ -9,7 +9,7 @@ from toolz.functoolz import pipe, partial, flip
 from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StatefulObject
+from chroma_core.models.jobs import StatefulObject, NullStateChangeJob
 from chroma_core.models.utils import DeletableMetaclass
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.lib.stratagem import (
@@ -52,7 +52,10 @@ class StratagemConfiguration(StatefulObject):
         help_text="Interval value in milliseconds between stratagem purges", null=True
     )
 
-    states = ["unconfigured", "configured"]
+    def get_label(self):
+        return "Stratagem Configuration"
+
+    states = ["unconfigured", "configured", "removed"]
     initial_state = "unconfigured"
 
     __metaclass__ = DeletableMetaclass
@@ -64,8 +67,14 @@ class StratagemConfiguration(StatefulObject):
 
 class ConfigureStratagemTimerStep(Step):
     def run(self, kwargs):
-        job_log.debug("Create stratagem timer step kwargs: {}".format(kwargs))
+        job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
         # Create systemd timer
+
+
+class UnconfigureStratagemTimerStep(Step):
+    def run(self, kwargs):
+        job_log.debug("Unconfigure stratagem timer step kwargs: {}".format(kwargs))
+        # Remove systemd timer
 
 
 class ConfigureStratagemJob(StateChangeJob):
@@ -94,6 +103,58 @@ class ConfigureStratagemJob(StateChangeJob):
         steps = [(ConfigureStratagemTimerStep, {})]
 
         return steps
+
+
+class UnconfigureStratagemJob(StateChangeJob):
+    state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "configured", "unconfigured")
+    stateful_object = "stratagem_configuration"
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Unconfigure"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Unconfigure Stratagem for the given filesystem"
+
+    def description(self):
+        return "Unconfigure Stratagem for the given filesystem"
+
+    def get_steps(self):
+        steps = [(UnconfigureStratagemTimerStep, {})]
+
+        return steps
+
+
+class RemoveStratagemJob(NullStateChangeJob):
+    state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "removed")
+    stateful_object = "stratagem_configuration"
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
+    requires_confirmation = False
+    state_verb = "Remove"
+
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Remove Stratagem for the given filesystem"
+
+    def description(self):
+        return "Remove Stratagem for the given filesystem"
+
+    def get_deps(self):
+        return DependOn(self.stratagem_configuration, "unconfigured")
 
 
 class RunStratagemStep(Step):
