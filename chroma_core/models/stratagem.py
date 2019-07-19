@@ -9,7 +9,7 @@ from toolz.functoolz import pipe, partial, flip
 from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StatefulObject, NullStateChangeJob
+from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass
 from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
 from chroma_core.lib.stratagem import (
@@ -132,7 +132,17 @@ class UnconfigureStratagemJob(StateChangeJob):
         return steps
 
 
-class RemoveStratagemJob(NullStateChangeJob):
+class DeleteStratagemStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        x = kwargs["stratagem_configuration"]
+        x.mark_deleted()
+        x.save()
+
+
+class RemoveStratagemJob(StateChangeJob):
     state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "removed")
     stateful_object = "stratagem_configuration"
     stratagem_configuration = models.ForeignKey(StratagemConfiguration)
@@ -152,6 +162,9 @@ class RemoveStratagemJob(NullStateChangeJob):
 
     def description(self):
         return "Remove Stratagem for the given filesystem"
+
+    def get_steps(self):
+        return [(DeleteStratagemStep, {"stratagem_configuration": self.stratagem_configuration})]
 
     def get_deps(self):
         return DependOn(self.stratagem_configuration, "unconfigured")
