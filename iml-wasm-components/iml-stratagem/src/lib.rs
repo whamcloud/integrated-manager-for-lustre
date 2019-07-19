@@ -45,6 +45,7 @@ struct Model {
     pub report_active: bool,
     pub report_config: iml_duration_picker::Model,
     pub purge_config: iml_duration_picker::Model,
+    pub inode_table: inode_table::Model
 }
 
 impl Default for Model {
@@ -75,6 +76,7 @@ impl Default for Model {
                 ],
                 ..Default::default()
             },
+            inode_table: inode_table::Model::default(),
             destroyed: false,
         }
     }
@@ -90,6 +92,7 @@ enum Msg {
     RunConfig(iml_duration_picker::Msg),
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
+    InodeTable(inode_table::Msg),
     WindowClick,
 }
 
@@ -106,6 +109,9 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
         }
         Msg::TogglePurge(iml_toggle::Active(active)) => {
             model.purge_config.disabled = !active;
+        },
+        Msg::InodeTable(msg) => {
+            *_orders = call_update(inode_table::update, msg, &mut model.inode_table).map_message(Msg::InodeTable);
         }
         Msg::WindowClick => {
             if model.run_config.watching.should_update() {
@@ -133,15 +139,7 @@ fn view(model: &Model) -> El<Msg> {
     div![
         class!["container", "container-full"],
         h4![class!["section-header"], "Top inode Users"],
-        table![
-            class!["table"],
-            thead![tr![th!["Name"], th!["Count"]]],
-            tbody![tr![td!["uid_1"], td!["5000"]]],
-            tbody![tr![td!["uid_4"], td!["3000"]]],
-            tbody![tr![td!["uid_3"], td!["2000"]]],
-            tbody![tr![td!["uid_2"], td!["1000"]]],
-            tbody![tr![td!["uid_0"], td!["500"]]],
-        ],
+        inode_table::view(&model.inode_table).map_message(Msg::InodeTable),
         div![
             class!["detail-panel"],
             h4![class!["section-header"], "Stratagem Configuration"],
@@ -216,6 +214,8 @@ pub fn render(el: Element) -> StratagemCallbacks {
         .window_events(window_events)
         .finish()
         .run();
+
+    app.update(Msg::InodeTable(inode_table::Msg::FetchInodes));
 
     StratagemCallbacks { app: app.clone() }
 }

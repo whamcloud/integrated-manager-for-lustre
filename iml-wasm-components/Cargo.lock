@@ -403,6 +403,7 @@ dependencies = [
  "console_log 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "iml-duration-picker 0.1.0",
+ "iml-environment 0.1.0",
  "iml-grafana-chart 0.1.0",
  "iml-sleep 0.1.0",
  "iml-toggle 0.1.0",

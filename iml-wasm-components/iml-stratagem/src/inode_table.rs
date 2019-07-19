@@ -7,6 +7,7 @@ use seed::{
     prelude::*,
     td, th, tr,
 };
+use iml_environment::influx_root;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
@@ -139,10 +140,13 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
+    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27", influx_root());
 
-    let fut = Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into())
-    .controller(|controller| request_controller = Some(controller))
-    .fetch_json(Msg::InodesFetched);
+    let fut = seed::fetch::Request::new(url)
+        .controller(|controller| {
+            request_controller = Some(controller)
+        })
+        .fetch_json(Msg::InodesFetched);
 
     (fut, request_controller)
 }
