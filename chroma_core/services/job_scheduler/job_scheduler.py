@@ -692,13 +692,16 @@ class JobScheduler(object):
                         ["stopped", "unavailable"],
                     )
                 if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "unavailable"},
-                        ["available"],
-                    )
+                    # Do not alter filesystem-state available->unavailable for non-zero MDT
+                    label = changed_item.get_label().split("-")[-1]
+                    if not label.startswith("MDT") or label == "MDT0000":
+                        self._notify(
+                            ContentType.objects.get_for_model(filesystem).natural_key(),
+                            filesystem.id,
+                            now,
+                            {"state": "unavailable"},
+                            ["available"],
+                        )
 
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
