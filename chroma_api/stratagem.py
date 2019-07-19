@@ -210,24 +210,24 @@ class StratagemConfigurationResource(ChromaModelResource):
 
         if x is None:
             return x
-        else:
-            return long(x)
+
+        return long(x)
 
     def dehydrate_report_duration(self, bundle):
         x = bundle.data.get("report_duration")
 
         if x is None:
             return x
-        else:
-            return long(x)
+
+        return long(x)
 
     def dehydrate_purge_duration(self, bundle):
         x = bundle.data.get("purge_duration")
 
         if x is None:
             return x
-        else:
-            return long(x)
+
+        return long(x)
 
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
