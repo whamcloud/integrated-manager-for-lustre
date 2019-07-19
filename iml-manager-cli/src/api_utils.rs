@@ -11,6 +11,22 @@ use iml_wire_types::Command;
 use std::time::{Duration, Instant};
 use tokio::timer::Delay;
 
+#[derive(serde::Deserialize, Debug)]
+pub struct CmdWrapper {
+    pub command: Command,
+}
+
+/// Takes an asynchronous computation (Future), runs it to completion
+/// and returns the result.
+///
+/// Even though the action is asynchronous, this fn will block until
+/// the future resolves.
+pub fn run_cmd<R: Send + 'static, E: Send + 'static>(
+    fut: impl Future<Item = R, Error = E> + Send + 'static,
+) -> std::result::Result<R, E> {
+    tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
+}
+
 fn cmd_finished(cmd: &Command) -> bool {
     cmd.errored || cmd.cancelled || cmd.complete
 }

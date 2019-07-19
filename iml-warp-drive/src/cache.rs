@@ -350,7 +350,10 @@ pub fn populate_from_db(
 ) -> impl Future<Item = (), Error = iml_postgres::Error> {
     fetch_from_db(
         Arc::clone(&client),
-        &format!("select * from {} where not_deleted = 't'", StratagemConfiguration::table_name()),
+        &format!(
+            "select * from {} where not_deleted = 't'",
+            StratagemConfiguration::table_name()
+        ),
     )
     .join(fetch_from_db(
         Arc::clone(&client),
