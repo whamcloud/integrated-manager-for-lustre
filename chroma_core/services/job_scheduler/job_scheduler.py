@@ -50,7 +50,12 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
-from chroma_core.models import ConfigureStratagemJob, UnconfigureStratagemJob, RemoveStratagemJob, StratagemConfiguration
+from chroma_core.models import (
+    ConfigureStratagemJob,
+    UnconfigureStratagemJob,
+    RemoveStratagemJob,
+    StratagemConfiguration,
+)
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
