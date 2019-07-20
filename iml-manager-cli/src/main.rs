@@ -8,7 +8,7 @@ mod manager_cli_error;
 mod stratagem;
 
 use display_utils::{generate_table, start_spinner};
-use iml_manager_cli::api_utils::run_cmd;
+use iml_manager_cli::api_utils::{get, run_cmd};
 use iml_wire_types::{ApiList, EndpointName, Host};
 use std::process::exit;
 use stratagem::stratagem_cli;
@@ -55,11 +55,7 @@ fn main() {
             ServerCommand::List => {
                 let stop_spinner = start_spinner("Running command...");
 
-                let fut = {
-                    let client =
-                        iml_manager_client::get_client().expect("Could not create API client");
-                    iml_manager_client::get(client, Host::endpoint_name(), vec![("limit", 0)])
-                };
+                let fut = get(Host::endpoint_name(), serde_json::json!({"limit": 0}));
 
                 let result: Result<ApiList<Host>, _> = run_cmd(fut);
 
