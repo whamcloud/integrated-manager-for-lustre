@@ -7,7 +7,7 @@ use futures::{
     future::{self, loop_fn, Either, Loop},
     Future,
 };
-use iml_wire_types::Command;
+use iml_wire_types::{ApiList, Command, EndpointName};
 use std::time::{Duration, Instant};
 use tokio::timer::Delay;
 
@@ -55,4 +55,50 @@ pub fn wait_for_cmd(cmd: Command) -> impl Future<Item = Command, Error = ImlMana
                 .map(Loop::Continue),
         )
     })
+}
+
+/// Given an `ApiList`, this fn returns the first item or errors.
+pub fn first<T: EndpointName>(x: ApiList<T>) -> Result<T, ImlManagerCliError> {
+    x.objects
+        .into_iter()
+        .nth(0)
+        .ok_or_else(|| ImlManagerCliError::DoesNotExist(T::endpoint_name()))
+}
+
+/// Wrapper for a `GET` to the Api.
+pub fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+    endpoint: &str,
+    query: impl serde::Serialize,
+) -> impl Future<Item = T, Error = ImlManagerCliError> {
+    let client = iml_manager_client::get_client().expect("Could not create API client");
+
+    iml_manager_client::get(client, endpoint, query).from_err()
+}
+
+/// Wrapper for a `POST` to the Api.
+pub fn post(
+    endpoint: &str,
+    query: impl serde::Serialize,
+) -> impl Future<
+    Item = (iml_manager_client::Response, iml_manager_client::Chunk),
+    Error = ImlManagerCliError,
+> {
+    let client = iml_manager_client::get_client().expect("Could not create API client");
+    iml_manager_client::post(client, endpoint, query)
+        .and_then(iml_manager_client::concat_body)
+        .from_err()
+}
+
+/// Wrapper for a `DELETE` to the Api.
+pub fn delete(
+    endpoint: &str,
+    query: impl serde::Serialize,
+) -> impl Future<
+    Item = (iml_manager_client::Response, iml_manager_client::Chunk),
+    Error = ImlManagerCliError,
+> {
+    let client = iml_manager_client::get_client().expect("Could not create API client");
+    iml_manager_client::delete(client, endpoint, query)
+        .and_then(iml_manager_client::concat_body)
+        .from_err()
 }

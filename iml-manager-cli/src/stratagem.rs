@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{run_cmd, wait_for_cmd, CmdWrapper},
+    api_utils::{delete, first, get, post, run_cmd, wait_for_cmd, CmdWrapper},
     display_utils::{display_cmd_state, display_error, generate_table, start_spinner},
     manager_cli_error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
@@ -12,7 +12,7 @@ use crate::{
 };
 use futures::Future;
 use iml_wire_types::{ApiList, EndpointName, Filesystem, StratagemConfiguration};
-use std::{fmt::Debug, process::exit};
+use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -74,15 +74,6 @@ pub struct StratagemScanData {
     purge_duration: Option<u64>,
 }
 
-fn get<T: serde::de::DeserializeOwned + Debug>(
-    endpoint: &str,
-    query: impl serde::Serialize,
-) -> impl Future<Item = T, Error = ImlManagerCliError> {
-    let client = iml_manager_client::get_client().expect("Could not create API client");
-
-    iml_manager_client::get(client, endpoint, query).from_err()
-}
-
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
     if src.len() < 2 {
         return Err(DurationParseError::InvalidValue.into());
@@ -132,13 +123,7 @@ fn handle_cmd_resp(
 pub fn stratagem_cli(command: StratagemCommand) {
     match command {
         StratagemCommand::Scan(data) => {
-            let fut = {
-                let client = iml_manager_client::get_client().expect("Could not create API client");
-                iml_manager_client::post(client, "run_stratagem", data)
-                    .and_then(iml_manager_client::concat_body)
-                    .from_err()
-                    .and_then(handle_cmd_resp)
-            };
+            let fut = post("run_stratagem", data).and_then(handle_cmd_resp);
 
             let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
@@ -205,14 +190,8 @@ pub fn stratagem_cli(command: StratagemCommand) {
                 }
             }
             StratagemConfig::Add(c) => {
-                let fut = {
-                    let client =
-                        iml_manager_client::get_client().expect("Could not create API client");
-                    iml_manager_client::post(client, StratagemConfiguration::endpoint_name(), c)
-                        .and_then(iml_manager_client::concat_body)
-                        .from_err()
-                        .and_then(handle_cmd_resp)
-                };
+                let fut =
+                    post(StratagemConfiguration::endpoint_name(), c).and_then(handle_cmd_resp);
 
                 let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
@@ -237,13 +216,6 @@ pub fn stratagem_cli(command: StratagemCommand) {
                 }
             }
             StratagemConfig::Remove(StratagemRemoveData { name }) => {
-                fn first<T: EndpointName>(x: ApiList<T>) -> Result<T, ImlManagerCliError> {
-                    x.objects
-                        .into_iter()
-                        .nth(0)
-                        .ok_or_else(|| ImlManagerCliError::DoesNotExist(T::endpoint_name()))
-                }
-
                 let fut = get(
                     Filesystem::endpoint_name(),
                     serde_json::json!({
@@ -258,52 +230,34 @@ pub fn stratagem_cli(command: StratagemCommand) {
                         serde_json::json!({ "filesystem_id": fs.id }),
                     )
                 })
-                .and_then(first);
+                .and_then(first)
+                .and_then(|x: StratagemConfiguration| {
+                    delete(
+                        &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                        Vec::<(String, String)>::new(),
+                    )
+                })
+                .and_then(handle_cmd_resp);
 
-                let x: Result<StratagemConfiguration, ImlManagerCliError> = run_cmd(fut);
+                let x: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 
                 match x {
-                    Ok(x) => {
-                        let fut = {
-                            let client = iml_manager_client::get_client()
-                                .expect("Could not create API client");
-                            iml_manager_client::delete(
-                                client,
-                                &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                                Vec::<(String, String)>::new(),
-                            )
-                            .and_then(iml_manager_client::concat_body)
-                            .from_err()
-                            .and_then(handle_cmd_resp)
-                        };
+                    Ok(CmdWrapper { command }) => {
+                        let stop_spinner = start_spinner(&command.message);
 
-                        let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+                        let command =
+                            run_cmd(wait_for_cmd(command)).expect("Could not poll command");
 
-                        match command {
-                            Ok(CmdWrapper { command }) => {
-                                let stop_spinner = start_spinner(&command.message);
+                        stop_spinner(None);
 
-                                let command =
-                                    run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+                        display_cmd_state(&command);
 
-                                stop_spinner(None);
-
-                                display_cmd_state(&command);
-
-                                exit(exitcode::OK)
-                            }
-                            Err(validation_error) => {
-                                display_error(validation_error);
-
-                                exit(exitcode::CANTCREAT)
-                            }
-                        }
+                        exit(exitcode::OK)
                     }
+                    Err(validation_error) => {
+                        display_error(validation_error);
 
-                    Err(e) => {
-                        display_error(e);
-
-                        exit(exitcode::SOFTWARE);
+                        exit(exitcode::CANTCREAT)
                     }
                 }
             }
