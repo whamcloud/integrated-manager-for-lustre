@@ -3,12 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use futures::{Future, IntoFuture as _, Stream as _};
-use reqwest::{
-    header,
-    r#async::{Chunk, Decoder, Response},
-    Url,
+use reqwest::{header, r#async::Decoder, Url};
+pub use reqwest::{
+    r#async::{Chunk, Client, Response},
+    StatusCode,
 };
-pub use reqwest::{r#async::Client, StatusCode};
 use serde::de::DeserializeOwned;
 use std::{fmt::Debug, mem, time::Duration};
 
@@ -170,4 +169,15 @@ pub fn post(
     create_api_url(path)
         .into_future()
         .and_then(move |url| client.post(url).json(&body).send().from_err())
+}
+
+/// Performs a DELETE to the given API path
+pub fn delete(
+    client: Client,
+    path: &str,
+    body: impl serde::Serialize,
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.delete(url).json(&body).send().from_err())
 }

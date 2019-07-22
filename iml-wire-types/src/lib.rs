@@ -785,3 +785,25 @@ impl EndpointName for Alert {
         "alert"
     }
 }
+
+/// A `StratagemConfiguration` record from `api/stratagem_configuration`.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct StratagemConfiguration {
+    pub filesystem: String,
+    pub filesystem_id: u32,
+    pub id: u32,
+    pub immutable_state: bool,
+    pub interval: u64,
+    pub not_deleted: Option<bool>,
+    pub purge_duration: Option<u64>,
+    pub report_duration: Option<u64>,
+    pub resource_uri: String,
+    pub state: String,
+    pub state_modified_at: String,
+}
+
+impl EndpointName for StratagemConfiguration {
+    fn endpoint_name() -> &'static str {
+        "stratagem_configuration"
+    }
+}

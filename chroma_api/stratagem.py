@@ -12,7 +12,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.validation_utils import validate
-from chroma_api.utils import custom_response, dehydrate_command
+from chroma_api.utils import custom_response, dehydrate_command, StatefulModelResource
 from chroma_core.models import (
     StratagemConfiguration,
     ManagedHost,
@@ -49,27 +49,31 @@ def get_duration(duration_key, bundle):
     return duration
 
 
-def validate_duration(bundle):
-    def check_duration(duration_key, bundle):
-        duration = get_duration(duration_key, bundle)
-        if isinstance(duration, dict):
-            return duration
+def check_duration(duration_key, bundle):
+    duration = get_duration(duration_key, bundle)
 
-        if duration > MAX_SAFE_INTEGER:
-            return {
-                "code": "{}_too_big".format(duration_key),
-                "message": "{} duration cannot be larger than {}.".format(
-                    get_duration_type(duration_key), MAX_SAFE_INTEGER
-                ),
-            }
-
+    if isinstance(duration, dict):
         return duration
 
+    if duration > MAX_SAFE_INTEGER:
+        return {
+            "code": "{}_too_big".format(duration_key),
+            "message": "{} duration cannot be larger than {}.".format(
+                get_duration_type(duration_key), MAX_SAFE_INTEGER
+            ),
+        }
+
+    return duration
+
+
+def validate_duration(bundle):
     purge_duration = check_duration("purge_duration", bundle)
+
     if isinstance(purge_duration, dict):
         return purge_duration
 
     report_duration = check_duration("report_duration", bundle)
+
     if isinstance(report_duration, dict):
         return report_duration
 
@@ -172,20 +176,28 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
         difference = set(required_args) - set(bundle.data.keys())
 
-        if not difference:
-            return super(StratagemConfigurationValidation, self).is_valid(bundle, request)
+        if difference:
+            return {
+                "code": "required_fields_missing",
+                "message": "Required fields are missing: {}".format(", ".join(difference)),
+            }
 
-        return {
-            "code": "required_fields_missing",
-            "message": "Required fields are missing: {}".format(", ".join(difference)),
-        }
+        x = check_duration("interval", bundle)
+
+        if isinstance(x, dict):
+            return x
+
+        return super(StratagemConfigurationValidation, self).is_valid(bundle, request)
 
 
-class StratagemConfigurationResource(ChromaModelResource):
+class StratagemConfigurationResource(StatefulModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
     interval = fields.IntegerField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
+
+    def hydrate_interval(self, val):
+        return long(val)
 
     def hydrate_report_duration(self, val):
         return long(val)
@@ -193,11 +205,29 @@ class StratagemConfigurationResource(ChromaModelResource):
     def hydrate_purge_duration(self, val):
         return long(val)
 
+    def dehydrate_interval(self, bundle):
+        x = bundle.data.get("interval")
+
+        if x is None:
+            return x
+
+        return long(x)
+
     def dehydrate_report_duration(self, bundle):
-        return long(bundle.data.get("report_duration"))
+        x = bundle.data.get("report_duration")
+
+        if x is None:
+            return x
+
+        return long(x)
 
     def dehydrate_purge_duration(self, bundle):
-        return long(bundle.data.get("purge_duration"))
+        x = bundle.data.get("purge_duration")
+
+        if x is None:
+            return x
+
+        return long(x)
 
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
@@ -207,12 +237,21 @@ class StratagemConfigurationResource(ChromaModelResource):
         queryset = StratagemConfiguration.objects.all()
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        allowed_methods = ["get", "post"]
+        list_allowed_methods = ["get", "post"]
+        detail_allowed_methods = ["get", "put", "delete"]
         validation = StratagemConfigurationValidation()
+        filtering = {"filesystem_id": ["exact"]}
 
     @validate
     def obj_create(self, bundle, **kwargs):
-        return JobSchedulerClient.configure_stratagem(bundle.data)
+        command_id = JobSchedulerClient.configure_stratagem(bundle.data)
+
+        try:
+            command = Command.objects.get(pk=command_id)
+        except ObjectDoesNotExist:
+            command = None
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
 
 class RunStratagemResource(Resource):
