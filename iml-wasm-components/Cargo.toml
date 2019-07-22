@@ -10,7 +10,6 @@ members = [
     'iml-paging',
     'iml-pie-chart',
     'iml-grafana-chart',
-    'iml-stratagem',
     'iml-sleep',
     'iml-stratagem',
     'iml-toggle',

@@ -51,7 +51,7 @@ pub struct StratagemConfiguration {
 }
 
 #[derive(Debug)]
-struct Model {
+pub struct Model {
     pub destroyed: bool,
     pub run_config: iml_duration_picker::Model,
     pub report_active: bool,
@@ -99,7 +99,7 @@ impl Default for Model {
 // Update
 
 #[derive(Clone, Debug)]
-enum Msg {
+pub enum Msg {
     Destroy,
     TogglePurge(iml_toggle::Active),
     ToggleReport(iml_toggle::Active),
@@ -111,7 +111,7 @@ enum Msg {
     WindowClick,
 }
 
-fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
     log::trace!("Msg: {:#?}", msg);
 
     match msg {
@@ -124,9 +124,6 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
         }
         Msg::TogglePurge(iml_toggle::Active(active)) => {
             model.purge_config.disabled = !active;
-        },
-        Msg::InodeTable(msg) => {
-            *_orders = call_update(inode_table::update, msg, &mut model.inode_table).map_message(Msg::InodeTable);
         }
         Msg::SetConfig(config) => {
             model.run_config.value = config.interval.to_string();
@@ -171,7 +168,7 @@ fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
 }
 
 // View
-fn view(model: &Model) -> El<Msg> {
+pub fn view(model: &Model) -> El<Msg> {
     let style_override =
         style! { "display" => "flex", "align-items" => "center", "line-height" => "unset" };
 
@@ -237,30 +234,30 @@ pub struct StratagemCallbacks {
     app: seed::App<Msg, Model, El<Msg>>,
 }
 
-#[wasm_bindgen]
-impl StratagemCallbacks {
-    pub fn destroy(&self) {
-        self.app.update(Msg::Destroy);
-    }
+// #[wasm_bindgen]
+// impl StratagemCallbacks {
+//     pub fn destroy(&self) {
+//         self.app.update(Msg::Destroy);
+//     }
 
-    pub fn set_config(&self, config: JsValue) {
-        let stratagem_configuration: StratagemConfiguration = config.into_serde().unwrap();
-        seed::log!("setting config to: {:?}", config);
-        self.app.update(Msg::SetConfig(stratagem_configuration));
-    }
-}
+//     pub fn set_config(&self, config: JsValue) {
+//         let stratagem_configuration: StratagemConfiguration = config.into_serde().unwrap();
+//         seed::log!("setting config to: {:?}", config);
+//         self.app.update(Msg::SetConfig(stratagem_configuration));
+//     }
+// }
 
-#[wasm_bindgen]
-pub fn render(el: Element) -> StratagemCallbacks {
-    init_log();
+// #[wasm_bindgen]
+// pub fn stratagem_component(el: Element) -> StratagemCallbacks {
+//     init_log();
 
-    let app = seed::App::build(Model::default(), update, view)
-        .mount(el)
-        .window_events(window_events)
-        .finish()
-        .run();
+//     let app = seed::App::build(Model::default(), update, view)
+//         .mount(el)
+//         .window_events(window_events)
+//         .finish()
+//         .run();
 
-    app.update(Msg::InodeTable(inode_table::Msg::FetchInodes));
+//     app.update(Msg::InodeTable(inode_table::Msg::FetchInodes));
 
-    StratagemCallbacks { app: app.clone() }
-}
+//     StratagemCallbacks { app: app.clone() }
+// }
