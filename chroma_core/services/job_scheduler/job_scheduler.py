@@ -27,6 +27,7 @@ from django.db.models import Q, FieldDoesNotExist, ManyToManyField
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.util import target_label_split
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock
@@ -693,8 +694,8 @@ class JobScheduler(object):
                     )
                 if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
                     # Do not alter filesystem-state available->unavailable for non-zero MDT
-                    label = changed_item.get_label().split("-")[-1]
-                    if not label.startswith("MDT") or label == "MDT0000":
+                    (_, label, index) = target_label_split(changed_item.get_label())
+                    if label != "MDT" or index == 0:
                         self._notify(
                             ContentType.objects.get_for_model(filesystem).natural_key(),
                             filesystem.id,
