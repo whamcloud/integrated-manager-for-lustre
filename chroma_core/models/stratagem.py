@@ -86,14 +86,14 @@ class ConfigureStratagemTimerStep(Step):
                 "Description=Start Stratagem run on {}\n"
                 "\n[Timer]\n"
                 "Unit={}.service\n"
-                "OnUnitActiveSec={}".format(config.filesystem_id, name, config.interval))
+                "OnUnitActiveSec={}".format(config.filesystem_id, name, config.interval)
             )
 
         iml_cmd = "iml stratagem scan --filesystem {}".format(config.filesystem_id)
         if config.report_duration is not None and config.report_duration > 0:
-            iml_cmd += " --report {}s".format(config.report_duration/1000)
+            iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration > 0:
-            iml_cmd += " --purge {}s".format(config.purge_duration/1000)
+            iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
         with open(service_file, "w") as fn:
             fn.write(
                 "#  This file is part of IML\n"
@@ -103,7 +103,7 @@ class ConfigureStratagemTimerStep(Step):
                 "After=iml-manager.target\n"
                 "\n[Service]\n"
                 "Type=oneshot\n"
-                "ExecStart={}".format(config.filesystem_id, iml_cmd))
+                "ExecStart={}".format(config.filesystem_id, iml_cmd)
             )
         shell.try_run(["systemctl", "daemon-reload"])
         shell.try_run(["systemctl", "enable", "--now", "{}.timer".format(name)])
