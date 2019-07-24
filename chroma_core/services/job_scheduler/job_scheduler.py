@@ -27,6 +27,7 @@ from django.db.models import Q, FieldDoesNotExist, ManyToManyField
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.util import target_label_split
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock
@@ -692,13 +693,16 @@ class JobScheduler(object):
                         ["stopped", "unavailable"],
                     )
                 if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "unavailable"},
-                        ["available"],
-                    )
+                    # Do not alter filesystem-state available->unavailable for non-zero MDT
+                    (_, label, index) = target_label_split(changed_item.get_label())
+                    if label != "MDT" or index == 0:
+                        self._notify(
+                            ContentType.objects.get_for_model(filesystem).natural_key(),
+                            filesystem.id,
+                            now,
+                            {"state": "unavailable"},
+                            ["available"],
+                        )
 
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
