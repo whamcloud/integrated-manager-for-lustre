@@ -5,6 +5,9 @@
 use iml_environment::grafana_root;
 use seed::{attrs, iframe, prelude::*};
 
+pub static GRAFANA_DASHBOARD_ID: &str = "OBdCS5IWz";
+pub static GRAFANA_DASHBOARD_NAME: &str = "stratagem";
+
 /// Create an iframe that loads the specified stratagem chart
 pub fn grafana_chart<T>(
     dashboard_id: &str,

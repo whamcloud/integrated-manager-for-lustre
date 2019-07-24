@@ -334,6 +334,7 @@ dependencies = [
  "iml-lock-indicator 0.1.0",
  "iml-paging 0.1.0",
  "iml-pie-chart 0.1.0",
+ "iml-stratagem 0.1.0",
  "iml-tooltip 0.1.0",
  "iml-utils 0.1.0",
  "iml-wire-types 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",

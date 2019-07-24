@@ -1,13 +1,14 @@
 use crate::inode_error::InodeError;
-use bootstrap_components::bs_table::{table, TABLE_STRIPED};
+use bootstrap_components::bs_well::well;
 use futures::Future;
-use seed::{
-    class,
-    fetch::{FetchObject, Request, RequestController},
-    prelude::*,
-    td, th, tr,
-};
 use iml_environment::influx_root;
+use seed::{
+    class, div,
+    fetch::{FetchObject, RequestController},
+    h4, i,
+    prelude::*,
+    style,
+};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
@@ -141,11 +142,8 @@ pub fn fetch_inodes() -> (
 ) {
     let mut request_controller = None;
     let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27", influx_root());
-
     let fut = seed::fetch::Request::new(url)
-        .controller(|controller| {
-            request_controller = Some(controller)
-        })
+        .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);
 
     (fut, request_controller)
@@ -154,8 +152,33 @@ pub fn fetch_inodes() -> (
 fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<El<T>> {
     inodes
         .into_iter()
-        .map(|x| tr![td![x.uid], td![x.count.to_string()]])
+        .map(|x| vec![div![x.uid], div![x.count.to_string()]])
+        .flatten()
         .collect()
+}
+
+fn detail_header<T>(header: &str) -> El<T> {
+    h4![
+        header,
+        style! {
+        "color" => "#777",
+        "grid-column" => "1 / span 2",
+        "grid-row-end" => "1"}
+    ]
+}
+
+fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+    well(children)
+        .add_style("display".into(), "grid".into())
+        .add_style("grid-template-columns".into(), "50% 50%".into())
+        .add_style("grid-row-gap".into(), px(20))
+}
+
+fn detail_label<T>(content: &str) -> El<T> {
+    div![
+        content,
+        style! { "font-weight" => "700", "color" => "#777" }
+    ]
 }
 
 /// View
@@ -166,12 +189,29 @@ pub fn view(model: &Model) -> El<Msg> {
         let entries = get_inode_elements(&model.inodes);
 
         if !entries.is_empty() {
-            let mut inodes: Vec<El<Msg>> = vec![tr![th!["Uid"], th!["Count"]]];
+            let mut els: Vec<El<Msg>> = vec![
+                detail_header("inode Users"),
+                detail_label("Uid"),
+                detail_label("Count"),
+            ];
+            els.extend(entries);
 
-            inodes.extend(entries);
-            table(class![TABLE_STRIPED], inodes)
+            div![detail_panel(els)]
         } else {
-            seed::empty()
+            div![detail_panel(vec![
+                detail_header("inode Users"),
+                i![
+                    class!["fa fa-circle-notch fa-spin".into()],
+                    style! {
+                        "grid-column" => "2",
+                        "grid-row" => "1",
+                        "width" => "40px",
+                        "height" => "40px",
+                        "margin-left" => "-20px",
+                        "font-size" => "40px"
+                    }
+                ]
+            ])]
         }
     }
 }

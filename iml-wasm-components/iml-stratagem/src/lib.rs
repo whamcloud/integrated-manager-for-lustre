@@ -2,41 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod add_stratagem_button;
 mod inode_error;
-mod inode_table;
+pub mod inode_table;
 
-use iml_grafana_chart::grafana_chart;
+use bootstrap_components::bs_well::well;
 use seed::prelude::*;
 
-static DASHBOARD_ID: &str = "OBdCS5IWz";
-static DASHBOARD_NAME: &str = "stratagem";
-
-pub fn size_distribution_chart<T>() -> El<T> {
-    grafana_chart(DASHBOARD_ID, DASHBOARD_NAME, "10s", 2, "100%", "600")
-}
-
-use cfg_if::cfg_if;
 use iml_duration_picker::{self, duration_picker};
+use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
 use iml_toggle::toggle;
-use seed::{
-    class, div, dom_types::MessageMapper as _, h4, prelude::*, style, table, tbody, td, th, thead,
-    tr,
-};
-use web_sys::Element;
-
-cfg_if! {
-    if #[cfg(feature = "console_log")] {
-        fn init_log() {
-            use log::Level;
-            match console_log::init_with_level(Level::Trace) {
-                Ok(_) => (),
-                Err(e) => log::info!("{:?}", e)
-            };
-        }
-    } else {
-        fn init_log() {}
-    }
-}
+use seed::{class, div, dom_types::At, h4, style};
 
 /// Record from the `chroma_core_stratagemconfiguration` table
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -53,17 +29,28 @@ pub struct StratagemConfiguration {
 #[derive(Debug)]
 pub struct Model {
     pub destroyed: bool,
+    pub fs_id: u32,
     pub run_config: iml_duration_picker::Model,
     pub report_active: bool,
     pub report_config: iml_duration_picker::Model,
     pub purge_active: bool,
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
+    pub add_stratagem_button: add_stratagem_button::Model,
+    pub ready: bool,
+    pub configured: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReadyAndFs {
+    pub ready: bool,
+    pub fs_id: u32,
 }
 
 impl Default for Model {
     fn default() -> Self {
         Model {
+            fs_id: 1,
             run_config: iml_duration_picker::Model {
                 value: "30".into(),
                 exclude_units: vec![
@@ -92,28 +79,29 @@ impl Default for Model {
             purge_active: false,
             inode_table: inode_table::Model::default(),
             destroyed: false,
+            ready: false,
+            configured: false,
+            add_stratagem_button: add_stratagem_button::Model::default(),
         }
     }
 }
 
 // Update
-
 #[derive(Clone, Debug)]
 pub enum Msg {
     Destroy,
     TogglePurge(iml_toggle::Active),
     ToggleReport(iml_toggle::Active),
     RunConfig(iml_duration_picker::Msg),
-    SetConfig(StratagemConfiguration),
+    SetConfig(Option<StratagemConfiguration>),
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
     InodeTable(inode_table::Msg),
+    AddStratagemButton(add_stratagem_button::Msg),
     WindowClick,
 }
 
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
-    log::trace!("Msg: {:#?}", msg);
-
     match msg {
         Msg::Destroy => model.destroyed = true,
         Msg::RunConfig(msg) => iml_duration_picker::update(msg, &mut model.run_config),
@@ -125,29 +113,51 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
         Msg::TogglePurge(iml_toggle::Active(active)) => {
             model.purge_config.disabled = !active;
         }
-        Msg::SetConfig(config) => {
-            model.run_config.value = config.interval.to_string();
-            model.report_active = config.report_duration.is_some();
-            match config.report_duration {
-                None => {
-                    model.report_config.value = "".to_string();
-                    model.report_config.disabled = true;
+        Msg::SetConfig(config) => match config {
+            Some(c) => {
+                model.configured = true;
+                model.run_config.value = c.interval.to_string();
+                model.report_active = c.report_duration.is_some();
+                match c.report_duration {
+                    None => {
+                        model.report_config.value = "".to_string();
+                        model.report_config.disabled = true;
+                    }
+                    Some(x) => model.report_config.value = x.to_string(),
                 }
-                Some(x) => model.report_config.value = x.to_string(),
-            }
 
-            model.purge_active = config.purge_duration.is_some();
-            match config.purge_duration {
-                None => {
-                    model.purge_config.value = "".to_string();
-                    model.purge_config.disabled = true;
+                model.purge_active = c.purge_duration.is_some();
+                match c.purge_duration {
+                    None => {
+                        model.purge_config.value = "".to_string();
+                        model.purge_config.disabled = true;
+                    }
+                    Some(x) => model.purge_config.value = x.to_string(),
                 }
-                Some(x) => model.purge_config.value = x.to_string(),
             }
-        }
+            None => {
+                model.configured = false;
+                model.run_config.value = "".to_string();
+                model.report_active = false;
+                model.report_config.value = "".to_string();
+                model.report_config.disabled = true;
+                model.purge_active = false;
+                model.purge_config.value = "".to_string();
+                model.purge_config.disabled = true;
+            }
+        },
         Msg::InodeTable(msg) => {
             *_orders = call_update(inode_table::update, msg, &mut model.inode_table)
                 .map_message(Msg::InodeTable);
+        }
+        Msg::AddStratagemButton(msg) => {
+            model.add_stratagem_button.fs_id = model.fs_id;
+            *_orders = call_update(
+                add_stratagem_button::update,
+                msg,
+                &mut model.add_stratagem_button,
+            )
+            .map_message(Msg::AddStratagemButton);
         }
         Msg::WindowClick => {
             if model.run_config.watching.should_update() {
@@ -167,58 +177,79 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
     log::trace!("Model: {:#?}", model);
 }
 
+fn detail_header<T>(header: &str) -> El<T> {
+    h4![
+        header,
+        style! {
+        "color" => "#777",
+        "grid-column" => "1 / span 3",
+        "grid-row-end" => "1"}
+    ]
+}
+
+fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+    well(children)
+        .add_style("display".into(), "grid".into())
+        .add_style("grid-template-columns".into(), "50% 25% 25%".into())
+        .add_style("grid-row-gap".into(), px(20))
+}
+
+fn detail_label<T>(content: &str) -> El<T> {
+    div![
+        content,
+        style! { "font-weight" => "700", "color" => "#777" }
+    ]
+}
+
 // View
 pub fn view(model: &Model) -> El<Msg> {
-    let style_override =
-        style! { "display" => "flex", "align-items" => "center", "line-height" => "unset" };
-
-    div![
-        class!["container", "container-full"],
-        h4![class!["section-header"], "Top inode Users"],
-        inode_table::view(&model.inode_table).map_message(Msg::InodeTable),
+    let mut configuration_component = vec![
+        detail_header("Stratagem Configuration"),
+        detail_label("Scan filesystem every"),
         div![
-            class!["detail-panel"],
-            h4![class!["section-header"], "Stratagem Configuration"],
-            div![
-                class!["detail-row"],
-                div![style_override.clone(), "Scan filesystem every"],
-                div![
-                    style_override.clone(),
-                    div![
-                        class!["input-group"],
-                        duration_picker(&model.run_config).map_message(Msg::RunConfig)
-                    ]
-                ]
-            ],
-            div![
-                class!["detail-row"],
-                div![
-                    style_override.clone(),
-                    "Generate report on files older than"
-                ],
-                div![
-                    style_override.clone(),
-                    div![
-                        class!["input-group"],
-                        duration_picker(&model.report_config).map_message(Msg::ReportConfig)
-                    ],
-                    toggle(!model.report_config.disabled).map_message(Msg::ToggleReport),
-                ],
-            ],
-            div![
-                class!["detail-row"],
-                div![style_override.clone(), "Purge Files older than"],
-                div![
-                    style_override,
-                    div![
-                        class!["input-group"],
-                        duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
-                    ],
-                    toggle(!model.purge_config.disabled).map_message(Msg::TogglePurge)
-                ]
-            ]
+            class!["input-group"],
+            duration_picker(&model.run_config).map_message(Msg::RunConfig)
+        ],
+        div![],
+        detail_label("Generate report on files older than"),
+        div![
+            class!["input-group"],
+            duration_picker(&model.report_config).map_message(Msg::ReportConfig)
+        ],
+        toggle(!model.report_config.disabled).map_message(Msg::ToggleReport),
+        detail_label("Purge Files older than"),
+        div![
+            class!["input-group"],
+            duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
+        ],
+        toggle(!model.purge_config.disabled).map_message(Msg::TogglePurge),
+    ];
+
+    if model.configured {
+        div![
+            h4![class!["section-header"], "Stratagem"],
+            well(vec![grafana_chart(
+                GRAFANA_DASHBOARD_ID,
+                GRAFANA_DASHBOARD_NAME,
+                "10s",
+                2,
+                "100%",
+                "600"
+            )]),
+            inode_table::view(&model.inode_table).map_message(Msg::InodeTable),
+            detail_panel(configuration_component)
         ]
-    ]
+    } else {
+        configuration_component.extend(vec![add_stratagem_button::view(
+            &model.add_stratagem_button,
+        )
+        .map_message(Msg::AddStratagemButton)]);
+
+        div![
+            h4![class!["section-header"], "Stratagem"],
+            detail_panel(configuration_component)
+        ]
+    }
 }
 
 fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
@@ -228,36 +259,3 @@ fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
 
     vec![simple_ev(Ev::Click, Msg::WindowClick)]
 }
-
-#[wasm_bindgen]
-pub struct StratagemCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
-}
-
-// #[wasm_bindgen]
-// impl StratagemCallbacks {
-//     pub fn destroy(&self) {
-//         self.app.update(Msg::Destroy);
-//     }
-
-//     pub fn set_config(&self, config: JsValue) {
-//         let stratagem_configuration: StratagemConfiguration = config.into_serde().unwrap();
-//         seed::log!("setting config to: {:?}", config);
-//         self.app.update(Msg::SetConfig(stratagem_configuration));
-//     }
-// }
-
-// #[wasm_bindgen]
-// pub fn stratagem_component(el: Element) -> StratagemCallbacks {
-//     init_log();
-
-//     let app = seed::App::build(Model::default(), update, view)
-//         .mount(el)
-//         .window_events(window_events)
-//         .finish()
-//         .run();
-
-//     app.update(Msg::InodeTable(inode_table::Msg::FetchInodes));
-
-//     StratagemCallbacks { app: app.clone() }
-// }

@@ -13,10 +13,14 @@ pub fn ui_root() -> String {
 }
 
 pub fn get_root_url() -> String {
-  let url = ui_root();
-  let mut idx = 0;
-  url.find("/ui/").map(|x| idx = x);
-  url.get(0..idx).expect("Couldn't get url root.").into()
+    let url = ui_root();
+    let mut idx = 0;
+    url.find("/ui/").map(|x| idx = x);
+    url.get(0..idx).expect("Couldn't get url root.").into()
+}
+
+pub fn api_root() -> String {
+    format!("{}/api/", get_root_url())
 }
 
 /// Returns https://<domain>:<port>/grafana/
