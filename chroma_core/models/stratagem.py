@@ -4,6 +4,7 @@
 
 import logging
 import json
+import os
 from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
@@ -70,11 +71,55 @@ class ConfigureStratagemTimerStep(Step):
         job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
         # Create systemd timer
 
+        config = kwargs["config"]
+
+        name = "iml-stratagem-{}".format(config.id)
+
+        timer_file = "/etc/systemd/system/{}.timer".format(name)
+        service_file = "/etc/systemd/system/{}.service".format(name)
+
+        with open(timer_file, "w") as fn:
+            fn.write(
+                "#  This file is part of IML\n"
+                "#  This file will be overwritten automatically\n"
+                "\n[Unit]\n"
+                "Description=Start Stratagem run on {}\n"
+                "\n[Timer]\n"
+                "Unit={}.service\n"
+                "OnUnitActiveSec={}".format(config.filesystem_id, name, config.interval))
+            )
+
+        iml_cmd = "iml stratagem scan --filesystem {}".format(config.filesystem_id)
+        if config.report_duration is not None and config.report_duration > 0:
+            iml_cmd += " --report {}s".format(config.report_duration/1000)
+        if config.purge_duration is not None and config.purge_duration > 0:
+            iml_cmd += " --purge {}s".format(config.purge_duration/1000)
+        with open(service_file, "w") as fn:
+            fn.write(
+                "#  This file is part of IML\n"
+                "#  This file will be overwritten automatically\n"
+                "\n[Unit]\n"
+                "Description=Start Stratagem run on {}\n"
+                "After=iml-manager.target\n"
+                "\n[Service]\n"
+                "Type=oneshot\n"
+                "ExecStart={}".format(config.filesystem_id, iml_cmd))
+            )
+        shell.try_run(["systemctl", "daemon-reload"])
+        shell.try_run(["systemctl", "enable", "--now", "{}.timer".format(name)])
+
 
 class UnconfigureStratagemTimerStep(Step):
     def run(self, kwargs):
         job_log.debug("Unconfigure stratagem timer step kwargs: {}".format(kwargs))
-        # Remove systemd timer
+
+        config = kwargs["config"]
+
+        name = "iml-stratagem-{}".format(config.id)
+        shell.try_run(["systemctl", "disable", "--now", "{}.timer".format(name)])
+
+        os.unlink("/etc/systemd/system/{}.timer".format(name))
+        os.unlink("/etc/systemd/system/{}.service".format(name))
 
 
 class ConfigureStratagemJob(StateChangeJob):
@@ -100,7 +145,7 @@ class ConfigureStratagemJob(StateChangeJob):
         return help_text["configure_stratagem_long"]
 
     def get_steps(self):
-        steps = [(ConfigureStratagemTimerStep, {})]
+        steps = [(ConfigureStratagemTimerStep, {"config": self.stratagem_configuration})]
 
         return steps
 
@@ -127,7 +172,7 @@ class UnconfigureStratagemJob(StateChangeJob):
         return "Unconfigure Stratagem for the given filesystem"
 
     def get_steps(self):
-        steps = [(UnconfigureStratagemTimerStep, {})]
+        steps = [(UnconfigureStratagemTimerStep, {"config": self.stratagem_configuration})]
 
         return steps
 
