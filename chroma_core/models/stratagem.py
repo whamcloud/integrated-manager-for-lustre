@@ -22,6 +22,7 @@ from chroma_core.lib.stratagem import (
     aggregate_points,
     submit_aggregated_data,
 )
+from chroma_core.lib.util import CommandLine
 
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
@@ -66,7 +67,7 @@ class StratagemConfiguration(StatefulObject):
         ordering = ["id"]
 
 
-class ConfigureStratagemTimerStep(Step):
+class ConfigureStratagemTimerStep(Step, CommandLine):
     def run(self, kwargs):
         job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
         # Create systemd timer
@@ -85,11 +86,11 @@ class ConfigureStratagemTimerStep(Step):
                 "\n[Unit]\n"
                 "Description=Start Stratagem run on {}\n"
                 "\n[Timer]\n"
-                "Unit={}.service\n"
-                "OnUnitActiveSec={}".format(config.filesystem_id, name, config.interval)
+                "OnBootSec={}\n"
+                "OnUnitActiveSec={}\n".format(config.filesystem_id, config.interval, config.interval)
             )
 
-        iml_cmd = "iml stratagem scan --filesystem {}".format(config.filesystem_id)
+        iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem_id)
         if config.report_duration is not None and config.report_duration > 0:
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration > 0:
@@ -103,23 +104,25 @@ class ConfigureStratagemTimerStep(Step):
                 "After=iml-manager.target\n"
                 "\n[Service]\n"
                 "Type=oneshot\n"
-                "ExecStart={}".format(config.filesystem_id, iml_cmd)
+                "ExecStart={}\n".format(config.filesystem_id, iml_cmd)
             )
-        shell.try_run(["systemctl", "daemon-reload"])
-        shell.try_run(["systemctl", "enable", "--now", "{}.timer".format(name)])
+        self.try_shell(["systemctl", "daemon-reload"])
+        self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(name)])
 
 
-class UnconfigureStratagemTimerStep(Step):
+class UnconfigureStratagemTimerStep(Step, CommandLine):
     def run(self, kwargs):
         job_log.debug("Unconfigure stratagem timer step kwargs: {}".format(kwargs))
 
         config = kwargs["config"]
 
         name = "iml-stratagem-{}".format(config.id)
-        shell.try_run(["systemctl", "disable", "--now", "{}.timer".format(name)])
+
+        self.try_shell(["systemctl", "disable", "--now", "{}.timer".format(name)])
 
         os.unlink("/etc/systemd/system/{}.timer".format(name))
         os.unlink("/etc/systemd/system/{}.service".format(name))
+        self.try_shell(["systemctl", "daemon-reload"])
 
 
 class ConfigureStratagemJob(StateChangeJob):
