@@ -3,8 +3,10 @@
 // license that can be found in the LICENSE file.
 
 mod add_stratagem_button;
+mod delete_stratagem_button;
 mod inode_error;
 pub mod inode_table;
+mod update_stratagem_button;
 
 use bootstrap_components::bs_well::well;
 use seed::prelude::*;
@@ -15,7 +17,7 @@ use iml_toggle::toggle;
 use seed::{class, div, dom_types::At, h4, style};
 
 /// Record from the `chroma_core_stratagemconfiguration` table
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct StratagemConfiguration {
     pub id: u32,
     pub filesystem_id: u32,
@@ -26,8 +28,18 @@ pub struct StratagemConfiguration {
     pub state: String,
 }
 
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
+pub struct StratagemUpdate {
+    pub id: u32,
+    pub filesystem: u32,
+    pub interval: u64,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+}
+
 #[derive(Debug)]
 pub struct Model {
+    pub id: Option<u32>,
     pub destroyed: bool,
     pub fs_id: u32,
     pub run_config: iml_duration_picker::Model,
@@ -37,6 +49,8 @@ pub struct Model {
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
     pub add_stratagem_button: add_stratagem_button::Model,
+    pub delete_stratagem_button: delete_stratagem_button::Model,
+    pub update_stratagem_button: update_stratagem_button::Model,
     pub ready: bool,
     pub configured: bool,
 }
@@ -50,6 +64,7 @@ pub struct ReadyAndFs {
 impl Default for Model {
     fn default() -> Self {
         Model {
+            id: None,
             fs_id: 1,
             run_config: iml_duration_picker::Model {
                 value: "30".into(),
@@ -82,6 +97,40 @@ impl Default for Model {
             ready: false,
             configured: false,
             add_stratagem_button: add_stratagem_button::Model::default(),
+            delete_stratagem_button: delete_stratagem_button::Model::default(),
+            update_stratagem_button: update_stratagem_button::Model::default(),
+        }
+    }
+}
+
+impl Model {
+    fn get_stratagem_update_config(&self) -> Option<StratagemUpdate> {
+        if let Some(id) = self.id {
+            let interval = self.run_config.value.parse::<u64>();
+
+            if let Ok(interval) = interval {
+                let report_duration: Option<u64> = match self.report_config.disabled {
+                    false => self.report_config.value.parse::<u64>().ok(),
+                    true => None,
+                };
+
+                let purge_duration: Option<u64> = match self.purge_config.disabled {
+                    false => self.purge_config.value.parse::<u64>().ok(),
+                    true => None,
+                };
+
+                Some(StratagemUpdate {
+                    id,
+                    filesystem: self.fs_id,
+                    interval,
+                    report_duration,
+                    purge_duration,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 }
@@ -98,6 +147,8 @@ pub enum Msg {
     PurgeConfig(iml_duration_picker::Msg),
     InodeTable(inode_table::Msg),
     AddStratagemButton(add_stratagem_button::Msg),
+    DeleteStratagemButton(delete_stratagem_button::Msg),
+    UpdateStratagemButton(update_stratagem_button::Msg),
     WindowClick,
 }
 
@@ -116,6 +167,10 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
         Msg::SetConfig(config) => match config {
             Some(c) => {
                 model.configured = true;
+                model.id = Some(c.id);
+                model.add_stratagem_button.fs_id = model.fs_id;
+                model.delete_stratagem_button.config_id = c.id;
+
                 model.run_config.value = c.interval.to_string();
                 model.report_active = c.report_duration.is_some();
                 match c.report_duration {
@@ -137,6 +192,7 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             }
             None => {
                 model.configured = false;
+                model.id = None;
                 model.run_config.value = "".to_string();
                 model.report_active = false;
                 model.report_config.value = "".to_string();
@@ -159,6 +215,23 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             )
             .map_message(Msg::AddStratagemButton);
         }
+        Msg::DeleteStratagemButton(msg) => {
+            *_orders = call_update(
+                delete_stratagem_button::update,
+                msg,
+                &mut model.delete_stratagem_button,
+            )
+            .map_message(Msg::DeleteStratagemButton);
+        }
+        Msg::UpdateStratagemButton(msg) => {
+            model.update_stratagem_button.config_data = model.get_stratagem_update_config();
+            *_orders = call_update(
+                update_stratagem_button::update,
+                msg,
+                &mut model.update_stratagem_button,
+            )
+            .map_message(Msg::UpdateStratagemButton);
+        }
         Msg::WindowClick => {
             if model.run_config.watching.should_update() {
                 model.run_config.watching.update();
@@ -178,27 +251,15 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
 }
 
 fn detail_header<T>(header: &str) -> El<T> {
-    h4![
-        header,
-        style! {
-        "color" => "#777",
-        "grid-column" => "1 / span 3",
-        "grid-row-end" => "1"}
-    ]
+    h4![class!["header"], header,]
 }
 
 fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
-    well(children)
-        .add_style("display".into(), "grid".into())
-        .add_style("grid-template-columns".into(), "50% 25% 25%".into())
-        .add_style("grid-row-gap".into(), px(20))
+    well(children).add_class("stratagem-config")
 }
 
 fn detail_label<T>(content: &str) -> El<T> {
-    div![
-        content,
-        style! { "font-weight" => "700", "color" => "#777" }
-    ]
+    div![class!["label"], content]
 }
 
 // View
@@ -207,25 +268,42 @@ pub fn view(model: &Model) -> El<Msg> {
         detail_header("Stratagem Configuration"),
         detail_label("Scan filesystem every"),
         div![
-            class!["input-group"],
+            class!["input-group", "duration-picker"],
             duration_picker(&model.run_config).map_message(Msg::RunConfig)
         ],
-        div![],
+        div![class!["enable_button_space"]],
         detail_label("Generate report on files older than"),
         div![
-            class!["input-group"],
+            class!["input-group", "duration-picker"],
             duration_picker(&model.report_config).map_message(Msg::ReportConfig)
         ],
-        toggle(!model.report_config.disabled).map_message(Msg::ToggleReport),
+        div![],
+        div![
+            class!["toggle-button"],
+            toggle(!model.report_config.disabled).map_message(Msg::ToggleReport),
+        ],
+        div![],
         detail_label("Purge Files older than"),
         div![
             class!["input-group"],
             duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
         ],
-        toggle(!model.purge_config.disabled).map_message(Msg::TogglePurge),
+        div![],
+        div![
+            class!["toggle-button"],
+            toggle(!model.purge_config.disabled).map_message(Msg::TogglePurge),
+        ],
+        div![],
     ];
 
     if model.configured {
+        configuration_component.extend(vec![
+            delete_stratagem_button::view(&model.delete_stratagem_button)
+                .map_message(Msg::DeleteStratagemButton),
+            update_stratagem_button::view(&model.update_stratagem_button)
+                .map_message(Msg::UpdateStratagemButton),
+        ]);
+
         div![
             h4![class!["section-header"], "Stratagem"],
             well(vec![grafana_chart(

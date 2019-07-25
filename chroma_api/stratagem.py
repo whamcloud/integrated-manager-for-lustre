@@ -246,6 +246,17 @@ class StratagemConfigurationResource(StatefulModelResource):
         filtering = {"filesystem_id": ["exact"]}
 
     @validate
+    def obj_update(self, bundle, **kwargs):
+        config = StratagemConfiguration.objects.get(pk=kwargs["pk"])
+        config.interval = bundle.data.get("interval")
+        config.report_duration = bundle.data.get("report_duration")
+        config.purge_duration = bundle.data.get("purge_duration")
+        config.save()
+
+        bundle.obj = config
+        return bundle
+
+    @validate
     def obj_create(self, bundle, **kwargs):
         command_id = JobSchedulerClient.configure_stratagem(bundle.data)
 

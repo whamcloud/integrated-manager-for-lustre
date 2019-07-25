@@ -7,31 +7,25 @@ use iml_environment::csrf_token;
 use seed::prelude::*;
 use seed::{attrs, button, class, dom_types::At, fetch, log, style};
 
-#[derive(Debug, serde::Serialize)]
-pub struct UnconfiguredStratagemConfiguration {
-    filesystem: u32,
-    interval: u64,
-}
-
 #[derive(Debug, Default)]
 pub struct Model {
-    pub fs_id: u32,
+    pub config_id: u32,
 }
 
 // Update
 #[derive(Clone, Debug)]
 pub enum Msg {
-    AddStratagem,
-    StratagemAdded(fetch::FetchObject<iml_wire_types::Command>),
+    DeleteStratagem,
+    StratagemDeleted(fetch::FetchObject<iml_wire_types::Command>),
     OnFetchError(seed::fetch::FailReason),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
-        Msg::AddStratagem => {
-            orders.skip().perform_cmd(add_stratagem(model.fs_id));
+        Msg::DeleteStratagem => {
+            orders.skip().perform_cmd(delete_stratagem(model.config_id));
         }
-        Msg::StratagemAdded(fetch_object) => match fetch_object.response() {
+        Msg::StratagemDeleted(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log!(format!("Response data: {:#?}", response.data));
                 orders.skip();
@@ -49,35 +43,30 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     log::trace!("Model: {:#?}", model);
 }
 
-fn add_stratagem(filesystem_id: u32) -> impl Future<Item = Msg, Error = Msg> {
-    let url: String = "/api/stratagem_configuration/".into();
-    let config = UnconfiguredStratagemConfiguration {
-        filesystem: filesystem_id,
-        interval: 2_592_000_000,
-    };
+fn delete_stratagem(config_id: u32) -> impl Future<Item = Msg, Error = Msg> {
+    let url: String = format!("/api/stratagem_configuration/{}", config_id).into();
 
     seed::fetch::Request::new(url)
-        .method(seed::fetch::Method::Post)
+        .method(seed::fetch::Method::Delete)
         .header(
             "X-CSRFToken",
             &csrf_token().expect("Couldn't get csrf token.")[..],
         )
-        .send_json(&config)
-        .fetch_json(Msg::StratagemAdded)
+        .fetch_json(Msg::StratagemDeleted)
 }
 
 // View
 pub fn view(_model: &Model) -> El<Msg> {
     button![
-        class!["btn btn-primary"],
+        class!["btn btn-danger delete-button"],
         attrs! {
             At::Type => "button",
         },
         style! {
-            "grid-column" => "1 / span 3",
+            "grid-column" => "1",
             "grid-row-end" => "5"
         },
-        simple_ev(Ev::Click, Msg::AddStratagem),
-        "Enable Stratagem",
+        simple_ev(Ev::Click, Msg::DeleteStratagem),
+        "Delete Stratagem",
     ]
 }
