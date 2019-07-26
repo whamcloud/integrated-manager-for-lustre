@@ -30,7 +30,7 @@ pub struct Cache {
     pub stratagem_config: HashMap<u32, StratagemConfiguration>,
     pub target: HashMap<u32, Target<TargetConfParam>>,
     pub volume: HashMap<u32, Volume>,
-    pub volume_node: HashMap<u32, VolumeNode>,
+    pub volume_node: HashMap<u32, VolumeNodeRecord>,
 }
 
 impl Cache {
@@ -76,7 +76,7 @@ impl Cache {
                 self.volume.insert(x.id, x);
             }
             Record::VolumeNode(x) => {
-                self.volume_node.insert(x.id, x);
+                self.volume_node.insert(x.id(), x);
             }
         }
     }
@@ -136,7 +136,7 @@ pub enum Record {
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
     Volume(Volume),
-    VolumeNode(VolumeNode),
+    VolumeNode(VolumeNodeRecord),
     LnetConfiguration(LnetConfigurationRecord),
 }
 
@@ -238,38 +238,51 @@ pub fn db_record_to_change_record(
                     .map(RecordChange::Update),
             ),
         },
-        DbRecord::StratagemConfiguration(x) => match msg_type {
-            MessageType::Delete => Box::new(future::ok(RecordChange::Delete(
+        DbRecord::StratagemConfiguration(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
                 RecordId::StratagemConfig(x.id()),
             ))) as BoxedFuture,
-            MessageType::Insert | MessageType::Update => {
+            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
+                RecordId::StratagemConfig(x.id()),
+            ))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Box::new(future::ok(RecordChange::Update(Record::StratagemConfig(x))))
             }
         },
-        DbRecord::LnetConfiguration(x) => match msg_type {
-            MessageType::Delete => Box::new(future::ok(RecordChange::Delete(
+        DbRecord::LnetConfiguration(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
                 RecordId::LnetConfiguration(x.id()),
             ))) as BoxedFuture,
-            MessageType::Insert | MessageType::Update => Box::new(future::ok(
+            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
+                RecordId::LnetConfiguration(x.id()),
+            ))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(future::ok(
                 RecordChange::Update(Record::LnetConfiguration(x)),
             )),
         },
-        DbRecord::ManagedTargetMount(x) => match msg_type {
-            MessageType::Delete => Box::new(future::ok(RecordChange::Delete(
+        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
                 RecordId::ManagedTargetMount(x.id()),
             ))) as BoxedFuture,
-            MessageType::Insert | MessageType::Update => Box::new(future::ok(
+            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
+                RecordId::ManagedTargetMount(x.id()),
+            ))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(future::ok(
                 RecordChange::Update(Record::ManagedTargetMount(x)),
             )),
         },
         DbRecord::Volume(x) => converter(client, msg_type, x, Record::Volume, RecordId::Volume),
-        DbRecord::VolumeNode(x) => converter(
-            client,
-            msg_type,
-            x,
-            Record::VolumeNode,
-            RecordId::VolumeNode,
-        ),
+        DbRecord::VolumeNode(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
+                RecordId::VolumeNode(x.id()),
+            ))) as BoxedFuture,
+            (_, ref x) if x.deleted() => Box::new(future::ok(RecordChange::Delete(
+                RecordId::VolumeNode(x.id()),
+            ))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Box::new(future::ok(RecordChange::Update(Record::VolumeNode(x))))
+            }
+        },
     }
 }
 
@@ -300,20 +313,25 @@ pub fn populate_from_api(
         .map(|x: ApiList<Alert>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let host_fut = get(client, Host::endpoint_name(), Host::query())
+    let host_fut = get(client.clone(), Host::endpoint_name(), Host::query())
         .map(|x: ApiList<Host>| x.objects)
         .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
 
-    fs_fut.join4(target_fut, active_alert_fut, host_fut).map(
-        move |(filesystem, target, alert, host)| {
+    let volume_fut = get(client, Volume::endpoint_name(), Volume::query())
+        .map(|x: ApiList<Volume>| x.objects)
+        .map(|x| x.into_iter().map(|x| (x.id, x)).collect());
+
+    fs_fut
+        .join5(target_fut, active_alert_fut, host_fut, volume_fut)
+        .map(move |(filesystem, target, alert, host, volume)| {
             let mut api_cache = shared_api_cache.lock();
 
             api_cache.filesystem = filesystem;
             api_cache.target = target;
             api_cache.active_alert = alert;
             api_cache.host = host;
-        },
-    )
+            api_cache.volume = volume;
+        })
 }
 
 fn fetch_from_db<T>(
@@ -348,24 +366,53 @@ pub fn populate_from_db(
     shared_api_cache: SharedCache,
     client: SharedClient,
 ) -> impl Future<Item = (), Error = iml_postgres::Error> {
-    fetch_from_db(
+    let target_mount_fut = fetch_from_db(
+        Arc::clone(&client),
+        &format!(
+            "select * from {} where not_deleted = 't'",
+            ManagedTargetMountRecord::table_name()
+        ),
+    );
+
+    let stratagem_config_fut = fetch_from_db(
         Arc::clone(&client),
         &format!(
             "select * from {} where not_deleted = 't'",
             StratagemConfiguration::table_name()
         ),
-    )
-    .join(fetch_from_db(
+    );
+
+    let lnet_config_fut = fetch_from_db(
         Arc::clone(&client),
         &format!(
             "select * from {} where not_deleted = 't'",
             LnetConfigurationRecord::table_name()
         ),
-    ))
-    .map(move |(stratagem_configuration, lnet_configuration)| {
-        let mut cache = shared_api_cache.lock();
+    );
 
-        cache.stratagem_config = stratagem_configuration;
-        cache.lnet_configuration = lnet_configuration;
-    })
+    let volume_node_fut = fetch_from_db(
+        Arc::clone(&client),
+        &format!(
+            "select * from {} where not_deleted = 't'",
+            VolumeNodeRecord::table_name()
+        ),
+    );
+
+    target_mount_fut
+        .join4(volume_node_fut, stratagem_config_fut, lnet_config_fut)
+        .map(
+            move |(
+                managed_target_mount,
+                volume_node_fut,
+                stratagem_configuration,
+                lnet_configuration,
+            )| {
+                let mut cache = shared_api_cache.lock();
+
+                cache.managed_target_mount = managed_target_mount;
+                cache.volume_node = volume_node_fut;
+                cache.stratagem_config = stratagem_configuration;
+                cache.lnet_configuration = lnet_configuration;
+            },
+        )
 }

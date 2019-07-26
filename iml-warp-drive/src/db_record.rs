@@ -108,7 +108,7 @@ impl Name for VolumeRecord {
 }
 
 /// Record from the `chroma_core_volumenode` table
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct VolumeNodeRecord {
     id: u32,
     volume_id: u32,
@@ -141,6 +141,21 @@ impl Name for VolumeNodeRecord {
     }
 }
 
+impl From<Row> for VolumeNodeRecord {
+    fn from(row: Row) -> Self {
+        VolumeNodeRecord {
+            id: row.get::<_, i32>("id") as u32,
+            volume_id: row.get::<_, i32>("volume_id") as u32,
+            host_id: row.get::<_, i32>("host_id") as u32,
+            path: row.get("path"),
+            storage_resource_id: row.get("storage_resource_id"),
+            primary: row.get("primary"),
+            _use: row.get("use"),
+            not_deleted: row.get("not_deleted"),
+        }
+    }
+}
+
 /// Record from the `chroma_core_managedtargetmount` table
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct ManagedTargetMountRecord {
@@ -162,6 +177,20 @@ impl Id for ManagedTargetMountRecord {
 impl NotDeleted for ManagedTargetMountRecord {
     fn not_deleted(&self) -> bool {
         not_deleted(self.not_deleted)
+    }
+}
+
+impl From<Row> for ManagedTargetMountRecord {
+    fn from(row: Row) -> Self {
+        ManagedTargetMountRecord {
+            id: row.get::<_, i32>("id") as u32,
+            host_id: row.get::<_, i32>("host_id") as u32,
+            mount_point: row.get("mount_point"),
+            volume_node_id: row.get::<_, i32>("volume_node_id") as u32,
+            primary: row.get("primary"),
+            target_id: row.get::<_, i32>("target_id") as u32,
+            not_deleted: row.get("not_deleted"),
+        }
     }
 }
 
@@ -300,6 +329,7 @@ pub struct StratagemConfiguration {
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
     pub immutable_state: bool,
+    pub not_deleted: Option<bool>,
     pub state: String,
 }
 
@@ -316,6 +346,7 @@ impl From<Row> for StratagemConfiguration {
                 .get::<_, Option<i64>>("purge_duration")
                 .map(|x| x as u64),
             immutable_state: row.get("immutable_state"),
+            not_deleted: row.get("not_deleted"),
             state: row.get("state"),
         }
     }
@@ -324,6 +355,12 @@ impl From<Row> for StratagemConfiguration {
 impl Id for StratagemConfiguration {
     fn id(&self) -> u32 {
         self.id
+    }
+}
+
+impl NotDeleted for StratagemConfiguration {
+    fn not_deleted(&self) -> bool {
+        not_deleted(self.not_deleted)
     }
 }
 
