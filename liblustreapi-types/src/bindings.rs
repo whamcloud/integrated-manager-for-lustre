@@ -36,6 +36,7 @@ impl<T> ::std::clone::Clone for __IncompleteArrayField<T> {
         Self::new()
     }
 }
+pub const OBD_MAX_FIDS_IN_ARRAY: u32 = 4096;
 pub type __u16 = ::std::os::raw::c_ushort;
 pub type __u32 = ::std::os::raw::c_uint;
 pub type __u64 = ::std::os::raw::c_ulonglong;
@@ -291,4 +292,25 @@ impl Default for lov_user_mds_data_v1 {
     fn default() -> Self {
         unsafe { ::std::mem::zeroed() }
     }
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct fid_array {
+    pub fa_nr: __u32,
+    pub fa_padding0: __u32,
+    pub fa_padding1: __u64,
+    pub fa_fids: __IncompleteArrayField<lu_fid>,
+}
+#[test]
+fn bindgen_test_layout_fid_array() {
+    assert_eq!(
+        ::std::mem::size_of::<fid_array>(),
+        16usize,
+        concat!("Size of: ", stringify!(fid_array))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<fid_array>(),
+        8usize,
+        concat!("Alignment of ", stringify!(fid_array))
+    );
 }

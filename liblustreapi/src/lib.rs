@@ -26,6 +26,7 @@ const LIBLUSTRE: &str = "liblustreapi.so.1";
 
 // FID
 
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Fid {
     pub seq: u64,
@@ -67,6 +68,53 @@ impl From<types::lu_fid> for Fid {
             oid: fid.f_oid,
             ver: fid.f_ver,
         }
+    }
+}
+
+impl From<Fid> for types::lu_fid {
+    fn from(fid: Fid) -> Self {
+        Self {
+            f_seq: fid.seq,
+            f_oid: fid.oid,
+            f_ver: fid.ver,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FidArrayHdr {
+    pub nr: u32,
+    pub pad0: u32,
+    pub pad1: u64,
+}
+
+impl FidArrayHdr {
+    pub fn new(num: u32) -> Self {
+        FidArrayHdr {
+            nr: num,
+            pad0: 0,
+            pad1: 0,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union RmfidsArg {
+    pub hdr: FidArrayHdr,
+    pub fid: Fid,
+}
+
+impl From<FidArrayHdr> for RmfidsArg {
+    fn from(hdr: FidArrayHdr) -> Self {
+        Self { hdr: hdr }
+    }
+}
+
+impl From<Fid> for RmfidsArg {
+    fn from(fid: Fid) -> Self {
+        Self { fid: fid }
     }
 }
 
@@ -265,29 +313,70 @@ impl Llapi {
         Ok(())
     }
 
+    // Does llapi_rmfids() or returns back fidlist as a Vec<String> in Err()
+    fn llapi_rmfids(
+        &self,
+        mntpt: &str,
+        fidlist: impl IntoIterator<Item = String>,
+    ) -> Result<i32, Vec<String>> {
+        let flist: Vec<String> = fidlist.into_iter().collect();
+        let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
+            match unsafe { self.lib.get(b"llapi_rmfids\0") } {
+                Err(_) => return Err(flist),
+                Ok(f) => f,
+            };
+
+        let devptr = match CString::new(mntpt) {
+            Ok(c) => c.into_raw(),
+            Err(_) => return Err(flist),
+        };
+
+        let mut fids: Vec<RmfidsArg> = Vec::with_capacity(flist.len() + 1);
+        fids.push(FidArrayHdr::new(0).into());
+        for fidstr in flist {
+            if let Ok(fid) = Fid::from_str(&fidstr) {
+                fids.push(fid.into());
+            } else {
+                log::error!("Bad fid format: {}", fidstr);
+            }
+        }
+        unsafe {
+            fids[0].hdr.nr = fids.len() as u32 - 1;
+        }
+
+        let rc = func(devptr, fids.as_ptr());
+
+        // Ensure CString is freed
+        unsafe {
+            let _ = CString::from_raw(devptr);
+        }
+
+        Ok(rc)
+    }
+
     pub fn rmfids(
         &self,
         mntpt: &str,
         fidlist: impl IntoIterator<Item = String>,
     ) -> Result<(), LiblustreError> {
-        // @@TODO replace with sys::llapi_rmfid once LU-12090 lands
-        for fidstr in fidlist {
-            self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
-                log::error!(
-                    "Couldn't remove fid {} with mountpoint {}: {}.",
-                    fidstr,
-                    mntpt,
-                    x
-                )
-            });
+        if let Err(flist) = self.llapi_rmfids(&mntpt, fidlist) {
+            for fidstr in flist {
+                self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
+                    log::error!(
+                        "Couldn't remove fid {} with mountpoint {}: {}.",
+                        fidstr,
+                        mntpt,
+                        x
+                    )
+                });
+            }
         }
 
         Ok(())
     }
 
     pub fn rmfids_size(&self) -> usize {
-        // @@TODO determine size of llapi_rmfid() array
-        10
+        types::OBD_MAX_FIDS_IN_ARRAY as usize
     }
 }
 
@@ -369,5 +458,24 @@ mod tests {
             ver: 0x10,
         };
         assert_eq!(Ok(fid), Fid::from_str("[0x404:0x40:0x10]"))
+    }
+
+    #[test]
+    fn test_layout_RmfidsArg() {
+        assert_eq!(
+            ::std::mem::size_of::<RmfidsArg>(),
+            16usize,
+            concat!("Size of: ", stringify!(RmfidsArg))
+        );
+        assert_eq!(
+            ::std::mem::align_of::<RmfidsArg>(),
+            8usize,
+            concat!("Alignment of ", stringify!(RmfidsArg))
+        );
+        assert_eq!(
+            ::std::mem::size_of::<RmfidsArg>(),
+            ::std::mem::size_of::<Fid>(),
+            concat!("Size of: ", stringify!(RmfidsArg))
+        );
     }
 }
