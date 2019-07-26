@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use bootstrap_components::popover;
+use bootstrap_components::{
+    bs_panel::{panel, panel_body, panel_heading},
+    popover,
+};
 use iml_tooltip::{tooltip, TooltipPlacement, TooltipSize};
 use iml_utils::Locks;
 use iml_utils::WatchState;
@@ -32,18 +35,6 @@ fn get_tooltip_message(
 
 #[derive(Debug, Clone)]
 pub struct LockIndicatorState(pub u32, pub WatchState);
-
-fn panel<T>(els: Vec<El<T>>) -> El<T> {
-    div![class!["panel", "panel-default"], els]
-}
-
-fn panel_heading<T>(el: El<T>) -> El<T> {
-    div![class!["panel-heading"], el]
-}
-
-fn panel_body<T>(el: El<T>) -> El<T> {
-    div![class!["panel-body"], el]
-}
 
 fn lock_panel<T>(title: &str, locks: &HashSet<&LockChange>) -> El<T> {
     if locks.is_empty() {

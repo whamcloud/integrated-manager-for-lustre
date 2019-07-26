@@ -9,6 +9,26 @@ use std::{
     collections::{HashMap, HashSet},
     mem,
 };
+use wasm_bindgen::JsValue;
+
+pub trait IntoSerdeOpt {
+    fn into_serde_opt<T>(&self) -> serde_json::Result<Option<T>>
+    where
+        T: for<'a> serde::de::Deserialize<'a>;
+}
+
+impl IntoSerdeOpt for JsValue {
+    fn into_serde_opt<T>(&self) -> serde_json::Result<Option<T>>
+    where
+        T: for<'a> serde::de::Deserialize<'a>,
+    {
+        if self.is_undefined() || self.is_null() {
+            Ok(None)
+        } else {
+            self.into_serde().map(Some)
+        }
+    }
+}
 
 pub fn extract_api(s: &str) -> Option<&str> {
     let re = Regex::new(r"^/?api/[^/]+/(\d+)/?$").unwrap();
@@ -30,6 +50,23 @@ pub fn format_bytes(bytes: f64, precision: Option<usize>) -> String {
     let bytes = format!("{:.*}", precision.unwrap_or(1), bytes);
 
     format!("{} {}", bytes, units[pwr as usize])
+}
+
+pub fn format_number(num: f64, precision: Option<usize>) -> String {
+    let units = ["", "k", "M", "B", "T"];
+
+    let sign = if num < 0_f64 { "-" } else { "" };
+
+    let num = num.abs();
+
+    let pwr = (num.ln() / 1000_f64.ln()).floor() as i32;
+    let pwr = cmp::min(pwr, (units.len() - 1) as i32);
+    let pwr = cmp::max(pwr, 0);
+
+    let num = num / 1000_f64.powi(pwr);
+    let num = format!("{:.*}", precision.unwrap_or(1), num);
+
+    format!("{}{}{}", sign, num, units[pwr as usize])
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -112,5 +149,26 @@ mod tests {
             "4.416 ZiB"
         );
         assert_eq!(format_bytes(139_083_776.0, Some(1)), "132.6 MiB");
+    }
+
+    #[test]
+    fn test_format_number_success() {
+        assert_eq!(format_number(22.0, Some(10)), "22.0000000000");
+        assert_eq!(format_number(22.3, Some(10)), "22.3000000000");
+        assert_eq!(format_number(22.3, Some(2)), "22.30");
+        assert_eq!(format_number(22.3, Some(1)), "22.3");
+        assert_eq!(format_number(0.023, Some(5)), "0.02300");
+        assert_eq!(format_number(0.023, Some(1)), "0.0");
+        assert_eq!(format_number(8007.0, Some(5)), "8.00700k");
+        assert_eq!(format_number(8007.0, Some(3)), "8.007k");
+        assert_eq!(format_number(8007.0, Some(2)), "8.01k");
+        assert_eq!(format_number(8_007_000.0, Some(5)), "8.00700M");
+        assert_eq!(format_number(8_007_000_000.0, Some(1)), "8.0B");
+        assert_eq!(format_number(8_007_000_000_000.0, Some(1)), "8.0T");
+        assert_eq!(format_number(800_700.0, Some(5)), "800.70000k");
+        assert_eq!(format_number(8200.0, Some(5)), "8.20000k");
+        assert_eq!(format_number(8200.0, Some(3)), "8.200k");
+        assert_eq!(format_number(8200.0, Some(1)), "8.2k");
+        assert_eq!(format_number(8200.0, Some(0)), "8k");
     }
 }
