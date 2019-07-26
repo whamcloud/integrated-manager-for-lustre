@@ -1,7 +1,8 @@
 use crate::inode_error::InodeError;
-use bootstrap_components::bs_table::table;
+use bootstrap_components::bs_table::{table, TABLE_STRIPED};
 use futures::Future;
 use seed::{
+    class,
     fetch::{FetchObject, Request, RequestController},
     prelude::*,
     td, th, tr,
@@ -164,7 +165,7 @@ pub fn view(model: &Model) -> El<Msg> {
             let mut inodes: Vec<El<Msg>> = vec![tr![th!["Uid"], th!["Count"]]];
 
             inodes.extend(entries);
-            table(inodes)
+            table(class![TABLE_STRIPED], inodes)
         } else {
             seed::empty()
         }

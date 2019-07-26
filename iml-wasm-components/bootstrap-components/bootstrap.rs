@@ -23,9 +23,12 @@ pub const RIGHT: Placement = Placement("right");
 pub const TOP: Placement = Placement("top");
 pub const BOTTOM: Placement = Placement("bottom");
 
+pub const DISABLED: &str = "disabled";
+
 pub mod bs_button {
     use seed::{attrs, button, class, div, dom_types::Attrs, prelude::*};
 
+    pub const BTN: &str = "btn";
     pub const BTN_GROUP: &str = "btn-group";
 
     pub const BTN_DEFAULT: &str = "btn-default";
@@ -41,7 +44,7 @@ pub mod bs_button {
     pub const EXTRASMALL: &str = "btn-xs";
 
     pub fn btn_cfg(more_attrs: Attrs) -> Attrs {
-        let mut attrs = class!["btn"];
+        let mut attrs = class![BTN];
 
         attrs.merge(attrs! { At::Type => "button" });
         attrs.merge(more_attrs);
@@ -66,6 +69,7 @@ pub mod bs_dropdown {
     use seed::{class, div, dom_types::Attrs, i, li, prelude::*, style, ul};
 
     pub const DROPDOWN_MENU_RIGHT: &str = "dropdown_menu_right";
+    pub const DROPDOWN_TOGGLE: &str = "dropdown-toggle";
 
     pub fn header<T>(label: &str) -> El<T> {
         li![
@@ -77,7 +81,7 @@ pub mod bs_dropdown {
 
     pub fn btn<T>(btn_name: &str) -> El<T> {
         bs_button::btn(
-            class!["dropdown-toggle"],
+            class![DROPDOWN_TOGGLE],
             vec![
                 El::new_text(btn_name),
                 i![class!["fa", "fa-fw", "fa-caret-down", "icon-caret-down"]],
@@ -124,9 +128,81 @@ pub mod popover {
 }
 
 pub mod bs_table {
-    use seed::{class, prelude::*, table};
+    use seed::{class, div, dom_types::Attrs, prelude::*, table};
 
-    pub fn table<T>(children: Vec<El<T>>) -> El<T> {
-        table![class!["table"], children]
+    pub const TABLE_STRIPED: &str = "table-striped";
+    pub const TABLE_HOVER: &str = "table-hover";
+
+    pub fn table<T>(more_attrs: Attrs, children: Vec<El<T>>) -> El<T> {
+        let mut attrs = class!["table"];
+        attrs.merge(more_attrs);
+
+        table![attrs, children]
+    }
+
+    pub fn table_responsive<T>(el: El<T>) -> El<T> {
+        div![class!["table-responsive"], el]
+    }
+}
+
+pub mod bs_well {
+    use seed::{class, div, prelude::*};
+
+    pub fn well<T>(children: Vec<El<T>>) -> El<T> {
+        div![class!["well"], children]
+    }
+}
+
+pub mod bs_panel {
+    use seed::{class, div, prelude::*};
+
+    pub fn panel<T>(els: Vec<El<T>>) -> El<T> {
+        div![class!["panel", "panel-default"], els]
+    }
+
+    pub fn panel_heading<T>(el: El<T>) -> El<T> {
+        div![class!["panel-heading"], el]
+    }
+
+    pub fn panel_body<T>(el: El<T>) -> El<T> {
+        div![class!["panel-body"], el]
+    }
+
+    pub fn panel_footer<T>(els: Vec<El<T>>) -> El<T> {
+        div![class!["panel-footer"], els]
+    }
+}
+
+pub mod bs_modal {
+    use seed::{class, div, prelude::*, style};
+
+    pub fn modal<T>(children: Vec<El<T>>) -> El<T> {
+        div![
+            style! { "display" => "block", "z-index" => "9999" },
+            class!["modal", "fade", "in"],
+            div![
+                class!["modal-dialog"],
+                div![class!["modal-content"], children]
+            ]
+        ]
+    }
+
+    pub fn header<T>(children: Vec<El<T>>) -> El<T> {
+        div![class!["modal-header"], children]
+    }
+
+    pub fn body<T>(children: Vec<El<T>>) -> El<T> {
+        div![class!["modal-body"], children]
+    }
+
+    pub fn footer<T>(children: Vec<El<T>>) -> El<T> {
+        div![class!["modal-footer"], children]
+    }
+
+    pub fn backdrop<T>() -> El<T> {
+        div![
+            style! { "z-index" => "9998" },
+            class!["modal-backdrop", "fade", "in"]
+        ]
     }
 }

@@ -8,7 +8,7 @@ pub mod deferred_action_dropdown;
 pub mod hsm_dropdown;
 pub mod multi_action_dropdown;
 
-pub use iml_fs_page;
+pub use iml_fs::{fs_detail_page, fs_page};
 cfg_if! {
     if #[cfg(feature = "console_log")] {
         fn init_log() {

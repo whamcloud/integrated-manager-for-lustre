@@ -2,15 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::{client_count, mgt_link, space_usage, ui_link};
+use bootstrap_components::bs_button;
 use cfg_if::cfg_if;
 use iml_action_dropdown::{deferred_action_dropdown as dad, has_lock};
 use iml_alert_indicator::{alert_indicator, AlertIndicatorPopoverState};
 use iml_environment::ui_root;
 use iml_lock_indicator::{lock_indicator, LockIndicatorState};
-use iml_pie_chart::pie_chart;
-use iml_utils::{extract_api, format_bytes, Locks, WatchState};
+use iml_utils::{Locks, WatchState};
 use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId};
-use seed::{a, attrs, class, div, h1, h4, i, prelude::*, span, table, tbody, td, th, thead, tr};
+use seed::{a, attrs, class, div, h1, h4, i, prelude::*, table, tbody, td, th, thead, tr};
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
@@ -108,7 +109,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             let to_add = new_keys.difference(&old_keys);
             let to_change = new_keys.intersection(&old_keys);
 
-            log::info!("old keys {:?}, new keys {:?}", old_keys, new_keys);
+            log::trace!(
+                "old keys {:?}, new keys {:?}, change_keys {:?}",
+                old_keys,
+                new_keys,
+                to_change
+            );
 
             for x in to_remove {
                 model.rows.remove(x);
@@ -186,26 +192,6 @@ fn no_fs() -> El<Msg> {
     ]
 }
 
-fn link(href: &str, content: &str) -> El<Msg> {
-    a![attrs! { At::Href => href, At::Type => "button" }, content]
-}
-
-fn space_usage(used: Option<f64>, total: Option<f64>) -> El<Msg> {
-    div![match (used, total) {
-        (Some(used), Some(total)) => div![
-            pie_chart(used, total, "#aec7e8", "#1f77b4")
-                .add_style("width".into(), px(18))
-                .add_style("height".into(), px(18))
-                .add_style("vertical-align".into(), "bottom".into())
-                .add_style("margin-right".into(), px(3)),
-            format_bytes(used, Some(1)),
-            " / ",
-            format_bytes(total, Some(1)),
-        ],
-        _ => span!["Calculating..."],
-    }]
-}
-
 fn fs_rows(model: &Model) -> Vec<El<Msg>> {
     model
         .rows
@@ -216,8 +202,8 @@ fn fs_rows(model: &Model) -> Vec<El<Msg>> {
             let mgt = model.get_mgt(&fs);
 
             tr![
-                td![link(
-                    &format!("{}configure/filesystem/{}", ui_root(), fs.id),
+                td![ui_link(
+                    &format!("configure/filesystem/{}", fs.id),
                     &fs.name
                 )],
                 td![
@@ -237,24 +223,11 @@ fn fs_rows(model: &Model) -> Vec<El<Msg>> {
                     )
                     .map_message(Msg::FsRowPopoverState)
                 ],
-                td![match mgt {
-                    Some(mgt) => link(
-                        &format!(
-                            "{}configure/server/{}",
-                            ui_root(),
-                            extract_api(&mgt.primary_server).unwrap()
-                        ),
-                        &mgt.primary_server_name
-                    ),
-                    None => span!["---"],
-                }],
+                td![mgt_link(mgt)],
                 td![fs.mdts.len().to_string()],
-                td![match fs.client_count {
-                    Some(x) => x.round().to_string(),
-                    None => "---".into(),
-                }],
+                td![client_count(fs.client_count)],
                 td![space_usage(
-                    Some(fs.bytes_total.unwrap() - fs.bytes_free.unwrap()),
+                    fs.bytes_total.and_then(|x| fs.bytes_free.map(|y| x - y)),
                     fs.bytes_total
                 )],
                 td![dad::render(fs.id, &x.dropdown, fs).map_message(Msg::ActionDropdown)],
@@ -281,6 +254,17 @@ fn view(model: &Model) -> El<Msg> {
                         th!["Actions"]
                     ]],
                     tbody![fs_rows(&model)]
+                ],
+                a![
+                    class![
+                        bs_button::BTN_DEFAULT,
+                        bs_button::BTN,
+                        bs_button::SMALL,
+                        "add-fs-button"
+                    ],
+                    attrs! { At::Href => format!("{}configure/filesystem/create/", ui_root()), At::Type => "button"},
+                    i![class!["fa", "fa-plus-circle", "text-success"]],
+                    "Create More Filesystems"
                 ]
             ]
         } else {
