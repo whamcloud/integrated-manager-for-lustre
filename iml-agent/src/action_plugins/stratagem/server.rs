@@ -215,7 +215,7 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
         ],
     };
 
-    if let Some(rd) = rd {
+    if let Some(pd) = pd {
         let name = "purge_fids";
 
         conf.device.groups.push(name.into());
@@ -224,14 +224,14 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", rd),
+                expression: format!("< atime - sys_time {}", pd),
                 argument: "fids_expired".into(),
                 counter_name: Some("fids_expired".into()),
             }],
         });
     }
 
-    if let Some(pd) = pd {
+    if let Some(rd) = rd {
         let name = "warn_fids";
 
         conf.device.groups.push(name.into());
@@ -240,7 +240,7 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", pd),
+                expression: format!("< atime - sys_time {}", rd),
                 argument: "fids_expiring_soon".into(),
                 counter_name: Some("fids_expiring_soon".into()),
             }],
