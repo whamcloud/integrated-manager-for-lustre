@@ -250,6 +250,7 @@ class RunStratagemStep(Step):
                                 "action": "LAT_SHELL_CMD_FID",
                                 "expression": calc_warn_duration(report_duration, purge_duration),
                                 "argument": "fids_expiring_soon",
+                                "counter_name": "fids_expiring_soon",
                             }
                         ],
                     },
@@ -260,6 +261,7 @@ class RunStratagemStep(Step):
                                 "action": "LAT_SHELL_CMD_FID",
                                 "expression": "< atime - sys_time {}".format(purge_duration),
                                 "argument": "fids_expired",
+                                "counter_name": "fids_expired",
                             }
                         ],
                     },
@@ -267,7 +269,7 @@ class RunStratagemStep(Step):
             )
 
             return {
-                "dump_flist": False,
+                "flist_type": "none",
                 "device": {"path": path, "groups": groups},
                 "groups": [
                     {
@@ -288,7 +290,14 @@ class RunStratagemStep(Step):
                         "name": "size_distribution",
                     },
                     {
-                        "rules": [{"action": "LAT_ATTR_CLASSIFY", "expression": "1", "argument": "uid"}],
+                        "rules": [
+                            {
+                                "action": "LAT_ATTR_CLASSIFY",
+                                "expression": "1",
+                                "argument": "uid",
+                                "counter_name": "top_inode_users",
+                            }
+                        ],
                         "name": "user_distribution",
                     },
                 ]
