@@ -108,13 +108,13 @@ pub union RmfidsArg {
 
 impl From<FidArrayHdr> for RmfidsArg {
     fn from(hdr: FidArrayHdr) -> Self {
-        Self { hdr: hdr }
+        Self { hdr }
     }
 }
 
 impl From<Fid> for RmfidsArg {
     fn from(fid: Fid) -> Self {
-        Self { fid: fid }
+        Self { fid }
     }
 }
 
@@ -313,16 +313,19 @@ impl Llapi {
         Ok(())
     }
 
-    // Does llapi_rmfids() or returns back fidlist as a Vec<String> in Err()
-    fn llapi_rmfids(
+    // Does llapi_rmfid() or returns back fidlist as a Vec<String> in Err()
+    fn llapi_rmfid(
         &self,
         mntpt: &str,
         fidlist: impl IntoIterator<Item = String>,
-    ) -> Result<i32, Vec<String>> {
+    ) -> Result<(), Vec<String>> {
         let flist: Vec<String> = fidlist.into_iter().collect();
         let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
-            match unsafe { self.lib.get(b"llapi_rmfids\0") } {
-                Err(_) => return Err(flist),
+            match unsafe { self.lib.get(b"llapi_rmfid\0") } {
+                Err(e) => {
+                    log::info!("Failed load llapi_rmfid: {:?}", e);
+                    return Err(flist);
+                }
                 Ok(f) => f,
             };
 
@@ -333,6 +336,7 @@ impl Llapi {
 
         let mut fids: Vec<RmfidsArg> = Vec::with_capacity(flist.len() + 1);
         fids.push(FidArrayHdr::new(0).into());
+        let flist2 = flist.clone();
         for fidstr in flist {
             if let Ok(fid) = Fid::from_str(&fidstr) {
                 fids.push(fid.into());
@@ -350,8 +354,17 @@ impl Llapi {
         unsafe {
             let _ = CString::from_raw(devptr);
         }
-
-        Ok(rc)
+        if rc == 0 {
+            Ok(())
+        } else {
+            log::info!(
+                "Call to llapi_rmfids({}, [{}, ...]) failed: {}",
+                &mntpt,
+                unsafe { fids[0].hdr.nr },
+                rc
+            );
+            Err(flist2)
+        }
     }
 
     pub fn rmfids(
@@ -359,7 +372,8 @@ impl Llapi {
         mntpt: &str,
         fidlist: impl IntoIterator<Item = String>,
     ) -> Result<(), LiblustreError> {
-        if let Err(flist) = self.llapi_rmfids(&mntpt, fidlist) {
+        if let Err(flist) = self.llapi_rmfid(&mntpt, fidlist) {
+            log::debug!("llapi_rmfid is unavailable, using loop across rmfid");
             for fidstr in flist {
                 self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
                     log::error!(
