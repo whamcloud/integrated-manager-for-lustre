@@ -148,7 +148,9 @@ impl From<Row> for VolumeNodeRecord {
             volume_id: row.get::<_, i32>("volume_id") as u32,
             host_id: row.get::<_, i32>("host_id") as u32,
             path: row.get("path"),
-            storage_resource_id: row.get("storage_resource_id"),
+            storage_resource_id: row
+                .get::<_, Option<i32>>("storage_resource_id")
+                .map(|x| x as u32),
             primary: row.get("primary"),
             _use: row.get("use"),
             not_deleted: row.get("not_deleted"),
