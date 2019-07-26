@@ -19,6 +19,7 @@ from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models import StatefulObject
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models.utils import DeletableManager, _make_deletable
 from chroma_core.models import StonithNotEnabledAlert
 from chroma_help.help import help_text
 from iml_common.blockdevices.blockdevice import BlockDevice
@@ -1739,10 +1740,31 @@ class FailoverTargetJob(MigrateTargetJob):
         return """Forcibly migrate the target to its failover server. Clients attempting to access data on the target while the migration is occurring may experience delays until the migration completes."""
 
 
+# ManagedTargetMounts are not always deleted cleanly.
+# This overrides the default manager so any mounts which point to
+# associated records that have been deleted are no longer returned.
+class DeletableCheckRelatedManager(DeletableManager):
+    def get_queryset(self):
+        return (
+            super(DeletableCheckRelatedManager, self)
+            .get_queryset()
+            .filter(managedtarget__not_deleted=True)
+            .filter(host__not_deleted=True)
+            .filter(volume_node__not_deleted=True)
+        )
+
+
+class DeletableCheckRelatedMetaclass(models.base.ModelBase):
+    def __new__(cls, name, bases, dct):
+        _make_deletable(cls, dct)
+        dct["objects"] = DeletableCheckRelatedManager()
+        return super(DeletableCheckRelatedMetaclass, cls).__new__(cls, name, bases, dct)
+
+
 class ManagedTargetMount(models.Model):
     """Associate a particular Lustre target with a device node on a host"""
 
-    __metaclass__ = DeletableMetaclass
+    __metaclass__ = DeletableCheckRelatedMetaclass
 
     # FIXME: both VolumeNode and TargetMount refer to the host
     host = models.ForeignKey("ManagedHost")
