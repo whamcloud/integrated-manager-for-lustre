@@ -12,8 +12,8 @@ use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
 use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId};
-use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
 use iml_stratagem::StratagemConfiguration;
+use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
@@ -81,8 +81,8 @@ impl Model {
     fn stratagem_ready(&self) -> bool {
         if let Some(fs) = &self.fs {
             let mdts = self
-                .targets
-                .values()
+                .mdts
+                .clone()
                 .into_iter()
                 .filter(|x| x.filesystem_id == Some(fs.id) && x.kind == "MDT")
                 .into_iter();
@@ -107,7 +107,7 @@ impl Model {
     }
 
     fn can_check_stratagem(&self) -> bool {
-        !self.targets.is_empty() && !self.hosts.is_empty() && self.fs.is_some()
+        !self.mdts.is_empty() && !self.hosts.is_empty() && self.fs.is_some()
     }
 }
 
@@ -169,11 +169,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
                     row.lock_indicator.update()
                 }
             }
+
+            if model.stratagem.run_config.watching.should_update() {
+                model.stratagem.run_config.watching.update();
+            }
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {
                 model.fs_detail.dropdown.composite_ids = vec![fs.composite_id()];
-                
                 if model.can_check_stratagem() {
                     model.stratagem.fs_id = model
                         .get_filesystem_id()
@@ -241,7 +244,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             osts.sort_by(|a, b| natord::compare(&a.name, &b.name));
             model.ost_paging.total = osts.len();
             model.osts = osts;
-            
             if model.can_check_stratagem() {
                 model.stratagem.fs_id = model
                     .get_filesystem_id()

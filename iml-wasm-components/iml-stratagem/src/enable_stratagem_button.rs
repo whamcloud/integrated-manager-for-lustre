@@ -16,22 +16,23 @@ pub struct UnconfiguredStratagemConfiguration {
 #[derive(Debug, Default)]
 pub struct Model {
     pub fs_id: u32,
+    pub disabled: bool,
 }
 
 // Update
 #[derive(Clone, Debug)]
 pub enum Msg {
-    AddStratagem,
-    StratagemAdded(fetch::FetchObject<iml_wire_types::Command>),
+    EnableStratagem,
+    StratagemEnabled(fetch::FetchObject<iml_wire_types::Command>),
     OnFetchError(seed::fetch::FailReason),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
-        Msg::AddStratagem => {
-            orders.skip().perform_cmd(add_stratagem(model.fs_id));
+        Msg::EnableStratagem => {
+            orders.skip().perform_cmd(enable_stratagem(model.fs_id));
         }
-        Msg::StratagemAdded(fetch_object) => match fetch_object.response() {
+        Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log!(format!("Response data: {:#?}", response.data));
                 orders.skip();
@@ -49,7 +50,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     log::trace!("Model: {:#?}", model);
 }
 
-fn add_stratagem(filesystem_id: u32) -> impl Future<Item = Msg, Error = Msg> {
+fn enable_stratagem(filesystem_id: u32) -> impl Future<Item = Msg, Error = Msg> {
     let url: String = "/api/stratagem_configuration/".into();
     let config = UnconfiguredStratagemConfiguration {
         filesystem: filesystem_id,
@@ -63,21 +64,20 @@ fn add_stratagem(filesystem_id: u32) -> impl Future<Item = Msg, Error = Msg> {
             &csrf_token().expect("Couldn't get csrf token.")[..],
         )
         .send_json(&config)
-        .fetch_json(Msg::StratagemAdded)
+        .fetch_json(Msg::StratagemEnabled)
 }
 
 // View
-pub fn view(_model: &Model) -> El<Msg> {
-    button![
-        class!["btn btn-primary"],
-        attrs! {
-            At::Type => "button",
-        },
-        style! {
-            "grid-column" => "1 / span 3",
-            "grid-row-end" => "5"
-        },
-        simple_ev(Ev::Click, Msg::AddStratagem),
-        "Enable Stratagem",
-    ]
+pub fn view(model: &Model) -> El<Msg> {
+    let mut attrs = attrs! {
+        At::Type => "button"
+    };
+
+    if model.disabled {
+        attrs.merge(attrs! {
+            At::Disabled => "disabled"
+        });
+    }
+
+    button![class!["btn btn-primary"], attrs, "Enable Stratagem",]
 }

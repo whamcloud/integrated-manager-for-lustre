@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod add_stratagem_button;
 mod delete_stratagem_button;
+mod enable_stratagem_button;
 mod inode_error;
 pub mod inode_table;
 mod update_stratagem_button;
@@ -48,7 +48,7 @@ pub struct Model {
     pub purge_active: bool,
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
-    pub add_stratagem_button: add_stratagem_button::Model,
+    pub enable_stratagem_button: enable_stratagem_button::Model,
     pub delete_stratagem_button: delete_stratagem_button::Model,
     pub update_stratagem_button: update_stratagem_button::Model,
     pub ready: bool,
@@ -72,6 +72,7 @@ impl Default for Model {
                     iml_duration_picker::Unit::Minutes,
                     iml_duration_picker::Unit::Seconds,
                 ],
+                tooltip_placement: iml_tooltip::TooltipPlacement::Left,
                 ..Default::default()
             },
             report_active: true,
@@ -96,7 +97,7 @@ impl Default for Model {
             destroyed: false,
             ready: false,
             configured: false,
-            add_stratagem_button: add_stratagem_button::Model::default(),
+            enable_stratagem_button: enable_stratagem_button::Model::default(),
             delete_stratagem_button: delete_stratagem_button::Model::default(),
             update_stratagem_button: update_stratagem_button::Model::default(),
         }
@@ -146,7 +147,7 @@ pub enum Msg {
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
     InodeTable(inode_table::Msg),
-    AddStratagemButton(add_stratagem_button::Msg),
+    EnableStratagemButton(enable_stratagem_button::Msg),
     DeleteStratagemButton(delete_stratagem_button::Msg),
     UpdateStratagemButton(update_stratagem_button::Msg),
     WindowClick,
@@ -168,7 +169,7 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             Some(c) => {
                 model.configured = true;
                 model.id = Some(c.id);
-                model.add_stratagem_button.fs_id = model.fs_id;
+                model.enable_stratagem_button.fs_id = model.fs_id;
                 model.delete_stratagem_button.config_id = c.id;
 
                 model.run_config.value = c.interval.to_string();
@@ -206,14 +207,22 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             *_orders = call_update(inode_table::update, msg, &mut model.inode_table)
                 .map_message(Msg::InodeTable);
         }
-        Msg::AddStratagemButton(msg) => {
-            model.add_stratagem_button.fs_id = model.fs_id;
+        Msg::EnableStratagemButton(msg) => {
+            model.enable_stratagem_button.fs_id = model.fs_id;
+            model.enable_stratagem_button.disabled =
+                model.run_config.value.parse::<u64>().ok().is_some();
+            seed::log!(format!(
+                "set disabled to: {}, {}",
+                model.run_config.value,
+                model.run_config.value.parse::<u64>().ok().is_some()
+            ));
+
             *_orders = call_update(
-                add_stratagem_button::update,
+                enable_stratagem_button::update,
                 msg,
-                &mut model.add_stratagem_button,
+                &mut model.enable_stratagem_button,
             )
-            .map_message(Msg::AddStratagemButton);
+            .map_message(Msg::EnableStratagemButton);
         }
         Msg::DeleteStratagemButton(msg) => {
             *_orders = call_update(
@@ -251,15 +260,39 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
 }
 
 fn detail_header<T>(header: &str) -> El<T> {
-    h4![class!["header"], header,]
+    h4![
+        header,
+        style! {
+            "color" => "#777",
+            "grid-column" => "1 / span 12",
+            "grid-row-end" => "1"
+        }
+    ]
 }
 
 fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
-    well(children).add_class("stratagem-config")
+    well(children)
+        .add_style("display".into(), "grid".into())
+        .add_style(
+            "grid-template-columns".into(),
+            "8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33%".into(),
+        )
+        .add_style("grid-row-gap".into(), px(20))
 }
 
 fn detail_label<T>(content: &str) -> El<T> {
-    div![class!["label"], content]
+    div![
+        content,
+        style! {
+            "font-weight" => "700",
+            "color" => "#777",
+            "grid-column" => "1 /span 6"
+        }
+    ]
+}
+
+fn stratagem_section<T>(el: El<T>) -> El<T> {
+    el.add_style("margin-bottom".into(), "20px".into())
 }
 
 // View
@@ -268,60 +301,59 @@ pub fn view(model: &Model) -> El<Msg> {
         detail_header("Stratagem Configuration"),
         detail_label("Scan filesystem every"),
         div![
-            class!["input-group", "duration-picker"],
+            class!["input-group"],
+            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
             duration_picker(&model.run_config).map_message(Msg::RunConfig)
         ],
-        div![class!["enable_button_space"]],
         detail_label("Generate report on files older than"),
         div![
-            class!["input-group", "duration-picker"],
+            class!["input-group"],
+            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
             duration_picker(&model.report_config).map_message(Msg::ReportConfig)
         ],
-        div![],
-        div![
-            class!["toggle-button"],
-            toggle(!model.report_config.disabled).map_message(Msg::ToggleReport),
-        ],
-        div![],
+        toggle(!model.report_config.disabled)
+            .map_message(Msg::ToggleReport)
+            .add_style("grid-column".into(), "10 /span 3".into()),
         detail_label("Purge Files older than"),
         div![
             class!["input-group"],
+            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
             duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
         ],
-        div![],
-        div![
-            class!["toggle-button"],
-            toggle(!model.purge_config.disabled).map_message(Msg::TogglePurge),
-        ],
-        div![],
+        toggle(!model.purge_config.disabled)
+            .map_message(Msg::TogglePurge)
+            .add_style("grid-column".into(), "10 /span 3".into()),
     ];
 
     if model.configured {
         configuration_component.extend(vec![
-            delete_stratagem_button::view(&model.delete_stratagem_button)
-                .map_message(Msg::DeleteStratagemButton),
             update_stratagem_button::view(&model.update_stratagem_button)
+                .add_style("grid-column".into(), "1 /span 12".into())
                 .map_message(Msg::UpdateStratagemButton),
+            delete_stratagem_button::view(&model.delete_stratagem_button)
+                .add_style("grid-column".into(), "1 /span 12".into())
+                .map_message(Msg::DeleteStratagemButton),
         ]);
 
         div![
             h4![class!["section-header"], "Stratagem"],
-            well(vec![grafana_chart(
+            stratagem_section(div!(vec![grafana_chart(
                 GRAFANA_DASHBOARD_ID,
                 GRAFANA_DASHBOARD_NAME,
                 "10s",
                 2,
                 "100%",
                 "600"
-            )]),
-            inode_table::view(&model.inode_table).map_message(Msg::InodeTable),
+            )])),
+            stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
             detail_panel(configuration_component)
         ]
     } else {
-        configuration_component.extend(vec![add_stratagem_button::view(
-            &model.add_stratagem_button,
+        configuration_component.extend(vec![enable_stratagem_button::view(
+            &model.enable_stratagem_button,
         )
-        .map_message(Msg::AddStratagemButton)]);
+        .add_style("grid-column".into(), "1 /span 12".into())
+        .map_message(Msg::EnableStratagemButton)]);
 
         div![
             h4![class!["section-header"], "Stratagem"],

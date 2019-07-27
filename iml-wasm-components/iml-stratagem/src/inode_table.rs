@@ -168,7 +168,7 @@ fn detail_header<T>(header: &str) -> El<T> {
 }
 
 fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
-    well(children)
+    div!(children)
         .add_style("display".into(), "grid".into())
         .add_style("grid-template-columns".into(), "50% 50%".into())
         .add_style("grid-row-gap".into(), px(20))

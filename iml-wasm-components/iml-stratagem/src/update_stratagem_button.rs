@@ -6,7 +6,7 @@ use crate::StratagemUpdate;
 use futures::Future;
 use iml_environment::csrf_token;
 use seed::prelude::*;
-use seed::{attrs, button, class, dom_types::At, fetch, log, style};
+use seed::{attrs, button, class, dom_types::At, fetch, log, style, i};
 
 #[derive(Debug, Default)]
 pub struct Model {
@@ -74,5 +74,6 @@ pub fn view(_model: &Model) -> El<Msg> {
     },
     simple_ev(Ev::Click, Msg::UpdateStratagem),
     "Update Stratagem",
+    i![class!["fas fa-check"]]
   ]
 }

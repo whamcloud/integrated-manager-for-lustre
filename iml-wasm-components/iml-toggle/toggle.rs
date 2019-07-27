@@ -20,7 +20,7 @@ pub fn toggle(active: bool) -> El<Active> {
         if active {
             vec![i![class!["fa", "fa-check"]], El::new_text("Enabled")]
         } else {
-            vec![El::new_text("Disabled")]
+            vec![i![class!["fas", "fa-times-circle"]], El::new_text("Disabled")]
         },
     );
 

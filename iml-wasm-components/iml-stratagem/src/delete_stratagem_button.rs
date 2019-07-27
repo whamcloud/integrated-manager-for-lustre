@@ -5,7 +5,7 @@
 use futures::Future;
 use iml_environment::csrf_token;
 use seed::prelude::*;
-use seed::{attrs, button, class, dom_types::At, fetch, log, style};
+use seed::{attrs, button, class, dom_types::At, fetch, i, log, style};
 
 #[derive(Debug, Default)]
 pub struct Model {
@@ -62,11 +62,8 @@ pub fn view(_model: &Model) -> El<Msg> {
         attrs! {
             At::Type => "button",
         },
-        style! {
-            "grid-column" => "1",
-            "grid-row-end" => "5"
-        },
         simple_ev(Ev::Click, Msg::DeleteStratagem),
         "Delete Stratagem",
+        i![class!["fas fa-times-circle"]]
     ]
 }

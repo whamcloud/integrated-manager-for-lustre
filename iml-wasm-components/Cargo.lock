@@ -304,6 +304,7 @@ dependencies = [
  "insta 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasm-bindgen 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen-test 0.2.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-sys 0.3.25 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -408,6 +409,7 @@ dependencies = [
  "iml-grafana-chart 0.1.0",
  "iml-sleep 0.1.0",
  "iml-toggle 0.1.0",
+ "iml-tooltip 0.1.0",
  "iml-wire-types 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "seed 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",

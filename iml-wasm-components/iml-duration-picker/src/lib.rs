@@ -7,6 +7,7 @@ use iml_tooltip::tooltip;
 use iml_utils::WatchState;
 use seed::{a, attrs, class, input, li, prelude::*};
 use std::fmt;
+use wasm_bindgen::JsCast;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Unit {
@@ -36,11 +37,13 @@ pub struct Model {
     pub unit: Unit,
     pub watching: WatchState,
     pub exclude_units: Vec<Unit>,
+    pub changed: bool,
+    pub tooltip_placement: iml_tooltip::TooltipPlacement,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    SetWatchState(WatchState),
+    WatchChange,
     SetUnit(Unit),
     InputChange(web_sys::Event),
 }
@@ -50,9 +53,7 @@ pub fn update(msg: Msg, model: &mut Model) {
         Msg::SetUnit(unit) => {
             model.unit = unit;
         }
-        Msg::SetWatchState(watching) => {
-            model.watching = watching;
-        }
+        Msg::WatchChange => model.watching.update(),
         Msg::InputChange(ev) => {
             let target = ev.target().unwrap();
             let input_el = seed::to_input(&target);
@@ -61,6 +62,7 @@ pub fn update(msg: Msg, model: &mut Model) {
 
             let validation_message = input_el.validation_message().ok().filter(|x| x != "");
 
+            model.changed = true;
             model.validation_message = validation_message;
         }
     }
@@ -83,9 +85,27 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
         )
         .collect();
 
-    let el = if let (Some(msg), false) = (&model.validation_message, model.disabled) {
+    let mut input_attrs = attrs! {
+        At::Class => "form-control";
+        At::Type => "number"; At::Min => "1";
+        At::Value => model.value;
+        At::Required => true
+    };
+
+    let disabled_attrs = if model.disabled {
+        attrs! {At::Disabled => true}
+    } else {
+        attrs! {}
+    };
+
+    input_attrs.merge(disabled_attrs.clone());
+
+    let input = input![input_attrs, raw_ev(Ev::Input, Msg::InputChange)];
+
+    let validation_message = &model.validation_message;
+    let el = if let (Some(msg), false) = (validation_message, model.disabled) {
         let tt_model = iml_tooltip::Model {
-            placement: iml_tooltip::TooltipPlacement::Bottom,
+            placement: model.tooltip_placement.clone(),
             error_tooltip: true,
             open: true,
             ..Default::default()
@@ -101,21 +121,6 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     } else {
         bs_button::BTN_DEFAULT
     };
-
-    let disabled_attrs = if model.disabled {
-        attrs! {At::Disabled => true}
-    } else {
-        attrs! {}
-    };
-
-    let mut input_attrs = attrs! {
-        At::Class => "form-control";
-        At::Type => "number"; At::Min => "1";
-        At::Value => model.value;
-        At::Required => true
-    };
-
-    input_attrs.merge(disabled_attrs.clone());
 
     let mut attrs = class![btn_class];
     attrs.merge(disabled_attrs);
@@ -135,14 +140,10 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     );
 
     if !open && !model.disabled {
-        dropdown.listeners.push(mouse_ev(Ev::Click, move |_| {
-            Msg::SetWatchState(WatchState::Watching)
-        }));
+        dropdown
+            .listeners
+            .push(mouse_ev(Ev::Click, move |_| Msg::WatchChange));
     }
 
-    vec![
-        input![input_attrs, raw_ev(Ev::Input, Msg::InputChange)],
-        el,
-        dropdown,
-    ]
+    vec![input, el, dropdown]
 }
