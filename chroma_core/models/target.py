@@ -753,7 +753,6 @@ class ForgetTargetJob(StateChangeJob):
             m.mark_deleted()
             m.save()
 
-
         super(ForgetTargetJob, self).on_success()
 
     state_transition = StateChangeJob.StateTransition(ManagedTarget, ["unmounted", "mounted"], "forgotten")
