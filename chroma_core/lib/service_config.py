@@ -317,7 +317,7 @@ class ServiceConfig(CommandLine):
             expected_exception_classes=[CommandError],
         )
 
-        log.info("Creating InfluxDB databse...")
+        log.info("Creating InfluxDB database...")
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
 

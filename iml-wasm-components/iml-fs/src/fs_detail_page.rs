@@ -11,7 +11,7 @@ use iml_environment::ui_root;
 use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
-use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId};
+use iml_wire_types::{Alert, Filesystem, Host, Target, TargetConfParam, ToCompositeId};
 use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::JsValue;
@@ -72,6 +72,26 @@ struct Model {
     pub ost_paging: Paging,
     pub table_rows: HashMap<u32, TableRow>,
     pub locks: Locks,
+    pub hosts: HashMap<u32, Host>,
+    pub stratagem: iml_stratagem::Model,
+    stratagem_ready: bool,
+}
+
+impl Model {
+    fn stratagem_ready(&self) -> bool {
+        !self.mdts.is_empty()
+            && !self.hosts.is_empty()
+            && self.fs.is_some()
+            && self
+                .hosts
+                .values()
+                .filter(|x| {
+                    self.mdts
+                        .iter()
+                        .any(|mdt| mdt.active_host_name == x.address)
+                })
+                .all(|x| x.server_profile.name == "stratagem_server")
+    }
 }
 
 #[derive(Clone)]
@@ -91,6 +111,10 @@ enum Msg {
     OpenMountModal,
     Targets(HashMap<u32, Target<TargetConfParam>>),
     WindowClick,
+    Hosts(HashMap<u32, Host>),
+    InodeTable(iml_stratagem::Msg),
+    StratagemInit(iml_stratagem::Msg),
+    StratagemComponent(iml_stratagem::Msg),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
@@ -128,10 +152,26 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
                     row.lock_indicator.update()
                 }
             }
+
+            if model.stratagem.run_config.watching.should_update() {
+                model.stratagem.run_config.watching.update();
+            }
+
+            if model.stratagem.report_config.watching.should_update() {
+                model.stratagem.report_config.watching.update();
+            }
+
+            if model.stratagem.purge_config.watching.should_update() {
+                model.stratagem.purge_config.watching.update();
+            }
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {
                 model.fs_detail.dropdown.composite_ids = vec![fs.composite_id()];
+
+                model.stratagem.fs_id = fs.id;
+
+                model.stratagem_ready = model.stratagem_ready();
             };
 
             model.fs = fs;
@@ -193,9 +233,16 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             osts.sort_by(|a, b| natord::compare(&a.name, &b.name));
             model.ost_paging.total = osts.len();
             model.osts = osts;
+
+            model.stratagem_ready = model.stratagem_ready();
         }
         Msg::OstPaging(msg) => update_paging(msg, &mut model.ost_paging),
         Msg::MdtPaging(msg) => update_paging(msg, &mut model.mdt_paging),
+        Msg::Hosts(hosts) => {
+            model.hosts = hosts;
+
+            model.stratagem_ready = model.stratagem_ready();
+        }
         Msg::Alerts(alerts) => {
             model.alerts = alerts;
         }
@@ -232,6 +279,19 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
         Msg::OpenMountModal => {
             model.mount_modal_open = true;
         }
+        Msg::InodeTable(msg) => {
+            *orders = call_update(iml_stratagem::update, msg, &mut model.stratagem)
+                .map_message(Msg::InodeTable);
+        }
+        Msg::StratagemInit(msg) => {
+            model.stratagem_ready = model.stratagem_ready();
+
+            orders.send_msg(Msg::StratagemComponent(msg));
+        }
+        Msg::StratagemComponent(msg) => {
+            *orders = call_update(iml_stratagem::update, msg, &mut model.stratagem)
+                .map_message(Msg::StratagemComponent);
+        }
     }
 }
 
@@ -239,9 +299,10 @@ fn detail_header<T>(header: &str) -> El<T> {
     h4![
         header,
         style! {
-        "color" => "#777",
-        "grid-column" => "1 / span 2",
-        "grid-row-end" => "1",}
+            "color" => "#777",
+            "grid-column" => "1 / span 2",
+            "grid-row-end" => "1",
+        }
     ]
 }
 
@@ -419,6 +480,11 @@ fn view(model: &Model) -> El<Msg> {
             } else {
                 vec![]
             },
+            if model.stratagem_ready {
+                iml_stratagem::view(&model.stratagem).map_message(Msg::StratagemComponent)
+            } else {
+                seed::empty()
+            },
             h4![class!["section-header"], format!("{} Targets", fs.name)],
             if model.mgt.is_empty() {
                 vec![]
@@ -488,11 +554,26 @@ impl FsDetailPageCallbacks {
     pub fn set_targets(&self, targets: JsValue) {
         self.app.update(Msg::Targets(targets.into_serde().unwrap()))
     }
+    pub fn set_hosts(&self, hosts: JsValue) {
+        self.app.update(Msg::Hosts(hosts.into_serde().unwrap()));
+    }
     pub fn set_alerts(&self, alerts: JsValue) {
         self.app.update(Msg::Alerts(alerts.into_serde().unwrap()))
     }
     pub fn set_locks(&self, locks: JsValue) {
         self.app.update(Msg::Locks(locks.into_serde().unwrap()));
+    }
+    pub fn set_stratagem_configuration(&self, config: JsValue) {
+        self.app
+            .update(Msg::StratagemInit(iml_stratagem::Msg::SetConfig(
+                config.into_serde_opt().unwrap(),
+            )));
+    }
+    pub fn fetch_inode_table(&self) {
+        self.app
+            .update(Msg::InodeTable(iml_stratagem::Msg::InodeTable(
+                iml_stratagem::inode_table::Msg::FetchInodes,
+            )));
     }
 }
 

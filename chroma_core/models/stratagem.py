@@ -87,7 +87,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "Description=Start Stratagem run on {}\n"
                 "\n[Timer]\n"
                 "OnBootSec={}\n"
-                "OnUnitActiveSec={}\n".format(config.filesystem_id, config.interval, config.interval)
+                "OnUnitActiveSec={}\n".format(config.filesystem_id, config.interval / 1000, config.interval / 1000)
             )
 
         iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem_id)

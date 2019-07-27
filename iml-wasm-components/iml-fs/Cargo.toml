@@ -17,7 +17,8 @@ iml-paging = { path = "../iml-paging", version = "0.1" }
 iml-pie-chart = { path = "../iml-pie-chart", version = "0.1" }
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }
-iml-wire-types = "0.1"
+iml-wire-types = "0.1.10"
+iml-stratagem = { path = "../iml-stratagem", version = "0.1" }
 log = "0.4"
 seed = "=0.3.7"
 natord = "1.0.9"

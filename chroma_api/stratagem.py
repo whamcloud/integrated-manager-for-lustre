@@ -172,7 +172,7 @@ class RunStratagemValidation(Validation):
 
 class StratagemConfigurationValidation(RunStratagemValidation):
     def is_valid(self, bundle, request=None):
-        required_args = ["interval", "filesystem"]
+        required_args = ["filesystem"]
 
         difference = set(required_args) - set(bundle.data.keys())
 
@@ -192,7 +192,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 class StratagemConfigurationResource(StatefulModelResource):
     filesystem = fields.CharField(attribute="filesystem_id", null=False)
-    interval = fields.IntegerField(attribute="interval", null=False)
+    interval = fields.CharField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
 
@@ -229,6 +229,9 @@ class StratagemConfigurationResource(StatefulModelResource):
 
         return long(x)
 
+    def dehydrate_interval(self, bundle):
+        return long(bundle.data.get("interval"))
+
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
 
@@ -241,6 +244,17 @@ class StratagemConfigurationResource(StatefulModelResource):
         detail_allowed_methods = ["get", "put", "delete"]
         validation = StratagemConfigurationValidation()
         filtering = {"filesystem_id": ["exact"]}
+
+    @validate
+    def obj_update(self, bundle, **kwargs):
+        config = StratagemConfiguration.objects.get(pk=kwargs["pk"])
+        config.interval = bundle.data.get("interval")
+        config.report_duration = bundle.data.get("report_duration")
+        config.purge_duration = bundle.data.get("purge_duration")
+        config.save()
+
+        bundle.obj = config
+        return bundle
 
     @validate
     def obj_create(self, bundle, **kwargs):

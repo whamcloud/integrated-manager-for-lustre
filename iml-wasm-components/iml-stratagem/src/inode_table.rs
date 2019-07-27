@@ -1,11 +1,14 @@
 use crate::inode_error::InodeError;
-use bootstrap_components::bs_table::{table, TABLE_STRIPED};
+use bootstrap_components::bs_table;
 use futures::Future;
+use iml_environment::influx_root;
 use seed::{
-    class,
-    fetch::{FetchObject, Request, RequestController},
+    class, div,
+    dom_types::Attrs,
+    fetch::{FetchObject, RequestController},
+    h4, i,
     prelude::*,
-    td, th, tr,
+    style, tbody, td, th, thead, tr,
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -35,10 +38,8 @@ pub enum Msg {
 pub struct InfluxSeries {
     #[serde(skip)]
     name: String,
-
     #[serde(skip)]
     columns: Vec<String>,
-
     values: Vec<(String, String, u32)>,
 }
 
@@ -139,10 +140,10 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-
-    let fut = Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into())
-    .controller(|controller| request_controller = Some(controller))
-    .fetch_json(Msg::InodesFetched);
+    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27", influx_root());
+    let fut = seed::fetch::Request::new(url)
+        .controller(|controller| request_controller = Some(controller))
+        .fetch_json(Msg::InodesFetched);
 
     (fut, request_controller)
 }
@@ -154,6 +155,13 @@ fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<El<T>> {
         .collect()
 }
 
+fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+    div!(children)
+        .add_style("display".into(), "grid".into())
+        .add_style("grid-template-columns".into(), "50% 50%".into())
+        .add_style("grid-row-gap".into(), px(20))
+}
+
 /// View
 pub fn view(model: &Model) -> El<Msg> {
     if model.destroyed {
@@ -161,14 +169,27 @@ pub fn view(model: &Model) -> El<Msg> {
     } else {
         let entries = get_inode_elements(&model.inodes);
 
-        if !entries.is_empty() {
-            let mut inodes: Vec<El<Msg>> = vec![tr![th!["Uid"], th!["Count"]]];
-
-            inodes.extend(entries);
-            table(class![TABLE_STRIPED], inodes)
-        } else {
-            seed::empty()
-        }
+        div![
+            h4![class!["section-header"], "Top inode Users"],
+            if !entries.is_empty() {
+                bs_table::table(
+                    Attrs::empty(),
+                    vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
+                )
+            } else {
+                div![detail_panel(vec![i![
+                    class!["fa fa-circle-notch fa-spin".into()],
+                    style! {
+                        "grid-column" => "2",
+                        "grid-row" => "1",
+                        "width" => "40px",
+                        "height" => "40px",
+                        "margin-left" => "-20px",
+                        "font-size" => "40px"
+                    }
+                ]])]
+            }
+        ]
     }
 }
 

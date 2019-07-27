@@ -7,14 +7,31 @@ use seed::document;
 use wasm_bindgen::JsValue;
 use web_sys::HtmlDocument;
 
+pub static MAX_SAFE_INTEGER: u64 = 9007199254740991;
+
 /// Returns https://<domain>:<port>/ui/
 pub fn ui_root() -> String {
     document().base_uri().unwrap().unwrap_or_default()
 }
 
+pub fn get_root_url() -> String {
+    let url = ui_root();
+    let mut idx = 0;
+    url.find("/ui/").map(|x| idx = x);
+    url.get(0..idx).expect("Couldn't get url root.").into()
+}
+
+pub fn api_root() -> String {
+    format!("{}/api/", get_root_url())
+}
+
 /// Returns https://<domain>:<port>/grafana/
 pub fn grafana_root() -> String {
-    ui_root().replace("/ui/", "/grafana/")
+    format!("{}/grafana/", get_root_url())
+}
+
+pub fn influx_root() -> String {
+    format!("{}/influx?", get_root_url())
 }
 
 /// Returns the CSRF token if one exists within the cookie.

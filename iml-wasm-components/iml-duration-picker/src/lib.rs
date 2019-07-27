@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use bootstrap_components::{bs_button, bs_dropdown, bs_input};
+use iml_environment::MAX_SAFE_INTEGER;
 use iml_tooltip::tooltip;
 use iml_utils::WatchState;
 use seed::{a, attrs, class, input, li, prelude::*};
@@ -40,7 +41,7 @@ pub struct Model {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    SetWatchState(WatchState),
+    WatchChange,
     SetUnit(Unit),
     InputChange(web_sys::Event),
 }
@@ -48,25 +49,46 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model) {
     match msg {
         Msg::SetUnit(unit) => {
+            let old_unit = model.unit;
             model.unit = unit;
+            if !model.value.is_empty() {
+                let old_val = model.value.parse::<u64>();
+                if let Ok(val) = old_val {
+                    let ms = convert_unit_to_ms(old_unit, val);
+                    model.value = convert_ms_to_unit(unit, ms).to_string();
+                }
+            }
         }
-        Msg::SetWatchState(watching) => {
-            model.watching = watching;
-        }
+        Msg::WatchChange => model.watching.update(),
         Msg::InputChange(ev) => {
             let target = ev.target().unwrap();
             let input_el = seed::to_input(&target);
 
             model.value = input_el.value().trim().to_string();
 
-            let validation_message = input_el.validation_message().ok().filter(|x| x != "");
-
-            model.validation_message = validation_message;
+            model.validation_message = input_el.validation_message().ok().filter(|x| x != "");
         }
     }
 }
 
-/// A duration picker
+pub fn convert_unit_to_ms(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val * 24 * 60 * 60 * 1000,
+        Unit::Hours => val * 60 * 60 * 1000,
+        Unit::Minutes => val * 60 * 1000,
+        Unit::Seconds => val * 1000,
+    }
+}
+
+pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val / 24 / 60 / 60 / 1000,
+        Unit::Hours => val / 60 / 60 / 1000,
+        Unit::Minutes => val / 60 / 1000,
+        Unit::Seconds => val / 1000,
+    }
+}
+
 pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     let items: Vec<_> = std::iter::once(bs_dropdown::header("Units"))
         .chain(
@@ -74,18 +96,32 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
                 .into_iter()
                 .filter(|x| x != &model.unit)
                 .filter(|x| !model.exclude_units.contains(x))
-                .map(|x| {
-                    li![a![
-                        x.to_string(),
-                        mouse_ev(Ev::Click, move |_| { Msg::SetUnit(x) })
-                    ]]
-                }),
+                .map(|x| li![a![x.to_string(), simple_ev(Ev::Click, Msg::SetUnit(x))]]),
         )
         .collect();
 
-    let el = if let (Some(msg), false) = (&model.validation_message, model.disabled) {
+    let mut input_attrs = attrs! {
+        At::Class => "form-control",
+        At::Type => "number",
+        At::Min => "1",
+        At::Max => MAX_SAFE_INTEGER,
+        At::Required => true,
+        At::Value => model.value,
+    };
+
+    let disabled_attrs = if model.disabled {
+        attrs! {At::Disabled => true}
+    } else {
+        attrs! {}
+    };
+
+    input_attrs.merge(disabled_attrs.clone());
+
+    let input = input![input_attrs, raw_ev(Ev::Input, Msg::InputChange)];
+
+    let validation_message = &model.validation_message;
+    let el = if let (Some(msg), false) = (validation_message, model.disabled) {
         let tt_model = iml_tooltip::Model {
-            placement: iml_tooltip::TooltipPlacement::Bottom,
             error_tooltip: true,
             open: true,
             ..Default::default()
@@ -101,21 +137,6 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     } else {
         bs_button::BTN_DEFAULT
     };
-
-    let disabled_attrs = if model.disabled {
-        attrs! {At::Disabled => true}
-    } else {
-        attrs! {}
-    };
-
-    let mut input_attrs = attrs! {
-        At::Class => "form-control";
-        At::Type => "number"; At::Min => "1";
-        At::Value => model.value;
-        At::Required => true
-    };
-
-    input_attrs.merge(disabled_attrs.clone());
 
     let mut attrs = class![btn_class];
     attrs.merge(disabled_attrs);
@@ -135,14 +156,10 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     );
 
     if !open && !model.disabled {
-        dropdown.listeners.push(mouse_ev(Ev::Click, move |_| {
-            Msg::SetWatchState(WatchState::Watching)
-        }));
+        dropdown
+            .listeners
+            .push(mouse_ev(Ev::Click, move |_| Msg::WatchChange));
     }
 
-    vec![
-        input![input_attrs, raw_ev(Ev::Input, Msg::InputChange)],
-        el,
-        dropdown,
-    ]
+    vec![input, el, dropdown]
 }
