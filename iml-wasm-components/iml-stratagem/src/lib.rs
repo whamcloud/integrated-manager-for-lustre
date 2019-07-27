@@ -469,9 +469,6 @@ pub fn view(model: &Model) -> El<Msg> {
         .add_style("grid-column".into(), "1 /span 12".into())
         .map_message(Msg::EnableStratagemButton)]);
 
-        div![
-            h4![class!["section-header"], "Stratagem"],
-            detail_panel(configuration_component)
-        ]
+        div![detail_panel(configuration_component)]
     }
 }
