@@ -711,7 +711,13 @@ class RemoveTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
 
         super(RemoveTargetJob, self).on_success()
 
@@ -739,7 +745,14 @@ class ForgetTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
+
 
         super(ForgetTargetJob, self).on_success()
 
