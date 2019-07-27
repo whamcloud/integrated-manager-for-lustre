@@ -1,12 +1,14 @@
 use crate::inode_error::InodeError;
+use bootstrap_components::bs_table;
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{
     class, div,
+    dom_types::Attrs,
     fetch::{FetchObject, RequestController},
     h4, i,
     prelude::*,
-    style,
+    style, tbody, td, th, thead, tr,
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
@@ -36,10 +38,8 @@ pub enum Msg {
 pub struct InfluxSeries {
     #[serde(skip)]
     name: String,
-
     #[serde(skip)]
     columns: Vec<String>,
-
     values: Vec<(String, String, u32)>,
 }
 
@@ -151,19 +151,8 @@ pub fn fetch_inodes() -> (
 fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<El<T>> {
     inodes
         .into_iter()
-        .map(|x| vec![div![x.uid], div![x.count.to_string()]])
-        .flatten()
+        .map(|x| tr![td![x.uid], td![x.count.to_string()]])
         .collect()
-}
-
-fn detail_header<T>(header: &str) -> El<T> {
-    h4![
-        header,
-        style! {
-        "color" => "#777",
-        "grid-column" => "1 / span 2",
-        "grid-row-end" => "1"}
-    ]
 }
 
 fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
@@ -173,13 +162,6 @@ fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
         .add_style("grid-row-gap".into(), px(20))
 }
 
-fn detail_label<T>(content: &str) -> El<T> {
-    div![
-        content,
-        style! { "font-weight" => "700", "color" => "#777" }
-    ]
-}
-
 /// View
 pub fn view(model: &Model) -> El<Msg> {
     if model.destroyed {
@@ -187,19 +169,15 @@ pub fn view(model: &Model) -> El<Msg> {
     } else {
         let entries = get_inode_elements(&model.inodes);
 
-        if !entries.is_empty() {
-            let mut els: Vec<El<Msg>> = vec![
-                detail_header("inode Users"),
-                detail_label("Uid"),
-                detail_label("Count"),
-            ];
-            els.extend(entries);
-
-            div![detail_panel(els)]
-        } else {
-            div![detail_panel(vec![
-                detail_header("inode Users"),
-                i![
+        div![
+            h4![class!["section-header"], "Top inode Users"],
+            if !entries.is_empty() {
+                bs_table::table(
+                    Attrs::empty(),
+                    vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
+                )
+            } else {
+                div![detail_panel(vec![i![
                     class!["fa fa-circle-notch fa-spin".into()],
                     style! {
                         "grid-column" => "2",
@@ -209,9 +187,9 @@ pub fn view(model: &Model) -> El<Msg> {
                         "margin-left" => "-20px",
                         "font-size" => "40px"
                     }
-                ]
-            ])]
-        }
+                ]])]
+            }
+        ]
     }
 }
 

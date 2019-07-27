@@ -12,7 +12,7 @@ pub struct Model {
     pub open: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum TooltipPlacement {
     Left,

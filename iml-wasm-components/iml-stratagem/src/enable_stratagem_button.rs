@@ -2,33 +2,19 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
-use seed::prelude::*;
-use seed::{attrs, button, class, dom_types::At, fetch, log};
+use seed::{class, dom_types::At, fetch, prelude::*};
 
 #[derive(Debug, serde::Serialize)]
-pub struct UnconfiguredStratagemConfiguration {
-    filesystem: u32,
-    interval: u64,
-}
-
-#[derive(Debug)]
 pub struct Model {
-    pub fs_id: u32,
-    pub disabled: bool,
+    pub filesystem: u32,
+    pub interval: u64,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
 }
 
-impl Default for Model {
-    fn default() -> Self {
-        Model {
-            disabled: true,
-            fs_id: 0,
-        }
-    }
-}
-
-// Update
 #[derive(Clone, Debug)]
 pub enum Msg {
     EnableStratagem,
@@ -37,61 +23,53 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+    let orders = orders.skip();
+
     match msg {
         Msg::EnableStratagem => {
-            orders.skip().perform_cmd(enable_stratagem(model.fs_id));
+            orders.perform_cmd(enable_stratagem(&model));
         }
         Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {
-                log!(format!("Response data: {:#?}", response.data));
-                orders.skip();
+                log::trace!("Response data: {:#?}", response.data);
             }
             Err(fail_reason) => {
-                orders.send_msg(Msg::OnFetchError(fail_reason)).skip();
+                orders.send_msg(Msg::OnFetchError(fail_reason));
             }
         },
         Msg::OnFetchError(fail_reason) => {
-            log!(format!("Fetch error: {:#?}", fail_reason));
-            orders.skip();
+            log::warn!("Fetch error: {:#?}", fail_reason);
         }
     }
 
     log::trace!("Model: {:#?}", model);
 }
 
-fn enable_stratagem(filesystem_id: u32) -> impl Future<Item = Msg, Error = Msg> {
-    let url: String = "/api/stratagem_configuration/".into();
-    let config = UnconfiguredStratagemConfiguration {
-        filesystem: filesystem_id,
-        interval: 2_592_000_000,
-    };
+fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
+    let url = "/api/stratagem_configuration/".into();
 
     seed::fetch::Request::new(url)
         .method(seed::fetch::Method::Post)
         .header(
             "X-CSRFToken",
-            &csrf_token().expect("Couldn't get csrf token.")[..],
+            &csrf_token().expect("Couldn't get csrf token."),
         )
-        .send_json(&config)
+        .send_json(model)
         .fetch_json(Msg::StratagemEnabled)
 }
 
-// View
-pub fn view(model: &Model) -> El<Msg> {
-    let mut attrs = attrs! {
-        At::Type => "button"
-    };
+pub fn view(model: &Option<Model>) -> El<Msg> {
+    let mut btn = bs_button::btn(
+        class![bs_button::BTN_PRIMARY],
+        vec![El::new_text("Enable Stratagem")],
+    );
 
-    if model.disabled {
-        attrs.merge(attrs! {
-            At::Disabled => "disabled"
-        });
+    if model.is_some() {
+        btn.listeners
+            .push(simple_ev(Ev::Click, Msg::EnableStratagem));
+
+        btn
+    } else {
+        btn.add_attr(At::Disabled.as_str().into(), "disabled".into())
     }
-
-    button![
-        class!["btn btn-primary"],
-        attrs,
-        "Enable Stratagem",
-        simple_ev(Ev::Click, Msg::EnableStratagem)
-    ]
 }

@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use bootstrap_components::{bs_button, bs_dropdown, bs_input};
+use iml_environment::MAX_SAFE_INTEGER;
 use iml_tooltip::tooltip;
 use iml_utils::WatchState;
 use seed::{a, attrs, class, input, li, prelude::*};
@@ -36,8 +37,6 @@ pub struct Model {
     pub unit: Unit,
     pub watching: WatchState,
     pub exclude_units: Vec<Unit>,
-    pub changed: bool,
-    pub tooltip_placement: iml_tooltip::TooltipPlacement,
 }
 
 #[derive(Clone, Debug)]
@@ -45,24 +44,6 @@ pub enum Msg {
     WatchChange,
     SetUnit(Unit),
     InputChange(web_sys::Event),
-}
-
-pub fn convert_unit_to_ms(unit: Unit, val: u64) -> u64 {
-    match unit {
-        Unit::Days => val * 24 * 60 * 60 * 1000,
-        Unit::Hours => val * 60 * 60 * 1000,
-        Unit::Minutes => val * 60 * 1000,
-        Unit::Seconds => val * 1000,
-    }
-}
-
-pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
-    match unit {
-        Unit::Days => val / 24 / 60 / 60 / 1000,
-        Unit::Hours => val / 60 / 60 / 1000,
-        Unit::Minutes => val / 60 / 1000,
-        Unit::Seconds => val / 1000,
-    }
 }
 
 pub fn update(msg: Msg, model: &mut Model) {
@@ -85,15 +66,29 @@ pub fn update(msg: Msg, model: &mut Model) {
 
             model.value = input_el.value().trim().to_string();
 
-            let validation_message = input_el.validation_message().ok().filter(|x| x != "");
-
-            model.changed = true;
-            model.validation_message = validation_message;
+            model.validation_message = input_el.validation_message().ok().filter(|x| x != "");
         }
     }
 }
 
-/// A duration picker
+pub fn convert_unit_to_ms(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val * 24 * 60 * 60 * 1000,
+        Unit::Hours => val * 60 * 60 * 1000,
+        Unit::Minutes => val * 60 * 1000,
+        Unit::Seconds => val * 1000,
+    }
+}
+
+pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val / 24 / 60 / 60 / 1000,
+        Unit::Hours => val / 60 / 60 / 1000,
+        Unit::Minutes => val / 60 / 1000,
+        Unit::Seconds => val / 1000,
+    }
+}
+
 pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     let items: Vec<_> = std::iter::once(bs_dropdown::header("Units"))
         .chain(
@@ -101,20 +96,17 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
                 .into_iter()
                 .filter(|x| x != &model.unit)
                 .filter(|x| !model.exclude_units.contains(x))
-                .map(|x| {
-                    li![a![
-                        x.to_string(),
-                        mouse_ev(Ev::Click, move |_| { Msg::SetUnit(x) })
-                    ]]
-                }),
+                .map(|x| li![a![x.to_string(), simple_ev(Ev::Click, Msg::SetUnit(x))]]),
         )
         .collect();
 
     let mut input_attrs = attrs! {
-        At::Class => "form-control";
-        At::Type => "number"; At::Min => "1";
-        At::Value => model.value;
-        At::Required => true
+        At::Class => "form-control",
+        At::Type => "number",
+        At::Min => "1",
+        At::Max => MAX_SAFE_INTEGER,
+        At::Required => true,
+        At::Value => model.value,
     };
 
     let disabled_attrs = if model.disabled {
@@ -130,7 +122,6 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
     let validation_message = &model.validation_message;
     let el = if let (Some(msg), false) = (validation_message, model.disabled) {
         let tt_model = iml_tooltip::Model {
-            placement: model.tooltip_placement.clone(),
             error_tooltip: true,
             open: true,
             ..Default::default()
