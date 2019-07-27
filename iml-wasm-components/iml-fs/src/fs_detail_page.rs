@@ -11,7 +11,7 @@ use iml_environment::ui_root;
 use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
-use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId};
+use iml_wire_types::{Alert, Filesystem, Target, TargetConfParam, ToCompositeId, Host};
 use iml_stratagem::StratagemConfiguration;
 use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
 use std::collections::{HashMap, HashSet};

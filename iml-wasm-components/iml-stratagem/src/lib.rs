@@ -188,9 +188,7 @@ impl Model {
         };
 
         let run_config = self.run_config.value.parse::<u64>();
-        if self.run_config.validation_message.is_some() {
-            validation.run_config = self.run_config.validation_message.clone();
-        } else if run_config.clone().is_err() {
+        if run_config.clone().is_err() {
             validation.run_config =
                 Some("The report field must contain a numeric value.".to_string());
         } else {
@@ -204,8 +202,6 @@ impl Model {
 
         if self.report_config.disabled {
             validation.report_config = None;
-        } else if self.report_config.validation_message.is_some() {
-            validation.report_config = self.report_config.validation_message.clone();
         } else if report_config.clone().is_err() {
             validation.report_config =
                 Some("The report field must contain a numeric value.".to_string());
@@ -219,8 +215,6 @@ impl Model {
         let purge_config = self.purge_config.value.parse::<u64>();
         if self.purge_config.disabled {
             validation.purge_config = None;
-        } else if self.purge_config.validation_message.is_some() {
-            validation.purge_config = self.purge_config.validation_message.clone();
         } else if purge_config.clone().is_err() {
             validation.purge_config =
                 Some("The purge field must contain a numeric value.".to_string());
@@ -313,14 +307,24 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
 
                 model.delete_stratagem_button.config_id = c.id;
 
-                model.run_config.value = iml_duration_picker::convert_ms_to_unit(iml_duration_picker::Unit::Days, c.interval);
+                model.run_config.value = iml_duration_picker::convert_ms_to_unit(
+                    iml_duration_picker::Unit::Days,
+                    c.interval,
+                )
+                .to_string();
                 model.report_active = c.report_duration.is_some();
                 match c.report_duration {
                     None => {
                         model.report_config.value = "".to_string();
                         model.report_config.disabled = true;
                     }
-                    Some(x) => model.report_config.value = x.to_string(),
+                    Some(x) => {
+                        model.report_config.value = iml_duration_picker::convert_ms_to_unit(
+                            iml_duration_picker::Unit::Days,
+                            x,
+                        )
+                        .to_string()
+                    }
                 }
 
                 model.purge_active = c.purge_duration.is_some();
@@ -329,7 +333,13 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                         model.purge_config.value = "".to_string();
                         model.purge_config.disabled = true;
                     }
-                    Some(x) => model.purge_config.value = x.to_string(),
+                    Some(x) => {
+                        model.purge_config.value = iml_duration_picker::convert_ms_to_unit(
+                            iml_duration_picker::Unit::Days,
+                            x,
+                        )
+                        .to_string()
+                    }
                 }
 
                 model.validate();
