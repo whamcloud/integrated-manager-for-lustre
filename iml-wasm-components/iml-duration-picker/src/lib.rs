@@ -7,7 +7,6 @@ use iml_tooltip::tooltip;
 use iml_utils::WatchState;
 use seed::{a, attrs, class, input, li, prelude::*};
 use std::fmt;
-use wasm_bindgen::JsCast;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Unit {
@@ -48,10 +47,36 @@ pub enum Msg {
     InputChange(web_sys::Event),
 }
 
+pub fn convert_unit_to_ms(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val * 24 * 60 * 60 * 1000,
+        Unit::Hours => val * 60 * 60 * 1000,
+        Unit::Minutes => val * 60 * 1000,
+        Unit::Seconds => val * 1000,
+    }
+}
+
+pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
+    match unit {
+        Unit::Days => val / 24 / 60 / 60 / 1000,
+        Unit::Hours => val / 60 / 60 / 1000,
+        Unit::Minutes => val / 60 / 1000,
+        Unit::Seconds => val / 1000,
+    }
+}
+
 pub fn update(msg: Msg, model: &mut Model) {
     match msg {
         Msg::SetUnit(unit) => {
+            let old_unit = model.unit;
             model.unit = unit;
+            if !model.value.is_empty() {
+                let old_val = model.value.parse::<u64>();
+                if let Ok(val) = old_val {
+                    let ms = convert_unit_to_ms(old_unit, val);
+                    model.value = convert_ms_to_unit(unit, ms).to_string();
+                }
+            }
         }
         Msg::WatchChange => model.watching.update(),
         Msg::InputChange(ev) => {

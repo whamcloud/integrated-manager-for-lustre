@@ -12,6 +12,7 @@ use bootstrap_components::bs_well::well;
 use seed::prelude::*;
 
 use iml_duration_picker::{self, duration_picker};
+use iml_environment::MAX_SAFE_INTEGER;
 use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
 use iml_toggle::toggle;
 use seed::{class, div, dom_types::At, h4, style};
@@ -35,6 +36,24 @@ pub struct StratagemUpdate {
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
+}
+#[derive(Debug, Default, Clone)]
+pub struct Validation {
+    run_config: Option<String>,
+    report_config: Option<String>,
+    purge_config: Option<String>,
+}
+
+impl Validation {
+    fn is_valid(&self) -> bool {
+        self.run_config.is_none() && self.report_config.is_none() && self.purge_config.is_none()
+    }
+}
+
+pub enum Durations {
+    RunConfig,
+    ReportConfig,
+    PurgeConfig,
 }
 
 #[derive(Debug)]
@@ -82,6 +101,7 @@ impl Default for Model {
                     iml_duration_picker::Unit::Minutes,
                     iml_duration_picker::Unit::Seconds,
                 ],
+                disabled: false,
                 ..Default::default()
             },
             purge_config: iml_duration_picker::Model {
@@ -90,6 +110,7 @@ impl Default for Model {
                     iml_duration_picker::Unit::Minutes,
                     iml_duration_picker::Unit::Seconds,
                 ],
+                disabled: false,
                 ..Default::default()
             },
             purge_active: false,
@@ -104,26 +125,52 @@ impl Default for Model {
     }
 }
 
+fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<String> {
+    if ms > MAX_SAFE_INTEGER {
+        Some(format!(
+            "Duration cannot be greater than {} {}",
+            iml_duration_picker::convert_ms_to_unit(unit, MAX_SAFE_INTEGER),
+            unit.to_string()
+        ))
+    } else {
+        None
+    }
+}
+
 impl Model {
     fn get_stratagem_update_config(&self) -> Option<StratagemUpdate> {
         if let Some(id) = self.id {
             let interval = self.run_config.value.parse::<u64>();
 
             if let Ok(interval) = interval {
+                let interval_ms =
+                    iml_duration_picker::convert_unit_to_ms(self.run_config.unit, interval);
                 let report_duration: Option<u64> = match self.report_config.disabled {
-                    false => self.report_config.value.parse::<u64>().ok(),
+                    false => self
+                        .report_config
+                        .value
+                        .parse::<u64>()
+                        .map(|x| {
+                            iml_duration_picker::convert_unit_to_ms(self.report_config.unit, x)
+                        })
+                        .ok(),
                     true => None,
                 };
 
                 let purge_duration: Option<u64> = match self.purge_config.disabled {
-                    false => self.purge_config.value.parse::<u64>().ok(),
+                    false => self
+                        .purge_config
+                        .value
+                        .parse::<u64>()
+                        .map(|x| iml_duration_picker::convert_unit_to_ms(self.purge_config.unit, x))
+                        .ok(),
                     true => None,
                 };
 
                 Some(StratagemUpdate {
                     id,
                     filesystem: self.fs_id,
-                    interval,
+                    interval: interval_ms,
                     report_duration,
                     purge_duration,
                 })
@@ -133,6 +180,78 @@ impl Model {
         } else {
             None
         }
+    }
+
+    fn validate(&mut self) -> Validation {
+        let mut validation = Validation {
+            ..Default::default()
+        };
+
+        let run_config = self.run_config.value.parse::<u64>();
+        if self.run_config.validation_message.is_some() {
+            validation.run_config = self.run_config.validation_message.clone();
+        } else if run_config.clone().is_err() {
+            validation.run_config =
+                Some("The report field must contain a numeric value.".to_string());
+        } else {
+            let val = run_config.clone().unwrap();
+            let ms = iml_duration_picker::convert_unit_to_ms(self.run_config.unit, val);
+            seed::log!("ms: {}, max: {}", ms, MAX_SAFE_INTEGER);
+            validation.run_config = max_value_validation(ms, self.run_config.unit);
+        }
+
+        let report_config = self.report_config.value.parse::<u64>();
+
+        if self.report_config.disabled {
+            validation.report_config = None;
+        } else if self.report_config.validation_message.is_some() {
+            validation.report_config = self.report_config.validation_message.clone();
+        } else if report_config.clone().is_err() {
+            validation.report_config =
+                Some("The report field must contain a numeric value.".to_string());
+        } else {
+            let val = report_config.clone().unwrap();
+            let ms = iml_duration_picker::convert_unit_to_ms(self.report_config.unit, val);
+
+            validation.report_config = max_value_validation(ms, self.report_config.unit);
+        }
+
+        let purge_config = self.purge_config.value.parse::<u64>();
+        if self.purge_config.disabled {
+            validation.purge_config = None;
+        } else if self.purge_config.validation_message.is_some() {
+            validation.purge_config = self.purge_config.validation_message.clone();
+        } else if purge_config.clone().is_err() {
+            validation.purge_config =
+                Some("The purge field must contain a numeric value.".to_string());
+        } else {
+            let val = purge_config.clone().unwrap();
+            let ms = iml_duration_picker::convert_unit_to_ms(self.report_config.unit, val);
+
+            validation.report_config = max_value_validation(ms, self.report_config.unit);
+        }
+
+        if report_config.is_ok()
+            && purge_config.is_ok()
+            && report_config.unwrap() > purge_config.unwrap()
+        {
+            validation.report_config =
+                Some("Report duration must be less than Purge duration.".to_string());
+        }
+
+        if self.run_config.validation_message.is_none() {
+            self.run_config.validation_message = validation.run_config.clone();
+        }
+
+        if self.report_config.validation_message.is_none() {
+            self.report_config.validation_message = validation.report_config.clone();
+        }
+
+        if self.purge_config.validation_message.is_none() {
+            self.purge_config.validation_message = validation.purge_config.clone();
+        }
+
+        validation
     }
 }
 
@@ -156,23 +275,45 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
     match msg {
         Msg::Destroy => model.destroyed = true,
-        Msg::RunConfig(msg) => iml_duration_picker::update(msg, &mut model.run_config),
-        Msg::ReportConfig(msg) => iml_duration_picker::update(msg, &mut model.report_config),
-        Msg::PurgeConfig(msg) => iml_duration_picker::update(msg, &mut model.purge_config),
+        Msg::RunConfig(msg) => {
+            iml_duration_picker::update(msg, &mut model.run_config);
+
+            let validation = model.validate();
+            model.enable_stratagem_button.disabled = !validation.is_valid();
+        }
+        Msg::ReportConfig(msg) => {
+            iml_duration_picker::update(msg, &mut model.report_config);
+            let validation = model.validate();
+            model.enable_stratagem_button.disabled = !validation.is_valid();
+        }
+        Msg::PurgeConfig(msg) => {
+            iml_duration_picker::update(msg, &mut model.purge_config);
+            let validation = model.validate();
+
+            model.enable_stratagem_button.disabled = !validation.is_valid();
+        }
         Msg::ToggleReport(iml_toggle::Active(active)) => {
             model.report_config.disabled = !active;
+            let validation = model.validate();
+
+            model.enable_stratagem_button.disabled = !validation.is_valid();
         }
         Msg::TogglePurge(iml_toggle::Active(active)) => {
             model.purge_config.disabled = !active;
+            let validation = model.validate();
+
+            model.enable_stratagem_button.disabled = !validation.is_valid();
         }
         Msg::SetConfig(config) => match config {
             Some(c) => {
                 model.configured = true;
                 model.id = Some(c.id);
                 model.enable_stratagem_button.fs_id = model.fs_id;
+                model.enable_stratagem_button.disabled = true;
+
                 model.delete_stratagem_button.config_id = c.id;
 
-                model.run_config.value = c.interval.to_string();
+                model.run_config.value = iml_duration_picker::convert_ms_to_unit(iml_duration_picker::Unit::Days, c.interval);
                 model.report_active = c.report_duration.is_some();
                 match c.report_duration {
                     None => {
@@ -190,6 +331,8 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                     }
                     Some(x) => model.purge_config.value = x.to_string(),
                 }
+
+                model.validate();
             }
             None => {
                 model.configured = false;
@@ -197,10 +340,14 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                 model.run_config.value = "".to_string();
                 model.report_active = false;
                 model.report_config.value = "".to_string();
-                model.report_config.disabled = true;
+                model.report_config.disabled = false;
                 model.purge_active = false;
                 model.purge_config.value = "".to_string();
-                model.purge_config.disabled = true;
+                model.purge_config.disabled = false;
+                model.enable_stratagem_button.fs_id = model.fs_id;
+
+                model.enable_stratagem_button.disabled = true;
+                model.validate();
             }
         },
         Msg::InodeTable(msg) => {
@@ -208,15 +355,6 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                 .map_message(Msg::InodeTable);
         }
         Msg::EnableStratagemButton(msg) => {
-            model.enable_stratagem_button.fs_id = model.fs_id;
-            model.enable_stratagem_button.disabled =
-                model.run_config.value.parse::<u64>().ok().is_some();
-            seed::log!(format!(
-                "set disabled to: {}, {}",
-                model.run_config.value,
-                model.run_config.value.parse::<u64>().ok().is_some()
-            ));
-
             *_orders = call_update(
                 enable_stratagem_button::update,
                 msg,
@@ -302,27 +440,27 @@ pub fn view(model: &Model) -> El<Msg> {
         detail_label("Scan filesystem every"),
         div![
             class!["input-group"],
-            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
+            style! {"grid-column" => "7 /span 6"},
             duration_picker(&model.run_config).map_message(Msg::RunConfig)
         ],
         detail_label("Generate report on files older than"),
         div![
             class!["input-group"],
-            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
+            style! {"grid-column" => "7 /span 5", "padding-right" => "15px"},
             duration_picker(&model.report_config).map_message(Msg::ReportConfig)
         ],
         toggle(!model.report_config.disabled)
             .map_message(Msg::ToggleReport)
-            .add_style("grid-column".into(), "10 /span 3".into()),
+            .add_style("grid-column".into(), "12".into()),
         detail_label("Purge Files older than"),
         div![
             class!["input-group"],
-            style! {"grid-column" => "7 /span 3", "padding-right" => "15px"},
+            style! {"grid-column" => "7 /span 5", "padding-right" => "15px"},
             duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
         ],
         toggle(!model.purge_config.disabled)
             .map_message(Msg::TogglePurge)
-            .add_style("grid-column".into(), "10 /span 3".into()),
+            .add_style("grid-column".into(), "12".into()),
     ];
 
     if model.configured {
@@ -360,12 +498,4 @@ pub fn view(model: &Model) -> El<Msg> {
             detail_panel(configuration_component)
         ]
     }
-}
-
-fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
-    if model.destroyed {
-        return vec![];
-    }
-
-    vec![simple_ev(Ev::Click, Msg::WindowClick)]
 }

@@ -5,7 +5,7 @@
 use futures::Future;
 use iml_environment::csrf_token;
 use seed::prelude::*;
-use seed::{attrs, button, class, dom_types::At, fetch, log, style};
+use seed::{attrs, button, class, dom_types::At, fetch, log};
 
 #[derive(Debug, serde::Serialize)]
 pub struct UnconfiguredStratagemConfiguration {
@@ -13,10 +13,19 @@ pub struct UnconfiguredStratagemConfiguration {
     interval: u64,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Model {
     pub fs_id: u32,
     pub disabled: bool,
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Model {
+            disabled: true,
+            fs_id: 0,
+        }
+    }
 }
 
 // Update
@@ -79,5 +88,10 @@ pub fn view(model: &Model) -> El<Msg> {
         });
     }
 
-    button![class!["btn btn-primary"], attrs, "Enable Stratagem",]
+    button![
+        class!["btn btn-primary"],
+        attrs,
+        "Enable Stratagem",
+        simple_ev(Ev::Click, Msg::EnableStratagem)
+    ]
 }

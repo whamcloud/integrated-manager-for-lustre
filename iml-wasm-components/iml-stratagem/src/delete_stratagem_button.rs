@@ -5,7 +5,7 @@
 use futures::Future;
 use iml_environment::csrf_token;
 use seed::prelude::*;
-use seed::{attrs, button, class, dom_types::At, fetch, i, log, style};
+use seed::{attrs, button, class, dom_types::At, fetch, i, log};
 
 #[derive(Debug, Default)]
 pub struct Model {

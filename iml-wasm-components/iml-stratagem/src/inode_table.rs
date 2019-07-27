@@ -1,5 +1,4 @@
 use crate::inode_error::InodeError;
-use bootstrap_components::bs_well::well;
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{

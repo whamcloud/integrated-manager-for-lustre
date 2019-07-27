@@ -7,6 +7,8 @@ use seed::document;
 use wasm_bindgen::JsValue;
 use web_sys::HtmlDocument;
 
+pub static MAX_SAFE_INTEGER: u64 = 9007199254740991;
+
 /// Returns https://<domain>:<port>/ui/
 pub fn ui_root() -> String {
     document().base_uri().unwrap().unwrap_or_default()

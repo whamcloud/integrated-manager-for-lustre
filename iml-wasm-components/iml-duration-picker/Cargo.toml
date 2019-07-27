@@ -11,6 +11,7 @@ web-sys = { version = "0.3", features = ["Event", "EventTarget", "Element", "Htm
 wasm-bindgen = {version = "0.2.48"}
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
 iml-utils = { path = "../iml-utils", version = "0.1" }
+iml-environment = { path = "../iml-environment", version = "0.1.0" }
 bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 
 [dev-dependencies]

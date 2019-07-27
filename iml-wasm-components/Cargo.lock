@@ -299,6 +299,7 @@ name = "iml-duration-picker"
 version = "0.1.0"
 dependencies = [
  "bootstrap-components 0.1.0",
+ "iml-environment 0.1.0",
  "iml-tooltip 0.1.0",
  "iml-utils 0.1.0",
  "insta 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
