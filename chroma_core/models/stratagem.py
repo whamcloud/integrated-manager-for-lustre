@@ -79,6 +79,9 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         timer_file = "/etc/systemd/system/{}.timer".format(name)
         service_file = "/etc/systemd/system/{}.service".format(name)
 
+        if os.path.exists(timer_file):
+            self.try_shell(["systemctl", "disable", "--now", "{}.timer".format(name)])
+
         with open(timer_file, "w") as fn:
             fn.write(
                 "#  This file is part of IML\n"
