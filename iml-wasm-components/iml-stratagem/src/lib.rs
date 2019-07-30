@@ -6,6 +6,7 @@ mod delete_stratagem_button;
 mod enable_stratagem_button;
 mod inode_error;
 pub mod inode_table;
+mod scan_stratagem_button;
 mod update_stratagem_button;
 
 use bootstrap_components::bs_well::well;
@@ -36,6 +37,13 @@ pub struct StratagemUpdate {
     pub purge_duration: Option<u64>,
 }
 
+#[derive(Debug, Default, Clone, serde::Serialize)]
+pub struct StratagemScan {
+    pub filesystem: u32,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+}
+
 #[derive(Debug)]
 pub struct Model {
     pub id: Option<u32>,
@@ -49,6 +57,7 @@ pub struct Model {
     pub enable_stratagem_button: Option<enable_stratagem_button::Model>,
     pub delete_stratagem_button: delete_stratagem_button::Model,
     pub update_stratagem_button: update_stratagem_button::Model,
+    pub scan_stratagem_button: scan_stratagem_button::Model,
 }
 
 impl Default for Model {
@@ -79,6 +88,7 @@ impl Default for Model {
             enable_stratagem_button: None,
             delete_stratagem_button: delete_stratagem_button::Model::default(),
             update_stratagem_button: update_stratagem_button::Model::default(),
+            scan_stratagem_button: scan_stratagem_button::Model::default(),
         }
     }
 }
@@ -130,6 +140,15 @@ impl Model {
             purge_duration,
         })
     }
+
+    fn get_stratagem_scan_config(&self) -> Option<StratagemScan> {
+        self.get_stratagem_update_config().map(|x| StratagemScan {
+            filesystem: self.fs_id,
+            report_duration: x.report_duration,
+            purge_duration: x.purge_duration,
+        })
+    }
+
     fn create_enable_stratagem_model(&self) -> Option<enable_stratagem_button::Model> {
         let interval = self.run_config.value.parse::<u64>().ok()?;
         let interval = iml_duration_picker::convert_unit_to_ms(self.run_config.unit, interval);
@@ -238,6 +257,7 @@ pub enum Msg {
     EnableStratagemButton(enable_stratagem_button::Msg),
     DeleteStratagemButton(delete_stratagem_button::Msg),
     UpdateStratagemButton(update_stratagem_button::Msg),
+    ScanStratagemButton(scan_stratagem_button::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
@@ -368,6 +388,16 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             )
             .map_message(Msg::UpdateStratagemButton);
         }
+        Msg::ScanStratagemButton(msg) => {
+            model.scan_stratagem_button.config_data = model.get_stratagem_scan_config();
+
+            *_orders = call_update(
+                scan_stratagem_button::scan,
+                msg,
+                &mut model.scan_stratagem_button,
+            )
+            .map_message(Msg::ScanStratagemButton);
+        }
     }
 
     log::trace!("Model: {:#?}", model);
@@ -441,6 +471,9 @@ pub fn view(model: &Model) -> El<Msg> {
 
     if model.configured {
         configuration_component.extend(vec![
+            scan_stratagem_button::view()
+                .add_style("grid-column".into(), "1 / span 12".into())
+                .map_message(Msg::ScanStratagemButton),
             update_stratagem_button::view()
                 .add_style("grid-column".into(), "1 /span 12".into())
                 .map_message(Msg::UpdateStratagemButton),

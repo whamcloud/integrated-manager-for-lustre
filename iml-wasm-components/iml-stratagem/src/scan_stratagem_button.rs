@@ -2,34 +2,34 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::StratagemUpdate;
+use crate::StratagemScan;
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
-use seed::{class, dom_types::At, fetch, i, prelude::*};
+use seed::{class, dom_types::At, fetch, prelude::*};
 
 #[derive(Debug, Default)]
 pub struct Model {
-    pub config_data: Option<StratagemUpdate>,
+    pub config_data: Option<StratagemScan>,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    UpdateStratagem,
-    StratagemUpdated(fetch::FetchObject<iml_wire_types::Command>),
+    ScanStratagem,
+    StratagemScanned(fetch::FetchObject<iml_wire_types::Command>),
     OnFetchError(seed::fetch::FailReason),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn scan(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
-        Msg::UpdateStratagem => {
+        Msg::ScanStratagem => {
             let orders = orders.skip();
 
             if let Some(config_data) = &model.config_data {
-                orders.perform_cmd(update_stratagem(&config_data));
+                orders.perform_cmd(scan_stratagem(&config_data));
             }
         }
-        Msg::StratagemUpdated(fetch_object) => match fetch_object.response() {
+        Msg::StratagemScanned(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log::trace!("Response data: {:#?}", response.data);
                 orders.skip();
@@ -47,27 +47,26 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     log::trace!("Model: {:#?}", model);
 }
 
-fn update_stratagem(config_data: &StratagemUpdate) -> impl Future<Item = Msg, Error = Msg> {
-    let url = format!("/api/stratagem_configuration/{}", config_data.id);
+fn scan_stratagem(config_data: &StratagemScan) -> impl Future<Item = Msg, Error = Msg> {
+    let url = format!("/api/run_stratagem/");
 
     seed::fetch::Request::new(url)
-        .method(seed::fetch::Method::Put)
+        .method(seed::fetch::Method::Post)
         .header(
             "X-CSRFToken",
             &csrf_token().expect("Couldn't get csrf token."),
         )
         .send_json(config_data)
-        .fetch_json(Msg::StratagemUpdated)
+        .fetch_json(Msg::StratagemScanned)
 }
 
 pub fn view() -> El<Msg> {
     let mut btn = bs_button::btn(
-        class![bs_button::BTN_SUCCESS, "update-button"],
-        vec![El::new_text("Update Stratagem"), i![class!["fas fa-check"]]],
+        class![bs_button::BTN_PRIMARY, "scan-button"],
+        vec![El::new_text("Scan Stratagem")],
     );
 
-    btn.listeners
-        .push(simple_ev(Ev::Click, Msg::UpdateStratagem));
+    btn.listeners.push(simple_ev(Ev::Click, Msg::ScanStratagem));
 
     btn
 }
