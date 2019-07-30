@@ -191,7 +191,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(StatefulModelResource):
-    filesystem = fields.CharField(attribute="filesystem_id", null=False)
+    filesystem = fields.CharField(null=False)
     interval = fields.CharField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
@@ -243,7 +243,7 @@ class StratagemConfigurationResource(StatefulModelResource):
         list_allowed_methods = ["get", "post"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = StratagemConfigurationValidation()
-        filtering = {"filesystem_id": ["exact"]}
+        filtering = {"filesystem": ["exact"]}
 
     @validate
     def obj_update(self, bundle, **kwargs):

@@ -1769,25 +1769,25 @@ class JobScheduler(object):
         with self._lock:
             configuration_data = {
                 "state": "unconfigured",
-                "filesystem_id": stratagem_data.get("filesystem"),
                 "interval": stratagem_data.get("interval"),
                 "report_duration": stratagem_data.get("report_duration"),
                 "purge_duration": stratagem_data.get("purge_duration"),
             }
 
             # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
-            fs_identifier = str(configuration_data.get("filesystem_id"))
+            fs_identifier = str(stratagem_data.get("filesystem"))
             fs_id = get_fs_id_from_identifier(fs_identifier)
 
             if not fs_id:
                 raise Exception("No matching filesystem for {}".format(fs_identifier))
 
-            configuration_data["filesystem_id"] = fs_id
+            managed_filesystem = ManagedFilesystem.objects.get(id=fs_id)
+            configuration_data["filesystem"] = managed_filesystem
 
-            matches = StratagemConfiguration.objects.filter(filesystem_id=fs_id)
+            matches = StratagemConfiguration.objects.filter(filesystem=managed_filesystem)
             if len(matches) == 1:
                 matches.update(**configuration_data)
-                stratagem_configuration = StratagemConfiguration.objects.get(filesystem_id=fs_id)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
             else:
                 stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
 
