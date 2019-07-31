@@ -86,11 +86,10 @@ class StratagemConfiguration(StatefulObject):
         app_label = "chroma_core"
         ordering = ["id"]
 
-    @classmethod
-    def filter_by_fs(cls, fs):
+    def filter_by_fs(fs):
         return ObjectCache.get(StratagemConfiguration, lambda sc, fs=fs: sc.filesystem.id == fs.id)
 
-    reverse_deps = {"ManagedFilesystem": lambda mfs: StratagemConfiguration.filter_by_fs(mfs)}
+    reverse_deps = {"ManagedFilesystem": filter_by_fs}
 
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
@@ -204,6 +203,7 @@ class UnconfigureStratagemJob(StateChangeJob):
         steps = [(UnconfigureStratagemTimerStep, {"config": self.stratagem_configuration})]
 
         return steps
+
 
 class ForgetStratagemConfigurationJob(StateChangeJob):
     class Meta:
