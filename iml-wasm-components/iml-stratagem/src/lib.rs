@@ -262,7 +262,15 @@ pub enum Msg {
 
 pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
     match msg {
-        Msg::Destroy => model.destroyed = true,
+        Msg::Destroy => {
+            model.destroyed = true;
+            *_orders = call_update(
+                inode_table::update,
+                inode_table::Msg::Destroy,
+                &mut model.inode_table,
+            )
+            .map_message(Msg::InodeTable);
+        }
         Msg::RunConfig(msg) => {
             iml_duration_picker::update(msg, &mut model.run_config);
 
@@ -346,6 +354,13 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                     }
                 }
 
+                *_orders = call_update(
+                    inode_table::update,
+                    inode_table::Msg::FetchInodes,
+                    &mut model.inode_table,
+                )
+                .map_message(Msg::InodeTable);
+
                 model.validate();
             }
             None => {
@@ -357,6 +372,13 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
                 model.purge_config.value = "".to_string();
                 model.purge_config.disabled = false;
                 model.enable_stratagem_button = None;
+
+                *_orders = call_update(
+                    inode_table::update,
+                    inode_table::Msg::Cancel,
+                    &mut model.inode_table,
+                )
+                .map_message(Msg::InodeTable);
 
                 model.validate();
             }

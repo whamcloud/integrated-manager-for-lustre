@@ -6,7 +6,7 @@ use seed::{
     class, div,
     dom_types::Attrs,
     fetch::{FetchObject, RequestController},
-    h4, i,
+    h4, p,
     prelude::*,
     style, tbody, td, th, thead, tr,
 };
@@ -32,6 +32,7 @@ pub enum Msg {
     OnFetchError(InodeError),
     Destroy,
     Noop,
+    Cancel,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -122,6 +123,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
         Msg::Noop => {
             orders.skip();
         }
+        Msg::Cancel => {
+            if let Some(c) = model.request_controller.take() {
+                c.abort()
+            }
+
+            model.inodes = vec![];
+        }
         Msg::Destroy => {
             model.cancel = None;
 
@@ -177,17 +185,7 @@ pub fn view(model: &Model) -> El<Msg> {
                     vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
                 )
             } else {
-                div![detail_panel(vec![i![
-                    class!["fa fa-circle-notch fa-spin".into()],
-                    style! {
-                        "grid-column" => "2",
-                        "grid-row" => "1",
-                        "width" => "40px",
-                        "height" => "40px",
-                        "margin-left" => "-20px",
-                        "font-size" => "40px"
-                    }
-                ]])]
+                div![detail_panel(vec![p!["No Data"]])]
             }
         ]
     }
