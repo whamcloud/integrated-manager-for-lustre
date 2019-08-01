@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod dispatch_custom_event;
 use iml_wire_types::LockChange;
 use regex::Regex;
 use std::{

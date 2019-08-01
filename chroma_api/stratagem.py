@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from toolz.functoolz import partial, flip, compose
 
 import tastypie.http as http
+import re
 
 from tastypie import fields
 from tastypie.resources import Resource
@@ -191,7 +192,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(StatefulModelResource):
-    filesystem = fields.CharField(attribute="filesystem_id", null=False)
+    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
     interval = fields.CharField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
@@ -232,6 +233,16 @@ class StratagemConfigurationResource(StatefulModelResource):
     def dehydrate_interval(self, bundle):
         return long(bundle.data.get("interval"))
 
+    def dehydrate_filesystem(self, bundle):
+        regex = r".*\/(\d+)\/$"
+        fs_uri = bundle.data.get("filesystem")
+        matches = re.findall(regex, fs_uri)
+
+        try:
+            return matches[0]
+        except IndexError:
+            raise "Could not locate filesystem id."
+
     def get_resource_uri(self, bundle=None, url_name=None):
         return Resource.get_resource_uri(self)
 
@@ -243,18 +254,18 @@ class StratagemConfigurationResource(StatefulModelResource):
         list_allowed_methods = ["get", "post"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = StratagemConfigurationValidation()
-        filtering = {"filesystem_id": ["exact"]}
+        filtering = {"filesystem": ["exact"]}
 
     @validate
     def obj_update(self, bundle, **kwargs):
-        config = StratagemConfiguration.objects.get(pk=kwargs["pk"])
-        config.interval = bundle.data.get("interval")
-        config.report_duration = bundle.data.get("report_duration")
-        config.purge_duration = bundle.data.get("purge_duration")
-        config.save()
+        command_id = JobSchedulerClient.update_stratagem(bundle.data)
 
-        bundle.obj = config
-        return bundle
+        try:
+            command = Command.objects.get(pk=command_id)
+        except ObjectDoesNotExist:
+            command = None
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
     @validate
     def obj_create(self, bundle, **kwargs):

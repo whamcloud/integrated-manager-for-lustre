@@ -5,6 +5,8 @@
 import logging
 import json
 import os
+import time
+
 from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
@@ -32,6 +34,7 @@ from chroma_core.models import (
     AlertEvent,
     ManagedHost,
     ManagedMdt,
+    ManagedFilesystem,
     ManagedTarget,
     ManagedTargetMount,
     Volume,
@@ -41,9 +44,7 @@ from chroma_core.models import (
 
 
 class StratagemConfiguration(StatefulObject):
-    filesystem_id = models.IntegerField(
-        help_text="The filesystem id associated with the stratagem configuration", null=False
-    )
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
     interval = models.BigIntegerField(
         help_text="Interval value in milliseconds between each stratagem execution", null=False
     )
@@ -57,6 +58,27 @@ class StratagemConfiguration(StatefulObject):
     def get_label(self):
         return "Stratagem Configuration"
 
+    def get_deps(self, state=None):
+        if not state:
+            state = self.state
+
+        deps = []
+        if state != "removed":
+            # Depend on the filesystem being available.
+            deps.append(DependOn(self.filesystem, "available", fix_state="unconfigured"))
+
+            # move to the removed state if the filesystem is removed.
+            deps.append(
+                DependOn(
+                    self.filesystem,
+                    "available",
+                    acceptable_states=list(set(self.filesystem.states) - set(["removed", "forgotten"])),
+                    fix_state="removed",
+                )
+            )
+
+        return DependAll(deps)
+
     states = ["unconfigured", "configured", "removed"]
     initial_state = "unconfigured"
 
@@ -65,6 +87,11 @@ class StratagemConfiguration(StatefulObject):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
+
+    def filter_by_fs(fs):
+        return ObjectCache.get(StratagemConfiguration, lambda sc, fs=fs: sc.filesystem.id == fs.id)
+
+    reverse_deps = {"ManagedFilesystem": filter_by_fs}
 
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
@@ -87,10 +114,10 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "Description=Start Stratagem run on {}\n"
                 "\n[Timer]\n"
                 "OnBootSec={}\n"
-                "OnUnitActiveSec={}\n".format(config.filesystem_id, config.interval / 1000, config.interval / 1000)
+                "OnUnitActiveSec={}\n".format(config.filesystem.id, config.interval / 1000, config.interval / 1000)
             )
 
-        iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem_id)
+        iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem.id)
         if config.report_duration is not None and config.report_duration > 0:
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration > 0:
@@ -104,10 +131,15 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "After=iml-manager.target\n"
                 "\n[Service]\n"
                 "Type=oneshot\n"
-                "ExecStart={}\n".format(config.filesystem_id, iml_cmd)
+                "ExecStart={}\n".format(config.filesystem.id, iml_cmd)
             )
         self.try_shell(["systemctl", "daemon-reload"])
         self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(name)])
+        
+        # This step happens so quickly that sometimes the modal doesn't have an opportunity to appear. 
+        # Adding a short sleep will ensure that the command modal can be launched. This is temporary 
+        # for the demo and until we can find a better solution.
+        time.sleep(1)
 
 
 class UnconfigureStratagemTimerStep(Step, CommandLine):
@@ -178,6 +210,33 @@ class UnconfigureStratagemJob(StateChangeJob):
         steps = [(UnconfigureStratagemTimerStep, {"config": self.stratagem_configuration})]
 
         return steps
+
+
+class ForgetStratagemConfigurationJob(StateChangeJob):
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    @classmethod
+    def long_description(cls, self):
+        return "Forget the stratagem configuration for filesystem"
+
+    def description(self):
+        return self.long_description(self)
+
+    def get_requires_confirmation(self):
+        return True
+
+    def on_success(self):
+        self.stratagem_configuration.mark_deleted()
+        job_log.debug("forgetting stratagem configuration")
+
+        super(ForgetStratagemConfigurationJob, self).on_success()
+
+    state_transition = StateChangeJob.StateTransition(StratagemConfiguration, "unconfigured", "removed")
+    stateful_object = "stratagem_configuration"
+    stratagem_configuration = models.ForeignKey(StratagemConfiguration)
+    state_verb = "Forget"
 
 
 class DeleteStratagemStep(Step):

@@ -227,7 +227,7 @@ pub fn stratagem_cli(command: StratagemCommand) {
                 .and_then(|fs: Filesystem| {
                     get(
                         StratagemConfiguration::endpoint_name(),
-                        serde_json::json!({ "filesystem_id": fs.id }),
+                        serde_json::json!({ "filesystem": fs.id }),
                     )
                 })
                 .and_then(first)

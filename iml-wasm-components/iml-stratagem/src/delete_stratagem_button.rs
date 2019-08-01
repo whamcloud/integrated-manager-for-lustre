@@ -5,6 +5,7 @@
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
+use iml_utils::dispatch_custom_event::dispatch_custom_event;
 use seed::{class, dom_types::At, fetch, i, prelude::*};
 
 #[derive(Debug, Default)]
@@ -25,6 +26,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
         Msg::DeleteStratagem => {
             orders.perform_cmd(delete_stratagem(model.config_id));
+            dispatch_custom_event("show_command_modal", &model.config_id);
         }
         Msg::StratagemDeleted(fetch_object) => match fetch_object.response() {
             Ok(response) => {

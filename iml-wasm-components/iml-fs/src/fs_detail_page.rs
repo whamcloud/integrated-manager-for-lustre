@@ -112,7 +112,6 @@ enum Msg {
     Targets(HashMap<u32, Target<TargetConfParam>>),
     WindowClick,
     Hosts(HashMap<u32, Host>),
-    InodeTable(iml_stratagem::Msg),
     StratagemInit(iml_stratagem::Msg),
     StratagemComponent(iml_stratagem::Msg),
 }
@@ -279,10 +278,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
         Msg::OpenMountModal => {
             model.mount_modal_open = true;
         }
-        Msg::InodeTable(msg) => {
-            *orders = call_update(iml_stratagem::update, msg, &mut model.stratagem)
-                .map_message(Msg::InodeTable);
-        }
         Msg::StratagemInit(msg) => {
             model.stratagem_ready = model.stratagem_ready();
 
@@ -414,7 +409,7 @@ fn target_table(
                     class!["col-sm-1"],
                     ui_link(&format!("target/{}", x.id), &x.name)
                 ],
-                td![x.volume_name],
+                td![class!["col-sm-3"], x.volume_name],
                 td![server_link(&x.primary_server, &x.primary_server_name)],
                 td![server_link(
                     &x.failover_servers.first().unwrap_or(&"".into()),
@@ -567,12 +562,6 @@ impl FsDetailPageCallbacks {
         self.app
             .update(Msg::StratagemInit(iml_stratagem::Msg::SetConfig(
                 config.into_serde_opt().unwrap(),
-            )));
-    }
-    pub fn fetch_inode_table(&self) {
-        self.app
-            .update(Msg::InodeTable(iml_stratagem::Msg::InodeTable(
-                iml_stratagem::inode_table::Msg::FetchInodes,
             )));
     }
 }

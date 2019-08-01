@@ -5,6 +5,7 @@
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
+use iml_utils::dispatch_custom_event::dispatch_custom_event;
 use seed::{class, dom_types::At, fetch, prelude::*};
 
 #[derive(Debug, serde::Serialize)]
@@ -28,6 +29,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
     match msg {
         Msg::EnableStratagem => {
             orders.perform_cmd(enable_stratagem(&model));
+            dispatch_custom_event("show_command_modal", &model);
         }
         Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {

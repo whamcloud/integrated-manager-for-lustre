@@ -17,6 +17,7 @@ iml-toggle = { path = "../iml-toggle", version = "0.1.0" }
 iml-tooltip = { path = "../iml-tooltip", version = "0.1.0" }
 iml-environment = { path = "../iml-environment", version = "0.1.0" }
 iml-wire-types = "0.1.10"
+iml-utils = { path = "../iml-utils", version = "0.1" }
 iml-grafana-chart = { path = "../iml-grafana-chart", version = "0.1" }
 log = "0.4"
 seed = "=0.3.7"

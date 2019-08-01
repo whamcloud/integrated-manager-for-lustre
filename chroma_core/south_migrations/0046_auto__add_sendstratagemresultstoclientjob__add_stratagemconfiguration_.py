@@ -39,13 +39,21 @@ class Migration(SchemaMigration):
             ('state_modified_at', self.gf('django.db.models.fields.DateTimeField')()),
             ('state', self.gf('django.db.models.fields.CharField')(max_length=32)),
             ('immutable_state', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('filesystem_id', self.gf('django.db.models.fields.IntegerField')()),
+            ('filesystem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedFilesystem'])),
             ('interval', self.gf('django.db.models.fields.BigIntegerField')()),
             ('report_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
             ('purge_duration', self.gf('django.db.models.fields.BigIntegerField')(null=True)),
             ('not_deleted', self.gf('django.db.models.fields.NullBooleanField')(default=True, null=True, blank=True)),
         ))
         db.send_create_signal('chroma_core', ['StratagemConfiguration'])
+
+        # Adding model 'ForgetStratagemConfigurationJob'
+        db.create_table(u'chroma_core_forgetstratagemconfigurationjob', (
+            (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
+            ('stratagem_configuration', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.StratagemConfiguration'])),
+        ))
+        db.send_create_signal('chroma_core', ['ForgetStratagemConfigurationJob'])
 
         # Adding model 'RunStratagemJob'
         db.create_table(u'chroma_core_runstratagemjob', (
@@ -89,6 +97,9 @@ class Migration(SchemaMigration):
 
         # Deleting model 'StratagemConfiguration'
         db.delete_table(u'chroma_core_stratagemconfiguration')
+
+        # Deleting model 'ForgetStratagemConfigurationJob'
+        db.delete_table(u'chroma_core_forgetstratagemconfigurationjob')
 
         # Deleting model 'RunStratagemJob'
         db.delete_table(u'chroma_core_runstratagemjob')
@@ -524,6 +535,12 @@ class Migration(SchemaMigration):
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
+        },
+        'chroma_core.forgetstratagemconfigurationjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'ForgetStratagemConfigurationJob'},
+            u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
+            'stratagem_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StratagemConfiguration']"})
         },
         'chroma_core.forgettargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'ForgetTargetJob'},
@@ -967,10 +984,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 7, 19, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 7, 30, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'F4B9EA6FBF20477770D20BE890195B19'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'74FFD01032ECEB06D65A6FD1B48C50CD'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1399,7 +1416,7 @@ class Migration(SchemaMigration):
         },
         'chroma_core.stratagemconfiguration': {
             'Meta': {'ordering': "['id']", 'object_name': 'StratagemConfiguration'},
-            'filesystem_id': ('django.db.models.fields.IntegerField', [], {}),
+            'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'interval': ('django.db.models.fields.BigIntegerField', [], {}),
