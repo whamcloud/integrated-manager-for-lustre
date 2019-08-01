@@ -333,18 +333,18 @@ class RunStratagemStep(Step):
                 "groups": [
                     {
                         "rules": [
-                            {"action": "LAT_COUNTER_INC", "expression": "< size 1048576", "argument": "SIZE < 1M"},
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "&& >= size 1048576 < size 1048576000",
-                                "argument": "1M <= SIZE < 1G",
-                            },
-                            {"action": "LAT_COUNTER_INC", "expression": ">= size 1048576000", "argument": "SIZE >= 1G"},
                             {
                                 "action": "LAT_COUNTER_INC",
                                 "expression": ">= size 1048576000000",
                                 "argument": "SIZE >= 1T",
                             },
+                            {"action": "LAT_COUNTER_INC", "expression": ">= size 1048576000", "argument": "SIZE >= 1G"},
+                            {
+                                "action": "LAT_COUNTER_INC",
+                                "expression": ">= size 1048576",
+                                "argument": "1M <= SIZE < 1G",
+                            },
+                            {"action": "LAT_COUNTER_INC", "expression": "< size 1048576", "argument": "SIZE < 1M"},
                         ],
                         "name": "size_distribution",
                     },
