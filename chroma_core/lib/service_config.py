@@ -81,7 +81,7 @@ class ServiceConfig(CommandLine):
         try:
             hostname = socket.gethostname()
         except socket.error:
-            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname esolution.")
+            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname resolution.")
             return False
 
         if hostname == "localhost":
@@ -130,7 +130,7 @@ class ServiceConfig(CommandLine):
             return False
 
     def print_usage_message(self):
-        rc, out, err = self.try_shell(["man", "-P", "cat", "chroma-config"])
+        _, out, _ = self.try_shell(["man", "-P", "cat", "chroma-config"])
 
         return out
 
@@ -404,7 +404,7 @@ class ServiceConfig(CommandLine):
         "iml-view-server.service",
         "iml-realtime.service",
         "iml-warp-drive.service",
-        "device-aggregator.socket",
+        "device-aggregator.service",
         "iml-srcmap-reverse.socket",
         "iml-mailbox.service",
         "iml-action-runner.service",
@@ -721,8 +721,8 @@ class ServiceConfig(CommandLine):
             "MAILBOX_PROXY_PASS",
             "SSL_PATH",
             "DEVICE_AGGREGATOR_PORT",
-            "UPDATE_HANDLER_PROXY_PASS",
             "DEVICE_AGGREGATOR_PROXY_PASS",
+            "UPDATE_HANDLER_PROXY_PASS",
             "SRCMAP_REVERSE_PROXY_PASS",
         ]
 

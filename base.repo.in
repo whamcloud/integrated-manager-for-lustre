@@ -8,6 +8,16 @@ gpgkey=https://copr-be.cloud.fedoraproject.org/results/@MFL_COPR_REPO@/pubkey.gp
 repo_gpgcheck=0
 enabled=1
 
+[managerforlustre-device-scanner-devel]
+name=Copr repo for device-scanner-devel owned by managerforlustre
+baseurl=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/device-scanner-devel/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/managerforlustre/device-scanner-devel/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+
 [epel]
 name=Extra Packages for Enterprise Linux 7 - $basearch
 #baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
