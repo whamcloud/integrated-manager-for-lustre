@@ -86,7 +86,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "\n[Unit]\n"
                 "Description=Start Stratagem run on {}\n"
                 "\n[Timer]\n"
-                "OnBootSec={}\n"
+                "OnActiveSec={}\n"
                 "OnUnitActiveSec={}\n".format(config.filesystem_id, config.interval / 1000, config.interval / 1000)
             )
 
