@@ -67,6 +67,18 @@ class StratagemConfiguration(StatefulObject):
         ordering = ["id"]
 
 
+def unit_name(fid):
+    return "iml-stratagem-{}".format(fid)
+
+
+def timer_file(fid):
+    return "/etc/systemd/system/{}.timer".format(unit_name(fid))
+
+
+def service_file(fid):
+    return "/etc/systemd/system/{}.service".format(unit_name(fid))
+
+
 class ConfigureStratagemTimerStep(Step, CommandLine):
     def run(self, kwargs):
         job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
@@ -74,15 +86,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
 
         config = kwargs["config"]
 
-        name = "iml-stratagem-{}".format(config.id)
-
-        timer_file = "/etc/systemd/system/{}.timer".format(name)
-        service_file = "/etc/systemd/system/{}.service".format(name)
-
-        if os.path.exists(timer_file):
-            self.try_shell(["systemctl", "disable", "--now", "{}.timer".format(name)])
-
-        with open(timer_file, "w") as fn:
+        with open(timer_file(config.id), "w") as fn:
             fn.write(
                 "#  This file is part of IML\n"
                 "#  This file will be overwritten automatically\n"
@@ -98,7 +102,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration > 0:
             iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
-        with open(service_file, "w") as fn:
+        with open(service_file(config.id), "w") as fn:
             fn.write(
                 "#  This file is part of IML\n"
                 "#  This file will be overwritten automatically\n"
@@ -110,7 +114,7 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
                 "ExecStart={}\n".format(config.filesystem_id, iml_cmd)
             )
         self.try_shell(["systemctl", "daemon-reload"])
-        self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(name)])
+        self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
 
 
 class UnconfigureStratagemTimerStep(Step, CommandLine):
@@ -119,12 +123,10 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
 
         config = kwargs["config"]
 
-        name = "iml-stratagem-{}".format(config.id)
+        self.try_shell(["systemctl", "disable", "--now", "{}.timer".format(unit_name(config.id))])
 
-        self.try_shell(["systemctl", "disable", "--now", "{}.timer".format(name)])
-
-        os.unlink("/etc/systemd/system/{}.timer".format(name))
-        os.unlink("/etc/systemd/system/{}.service".format(name))
+        os.unlink(timer_file(config.id))
+        os.unlink(service_file(config.id))
         self.try_shell(["systemctl", "daemon-reload"])
 
 
@@ -151,7 +153,10 @@ class ConfigureStratagemJob(StateChangeJob):
         return help_text["configure_stratagem_long"]
 
     def get_steps(self):
-        steps = [(ConfigureStratagemTimerStep, {"config": self.stratagem_configuration})]
+        steps = []
+        if os.path.exists(timer_file(self.stratagem_configuration.id)):
+            steps.append((UnconfigureStratagemTimerStep, {"config": self.stratagem_configuration}))
+        steps.append((ConfigureStratagemTimerStep, {"config": self.stratagem_configuration}))
 
         return steps
 
