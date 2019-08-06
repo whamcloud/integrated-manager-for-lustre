@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::codec::{BytesCodec, FramedRead, FramedWrite};
+use tokio::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec};
 use tokio_threadpool::blocking;
 
 /// Given a path, attempts to do an async read to the end of the file.
@@ -39,6 +39,38 @@ where
         .flatten_stream()
         .map(bytes::BytesMut::freeze)
         .from_err()
+}
+
+/// Given a path, streams the file line by line till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a file.
+pub fn stream_file_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::File::open(p)
+        .map(|file| FramedRead::new(file, LinesCodec::new()))
+        .flatten_stream()
+        .from_err()
+}
+
+/// Given a directory of files,
+/// stream each file line by line one at a time till EOF
+///
+/// # Arguments
+///
+/// * `p` - The `Path` to a directory.
+pub fn stream_dir_lines<P>(p: P) -> impl Stream<Item = String, Error = std::io::Error>
+where
+    P: AsRef<Path> + Send + 'static,
+{
+    tokio::fs::read_dir(p)
+        .flatten_stream()
+        .map(|d| d.path())
+        .map(stream_file_lines)
+        .flatten()
 }
 
 /// Given a directory of files,
