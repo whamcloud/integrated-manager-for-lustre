@@ -5,10 +5,10 @@
 use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tokio::codec::{BytesCodec, Framed};
+use tokio::codec::{BytesCodec, FramedRead, FramedWrite};
 use tokio_threadpool::blocking;
 
 /// Given a path, attempts to do an async read to the end of the file.
@@ -35,7 +35,7 @@ where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::File::open(p)
-        .map(|file| Framed::new(file, BytesCodec::new()))
+        .map(|file| FramedRead::new(file, BytesCodec::new()))
         .flatten_stream()
         .map(bytes::BytesMut::freeze)
         .from_err()
@@ -88,6 +88,14 @@ pub fn write_tempfile(contents: Vec<u8>) -> impl Future<Item = NamedTempFile, Er
         .map_err(|_| panic!("the threadpool shut down"))
     })
     .and_then(|x| x)
+}
+
+/// Given a `PathBuf`, creates a new file that can have
+/// arbitrary `Bytes` written to it.
+pub fn file_write_bytes(
+    path: PathBuf,
+) -> impl Future<Item = FramedWrite<tokio::fs::File, BytesCodec>, Error = io::Error> {
+    tokio::fs::File::create(path).map(|file| FramedWrite::new(file, BytesCodec::new()))
 }
 
 #[cfg(test)]
