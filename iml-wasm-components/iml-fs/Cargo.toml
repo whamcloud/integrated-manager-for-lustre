@@ -20,7 +20,7 @@ iml-utils = { path = "../iml-utils", version = "0.1" }
 iml-wire-types = "0.1.10"
 iml-stratagem = { path = "../iml-stratagem", version = "0.1" }
 log = "0.4"
-seed = "=0.3.7"
+seed = "=0.4.0"
 natord = "1.0.9"
 serde = { version = "1", features = ['derive'] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"]}

@@ -19,10 +19,10 @@ pub struct Model {
 pub enum Msg {
     EnableStratagem,
     StratagemEnabled(fetch::FetchObject<iml_wire_types::Command>),
-    OnFetchError(seed::fetch::FailReason),
+    OnFetchError(seed::fetch::FailReason<iml_wire_types::Command>),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     let orders = orders.skip();
 
     match msg {
@@ -46,9 +46,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
 }
 
 fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
-    let url = "/api/stratagem_configuration/".into();
-
-    seed::fetch::Request::new(url)
+    seed::fetch::Request::new("/api/stratagem_configuration/")
         .method(seed::fetch::Method::Post)
         .header(
             "X-CSRFToken",
@@ -58,18 +56,15 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
         .fetch_json(Msg::StratagemEnabled)
 }
 
-pub fn view(model: &Option<Model>) -> El<Msg> {
-    let mut btn = bs_button::btn(
+pub fn view(model: &Option<Model>) -> Node<Msg> {
+    let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
-        vec![El::new_text("Enable Stratagem")],
+        vec![Node::new_text("Enable Stratagem")],
     );
 
     if model.is_some() {
-        btn.listeners
-            .push(simple_ev(Ev::Click, Msg::EnableStratagem));
-
-        btn
+        btn.add_listener(simple_ev(Ev::Click, Msg::EnableStratagem))
     } else {
-        btn.add_attr(At::Disabled.as_str().into(), "disabled".into())
+        btn.add_attr(At::Disabled.as_str(), "disabled")
     }
 }

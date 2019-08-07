@@ -5,5 +5,5 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "=0.3.7"
+seed = "=0.4.0"
 iml-environment = { path = "../iml-environment", version = "0.1" }

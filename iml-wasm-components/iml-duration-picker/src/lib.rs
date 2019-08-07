@@ -5,8 +5,8 @@
 use bootstrap_components::{bs_button, bs_dropdown, bs_input};
 use iml_environment::MAX_SAFE_INTEGER;
 use iml_tooltip::tooltip;
-use iml_utils::WatchState;
-use seed::{a, attrs, class, input, li, prelude::*};
+use iml_utils::{AddAttrs, WatchState};
+use seed::{a, attrs, class, empty, input, li, prelude::*};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -89,8 +89,8 @@ pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
     }
 }
 
-pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
-    let items: Vec<_> = std::iter::once(bs_dropdown::header("Units"))
+pub fn duration_picker(model: &Model) -> Vec<Node<Msg>> {
+    let items: Vec<Node<_>> = std::iter::once(bs_dropdown::header("Units"))
         .chain(
             vec![Unit::Days, Unit::Hours, Unit::Minutes, Unit::Seconds]
                 .into_iter()
@@ -129,7 +129,7 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
 
         tooltip(&msg, &tt_model)
     } else {
-        seed::empty()
+        empty![]
     };
 
     let btn_class = if model.validation_message.is_some() {
@@ -143,8 +143,7 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
 
     let open = model.watching.is_open();
 
-    let mut btn = bs_dropdown::btn(&model.unit.to_string());
-    btn.attrs.merge(attrs);
+    let btn = bs_dropdown::btn(model.unit.to_string()).add_attrs(attrs);
 
     let mut dropdown = bs_dropdown::wrapper(
         class![bs_input::INPUT_GROUP_BTN],
@@ -155,11 +154,11 @@ pub fn duration_picker(model: &Model) -> Vec<El<Msg>> {
         ],
     );
 
-    if !open && !model.disabled {
+    dropdown = if !open && !model.disabled {
+        dropdown.add_listener(mouse_ev(Ev::Click, move |_| Msg::WatchChange))
+    } else {
         dropdown
-            .listeners
-            .push(mouse_ev(Ev::Click, move |_| Msg::WatchChange));
-    }
+    };
 
     vec![input, el, dropdown]
 }

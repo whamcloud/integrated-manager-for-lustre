@@ -36,7 +36,7 @@ fn get_tooltip_message(
 #[derive(Debug, Clone)]
 pub struct LockIndicatorState(pub u32, pub WatchState);
 
-fn lock_panel<T>(title: &str, locks: &HashSet<&LockChange>) -> El<T> {
+fn lock_panel<T>(title: &'static str, locks: &HashSet<&LockChange>) -> Node<T> {
     if locks.is_empty() {
         seed::empty()
     } else {
@@ -45,7 +45,7 @@ fn lock_panel<T>(title: &str, locks: &HashSet<&LockChange>) -> El<T> {
         items.sort_unstable();
 
         panel(vec![
-            panel_heading(El::new_text(title)),
+            panel_heading(Node::new_text(title)),
             panel_body(ul![items.iter().map(|x| li![x])]),
         ])
     }
@@ -56,16 +56,18 @@ pub fn lock_indicator(
     open: bool,
     composite_id: CompositeId,
     locks: &Locks,
-) -> El<LockIndicatorState> {
+) -> Node<LockIndicatorState> {
     match get_locks(composite_id, &locks) {
         Some((write_locks, read_locks)) => {
-            let mut i = i![class!["fa", "fa-lock"]];
+            let i = i![class!["fa", "fa-lock"]];
 
-            if !open {
-                i.listeners.push(mouse_ev(Ev::Click, move |_| {
+            let i = if !open {
+                i.add_listener(mouse_ev(Ev::Click, move |_| {
                     LockIndicatorState(id, WatchState::Watching)
-                }));
-            }
+                }))
+            } else {
+                i
+            };
 
             span![
                 class!["job-status", "tooltip-container", "tooltip-hover"],
@@ -74,7 +76,7 @@ pub fn lock_indicator(
                     open,
                     &bootstrap_components::BOTTOM,
                     vec![
-                        popover::title(El::new_text("Active Locks")),
+                        popover::title(Node::new_text("Active Locks")),
                         popover::content(div![
                             lock_panel("Read Locks", &read_locks),
                             lock_panel("Write Locks", &write_locks)

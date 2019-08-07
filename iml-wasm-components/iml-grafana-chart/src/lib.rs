@@ -16,7 +16,7 @@ pub fn grafana_chart<T>(
     panel_id: u16,
     width: &str,
     height: &str,
-) -> El<T> {
+) -> Node<T> {
     iframe![attrs! {
        At::Src => format!("{}d-solo/{}/{}?orgId=1&refresh={}&panelId={}", grafana_root(), dashboard_id, dashboard_name, refresh, panel_id),
        At::Width => width,

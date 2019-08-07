@@ -73,7 +73,7 @@ pub fn tooltip<T>(
         error_tooltip,
         open,
     }: &Model,
-) -> El<T> {
+) -> Node<T> {
     let class = if *error_tooltip { "error-tooltip" } else { "" };
 
     let style = if *open {

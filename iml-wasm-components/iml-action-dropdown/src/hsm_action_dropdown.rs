@@ -53,7 +53,7 @@ pub enum Msg {
 }
 
 /// The sole source of updating the model
-pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, _orders: &mut impl Orders<Msg>) {
     if model.destroyed {
         return;
     }
@@ -87,7 +87,7 @@ pub fn get_record_els_from_hsm_control_params(
     hsm_control_params: &[HsmControlParam],
     tooltip_config: &iml_tooltip::Model,
     update_fn: fn(RecordAndHsmControlParam) -> Msg,
-) -> Vec<El<Msg>> {
+) -> Vec<Node<Msg>> {
     let ys = hsm_control_params.into_iter().map(|y| {
         let x = RecordAndHsmControlParam {
             record: record.clone(),
@@ -107,7 +107,7 @@ pub fn get_record_els_from_hsm_control_params(
         .collect()
 }
 
-pub fn view(model: &Model) -> El<Msg> {
+pub fn view(model: &Model) -> Node<Msg> {
     if model.destroyed {
         return seed::empty();
     }
@@ -130,9 +130,6 @@ pub fn view(model: &Model) -> El<Msg> {
         Msg::ActionClicked,
     );
 
-    let mut el = action_dropdown(model.watching.is_open(), model.is_locked, record_els);
-
-    el.listeners.push(simple_ev(Ev::Click, Msg::WatchChange));
-
-    el
+    action_dropdown(model.watching.is_open(), model.is_locked, record_els)
+        .add_listener(simple_ev(Ev::Click, Msg::WatchChange))
 }

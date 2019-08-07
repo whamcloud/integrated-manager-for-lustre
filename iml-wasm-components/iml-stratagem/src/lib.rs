@@ -240,7 +240,7 @@ pub enum Msg {
     UpdateStratagemButton(update_stratagem_button::Msg),
 }
 
-pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::Destroy => model.destroyed = true,
         Msg::RunConfig(msg) => {
@@ -342,38 +342,43 @@ pub fn update(msg: Msg, model: &mut Model, _orders: &mut Orders<Msg>) {
             }
         },
         Msg::InodeTable(msg) => {
-            *_orders = call_update(inode_table::update, msg, &mut model.inode_table)
-                .map_message(Msg::InodeTable);
+            inode_table::update(
+                msg,
+                &mut model.inode_table,
+                &mut orders.proxy(Msg::InodeTable),
+            );
         }
         Msg::EnableStratagemButton(msg) => {
             if let Some(mut model) = model.enable_stratagem_button.as_mut() {
-                *_orders = call_update(enable_stratagem_button::update, msg, &mut model)
-                    .map_message(Msg::EnableStratagemButton);
+                enable_stratagem_button::update(
+                    msg,
+                    &mut model,
+                    &mut orders.proxy(Msg::EnableStratagemButton),
+                );
             }
         }
         Msg::DeleteStratagemButton(msg) => {
-            *_orders = call_update(
-                delete_stratagem_button::update,
+            delete_stratagem_button::update(
                 msg,
                 &mut model.delete_stratagem_button,
-            )
-            .map_message(Msg::DeleteStratagemButton);
+                &mut orders.proxy(Msg::DeleteStratagemButton),
+            );
         }
         Msg::UpdateStratagemButton(msg) => {
             model.update_stratagem_button.config_data = model.get_stratagem_update_config();
-            *_orders = call_update(
-                update_stratagem_button::update,
+
+            update_stratagem_button::update(
                 msg,
                 &mut model.update_stratagem_button,
-            )
-            .map_message(Msg::UpdateStratagemButton);
+                &mut orders.proxy(Msg::UpdateStratagemButton),
+            );
         }
     }
 
     log::trace!("Model: {:#?}", model);
 }
 
-fn detail_header<T>(header: &str) -> El<T> {
+fn detail_header<T>(header: &str) -> Node<T> {
     h4![
         header,
         style! {
@@ -384,17 +389,17 @@ fn detail_header<T>(header: &str) -> El<T> {
     ]
 }
 
-fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
     well(children)
-        .add_style("display".into(), "grid".into())
+        .add_style("display", "grid")
         .add_style(
-            "grid-template-columns".into(),
-            "8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33%".into(),
+            "grid-template-columns",
+            "8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33%",
         )
-        .add_style("grid-row-gap".into(), px(20))
+        .add_style("grid-row-gap", px(20))
 }
 
-fn detail_label<T>(content: &str) -> El<T> {
+fn detail_label<T>(content: &str) -> Node<T> {
     div![
         content,
         style! {
@@ -405,12 +410,12 @@ fn detail_label<T>(content: &str) -> El<T> {
     ]
 }
 
-fn stratagem_section<T>(el: El<T>) -> El<T> {
-    el.add_style("margin-bottom".into(), px(20))
+fn stratagem_section<T>(el: Node<T>) -> Node<T> {
+    el.add_style("margin-bottom", px(20))
 }
 
 // View
-pub fn view(model: &Model) -> El<Msg> {
+pub fn view(model: &Model) -> Node<Msg> {
     let mut configuration_component = vec![
         detail_header("Stratagem Configuration"),
         detail_label("Scan filesystem every"),
@@ -427,7 +432,7 @@ pub fn view(model: &Model) -> El<Msg> {
         ],
         toggle(!model.report_config.disabled)
             .map_message(Msg::ToggleReport)
-            .add_style("grid-column".into(), "12".into()),
+            .add_style("grid-column", "12"),
         detail_label("Purge Files older than"),
         div![
             class!["input-group"],
@@ -436,16 +441,16 @@ pub fn view(model: &Model) -> El<Msg> {
         ],
         toggle(!model.purge_config.disabled)
             .map_message(Msg::TogglePurge)
-            .add_style("grid-column".into(), "12".into()),
+            .add_style("grid-column", "12"),
     ];
 
     if model.configured {
         configuration_component.extend(vec![
             update_stratagem_button::view()
-                .add_style("grid-column".into(), "1 /span 12".into())
+                .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::UpdateStratagemButton),
             delete_stratagem_button::view()
-                .add_style("grid-column".into(), "1 /span 12".into())
+                .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
         ]);
 
@@ -466,7 +471,7 @@ pub fn view(model: &Model) -> El<Msg> {
         configuration_component.extend(vec![enable_stratagem_button::view(
             &model.enable_stratagem_button,
         )
-        .add_style("grid-column".into(), "1 /span 12".into())
+        .add_style("grid-column", "1 /span 12")
         .map_message(Msg::EnableStratagemButton)]);
 
         div![detail_panel(configuration_component)]
