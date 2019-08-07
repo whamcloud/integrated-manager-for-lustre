@@ -54,7 +54,7 @@ def target_label_split(label):
     """
     Split a target label into a tuple of it's parts: (fsname, target type, index)
     """
-    a = label.split("-")
+    a = label.rsplit("-", 1)
     if len(a) == 1:
         # MGS
         return (None, a[0][0:3], None)
