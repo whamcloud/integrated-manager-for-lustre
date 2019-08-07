@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, cmd::cmd_output_success, http_comms::mailbox_client};
-use futures::{future, Future, IntoFuture, Stream as _};
-use iml_fs::{read_file_to_end, stream_dir, write_tempfile};
+use futures::{future, stream, Future, IntoFuture, Stream as _};
+use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
 
@@ -335,9 +335,17 @@ pub fn trigger_scan(
 pub fn stream_fidlists(
     mailbox_files: MailboxFiles,
 ) -> impl Future<Item = (), Error = ImlAgentError> {
-    let mailbox_files = mailbox_files
-        .into_iter()
-        .map(|(file, address)| mailbox_client::send(address, stream_dir(file).from_err()));
+    let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
+        stream_dir_lines(file)
+            .from_err()
+            .chunks(5000)
+            .for_each(move |xs| {
+                mailbox_client::send(
+                    address.clone(),
+                    stream::iter_ok(xs.into_iter().map(|x| format!("{}\n", x)).map(|x| x.into())),
+                )
+            })
+    });
 
     future::join_all(mailbox_files).map(|_| ())
 }
