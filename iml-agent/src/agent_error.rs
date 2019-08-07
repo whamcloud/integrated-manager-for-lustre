@@ -68,7 +68,6 @@ pub enum ImlAgentError {
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
-    CsvError(csv::Error),
     CmdOutputError(Output),
     SendError,
     InvalidUriParts(http::uri::InvalidUriParts),
@@ -96,7 +95,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
-            ImlAgentError::CsvError(ref err) => write!(f, "{}", err),
+
             ImlAgentError::CmdOutputError(ref err) => write!(
                 f,
                 "{}, stdout: {}, stderr: {}",
@@ -132,7 +131,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
-            ImlAgentError::CsvError(ref err) => Some(err),
+
             ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
             ImlAgentError::InvalidUriParts(ref err) => Some(err),
@@ -220,12 +219,6 @@ impl From<NoPluginError> for ImlAgentError {
 impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
     fn from(err: liblustreapi::error::LiblustreError) -> Self {
         ImlAgentError::LiblustreError(err)
-    }
-}
-
-impl From<csv::Error> for ImlAgentError {
-    fn from(err: csv::Error) -> Self {
-        ImlAgentError::CsvError(err)
     }
 }
 
