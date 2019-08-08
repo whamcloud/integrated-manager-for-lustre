@@ -75,7 +75,7 @@ pub struct FidInput {
     fsname: String,
 
     #[structopt(name = "FIDS")]
-    /// Optional list of FIDs to purge
+    /// List of FIDs to purge
     fidlist: Vec<String>,
 }
 
@@ -225,9 +225,8 @@ fn main() {
         App::StratagemClient { command: cmd } => match cmd {
             StratagemClientCommand::Purge { fidopts: opt } => {
                 let device = opt.fsname;
-                let input = input_to_iter(opt.input, opt.fidlist);
 
-                if action_purge::purge_files(&device, input).is_err() {
+                if action_purge::purge_files(&device, opt.fidlist).is_err() {
                     exit(exitcode::OSERR);
                 }
             }

@@ -317,27 +317,25 @@ impl Llapi {
     fn llapi_rmfid(
         &self,
         mntpt: &str,
-        fidlist: impl IntoIterator<Item = String>,
-    ) -> Result<(), Vec<String>> {
-        let flist: Vec<String> = fidlist.into_iter().collect();
+        fidlist: &Vec<String>,
+    ) -> Result<(), ()> {
         let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
             match unsafe { self.lib.get(b"llapi_rmfid\0") } {
                 Err(e) => {
                     log::info!("Failed load llapi_rmfid: {:?}", e);
-                    return Err(flist);
+                    return Err(());
                 }
                 Ok(f) => f,
             };
 
         let devptr = match CString::new(mntpt) {
             Ok(c) => c.into_raw(),
-            Err(_) => return Err(flist),
+            Err(_) => return Err(()),
         };
 
-        let mut fids: Vec<RmfidsArg> = Vec::with_capacity(flist.len() + 1);
+        let mut fids: Vec<RmfidsArg> = Vec::with_capacity(fidlist.len() + 1);
         fids.push(FidArrayHdr::new(0).into());
-        let flist2 = flist.clone();
-        for fidstr in flist {
+        for fidstr in fidlist {
             if let Ok(fid) = Fid::from_str(&fidstr) {
                 fids.push(fid.into());
             } else {
@@ -363,30 +361,32 @@ impl Llapi {
                 unsafe { fids[0].hdr.nr },
                 rc
             );
-            Err(flist2)
+            Err(())
         }
     }
 
     pub fn rmfids(
         &self,
         mntpt: &str,
-        fidlist: impl IntoIterator<Item = String>,
+        fidlist: Vec<String>,
     ) -> Result<(), LiblustreError> {
-        if let Err(flist) = self.llapi_rmfid(&mntpt, fidlist) {
-            log::debug!("llapi_rmfid is unavailable, using loop across rmfid");
-            for fidstr in flist {
-                self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
-                    log::error!(
-                        "Couldn't remove fid {} with mountpoint {}: {}.",
-                        fidstr,
-                        mntpt,
-                        x
-                    )
-                });
+        match self.llapi_rmfid(&mntpt, &fidlist) {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                log::debug!("llapi_rmfid is unavailable, using loop across rmfid");
+                for fidstr in fidlist {
+                    self.rmfid(&mntpt, &fidstr).unwrap_or_else(|x| {
+                        log::error!(
+                            "Couldn't remove fid {} with mountpoint {}: {}.",
+                            fidstr,
+                            mntpt,
+                            x
+                        )
+                    });
+                }
+                Ok(())
             }
         }
-
-        Ok(())
     }
 
     pub fn rmfids_size(&self) -> usize {
@@ -432,7 +432,7 @@ impl LlapiFid {
         self.llapi.rmfid(&self.mntpt, fidstr)
     }
 
-    pub fn rmfids(&self, fidlist: impl IntoIterator<Item = String>) -> Result<(), LiblustreError> {
+    pub fn rmfids(&self, fidlist: Vec<String>) -> Result<(), LiblustreError> {
         self.llapi.rmfids(&self.mntpt, fidlist)
     }
     pub fn rmfids_size(&self) -> usize {
