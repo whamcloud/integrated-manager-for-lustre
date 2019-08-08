@@ -98,9 +98,9 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
             )
 
         iml_cmd = "/usr/bin/iml stratagem scan --filesystem {}".format(config.filesystem_id)
-        if config.report_duration is not None and config.report_duration > 0:
+        if config.report_duration is not None and config.report_duration >= 0:
             iml_cmd += " --report {}s".format(config.report_duration / 1000)
-        if config.purge_duration is not None and config.purge_duration > 0:
+        if config.purge_duration is not None and config.purge_duration >= 0:
             iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
         with open(service_file(config.id), "w") as fn:
             fn.write(
