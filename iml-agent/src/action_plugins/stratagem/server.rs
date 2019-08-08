@@ -178,26 +178,26 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
                 rules: vec![
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: "< size 1048576".into(),
+                        expression: "&& < size 1048576 != type S_IFDIR".into(),
                         argument: "SIZE_<_1M".into(),
                         counter_name: None,
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: "&& >= size 1048576 < size 1048576000".into(),
-                        argument: "1M_<=_SIZE_<_1G".into(),
+                        expression: "&& >= size 1048576000000 != type S_IFDIR".into(),
+                        argument: "SIZE_>=_1T".into(),
                         counter_name: None,
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: ">= size 1048576000".into(),
+                        expression: "&& >= size 1048576000 != type S_IFDIR".into(),
                         argument: "SIZE_>=_1G".into(),
                         counter_name: None,
                     },
                     StratagemRule {
                         action: "LAT_COUNTER_INC".into(),
-                        expression: ">= size 1048576000000".into(),
-                        argument: "SIZE_>=_1T".into(),
+                        expression: "&& >= size 1048576 != type S_IFDIR".into(),
+                        argument: "1M_<=_SIZE_<_1G".into(),
                         counter_name: None,
                     },
                 ],
@@ -206,7 +206,7 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             StratagemGroup {
                 rules: vec![StratagemRule {
                     action: "LAT_ATTR_CLASSIFY".into(),
-                    expression: "1".into(),
+                    expression: "!= type S_IFDIR".into(),
                     argument: "uid".into(),
                     counter_name: Some("top_inode_users".into()),
                 }],
@@ -224,7 +224,7 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", pd),
+                expression: format!("&& != type S_IFDIR < atime - sys_time {}", pd),
                 argument: "fids_expired".into(),
                 counter_name: Some("fids_expired".into()),
             }],
@@ -236,11 +236,20 @@ pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) ->
 
         conf.device.groups.push(name.into());
 
+        let expression = if let Some(pd) = pd {
+            format!(
+                "&& != type S_IFDIR && < atime - sys_time {} > atime - sys_time {}",
+                rd, pd
+            )
+        } else {
+            format!("&& != type S_IFDIR < atime - sys_time {}", rd)
+        };
+
         conf.groups.push(StratagemGroup {
             name: name.into(),
             rules: vec![StratagemRule {
                 action: "LAT_SHELL_CMD_FID".into(),
-                expression: format!("< atime - sys_time {}", rd),
+                expression,
                 argument: "fids_expiring_soon".into(),
                 counter_name: Some("fids_expiring_soon".into()),
             }],

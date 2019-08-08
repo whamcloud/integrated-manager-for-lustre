@@ -236,14 +236,16 @@ class RunStratagemStep(Step):
 
         def calc_warn_duration(report_duration, purge_duration):
             if report_duration is not None and purge_duration is not None:
-                return "(&& < atime - sys_time {} > atime - sys_time {})".format(report_duration, purge_duration)
+                return "&& != type S_IFDIR && < atime - sys_time {} > atime - sys_time {}".format(
+                    report_duration, purge_duration
+                )
 
-            return "< atime - sys_time {}".format(report_duration or 0)
+            return "&& != type S_IFDIR < atime - sys_time {}".format(report_duration or 0)
 
         def get_body(mount_point, report_duration, purge_duration):
             rule_map = {
-                "fids_expiring_soon": report_duration != None and "warn_fids",
-                "fids_expired": purge_duration != None and "purge_fids",
+                "fids_expiring_soon": report_duration is not None and "warn_fids",
+                "fids_expired": purge_duration is not None and "purge_fids",
             }
 
             groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
@@ -267,7 +269,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_SHELL_CMD_FID",
-                                "expression": "< atime - sys_time {}".format(purge_duration),
+                                "expression": "&& != type S_IFDIR < atime - sys_time {}".format(purge_duration),
                                 "argument": "fids_expired",
                                 "counter_name": "fids_expired",
                             }
@@ -282,17 +284,25 @@ class RunStratagemStep(Step):
                 "groups": [
                     {
                         "rules": [
-                            {"action": "LAT_COUNTER_INC", "expression": "< size 1048576", "argument": "SIZE < 1M"},
                             {
                                 "action": "LAT_COUNTER_INC",
-                                "expression": "&& >= size 1048576 < size 1048576000",
-                                "argument": "1M <= SIZE < 1G",
+                                "expression": "&& < size 1048576 != type S_IFDIR",
+                                "argument": "SIZE < 1M",
                             },
-                            {"action": "LAT_COUNTER_INC", "expression": ">= size 1048576000", "argument": "SIZE >= 1G"},
                             {
                                 "action": "LAT_COUNTER_INC",
-                                "expression": ">= size 1048576000000",
+                                "expression": "&& >= size 1048576000000 != type S_IFDIR",
                                 "argument": "SIZE >= 1T",
+                            },
+                            {
+                                "action": "LAT_COUNTER_INC",
+                                "expression": "&& >= size 1048576000 != type S_IFDIR",
+                                "argument": "SIZE >= 1G",
+                            },
+                            {
+                                "action": "LAT_COUNTER_INC",
+                                "expression": "&& >= size 1048576 != type S_IFDIR",
+                                "argument": "1M <= SIZE < 1G",
                             },
                         ],
                         "name": "size_distribution",
@@ -301,7 +311,7 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_ATTR_CLASSIFY",
-                                "expression": "1",
+                                "expression": "!= type S_IFDIR",
                                 "argument": "uid",
                                 "counter_name": "top_inode_users",
                             }
