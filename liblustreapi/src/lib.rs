@@ -313,7 +313,6 @@ impl Llapi {
         Ok(())
     }
 
-    // Does llapi_rmfid() or returns back fidlist as a Vec<String> in Err()
     fn llapi_rmfid(
         &self,
         mntpt: &str,
