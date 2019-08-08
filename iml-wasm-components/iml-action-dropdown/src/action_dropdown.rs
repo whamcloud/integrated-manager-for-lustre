@@ -10,7 +10,7 @@ use seed::{
     style, ul,
 };
 
-pub fn dropdown_header<T>(label: &str) -> El<T> {
+pub fn dropdown_header<T>(label: &str) -> Node<T> {
     li![
         class!["dropdown-header"],
         style! {"user-select" => "none"},
@@ -19,20 +19,22 @@ pub fn dropdown_header<T>(label: &str) -> El<T> {
 }
 
 pub fn dropdown<T>(
-    btn_classes: &[&str],
+    btn_classes: &[&'static str],
     btn_name: &str,
     open: bool,
-    children: Vec<El<T>>,
-) -> El<T> {
+    children: Vec<Node<T>>,
+) -> Node<T> {
     let open_class = if open { "open" } else { "" };
 
-    let btn = button![
+    let btn: Node<_> = button![
         class!["btn", "dropdown-toggle"],
         btn_name,
         i![class!["fa", "fa-fw", "fa-caret-down", "icon-caret-down"]]
     ];
 
-    let btn = btn_classes.iter().fold(btn, |btn, x| btn.add_class(x));
+    let btn = btn_classes
+        .into_iter()
+        .fold(btn, |btn, &x| btn.add_class(x));
 
     div![
         class!["btn-group", "dropdown", open_class],
@@ -41,7 +43,7 @@ pub fn dropdown<T>(
     ]
 }
 
-pub fn action_dropdown<T>(open: bool, is_locked: bool, children: Vec<El<T>>) -> El<T> {
+pub fn action_dropdown<T>(open: bool, is_locked: bool, children: Vec<Node<T>>) -> Node<T> {
     let btn_classes = "btn btn-primary btn-sm";
 
     let el = if is_locked {

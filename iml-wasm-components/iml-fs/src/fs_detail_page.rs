@@ -13,7 +13,10 @@ use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
 use iml_wire_types::{Alert, Filesystem, Host, Target, TargetConfParam, ToCompositeId};
 use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
@@ -117,7 +120,7 @@ enum Msg {
     StratagemComponent(iml_stratagem::Msg),
 }
 
-fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::Destroy => {
             model.destroyed = true;
@@ -256,8 +259,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
         }
         Msg::FsRowDropdown(dad::IdMsg(id, msg)) => {
             if let Some(row) = model.table_rows.get_mut(&id) {
-                *orders = call_update(dad::update, dad::IdMsg(id, msg), &mut row.dropdown)
-                    .map_message(Msg::FsRowDropdown);
+                dad::update(
+                    dad::IdMsg(id, msg),
+                    &mut row.dropdown,
+                    &mut orders.proxy(Msg::FsRowDropdown),
+                );
             }
         }
         Msg::FsRowLockIndicatorState(LockIndicatorState(id, state)) => {
@@ -266,12 +272,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             }
         }
         Msg::FsDetailDropdown(dad::IdMsg(id, msg)) => {
-            *orders = call_update(
-                dad::update,
+            dad::update(
                 dad::IdMsg(id, msg),
                 &mut model.fs_detail.dropdown,
-            )
-            .map_message(Msg::FsDetailDropdown);
+                &mut orders.proxy(Msg::FsDetailDropdown),
+            );
         }
         Msg::CloseMountModal => {
             model.mount_modal_open = false;
@@ -280,8 +285,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             model.mount_modal_open = true;
         }
         Msg::InodeTable(msg) => {
-            *orders = call_update(iml_stratagem::update, msg, &mut model.stratagem)
-                .map_message(Msg::InodeTable);
+            iml_stratagem::update(
+                msg,
+                &mut model.stratagem,
+                &mut orders.proxy(Msg::InodeTable),
+            );
         }
         Msg::StratagemInit(msg) => {
             model.stratagem_ready = model.stratagem_ready();
@@ -289,13 +297,16 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             orders.send_msg(Msg::StratagemComponent(msg));
         }
         Msg::StratagemComponent(msg) => {
-            *orders = call_update(iml_stratagem::update, msg, &mut model.stratagem)
-                .map_message(Msg::StratagemComponent);
+            iml_stratagem::update(
+                msg,
+                &mut model.stratagem,
+                &mut orders.proxy(Msg::StratagemComponent),
+            );
         }
     }
 }
 
-fn detail_header<T>(header: &str) -> El<T> {
+fn detail_header<T>(header: &str) -> Node<T> {
     h4![
         header,
         style! {
@@ -306,21 +317,26 @@ fn detail_header<T>(header: &str) -> El<T> {
     ]
 }
 
-fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
     well(children)
-        .add_style("display".into(), "grid".into())
-        .add_style("grid-template-columns".into(), "50% 50%".into())
-        .add_style("grid-row-gap".into(), px(20))
+        .add_style("display", "grid")
+        .add_style("grid-template-columns", "50% 50%")
+        .add_style("grid-row-gap", px(20))
 }
 
-fn detail_label<T>(content: &str) -> El<T> {
+fn detail_label<T>(content: &str) -> Node<T> {
     div![
         content,
         style! { "font-weight" => "700", "color" => "#777" }
     ]
 }
 
-fn filesystem(fs: &Filesystem, alerts: &[Alert], fs_detail: &FsDetail, mgt_el: El<Msg>) -> El<Msg> {
+fn filesystem(
+    fs: &Filesystem,
+    alerts: &[Alert],
+    fs_detail: &FsDetail,
+    mgt_el: Node<Msg>,
+) -> Node<Msg> {
     detail_panel(vec![
         detail_header(&format!("{} Details", fs.name)),
         detail_label("Space Usage"),
@@ -356,20 +372,20 @@ fn filesystem(fs: &Filesystem, alerts: &[Alert], fs_detail: &FsDetail, mgt_el: E
             style! { "grid-column" => "1 / span 2" },
             dad::render(fs.id, &fs_detail.dropdown, fs)
                 .map_message(Msg::FsDetailDropdown)
-                .add_style("grid-column".into(), "1 / span 2".into())
+                .add_style("grid-column", "1 / span 2")
         ],
     ])
 }
 
-fn client_mount_details(fs_name: &str, details: &str) -> Vec<El<Msg>> {
-    let mut close_btn = bs_button::btn(
+fn client_mount_details(fs_name: &str, details: impl Into<Cow<'static, str>>) -> Vec<Node<Msg>> {
+    let close_btn = bs_button::btn(
         class![bs_button::BTN_DEFAULT],
-        vec![El::new_text("Close"), i![class!["far", "fa-times-circle"]]],
-    );
-
-    close_btn
-        .listeners
-        .push(simple_ev(Ev::Click, Msg::CloseMountModal));
+        vec![
+            Node::new_text("Close"),
+            i![class!["far", "fa-times-circle"]],
+        ],
+    )
+    .add_listener(simple_ev(Ev::Click, Msg::CloseMountModal));
 
     vec![
         bs_modal::backdrop(),
@@ -380,14 +396,14 @@ fn client_mount_details(fs_name: &str, details: &str) -> Vec<El<Msg>> {
                     style! { "padding-bottom" => px(10) },
                     "To mount this filesystem on a Lustre client, use the following command:"
                 ],
-                well(vec![El::new_text(details)]),
+                well(vec![Node::new_text(details)]),
             ]),
             bs_modal::footer(vec![close_btn]),
         ]),
     ]
 }
 
-fn ui_link<T>(path: &str, label: &str) -> El<T> {
+fn ui_link<T>(path: &str, label: &str) -> Node<T> {
     link(&format!("{}{}", ui_root(), path), label)
 }
 
@@ -396,7 +412,7 @@ fn target_table(
     alerts: &[Alert],
     locks: &Locks,
     table_rows: &HashMap<u32, TableRow>,
-) -> El<Msg> {
+) -> Node<Msg> {
     bs_table::table(
         Attrs::empty(),
         vec![
@@ -434,7 +450,7 @@ fn target_table(
                                 x.composite_id(),
                                 &locks
                             )
-                            .add_style("margin-right".into(), px(5))
+                            .add_style("margin-right", px(5))
                             .map_message(Msg::FsRowLockIndicatorState),
                             alert_indicator(
                                 &alerts,
@@ -453,18 +469,15 @@ fn target_table(
     )
 }
 
-fn view(model: &Model) -> El<Msg> {
-    let mut mnt_info_btn = bs_button::btn(
+fn view(model: &Model) -> Node<Msg> {
+    let mnt_info_btn = bs_button::btn(
         class![bs_button::BTN_DEFAULT],
         vec![
-            El::new_text("View Client Mount Information"),
+            Node::new_text("View Client Mount Information"),
             i![class!["fas", "fa-info-circle"]],
         ],
-    );
-
-    mnt_info_btn
-        .listeners
-        .push(simple_ev(Ev::Click, Msg::OpenMountModal));
+    )
+    .add_listener(simple_ev(Ev::Click, Msg::OpenMountModal));
 
     match &model.fs {
         Some(fs) => div![
@@ -476,7 +489,7 @@ fn view(model: &Model) -> El<Msg> {
             ),
             mnt_info_btn,
             if model.mount_modal_open {
-                client_mount_details(&fs.name, &fs.mount_command)
+                client_mount_details(&fs.name, fs.mount_command.clone())
             } else {
                 vec![]
             },
@@ -520,7 +533,7 @@ fn view(model: &Model) -> El<Msg> {
                         &model.table_rows,
                     ),
                     paging(&model.ost_paging)
-                        .add_style("margin-bottom".into(), px(50))
+                        .add_style("margin-bottom", px(50))
                         .map_message(Msg::OstPaging),
                 ]
             }
@@ -539,7 +552,7 @@ fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
 
 #[wasm_bindgen]
 pub struct FsDetailPageCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
+    app: seed::App<Msg, Model, Node<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -577,11 +590,15 @@ impl FsDetailPageCallbacks {
     }
 }
 
+fn init(_: Url, _orders: &mut impl Orders<Msg>) -> Model {
+    Model::default()
+}
+
 #[wasm_bindgen]
 pub fn render_fs_detail_page(el: Element) -> FsDetailPageCallbacks {
     init_log();
 
-    let app = seed::App::build(Model::default(), update, view)
+    let app = seed::App::build(init, update, view)
         .mount(el)
         .window_events(window_events)
         .finish()

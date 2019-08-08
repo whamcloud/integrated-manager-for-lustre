@@ -59,16 +59,15 @@ pub enum PagingMsg {
     Limit(usize),
 }
 
-pub fn page_selection(open: bool, rows: usize) -> El<PagingMsg> {
-    let mut btn = bs_button::btn(
+pub fn page_selection(open: bool, rows: usize) -> Node<PagingMsg> {
+    let btn = bs_button::btn(
         class![bs_dropdown::DROPDOWN_TOGGLE, bs_button::EXTRASMALL],
         vec![
-            El::new_text(&rows.to_string()),
+            Node::new_text(rows.to_string()),
             i![class!["fa", "fa-fw", "fa-caret-up", "icon-caret-up"]],
         ],
-    );
-
-    btn.listeners.push(mouse_ev(Ev::Click, |_| {
+    )
+    .add_listener(mouse_ev(Ev::Click, |_| {
         PagingMsg::Dropdown(WatchState::Watching)
     }));
 
@@ -90,7 +89,7 @@ pub fn page_selection(open: bool, rows: usize) -> El<PagingMsg> {
             ),
         ],
     )
-    .add_style("display".into(), "inline-block".into())
+    .add_style("display", "inline-block")
 }
 
 pub fn update_paging(msg: PagingMsg, p: &mut Paging) {
@@ -110,7 +109,7 @@ pub fn update_paging(msg: PagingMsg, p: &mut Paging) {
     }
 }
 
-pub fn paging(p: &Paging) -> El<PagingMsg> {
+pub fn paging(p: &Paging) -> Node<PagingMsg> {
     div![
         style! {"display" => "grid", "grid-template-columns" => "75% 15% 10%"},
         div![

@@ -35,7 +35,7 @@ pub enum Msg {
     DeferredActionDropdown(dad::IdMsg<model::Record>),
 }
 
-pub fn update(msg: Msg, mut model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, mut model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::DeferredActionDropdown(dad::IdMsg(id, msg)) => match msg {
             dad::Msg::StartFetch => {
@@ -46,10 +46,11 @@ pub fn update(msg: Msg, mut model: &mut Model, orders: &mut Orders<Msg>) {
                     orders.send_msg(Msg::FetchUrls);
                 }
             }
-            x => {
-                *orders = call_update(dad::update, dad::IdMsg(id, x), &mut model.dropdown)
-                    .map_message(Msg::DeferredActionDropdown)
-            }
+            x => dad::update(
+                dad::IdMsg(id, x),
+                &mut model.dropdown,
+                &mut orders.proxy(Msg::DeferredActionDropdown),
+            ),
         },
         Msg::FetchUrls => {
             let urls = model.urls.drain(..).collect();
@@ -61,10 +62,7 @@ pub fn update(msg: Msg, mut model: &mut Model, orders: &mut Orders<Msg>) {
                 .filter_map(|x| match x.response() {
                     Ok(resp) => Some(resp.data),
                     Err(e) => {
-                        orders.send_msg(Msg::DeferredActionDropdown(dad::IdMsg(
-                            model.id,
-                            dad::Msg::Error(e.into()),
-                        )));
+                        log::error!("An erorr has occurred: {:?}", e);
 
                         None
                     }
@@ -86,7 +84,7 @@ pub fn update(msg: Msg, mut model: &mut Model, orders: &mut Orders<Msg>) {
 }
 
 // View
-pub fn view(model: &Model) -> El<Msg> {
+pub fn view(model: &Model) -> Node<Msg> {
     let actions = group_actions_by_label(&model.dropdown.actions, &model.records);
 
     dad::render_with_action(model.id, &model.dropdown, actions)

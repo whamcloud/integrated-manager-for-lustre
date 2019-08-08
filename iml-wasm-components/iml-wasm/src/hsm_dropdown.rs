@@ -22,7 +22,7 @@ fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
 
 #[wasm_bindgen]
 pub struct HsmCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
+    app: seed::App<Msg, Model, Node<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -54,25 +54,27 @@ pub fn hsm_action_dropdown_component(x: &JsValue, el: Element) -> HsmCallbacks {
         tooltip_size,
     } = x.into_serde().expect("Could not parse incoming data");
 
-    let model = Model {
-        id: 1,
-        is_locked: has_lock(&locks, &record),
-        tooltip: iml_tooltip::Model {
-            placement: tooltip_placement.unwrap_or_default(),
-            size: tooltip_size.unwrap_or_default(),
-            ..Default::default()
+    let app = seed::App::build(
+        move |_, _| Model {
+            id: 1,
+            is_locked: has_lock(&locks, &record),
+            tooltip: iml_tooltip::Model {
+                placement: tooltip_placement.unwrap_or_default(),
+                size: tooltip_size.unwrap_or_default(),
+                ..Default::default()
+            },
+            record,
+            locks,
+            destroyed: false,
+            watching: Default::default(),
         },
-        record,
-        locks,
-        destroyed: false,
-        watching: Default::default(),
-    };
-
-    let app = seed::App::build(model, update, view)
-        .window_events(window_events)
-        .mount(el)
-        .finish()
-        .run();
+        update,
+        view,
+    )
+    .window_events(window_events)
+    .mount(el)
+    .finish()
+    .run();
 
     HsmCallbacks { app: app.clone() }
 }

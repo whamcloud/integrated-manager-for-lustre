@@ -4,7 +4,6 @@
 
 use crate::{
     action_dropdown::{action_dropdown, dropdown_header},
-    action_dropdown_error::ActionDropdownError,
     dispatch_custom_event::dispatch_custom_event,
     model::{
         self, composite_ids_to_query_string, sort_actions, ActionMap, ActionRecord,
@@ -52,7 +51,6 @@ pub enum Msg<T: ActionRecord> {
     FetchActions,
     WatchChange,
     ActionsFetched(FetchObject<model::AvailableActions>),
-    Error(ActionDropdownError),
     Destroy,
     Noop,
 }
@@ -63,7 +61,7 @@ pub struct IdMsg<T: Clone + ActionRecord>(pub u32, pub Msg<T>);
 pub fn update<T: ActionRecord + 'static>(
     msg: IdMsg<T>,
     model: &mut Model,
-    orders: &mut Orders<IdMsg<T>>,
+    orders: &mut impl Orders<IdMsg<T>>,
 ) {
     if model.destroyed {
         return;
@@ -73,10 +71,6 @@ pub fn update<T: ActionRecord + 'static>(
 
     match msg {
         Msg::Noop => {
-            orders.skip();
-        }
-        Msg::Error(e) => {
-            log::error!("An error has occurred {}", e);
             orders.skip();
         }
         Msg::WatchChange => model.watching.update(),
@@ -99,7 +93,8 @@ pub fn update<T: ActionRecord + 'static>(
                     model.actions = objects;
                 }
                 Err(fail_reason) => {
-                    orders.send_msg(IdMsg(id, Msg::Error(fail_reason.into())));
+                    log::error!("An error has occurred {:?}", fail_reason);
+                    orders.skip();
                 }
             }
 
@@ -179,7 +174,7 @@ pub fn get_record_els<'a, T: ActionRecord + 'static>(
     actions: ActionMap<'a, T>,
     flag: &Option<String>,
     tooltip_config: &iml_tooltip::Model,
-) -> Vec<El<IdMsg<T>>> {
+) -> Vec<Node<IdMsg<T>>> {
     actions
         .into_iter()
         .filter(|(_, xs)| !xs.is_empty())
@@ -213,7 +208,7 @@ pub fn render<'a, T: 'static + ActionRecord>(
     id: u32,
     model: &Model,
     record: &'a T,
-) -> El<IdMsg<T>> {
+) -> Node<IdMsg<T>> {
     let xs = model
         .actions
         .iter()
@@ -232,7 +227,7 @@ pub fn render_with_action<'a, T: 'static + ActionRecord>(
     id: u32,
     model: &Model,
     actions: ActionMap<'a, T>,
-) -> El<IdMsg<T>> {
+) -> Node<IdMsg<T>> {
     if model.destroyed {
         seed::empty()
     } else if model.first_fetch_activated {
@@ -246,20 +241,12 @@ pub fn render_with_action<'a, T: 'static + ActionRecord>(
             ]
         ]
     } else if !model.activated {
-        let mut d = action_dropdown(model.watching.is_open(), model.is_locked, vec![span![]]);
-
-        d.listeners
-            .push(simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch)));
-
-        d
+        action_dropdown(model.watching.is_open(), model.is_locked, vec![span![]])
+            .add_listener(simple_ev(Ev::MouseMove, IdMsg(id, Msg::StartFetch)))
     } else {
         let record_els = get_record_els(id, actions, &model.flag, &model.tooltip);
 
-        let mut el = action_dropdown(model.watching.is_open(), model.is_locked, record_els);
-
-        el.listeners
-            .push(simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange)));
-
-        el
+        action_dropdown(model.watching.is_open(), model.is_locked, record_els)
+            .add_listener(simple_ev(Ev::Click, IdMsg(id, Msg::WatchChange)))
     }
 }

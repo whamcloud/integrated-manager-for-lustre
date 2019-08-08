@@ -41,7 +41,7 @@ enum Msg {
     Destroy,
 }
 
-fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     if model.destroyed {
         return;
     }
@@ -63,27 +63,29 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
                     has_locks(&model.locks, &model.multi_dropdown.records);
             }
 
-            *orders = call_update(multi_dropdown::update, msg, &mut model.multi_dropdown)
-                .map_message(Msg::DeferredActionDropdown);
+            multi_dropdown::update(
+                msg,
+                &mut model.multi_dropdown,
+                &mut orders.proxy(Msg::DeferredActionDropdown),
+            );
         }
         Msg::Destroy => {
             model.destroyed = true;
             model.locks = HashMap::new();
 
-            *orders = call_update(
-                multi_dropdown::update,
+            multi_dropdown::update(
                 multi_dropdown::Msg::DeferredActionDropdown(dad::IdMsg(
                     model.multi_dropdown.id,
                     dad::Msg::Destroy,
                 )),
                 &mut model.multi_dropdown,
-            )
-            .map_message(Msg::DeferredActionDropdown);
+                &mut orders.proxy(Msg::DeferredActionDropdown),
+            );
         }
     }
 }
 
-fn view(model: &Model) -> El<Msg> {
+fn view(model: &Model) -> Node<Msg> {
     multi_dropdown::view(&model.multi_dropdown).map_message(Msg::DeferredActionDropdown)
 }
 
@@ -99,7 +101,7 @@ pub struct Data {
 
 #[wasm_bindgen]
 pub struct MadCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
+    app: seed::App<Msg, Model, Node<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -127,31 +129,33 @@ pub fn multi_action_dropdown_component(x: &JsValue, el: Element) -> MadCallbacks
         tooltip_size,
     } = x.into_serde().expect("Could not parse incoming data");
 
-    let model = Model {
-        destroyed: false,
-        locks,
-        multi_dropdown: multi_dropdown::Model {
-            id: 1,
-            urls,
-            records: HashMap::new(),
-            dropdown: dad::Model {
-                flag,
-                tooltip: iml_tooltip::Model {
-                    placement: tooltip_placement.unwrap_or_default(),
-                    size: tooltip_size.unwrap_or_default(),
-                    ..iml_tooltip::Model::default()
+    let app = seed::App::build(
+        move |_, _| Model {
+            destroyed: false,
+            locks,
+            multi_dropdown: multi_dropdown::Model {
+                id: 1,
+                urls,
+                records: HashMap::new(),
+                dropdown: dad::Model {
+                    flag,
+                    tooltip: iml_tooltip::Model {
+                        placement: tooltip_placement.unwrap_or_default(),
+                        size: tooltip_size.unwrap_or_default(),
+                        ..iml_tooltip::Model::default()
+                    },
+                    is_locked: false,
+                    ..dad::Model::default()
                 },
-                is_locked: false,
-                ..dad::Model::default()
             },
         },
-    };
-
-    let app = seed::App::build(model, update, view)
-        .window_events(window_events)
-        .mount(el)
-        .finish()
-        .run();
+        update,
+        view,
+    )
+    .window_events(window_events)
+    .mount(el)
+    .finish()
+    .run();
 
     MadCallbacks { app: app.clone() }
 }
