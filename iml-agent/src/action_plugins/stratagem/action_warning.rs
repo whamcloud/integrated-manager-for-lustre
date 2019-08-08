@@ -96,7 +96,14 @@ pub fn read_mailbox(
                         .map(|x| format!("{}/{}", mntpt, x))
                         .collect()
                 })
-                .map(|xs: Vec<String>| xs.join("\n").into());
+                .map(|xs: Vec<String>| -> bytes::BytesMut { xs.join("\n").into() })
+                .map(|mut x: bytes::BytesMut| {
+                    if !x.is_empty() {
+                        x.extend_from_slice(b"\n");
+                    }
+
+                    x.freeze()
+                });
 
             f.sink_from_err().send_all(s2).map(drop)
         })
