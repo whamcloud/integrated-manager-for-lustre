@@ -40,7 +40,7 @@ enum Msg {
     Destroy,
 }
 
-fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     if model.destroyed {
         return;
     }
@@ -52,24 +52,26 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
             model.deferred_action_dropdown.is_locked = has_lock(&model.locks, &model.record);
         }
         Msg::DeferredActionDropdown(msg) => {
-            *orders = call_update(dad::update, msg, &mut model.deferred_action_dropdown)
-                .map_message(Msg::DeferredActionDropdown);
+            dad::update(
+                msg,
+                &mut model.deferred_action_dropdown,
+                &mut orders.proxy(Msg::DeferredActionDropdown),
+            );
         }
         Msg::Destroy => {
             model.destroyed = true;
             model.locks = HashMap::new();
 
-            *orders = call_update(
-                dad::update,
+            dad::update(
                 dad::IdMsg(model.id, dad::Msg::Destroy),
                 &mut model.deferred_action_dropdown,
-            )
-            .map_message(Msg::DeferredActionDropdown);
+                &mut orders.proxy(Msg::DeferredActionDropdown),
+            );
         }
     }
 }
 
-fn view(model: &Model) -> El<Msg> {
+fn view(model: &Model) -> Node<Msg> {
     dad::render(model.id, &model.deferred_action_dropdown, &model.record)
         .map_message(Msg::DeferredActionDropdown)
 }
@@ -86,7 +88,7 @@ pub struct Data {
 
 #[wasm_bindgen]
 pub struct DadCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
+    app: seed::App<Msg, Model, Node<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -114,29 +116,31 @@ pub fn deferred_action_dropdown_component(x: &JsValue, el: Element) -> DadCallba
         tooltip_size,
     } = x.into_serde().expect("Could not parse incoming data");
 
-    let model = Model {
-        id: record.id,
-        destroyed: false,
-        deferred_action_dropdown: dad::Model {
-            flag,
-            composite_ids: vec![record.composite_id()],
-            tooltip: iml_tooltip::Model {
-                placement: tooltip_placement.unwrap_or_default(),
-                size: tooltip_size.unwrap_or_default(),
-                ..iml_tooltip::Model::default()
+    let app = seed::App::build(
+        move |_, _| Model {
+            id: record.id,
+            destroyed: false,
+            deferred_action_dropdown: dad::Model {
+                flag,
+                composite_ids: vec![record.composite_id()],
+                tooltip: iml_tooltip::Model {
+                    placement: tooltip_placement.unwrap_or_default(),
+                    size: tooltip_size.unwrap_or_default(),
+                    ..iml_tooltip::Model::default()
+                },
+                is_locked: has_lock(&locks, &record),
+                ..dad::Model::default()
             },
-            is_locked: has_lock(&locks, &record),
-            ..dad::Model::default()
+            record,
+            locks,
         },
-        record,
-        locks,
-    };
-
-    let app = seed::App::build(model, update, view)
-        .window_events(window_events)
-        .mount(el)
-        .finish()
-        .run();
+        update,
+        view,
+    )
+    .window_events(window_events)
+    .mount(el)
+    .finish()
+    .run();
 
     DadCallbacks { app: app.clone() }
 }

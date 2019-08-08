@@ -5,7 +5,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "0.3.7"
+seed = "0.4.0"
 log = "0.4"
 web-sys = { version = "0.3", features = ["Event", "EventTarget", "Element", "HtmlInputElement", "ValidityState"]}
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
@@ -15,4 +15,4 @@ bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.8.2"
+insta = "0.10.0"

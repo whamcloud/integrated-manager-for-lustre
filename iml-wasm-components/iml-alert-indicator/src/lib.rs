@@ -26,7 +26,7 @@ pub fn alert_indicator(
     id: u32,
     resource_uri: &str,
     open: bool,
-) -> El<AlertIndicatorPopoverState> {
+) -> Node<AlertIndicatorPopoverState> {
     log::trace!("Alerts {:#?}", alerts);
 
     let alerts: Vec<&Alert> = alerts
@@ -46,13 +46,15 @@ pub fn alert_indicator(
             if alerts.is_empty() {
                 vec![i![class!["fa", "fa-check-circle"]]]
             } else {
-                let mut i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
+                let i = i![class!["fa", "activate-popover", "fa-exclamation-circle"]];
 
-                if !open {
-                    i.listeners.push(mouse_ev(Ev::Click, move |_| {
+                let i = if !open {
+                    i.add_listener(mouse_ev(Ev::Click, move |_| {
                         AlertIndicatorPopoverState((id, WatchState::Watching))
-                    }));
-                }
+                    }))
+                } else {
+                    i
+                };
 
                 vec![
                     i,
@@ -60,7 +62,7 @@ pub fn alert_indicator(
                         open,
                         &bootstrap_components::BOTTOM,
                         vec![
-                            popover::title(El::new_text("Alerts")),
+                            popover::title(Node::new_text("Alerts")),
                             popover::content(ul![alerts.iter().map(|x| { li![x.message] })]),
                         ],
                     ),

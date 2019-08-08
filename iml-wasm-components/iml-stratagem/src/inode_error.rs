@@ -2,10 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::inode_table::InfluxResults;
+
 #[derive(Debug, Clone)]
 pub enum InodeError {
     Cancelled(futures::sync::oneshot::Canceled),
-    FailedFetch(seed::fetch::FailReason),
+    FailedFetch(seed::fetch::FailReason<InfluxResults>),
 }
 
 impl std::fmt::Display for InodeError {
@@ -32,8 +34,8 @@ impl From<futures::sync::oneshot::Canceled> for InodeError {
     }
 }
 
-impl From<seed::fetch::FailReason> for InodeError {
-    fn from(err: seed::fetch::FailReason) -> Self {
+impl From<seed::fetch::FailReason<InfluxResults>> for InodeError {
+    fn from(err: seed::fetch::FailReason<InfluxResults>) -> Self {
         InodeError::FailedFetch(err)
     }
 }

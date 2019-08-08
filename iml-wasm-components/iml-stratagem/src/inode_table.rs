@@ -55,7 +55,7 @@ pub struct InfluxResults {
     results: Vec<InfluxResult>,
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     if model.destroyed {
         return;
     }
@@ -148,22 +148,22 @@ pub fn fetch_inodes() -> (
     (fut, request_controller)
 }
 
-fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<El<T>> {
+fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<Node<T>> {
     inodes
         .into_iter()
         .map(|x| tr![td![x.uid], td![x.count.to_string()]])
         .collect()
 }
 
-fn detail_panel<T>(children: Vec<El<T>>) -> El<T> {
+fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
     div!(children)
-        .add_style("display".into(), "grid".into())
-        .add_style("grid-template-columns".into(), "50% 50%".into())
-        .add_style("grid-row-gap".into(), px(20))
+        .add_style("display", "grid")
+        .add_style("grid-template-columns", "50% 50%")
+        .add_style("grid-row-gap", px(20))
 }
 
 /// View
-pub fn view(model: &Model) -> El<Msg> {
+pub fn view(model: &Model) -> Node<Msg> {
     if model.destroyed {
         seed::empty()
     } else {
@@ -197,6 +197,7 @@ pub fn view(model: &Model) -> El<Msg> {
 mod tests {
     use super::*;
     use futures::sync::{oneshot, oneshot::Sender};
+    use iml_utils::Children;
     use seed::fetch::{Request, ResponseWithDataResult, Status, StatusCategory};
     use std::sync::{Arc, Mutex};
     use wasm_bindgen_test::wasm_bindgen_test_configure;
@@ -208,7 +209,7 @@ mod tests {
     #[derive(Debug)]
     pub struct TestModel {
         model: Model,
-        p: Arc<Mutex<Option<Sender<El<Msg>>>>>,
+        p: Arc<Mutex<Option<Sender<Node<Msg>>>>>,
     }
 
     fn destroy_after_delay() -> impl Future<Item = Msg, Error = Msg> {
@@ -217,7 +218,7 @@ mod tests {
             .map_err(|_| unreachable!())
     }
 
-    pub fn test_view(TestModel { p, model }: &TestModel) -> El<Msg> {
+    pub fn test_view(TestModel { p, model }: &TestModel) -> Node<Msg> {
         let el = view(&model);
 
         if let Some(_) = &model.cancel {
@@ -227,7 +228,7 @@ mod tests {
         el
     }
 
-    pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut Orders<Msg>) {
+    pub fn test_update(msg: Msg, model: &mut TestModel, orders: &mut impl Orders<Msg>) {
         update(msg.clone(), &mut model.model, orders);
         orders.perform_cmd(destroy_after_delay());
     }
@@ -235,16 +236,19 @@ mod tests {
     #[wasm_bindgen_test(async)]
     pub fn test_inodes_with_data() -> impl Future<Item = (), Error = JsValue> {
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<El<Msg>>();
-            let test_model = TestModel {
-                p: Arc::new(Mutex::new(Some(p))),
-                model: Model::default(),
-            };
+            let (p, c) = oneshot::channel::<Node<Msg>>();
 
-            let app = seed::App::build(test_model, test_update, test_view)
-                .mount(seed::body())
-                .finish()
-                .run();
+            let app = seed::App::build(
+                |_, _| TestModel {
+                    p: Arc::new(Mutex::new(Some(p))),
+                    model: Model::default(),
+                },
+                test_update,
+                test_view,
+            )
+            .mount(seed::body())
+            .finish()
+            .run();
 
             let results = r#"{
             "results": [
@@ -280,7 +284,7 @@ mod tests {
             let data: InfluxResults = serde_json::from_str(results).unwrap();
 
             let fetch_object: FetchObject<InfluxResults> = FetchObject {
-                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
+                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'"),
                 result: Ok(ResponseWithDataResult {
                     raw,
                     status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
@@ -291,22 +295,25 @@ mod tests {
             app.update(Msg::InodesFetched(fetch_object));
 
             c.map(|el| {
-                let tr1 = el.children[0].clone();
-                let th1 = tr1.children[0].children[0].clone().text;
-                let th2 = tr1.children[1].children[0].clone().text;
-                let tr2 = el.children[1].clone();
-                let td21 = tr2.children[0].children[0].clone().text;
-                let td22 = tr2.children[1].children[0].clone().text;
-                let tr3 = el.children[2].clone();
-                let td31 = tr3.children[0].children[0].clone().text;
-                let td32 = tr3.children[1].children[0].clone().text;
+                let children = el.get_children().unwrap();
 
-                assert_eq!(th1, Some("Uid".into()));
-                assert_eq!(th2, Some("Count".into()));
-                assert_eq!(td21, Some("uid_0".into()));
-                assert_eq!(td22, Some("26".into()));
-                assert_eq!(td31, Some("uid_1".into()));
-                assert_eq!(td32, Some("13".into()));
+                let tr1 = &children[0];
+                let th1 = tr1.get_children().unwrap()[0].get_text();
+                let th2 = tr1.get_children().unwrap()[1].get_children().unwrap()[0].get_text();
+
+                let tr2 = &children[1];
+                let td21 = tr2.get_children().unwrap()[0].get_children().unwrap()[0].get_text();
+                let td22 = tr2.get_children().unwrap()[1].get_children().unwrap()[0].get_text();
+                let tr3 = &children[2];
+                let td31 = tr3.get_children().unwrap()[0].get_children().unwrap()[0].get_text();
+                let td32 = tr3.get_children().unwrap()[1].get_children().unwrap()[0].get_text();
+
+                assert_eq!(th1, "Uid".to_string());
+                assert_eq!(th2, "Count".to_string());
+                assert_eq!(td21, "uid_0".to_string());
+                assert_eq!(td22, "26".to_string());
+                assert_eq!(td31, "uid_1".to_string());
+                assert_eq!(td32, "13".to_string());
             })
             .map_err(|_| unreachable!())
         }
@@ -317,16 +324,19 @@ mod tests {
     #[wasm_bindgen_test(async)]
     pub fn test_inodes_with_empty_results() -> impl Future<Item = (), Error = JsValue> {
         pub fn render() -> impl Future<Item = (), Error = JsValue> {
-            let (p, c) = oneshot::channel::<El<Msg>>();
-            let test_model = TestModel {
-                p: Arc::new(Mutex::new(Some(p))),
-                model: Model::default(),
-            };
+            let (p, c) = oneshot::channel::<Node<Msg>>();
 
-            let app = seed::App::build(test_model, test_update, test_view)
-                .mount(seed::body())
-                .finish()
-                .run();
+            let app = seed::App::build(
+                |_, _| TestModel {
+                    p: Arc::new(Mutex::new(Some(p))),
+                    model: Model::default(),
+                },
+                test_update,
+                test_view,
+            )
+            .mount(seed::body())
+            .finish()
+            .run();
 
             let results = r#"{
                 "results": []
@@ -336,7 +346,7 @@ mod tests {
             let data: InfluxResults = serde_json::from_str(results).unwrap();
 
             let fetch_object: FetchObject<InfluxResults> = FetchObject {
-                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'".into()),
+                request: Request::new("/influx?db=iml_stratagem_scans&q=SELECT counter_name, count FROM stratagem_scan WHERE group_name='user_distribution'"),
                 result: Ok(ResponseWithDataResult {
                     raw,
                     status: Status {code: 200, text: "OK".into(), category: StatusCategory::Success},
@@ -347,7 +357,7 @@ mod tests {
             app.update(Msg::InodesFetched(fetch_object));
 
             c.map(|el| {
-                assert_eq!(el.children.len(), 0);
+                assert_eq!(el.get_children().unwrap().len(), 0);
             })
             .map_err(|_| unreachable!())
         }

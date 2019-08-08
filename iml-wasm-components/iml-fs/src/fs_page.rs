@@ -72,18 +72,17 @@ enum Msg {
     ActionDropdown(dad::IdMsg<Filesystem>),
 }
 
-fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::Destroy => {
             model.destroyed = true;
 
             for (id, row) in &mut model.rows {
-                *orders = call_update(
-                    dad::update,
+                dad::update(
                     dad::IdMsg(*id, dad::Msg::Destroy),
                     &mut row.dropdown,
+                    &mut orders.proxy(Msg::ActionDropdown),
                 )
-                .map_message(Msg::ActionDropdown);
             }
         }
         Msg::WindowClick => {
@@ -172,14 +171,17 @@ fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
         }
         Msg::ActionDropdown(dad::IdMsg(id, msg)) => {
             if let Some(x) = model.rows.get_mut(&id) {
-                *orders = call_update(dad::update, dad::IdMsg(id, msg), &mut x.dropdown)
-                    .map_message(Msg::ActionDropdown);
+                dad::update(
+                    dad::IdMsg(id, msg),
+                    &mut x.dropdown,
+                    &mut orders.proxy(Msg::ActionDropdown),
+                );
             }
         }
     }
 }
 
-fn no_fs() -> El<Msg> {
+fn no_fs() -> Node<Msg> {
     div![
         class!["no-fs", "well", "text-center"],
         h1!["No File Systems are configured"],
@@ -192,7 +194,7 @@ fn no_fs() -> El<Msg> {
     ]
 }
 
-fn fs_rows(model: &Model) -> Vec<El<Msg>> {
+fn fs_rows(model: &Model) -> Vec<Node<Msg>> {
     model
         .rows
         .values()
@@ -213,7 +215,7 @@ fn fs_rows(model: &Model) -> Vec<El<Msg>> {
                         fs.composite_id(),
                         &model.locks
                     )
-                    .add_style("margin-right".into(), px(5))
+                    .add_style("margin-right", px(5))
                     .map_message(Msg::FsRowLockIndicatorState),
                     alert_indicator(
                         &model.alerts,
@@ -236,7 +238,7 @@ fn fs_rows(model: &Model) -> Vec<El<Msg>> {
         .collect()
 }
 
-fn view(model: &Model) -> El<Msg> {
+fn view(model: &Model) -> Node<Msg> {
     div![
         class!["file-systems"],
         if model.has_fs() {
@@ -283,7 +285,7 @@ fn window_events(model: &Model) -> Vec<seed::events::Listener<Msg>> {
 
 #[wasm_bindgen]
 pub struct FsPageCallbacks {
-    app: seed::App<Msg, Model, El<Msg>>,
+    app: seed::App<Msg, Model, Node<Msg>>,
 }
 
 #[wasm_bindgen]
@@ -307,11 +309,15 @@ impl FsPageCallbacks {
     }
 }
 
+fn init(_: Url, _orders: &mut impl Orders<Msg>) -> Model {
+    Model::default()
+}
+
 #[wasm_bindgen]
 pub fn render_fs_page(el: Element) -> FsPageCallbacks {
     init_log();
 
-    let app = seed::App::build(Model::default(), update, view)
+    let app = seed::App::build(init, update, view)
         .mount(el)
         .window_events(window_events)
         .finish()

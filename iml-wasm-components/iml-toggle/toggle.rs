@@ -8,27 +8,23 @@ use seed::{class, i, prelude::*};
 #[derive(Clone, Debug)]
 pub struct Active(pub bool);
 
-pub fn toggle(active: bool) -> El<Active> {
+pub fn toggle(active: bool) -> Node<Active> {
     let mut cfg = class![bs_button::BTN_INFO, bs_button::SMALL];
 
     if active {
         cfg.merge(class!["active"]);
     }
 
-    let mut btn = bs_button::btn(
+    bs_button::btn(
         cfg,
         if active {
-            vec![i![class!["fa", "fa-check"]], El::new_text("Enabled")]
+            vec![i![class!["fa", "fa-check"]], Node::new_text("Enabled")]
         } else {
             vec![
                 i![class!["fas", "fa-times-circle"]],
-                El::new_text("Disabled"),
+                Node::new_text("Disabled"),
             ]
         },
-    );
-
-    btn.listeners
-        .push(mouse_ev(Ev::Click, move |_| Active(!active)));
-
-    btn
+    )
+    .add_listener(mouse_ev(Ev::Click, move |_| Active(!active)))
 }

@@ -17,10 +17,10 @@ pub struct Model {
 pub enum Msg {
     UpdateStratagem,
     StratagemUpdated(fetch::FetchObject<iml_wire_types::Command>),
-    OnFetchError(seed::fetch::FailReason),
+    OnFetchError(seed::fetch::FailReason<iml_wire_types::Command>),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UpdateStratagem => {
             let orders = orders.skip();
@@ -60,16 +60,15 @@ fn update_stratagem(config_data: &StratagemUpdate) -> impl Future<Item = Msg, Er
         .fetch_json(Msg::StratagemUpdated)
 }
 
-pub fn view() -> El<Msg> {
-    let mut btn = bs_button::btn(
+pub fn view() -> Node<Msg> {
+    bs_button::btn(
         class![bs_button::BTN_SUCCESS, "update-button"],
-        vec![El::new_text("Update Stratagem"), i![class!["fas fa-check"]]],
+        vec![
+            Node::new_text("Update Stratagem"),
+            i![class!["fas fa-check"]],
+        ],
     )
-    .add_style("grid-column".into(), "2 / span 2".into())
-    .add_style("grid-row-end".into(), "5".into());
-
-    btn.listeners
-        .push(simple_ev(Ev::Click, Msg::UpdateStratagem));
-
-    btn
+    .add_style("grid-column", "2 / span 2")
+    .add_style("grid-row-end", "5")
+    .add_listener(simple_ev(Ev::Click, Msg::UpdateStratagem))
 }

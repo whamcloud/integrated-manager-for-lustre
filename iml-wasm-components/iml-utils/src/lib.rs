@@ -4,6 +4,7 @@
 
 use iml_wire_types::LockChange;
 use regex::Regex;
+use seed::dom_types::{Attrs, Node};
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -26,6 +27,35 @@ impl IntoSerdeOpt for JsValue {
             Ok(None)
         } else {
             self.into_serde().map(Some)
+        }
+    }
+}
+
+pub trait AddAttrs {
+    fn add_attrs(self, attrs: Attrs) -> Self;
+}
+
+impl<T> AddAttrs for Node<T> {
+    fn add_attrs(self, attrs: Attrs) -> Self {
+        if let Node::Element(mut el) = self {
+            el.attrs.merge(attrs);
+            Node::Element(el)
+        } else {
+            self
+        }
+    }
+}
+
+pub trait Children<T> {
+    fn get_children(&self) -> Option<&Vec<Node<T>>>;
+}
+
+impl<T> Children<T> for Node<T> {
+    fn get_children(&self) -> Option<&Vec<Node<T>>> {
+        if let Node::Element(el) = self {
+            Some(&el.children)
+        } else {
+            None
         }
     }
 }

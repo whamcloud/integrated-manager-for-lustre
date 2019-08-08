@@ -16,10 +16,10 @@ pub struct Model {
 pub enum Msg {
     DeleteStratagem,
     StratagemDeleted(fetch::FetchObject<iml_wire_types::Command>),
-    OnFetchError(seed::fetch::FailReason),
+    OnFetchError(seed::fetch::FailReason<iml_wire_types::Command>),
 }
 
-pub fn update(msg: Msg, model: &mut Model, orders: &mut Orders<Msg>) {
+pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     let orders = orders.skip();
 
     match msg {
@@ -54,17 +54,13 @@ fn delete_stratagem(config_id: u32) -> impl Future<Item = Msg, Error = Msg> {
         .fetch_json(Msg::StratagemDeleted)
 }
 
-pub fn view() -> El<Msg> {
-    let mut btn = bs_button::btn(
+pub fn view() -> Node<Msg> {
+    bs_button::btn(
         class![bs_button::BTN_DANGER, "delete-button"],
         vec![
-            El::new_text("Delete Stratagem"),
+            Node::new_text("Delete Stratagem"),
             i![class!["fas fa-times-circle"]],
         ],
-    );
-
-    btn.listeners
-        .push(simple_ev(Ev::Click, Msg::DeleteStratagem));
-
-    btn
+    )
+    .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem))
 }
