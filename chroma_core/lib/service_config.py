@@ -336,6 +336,8 @@ class ServiceConfig(CommandLine):
         if error:
             log.error(error)
             raise RuntimeError(error)
+        if service.running:
+            service.stop()
         error = service.start()
         if error:
             log.error(error)
