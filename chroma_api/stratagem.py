@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from toolz.functoolz import partial, flip, compose
 
 import tastypie.http as http
+import re
 
 from tastypie import fields
 from tastypie.resources import Resource
@@ -191,7 +192,7 @@ class StratagemConfigurationValidation(RunStratagemValidation):
 
 
 class StratagemConfigurationResource(StatefulModelResource):
-    filesystem = fields.CharField(attribute="filesystem_id", null=False)
+    filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
     interval = fields.CharField(attribute="interval", null=False)
     report_duration = fields.CharField("report_duration", null=True)
     purge_duration = fields.CharField(attribute="purge_duration", null=True)
@@ -212,6 +213,16 @@ class StratagemConfigurationResource(StatefulModelResource):
             return x
 
         return long(x)
+
+    def dehydrate_filesystem(self, bundle):
+        regex = r".*\/(\d+)\/$"
+        fs_uri = bundle.data.get("filesystem")
+        matches = re.findall(regex, fs_uri)
+
+        try:
+            return matches[0]
+        except IndexError:
+            raise "Could not locate filesystem id."
 
     def dehydrate_report_duration(self, bundle):
         x = bundle.data.get("report_duration")
@@ -243,7 +254,7 @@ class StratagemConfigurationResource(StatefulModelResource):
         list_allowed_methods = ["get", "post"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = StratagemConfigurationValidation()
-        filtering = {"filesystem_id": ["exact"]}
+        filtering = {"filesystem": ["exact"]}
 
     @validate
     def obj_update(self, bundle, **kwargs):
