@@ -790,7 +790,6 @@ impl EndpointName for Alert {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct StratagemConfiguration {
     pub filesystem: String,
-    pub filesystem_id: u32,
     pub id: u32,
     pub immutable_state: bool,
     pub interval: u64,
