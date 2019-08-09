@@ -337,16 +337,24 @@ class RunStratagemStep(Step):
                         "rules": [
                             {
                                 "action": "LAT_COUNTER_INC",
-                                "expression": ">= size 1048576000000",
-                                "argument": "SIZE >= 1T",
+                                "expression": "&& < size 1048576 != type S_IFDIR",
+                                "argument": "SIZE < 1M",
                             },
-                            {"action": "LAT_COUNTER_INC", "expression": ">= size 1048576000", "argument": "SIZE >= 1G"},
                             {
                                 "action": "LAT_COUNTER_INC",
-                                "expression": ">= size 1048576",
+                                "expression": "&& >= size 1048576000000 != type S_IFDIR",
+                                "argument": "SIZE >= 1T",
+                            },
+                            {
+                                "action": "LAT_COUNTER_INC",
+                                "expression": "&& >= size 1048576000 != type S_IFDIR",
+                                "argument": "SIZE >= 1G",
+                            },
+                            {
+                                "action": "LAT_COUNTER_INC",
+                                "expression": "&& >= size 1048576 != type S_IFDIR",
                                 "argument": "1M <= SIZE < 1G",
                             },
-                            {"action": "LAT_COUNTER_INC", "expression": "< size 1048576", "argument": "SIZE < 1M"},
                         ],
                         "name": "size_distribution",
                     },
