@@ -313,11 +313,7 @@ impl Llapi {
         Ok(())
     }
 
-    fn llapi_rmfid(
-        &self,
-        mntpt: &str,
-        fidlist: &Vec<String>,
-    ) -> Result<(), ()> {
+    fn llapi_rmfid(&self, mntpt: &str, fidlist: &Vec<String>) -> Result<(), ()> {
         let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
             match unsafe { self.lib.get(b"llapi_rmfid\0") } {
                 Err(e) => {
@@ -364,11 +360,7 @@ impl Llapi {
         }
     }
 
-    pub fn rmfids(
-        &self,
-        mntpt: &str,
-        fidlist: Vec<String>,
-    ) -> Result<(), LiblustreError> {
+    pub fn rmfids(&self, mntpt: &str, fidlist: Vec<String>) -> Result<(), LiblustreError> {
         match self.llapi_rmfid(&mntpt, &fidlist) {
             Ok(_) => Ok(()),
             Err(_) => {
