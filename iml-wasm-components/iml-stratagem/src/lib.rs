@@ -392,10 +392,7 @@ fn detail_header<T>(header: &str) -> Node<T> {
 fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
     well(children)
         .add_style("display", "grid")
-        .add_style(
-            "grid-template-columns",
-            "8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33% 8.33%",
-        )
+        .add_style("grid-template-columns", "repeat(11, 1fr) minmax(90px, 1fr)")
         .add_style("grid-row-gap", px(20))
 }
 

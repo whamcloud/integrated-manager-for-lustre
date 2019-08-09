@@ -419,23 +419,34 @@ fn target_table(
             thead![tr![
                 th!["Name"],
                 th!["Volume"],
-                th!["Primary Server"],
-                th!["Failover Server"],
+                th![class!["hidden-xs"], "Primary Server"],
+                th![class!["hidden-xs"], "Failover Server"],
                 th!["Started on"],
                 th!["Status"],
                 th!["Actions"],
             ]],
             tbody![xs.iter().map(|x| tr![
                 td![
-                    class!["col-sm-1"],
+                    class!["col-sm-1", "col-xs-2"],
+                    style! {"word-break" => "break-all"},
                     ui_link(&format!("target/{}", x.id), &x.name)
                 ],
-                td![x.volume_name],
-                td![server_link(&x.primary_server, &x.primary_server_name)],
-                td![server_link(
-                    &x.failover_servers.first().unwrap_or(&"".into()),
-                    &x.failover_server_name
-                )],
+                td![
+                    class!["col-sm-3", "col-xs-2"],
+                    style! {"word-break" => "break-all"},
+                    x.volume_name
+                ],
+                td![
+                    class!["hidden-xs"],
+                    server_link(&x.primary_server, &x.primary_server_name)
+                ],
+                td![
+                    class!["hidden-xs"],
+                    server_link(
+                        &x.failover_servers.first().unwrap_or(&"".into()),
+                        &x.failover_server_name
+                    )
+                ],
                 td![server_link(
                     x.active_host.as_ref().unwrap_or(&"".into()),
                     &x.active_host_name
