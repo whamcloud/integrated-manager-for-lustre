@@ -6,10 +6,12 @@ use seed::{
     class, div,
     dom_types::Attrs,
     fetch::{FetchObject, RequestController},
-    h4, i,
+    h4, p,
     prelude::*,
-    style, tbody, td, th, thead, tr,
+    tbody, td, th, thead, tr,
 };
+
+pub static MAX_INODE_ENTRIES: u32 = 20;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
@@ -140,7 +142,7 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27", influx_root());
+    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
     let fut = seed::fetch::Request::new(url)
         .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);
@@ -177,17 +179,7 @@ pub fn view(model: &Model) -> Node<Msg> {
                     vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
                 )
             } else {
-                div![detail_panel(vec![i![
-                    class!["fa fa-circle-notch fa-spin".into()],
-                    style! {
-                        "grid-column" => "2",
-                        "grid-row" => "1",
-                        "width" => "40px",
-                        "height" => "40px",
-                        "margin-left" => "-20px",
-                        "font-size" => "40px"
-                    }
-                ]])]
+                div![detail_panel(vec![p!["No Data"]])]
             }
         ]
     }
