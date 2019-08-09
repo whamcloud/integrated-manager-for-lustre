@@ -431,13 +431,22 @@ fn target_table(
                     style! {"word-break" => "break-all"},
                     ui_link(&format!("target/{}", x.id), &x.name)
                 ],
-                td![class!["col-sm-3", "col-xs-2"], style! {"word-break" => "break-all"}, x.volume_name],
-                td![class!["hidden-xs"], server_link(&x.primary_server, &x.primary_server_name)],
-                td![class!["hidden-xs"],
-                server_link(
-                    &x.failover_servers.first().unwrap_or(&"".into()),
-                    &x.failover_server_name
-                )],
+                td![
+                    class!["col-sm-3", "col-xs-2"],
+                    style! {"word-break" => "break-all"},
+                    x.volume_name
+                ],
+                td![
+                    class!["hidden-xs"],
+                    server_link(&x.primary_server, &x.primary_server_name)
+                ],
+                td![
+                    class!["hidden-xs"],
+                    server_link(
+                        &x.failover_servers.first().unwrap_or(&"".into()),
+                        &x.failover_server_name
+                    )
+                ],
                 td![server_link(
                     x.active_host.as_ref().unwrap_or(&"".into()),
                     &x.active_host_name
