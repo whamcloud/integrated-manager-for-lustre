@@ -59,7 +59,7 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
 pub fn view(model: &Option<Model>) -> Node<Msg> {
     let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
-        vec![Node::new_text("Enable Stratagem")],
+        vec![Node::new_text("Enable")],
     );
 
     if model.is_some() {

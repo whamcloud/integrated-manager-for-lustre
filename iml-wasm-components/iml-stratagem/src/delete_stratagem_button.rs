@@ -58,7 +58,7 @@ pub fn view() -> Node<Msg> {
     bs_button::btn(
         class![bs_button::BTN_DANGER, "delete-button"],
         vec![
-            Node::new_text("Delete Stratagem"),
+            Node::new_text("Delete"),
             i![class!["fas fa-times-circle"]],
         ],
     )

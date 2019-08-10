@@ -64,7 +64,7 @@ pub fn view() -> Node<Msg> {
     bs_button::btn(
         class![bs_button::BTN_SUCCESS, "update-button"],
         vec![
-            Node::new_text("Update Stratagem"),
+            Node::new_text("Update"),
             i![class!["fas fa-check"]],
         ],
     )

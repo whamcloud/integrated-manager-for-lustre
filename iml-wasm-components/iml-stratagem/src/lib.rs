@@ -450,27 +450,25 @@ pub fn view(model: &Model) -> Node<Msg> {
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
         ]);
-
-        div![
-            stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
-            h4![class!["section-header"], "File Size Distribution"],
-            stratagem_section(div!(vec![grafana_chart(
-                GRAFANA_DASHBOARD_ID,
-                GRAFANA_DASHBOARD_NAME,
-                "10s",
-                2,
-                "100%",
-                "600"
-            )])),
-            detail_panel(configuration_component)
-        ]
     } else {
         configuration_component.extend(vec![enable_stratagem_button::view(
             &model.enable_stratagem_button,
         )
         .add_style("grid-column", "1 /span 12")
         .map_message(Msg::EnableStratagemButton)]);
-
-        div![detail_panel(configuration_component)]
     }
+
+    div![
+        stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
+        h4![class!["section-header"], "File Size Distribution"],
+        stratagem_section(div!(vec![grafana_chart(
+            GRAFANA_DASHBOARD_ID,
+            GRAFANA_DASHBOARD_NAME,
+            "10s",
+            2,
+            "100%",
+            "600"
+        )])),
+        detail_panel(configuration_component)
+    ]
 }

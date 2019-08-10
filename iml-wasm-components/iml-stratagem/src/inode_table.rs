@@ -1,5 +1,7 @@
 use crate::inode_error::InodeError;
 use bootstrap_components::bs_table;
+use chrono::format::ParseError;
+use chrono::DateTime;
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{
@@ -15,6 +17,7 @@ pub static MAX_INODE_ENTRIES: u32 = 20;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
+    timestamp: String,
     uid: String,
     count: u32,
 }
@@ -85,7 +88,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         .take(1)
                         .map(|v| v.values)
                         .flatten()
-                        .map(|(_, uid, count)| INodeCount { uid, count })
+                        .map(|(timestamp, uid, count)| INodeCount {
+                            timestamp,
+                            uid,
+                            count,
+                        })
                         .collect();
                 }
                 Err(fail_reason) => {
@@ -164,6 +171,11 @@ fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
         .add_style("grid-row-gap", px(20))
 }
 
+fn get_date_time(timestamp: &str) -> Result<String, ParseError> {
+    let dt = DateTime::parse_from_rfc3339(&timestamp)?;
+    Ok(format!("{}", dt.format("%A, %B %d, %Y %H:%M:%S")))
+}
+
 /// View
 pub fn view(model: &Model) -> Node<Msg> {
     if model.destroyed {
@@ -174,10 +186,24 @@ pub fn view(model: &Model) -> Node<Msg> {
         div![
             h4![class!["section-header"], "Top inode Users"],
             if !entries.is_empty() {
-                bs_table::table(
+                let inode_table = bs_table::table(
                     Attrs::empty(),
                     vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
-                )
+                );
+
+                let timestamp = model.inodes.first().map(|x| &x.timestamp);
+                if let Some(timestamp) = timestamp {
+                    if let Ok(dt) = get_date_time(&timestamp) {
+                        div![
+                            p![class!["text-muted"], format!("Last Scanned on: {}", dt)],
+                            inode_table
+                        ]
+                    } else {
+                        div![inode_table]
+                    }
+                } else {
+                    div![inode_table]
+                }
             } else {
                 div![detail_panel(vec![p!["No Data"]])]
             }
