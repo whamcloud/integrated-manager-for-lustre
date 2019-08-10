@@ -28,6 +28,7 @@ pub struct Model {
     destroyed: bool,
     cancel: Option<futures::sync::oneshot::Sender<()>>,
     request_controller: Option<RequestController>,
+    pub last_known_scan: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -94,6 +95,13 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                             count,
                         })
                         .collect();
+
+                    let ts = model.inodes.first().map(|x| x.timestamp.clone());
+                    if let Some(timestamp) = ts {
+                        model.last_known_scan = get_date_time(&timestamp).ok();
+                    } else {
+                        model.last_known_scan = None;
+                    }
                 }
                 Err(fail_reason) => {
                     orders.send_msg(Msg::OnFetchError(fail_reason.into()));
@@ -191,18 +199,19 @@ pub fn view(model: &Model) -> Node<Msg> {
                     vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
                 );
 
-                let timestamp = model.inodes.first().map(|x| &x.timestamp);
-                if let Some(timestamp) = timestamp {
-                    if let Ok(dt) = get_date_time(&timestamp) {
-                        div![
-                            p![class!["text-muted"], format!("Last Scanned on: {}", dt)],
-                            inode_table
-                        ]
-                    } else {
-                        div![inode_table]
-                    }
+                if let Some(timestamp) = &model.last_known_scan {
+                    div![
+                        p![
+                            class!["text-muted"],
+                            format!("Last Scanned on: {}", timestamp)
+                        ],
+                        inode_table
+                    ]
                 } else {
-                    div![inode_table]
+                    div![
+                        p![class!["text-muted"], format!("No recorded scans yet.")],
+                        inode_table
+                    ]
                 }
             } else {
                 div![detail_panel(vec![p!["No Data"]])]
