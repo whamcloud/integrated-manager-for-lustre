@@ -19,6 +19,8 @@ pub enum RunStratagemCommandResult {
     InvalidArgument,
     PurgeDurationTooBig,
     ReportDurationTooBig,
+    PurgeDurationTooSmall,
+    ReportDurationTooSmall,
     Mdt0NotFound,
     Mdt0NotMounted,
     StratagemServerProfileNotInstalled,
