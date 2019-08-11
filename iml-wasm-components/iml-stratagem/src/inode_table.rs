@@ -1,7 +1,7 @@
 use crate::inode_error::InodeError;
 use bootstrap_components::bs_table;
-use chrono::format::ParseError;
-use chrono::DateTime;
+use chrono::offset::TimeZone;
+use chrono::offset::Utc;
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{
@@ -17,7 +17,7 @@ pub static MAX_INODE_ENTRIES: u32 = 20;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
-    timestamp: String,
+    timestamp: i64,
     uid: String,
     count: u32,
 }
@@ -46,7 +46,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(String, String, u32)>,
+    values: Vec<(i64, String, u32)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -98,7 +98,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
                     let ts = model.inodes.first().map(|x| x.timestamp.clone());
                     if let Some(timestamp) = ts {
-                        model.last_known_scan = get_date_time(&timestamp).ok();
+                        model.last_known_scan = Some(get_date_time(timestamp));
                     } else {
                         model.last_known_scan = None;
                     }
@@ -157,7 +157,7 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
+    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
     let fut = seed::fetch::Request::new(url)
         .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);
@@ -179,9 +179,10 @@ fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
         .add_style("grid-row-gap", px(20))
 }
 
-fn get_date_time(timestamp: &str) -> Result<String, ParseError> {
-    let dt = DateTime::parse_from_rfc3339(&timestamp)?;
-    Ok(format!("{}", dt.format("%A, %B %d, %Y %H:%M:%S")))
+fn get_date_time(timestamp: i64) -> String {
+    let dt = Utc.timestamp_nanos(timestamp);
+
+    format!("{}", dt.format("%A, %B %d, %Y %H:%M:%S %Z"))
 }
 
 /// View
