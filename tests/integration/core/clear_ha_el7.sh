@@ -15,7 +15,7 @@ pcs cluster destroy
 systemctl disable --now pcsd pacemaker corosync
 
 if [ -n "$ring0_iface" ] && ip link show "$ring0_iface"; then
-    ifdown "$ring0_iface"
+    ifconfig "$ring0_iface" 0.0.0.0 down
     rm -f /etc/sysconfig/network-scripts/ifcfg-"$ring0_iface"
 fi
 
