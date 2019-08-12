@@ -1,14 +1,13 @@
 #!/bin/bash
 
-set -xe
+set -e
 
 if pcs status ; then
     pcs cluster stop --all
 fi
 
-# figure it out for ourselves if we can
-# otherwise the caller needs to have set it
-if [ -f /etc/corosync/corosync.conf ]; then
+# figure it out for ourselves if we can if caller didn't set it
+if [ -z "$ring0_iface" ] && [ -f /etc/corosync/corosync.conf ]; then
     ring0_iface=$(ip route get "$(sed -ne '/ringnumber: 0/{s///;n;s/.*: //p}' /etc/corosync/corosync.conf)" | sed -ne 's/.* dev \([^ ]*\)  *src.*/\1/p')
 fi
 
