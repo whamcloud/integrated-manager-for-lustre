@@ -96,12 +96,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         })
                         .collect();
 
-                    let ts = model.inodes.first().map(|x| x.timestamp.clone());
-                    if let Some(timestamp) = ts {
-                        model.last_known_scan = Some(get_date_time(timestamp));
-                    } else {
-                        model.last_known_scan = None;
-                    }
+                    model.last_known_scan = model.inodes.first().map(|x| get_date_time(x.timestamp));
                 }
                 Err(fail_reason) => {
                     orders.send_msg(Msg::OnFetchError(fail_reason.into()));
