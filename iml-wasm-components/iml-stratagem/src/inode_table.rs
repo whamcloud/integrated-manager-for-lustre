@@ -1,7 +1,6 @@
 use crate::inode_error::InodeError;
 use bootstrap_components::bs_table;
-use chrono::offset::TimeZone;
-use chrono::offset::Utc;
+use chrono::offset::{TimeZone, Utc};
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{
@@ -96,7 +95,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         })
                         .collect();
 
-                    model.last_known_scan = model.inodes.first().map(|x| get_date_time(x.timestamp));
+                    model.last_known_scan =
+                        model.inodes.first().map(|x| get_date_time(x.timestamp));
                 }
                 Err(fail_reason) => {
                     orders.send_msg(Msg::OnFetchError(fail_reason.into()));

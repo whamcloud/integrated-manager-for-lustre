@@ -57,10 +57,7 @@ fn delete_stratagem(config_id: u32) -> impl Future<Item = Msg, Error = Msg> {
 pub fn view() -> Node<Msg> {
     bs_button::btn(
         class![bs_button::BTN_DANGER, "delete-button"],
-        vec![
-            Node::new_text("Delete"),
-            i![class!["fas fa-times-circle"]],
-        ],
+        vec![Node::new_text("Delete"), i![class!["fas fa-times-circle"]]],
     )
     .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem))
 }

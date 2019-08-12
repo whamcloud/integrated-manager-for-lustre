@@ -63,10 +63,7 @@ fn update_stratagem(config_data: &StratagemUpdate) -> impl Future<Item = Msg, Er
 pub fn view() -> Node<Msg> {
     bs_button::btn(
         class![bs_button::BTN_SUCCESS, "update-button"],
-        vec![
-            Node::new_text("Update"),
-            i![class!["fas fa-check"]],
-        ],
+        vec![Node::new_text("Update"), i![class!["fas fa-check"]]],
     )
     .add_style("grid-column", "2 / span 2")
     .add_style("grid-row-end", "5")
