@@ -13,7 +13,7 @@ use iml_duration_picker::{self, duration_picker};
 use iml_environment::MAX_SAFE_INTEGER;
 use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
 use iml_toggle::toggle;
-use seed::{class, div, dom_types::At, h4, prelude::*, style};
+use seed::{class, div, dom_types::At, h4, p, prelude::*, style};
 
 /// Record from the `chroma_core_stratagemconfiguration` table
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
@@ -450,27 +450,31 @@ pub fn view(model: &Model) -> Node<Msg> {
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
         ]);
-
-        div![
-            stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
-            h4![class!["section-header"], "File Size Distribution"],
-            stratagem_section(div!(vec![grafana_chart(
-                GRAFANA_DASHBOARD_ID,
-                GRAFANA_DASHBOARD_NAME,
-                "10s",
-                2,
-                "100%",
-                "600"
-            )])),
-            detail_panel(configuration_component)
-        ]
     } else {
         configuration_component.extend(vec![enable_stratagem_button::view(
             &model.enable_stratagem_button,
         )
         .add_style("grid-column", "1 /span 12")
         .map_message(Msg::EnableStratagemButton)]);
-
-        div![detail_panel(configuration_component)]
     }
+
+    let mut last_scanned = p![class!["text-muted"], format!("No recorded scans yet.")];
+    if let Some(dt) = &model.inode_table.last_known_scan {
+        last_scanned = p![class!["text-muted"], format!("Last Scanned on: {}", dt)];
+    }
+
+    div![
+        stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
+        h4![class!["section-header"], "File Size Distribution"],
+        last_scanned,
+        stratagem_section(div!(vec![grafana_chart(
+            GRAFANA_DASHBOARD_ID,
+            GRAFANA_DASHBOARD_NAME,
+            "10s",
+            2,
+            "100%",
+            "600"
+        )])),
+        detail_panel(configuration_component)
+    ]
 }

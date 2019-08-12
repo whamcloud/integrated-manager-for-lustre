@@ -1,5 +1,6 @@
 use crate::inode_error::InodeError;
 use bootstrap_components::bs_table;
+use chrono::offset::{TimeZone, Utc};
 use futures::Future;
 use iml_environment::influx_root;
 use seed::{
@@ -15,6 +16,7 @@ pub static MAX_INODE_ENTRIES: u32 = 20;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
 pub struct INodeCount {
+    timestamp: i64,
     uid: String,
     count: u32,
 }
@@ -25,6 +27,7 @@ pub struct Model {
     destroyed: bool,
     cancel: Option<futures::sync::oneshot::Sender<()>>,
     request_controller: Option<RequestController>,
+    pub last_known_scan: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -42,7 +45,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(String, String, u32)>,
+    values: Vec<(i64, String, u32)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -85,8 +88,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         .take(1)
                         .map(|v| v.values)
                         .flatten()
-                        .map(|(_, uid, count)| INodeCount { uid, count })
+                        .map(|(timestamp, uid, count)| INodeCount {
+                            timestamp,
+                            uid,
+                            count,
+                        })
                         .collect();
+
+                    model.last_known_scan =
+                        model.inodes.first().map(|x| get_date_time(x.timestamp));
                 }
                 Err(fail_reason) => {
                     orders.send_msg(Msg::OnFetchError(fail_reason.into()));
@@ -142,7 +152,7 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-    let url:String = format!("{}db=iml_stratagem_scans&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
+    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
     let fut = seed::fetch::Request::new(url)
         .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);
@@ -164,6 +174,12 @@ fn detail_panel<T>(children: Vec<Node<T>>) -> Node<T> {
         .add_style("grid-row-gap", px(20))
 }
 
+fn get_date_time(timestamp: i64) -> String {
+    let dt = Utc.timestamp_nanos(timestamp);
+
+    format!("{}", dt.format("%A, %B %d, %Y %H:%M:%S %Z"))
+}
+
 /// View
 pub fn view(model: &Model) -> Node<Msg> {
     if model.destroyed {
@@ -174,10 +190,25 @@ pub fn view(model: &Model) -> Node<Msg> {
         div![
             h4![class!["section-header"], "Top inode Users"],
             if !entries.is_empty() {
-                bs_table::table(
+                let inode_table = bs_table::table(
                     Attrs::empty(),
                     vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
-                )
+                );
+
+                if let Some(timestamp) = &model.last_known_scan {
+                    div![
+                        p![
+                            class!["text-muted"],
+                            format!("Last Scanned on: {}", timestamp)
+                        ],
+                        inode_table
+                    ]
+                } else {
+                    div![
+                        p![class!["text-muted"], format!("No recorded scans yet.")],
+                        inode_table
+                    ]
+                }
             } else {
                 div![detail_panel(vec![p!["No Data"]])]
             }
