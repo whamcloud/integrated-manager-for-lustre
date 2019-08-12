@@ -214,7 +214,7 @@ class RealRemoteOperations(RemoteOperations):
         if buffer:
             stdin = channel.makefile("wb")
             stdin.write(buffer)
-            stdin.flush()
+            stdin.close()
             stdin.channel.shutdown_write()
 
         # Store results. This needs to happen in this order. If recv_exit_status is
