@@ -264,14 +264,14 @@ class StratagemConfigurationResource(StatefulModelResource):
 
     @validate
     def obj_update(self, bundle, **kwargs):
-        config = StratagemConfiguration.objects.get(pk=kwargs["pk"])
-        config.interval = bundle.data.get("interval")
-        config.report_duration = bundle.data.get("report_duration")
-        config.purge_duration = bundle.data.get("purge_duration")
-        config.save()
+        command_id = JobSchedulerClient.update_stratagem(bundle.data)
 
-        bundle.obj = config
-        return bundle
+        try:
+            command = Command.objects.get(pk=command_id)
+        except ObjectDoesNotExist:
+            command = None
+
+        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
 
     @validate
     def obj_create(self, bundle, **kwargs):

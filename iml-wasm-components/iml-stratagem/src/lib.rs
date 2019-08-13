@@ -28,12 +28,25 @@ pub struct StratagemConfiguration {
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
+pub struct StratagemEnable {
+    pub filesystem: u32,
+    pub interval: u64,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+}
+
+#[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemUpdate {
     pub id: u32,
     pub filesystem: u32,
     pub interval: u64,
     pub report_duration: Option<u64>,
     pub purge_duration: Option<u64>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ActionResponse {
+    command: iml_wire_types::Command,
 }
 
 #[derive(Debug)]

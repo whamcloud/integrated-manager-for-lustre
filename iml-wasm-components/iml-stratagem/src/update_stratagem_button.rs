@@ -2,22 +2,24 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::StratagemUpdate;
+use crate::{ActionResponse, StratagemUpdate};
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
+use iml_utils::dispatch_custom_event;
 use seed::{class, dom_types::At, fetch, i, prelude::*};
 
 #[derive(Debug, Default)]
 pub struct Model {
     pub config_data: Option<StratagemUpdate>,
+    pub disabled: bool,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
     UpdateStratagem,
-    StratagemUpdated(fetch::FetchObject<iml_wire_types::Command>),
-    OnFetchError(seed::fetch::FailReason<iml_wire_types::Command>),
+    StratagemUpdated(fetch::FetchObject<ActionResponse>),
+    OnFetchError(seed::fetch::FailReason<ActionResponse>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -25,6 +27,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::UpdateStratagem => {
             let orders = orders.skip();
 
+            model.disabled = true;
             if let Some(config_data) = &model.config_data {
                 orders.perform_cmd(update_stratagem(&config_data));
             }
@@ -32,6 +35,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::StratagemUpdated(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log::trace!("Response data: {:#?}", response.data);
+                dispatch_custom_event("show_command_modal", &response.data);
                 orders.skip();
             }
             Err(fail_reason) => {
@@ -39,6 +43,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         },
         Msg::OnFetchError(fail_reason) => {
+            model.disabled = false;
             log::error!("Fetch error: {:#?}", fail_reason);
             orders.skip();
         }
@@ -48,7 +53,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 }
 
 fn update_stratagem(config_data: &StratagemUpdate) -> impl Future<Item = Msg, Error = Msg> {
-    let url = format!("/api/stratagem_configuration/{}", config_data.id);
+    let url = format!("/api/stratagem_configuration/{}/", config_data.id);
 
     seed::fetch::Request::new(url)
         .method(seed::fetch::Method::Put)

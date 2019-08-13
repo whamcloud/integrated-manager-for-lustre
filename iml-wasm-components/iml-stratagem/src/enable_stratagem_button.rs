@@ -5,6 +5,7 @@
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
+use iml_utils::dispatch_custom_event;
 use seed::{class, dom_types::At, fetch, i, prelude::*};
 
 #[derive(Debug, serde::Serialize)]
@@ -15,11 +16,16 @@ pub struct Model {
     pub purge_duration: Option<u64>,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EnableCommand {
+    command: iml_wire_types::Command,
+}
+
 #[derive(Clone, Debug)]
 pub enum Msg {
     EnableStratagem,
-    StratagemEnabled(fetch::FetchObject<iml_wire_types::Command>),
-    OnFetchError(seed::fetch::FailReason<iml_wire_types::Command>),
+    StratagemEnabled(fetch::FetchObject<EnableCommand>),
+    OnFetchError(seed::fetch::FailReason<EnableCommand>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -32,6 +38,8 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log::trace!("Response data: {:#?}", response.data);
+                seed::log!("Opening command moal");
+                dispatch_custom_event("show_command_modal", &response.data);
             }
             Err(fail_reason) => {
                 orders.send_msg(Msg::OnFetchError(fail_reason));
