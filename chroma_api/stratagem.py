@@ -53,7 +53,7 @@ def get_duration(duration_key, bundle):
 def check_duration(duration_key, bundle):
     duration = get_duration(duration_key, bundle)
 
-    if isinstance(duration, dict):
+    if duration is None or isinstance(duration, dict):
         return duration
 
     if duration > MAX_SAFE_INTEGER:
@@ -64,7 +64,7 @@ def check_duration(duration_key, bundle):
             ),
         }
 
-    if duration is not None and duration < 0:
+    if duration < 0:
         return {
             "code": "{}_too_small".format(duration_key),
             "message": "{} duration cannot be negative.".format(get_duration_type(duration_key)),
