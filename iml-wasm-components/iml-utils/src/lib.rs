@@ -4,7 +4,10 @@
 
 use iml_wire_types::LockChange;
 use regex::Regex;
-use seed::dom_types::{Attrs, Node};
+use seed::{
+    dom_types::{Attrs, Node},
+    window,
+};
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -97,6 +100,20 @@ pub fn format_number(num: f64, precision: Option<usize>) -> String {
     let num = format!("{:.*}", precision.unwrap_or(1), num);
 
     format!("{}{}{}", sign, num, units[pwr as usize])
+}
+
+/// Sends the custom event up to the window, carrying with it the data.
+pub fn dispatch_custom_event<T>(r#type: &str, data: &T)
+where
+    T: serde::Serialize + ?Sized,
+{
+    let js_value = JsValue::from_serde(data).expect("Error serializing data");
+    let ev = web_sys::CustomEvent::new(r#type).expect("Could not create custom event");
+    ev.init_custom_event_with_can_bubble_and_cancelable_and_detail(r#type, true, true, &js_value);
+
+    window()
+        .dispatch_event(&ev)
+        .expect("Could not dispatch custom event");
 }
 
 #[derive(Debug, Copy, Clone)]

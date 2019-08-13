@@ -108,13 +108,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             let to_add = new_keys.difference(&old_keys);
             let to_change = new_keys.intersection(&old_keys);
 
-            log::trace!(
-                "old keys {:?}, new keys {:?}, change_keys {:?}",
-                old_keys,
-                new_keys,
-                to_change
-            );
-
             for x in to_remove {
                 model.rows.remove(x);
             }

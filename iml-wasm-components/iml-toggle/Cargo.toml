@@ -11,7 +11,7 @@ bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.8.1"
+insta = "0.10.1"
 
 [lib]
 path = "toggle.rs"

@@ -6,14 +6,14 @@ mod delete_stratagem_button;
 mod enable_stratagem_button;
 mod inode_error;
 pub mod inode_table;
+pub mod scan_now;
 mod update_stratagem_button;
 
 use bootstrap_components::bs_well::well;
 use iml_duration_picker::{self, duration_picker};
 use iml_environment::MAX_SAFE_INTEGER;
 use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
-use iml_toggle::toggle;
-use seed::{class, div, dom_types::At, h4, p, prelude::*, style};
+use seed::{attrs, class, div, dom_types::At, h4, input, p, prelude::*, style};
 
 /// Record from the `chroma_core_stratagemconfiguration` table
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
@@ -83,7 +83,7 @@ impl Default for Model {
     }
 }
 
-fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<String> {
+pub fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<String> {
     if ms > MAX_SAFE_INTEGER {
         Some(format!(
             "Duration cannot be greater than {} {}",
@@ -97,68 +97,21 @@ fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<Stri
 
 impl Model {
     fn get_stratagem_update_config(&self) -> Option<StratagemUpdate> {
-        let id = self.id?;
-
-        let interval = self.run_config.value.parse::<u64>().ok()?;
-        let interval = iml_duration_picker::convert_unit_to_ms(self.run_config.unit, interval);
-
-        let report_duration = if self.report_config.disabled {
-            None
-        } else {
-            self.report_config
-                .value
-                .parse::<u64>()
-                .map(|x| iml_duration_picker::convert_unit_to_ms(self.report_config.unit, x))
-                .ok()
-        };
-
-        let purge_duration = if self.purge_config.disabled {
-            None
-        } else {
-            self.purge_config
-                .value
-                .parse::<u64>()
-                .map(|x| iml_duration_picker::convert_unit_to_ms(self.purge_config.unit, x))
-                .ok()
-        };
-
         Some(StratagemUpdate {
-            id,
+            id: self.id?,
             filesystem: self.fs_id,
-            interval,
-            report_duration,
-            purge_duration,
+            interval: self.run_config.value_as_ms()?,
+            report_duration: self.report_config.value_as_ms(),
+            purge_duration: self.purge_config.value_as_ms(),
         })
     }
+
     fn create_enable_stratagem_model(&self) -> Option<enable_stratagem_button::Model> {
-        let interval = self.run_config.value.parse::<u64>().ok()?;
-        let interval = iml_duration_picker::convert_unit_to_ms(self.run_config.unit, interval);
-
-        let report_duration = if self.report_config.disabled {
-            None
-        } else {
-            self.report_config
-                .value
-                .parse::<u64>()
-                .map(|x| iml_duration_picker::convert_unit_to_ms(self.report_config.unit, x))
-                .ok()
-        };
-
-        let purge_duration = if self.purge_config.disabled {
-            None
-        } else {
-            self.purge_config
-                .value
-                .parse::<u64>()
-                .map(|x| iml_duration_picker::convert_unit_to_ms(self.purge_config.unit, x))
-                .ok()
-        };
-
         Some(enable_stratagem_button::Model {
             filesystem: self.fs_id,
-            interval,
-            report_duration,
-            purge_duration,
+            interval: self.run_config.value_as_ms()?,
+            report_duration: self.report_config.value_as_ms(),
+            purge_duration: self.purge_config.value_as_ms(),
         })
     }
 
@@ -168,53 +121,27 @@ impl Model {
             && self.purge_config.validation_message.is_none()
     }
 
+    /// Validates the input fields for the duration picker.
+    /// It would be much better if we relied on HTML5 validation,
+    /// but we need a solution to https://github.com/David-OConnor/seed/issues/82 first.
     fn validate(&mut self) {
-        let run_config = self.run_config.value.parse::<u64>();
+        self.run_config.validation_message = match self.run_config.value_as_ms() {
+            Some(ms) => {
+                log::trace!("ms: {}, max: {}", ms, MAX_SAFE_INTEGER);
 
-        if run_config.is_err() {
-            self.run_config.validation_message =
-                Some("The scan field must contain a numeric value.".to_string());
-        } else {
-            let val = run_config.unwrap();
-            let ms = iml_duration_picker::convert_unit_to_ms(self.run_config.unit, val);
+                if ms < 1 {
+                    Some("Value must be greater than or equal to 1.".into())
+                } else {
+                    max_value_validation(ms, self.run_config.unit)
+                }
+            }
+            None => Some("Please fill out this field.".into()),
+        };
 
-            log::trace!("ms: {}, max: {}", ms, MAX_SAFE_INTEGER);
-
-            self.run_config.validation_message = max_value_validation(ms, self.run_config.unit);
-        }
-
-        let report_config = self.report_config.value.parse::<u64>();
-
-        if self.report_config.disabled {
-            self.report_config.validation_message = None;
-        } else if report_config.is_err() {
-            self.report_config.validation_message =
-                Some("The report field must contain a numeric value.".into());
-        } else {
-            let val = report_config.as_ref().unwrap();
-            let ms = iml_duration_picker::convert_unit_to_ms(self.report_config.unit, *val);
-
-            self.report_config.validation_message =
-                max_value_validation(ms, self.report_config.unit);
-        }
-
-        let purge_config = self.purge_config.value.parse::<u64>();
-
-        if self.purge_config.disabled {
-            self.purge_config.validation_message = None;
-        } else if purge_config.is_err() {
-            self.purge_config.validation_message =
-                Some("The purge field must contain a numeric value.".into());
-        } else {
-            let val = purge_config.as_ref().unwrap();
-            let ms = iml_duration_picker::convert_unit_to_ms(self.report_config.unit, *val);
-
-            self.purge_config.validation_message =
-                max_value_validation(ms, self.report_config.unit);
-        }
-
-        let check = report_config
-            .and_then(|r| purge_config.map(|p| r > p))
+        let check = self
+            .report_config
+            .value
+            .and_then(|r| self.purge_config.value.map(|p| r > p))
             .unwrap_or(false);
 
         if check {
@@ -228,8 +155,6 @@ impl Model {
 #[derive(Clone, Debug)]
 pub enum Msg {
     Destroy,
-    TogglePurge(iml_toggle::Active),
-    ToggleReport(iml_toggle::Active),
     RunConfig(iml_duration_picker::Msg),
     SetConfig(Option<StratagemConfiguration>),
     ReportConfig(iml_duration_picker::Msg),
@@ -248,8 +173,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             model.validate();
 
-            if model.config_valid() {
-                model.enable_stratagem_button = model.create_enable_stratagem_model();
+            model.enable_stratagem_button = if model.config_valid() {
+                model.create_enable_stratagem_model()
+            } else {
+                None
             }
         }
         Msg::ReportConfig(msg) => {
@@ -257,32 +184,20 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             model.validate();
 
-            if model.config_valid() {
-                model.enable_stratagem_button = model.create_enable_stratagem_model();
+            model.enable_stratagem_button = if model.config_valid() {
+                model.create_enable_stratagem_model()
+            } else {
+                None
             }
         }
         Msg::PurgeConfig(msg) => {
             iml_duration_picker::update(msg, &mut model.purge_config);
             model.validate();
 
-            if model.config_valid() {
-                model.enable_stratagem_button = model.create_enable_stratagem_model();
-            }
-        }
-        Msg::ToggleReport(iml_toggle::Active(active)) => {
-            model.report_config.disabled = !active;
-            model.validate();
-
-            if model.config_valid() {
-                model.enable_stratagem_button = model.create_enable_stratagem_model();
-            }
-        }
-        Msg::TogglePurge(iml_toggle::Active(active)) => {
-            model.purge_config.disabled = !active;
-            model.validate();
-
-            if model.config_valid() {
-                model.enable_stratagem_button = model.create_enable_stratagem_model();
+            model.enable_stratagem_button = if model.config_valid() {
+                model.create_enable_stratagem_model()
+            } else {
+                None
             }
         }
         Msg::SetConfig(config) => match config {
@@ -292,37 +207,32 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
                 model.delete_stratagem_button.config_id = c.id;
 
-                model.run_config.value = iml_duration_picker::convert_ms_to_unit(
+                model.run_config.value = Some(iml_duration_picker::convert_ms_to_unit(
                     iml_duration_picker::Unit::Days,
                     c.interval,
-                )
-                .to_string();
+                ));
 
                 match c.report_duration {
                     None => {
-                        model.report_config.value = "".to_string();
-                        model.report_config.disabled = true;
+                        model.report_config.value = None;
                     }
                     Some(x) => {
-                        model.report_config.value = iml_duration_picker::convert_ms_to_unit(
+                        model.report_config.value = Some(iml_duration_picker::convert_ms_to_unit(
                             iml_duration_picker::Unit::Days,
                             x,
-                        )
-                        .to_string()
+                        ))
                     }
                 }
 
                 match c.purge_duration {
                     None => {
-                        model.purge_config.value = "".to_string();
-                        model.purge_config.disabled = true;
+                        model.purge_config.value = None;
                     }
                     Some(x) => {
-                        model.purge_config.value = iml_duration_picker::convert_ms_to_unit(
+                        model.purge_config.value = Some(iml_duration_picker::convert_ms_to_unit(
                             iml_duration_picker::Unit::Days,
                             x,
-                        )
-                        .to_string()
+                        ))
                     }
                 }
 
@@ -331,11 +241,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             None => {
                 model.configured = false;
                 model.id = None;
-                model.run_config.value = "".to_string();
-                model.report_config.value = "".to_string();
-                model.report_config.disabled = false;
-                model.purge_config.value = "".to_string();
-                model.purge_config.disabled = false;
+                model.run_config.value = None;
+                model.report_config.value = None;
+                model.purge_config.value = None;
                 model.enable_stratagem_button = None;
 
                 model.validate();
@@ -407,74 +315,84 @@ fn detail_label<T>(content: &str) -> Node<T> {
     ]
 }
 
-fn stratagem_section<T>(el: Node<T>) -> Node<T> {
-    el.add_style("margin-bottom", px(20))
-}
-
 // View
 pub fn view(model: &Model) -> Node<Msg> {
     let mut configuration_component = vec![
-        detail_header("Stratagem Configuration"),
+        detail_header("Configure Scanning Interval"),
         detail_label("Scan filesystem every"),
         div![
             class!["input-group"],
             style! {"grid-column" => "7 /span 6"},
-            duration_picker(&model.run_config).map_message(Msg::RunConfig)
+            duration_picker(
+                &model.run_config,
+                input![attrs! { At::Required => true, At::Placeholder => "Required" }],
+            )
+            .map_message(Msg::RunConfig)
         ],
         detail_label("Generate report on files older than"),
         div![
             class!["input-group"],
-            style! {"grid-column" => "7 /span 5", "padding-right" => "15px"},
-            duration_picker(&model.report_config).map_message(Msg::ReportConfig)
+            style! {"grid-column" => "7 /span 6"},
+            duration_picker(
+                &model.report_config,
+                input![attrs! { At::Placeholder => "Optional" }]
+            )
+            .map_message(Msg::ReportConfig)
         ],
-        toggle(!model.report_config.disabled)
-            .map_message(Msg::ToggleReport)
-            .add_style("grid-column", "12"),
         detail_label("Purge Files older than"),
         div![
             class!["input-group"],
-            style! {"grid-column" => "7 /span 5", "padding-right" => "15px"},
-            duration_picker(&model.purge_config).map_message(Msg::PurgeConfig)
+            style! {"grid-column" => "7 /span 6"},
+            duration_picker(
+                &model.purge_config,
+                input![attrs! { At::Placeholder => "Optional" }]
+            )
+            .map_message(Msg::PurgeConfig)
         ],
-        toggle(!model.purge_config.disabled)
-            .map_message(Msg::TogglePurge)
-            .add_style("grid-column", "12"),
     ];
 
     if model.configured {
-        configuration_component.extend(vec![
+        configuration_component.push(
             update_stratagem_button::view()
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::UpdateStratagemButton),
+        );
+
+        configuration_component.push(
             delete_stratagem_button::view()
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
-        ]);
+        );
     } else {
-        configuration_component.extend(vec![enable_stratagem_button::view(
-            &model.enable_stratagem_button,
+        configuration_component.push(
+            enable_stratagem_button::view(&model.enable_stratagem_button)
+                .add_style("grid-column", "1 /span 12")
+                .map_message(Msg::EnableStratagemButton),
         )
-        .add_style("grid-column", "1 /span 12")
-        .map_message(Msg::EnableStratagemButton)]);
-    }
-
-    let mut last_scanned = p![class!["text-muted"], format!("No recorded scans yet.")];
-    if let Some(dt) = &model.inode_table.last_known_scan {
-        last_scanned = p![class!["text-muted"], format!("Last Scanned on: {}", dt)];
     }
 
     div![
-        stratagem_section(inode_table::view(&model.inode_table).map_message(Msg::InodeTable)),
+        inode_table::view(&model.inode_table)
+            .add_style("margin-bottom", px(20))
+            .map_message(Msg::InodeTable),
         h4![class!["section-header"], "File Size Distribution"],
-        last_scanned,
-        stratagem_section(div!(vec![grafana_chart(
+        p![
+            class!["text-muted"],
+            if let Some(dt) = &model.inode_table.last_known_scan {
+                format!("Last Scanned: {}", dt)
+            } else {
+                "No scan recorded.".into()
+            }
+        ],
+        div!(grafana_chart(
             GRAFANA_DASHBOARD_ID,
             GRAFANA_DASHBOARD_NAME,
             "10s",
             2,
             "100%",
             "600"
-        )])),
+        ))
+        .add_style("margin-bottom", px(20)),
         detail_panel(configuration_component)
     ]
 }

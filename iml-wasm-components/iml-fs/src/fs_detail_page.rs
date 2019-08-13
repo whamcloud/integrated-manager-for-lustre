@@ -77,6 +77,7 @@ struct Model {
     pub locks: Locks,
     pub hosts: HashMap<u32, Host>,
     pub stratagem: iml_stratagem::Model,
+    pub scan_now: iml_stratagem::scan_now::Model,
     stratagem_ready: bool,
 }
 
@@ -118,6 +119,7 @@ enum Msg {
     InodeTable(iml_stratagem::Msg),
     StratagemInit(iml_stratagem::Msg),
     StratagemComponent(iml_stratagem::Msg),
+    ScanNow(iml_stratagem::scan_now::Msg),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -167,6 +169,14 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if model.stratagem.purge_config.watching.should_update() {
                 model.stratagem.purge_config.watching.update();
             }
+
+            if model.scan_now.purge_config.watching.should_update() {
+                model.scan_now.purge_config.watching.update();
+            }
+
+            if model.scan_now.report_config.watching.should_update() {
+                model.scan_now.report_config.watching.update();
+            }
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {
@@ -192,8 +202,6 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
             let to_remove = old_keys.difference(&new_keys);
             let to_add = new_keys.difference(&old_keys);
-
-            log::trace!("old keys {:?}, new keys {:?}", old_keys, new_keys);
 
             for x in to_remove {
                 model.table_rows.remove(x);
@@ -301,6 +309,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 msg,
                 &mut model.stratagem,
                 &mut orders.proxy(Msg::StratagemComponent),
+            );
+        }
+        Msg::ScanNow(msg) => {
+            iml_stratagem::scan_now::update(
+                msg,
+                &mut model.scan_now,
+                &mut orders.proxy(Msg::ScanNow),
             );
         }
     }
@@ -499,6 +514,11 @@ fn view(model: &Model) -> Node<Msg> {
                 mgt_link(model.mgt.first()),
             ),
             mnt_info_btn,
+            if model.stratagem_ready {
+                iml_stratagem::scan_now::view(fs.id, &model.scan_now).map_message(Msg::ScanNow)
+            } else {
+                vec![]
+            },
             if model.mount_modal_open {
                 client_mount_details(&fs.name, fs.mount_command.clone())
             } else {

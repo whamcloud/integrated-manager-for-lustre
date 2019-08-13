@@ -4,14 +4,13 @@
 
 use crate::{
     action_dropdown::{action_dropdown, dropdown_header},
-    dispatch_custom_event::dispatch_custom_event,
     model::{
         self, composite_ids_to_query_string, sort_actions, ActionMap, ActionRecord,
         AvailableActionAndRecord,
     },
 };
 use futures::Future;
-use iml_utils::WatchState;
+use iml_utils::{dispatch_custom_event, WatchState};
 use iml_wire_types::{AvailableAction, CompositeId};
 use seed::{
     a, attrs, button, class, div,
