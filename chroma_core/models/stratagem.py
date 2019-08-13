@@ -5,6 +5,8 @@
 import logging
 import json
 import os
+
+from os import path
 from toolz.functoolz import pipe, partial, flip
 
 from django.db import models
@@ -528,6 +530,8 @@ class SendResultsToClientStep(Step):
             ]
             if duration is not None
         ]
+
+        action_list = filter(lambda (label, (mnt_pt, mailbox_file)): path.exists("/var/spool/iml/mailbox/{}".format(mailbox_file)), action_list)
 
         file_location = pipe(
             action_list,

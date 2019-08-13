@@ -64,7 +64,7 @@ def check_duration(duration_key, bundle):
             ),
         }
 
-    if duration < 0:
+    if duration is not None and duration < 0:
         return {
             "code": "{}_too_small".format(duration_key),
             "message": "{} duration cannot be negative.".format(get_duration_type(duration_key)),
