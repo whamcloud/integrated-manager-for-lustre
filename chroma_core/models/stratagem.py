@@ -531,7 +531,7 @@ class SendResultsToClientStep(Step):
             if duration is not None
         ]
 
-        action_list = filter(lambda (label, (mnt_pt, mailbox_file)): path.exists("{}/{}".format(MAILBOX_PATH, mailbox_file)), action_list)
+        action_list = filter(lambda (_, xs): path.exists("{}/{}".format(MAILBOX_PATH, xs[1])), action_list)
 
         file_location = pipe(
             action_list,
