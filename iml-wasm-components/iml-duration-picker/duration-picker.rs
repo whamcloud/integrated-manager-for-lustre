@@ -6,7 +6,7 @@ use bootstrap_components::{bs_button, bs_dropdown, bs_input};
 use iml_environment::MAX_SAFE_INTEGER;
 use iml_tooltip::tooltip;
 use iml_utils::{AddAttrs, WatchState};
-use seed::{a, attrs, class, empty, input, li, prelude::*};
+use seed::{a, attrs, class, empty, li, prelude::*};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

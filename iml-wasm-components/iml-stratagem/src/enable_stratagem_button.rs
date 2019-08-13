@@ -5,7 +5,7 @@
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
-use seed::{class, dom_types::At, fetch, prelude::*};
+use seed::{class, dom_types::At, fetch, i, prelude::*};
 
 #[derive(Debug, serde::Serialize)]
 pub struct Model {
@@ -57,7 +57,10 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
 pub fn view(model: &Option<Model>) -> Node<Msg> {
     let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
-        vec![Node::new_text("Enable Interval")],
+        vec![
+            Node::new_text("Enable Scan Interval"),
+            i![class!["far", "fa-clock"]],
+        ],
     );
 
     if model.is_some() {

@@ -7,7 +7,7 @@ use futures::Future;
 use iml_duration_picker::duration_picker;
 use iml_environment::csrf_token;
 use iml_utils::dispatch_custom_event;
-use seed::{attrs, class, div, dom_types::At, fetch, form, h4, i, input, label, prelude::*, small};
+use seed::{attrs, class, div, dom_types::At, fetch, form, h4, i, input, label, prelude::*};
 
 #[derive(Debug, serde::Serialize)]
 pub struct StratagemScan {

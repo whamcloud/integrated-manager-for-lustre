@@ -317,7 +317,7 @@ fn detail_label<T>(content: &str) -> Node<T> {
 
 // View
 pub fn view(model: &Model) -> Node<Msg> {
-    let configuration_component = detail_panel(vec![
+    let mut configuration_component = vec![
         detail_header("Configure Scanning Interval"),
         detail_label("Scan filesystem every"),
         div![
@@ -349,23 +349,27 @@ pub fn view(model: &Model) -> Node<Msg> {
             )
             .map_message(Msg::PurgeConfig)
         ],
-        if model.configured {
-            vec![
-                update_stratagem_button::view()
-                    .add_style("grid-column", "1 /span 12")
-                    .map_message(Msg::UpdateStratagemButton),
-                delete_stratagem_button::view()
-                    .add_style("grid-column", "1 /span 12")
-                    .map_message(Msg::DeleteStratagemButton),
-            ]
-        } else {
-            vec![
-                enable_stratagem_button::view(&model.enable_stratagem_button)
-                    .add_style("grid-column", "1 /span 12")
-                    .map_message(Msg::EnableStratagemButton),
-            ]
-        },
-    ]);
+    ];
+
+    if model.configured {
+        configuration_component.push(
+            update_stratagem_button::view()
+                .add_style("grid-column", "1 /span 12")
+                .map_message(Msg::UpdateStratagemButton),
+        );
+
+        configuration_component.push(
+            delete_stratagem_button::view()
+                .add_style("grid-column", "1 /span 12")
+                .map_message(Msg::DeleteStratagemButton),
+        );
+    } else {
+        configuration_component.push(
+            enable_stratagem_button::view(&model.enable_stratagem_button)
+                .add_style("grid-column", "1 /span 12")
+                .map_message(Msg::EnableStratagemButton),
+        )
+    }
 
     div![
         inode_table::view(&model.inode_table)
@@ -389,6 +393,6 @@ pub fn view(model: &Model) -> Node<Msg> {
             "600"
         ))
         .add_style("margin-bottom", px(20)),
-        configuration_component
+        detail_panel(configuration_component)
     ]
 }
