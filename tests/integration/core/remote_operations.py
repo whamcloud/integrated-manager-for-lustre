@@ -190,7 +190,9 @@ class RealRemoteOperations(RemoteOperations):
                 # (vagrant always quotes IdentityFile)
                 args["key_filename"] = args["key_filename"].strip('"')
 
-        logger.info("SSH address = %s, args = %s" % (address, args))
+        logger.info(
+            "SSH address = %s, timeout = %d, write len = %d, args = %s" % (address, timeout, len(buffer or ""), args)
+        )
 
         # Create ssh connection
         try:
