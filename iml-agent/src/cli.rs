@@ -178,10 +178,14 @@ fn print_counters(xs: Vec<StratagemCounters>) {
     log::info!("Looking at: {:?}", xs);
 
     let mut table = Table::new();
-    table.add_row(row!["Name", "Count"]);
+    table.add_row(row!["Name", "Count", "Used"]);
 
     let mut h = v_hist::init();
     h.max_width = 50;
+
+    if xs.is_empty() {
+        return;
+    }
 
     for x in xs {
         add_counter_entry(&x, &mut table, &mut h);
@@ -206,14 +210,12 @@ fn print_counters(xs: Vec<StratagemCounters>) {
 
 fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) {
     let name = humanize(&x.name());
-    let count: usize = x
-        .count()
-        .try_into()
-        .expect("Conversion to usize for counter failed");
 
-    t.add_row(row![name.clone(), count]);
+    let b = byte_unit::Byte::from_bytes(x.size().into()).get_appropriate_unit(true);
 
-    h.add_entry(name, count);
+    t.add_row(row![name.clone(), x.count(), b.to_string()]);
+
+    h.add_entry(name, x.count().try_into().unwrap());
 }
 
 fn main() {

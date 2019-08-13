@@ -29,6 +29,7 @@
       "dashes": false,
       "datasource": "iml-influx-iml_stratagem_scans",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -50,16 +51,14 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "< 1 Mib"
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -253,10 +252,240 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "iml-influx-iml_stratagem_scans",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_label",
+          "groupBy": [
+            {
+              "params": ["label"],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "stratagem_scan",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT \"count\" FROM \"stratagem_scan\" WHERE (\"group_name\" = 'size_distribution')",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": ["size"],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "group_name",
+              "operator": "=",
+              "value": "size_distribution"
+            },
+            {
+              "condition": "AND",
+              "key": "label",
+              "operator": "=",
+              "value": "< 1 Mib"
+            }
+          ]
+        },
+        {
+          "alias": "$tag_label",
+          "groupBy": [
+            {
+              "params": ["label"],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "stratagem_scan",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": ["size"],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "group_name",
+              "operator": "=",
+              "value": "size_distribution"
+            },
+            {
+              "condition": "AND",
+              "key": "label",
+              "operator": "=",
+              "value": ">= 1 Mib, < 1 GiB"
+            }
+          ]
+        },
+        {
+          "alias": "$tag_label",
+          "groupBy": [
+            {
+              "params": ["label"],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "stratagem_scan",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": ["size"],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "group_name",
+              "operator": "=",
+              "value": "size_distribution"
+            },
+            {
+              "condition": "AND",
+              "key": "label",
+              "operator": "=",
+              "value": ">= 1 GiB"
+            }
+          ]
+        },
+        {
+          "alias": "$tag_label",
+          "groupBy": [
+            {
+              "params": ["label"],
+              "type": "tag"
+            }
+          ],
+          "hide": false,
+          "measurement": "stratagem_scan",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "D",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": ["size"],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "group_name",
+              "operator": "=",
+              "value": "size_distribution"
+            },
+            {
+              "condition": "AND",
+              "key": "label",
+              "operator": "=",
+              "value": ">= 1 TiB"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "series",
+        "name": null,
+        "show": true,
+        "values": ["total"]
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "bytes",
+          "label": "Size",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "light",
   "tags": ["stratagem"],
   "templating": {
@@ -273,5 +502,5 @@
   "timezone": "",
   "title": "Stratagem",
   "uid": "OBdCS5IWz",
-  "version": 10
+  "version": 6
 }

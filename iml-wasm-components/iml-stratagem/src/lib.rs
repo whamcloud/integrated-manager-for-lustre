@@ -394,15 +394,34 @@ pub fn view(model: &Model) -> Node<Msg> {
                 "No scan recorded.".into()
             }
         ],
-        div!(grafana_chart(
+        div![grafana_chart(
             GRAFANA_DASHBOARD_ID,
             GRAFANA_DASHBOARD_NAME,
             "10s",
             2,
             "100%",
             "600"
-        ))
-        .add_style("margin-bottom", px(20)),
-        detail_panel(configuration_component)
+        )],
+        h4![class!["section-header"], "Space Usage Distribution"],
+        p![
+            class!["text-muted"],
+            if let Some(dt) = &model.inode_table.last_known_scan {
+                format!("Last Scanned: {}", dt)
+            } else {
+                "No scan recorded.".into()
+            }
+        ],
+        div![
+            grafana_chart(
+                GRAFANA_DASHBOARD_ID,
+                GRAFANA_DASHBOARD_NAME,
+                "10s",
+                3,
+                "100%",
+                "600"
+            ),
+            style! {"margin-bottom" => px(20)}
+        ],
+        detail_panel(configuration_component),
     ]
 }

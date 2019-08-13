@@ -3,6 +3,7 @@ use bootstrap_components::bs_table;
 use chrono::offset::{TimeZone, Utc};
 use futures::Future;
 use iml_environment::influx_root;
+use iml_utils::format_bytes;
 use seed::{
     class, div,
     dom_types::Attrs,
@@ -19,6 +20,7 @@ pub struct INodeCount {
     timestamp: i64,
     uid: String,
     count: u32,
+    size: i64,
 }
 
 #[derive(Default, Debug)]
@@ -45,7 +47,7 @@ pub struct InfluxSeries {
     name: String,
     #[serde(skip)]
     columns: Vec<String>,
-    values: Vec<(i64, String, u32)>,
+    values: Vec<(i64, String, u32, i64)>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -88,10 +90,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         .take(1)
                         .map(|v| v.values)
                         .flatten()
-                        .map(|(timestamp, uid, count)| INodeCount {
+                        .map(|(timestamp, uid, count, size)| INodeCount {
                             timestamp,
                             uid,
                             count,
+                            size,
                         })
                         .collect();
 
@@ -152,7 +155,7 @@ pub fn fetch_inodes() -> (
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
+    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
     let fut = seed::fetch::Request::new(url)
         .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);
@@ -163,7 +166,13 @@ pub fn fetch_inodes() -> (
 fn get_inode_elements<T>(inodes: &Vec<INodeCount>) -> Vec<Node<T>> {
     inodes
         .into_iter()
-        .map(|x| tr![td![x.uid], td![x.count.to_string()]])
+        .map(|x| {
+            tr![
+                td![x.uid],
+                td![x.count.to_string()],
+                td![format_bytes(x.size as f64, None)]
+            ]
+        })
         .collect()
 }
 
@@ -192,7 +201,10 @@ pub fn view(model: &Model) -> Node<Msg> {
             if !entries.is_empty() {
                 let inode_table = bs_table::table(
                     Attrs::empty(),
-                    vec![thead![tr![th!["Name"], th!["Count"]]], tbody![entries]],
+                    vec![
+                        thead![tr![th!["Name"], th!["Count"], th!["Space Used"]]],
+                        tbody![entries],
+                    ],
                 );
 
                 if let Some(timestamp) = &model.last_known_scan {

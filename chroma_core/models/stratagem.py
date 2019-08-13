@@ -333,6 +333,7 @@ class RunStratagemStep(Step):
 
             return {
                 "flist_type": "none",
+                "summarize_size": True,
                 "device": {"path": path, "groups": groups},
                 "groups": [
                     {
