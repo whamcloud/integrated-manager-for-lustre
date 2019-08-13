@@ -29,4 +29,4 @@ web-sys = "0.3"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.8.2"
+insta = "0.10.1"

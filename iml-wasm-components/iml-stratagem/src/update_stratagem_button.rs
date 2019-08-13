@@ -65,7 +65,5 @@ pub fn view() -> Node<Msg> {
         class![bs_button::BTN_SUCCESS, "update-button"],
         vec![Node::new_text("Update"), i![class!["fas fa-check"]]],
     )
-    .add_style("grid-column", "2 / span 2")
-    .add_style("grid-row-end", "5")
     .add_listener(simple_ev(Ev::Click, Msg::UpdateStratagem))
 }

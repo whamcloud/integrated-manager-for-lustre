@@ -27,8 +27,6 @@ pub fn alert_indicator(
     resource_uri: &str,
     open: bool,
 ) -> Node<AlertIndicatorPopoverState> {
-    log::trace!("Alerts {:#?}", alerts);
-
     let alerts: Vec<&Alert> = alerts
         .iter()
         .filter_map(|x| match &x.affected {

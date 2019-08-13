@@ -4,8 +4,11 @@ version = "0.1.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 
+[lib]
+path = "duration-picker.rs"
+
 [dependencies]
-seed = "0.4.0"
+seed = "=0.4.0"
 log = "0.4"
 web-sys = { version = "0.3", features = ["Event", "EventTarget", "Element", "HtmlInputElement", "ValidityState"]}
 iml-tooltip = { path = "../iml-tooltip", version = "0.1" }
@@ -15,4 +18,4 @@ bootstrap-components = { path = "../bootstrap-components", version = "0.1" }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.10.0"
+insta = "0.10.1"

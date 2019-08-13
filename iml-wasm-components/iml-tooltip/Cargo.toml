@@ -10,4 +10,4 @@ serde = { version = "1", features = ['derive'] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
-insta = "0.8.1"
+insta = "0.10.1"

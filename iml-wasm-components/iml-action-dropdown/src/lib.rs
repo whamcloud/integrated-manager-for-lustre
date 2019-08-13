@@ -4,7 +4,6 @@
 
 mod action_dropdown;
 pub mod deferred_action_dropdown;
-mod dispatch_custom_event;
 pub mod hsm_action_dropdown;
 mod model;
 pub mod multi_dropdown;

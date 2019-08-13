@@ -41,8 +41,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             log::warn!("Fetch error: {:#?}", fail_reason);
         }
     }
-
-    log::trace!("Model: {:#?}", model);
 }
 
 fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
@@ -59,7 +57,7 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
 pub fn view(model: &Option<Model>) -> Node<Msg> {
     let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
-        vec![Node::new_text("Enable")],
+        vec![Node::new_text("Enable Interval")],
     );
 
     if model.is_some() {
