@@ -995,7 +995,7 @@ def register_profile(profile_file):
         profile.repolist.add(Repo.objects.get(repo_name=name))
 
     # Remove absent packages
-    for name in profile.packages:
+    for package_name in profile.packages:
         if package_name not in data["packages"]:
             ServerProfilePackage.objects.filter(server_profile=profile, package_name=package_name).delete()
 
