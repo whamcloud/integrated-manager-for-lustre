@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::ActionResponse;
 use bootstrap_components::{bs_button, bs_modal};
 use futures::Future;
 use iml_duration_picker::duration_picker;
@@ -33,7 +34,7 @@ impl Model {
         let check = self
             .report_config
             .value
-            .and_then(|r| self.purge_config.value.map(|p| r > p))
+            .and_then(|r| self.purge_config.value.map(|p| r >= p))
             .unwrap_or(false);
 
         if check {
@@ -50,7 +51,7 @@ pub enum Msg {
     CloseModal,
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
-    StratagemScanned(fetch::FetchObject<iml_wire_types::Command>),
+    StratagemScanned(fetch::FetchObject<ActionResponse>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -67,7 +68,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             orders.perform_cmd(scan(&x));
         }
         Msg::StratagemScanned(fetch_object) => {
-            model.disabled = false;
             model.open = false;
 
             match fetch_object.response() {
@@ -75,6 +75,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                     dispatch_custom_event("show_command_modal", &response.data);
                 }
                 Err(fail_reason) => {
+                    model.disabled = false;
                     log::error!("Fetch error: {:#?}", fail_reason);
                 }
             }
@@ -108,15 +109,22 @@ fn scan(x: &StratagemScan) -> impl Future<Item = Msg, Error = Msg> {
 }
 
 pub fn view(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
-    let mut xs = vec![bs_button::btn(
+    let mut scan_now_button = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
         vec![
             Node::new_text("Scan Filesystem Now"),
             i![class!["far", "fa-chart-bar"]],
         ],
     )
-    .add_style("margin-left", px(15))
-    .add_listener(simple_ev(Ev::Click, Msg::OpenModal))];
+    .add_style("margin-left", px(15));
+
+    if !model.disabled {
+        scan_now_button = scan_now_button.add_listener(simple_ev(Ev::Click, Msg::OpenModal));
+    } else {
+        scan_now_button = scan_now_button.add_attr(At::Disabled.as_str(), "disabled");
+    }
+
+    let mut xs = vec![scan_now_button];
 
     if model.open {
         xs.append(&mut scan_modal(fs_id, &model));

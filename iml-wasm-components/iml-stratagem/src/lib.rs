@@ -10,10 +10,12 @@ pub mod scan_now;
 mod update_stratagem_button;
 
 use bootstrap_components::bs_well::well;
+use futures::Future;
 use iml_duration_picker::{self, duration_picker};
 use iml_environment::MAX_SAFE_INTEGER;
 use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
-use seed::{attrs, class, div, dom_types::At, h4, input, p, prelude::*, style};
+use iml_utils::dispatch_custom_event;
+use seed::{attrs, class, div, dom_types::At, fetch, h4, input, p, prelude::*, style};
 
 /// Record from the `chroma_core_stratagemconfiguration` table
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
@@ -28,6 +30,14 @@ pub struct StratagemConfiguration {
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
+pub struct StratagemEnable {
+    pub filesystem: u32,
+    pub interval: u64,
+    pub report_duration: Option<u64>,
+    pub purge_duration: Option<u64>,
+}
+
+#[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct StratagemUpdate {
     pub id: u32,
     pub filesystem: u32,
@@ -36,19 +46,21 @@ pub struct StratagemUpdate {
     pub purge_duration: Option<u64>,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ActionResponse {
+    command: iml_wire_types::Command,
+}
+
 #[derive(Debug)]
 pub struct Model {
     pub id: Option<u32>,
     pub destroyed: bool,
     pub fs_id: u32,
-    pub configured: bool,
     pub run_config: iml_duration_picker::Model,
     pub report_config: iml_duration_picker::Model,
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
-    pub enable_stratagem_button: Option<enable_stratagem_button::Model>,
-    pub delete_stratagem_button: delete_stratagem_button::Model,
-    pub update_stratagem_button: update_stratagem_button::Model,
+    pub disabled: bool,
 }
 
 impl Default for Model {
@@ -75,10 +87,7 @@ impl Default for Model {
             },
             inode_table: inode_table::Model::default(),
             destroyed: false,
-            configured: false,
-            enable_stratagem_button: None,
-            delete_stratagem_button: delete_stratagem_button::Model::default(),
-            update_stratagem_button: update_stratagem_button::Model::default(),
+            disabled: false,
         }
     }
 }
@@ -106,8 +115,8 @@ impl Model {
         })
     }
 
-    fn create_enable_stratagem_model(&self) -> Option<enable_stratagem_button::Model> {
-        Some(enable_stratagem_button::Model {
+    fn create_enable_stratagem_model(&self) -> Option<StratagemEnable> {
+        Some(StratagemEnable {
             filesystem: self.fs_id,
             interval: self.run_config.value_as_ms()?,
             report_duration: self.report_config.value_as_ms(),
@@ -141,14 +150,23 @@ impl Model {
         let check = self
             .report_config
             .value
-            .and_then(|r| self.purge_config.value.map(|p| r > p))
+            .and_then(|r| self.purge_config.value.map(|p| r >= p))
             .unwrap_or(false);
 
         if check {
             self.report_config.validation_message =
                 Some("Report duration must be less than Purge duration.".into());
+        } else {
+            self.report_config.validation_message = None;
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum Command {
+    Update,
+    Delete,
+    Enable,
 }
 
 // Update
@@ -160,9 +178,8 @@ pub enum Msg {
     ReportConfig(iml_duration_picker::Msg),
     PurgeConfig(iml_duration_picker::Msg),
     InodeTable(inode_table::Msg),
-    EnableStratagemButton(enable_stratagem_button::Msg),
-    DeleteStratagemButton(delete_stratagem_button::Msg),
-    UpdateStratagemButton(update_stratagem_button::Msg),
+    SendCommand(Command),
+    CmdSent(fetch::FetchObject<ActionResponse>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -170,42 +187,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::Destroy => model.destroyed = true,
         Msg::RunConfig(msg) => {
             iml_duration_picker::update(msg, &mut model.run_config);
-
             model.validate();
-
-            model.enable_stratagem_button = if model.config_valid() {
-                model.create_enable_stratagem_model()
-            } else {
-                None
-            }
         }
         Msg::ReportConfig(msg) => {
             iml_duration_picker::update(msg, &mut model.report_config);
-
             model.validate();
-
-            model.enable_stratagem_button = if model.config_valid() {
-                model.create_enable_stratagem_model()
-            } else {
-                None
-            }
         }
         Msg::PurgeConfig(msg) => {
             iml_duration_picker::update(msg, &mut model.purge_config);
             model.validate();
-
-            model.enable_stratagem_button = if model.config_valid() {
-                model.create_enable_stratagem_model()
-            } else {
-                None
-            }
         }
         Msg::SetConfig(config) => match config {
             Some(c) => {
-                model.configured = true;
                 model.id = Some(c.id);
-
-                model.delete_stratagem_button.config_id = c.id;
 
                 model.run_config.value = Some(iml_duration_picker::convert_ms_to_unit(
                     iml_duration_picker::Unit::Days,
@@ -239,12 +233,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.validate();
             }
             None => {
-                model.configured = false;
                 model.id = None;
                 model.run_config.value = None;
                 model.report_config.value = None;
                 model.purge_config.value = None;
-                model.enable_stratagem_button = None;
 
                 model.validate();
             }
@@ -256,31 +248,49 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 &mut orders.proxy(Msg::InodeTable),
             );
         }
-        Msg::EnableStratagemButton(msg) => {
-            if let Some(mut model) = model.enable_stratagem_button.as_mut() {
-                enable_stratagem_button::update(
-                    msg,
-                    &mut model,
-                    &mut orders.proxy(Msg::EnableStratagemButton),
-                );
+        Msg::SendCommand(cmd) => {
+            model.disabled = true;
+            match cmd {
+                Command::Update => {
+                    if let Some(x) = &model.get_stratagem_update_config() {
+                        orders.perform_cmd(
+                            update_stratagem_button::update_stratagem(&x)
+                                .map(Msg::CmdSent)
+                                .map_err(Msg::CmdSent),
+                        );
+                    }
+                }
+                Command::Enable => {
+                    if let Some(x) = &model.create_enable_stratagem_model() {
+                        orders.perform_cmd(
+                            enable_stratagem_button::enable_stratagem(&x)
+                                .map(Msg::CmdSent)
+                                .map_err(Msg::CmdSent),
+                        );
+                    }
+                }
+                Command::Delete => {
+                    if let Some(x) = model.id {
+                        orders.perform_cmd(
+                            delete_stratagem_button::delete_stratagem(x)
+                                .map(Msg::CmdSent)
+                                .map_err(Msg::CmdSent),
+                        );
+                    }
+                }
             }
         }
-        Msg::DeleteStratagemButton(msg) => {
-            delete_stratagem_button::update(
-                msg,
-                &mut model.delete_stratagem_button,
-                &mut orders.proxy(Msg::DeleteStratagemButton),
-            );
-        }
-        Msg::UpdateStratagemButton(msg) => {
-            model.update_stratagem_button.config_data = model.get_stratagem_update_config();
-
-            update_stratagem_button::update(
-                msg,
-                &mut model.update_stratagem_button,
-                &mut orders.proxy(Msg::UpdateStratagemButton),
-            );
-        }
+        Msg::CmdSent(fetch_object) => match fetch_object.response() {
+            Ok(response) => {
+                log::trace!("Response data: {:#?}", response.data);
+                dispatch_custom_event("show_command_modal", &response.data);
+                orders.skip();
+            }
+            Err(fail_reason) => {
+                model.disabled = false;
+                log::error!("Fetch error: {:#?}", fail_reason);
+            }
+        },
     }
 
     log::trace!("Model: {:#?}", model);
@@ -351,23 +361,23 @@ pub fn view(model: &Model) -> Node<Msg> {
         ],
     ];
 
-    if model.configured {
+    if model.id.is_some() {
         configuration_component.push(
-            update_stratagem_button::view()
+            update_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::UpdateStratagemButton),
+                .map_message(Msg::SendCommand),
         );
 
         configuration_component.push(
-            delete_stratagem_button::view()
+            delete_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::DeleteStratagemButton),
+                .map_message(Msg::SendCommand),
         );
     } else {
         configuration_component.push(
-            enable_stratagem_button::view(&model.enable_stratagem_button)
+            enable_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
-                .map_message(Msg::EnableStratagemButton),
+                .map_message(Msg::SendCommand),
         )
     }
 

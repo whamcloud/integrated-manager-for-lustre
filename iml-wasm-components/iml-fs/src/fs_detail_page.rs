@@ -115,6 +115,7 @@ enum Msg {
     OpenMountModal,
     Targets(HashMap<u32, Target<TargetConfParam>>),
     WindowClick,
+    CloseCommandModal,
     Hosts(HashMap<u32, Host>),
     InodeTable(iml_stratagem::Msg),
     StratagemInit(iml_stratagem::Msg),
@@ -177,6 +178,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             if model.scan_now.report_config.watching.should_update() {
                 model.scan_now.report_config.watching.update();
             }
+        }
+        Msg::CloseCommandModal => {
+            model.stratagem.disabled = false;
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {
@@ -618,6 +622,9 @@ impl FsDetailPageCallbacks {
             .update(Msg::InodeTable(iml_stratagem::Msg::InodeTable(
                 iml_stratagem::inode_table::Msg::FetchInodes,
             )));
+    }
+    pub fn command_modal_closed(&self) {
+        self.app.update(Msg::CloseCommandModal);
     }
 }
 

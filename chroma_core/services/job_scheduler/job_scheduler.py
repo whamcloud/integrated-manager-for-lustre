@@ -1870,3 +1870,27 @@ class JobScheduler(object):
         command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
 
         return command
+
+    def update_stratagem(self, stratagem_data):
+        with self._lock:
+            (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
+
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
+            else:
+                raise Exception("Not matching filesystem for stratagem configuration.")
+
+            ObjectCache.update(stratagem_configuration)
+
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    "configured",
+                )
+            ],
+            "Updating Stratagem",
+            True,
+        )
