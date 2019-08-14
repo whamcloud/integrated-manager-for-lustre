@@ -62,6 +62,7 @@ pub struct Model {
     pub enable_stratagem_button: Option<enable_stratagem_button::Model>,
     pub delete_stratagem_button: delete_stratagem_button::Model,
     pub update_stratagem_button: update_stratagem_button::Model,
+    pub disabled: bool,
 }
 
 impl Default for Model {
@@ -90,6 +91,7 @@ impl Default for Model {
             destroyed: false,
             configured: false,
             enable_stratagem_button: None,
+            disabled: false,
             delete_stratagem_button: delete_stratagem_button::Model::default(),
             update_stratagem_button: update_stratagem_button::Model::default(),
         }
@@ -154,7 +156,7 @@ impl Model {
         let check = self
             .report_config
             .value
-            .and_then(|r| self.purge_config.value.map(|p| r > p))
+            .and_then(|r| self.purge_config.value.map(|p| r >= p))
             .unwrap_or(false);
 
         if check {
@@ -178,6 +180,7 @@ pub enum Msg {
     EnableStratagemButton(enable_stratagem_button::Msg),
     DeleteStratagemButton(delete_stratagem_button::Msg),
     UpdateStratagemButton(update_stratagem_button::Msg),
+    StartCommand,
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -281,6 +284,15 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::DeleteStratagemButton(msg) => {
+            match msg {
+                delete_stratagem_button::Msg::DeleteStratagem => {
+                    model.disabled = true;
+                }
+                _ => {
+                    model.disabled = false;
+                }
+            }
+
             delete_stratagem_button::update(
                 msg,
                 &mut model.delete_stratagem_button,
@@ -290,12 +302,22 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::UpdateStratagemButton(msg) => {
             model.update_stratagem_button.config_data = model.get_stratagem_update_config();
 
+            match msg {
+                update_stratagem_button::Msg::UpdateStratagem => {
+                    model.disabled = true;
+                }
+                _ => {
+                    model.disabled = false;
+                }
+            }
+
             update_stratagem_button::update(
                 msg,
                 &mut model.update_stratagem_button,
                 &mut orders.proxy(Msg::UpdateStratagemButton),
             );
         }
+        Msg::StartCommand => {}
     }
 
     log::trace!("Model: {:#?}", model);
@@ -368,19 +390,19 @@ pub fn view(model: &Model) -> Node<Msg> {
 
     if model.configured {
         configuration_component.push(
-            update_stratagem_button::view(model.config_valid())
+            update_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::UpdateStratagemButton),
         );
 
         configuration_component.push(
-            delete_stratagem_button::view(model.config_valid())
+            delete_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
         );
     } else {
         configuration_component.push(
-            enable_stratagem_button::view(&model.enable_stratagem_button)
+            enable_stratagem_button::view(model.config_valid(), model.disabled)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::EnableStratagemButton),
         )

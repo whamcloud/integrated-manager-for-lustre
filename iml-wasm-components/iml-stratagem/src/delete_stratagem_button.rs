@@ -12,7 +12,6 @@ use seed::{class, dom_types::At, fetch, i, prelude::*};
 #[derive(Debug, Default)]
 pub struct Model {
     pub config_id: u32,
-    pub disabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -27,7 +26,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
     match msg {
         Msg::DeleteStratagem => {
-            model.disabled = true;
             orders.perform_cmd(delete_stratagem(model.config_id));
         }
         Msg::StratagemDeleted(fetch_object) => match fetch_object.response() {
@@ -40,7 +38,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         },
         Msg::OnFetchError(fail_reason) => {
-            model.disabled = false;
             log::warn!("Fetch error: {:#?}", fail_reason);
         }
     }
@@ -60,16 +57,15 @@ fn delete_stratagem(config_id: u32) -> impl Future<Item = Msg, Error = Msg> {
         .fetch_json(Msg::StratagemDeleted)
 }
 
-pub fn view(is_valid: bool) -> Node<Msg> {
-    let mut btn = bs_button::btn(
+pub fn view(is_valid: bool, disabled: bool) -> Node<Msg> {
+    let btn = bs_button::btn(
         class![bs_button::BTN_DANGER, "delete-button"],
         vec![Node::new_text("Delete"), i![class!["fas fa-times-circle"]]],
-    )
-    .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem));
+    );
 
-    if !is_valid {
-        btn = btn.add_attr(At::Disabled.as_str(), "disabled");
+    if is_valid && !disabled {
+        btn.add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem))
+    } else {
+        btn.add_attr(At::Disabled.as_str(), "disabled")
     }
-
-    btn
 }

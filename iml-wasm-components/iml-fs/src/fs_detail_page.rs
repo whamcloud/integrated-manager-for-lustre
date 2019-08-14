@@ -180,9 +180,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::CloseCommandModal => {
-            log::trace!("Closing command modal caught");
-            model.stratagem.update_stratagem_button.disabled = false;
-            model.stratagem.delete_stratagem_button.disabled = false;
+            model.stratagem.disabled = false;
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {

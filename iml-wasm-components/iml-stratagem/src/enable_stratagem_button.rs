@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::ActionResponse;
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
@@ -16,22 +17,18 @@ pub struct Model {
     pub purge_duration: Option<u64>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct EnableCommand {
-    command: iml_wire_types::Command,
-}
-
 #[derive(Clone, Debug)]
 pub enum Msg {
     EnableStratagem,
-    StratagemEnabled(fetch::FetchObject<EnableCommand>),
-    OnFetchError(seed::fetch::FailReason<EnableCommand>),
+    StratagemEnabled(fetch::FetchObject<ActionResponse>),
+    OnFetchError(seed::fetch::FailReason<ActionResponse>),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::EnableStratagem => {
             orders.perform_cmd(enable_stratagem(&model));
+            // set disabled to true
         }
         Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {
@@ -40,10 +37,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
             Err(fail_reason) => {
                 orders.send_msg(Msg::OnFetchError(fail_reason));
+                // set disabled to false
             }
         },
         Msg::OnFetchError(fail_reason) => {
             log::warn!("Fetch error: {:#?}", fail_reason);
+            // set disabled to false
         }
     }
 }
@@ -55,11 +54,11 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
             "X-CSRFToken",
             &csrf_token().expect("Couldn't get csrf token."),
         )
-        .send_json(model)
+        .send_json(&model)
         .fetch_json(Msg::StratagemEnabled)
 }
 
-pub fn view(model: &Option<Model>) -> Node<Msg> {
+pub fn view(is_valid: bool, disabled: bool) -> Node<Msg> {
     let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
         vec![
@@ -68,7 +67,7 @@ pub fn view(model: &Option<Model>) -> Node<Msg> {
         ],
     );
 
-    if model.is_some() {
+    if is_valid && !disabled {
         btn.add_listener(simple_ev(Ev::Click, Msg::EnableStratagem))
     } else {
         btn.add_attr(At::Disabled.as_str(), "disabled")
