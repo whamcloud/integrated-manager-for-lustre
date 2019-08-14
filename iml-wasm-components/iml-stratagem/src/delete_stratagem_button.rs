@@ -60,10 +60,16 @@ fn delete_stratagem(config_id: u32) -> impl Future<Item = Msg, Error = Msg> {
         .fetch_json(Msg::StratagemDeleted)
 }
 
-pub fn view() -> Node<Msg> {
-    bs_button::btn(
+pub fn view(is_valid: bool) -> Node<Msg> {
+    let mut btn = bs_button::btn(
         class![bs_button::BTN_DANGER, "delete-button"],
         vec![Node::new_text("Delete"), i![class!["fas fa-times-circle"]]],
     )
-    .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem))
+    .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem));
+
+    if is_valid {
+        btn = btn.add_attr(At::Disabled.as_str(), "disabled");
+    }
+
+    btn
 }

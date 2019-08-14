@@ -38,7 +38,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
             Ok(response) => {
                 log::trace!("Response data: {:#?}", response.data);
-                seed::log!("Opening command moal");
                 dispatch_custom_event("show_command_modal", &response.data);
             }
             Err(fail_reason) => {

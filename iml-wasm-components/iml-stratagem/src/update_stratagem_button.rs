@@ -25,8 +25,6 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::UpdateStratagem => {
-            let orders = orders.skip();
-
             model.disabled = true;
             if let Some(config_data) = &model.config_data {
                 orders.perform_cmd(update_stratagem(&config_data));
@@ -36,6 +34,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             Ok(response) => {
                 log::trace!("Response data: {:#?}", response.data);
                 dispatch_custom_event("show_command_modal", &response.data);
+                model.disabled = false;
                 orders.skip();
             }
             Err(fail_reason) => {
@@ -45,7 +44,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::OnFetchError(fail_reason) => {
             model.disabled = false;
             log::error!("Fetch error: {:#?}", fail_reason);
-            orders.skip();
         }
     }
 
@@ -65,10 +63,16 @@ fn update_stratagem(config_data: &StratagemUpdate) -> impl Future<Item = Msg, Er
         .fetch_json(Msg::StratagemUpdated)
 }
 
-pub fn view() -> Node<Msg> {
-    bs_button::btn(
+pub fn view(is_valid: bool) -> Node<Msg> {
+    let mut btn = bs_button::btn(
         class![bs_button::BTN_SUCCESS, "update-button"],
         vec![Node::new_text("Update"), i![class!["fas fa-check"]]],
     )
-    .add_listener(simple_ev(Ev::Click, Msg::UpdateStratagem))
+    .add_listener(simple_ev(Ev::Click, Msg::UpdateStratagem));
+
+    if is_valid {
+        btn = btn.add_attr(At::Disabled.as_str(), "disabled");
+    }
+
+    btn
 }

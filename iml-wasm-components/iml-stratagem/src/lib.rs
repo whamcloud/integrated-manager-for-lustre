@@ -366,13 +366,13 @@ pub fn view(model: &Model) -> Node<Msg> {
 
     if model.configured {
         configuration_component.push(
-            update_stratagem_button::view()
+            update_stratagem_button::view(model.config_valid())
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::UpdateStratagemButton),
         );
 
         configuration_component.push(
-            delete_stratagem_button::view()
+            delete_stratagem_button::view(model.config_valid())
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::DeleteStratagemButton),
         );

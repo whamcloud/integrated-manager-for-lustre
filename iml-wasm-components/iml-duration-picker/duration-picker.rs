@@ -115,6 +115,8 @@ pub fn duration_picker(model: &Model, mut input: Node<Msg>) -> Vec<Node<Msg>> {
 
     if let Some(x) = model.value {
         input = input.add_attr(At::Value.as_str(), x);
+    } else {
+        input = input.add_attr(At::Value.as_str(), "");
     }
 
     if model.disabled {
