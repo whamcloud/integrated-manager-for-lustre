@@ -8,15 +8,12 @@ use futures::{Future, Stream};
 use liblustreapi::LlapiFid;
 use tokio_threadpool::blocking;
 
-pub fn purge_files(
-    device: &str,
-    args: impl IntoIterator<Item = String>,
-) -> Result<(), ImlAgentError> {
+pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError> {
     let llapi = LlapiFid::create(&device).map_err(|e| {
         log::error!("Failed to find rootpath({}) -> {}", device, e);
         ImlAgentError::LiblustreError(e)
     })?;
-    llapi.rmfids(args).map_err(ImlAgentError::LiblustreError)
+    llapi.rmfids(fids).map_err(ImlAgentError::LiblustreError)
 }
 
 fn search_rootpath(device: String) -> impl Future<Item = LlapiFid, Error = ImlAgentError> {

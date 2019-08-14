@@ -24,6 +24,8 @@ fn main() {
         // FID
         .whitelist_type("lu_fid")
         .whitelist_type("lov_user_mds_data_v1")
+        .whitelist_type("fid_array")
+        .whitelist_var("OBD_MAX_FIDS_IN_ARRAY")
         .blacklist_type("lstat_t")
         .generate()
         // Unwrap the Result and panic on failure.
