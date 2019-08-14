@@ -1158,9 +1158,17 @@ def chroma_config():
         service_config.start()
 
     elif command == "repos":
-        operation = sys.argv[2]
-        if operation is None or operation == "help":
+
+        def repos_usage():
             print("usage: repos [scan|help|register REPOFILE|delete REPONAME|install REPONAME TARBALL]")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            repos_usage()
+
+        operation = sys.argv[2]
+        if operation == "help":
+            repos_usage()
 
         elif operation == "scan":
             service_config.scan_repos()
@@ -1178,9 +1186,17 @@ def chroma_config():
             raise NotImplementedError(operation)
 
     elif command == "profile":
-        operation = sys.argv[2]
-        if operation is None or operation == "help":
+
+        def profile_usage():
             print("usage: profile [register|delete|default] PROFILE")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            profile_usage()
+
+        operation = sys.argv[2]
+        if operation == "help":
+            profile_usage()
 
         elif operation == "register":
             try:
