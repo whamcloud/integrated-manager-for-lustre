@@ -5,8 +5,10 @@
 import logging
 import json
 import os
-from toolz.functoolz import pipe, partial, flip
 
+from os import path
+from toolz.functoolz import pipe, partial, flip
+from settings import MAILBOX_PATH
 from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
@@ -528,6 +530,8 @@ class SendResultsToClientStep(Step):
             ]
             if duration is not None
         ]
+
+        action_list = filter(lambda (_, xs): path.exists("{}/{}".format(MAILBOX_PATH, xs[1])), action_list)
 
         file_location = pipe(
             action_list,
