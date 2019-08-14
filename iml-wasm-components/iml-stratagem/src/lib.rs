@@ -65,24 +65,16 @@ pub struct Model {
 
 impl Default for Model {
     fn default() -> Self {
-        let exclude_units = vec![
-            iml_duration_picker::Unit::Minutes,
-            iml_duration_picker::Unit::Seconds,
-        ];
-
         Model {
             id: None,
             fs_id: 1,
             run_config: iml_duration_picker::Model {
-                exclude_units: exclude_units.clone(),
                 ..Default::default()
             },
             report_config: iml_duration_picker::Model {
-                exclude_units: exclude_units.clone(),
                 ..Default::default()
             },
             purge_config: iml_duration_picker::Model {
-                exclude_units,
                 ..Default::default()
             },
             inode_table: inode_table::Model::default(),
@@ -201,20 +193,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             Some(c) => {
                 model.id = Some(c.id);
 
-                model.run_config.value = Some(iml_duration_picker::convert_ms_to_unit(
-                    iml_duration_picker::Unit::Days,
-                    c.interval,
-                ));
+                iml_duration_picker::calculate_value_and_unit(&mut model.run_config, c.interval);
 
                 match c.report_duration {
                     None => {
                         model.report_config.value = None;
                     }
                     Some(x) => {
-                        model.report_config.value = Some(iml_duration_picker::convert_ms_to_unit(
-                            iml_duration_picker::Unit::Days,
-                            x,
-                        ))
+                        iml_duration_picker::calculate_value_and_unit(&mut model.report_config, x);
                     }
                 }
 
@@ -223,10 +209,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                         model.purge_config.value = None;
                     }
                     Some(x) => {
-                        model.purge_config.value = Some(iml_duration_picker::convert_ms_to_unit(
-                            iml_duration_picker::Unit::Days,
-                            x,
-                        ))
+                        iml_duration_picker::calculate_value_and_unit(&mut model.purge_config, x);
                     }
                 }
 
