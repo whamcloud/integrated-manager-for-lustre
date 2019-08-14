@@ -67,7 +67,7 @@ pub fn view(is_valid: bool) -> Node<Msg> {
     )
     .add_listener(simple_ev(Ev::Click, Msg::DeleteStratagem));
 
-    if is_valid {
+    if !is_valid {
         btn = btn.add_attr(At::Disabled.as_str(), "disabled");
     }
 
