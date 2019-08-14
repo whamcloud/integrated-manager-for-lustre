@@ -2,52 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::ActionResponse;
+use crate::{Command, StratagemEnable};
 use bootstrap_components::bs_button;
 use futures::Future;
 use iml_environment::csrf_token;
-use iml_utils::dispatch_custom_event;
-use seed::{class, dom_types::At, fetch, i, prelude::*};
+use seed::{class, dom_types::At, i, prelude::*};
 
-#[derive(Debug, serde::Serialize)]
-pub struct Model {
-    pub filesystem: u32,
-    pub interval: u64,
-    pub report_duration: Option<u64>,
-    pub purge_duration: Option<u64>,
-}
-
-#[derive(Clone, Debug)]
-pub enum Msg {
-    EnableStratagem,
-    StratagemEnabled(fetch::FetchObject<ActionResponse>),
-    OnFetchError(seed::fetch::FailReason<ActionResponse>),
-}
-
-pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
-    match msg {
-        Msg::EnableStratagem => {
-            orders.perform_cmd(enable_stratagem(&model));
-            // set disabled to true
-        }
-        Msg::StratagemEnabled(fetch_object) => match fetch_object.response() {
-            Ok(response) => {
-                log::trace!("Response data: {:#?}", response.data);
-                dispatch_custom_event("show_command_modal", &response.data);
-            }
-            Err(fail_reason) => {
-                orders.send_msg(Msg::OnFetchError(fail_reason));
-                // set disabled to false
-            }
-        },
-        Msg::OnFetchError(fail_reason) => {
-            log::warn!("Fetch error: {:#?}", fail_reason);
-            // set disabled to false
-        }
-    }
-}
-
-fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
+pub fn enable_stratagem<T: serde::de::DeserializeOwned + 'static>(
+    model: &StratagemEnable,
+) -> impl Future<Item = seed::fetch::FetchObject<T>, Error = seed::fetch::FetchObject<T>> {
     seed::fetch::Request::new("/api/stratagem_configuration/")
         .method(seed::fetch::Method::Post)
         .header(
@@ -55,10 +18,10 @@ fn enable_stratagem(model: &Model) -> impl Future<Item = Msg, Error = Msg> {
             &csrf_token().expect("Couldn't get csrf token."),
         )
         .send_json(&model)
-        .fetch_json(Msg::StratagemEnabled)
+        .fetch_json(std::convert::identity)
 }
 
-pub fn view(is_valid: bool, disabled: bool) -> Node<Msg> {
+pub fn view(is_valid: bool, disabled: bool) -> Node<Command> {
     let btn = bs_button::btn(
         class![bs_button::BTN_PRIMARY],
         vec![
@@ -68,7 +31,7 @@ pub fn view(is_valid: bool, disabled: bool) -> Node<Msg> {
     );
 
     if is_valid && !disabled {
-        btn.add_listener(simple_ev(Ev::Click, Msg::EnableStratagem))
+        btn.add_listener(simple_ev(Ev::Click, Command::Enable))
     } else {
         btn.add_attr(At::Disabled.as_str(), "disabled")
     }
