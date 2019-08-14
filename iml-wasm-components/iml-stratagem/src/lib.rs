@@ -160,6 +160,8 @@ impl Model {
         if check {
             self.report_config.validation_message =
                 Some("Report duration must be less than Purge duration.".into());
+        } else {
+            self.report_config.validation_message = None;
         }
     }
 }
