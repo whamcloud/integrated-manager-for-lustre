@@ -29,8 +29,6 @@ pub enum Msg {
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
-    let orders = orders.skip();
-
     match msg {
         Msg::EnableStratagem => {
             orders.perform_cmd(enable_stratagem(&model));
