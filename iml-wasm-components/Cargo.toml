@@ -1,5 +1,22 @@
 [workspace]
-members = ['iml-action-dropdown']
+members = [
+    'bootstrap-components',
+    'iml-action-dropdown',
+    'iml-alert-indicator',
+    'iml-duration-picker',
+    'iml-environment',
+    'iml-fs',
+    'iml-lock-indicator',
+    'iml-paging',
+    'iml-pie-chart',
+    'iml-grafana-chart',
+    'iml-sleep',
+    'iml-stratagem',
+    'iml-toggle',
+    'iml-tooltip',
+    'iml-utils',
+    'iml-wasm',
+]
 
 [profile.release]
 opt-level = "z"

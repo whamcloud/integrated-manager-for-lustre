@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 type Kwargs = HashMap<String, String>;
 
-#[derive(serde_derive::Serialize, serde_derive::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Request {
     request_id: String,
     pub response_routing_key: String,
@@ -17,11 +17,11 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new<S>(method: S, response_routing_key: S) -> Request
+    pub fn new<S>(method: S, response_routing_key: S) -> Self
     where
         S: Into<String> + std::cmp::Eq + std::hash::Hash,
     {
-        Request {
+        Self {
             request_id: Uuid::new_v4().to_hyphenated().to_string(),
             method: method.into(),
             args: vec![],

@@ -182,7 +182,7 @@ class UpdateScan(object):
 
         # Loop over all mountables we expected on this host, whether they
         # were actually seen in the results or not.
-        mounted_uuids = dict([(m["fs_uuid"], m) for m in self.host_data["mounts"]])
+        mounted_uuids = dict([(str(m["fs_uuid"]), m) for m in self.host_data["mounts"]])
         for target_mount in ManagedTargetMount.objects.filter(host=self.host):
 
             # Mounted-ness
@@ -291,7 +291,7 @@ class UpdateScan(object):
         try:
             target = ManagedTarget.objects.get(name=target_name).downcast()
 
-            if target.immutable_state:
+            if target.immutable_state and (target.active_host == target.primary_host):
                 # in monitored mode we want to make sure the target volume is accessible on current host
                 target.volume.volumenode_set.get(host=self.host, not_deleted=True)
             else:

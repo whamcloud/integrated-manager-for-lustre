@@ -44,6 +44,9 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "get_locks",
         "update_corosync_configuration",
         "get_transition_consequences",
+        "configure_stratagem",
+        "update_stratagem",
+        "run_stratagem",
     ]
 
 
@@ -252,3 +255,15 @@ class JobSchedulerClient(object):
     @classmethod
     def get_locks(cls):
         return JobSchedulerRpc().get_locks()
+
+    @classmethod
+    def configure_stratagem(cls, stratagem_data):
+        return JobSchedulerRpc().configure_stratagem(stratagem_data)
+
+    @classmethod
+    def update_stratagem(cls, stratagem_data):
+        return JobSchedulerRpc().update_stratagem(stratagem_data)
+
+    @classmethod
+    def run_stratagem(cls, mdts, stratagem_data):
+        return JobSchedulerRpc().run_stratagem(mdts, stratagem_data)

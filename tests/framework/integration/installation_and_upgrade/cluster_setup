@@ -15,53 +15,43 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APP
 if $RHEL; then
 yum-config-manager --enable  rhel-$(rpm --eval %rhel)-server-optional-rpms
 fi
-# for now at least, we need to disable epel before installing the upgrade-from version
-yum-config-manager --disable addon-epel\$(rpm --eval %rhel)-x86_64
-# and the IML and extras repos
-yum-config-manager --disable $COPR_OWNER-$COPR_PROJECT
-yum-config-manager --disable mirror.centos.org_centos_7_extras_x86_64_
 
-if [ -f /etc/yum.repos.d/autotest.repo ]; then
-    rm -f /etc/yum.repos.d/autotest.repo
-fi
+# and the IML repo
+yum-config-manager --disable $COPR_OWNER-$COPR_PROJECT
+
 yum install -y omping redhat-lsb-core" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
 # Install and setup integration tests on integration test runner
-if ! $JENKINS; then
-    CMIT=$(ls chroma-manager/dist/chroma-manager-integration-tests-*.x86_64.rpm)
-fi
+CMIT=$(ls $CHROMA_DIR/_topdir/RPMS/noarch/python2-iml-manager-integration-tests-*.noarch.rpm)
 scp $CMIT $CLUSTER_CONFIG root@$TEST_RUNNER:/root/
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
-if $JENKINS; then
-    yum --disablerepo=\* --enablerepo=chroma makecache
-    CMIT=chroma-manager-integration-tests
-else
-    CMIT=/root/${CMIT##*/}
-fi
+CMIT=/root/${CMIT##*/}
 
 # set up required repos
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/$COPR_OWNER/$COPR_PROJECT/repo/epel-7/$COPR_OWNER-$COPR_PROJECT-epel-7.repo
-EPEL_REPO=\$(repoquery --enablerepo=\*epel\* -q --qf %{repoid} epel-release)
-if [ -n "\$EPEL_REPO" ]; then
-    yum-config-manager --enable \$EPEL_REPO
-else
-    yum -y install epel-release
+# add any repos required by this test run
+if [ -n \"$TEST_RUNNER_REPOS\" ]; then
+    for repo in $TEST_RUNNER_REPOS; do
+        yum-config-manager --add-repo \$repo
+    done
 fi
+yum -y install epel-release
 
-if ! $PROXY yum -y install \$CMIT; then
+if ! $PROXY yum -y install \$CMIT python-mock; then
     $PROXY yum clean all
-    $PROXY yum -y install \$CMIT
+    $PROXY yum -y install \$CMIT python-mock
 fi
 
+# Set up fencing on the vm host
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured
     ssh root@$HOST_IP "exec 2>&1; set -xe
     uname -a
-    yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
     mkdir -p /etc/cluster
     echo \"not secure\" > /etc/cluster/fence_xvm.key
     restorecon -Rv /etc/cluster/
@@ -95,3 +85,5 @@ EOF1
     service fence_virtd restart"
 fi
 EOF
+
+echo "End installation and setup."

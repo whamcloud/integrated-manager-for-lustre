@@ -4,6 +4,9 @@ PartOf=iml-manager.target
 After=rabbitmq-server.service
 After=iml-settings-populator.service
 Requires=iml-settings-populator.service
+Requires=iml-action-runner.socket
+BindsTo=iml-action-runner.socket
+After=iml-action-runner.socket
 
 
 [Service]
@@ -16,4 +19,4 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=iml-manager.target 
+WantedBy=iml-manager.target

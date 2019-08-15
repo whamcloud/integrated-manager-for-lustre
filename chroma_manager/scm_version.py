@@ -1,4 +1,0 @@
-VERSION = "4.1.0.0-5-g40c571b"
-PACKAGE_VERSION = "4.1.0.0"
-BUILD = ""
-IS_RELEASE = False

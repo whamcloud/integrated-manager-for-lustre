@@ -1,5 +1,4 @@
 amqp==1.4.9
-anyjson==0.3.3
 Django==1.6.11
 django-extensions
 django-picklefield==0.1.9
@@ -23,15 +22,15 @@ paramiko==2.1.1
 pexpect
 prettytable==0.6
 psycopg2==2.7.5
-pycrypto==2.6.1
 pyparsing==1.5.6
 python-daemon==1.6
 python-dateutil==1.5
 pytz==2014.4
 requests==2.6.0
+requests_unixsocket==0.1.5
 South==1.0.2
 tablib==0.9.11
 toolz
 tzlocal
 urllib3
-werkzeug
+setuptools

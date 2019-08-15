@@ -561,10 +561,10 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
 
 class TargetRecoveryInfo(models.Model):
-    """Record of what we learn from /proc/fs/lustre/*/*/recovery_status
+    """Record of what we learn from /sys/fs/lustre/*/*/recovery_status
        for a running target"""
 
-    #: JSON-encoded dict parsed from /proc
+    #: JSON-encoded dict parsed from /sys
     recovery_status = models.TextField()
 
     target = models.ForeignKey("chroma_core.ManagedTarget")
@@ -711,7 +711,13 @@ class RemoveTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
 
         super(RemoveTargetJob, self).on_success()
 
@@ -739,7 +745,13 @@ class ForgetTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
 
         super(ForgetTargetJob, self).on_success()
 
@@ -972,10 +984,13 @@ class MountOrImportStep(Step):
 
     @classmethod
     def describe(cls, kwargs):
-        if kwargs["start_target"] is True:
-            return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+        if kwargs["active_volume_node"] is None:
+            return help_text["export_target_from_nodes"] % kwargs["target"]
         else:
-            return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+            if kwargs["start_target"] is True:
+                return help_text["mounting_target_on_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
+            else:
+                return help_text["moving_target_to_node"] % (kwargs["target"], kwargs["active_volume_node"].host)
 
     @classmethod
     def create_parameters(cls, target, host, start_target):
@@ -1436,7 +1451,7 @@ class UpdateManagedTargetMount(Step):
             mtm.volume_node = util.wait_for_result(
                 lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
                 logger=job_log,
-                timeout=60 * 60,
+                timeout=60 * 10,
                 expected_exception_classes=[VolumeNode.DoesNotExist],
             )
 

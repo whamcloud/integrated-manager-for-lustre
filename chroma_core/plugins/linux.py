@@ -227,10 +227,14 @@ class Linux(Plugin):
             if dev_json == self.current_devices:
                 return None
 
+            log.debug("Linux.devices changed on {}".format(fqdn))
+
             log.debug(
-                "Linux.devices changed on {}: {}".format(
-                    fqdn, set(json.loads(self.current_devices).keys()) - set(devices["devs"].keys())
-                )
+                "old devices {}".format(set(json.loads(self.current_devices).keys()) - set(devices["devs"].keys()))
+            )
+
+            log.debug(
+                "new devices {}".format(set(devices["devs"].keys()) - set(json.loads(self.current_devices).keys()))
             )
 
             self.current_devices = dev_json
@@ -402,7 +406,7 @@ class Linux(Plugin):
                         # Inactive LVs have no block device
                         pass
 
-            for mpath_alias, mpath in devices["mpath"].items():
+            for _, mpath in devices["mpath"].items():
                 # Devices contributing to the multipath
                 mpath_parents = [self.major_minor_to_node_resource[n["major_minor"]] for n in mpath["nodes"]]
                 # The multipath device node

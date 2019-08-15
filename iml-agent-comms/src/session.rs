@@ -3,15 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use iml_wire_types::{Fqdn, Id, ManagerMessage, PluginName};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use parking_lot::Mutex;
+use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
-pub type Sessions = Arc<Mutex<InnerSessions>>;
-
-pub type InnerSessions = HashMap<PluginName, Session>;
+pub type Shared<T> = Arc<Mutex<T>>;
+pub type Sessions = HashMap<PluginName, Session>;
+pub type SharedSessions = Shared<Sessions>;
 
 /// A bidirectional virtual channel between the manager and a remote agent plugin.
 /// There may be many of these per remote host, and they are transient.
@@ -30,7 +28,7 @@ impl std::fmt::Display for Session {
 
 impl Session {
     pub fn new(plugin: PluginName, fqdn: Fqdn) -> Self {
-        Session {
+        Self {
             fqdn,
             id: Id(Uuid::new_v4().to_hyphenated().to_string()),
             plugin,
@@ -38,7 +36,15 @@ impl Session {
     }
 }
 
-pub fn is_session_valid(msg: &ManagerMessage, sessions: &InnerSessions) -> bool {
+pub fn get_by_session_id<'a>(
+    plugin: &PluginName,
+    id: &Id,
+    sessions: &'a Sessions,
+) -> Option<&'a Session> {
+    sessions.get(plugin).filter(|s| &s.id == id)
+}
+
+pub fn is_session_valid(msg: &ManagerMessage, sessions: &Sessions) -> bool {
     let retain = match msg {
         ManagerMessage::SessionTerminateAll { .. } => true,
         ManagerMessage::SessionTerminate {
@@ -49,10 +55,7 @@ pub fn is_session_valid(msg: &ManagerMessage, sessions: &InnerSessions) -> bool 
         }
         | ManagerMessage::Data {
             session_id, plugin, ..
-        } => sessions
-            .get(&plugin)
-            .filter(|Session { id, .. }| id == session_id)
-            .is_some(),
+        } => get_by_session_id(&plugin, &session_id, sessions).is_some(),
     };
 
     if !retain {

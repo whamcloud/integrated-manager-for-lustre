@@ -703,8 +703,9 @@ class RebootIfNeededStep(Step):
     def _reboot_needed(self, host):
         # Check if we are running the required (lustre) kernel
         kernel_status = self.invoke_agent(host, "kernel_status")
+        selinux_status = self.invoke_agent(host, "selinux_status")
 
-        reboot_needed = (
+        reboot_needed = (selinux_status["status"] != "Disabled") or (
             kernel_status["running"] != kernel_status["required"]
             and kernel_status["required"]
             and kernel_status["required"] in kernel_status["available"]
@@ -1491,6 +1492,11 @@ class UpdateYumFileStep(RebootIfNeededStep):
         )
 
 
+class RemovePackagesStep(Step):
+    def run(self, kwargs):
+        self.invoke_agent_expect_result(kwargs["host"], "remove_packages", {"packages": kwargs["packages"]})
+
+
 class UpdateJob(Job):
     host = models.ForeignKey(ManagedHost)
 
@@ -1512,8 +1518,12 @@ class UpdateJob(Job):
         base_repo_url = os.path.join(str(settings.SERVER_HTTP_URL), "repo")
 
         return [
-            (UpdatePackagesStep, {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent"]}),
             (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
+            (
+                UpdatePackagesStep,
+                {"host": self.host, "enablerepos": [], "packages": ["python2-iml-agent", "rust-iml-agent"]},
+            ),
+            (RemovePackagesStep, {"host": self.host, "packages": ["lustre-all-dkms"]}),
             (
                 UpdatePackagesStep,
                 {"host": self.host, "enablerepos": [], "packages": list(self.host.server_profile.packages)},

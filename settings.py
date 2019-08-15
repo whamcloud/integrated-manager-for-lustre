@@ -8,6 +8,8 @@ import os
 import socket
 import logging
 
+from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
+
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -20,6 +22,8 @@ TEMPLATE_DEBUG = DEBUG
 APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
+
+MAILBOX_PATH = "/var/spool/iml/mailbox"
 
 HTTP_FRONTEND_PORT = 80
 
@@ -51,13 +55,21 @@ WARP_DRIVE_PORT = 8890
 
 WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
 
+MAILBOX_PORT = 8891
+
+INFLUXDB_IML_DB = "iml"
+
+INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
+
+MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
+
 SSL_PATH = "/var/lib/chroma"
 
 DEVICE_AGGREGATOR_PORT = 8008
 
-UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
+DEVICE_AGGREGATOR_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
 
-DEVICE_AGGREGATOR_PROXY_PASS = "http://unix:/var/run/device-aggregator.sock"
+UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 
 SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
 
@@ -313,10 +325,6 @@ SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
 
-DEVICE_AGGREGATOR_URL = os.getenv(
-    "DEVICE_AGGREGATOR_URL", "http://{}:{}/device-aggregator".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
-)
-
 # Supported power control agents
 SUPPORTED_FENCE_AGENTS = ["fence_apc", "fence_apc_snmp", "fence_ipmilan", "fence_virsh", "fence_vbox"]
 
@@ -331,14 +339,6 @@ SSH_CONFIG = None
 TASTYPIE_DEFAULT_FORMATS = ["json"]
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
-
-try:
-    from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
-except ImportError:
-    PACKAGE_VERSION = "0.0.0"
-    VERSION = "dev"
-    BUILD = 0
-    IS_RELEASE = False
 
 try:
     LOCAL_SETTINGS

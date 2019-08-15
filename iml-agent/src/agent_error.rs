@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_wire_types::PluginName;
-use std::fmt;
+use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
 
@@ -59,6 +59,7 @@ pub enum ImlAgentError {
     Reqwest(reqwest::Error),
     UrlParseError(url::ParseError),
     Utf8Error(std::str::Utf8Error),
+    FromUtf8Error(std::string::FromUtf8Error),
     TokioTimerError(tokio::timer::Error),
     AddrParseError(std::net::AddrParseError),
     ParseIntError(std::num::ParseIntError),
@@ -66,8 +67,15 @@ pub enum ImlAgentError {
     NoPluginError(NoPluginError),
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
-    PoisonError,
+    LiblustreError(liblustreapi::error::LiblustreError),
+    CmdOutputError(Output),
     SendError,
+    InvalidUriParts(http::uri::InvalidUriParts),
+    InvalidUri(http::uri::InvalidUri),
+    InvalidHeaderValue(http::header::InvalidHeaderValue),
+    HyperError(hyper::error::Error),
+    NativeTls(native_tls::Error),
+    UnexpectedStatusError,
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -78,6 +86,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => write!(f, "{}", err),
             ImlAgentError::UrlParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::Utf8Error(ref err) => write!(f, "{}", err),
+            ImlAgentError::FromUtf8Error(ref err) => write!(f, "{}", err),
             ImlAgentError::TokioTimerError(ref err) => write!(f, "{}", err),
             ImlAgentError::AddrParseError(ref err) => write!(f, "{}", err),
             ImlAgentError::ParseIntError(ref err) => write!(f, "{}", err),
@@ -85,8 +94,22 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => write!(f, "{}", err),
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
-            ImlAgentError::PoisonError => write!(f, "Mutex Poisoned"),
+            ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
+
+            ImlAgentError::CmdOutputError(ref err) => write!(
+                f,
+                "{}, stdout: {}, stderr: {}",
+                err.status,
+                String::from_utf8_lossy(&err.stdout),
+                String::from_utf8_lossy(&err.stderr)
+            ),
             ImlAgentError::SendError => write!(f, "Rx went away"),
+            ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
+            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
+            ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
         }
     }
 }
@@ -99,6 +122,7 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::Reqwest(ref err) => Some(err),
             ImlAgentError::UrlParseError(ref err) => Some(err),
             ImlAgentError::Utf8Error(ref err) => Some(err),
+            ImlAgentError::FromUtf8Error(ref err) => Some(err),
             ImlAgentError::TokioTimerError(ref err) => Some(err),
             ImlAgentError::AddrParseError(ref err) => Some(err),
             ImlAgentError::ParseIntError(ref err) => Some(err),
@@ -106,8 +130,16 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::NoPluginError(ref err) => Some(err),
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
-            ImlAgentError::PoisonError => None,
+            ImlAgentError::LiblustreError(ref err) => Some(err),
+
+            ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
+            ImlAgentError::InvalidUriParts(ref err) => Some(err),
+            ImlAgentError::InvalidUri(ref err) => Some(err),
+            ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
+            ImlAgentError::HyperError(ref err) => Some(err),
+            ImlAgentError::NativeTls(ref err) => Some(err),
+            ImlAgentError::UnexpectedStatusError => None,
         }
     }
 }
@@ -142,6 +174,12 @@ impl From<std::str::Utf8Error> for ImlAgentError {
     }
 }
 
+impl From<std::string::FromUtf8Error> for ImlAgentError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        ImlAgentError::FromUtf8Error(err)
+    }
+}
+
 impl From<tokio::timer::Error> for ImlAgentError {
     fn from(err: tokio::timer::Error) -> Self {
         ImlAgentError::TokioTimerError(err)
@@ -166,12 +204,6 @@ impl From<std::num::ParseIntError> for ImlAgentError {
     }
 }
 
-impl<T> From<std::sync::PoisonError<T>> for ImlAgentError {
-    fn from(_: std::sync::PoisonError<T>) -> Self {
-        ImlAgentError::PoisonError
-    }
-}
-
 impl From<NoSessionError> for ImlAgentError {
     fn from(err: NoSessionError) -> Self {
         ImlAgentError::NoSessionError(err)
@@ -181,6 +213,18 @@ impl From<NoSessionError> for ImlAgentError {
 impl From<NoPluginError> for ImlAgentError {
     fn from(err: NoPluginError) -> Self {
         ImlAgentError::NoPluginError(err)
+    }
+}
+
+impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
+    fn from(err: liblustreapi::error::LiblustreError) -> Self {
+        ImlAgentError::LiblustreError(err)
+    }
+}
+
+impl From<Output> for ImlAgentError {
+    fn from(output: Output) -> Self {
+        ImlAgentError::CmdOutputError(output)
     }
 }
 
@@ -199,5 +243,44 @@ impl From<futures::sync::oneshot::Canceled> for ImlAgentError {
 impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     fn from(_: futures::sync::mpsc::SendError<T>) -> Self {
         ImlAgentError::SendError
+    }
+}
+
+impl From<http::uri::InvalidUriParts> for ImlAgentError {
+    fn from(err: http::uri::InvalidUriParts) -> Self {
+        ImlAgentError::InvalidUriParts(err)
+    }
+}
+
+impl From<http::uri::InvalidUri> for ImlAgentError {
+    fn from(err: http::uri::InvalidUri) -> Self {
+        ImlAgentError::InvalidUri(err)
+    }
+}
+
+impl From<hyper::error::Error> for ImlAgentError {
+    fn from(err: hyper::error::Error) -> Self {
+        ImlAgentError::HyperError(err)
+    }
+}
+
+impl From<native_tls::Error> for ImlAgentError {
+    fn from(err: native_tls::Error) -> Self {
+        ImlAgentError::NativeTls(err)
+    }
+}
+
+impl From<http::header::InvalidHeaderValue> for ImlAgentError {
+    fn from(err: http::header::InvalidHeaderValue) -> Self {
+        ImlAgentError::InvalidHeaderValue(err)
+    }
+}
+
+impl serde::Serialize for ImlAgentError {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{:?}", self))
     }
 }

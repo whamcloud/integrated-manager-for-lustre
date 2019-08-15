@@ -1,0 +1,11 @@
+[Unit]
+Description=IML Action Runner Socket
+PartOf=iml-manager.target
+
+[Socket]
+ListenStream=/var/run/iml-action-runner.sock
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target
+WantedBy=iml-manager.target

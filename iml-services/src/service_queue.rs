@@ -22,15 +22,15 @@ pub fn consume_service_queue(
             basic_consume(
                 c,
                 q,
-                &name,
+                name,
                 Some(BasicConsumeOptions {
                     no_ack: true,
                     exclusive: true,
-                    ..Default::default()
+                    ..BasicConsumeOptions::default()
                 }),
             )
         })
-        .map_err(failure::Error::from)
+        .from_err()
         .map(|s| s.map_err(failure::Error::from))
         .flatten_stream()
         .and_then(|m| {
