@@ -84,6 +84,17 @@ pub fn update(msg: Msg, model: &mut Model) {
     }
 }
 
+pub fn calculate_value_and_unit(model: &mut Model, ms: u64) {
+    let interval_opt = convert_ms_to_max_unit(ms);
+    if let Some((unit, val)) = interval_opt {
+        model.value = Some(val);
+        model.unit = unit;
+    } else {
+        model.value = None;
+        model.unit = Unit::Days;
+    }
+}
+
 pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
     match unit {
         Unit::Days => val / 24 / 60 / 60 / 1000,
@@ -91,6 +102,54 @@ pub fn convert_ms_to_unit(unit: Unit, val: u64) -> u64 {
         Unit::Minutes => val / 60 / 1000,
         Unit::Seconds => val / 1000,
     }
+}
+
+fn get_unit_value(unit: Unit, val: u64) -> f64 {
+    let val = val as f64;
+    match unit {
+        Unit::Days => val / 24.0 / 60.0 / 60.0 / 1000.0,
+        Unit::Hours => val / 60.0 / 60.0 / 1000.0,
+        Unit::Minutes => val / 60.0 / 1000.0,
+        Unit::Seconds => val / 1000.0,
+    }
+}
+
+pub fn convert_ms_to_max_unit(val: u64) -> Option<(Unit, u64)> {
+    let days = get_unit_value(Unit::Days, val);
+    let mut result = if days.fract() == 0.0 {
+        Some((Unit::Days, days as u64))
+    } else {
+        None
+    };
+
+    if result == None {
+        let hours = get_unit_value(Unit::Hours, val);
+        result = if hours.fract() == 0.0 {
+            Some((Unit::Hours, hours as u64))
+        } else {
+            None
+        };
+    }
+
+    if result == None {
+        let minutes = get_unit_value(Unit::Minutes, val);
+        result = if minutes.fract() == 0.0 {
+            Some((Unit::Minutes, minutes as u64))
+        } else {
+            None
+        };
+    }
+
+    if result == None {
+        let seconds = get_unit_value(Unit::Seconds, val);
+        result = if seconds.fract() == 0.0 {
+            Some((Unit::Seconds, seconds as u64))
+        } else {
+            None
+        };
+    }
+
+    result
 }
 
 pub fn duration_picker(model: &Model, mut input: Node<Msg>) -> Vec<Node<Msg>> {
