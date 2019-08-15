@@ -217,7 +217,8 @@ class RealRemoteOperations(RemoteOperations):
             stdin = channel.makefile("wb")
             stdin.write(buffer)
             stdin.close()
-            stdin.channel.shutdown_write()
+        # Always shutdown write to ensure executable does not wait on input
+        channel.shutdown_write()
 
         # Store results. This needs to happen in this order. If recv_exit_status is
         # read first, it can block indefinitely due to paramiko bug #448. The read on
