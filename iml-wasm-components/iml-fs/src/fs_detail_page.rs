@@ -181,6 +181,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::CloseCommandModal => {
             model.stratagem.disabled = false;
+            model.scan_now.disabled = false;
         }
         Msg::Filesystem(fs) => {
             if let Some(fs) = &fs {

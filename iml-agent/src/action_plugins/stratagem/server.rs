@@ -41,6 +41,7 @@ pub struct StratagemRule {
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct StratagemConfig {
     pub flist_type: String,
+    pub summarize_size: bool,
     pub groups: Vec<StratagemGroup>,
     pub device: StratagemDevice,
 }
@@ -56,6 +57,8 @@ impl StratagemConfig {
 pub struct StratagemCounter {
     pub name: String,
     pub count: u64,
+    pub size: u64,
+    pub blocks: u64,
     pub flist_type: String,
 }
 
@@ -74,6 +77,8 @@ pub struct StratagemClassifyResult {
 pub struct StratagemClassifyCounter {
     pub name: String,
     pub count: u64,
+    pub size: u64,
+    pub blocks: u64,
     pub flist_type: String,
     pub expression: String,
     pub classify: StratagemClassifyResult,
@@ -108,6 +113,7 @@ pub struct StratagemResult {
 pub trait Counter {
     fn name(&self) -> &str;
     fn count(&self) -> u64;
+    fn size(&self) -> u64;
     fn have_flist(&self) -> bool;
 }
 
@@ -117,6 +123,9 @@ impl Counter for &StratagemCounter {
     }
     fn count(&self) -> u64 {
         self.count
+    }
+    fn size(&self) -> u64 {
+        self.size
     }
     fn have_flist(&self) -> bool {
         self.flist_type != "none"
@@ -129,6 +138,9 @@ impl Counter for &StratagemClassifyCounter {
     }
     fn count(&self) -> u64 {
         self.count
+    }
+    fn size(&self) -> u64 {
+        self.size
     }
     fn have_flist(&self) -> bool {
         self.flist_type != "none"
@@ -161,6 +173,14 @@ impl Counter for &StratagemCounters {
             }) => *count,
         }
     }
+    fn size(&self) -> u64 {
+        match self {
+            StratagemCounters::StratagemCounter(StratagemCounter { size, .. })
+            | StratagemCounters::StratagemClassifyCounter(StratagemClassifyCounter {
+                size, ..
+            }) => *size,
+        }
+    }
 }
 
 /// Pre-cooked config. This is a V1
@@ -169,6 +189,7 @@ impl Counter for &StratagemCounters {
 pub fn generate_cooked_config(path: String, rd: Option<u64>, pd: Option<u64>) -> StratagemConfig {
     let mut conf = StratagemConfig {
         flist_type: "none".into(),
+        summarize_size: true,
         device: StratagemDevice {
             path,
             groups: vec!["size_distribution".into(), "user_distribution".into()],
@@ -367,6 +388,7 @@ mod tests {
     fn test_get_fid_dirs() {
         let stratagem_data = StratagemConfig {
             flist_type: "none".into(),
+            summarize_size: true,
             device: StratagemDevice {
                 path: "/dev/mapper/mpathb".into(),
                 groups: vec!["size_distribution".into(), "warn_purge_times".into()],
@@ -428,26 +450,36 @@ mod tests {
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "Other".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "smaller_than_1M".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "not_smaller_than_1M_and_smaller_than_1G".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 1,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "not_smaller_than_1G".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "not_smaller_than_1T".into(),
                         }),
@@ -458,16 +490,22 @@ mod tests {
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 2,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "none".into(),
                             name: "Other".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "fid".into(),
                             name: "shell_cmd_of_rule_0".into(),
                         }),
                         StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
+                            blocks: 0,
+                            size: 0,
                             flist_type: "fid".into(),
                             name: "shell_cmd_of_rule_1".into(),
                         }),
