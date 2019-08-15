@@ -42,7 +42,7 @@ impl DaemonPlugin for ActionRunner {
     fn on_message(
         &self,
         v: serde_json::Value,
-    ) -> Box<Future<Item = AgentResult, Error = ImlAgentError> + Send> {
+    ) -> Box<dyn Future<Item = AgentResult, Error = ImlAgentError> + Send> {
         let action: Action = match serde_json::from_value(v) {
             Ok(x) => x,
             Err(e) => return Box::new(future::err(ImlAgentError::Serde(e))),

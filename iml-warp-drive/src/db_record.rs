@@ -294,7 +294,7 @@ pub struct AlertStateRecord {
     begin: String,
     end: Option<String>,
     active: Option<bool>,
-    dismissed: bool,
+    pub dismissed: bool,
     severity: u32,
     record_type: String,
     variant: Option<String>,

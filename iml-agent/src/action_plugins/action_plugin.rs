@@ -11,12 +11,12 @@ use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
 
 type BoxedFuture = Box<
-    Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
+    dyn Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
         + 'static
         + Send,
 >;
 
-type Callback = Box<Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
+type Callback = Box<dyn Fn(serde_json::value::Value) -> BoxedFuture + Send + Sync>;
 
 fn mk_boxed_future<T, R, Fut>(v: serde_json::value::Value, f: fn(T) -> Fut) -> BoxedFuture
 where

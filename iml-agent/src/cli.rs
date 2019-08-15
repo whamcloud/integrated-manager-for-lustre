@@ -57,7 +57,7 @@ fn parse_duration(src: &str) -> Result<u64, io::Error> {
         Some('d') => Ok(val * 86_400_000),
         Some('m') => Ok(val * 60_000),
         Some('s') => Ok(val * 1_000),
-        Some('1'...'9') => Err(invalid_input_err("No unit specified.")),
+        Some('1'..='9') => Err(invalid_input_err("No unit specified.")),
         _ => Err(invalid_input_err(
             "Invalid unit. Valid units include 'h' and 'd'.",
         )),
@@ -130,7 +130,7 @@ fn run_cmd<R: Send + 'static, E: Send + 'static>(
     tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
 }
 
-fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<Item = String>> {
+fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
     match input {
         None => {
             if fidlist.is_empty() {
@@ -144,7 +144,7 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<It
             }
         }
         Some(name) => {
-            let buf: Box<BufRead> = match name.as_ref() {
+            let buf: Box<dyn BufRead> = match name.as_ref() {
                 "-" => Box::new(BufReader::new(io::stdin())),
                 _ => {
                     let f = match File::open(&name) {
@@ -237,7 +237,7 @@ fn main() {
                 fidopts: opt,
             } => {
                 let device = opt.fsname;
-                let output: Box<io::Write> = match out {
+                let output: Box<dyn io::Write> = match out {
                     Some(file) => Box::new(File::create(file).expect("Failed to create file")),
                     None => Box::new(io::stdout()),
                 };

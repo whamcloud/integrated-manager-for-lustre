@@ -48,7 +48,7 @@ impl HttpsConnector {
 impl Connect for HttpsConnector {
     type Transport = TlsStream<TcpStream>;
     type Error = io::Error;
-    type Future = Box<Future<Item = (Self::Transport, Connected), Error = Self::Error> + Send>;
+    type Future = Box<dyn Future<Item = (Self::Transport, Connected), Error = Self::Error> + Send>;
 
     fn connect(&self, dst: Destination) -> Self::Future {
         if dst.scheme() != "https" {

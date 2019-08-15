@@ -89,55 +89,75 @@ fn main() {
 
                     warp::spawn(
                         stream
-                        .from_err()
-                            .for_each(move |msg| -> Box<Future<Item = (), Error = failure::Error> + Send> {
-                                let _c3 = &c2;
+                            .from_err()
+                            .for_each(
+                                move |msg| -> Box<
+                                    dyn Future<Item = (), Error = failure::Error> + Send,
+                                > {
+                                    let _c3 = &c2;
 
-                                let api_client = api_client.clone();
-                                let api_cache_state = Arc::clone(&api_cache_state);
-                                let user_state4 = Arc::clone(&user_state4);
+                                    let api_client = api_client.clone();
+                                    let api_cache_state = Arc::clone(&api_cache_state);
+                                    let user_state4 = Arc::clone(&user_state4);
 
-                                match msg {
-                                    iml_postgres::AsyncMessage::Notification(n) => {
-                                        if n.channel() == "table_update" {
-                                            let fut = listen::into_db_record(n.payload())
-                                                .into_future()
-                                                .from_err()
-                                                .and_then(|r| {
-                                                    cache::db_record_to_change_record(r, api_client)
+                                    match msg {
+                                        iml_postgres::AsyncMessage::Notification(n) => {
+                                            if n.channel() == "table_update" {
+                                                let fut = listen::into_db_record(n.payload())
+                                                    .into_future()
+                                                    .from_err()
+                                                    .and_then(|r| {
+                                                        cache::db_record_to_change_record(
+                                                            r, api_client,
+                                                        )
                                                         .from_err()
-                                                })
-                                                .map(move |record_change| {
-                                                    match record_change.clone() {
-                                                        cache::RecordChange::Delete(r) => {
-                                                            let removed = api_cache_state.lock().remove_record(&r);
+                                                    })
+                                                    .map(move |record_change| {
+                                                        match record_change.clone() {
+                                                            cache::RecordChange::Delete(r) => {
+                                                                let removed = api_cache_state
+                                                                    .lock()
+                                                                    .remove_record(&r);
 
-                                                            if removed {
-                                                                users::send_message(Message::RecordChange(record_change), Arc::clone(&user_state4));
+                                                                if removed {
+                                                                    users::send_message(
+                                                                        Message::RecordChange(
+                                                                            record_change,
+                                                                        ),
+                                                                        Arc::clone(&user_state4),
+                                                                    );
+                                                                }
                                                             }
-                                                        }
-                                                        cache::RecordChange::Update(r) => {
-                                                            api_cache_state.lock().insert_record(r);
+                                                            cache::RecordChange::Update(r) => {
+                                                                api_cache_state
+                                                                    .lock()
+                                                                    .insert_record(r);
 
-                                                            users::send_message(Message::RecordChange(record_change), Arc::clone(&user_state4));
-                                                        }
-                                                    };
-                                                });
+                                                                users::send_message(
+                                                                    Message::RecordChange(
+                                                                        record_change,
+                                                                    ),
+                                                                    Arc::clone(&user_state4),
+                                                                );
+                                                            }
+                                                        };
+                                                    });
 
                                                 Box::new(fut)
-                                        } else {
-                                            log::warn!("unknown channel: {}", n.channel());
+                                            } else {
+                                                log::warn!("unknown channel: {}", n.channel());
 
-                                            Box::new(future::ok(()))
+                                                Box::new(future::ok(()))
+                                            }
                                         }
+                                        iml_postgres::AsyncMessage::Notice(err) => {
+                                            log::error!("Error from postgres {}", err);
+                                            Box::new(future::err(err).from_err())
+                                        }
+                                        _ => unreachable!(),
                                     }
-                                    iml_postgres::AsyncMessage::Notice(err) => {
-                                        log::error!("Error from postgres {}", err);
-                                        Box::new(future::err(err).from_err())
-                                    }
-                                    _ => unreachable!()
-                                }
-                            })
+                                },
+                            )
                             .map_err(move |e| {
                                 exit.trigger();
                                 tx2.trigger();
@@ -150,13 +170,12 @@ fn main() {
                         let mut c = c.lock();
 
                         c.simple_query("LISTEN table_update")
-                        .for_each(|_| Ok(()))
-                        .from_err()
+                            .for_each(|_| Ok(()))
+                            .from_err()
                     };
 
                     fut.and_then(move |_| {
-                        populate_from_db(Arc::clone(&api_cache_state3), client)
-                        .from_err()
+                        populate_from_db(Arc::clone(&api_cache_state3), client).from_err()
                     })
                 })
                 .inspect(|_| log::info!("Started listening to NOTIFY events"))

@@ -18,7 +18,7 @@ fn send_if_data(
     agent_client: AgentClient,
 ) -> impl FnOnce(
     Option<(SessionInfo, OutputValue)>,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
     move |x| match x {
         Some((info, output)) => Box::new(agent_client.send_data(info, output)),
         None => Box::new(future::ok(())),
@@ -34,7 +34,7 @@ fn handle_state(
     mut sessions: Sessions,
     name: PluginName,
     now: Instant,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
     log::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {

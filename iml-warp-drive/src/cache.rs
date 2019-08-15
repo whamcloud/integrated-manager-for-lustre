@@ -86,7 +86,7 @@ pub trait ToApiRecord: std::fmt::Debug + Id {
     fn to_api_record<T: 'static>(
         &self,
         client: Client,
-    ) -> Box<Future<Item = T, Error = ImlManagerClientError> + Send>
+    ) -> Box<dyn Future<Item = T, Error = ImlManagerClientError> + Send>
     where
         T: Debug + serde::de::DeserializeOwned + EndpointName + ApiQuery + Send,
     {
@@ -118,7 +118,7 @@ impl<T> ApiQuery for Target<T> {
 
 impl ApiQuery for Alert {
     fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("active", "true")]
+        vec![("limit", "0"), ("active", "true"), ("dismissed", "false")]
     }
 }
 
@@ -161,7 +161,7 @@ pub enum RecordChange {
     Delete(RecordId),
 }
 
-type BoxedFuture = Box<Future<Item = RecordChange, Error = ImlManagerClientError> + Send>;
+type BoxedFuture = Box<dyn Future<Item = RecordChange, Error = ImlManagerClientError> + Send>;
 
 fn converter<T>(
     client: Client,
@@ -229,7 +229,7 @@ pub fn db_record_to_change_record(
             (MessageType::Delete, x) => Box::new(future::ok(RecordChange::Delete(
                 RecordId::ActiveAlert(x.id()),
             ))) as BoxedFuture,
-            (_, x) if !x.is_active() => Box::new(future::ok(RecordChange::Delete(
+            (_, x) if !x.is_active() || x.dismissed => Box::new(future::ok(RecordChange::Delete(
                 RecordId::ActiveAlert(x.id()),
             ))) as BoxedFuture,
             (MessageType::Insert, x) | (MessageType::Update, x) => Box::new(

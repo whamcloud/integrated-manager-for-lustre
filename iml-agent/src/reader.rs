@@ -22,7 +22,7 @@ fn send_if_data(
     agent_client: AgentClient,
 ) -> impl FnOnce(
     Option<(SessionInfo, OutputValue)>,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
     move |x| match x {
         Some((info, output)) => Box::new(agent_client.send_data(info, output)),
         None => Box::new(future::ok(())),
@@ -108,7 +108,7 @@ pub fn create_reader(
                 })
                 .collect()
                 .then(
-                    |r| -> Box<Future<Item = LoopState, Error = ImlAgentError> + Send> {
+                    |r| -> Box<dyn Future<Item = LoopState, Error = ImlAgentError> + Send> {
                         match r {
                             Ok(_) => Box::new(future::ok(Loop::Continue((
                                 agent_client,
