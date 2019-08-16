@@ -11,16 +11,16 @@ use warp::{body::BodyStream, filters::BoxedFilter, Filter};
 pub trait LineStream: Stream<Item = Vec<u8>, Error = warp::Rejection> {}
 impl<T: Stream<Item = Vec<u8>, Error = warp::Rejection>> LineStream for T {}
 
-fn streamer(s: BodyStream) -> Box<LineStream + Send> {
+fn streamer(s: BodyStream) -> Box<dyn LineStream + Send> {
     let s = s.map(Vec::from_buf).map_err(warp::reject::custom);
 
     let ls = stream_lines::Lines::<_, _, warp::Rejection>::new(s, Ok);
 
-    Box::new(ls) as Box<LineStream + Send>
+    Box::new(ls) as Box<dyn LineStream + Send>
 }
 
 /// Warp Filter that streams a newline delimited body
-pub fn line_stream() -> BoxedFilter<(Box<LineStream + Send>,)> {
+pub fn line_stream() -> BoxedFilter<(Box<dyn LineStream + Send>,)> {
     warp::body::stream().map(streamer).boxed()
 }
 

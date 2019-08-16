@@ -52,7 +52,7 @@ pub fn await_session(
     loop_fn(
         sessions,
         move |sessions| -> Box<
-            Future<Item = Loop<Id, Shared<Sessions>>, Error = ActionRunnerError> + Send,
+            dyn Future<Item = Loop<Id, Shared<Sessions>>, Error = ActionRunnerError> + Send,
         > {
             if clock::now() >= until {
                 log::info!(

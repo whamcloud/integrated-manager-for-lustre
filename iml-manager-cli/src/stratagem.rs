@@ -89,7 +89,7 @@ fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
         Some('d') => Ok(val * 86_400_000),
         Some('m') => Ok(val * 60_000),
         Some('s') => Ok(val * 1_000),
-        Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
+        Some('1'..='9') => Err(DurationParseError::NoUnit.into()),
         _ => Err(DurationParseError::InvalidUnit.into()),
     }
 }
