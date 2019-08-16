@@ -222,6 +222,7 @@ mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
 install chroma-config.1.gz $RPM_BUILD_ROOT%{_mandir}/man1
 install -m 644 logrotate.cfg $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/chroma-manager
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}/
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/device-aggregator.service.d/
 install -m 644 iml-manager.target $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
@@ -233,6 +234,7 @@ install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-stats.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-syslog.service $RPM_BUILD_ROOT%{_unitdir}/
+install -m 644 10-device-aggregator.service.conf $RPM_BUILD_ROOT%{_unitdir}/device-aggregator.service.d/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
 # only include modules in the main package
@@ -338,6 +340,7 @@ fi
 %attr(0644,root,grafana)%{manager_root}/grafana/dashboards/stratagem-dashboard*.json
 %attr(0644,root,root)%{_unitdir}/iml-manager.target
 %attr(0644,root,root)%{_unitdir}/*.service
+%attr(0644,root,root)%{_unitdir}/device-aggregator.service.d/10-device-aggregator.service.conf
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
