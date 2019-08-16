@@ -55,7 +55,9 @@ fn main() {
         )
         .and(iml_mailbox::line_stream())
         .and_then(
-            |mailbox_senders: SharedMailboxSenders, address: PathBuf, s: Box<LineStream + Send>| {
+            |mailbox_senders: SharedMailboxSenders,
+             address: PathBuf,
+             s: Box<dyn LineStream + Send>| {
                 let tx = { mailbox_senders.lock().get(&address) };
                 let tx = tx.unwrap_or_else(|| {
                     let (tx, fut) = { mailbox_senders.lock().create(address.clone()) };

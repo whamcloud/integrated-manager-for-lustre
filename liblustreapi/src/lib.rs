@@ -337,9 +337,8 @@ impl Llapi {
                 log::error!("Bad fid format: {}", fidstr);
             }
         }
-        unsafe {
-            fids[0].hdr.nr = fids.len() as u32 - 1;
-        }
+
+        fids[0].hdr.nr = fids.len() as u32 - 1;
 
         let rc = func(devptr, fids.as_ptr());
 
@@ -397,10 +396,7 @@ impl LlapiFid {
     pub fn create(fsname_or_mntpt: &str) -> Result<LlapiFid, LiblustreError> {
         let llapi = Llapi::create()?;
         let mntpt = llapi.search_rootpath(fsname_or_mntpt)?;
-        Ok(LlapiFid {
-            llapi: llapi,
-            mntpt: mntpt,
-        })
+        Ok(LlapiFid { llapi, mntpt })
     }
     pub fn mntpt(&self) -> String {
         self.mntpt.clone()
@@ -466,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn test_layout_RmfidsArg() {
+    fn test_layout_rm_fids_arg() {
         assert_eq!(
             ::std::mem::size_of::<RmfidsArg>(),
             16usize,
