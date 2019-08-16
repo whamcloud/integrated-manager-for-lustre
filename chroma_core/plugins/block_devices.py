@@ -19,7 +19,6 @@ def _fetch_aggregator(timeout):
     timeout = timeout if timeout >= 0 else 0
     while summary <= timeout:
         resp = requests.get(settings.DEVICE_AGGREGATOR_PROXY_PASS)
-        payload = resp.text
         summary += resp.elapsed.seconds
         summary += resp.elapsed.microseconds / 10.0 ** 6
 
