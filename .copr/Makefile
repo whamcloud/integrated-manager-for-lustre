@@ -83,6 +83,7 @@ iml-srpm: iml-deps substs
 		${BUILDROOT}/chroma-config.1 \
 		${BUILDROOT}/logrotate.cfg \
 		${BUILDROOT}/chroma-host-discover-init.sh \
+		${BUILDROOT}/10-device-aggregator.service.conf \
 		${TMPDIR}/configuration
 
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .
