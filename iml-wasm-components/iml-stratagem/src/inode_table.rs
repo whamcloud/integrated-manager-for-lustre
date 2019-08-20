@@ -209,10 +209,7 @@ pub fn view(model: &Model) -> Node<Msg> {
 
                 if let Some(timestamp) = &model.last_known_scan {
                     div![
-                        p![
-                            class!["text-muted"],
-                            format!("Last Scanned on: {}", timestamp)
-                        ],
+                        p![class!["text-muted"], format!("Last Scanned: {}", timestamp)],
                         inode_table
                     ]
                 } else {
