@@ -151,7 +151,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-pub fn fetch_inodes(fs_name:&str) -> (
+pub fn fetch_inodes(
+    fs_name: &str,
+) -> (
     impl Future<Item = Msg, Error = Msg>,
     Option<seed::fetch::RequestController>,
 ) {
