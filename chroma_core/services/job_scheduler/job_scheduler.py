@@ -1807,7 +1807,7 @@ class JobScheduler(object):
                     "configured",
                 )
             ],
-            "Configuring Stratagem",
+            "Configuring Stratagem scan interval",
             True,
         )
 
