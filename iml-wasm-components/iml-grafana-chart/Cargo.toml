@@ -6,4 +6,6 @@ edition = "2018"
 
 [dependencies]
 seed = "=0.4.0"
+serde = { version = "1", features = ['derive'] }
+serde_urlencoded = "0.6.1"
 iml-environment = { path = "../iml-environment", version = "0.1" }

@@ -418,7 +418,7 @@ class RunStratagemJob(Job):
     filesystem_type = models.CharField(max_length=32, null=False, default="")
     target_mount_point = models.CharField(max_length=512, null=False, default="")
     device_path = models.CharField(max_length=512, null=False, default="")
-    fs_name = models.IntegerField(null=False)
+    fs_name = models.CharField(max_length=8, null=False)
 
     def __init__(self, *args, **kwargs):
         if "mdt_id" not in kwargs or "uuid" not in kwargs:
@@ -485,7 +485,7 @@ class AggregateStratagemResultsStep(Step):
 
 
 class AggregateStratagemResultsJob(Job):
-    fs_name = models.IntegerField(null=False)
+    fs_name = models.CharField(max_length=8, null=False)
 
     class Meta:
         app_label = "chroma_core"
@@ -504,7 +504,7 @@ class AggregateStratagemResultsJob(Job):
                 AggregateStratagemResultsStep,
                 {
                     "aggregate_query": "SELECT * FROM temp_stratagem_scan",
-                    "clear_measurement_query": "DROP MEASUREMENT stratagem_scan",
+                    "clear_measurement_query": "DELETE FROM stratagem_scan WHERE fs_name='{}'".format(self.fs_name),
                     "clear_temp_measurement_query": "DROP MEASUREMENT temp_stratagem_scan",
                     "measurement": "stratagem_scan",
                     "fs_name": self.fs_name,

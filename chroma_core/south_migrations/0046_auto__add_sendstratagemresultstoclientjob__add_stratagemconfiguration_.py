@@ -67,7 +67,7 @@ class Migration(SchemaMigration):
             ('filesystem_type', self.gf('django.db.models.fields.CharField')(default='', max_length=32)),
             ('target_mount_point', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
             ('device_path', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
-            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8)),
+            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8, null=False)),
         ))
         db.send_create_signal('chroma_core', ['RunStratagemJob'])
 
@@ -82,7 +82,7 @@ class Migration(SchemaMigration):
         # Adding model 'AggregateStratagemResultsJob'
         db.create_table(u'chroma_core_aggregatestratagemresultsjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8)),
+            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8, null=False)),
         ))
         db.send_create_signal('chroma_core', ['AggregateStratagemResultsJob'])
 
@@ -145,7 +145,7 @@ class Migration(SchemaMigration):
         },
         'chroma_core.aggregatestratagemresultsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'AggregateStratagemResultsJob', '_ormbases': ['chroma_core.Job']},
-            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
+            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8', 'null': 'False'}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.alertemail': {
@@ -1062,7 +1062,7 @@ class Migration(SchemaMigration):
             'device_path': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '512'}),
             'filesystem_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '32'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '255'}),
-            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
+            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8', 'null': 'False'}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt_id': ('django.db.models.fields.IntegerField', [], {}),
             'purge_duration': ('django.db.models.fields.BigIntegerField', [], {'null': 'True'}),

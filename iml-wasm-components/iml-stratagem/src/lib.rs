@@ -13,7 +13,9 @@ use bootstrap_components::bs_well::well;
 use futures::Future;
 use iml_duration_picker::{self, duration_picker};
 use iml_environment::MAX_SAFE_INTEGER;
-use iml_grafana_chart::{grafana_chart, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME};
+use iml_grafana_chart::{
+    grafana_chart, GrafanaChartData, GRAFANA_DASHBOARD_ID, GRAFANA_DASHBOARD_NAME,
+};
 use iml_utils::dispatch_custom_event;
 use seed::{attrs, class, div, dom_types::At, fetch, h4, input, p, prelude::*, style};
 
@@ -51,7 +53,7 @@ pub struct ActionResponse {
     command: iml_wire_types::Command,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Model {
     pub id: Option<u32>,
     pub destroyed: bool,
@@ -62,28 +64,6 @@ pub struct Model {
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
     pub disabled: bool,
-}
-
-impl Default for Model {
-    fn default() -> Self {
-        Model {
-            id: None,
-            fs_id: 1,
-            fs_name: "".into(),
-            run_config: iml_duration_picker::Model {
-                ..Default::default()
-            },
-            report_config: iml_duration_picker::Model {
-                ..Default::default()
-            },
-            purge_config: iml_duration_picker::Model {
-                ..Default::default()
-            },
-            inode_table: inode_table::Model::default(),
-            destroyed: false,
-            disabled: false,
-        }
-    }
 }
 
 pub fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<String> {
@@ -382,11 +362,14 @@ pub fn view(model: &Model) -> Node<Msg> {
         div![grafana_chart(
             GRAFANA_DASHBOARD_ID,
             GRAFANA_DASHBOARD_NAME,
-            &model.fs_name,
-            "10s",
-            2,
             "100%",
-            "600"
+            "600",
+            GrafanaChartData {
+                org_id: 1,
+                var_fs_name: &model.fs_name,
+                refresh: "10s",
+                panel_id: 2,
+            }
         )],
         h4![class!["section-header"], "Space Usage Distribution"],
         p![
@@ -401,11 +384,14 @@ pub fn view(model: &Model) -> Node<Msg> {
             grafana_chart(
                 GRAFANA_DASHBOARD_ID,
                 GRAFANA_DASHBOARD_NAME,
-                &model.fs_name,
-                "10s",
-                3,
                 "100%",
-                "600"
+                "600",
+                GrafanaChartData {
+                    org_id: 1,
+                    var_fs_name: &model.fs_name,
+                    refresh: "10s",
+                    panel_id: 3,
+                }
             ),
             style! {"margin-bottom" => px(20)}
         ],
