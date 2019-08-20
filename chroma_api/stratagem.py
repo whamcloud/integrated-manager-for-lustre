@@ -316,7 +316,7 @@ class RunStratagemResource(Resource):
             ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False).values_list("id", flat=True)
         )
 
-        command_id = JobSchedulerClient.run_stratagem(mdts, bundle.data)
+        command_id = JobSchedulerClient.run_stratagem(mdts, fs_id, bundle.data)
 
         try:
             command = Command.objects.get(pk=command_id)

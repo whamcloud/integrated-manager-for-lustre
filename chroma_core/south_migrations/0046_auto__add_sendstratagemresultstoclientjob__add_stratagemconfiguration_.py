@@ -67,6 +67,7 @@ class Migration(SchemaMigration):
             ('filesystem_type', self.gf('django.db.models.fields.CharField')(default='', max_length=32)),
             ('target_mount_point', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
             ('device_path', self.gf('django.db.models.fields.CharField')(default='', max_length=512)),
+            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8)),
         ))
         db.send_create_signal('chroma_core', ['RunStratagemJob'])
 
@@ -81,6 +82,7 @@ class Migration(SchemaMigration):
         # Adding model 'AggregateStratagemResultsJob'
         db.create_table(u'chroma_core_aggregatestratagemresultsjob', (
             (u'job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('fs_name', self.gf('django.db.models.fields.CharField')(max_length=8)),
         ))
         db.send_create_signal('chroma_core', ['AggregateStratagemResultsJob'])
 
@@ -143,6 +145,7 @@ class Migration(SchemaMigration):
         },
         'chroma_core.aggregatestratagemresultsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'AggregateStratagemResultsJob', '_ormbases': ['chroma_core.Job']},
+            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.alertemail': {
@@ -984,10 +987,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 7, 30, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2019, 8, 19, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'74FFD01032ECEB06D65A6FD1B48C50CD'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'AFA8115F007D7E448973481FFBD898F8'", 'max_length': '32'})
         },
         'chroma_core.removeconfiguredtargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
@@ -1059,6 +1062,7 @@ class Migration(SchemaMigration):
             'device_path': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '512'}),
             'filesystem_type': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '32'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '255'}),
+            'fs_name': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
             u'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt_id': ('django.db.models.fields.IntegerField', [], {}),
             'purge_duration': ('django.db.models.fields.BigIntegerField', [], {'null': 'True'}),

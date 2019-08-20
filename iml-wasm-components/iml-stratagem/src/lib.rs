@@ -56,6 +56,7 @@ pub struct Model {
     pub id: Option<u32>,
     pub destroyed: bool,
     pub fs_id: u32,
+    pub fs_name: String,
     pub run_config: iml_duration_picker::Model,
     pub report_config: iml_duration_picker::Model,
     pub purge_config: iml_duration_picker::Model,
@@ -68,6 +69,7 @@ impl Default for Model {
         Model {
             id: None,
             fs_id: 1,
+            fs_name: "".into(),
             run_config: iml_duration_picker::Model {
                 ..Default::default()
             },
@@ -380,6 +382,7 @@ pub fn view(model: &Model) -> Node<Msg> {
         div![grafana_chart(
             GRAFANA_DASHBOARD_ID,
             GRAFANA_DASHBOARD_NAME,
+            &model.fs_name,
             "10s",
             2,
             "100%",
@@ -398,6 +401,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             grafana_chart(
                 GRAFANA_DASHBOARD_ID,
                 GRAFANA_DASHBOARD_NAME,
+                &model.fs_name,
                 "10s",
                 3,
                 "100%",

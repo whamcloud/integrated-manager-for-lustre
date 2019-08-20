@@ -1811,8 +1811,10 @@ class JobScheduler(object):
             True,
         )
 
-    def run_stratagem(self, mdts, stratagem_data):
+    def run_stratagem(self, mdts, fs_id, stratagem_data):
         unique_id = uuid.uuid4()
+        filesystem = ManagedFilesystem.objects.get(id=fs_id)
+
         run_stratagem_list = map(
             lambda mdt_id: {
                 "class_name": "RunStratagemJob",
@@ -1821,18 +1823,21 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
+                    "fs_name": filesystem.name,
                 },
             },
             mdts,
         )
 
         run_stratagem_list.append(
-            {"class_name": "AggregateStratagemResultsJob", "args": {"depends_on_job_range": range(len(mdts))}}
+            {
+                "class_name": "AggregateStratagemResultsJob",
+                "args": {"depends_on_job_range": range(len(mdts)), "fs_name": filesystem.name},
+            }
         )
 
         client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
         client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
-        filesystem = ManagedFilesystem.objects.get(id=ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
         mountpoint = "/mnt/{}".format(filesystem.name)
 
         if not client_mount_exists:

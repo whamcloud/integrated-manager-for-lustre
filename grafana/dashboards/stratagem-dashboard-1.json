@@ -20,6 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1566309516649,
   "links": [],
   "panels": [
     {
@@ -98,6 +99,12 @@
               "key": "label",
               "operator": "=",
               "value": "< 1 Mib"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -134,6 +141,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 Mib, < 1 GiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -170,6 +183,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 GiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -206,6 +225,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 TiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         }
@@ -220,7 +245,6 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "transparent": false,
       "type": "graph",
       "xaxis": {
         "buckets": null,
@@ -329,6 +353,12 @@
               "key": "label",
               "operator": "=",
               "value": "< 1 Mib"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -365,6 +395,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 Mib, < 1 GiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -401,6 +437,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 GiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         },
@@ -437,6 +479,12 @@
               "key": "label",
               "operator": "=",
               "value": ">= 1 TiB"
+            },
+            {
+              "condition": "AND",
+              "key": "fs_name",
+              "operator": "=",
+              "value": "$fs_name"
             }
           ]
         }
@@ -489,7 +537,27 @@
   "style": "light",
   "tags": ["stratagem"],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": null,
+        "name": "fs_name",
+        "options": [
+          {
+            "selected": false,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "constant"
+      }
+    ]
   },
   "time": {
     "from": "2000-01-01 00:00:00",
@@ -502,5 +570,5 @@
   "timezone": "",
   "title": "Stratagem",
   "uid": "OBdCS5IWz",
-  "version": 6
+  "version": 7
 }

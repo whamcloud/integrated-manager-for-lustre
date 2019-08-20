@@ -12,13 +12,14 @@ pub static GRAFANA_DASHBOARD_NAME: &str = "stratagem";
 pub fn grafana_chart<T>(
     dashboard_id: &str,
     dashboard_name: &str,
+    fs_name: &str,
     refresh: &str,
     panel_id: u16,
     width: &str,
     height: &str,
 ) -> Node<T> {
     iframe![attrs! {
-       At::Src => format!("{}d-solo/{}/{}?orgId=1&refresh={}&panelId={}", grafana_root(), dashboard_id, dashboard_name, refresh, panel_id),
+       At::Src => format!("{}d-solo/{}/{}?orgId=1&var-fs_name={}&refresh={}&panelId={}", grafana_root(), dashboard_id, dashboard_name, fs_name, refresh, panel_id),
        At::Width => width,
        At::Height => height,
        "frameborder" => 0
