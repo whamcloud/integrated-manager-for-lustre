@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1566309516649,
+  "iteration": 1566404748526,
   "links": [],
   "panels": [
     {
@@ -44,9 +44,10 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
-        "total": false,
-        "values": false
+        "rightSide": false,
+        "show": true,
+        "total": true,
+        "values": true
       },
       "lines": false,
       "linewidth": 1,
@@ -298,9 +299,10 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
-        "total": false,
-        "values": false
+        "rightSide": false,
+        "show": true,
+        "total": true,
+        "values": true
       },
       "lines": false,
       "linewidth": 1,
