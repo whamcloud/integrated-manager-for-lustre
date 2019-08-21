@@ -189,6 +189,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
                 model.stratagem.fs_id = fs.id;
 
+                model.stratagem.fs_name = fs.name.to_string();
+
+                model.stratagem.inode_table.fs_name = fs.name.to_string();
+
                 model.stratagem_ready = model.stratagem_ready();
             };
 

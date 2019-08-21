@@ -392,11 +392,12 @@ class StreamFidlistStep(Step):
         scan_result = args["prev_result"]
         host = args["host"]
         unique_id = args["uuid"]
+        fs_name = args["fs_name"]
 
         _, stratagem_result, mailbox_files = scan_result
 
         # Send stratagem_results to time series database
-        influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, stratagem_result)
+        influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, fs_name, stratagem_result)
         job_log.debug("influx_entries: {}".format(influx_entries))
 
         record_stratagem_point("\n".join(influx_entries))
@@ -417,6 +418,7 @@ class RunStratagemJob(Job):
     filesystem_type = models.CharField(max_length=32, null=False, default="")
     target_mount_point = models.CharField(max_length=512, null=False, default="")
     device_path = models.CharField(max_length=512, null=False, default="")
+    fs_name = models.CharField(max_length=8, null=False)
 
     def __init__(self, *args, **kwargs):
         if "mdt_id" not in kwargs or "uuid" not in kwargs:
@@ -466,15 +468,15 @@ class RunStratagemJob(Job):
                     "purge_duration": self.purge_duration,
                 },
             ),
-            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid}),
+            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.fs_name}),
         ]
 
 
 class AggregateStratagemResultsStep(Step):
     def run(self, args):
-        clear_scan_results(args["clear_measurement_query"])
+        clear_scan_results(args["clear_measurement_query"].format(args["fs_name"]))
         aggregated = aggregate_points(args["aggregate_query"])
-        influx_entries = submit_aggregated_data(args["measurement"], aggregated)
+        influx_entries = submit_aggregated_data(args["measurement"], args["fs_name"], aggregated)
         clear_scan_results(args["clear_temp_measurement_query"])
 
         self.log(u"\u2713 Aggregated Stratagem counts and submitted to time series database.")
@@ -483,6 +485,8 @@ class AggregateStratagemResultsStep(Step):
 
 
 class AggregateStratagemResultsJob(Job):
+    fs_name = models.CharField(max_length=8, null=False)
+
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
@@ -500,9 +504,10 @@ class AggregateStratagemResultsJob(Job):
                 AggregateStratagemResultsStep,
                 {
                     "aggregate_query": "SELECT * FROM temp_stratagem_scan",
-                    "clear_measurement_query": "DROP MEASUREMENT stratagem_scan",
+                    "clear_measurement_query": "DELETE FROM stratagem_scan WHERE fs_name='{}'",
                     "clear_temp_measurement_query": "DROP MEASUREMENT temp_stratagem_scan",
                     "measurement": "stratagem_scan",
+                    "fs_name": self.fs_name,
                 },
             )
         ]

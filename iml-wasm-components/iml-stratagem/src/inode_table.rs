@@ -30,6 +30,7 @@ pub struct Model {
     cancel: Option<futures::sync::oneshot::Sender<()>>,
     request_controller: Option<RequestController>,
     pub last_known_scan: Option<String>,
+    pub fs_name: String,
 }
 
 #[derive(Clone, Debug)]
@@ -71,7 +72,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::FetchInodes => {
             model.cancel = None;
 
-            let (fut, request_controller) = fetch_inodes();
+            let (fut, request_controller) = fetch_inodes(&model.fs_name);
             model.request_controller = request_controller;
             orders.skip().perform_cmd(fut);
         }
@@ -150,12 +151,14 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-pub fn fetch_inodes() -> (
+pub fn fetch_inodes(
+    fs_name: &str,
+) -> (
     impl Future<Item = Msg, Error = Msg>,
     Option<seed::fetch::RequestController>,
 ) {
     let mut request_controller = None;
-    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20limit%20{}", influx_root(), MAX_INODE_ENTRIES);
+    let url:String = format!("{}db=iml_stratagem_scans&epoch=ns&q=SELECT%20counter_name,%20count,%20size%20FROM%20stratagem_scan%20WHERE%20group_name=%27user_distribution%27%20and%20fs_name=%27{}%27%20limit%20{}", influx_root(), fs_name, MAX_INODE_ENTRIES);
     let fut = seed::fetch::Request::new(url)
         .controller(|controller| request_controller = Some(controller))
         .fetch_json(Msg::InodesFetched);

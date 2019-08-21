@@ -38,7 +38,7 @@ def create_stratagem_influx_point(measurement, tags, fields):
     ).rstrip()
 
 
-def parse_size_distribution(measurement, labels, counters):
+def parse_size_distribution(measurement, fs_name, labels, counters):
     return pipe(
         counters,
         filter_out_other_counter,
@@ -51,6 +51,7 @@ def parse_size_distribution(measurement, labels, counters):
                     ("group_name", "size_distribution"),
                     ("counter_name", x.get("name")),
                     ("label", labels.get(x.get("name"))),
+                    ("fs_name", fs_name),
                 ],
                 [("count", x.get("count")), ("size", x.get("size"))],
             ),
@@ -58,7 +59,7 @@ def parse_size_distribution(measurement, labels, counters):
     )
 
 
-def parse_user_distribution(measurement, counters):
+def parse_user_distribution(measurement, fs_name, counters):
     return pipe(
         counters,
         partial(filter, lambda x: "classify" in x),
@@ -73,6 +74,7 @@ def parse_user_distribution(measurement, counters):
                     ("group_name", "user_distribution"),
                     ("classify_attr_type", x.get("attr_type")),
                     ("counter_name", x.get("name")),
+                    ("fs_name", fs_name),
                 ],
                 [("count", x.get("count")), ("size", x.get("size"))],
             ),
@@ -80,10 +82,10 @@ def parse_user_distribution(measurement, counters):
     )
 
 
-def parse_stratagem_results_to_influx(measurement, stratagem_results_json):
+def parse_stratagem_results_to_influx(measurement, fs_name, stratagem_results_json):
     parse_fns = {
-        "size_distribution": partial(parse_size_distribution, measurement, labels),
-        "user_distribution": partial(parse_user_distribution, measurement),
+        "size_distribution": partial(parse_size_distribution, measurement, fs_name, labels),
+        "user_distribution": partial(parse_user_distribution, measurement, fs_name),
     }
 
     group_counters = stratagem_results_json.get("group_counters")
@@ -145,7 +147,7 @@ def join_entries_with_new_line(entries):
     return "\n".join(entries)
 
 
-def submit_aggregated_data(measurement, aggregated):
+def submit_aggregated_data(measurement, fs_name, aggregated):
     points = [
         (
             [
@@ -153,6 +155,7 @@ def submit_aggregated_data(measurement, aggregated):
                 ("group_name", point.get("group_name")),
                 ("label", point.get("label")),
                 ("counter_name", point.get("counter_name")),
+                ("fs_name", fs_name),
             ],
             [("count", point.get("count")), ("size", point.get("size"))],
         )
