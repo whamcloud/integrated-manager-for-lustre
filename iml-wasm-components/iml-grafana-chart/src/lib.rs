@@ -24,7 +24,7 @@ pub fn grafana_chart<T>(
     dashboard_name: &str,
     width: &str,
     height: &str,
-    chart_data: GrafanaChartData,
+    chart_data: impl serde::Serialize,
 ) -> Node<T> {
     let params = serde_urlencoded::to_string(chart_data);
     if let Ok(params) = params {
