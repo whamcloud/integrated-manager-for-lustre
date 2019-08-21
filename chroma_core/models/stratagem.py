@@ -474,7 +474,7 @@ class RunStratagemJob(Job):
 
 class AggregateStratagemResultsStep(Step):
     def run(self, args):
-        clear_scan_results(args["clear_measurement_query"])
+        clear_scan_results(args["clear_measurement_query"].format(args["fs_name"]))
         aggregated = aggregate_points(args["aggregate_query"])
         influx_entries = submit_aggregated_data(args["measurement"], args["fs_name"], aggregated)
         clear_scan_results(args["clear_temp_measurement_query"])
@@ -504,7 +504,7 @@ class AggregateStratagemResultsJob(Job):
                 AggregateStratagemResultsStep,
                 {
                     "aggregate_query": "SELECT * FROM temp_stratagem_scan",
-                    "clear_measurement_query": "DELETE FROM stratagem_scan WHERE fs_name='{}'".format(self.fs_name),
+                    "clear_measurement_query": "DELETE FROM stratagem_scan WHERE fs_name='{}'",
                     "clear_temp_measurement_query": "DROP MEASUREMENT temp_stratagem_scan",
                     "measurement": "stratagem_scan",
                     "fs_name": self.fs_name,
