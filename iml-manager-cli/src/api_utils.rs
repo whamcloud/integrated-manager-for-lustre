@@ -89,6 +89,20 @@ pub fn post(
         .from_err()
 }
 
+/// Wrapper for a `PUT` to the Api.
+pub fn put(
+    endpoint: &str,
+    query: impl serde::Serialize,
+) -> impl Future<
+    Item = (iml_manager_client::Response, iml_manager_client::Chunk),
+    Error = ImlManagerCliError,
+> {
+    let client = iml_manager_client::get_client().expect("Could not create API client");
+    iml_manager_client::put(client, endpoint, query)
+        .and_then(iml_manager_client::concat_body)
+        .from_err()
+}
+
 /// Wrapper for a `DELETE` to the Api.
 pub fn delete(
     endpoint: &str,
