@@ -8,6 +8,7 @@ import threading
 import sys
 import traceback
 import time
+import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -26,6 +27,7 @@ from django.db.models import Q, FieldDoesNotExist, ManyToManyField
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.util import target_label_split
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock
@@ -35,7 +37,13 @@ from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
 from chroma_core.models import StepResult
-from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
+from chroma_core.models import (
+    ManagedMgs,
+    ManagedFilesystem,
+    NetworkInterface,
+    LNetConfiguration,
+    get_fs_id_from_identifier,
+)
 from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
@@ -43,6 +51,12 @@ from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
+from chroma_core.models import (
+    ConfigureStratagemJob,
+    UnconfigureStratagemJob,
+    RemoveStratagemJob,
+    StratagemConfiguration,
+)
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -296,8 +310,11 @@ class RunJobThread(threading.Thread):
 
         step_index = 0
         finish_step = -1
+        prev_result = None
+
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
+            args["prev_result"] = prev_result
 
             # Do not persist any sensitive arguments (prefixed with __)
             clean_args = dict([(k, v) for k, v in args.items() if not k.startswith("__")])
@@ -324,6 +341,7 @@ class RunJobThread(threading.Thread):
 
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
                 result = step.run(args)
+                prev_result = result
                 log.debug("Job %d step %d successful result %s" % (self.job.id, step_index, result))
 
                 self._job_progress.step_success(self.job.id, result)
@@ -675,13 +693,16 @@ class JobScheduler(object):
                         ["stopped", "unavailable"],
                     )
                 if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "unavailable"},
-                        ["available"],
-                    )
+                    # Do not alter filesystem-state available->unavailable for non-zero MDT
+                    (_, label, index) = target_label_split(changed_item.get_label())
+                    if label != "MDT" or index == 0:
+                        self._notify(
+                            ContentType.objects.get_for_model(filesystem).natural_key(),
+                            filesystem.id,
+                            now,
+                            {"state": "unavailable"},
+                            ["available"],
+                        )
 
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
@@ -714,7 +735,7 @@ class JobScheduler(object):
                                 command = Command.objects.create(
                                     message="Updating configuration parameters on %s" % mgs
                                 )
-                            self.CommandPlan.add_jobs([job], command)
+                            self.CommandPlan.add_jobs([job], command, {})
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
@@ -730,7 +751,7 @@ class JobScheduler(object):
                 job = ConfigureHostFencingJob(host=changed_item.host)
                 if not command:
                     command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
-                self.CommandPlan.add_jobs([job], command)
+                self.CommandPlan.add_jobs([job], command, {})
 
     def _drain_notification_buffer(self):
         # Give any buffered notifications a chance to drain out
@@ -868,8 +889,10 @@ class JobScheduler(object):
     def run_jobs(self, job_dicts, message):
         with self._lock:
             result = self.CommandPlan.command_run_jobs(job_dicts, message)
-            self.progress.advance()
-            return result
+
+        self.progress.advance()
+
+        return result
 
     def get_transition_consequences(cls, stateful_object_class, stateful_object_id, new_state):
         """Query what the side effects of a state transition are.  Effectively does
@@ -1676,7 +1699,7 @@ class JobScheduler(object):
 
             with transaction.atomic():
                 command = Command.objects.create(message="Configuring NIDS for hosts")
-                self.CommandPlan.add_jobs(jobs, command)
+                self.CommandPlan.add_jobs(jobs, command, {})
 
         self.progress.advance()
 
@@ -1707,7 +1730,7 @@ class JobScheduler(object):
                         message="%s triggering updates from agents"
                         % ManagedHost.objects.get(id=exclude_host_ids[0]).fqdn
                     )
-                    self.CommandPlan.add_jobs(jobs, command)
+                    self.CommandPlan.add_jobs(jobs, command, {})
 
             self.progress.advance()
 
@@ -1741,3 +1764,133 @@ class JobScheduler(object):
     @property
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
+
+    def _get_stratagem_configuration(self, stratagem_data):
+        configuration_data = {
+            "state": "unconfigured",
+            "interval": stratagem_data.get("interval"),
+            "report_duration": stratagem_data.get("report_duration"),
+            "purge_duration": stratagem_data.get("purge_duration"),
+        }
+
+        # The filesystem_id may come in as the fs name or the fs id. In terms of storing information in the database, the fs id should always be used.
+        fs_identifier = str(stratagem_data.get("filesystem"))
+        fs_id = get_fs_id_from_identifier(fs_identifier)
+
+        if not fs_id:
+            raise Exception("No matching filesystem for {}".format(fs_identifier))
+
+        managed_filesystem = ManagedFilesystem.objects.get(id=fs_id)
+        configuration_data["filesystem"] = managed_filesystem
+
+        matches = StratagemConfiguration.objects.filter(filesystem=managed_filesystem)
+
+        return (configuration_data, managed_filesystem, matches)
+
+    def configure_stratagem(self, stratagem_data):
+        with self._lock:
+            (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
+
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
+            else:
+                stratagem_configuration = StratagemConfiguration.objects.create(**configuration_data)
+
+            ObjectCache.add(StratagemConfiguration, stratagem_configuration)
+
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    "configured",
+                )
+            ],
+            "Configuring Stratagem scan interval",
+            True,
+        )
+
+    def run_stratagem(self, mdts, stratagem_data):
+        unique_id = uuid.uuid4()
+        run_stratagem_list = map(
+            lambda mdt_id: {
+                "class_name": "RunStratagemJob",
+                "args": {
+                    "mdt_id": mdt_id,
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
+            },
+            mdts,
+        )
+
+        run_stratagem_list.append(
+            {"class_name": "AggregateStratagemResultsJob", "args": {"depends_on_job_range": range(len(mdts))}}
+        )
+
+        client_host = ManagedHost.objects.get(server_profile_id="stratagem_client")
+        client_mount_exists = LustreClientMount.objects.filter(host_id=client_host.id).exists()
+        filesystem = ManagedFilesystem.objects.get(id=ManagedMdt.objects.get(id=mdts[0]).filesystem_id)
+        mountpoint = "/mnt/{}".format(filesystem.name)
+
+        if not client_mount_exists:
+            self._create_client_mount(client_host, filesystem, mountpoint)
+
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+        client_mount.state = "unmounted"
+        client_mount.mountpoint = mountpoint
+        client_mount.filesystem_id = filesystem.id
+        client_mount.save()
+
+        run_stratagem_list.append(
+            {
+                "class_name": "MountLustreClientJob",
+                "args": {
+                    "depends_on_job_range": [len(run_stratagem_list) - 1],
+                    "lustre_client_mount": client_mount,
+                    "old_state": "unmounted",
+                },
+            }
+        )
+
+        run_stratagem_list.append(
+            {
+                "class_name": "SendStratagemResultsToClientJob",
+                "args": {
+                    "depends_on_job_range": [len(run_stratagem_list) - 1],
+                    "uuid": unique_id,
+                    "report_duration": stratagem_data.get("report_duration"),
+                    "purge_duration": stratagem_data.get("purge_duration"),
+                },
+            }
+        )
+
+        command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
+
+        return command
+
+    def update_stratagem(self, stratagem_data):
+        with self._lock:
+            (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
+
+            if len(matches) == 1:
+                matches.update(**configuration_data)
+                stratagem_configuration = StratagemConfiguration.objects.get(filesystem=managed_filesystem)
+            else:
+                raise Exception("Not matching filesystem for stratagem configuration.")
+
+            ObjectCache.update(stratagem_configuration)
+
+        return self.set_state(
+            [
+                (
+                    ContentType.objects.get_for_model(stratagem_configuration).natural_key(),
+                    stratagem_configuration.id,
+                    "configured",
+                )
+            ],
+            "Updating Stratagem",
+            True,
+        )

@@ -4,7 +4,7 @@ jobs:
     condition: and(succeeded(), contains(variables['Build.SourceBranch'], '${{parameters.branchref}}'))
     steps:
       - script: |
-          docker run -i -e OWNER="managerforlustre" -e PROD="${{parameters.release}}" -e PROJECT="${{parameters.project}}" -e PACKAGE="${{parameters.package}}" -e SPEC="${{parameters.spec}}" -e KEY="$(KEY)" -e IV="$(IV)" -v $(pwd):/build:rw imlteam/copr
+          docker run -i -e OWNER="managerforlustre" -e PROD="${{parameters.release}}" -e PROJECT="${{parameters.project}}" -e PACKAGE="${{parameters.package}}" -e SPEC="${{parameters.spec}}" -e KEY="$(KEY)" -e IV="$(IV)" -v $(pwd):/build:rw ${{parameters.image}}
         env:
           KEY: $(copr_key)
           IV: $(copr_iv)

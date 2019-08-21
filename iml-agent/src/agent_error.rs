@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_wire_types::{PluginName, ToJsonValue};
+use iml_wire_types::PluginName;
 use std::{fmt, process::Output};
 
 pub type Result<T> = std::result::Result<T, ImlAgentError>;
@@ -68,9 +68,14 @@ pub enum ImlAgentError {
     RequiredError(RequiredError),
     OneshotCanceled(futures::sync::oneshot::Canceled),
     LiblustreError(liblustreapi::error::LiblustreError),
-    CsvError(csv::Error),
     CmdOutputError(Output),
     SendError,
+    InvalidUriParts(http::uri::InvalidUriParts),
+    InvalidUri(http::uri::InvalidUri),
+    InvalidHeaderValue(http::header::InvalidHeaderValue),
+    HyperError(hyper::error::Error),
+    NativeTls(native_tls::Error),
+    UnexpectedStatusError,
 }
 
 impl std::fmt::Display for ImlAgentError {
@@ -90,7 +95,7 @@ impl std::fmt::Display for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => write!(f, "{}", err),
             ImlAgentError::OneshotCanceled(ref err) => write!(f, "{}", err),
             ImlAgentError::LiblustreError(ref err) => write!(f, "{}", err),
-            ImlAgentError::CsvError(ref err) => write!(f, "{}", err),
+
             ImlAgentError::CmdOutputError(ref err) => write!(
                 f,
                 "{}, stdout: {}, stderr: {}",
@@ -99,6 +104,12 @@ impl std::fmt::Display for ImlAgentError {
                 String::from_utf8_lossy(&err.stderr)
             ),
             ImlAgentError::SendError => write!(f, "Rx went away"),
+            ImlAgentError::InvalidUriParts(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidUri(ref err) => write!(f, "{}", err),
+            ImlAgentError::InvalidHeaderValue(ref err) => write!(f, "{}", err),
+            ImlAgentError::HyperError(ref err) => write!(f, "{}", err),
+            ImlAgentError::NativeTls(ref err) => write!(f, "{}", err),
+            ImlAgentError::UnexpectedStatusError => write!(f, "Unexpected status code"),
         }
     }
 }
@@ -120,9 +131,15 @@ impl std::error::Error for ImlAgentError {
             ImlAgentError::RequiredError(ref err) => Some(err),
             ImlAgentError::OneshotCanceled(ref err) => Some(err),
             ImlAgentError::LiblustreError(ref err) => Some(err),
-            ImlAgentError::CsvError(ref err) => Some(err),
+
             ImlAgentError::CmdOutputError(_) => None,
             ImlAgentError::SendError => None,
+            ImlAgentError::InvalidUriParts(ref err) => Some(err),
+            ImlAgentError::InvalidUri(ref err) => Some(err),
+            ImlAgentError::InvalidHeaderValue(ref err) => Some(err),
+            ImlAgentError::HyperError(ref err) => Some(err),
+            ImlAgentError::NativeTls(ref err) => Some(err),
+            ImlAgentError::UnexpectedStatusError => None,
         }
     }
 }
@@ -205,12 +222,6 @@ impl From<liblustreapi::error::LiblustreError> for ImlAgentError {
     }
 }
 
-impl From<csv::Error> for ImlAgentError {
-    fn from(err: csv::Error) -> Self {
-        ImlAgentError::CsvError(err)
-    }
-}
-
 impl From<Output> for ImlAgentError {
     fn from(output: Output) -> Self {
         ImlAgentError::CmdOutputError(output)
@@ -235,8 +246,41 @@ impl<T> From<futures::sync::mpsc::SendError<T>> for ImlAgentError {
     }
 }
 
-impl ToJsonValue for ImlAgentError {
-    fn to_json_value(&self) -> std::result::Result<serde_json::Value, String> {
-        Ok(serde_json::Value::String(format!("{:?}", self)))
+impl From<http::uri::InvalidUriParts> for ImlAgentError {
+    fn from(err: http::uri::InvalidUriParts) -> Self {
+        ImlAgentError::InvalidUriParts(err)
+    }
+}
+
+impl From<http::uri::InvalidUri> for ImlAgentError {
+    fn from(err: http::uri::InvalidUri) -> Self {
+        ImlAgentError::InvalidUri(err)
+    }
+}
+
+impl From<hyper::error::Error> for ImlAgentError {
+    fn from(err: hyper::error::Error) -> Self {
+        ImlAgentError::HyperError(err)
+    }
+}
+
+impl From<native_tls::Error> for ImlAgentError {
+    fn from(err: native_tls::Error) -> Self {
+        ImlAgentError::NativeTls(err)
+    }
+}
+
+impl From<http::header::InvalidHeaderValue> for ImlAgentError {
+    fn from(err: http::header::InvalidHeaderValue) -> Self {
+        ImlAgentError::InvalidHeaderValue(err)
+    }
+}
+
+impl serde::Serialize for ImlAgentError {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{:?}", self))
     }
 }

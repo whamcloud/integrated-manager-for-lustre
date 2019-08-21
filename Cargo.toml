@@ -1,2 +1,18 @@
 [workspace]
-members = ['iml-wire-types',  'iml-agent-comms', 'iml-rabbit', 'iml-manager-env', 'iml-agent', 'iml-services', 'liblustreapi-sys', 'liblustreapi', 'tokio-runtime-shutdown', 'iml-warp-drive']
+members = [
+    'iml-wire-types',
+    'iml-agent-comms',
+    'iml-rabbit',
+    'iml-manager-env',
+    'iml-agent',
+    'iml-services',
+    'liblustreapi-types',
+    'liblustreapi',
+    'tokio-runtime-shutdown',
+    'iml-warp-drive',
+    'iml-mailbox',
+    'iml-manager-cli',
+    'iml-manager-client',
+    'iml-fs',
+    'iml-postgres'
+]

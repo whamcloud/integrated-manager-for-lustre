@@ -19,6 +19,7 @@ jobs:
       spec: rust-iml.spec
       release: true
       branchref: refs/tags/v*r5.0
+      image: imlteam/copr-lustre
 
   # Wasm-Components Continuous Release to Prod Copr
   - template: template/azure-release.yml
@@ -31,3 +32,4 @@ jobs:
       crate: iml-wasm-components
       release: true
       branchref: refs/tags/v*r5.0
+      image: imlteam/copr-wasm

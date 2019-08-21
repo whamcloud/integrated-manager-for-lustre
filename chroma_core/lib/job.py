@@ -2,10 +2,11 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
+import json
 import django.db.models
 
 from chroma_core.services import log_register
+from chroma_core.lib.util import invoke_rust_agent, RustAgentCancellation
 from iml_common.lib.agent_rpc import agent_result
 
 job_log = log_register("job")
@@ -83,6 +84,7 @@ class DependOn(Dependable):
             depended_object = self.get_stateful_object()
         except:
             self.stateful_object.__class__._base_manager.get(pk=self.stateful_object.pk)
+
         satisfied = depended_object.state in self.acceptable_states
         if not satisfied:
             job_log.warning(
@@ -190,7 +192,32 @@ class Step(object):
             raise
 
     def invoke_rust_agent(self, host, command, args={}):
-        pass
+        """
+        Talks to the iml-action-runner service
+        """
+
+        return invoke_rust_agent(host, command, args, self._cancel_event)
+
+    def invoke_rust_agent_expect_result(self, host, command, args={}):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        try:
+            result = self.invoke_rust_agent(host, command, args)
+        except RustAgentCancellation as e:
+            raise AgentException(host, command, args, "Cancelled: {}".format(e))
+        except Exception as e:
+            raise AgentException(host, command, args, "Unexpected error: {}".format(e))
+
+        try:
+            result = json.loads(result)
+        except ValueError as e:
+            raise AgentException(host, command, args, "Error parsing json: {}".format(e))
+
+        if "Err" in result:
+            self.log(json.dumps(result["Err"], indent=2))
+            raise AgentException(host, command, args, result["Err"])
+
+        return result["Ok"]
 
     def invoke_agent_expect_result(self, host, command, args={}):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException

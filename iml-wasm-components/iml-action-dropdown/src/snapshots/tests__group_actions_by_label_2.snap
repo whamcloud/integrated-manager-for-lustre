@@ -1,52 +1,70 @@
 ---
-created: "2019-03-28T21:17:27.007551Z"
-creator: insta@0.7.4
-source: iml-action-dropdown/src/api_transforms.rs
+created: "2019-07-03T22:24:45.815246Z"
+creator: insta@0.8.1
+source: iml-action-dropdown/src/model.rs
 expression: "groups.get(&\"Label2\".to_string())"
 ---
 Some(
     [
-        AvailableAction {
-            args: Some(
-                ActionArgs {
-                    host_id: Some(
-                        2
-                    ),
-                    target_id: None
-                }
-            ),
-            composite_id: "62:2",
-            class_name: Some(
-                "RebootHostJob"
-            ),
-            confirmation: None,
-            display_group: 2,
-            display_order: 50,
-            long_description: "Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting.",
-            state: None,
-            verb: "Reboot"
-        },
-        AvailableAction {
-            args: Some(
-                ActionArgs {
-                    host_id: Some(
-                        2
-                    ),
-                    target_id: None
-                }
-            ),
-            composite_id: "62:2",
-            class_name: Some(
-                "ShutdownHostJob"
-            ),
-            confirmation: Some(
-                "Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted."
-            ),
-            display_group: 2,
-            display_order: 60,
-            long_description: "Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.",
-            state: None,
-            verb: "Shutdown"
-        }
-    ]
+        (
+            AvailableAction {
+                args: Some(
+                    ActionArgs {
+                        host_id: Some(
+                            2,
+                        ),
+                        target_id: None,
+                    },
+                ),
+                composite_id: "62:2",
+                class_name: Some(
+                    "RebootHostJob",
+                ),
+                confirmation: None,
+                display_group: 2,
+                display_order: 50,
+                long_description: "Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting.",
+                state: None,
+                verb: "Reboot",
+            },
+            Record {
+                content_type_id: 62,
+                id: 2,
+                label: "Label2",
+                hsm_control_params: None,
+                extra: None,
+            },
+        ),
+        (
+            AvailableAction {
+                args: Some(
+                    ActionArgs {
+                        host_id: Some(
+                            2,
+                        ),
+                        target_id: None,
+                    },
+                ),
+                composite_id: "62:2",
+                class_name: Some(
+                    "ShutdownHostJob",
+                ),
+                confirmation: Some(
+                    "Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.",
+                ),
+                display_group: 2,
+                display_order: 60,
+                long_description: "Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.",
+                state: None,
+                verb: "Shutdown",
+            },
+            Record {
+                content_type_id: 62,
+                id: 2,
+                label: "Label2",
+                hsm_control_params: None,
+                extra: None,
+            },
+        ),
+    ],
 )

@@ -711,7 +711,13 @@ class RemoveTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
 
         super(RemoveTargetJob, self).on_success()
 
@@ -739,7 +745,13 @@ class ForgetTargetJob(StateChangeJob):
         return True
 
     def on_success(self):
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.target.id)
+
         _delete_target(self.target)
+
+        for m in mounts:
+            m.mark_deleted()
+            m.save()
 
         super(ForgetTargetJob, self).on_success()
 
@@ -1439,7 +1451,7 @@ class UpdateManagedTargetMount(Step):
             mtm.volume_node = util.wait_for_result(
                 lambda: VolumeNode.objects.get(host=host, path=filesystem.mount_path(target.name)),
                 logger=job_log,
-                timeout=60 * 60,
+                timeout=60 * 10,
                 expected_exception_classes=[VolumeNode.DoesNotExist],
             )
 

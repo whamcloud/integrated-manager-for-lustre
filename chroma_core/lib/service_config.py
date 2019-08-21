@@ -15,6 +15,7 @@ import json
 import glob
 import shutil
 import errno
+import requests
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline
@@ -42,6 +43,7 @@ from chroma_core.lib.util import CommandLine, CommandError
 from iml_common.lib.ntp import NTPConfig
 from iml_common.lib.firewall_control import FirewallControl
 from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
+from iml_common.lib.util import wait_for_result
 
 log = logging.getLogger("installation")
 try:
@@ -79,7 +81,7 @@ class ServiceConfig(CommandLine):
         try:
             hostname = socket.gethostname()
         except socket.error:
-            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname esolution.")
+            log.error("Error: Unable to get the servers hostname. " "Please correct the hostname resolution.")
             return False
 
         if hostname == "localhost":
@@ -128,7 +130,7 @@ class ServiceConfig(CommandLine):
             return False
 
     def print_usage_message(self):
-        rc, out, err = self.try_shell(["man", "-P", "cat", "chroma-config"])
+        _, out, _ = self.try_shell(["man", "-P", "cat", "chroma-config"])
 
         return out
 
@@ -215,15 +217,19 @@ class ServiceConfig(CommandLine):
                 log.error("firewall command failed:\n%s" % error)
                 raise RuntimeError("Failure when opening port in firewall for ntpd: %s" % error)
 
+        log.info("Disabling chrony if active")
+        chrony_service = ServiceControl.create("chronyd")
+        chrony_service.stop(validate_time=0.5)
+        chrony_service.disable()
+
         log.info("Restarting ntp")
         ntp_service = ServiceControl.create("ntpd")
-
+        ntp_service.enable()
         error = ntp_service.restart()
+
         if error:
             log.error(error)
             raise RuntimeError(error)
-
-        ntp_service.enable()
 
     def _rabbit_configured(self):
         # Data message should be forwarded to AMQP
@@ -286,6 +292,96 @@ class ServiceConfig(CommandLine):
         # Enable use of the management plugin if its available, else this tag is just ignored.
         self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", settings.AMQP_BROKER_USER, "management"])
 
+    def _setup_influxdb(self):
+        influx_service = ServiceControlEL7("influxdb")
+
+        log.info("Starting InfluxDB...")
+        error = influx_service.enable()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = influx_service._stop()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        error = influx_service._start()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+
+        # Wait for influx to finish starting
+        wait_for_result(
+            lambda: self.try_shell(["influx", "-execute", "exit"]),
+            logger=log,
+            timeout=60,
+            expected_exception_classes=[CommandError],
+        )
+
+        log.info("Creating InfluxDB database...")
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
+
+    def _setup_grafana(self):
+        cfg_file = "/etc/sysconfig/grafana-server"
+        if os.path.exists("%s.dist" % cfg_file):
+            return
+        shutil.copy2(cfg_file, "%s.dist" % cfg_file)
+        with open(cfg_file, "a") as fn:
+            fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
+
+        # grafana needs daemon-reload before enable and start
+        ServiceControlEL7.daemon_reload()
+        service = ServiceControl.create("grafana-server")
+        error = service.enable()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+        if service.running:
+            service.stop()
+        error = service.start()
+        if error:
+            log.error(error)
+            raise RuntimeError(error)
+
+        # Add Datasources
+        url = "http://localhost:3000/api/datasources"
+        headers = {"X-WEBAUTH-USER": "admin"}
+        urlname = "{}/id/{}".format(url, "iml-postgres")
+        r = requests.get(urlname, headers=headers)
+        if not r.ok:
+            db = settings.DATABASES["default"]
+            resp = requests.post(
+                url,
+                headers=headers,
+                json={
+                    "name": "iml-postgres",
+                    "type": "postgres",
+                    "access": "proxy",
+                    "user": db["USER"],
+                    "password": db["PASSWORD"],
+                    "database": db["NAME"],
+                    "url": ":".join((x for x in [db["HOST"], db["PORT"]] if x)) or "localhost",
+                    "jsonData": {"sslmode": "disable"},
+                },
+            )
+        for db in [settings.INFLUXDB_IML_DB, settings.INFLUXDB_STRATAGEM_SCAN_DB]:
+            name = "iml-influx-{}".format(db)
+            urlname = "{}/id/{}".format(url, name)
+            r = requests.get(urlname, headers=headers)
+            if not r.ok:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "name": name,
+                        "type": "influxdb",
+                        "database": db,
+                        "url": "http://localhost:8086",
+                        "jsonData": {"httpMode": "GET"},
+                        "access": "proxy",
+                    },
+                )
+
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
             os.makedirs(settings.CRYPTO_FOLDER)
@@ -310,8 +406,12 @@ class ServiceConfig(CommandLine):
         "iml-view-server.service",
         "iml-realtime.service",
         "iml-warp-drive.service",
-        "device-aggregator.socket",
+        "device-aggregator.service",
         "iml-srcmap-reverse.socket",
+        "iml-mailbox.service",
+        "iml-action-runner.service",
+        "iml-agent-comms.service",
+        "iml-stratagem.service",
     ]
 
     def _enable_services(self):
@@ -338,7 +438,7 @@ class ServiceConfig(CommandLine):
                 else:
                     error = controller.reload()
             else:
-                error = controller.start()
+                error = controller.start(validate_time=0.5)
             if error:
                 log.error(error)
                 raise RuntimeError(error)
@@ -348,7 +448,7 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             controller = ServiceControl.create(service)
 
-            error = controller.stop()
+            error = controller.stop(validate_time=0.5)
             if error:
                 log.error(error)
                 raise RuntimeError(error)
@@ -361,21 +461,29 @@ class ServiceConfig(CommandLine):
                 log.error("stdout:\n%s" % out)
                 log.error("stderr:\n%s" % err)
                 raise CommandError("service postgresql initdb", rc, out, err)
-            return
-        # Only mess with auth if we've freshly initialized the db
+        # Always fixup postgres auth
         self._config_pgsql_auth(database)
 
     @staticmethod
     def _config_pgsql_auth(database):
         auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
-        os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
+        if not os.path.exists("%s.dist" % auth_cfg_file):
+            os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
         with open(auth_cfg_file, "w") as cfg:
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database["USER"])
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
+            # Allow grafana to connect (as chroma) with no password
+            cfg.write("host\tall\t%s\tlocalhost\ttrust\n" % database["USER"])
 
     PathStats = namedtuple("PathStats", ["total", "used", "free"])
+
+    def _try_psql_sql(self, sql):
+        return self.try_shell(["su", "postgres", "-c", 'psql -tAc "%s"' % sql])
+
+    def _psql_sql(self, sql):
+        return self.shell(["su", "postgres", "-c", 'psql -tAc "%s"' % sql])
 
     def _path_space(self, path):
         """Returns the disk statistics of the given path.
@@ -404,17 +512,23 @@ class ServiceConfig(CommandLine):
             log.error(error_msg)
             return error_msg
 
+    def _restart_pgsql(self):
+        postgresql_service = ServiceControl.create("postgresql")
+        if postgresql_service.running:
+            postgresql_service.reload()
+        else:
+            postgresql_service.start()
+        postgresql_service.enable()
+
     def _setup_pgsql(self, database, check_db_space):
         log.info("Setting up PostgreSQL service...")
 
         self._init_pgsql(database)
 
-        postgresql_service = ServiceControl.create("postgresql")
-        postgresql_service.restart()
-        postgresql_service.enable()
+        self._restart_pgsql()
 
         tries = 0
-        while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
+        while self._psql_sql("\\d")[0] != 0:
             if tries >= 4:
                 raise RuntimeError("Timed out waiting for PostgreSQL service to start")
             tries += 1
@@ -429,20 +543,12 @@ class ServiceConfig(CommandLine):
             log.info("Creating database owner '%s'...\n" % database["USER"])
 
             # Enumerate existing roles
-            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select " "rolname from pg_roles;'"])
+            _, roles_str, _ = self._try_psql_sql("select rolname from pg_roles")
             roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
 
             # Create database['USER'] role if not found
             if not database["USER"] in roles:
-                self.try_shell(
-                    [
-                        "su",
-                        "postgres",
-                        "-c",
-                        "psql -c 'CREATE ROLE %s NOSUPERUSER "
-                        "CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database["USER"],
-                    ]
-                )
+                self._try_psql_sql("CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;" % database["USER"])
 
             log.info("Creating database '%s'...\n" % database["NAME"])
             self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database["USER"], database["NAME"])])
@@ -529,17 +635,24 @@ class ServiceConfig(CommandLine):
 
     def _setup_database(self, check_db_space):
         error = None
-        if not self._db_accessible():
-            # For the moment use the builtin configuration
-            # TODO: this is where we would establish DB name and credentials
-            databases = settings.DATABASES
+        # For the moment use the builtin configuration
+        # TODO: this is where we would establish DB name and credentials
+        databases = settings.DATABASES
 
+        if not self._db_accessible():
             error = self._setup_pgsql(databases["default"], check_db_space)
+
         else:
-            log.info("DB already accessible")
+            log.info("Postgres already accessible")
+            self._config_pgsql_auth(databases["default"])
+            self._restart_pgsql()
 
         if error:
             return error
+
+        _, out, _ = self._try_psql_sql("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'grafana'")
+        if "grafana" not in out:
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s grafana;" % (databases["default"]["USER"])])
 
         self._syncdb()
 
@@ -607,10 +720,11 @@ class ServiceConfig(CommandLine):
             "REALTIME_PROXY_PASS",
             "VIEW_SERVER_PROXY_PASS",
             "WARP_DRIVE_PROXY_PASS",
+            "MAILBOX_PROXY_PASS",
             "SSL_PATH",
             "DEVICE_AGGREGATOR_PORT",
-            "UPDATE_HANDLER_PROXY_PASS",
             "DEVICE_AGGREGATOR_PROXY_PASS",
+            "UPDATE_HANDLER_PROXY_PASS",
             "SRCMAP_REVERSE_PROXY_PASS",
         ]
 
@@ -707,6 +821,8 @@ proxy=_none_
 
         self.set_nginx_config()
 
+        self._setup_influxdb()
+
         error = self._setup_database(check_db_space)
         if check_db_space and error:
             return [error]
@@ -720,7 +836,10 @@ proxy=_none_
         self._setup_crypto()
 
         self._setup_rabbitmq_service()
+
         self._setup_rabbitmq_credentials()
+
+        self._setup_grafana()
 
         self._enable_services()
         self._start_services()
@@ -738,9 +857,7 @@ proxy=_none_
 
     @staticmethod
     def _service_config(interesting_services=None):
-        """Interrogate the current status of services, it should be noted that el7 calls to
-        systemctl through ServiceControl will redirect to chkconfig if the specified service is
-        not native (SysV style init as opposed to systemd unit init file)
+        """Interrogate the current status of services
         """
         log.info("Checking service configuration...")
 
@@ -761,7 +878,11 @@ proxy=_none_
             errors.append("No user accounts exist")
 
         # Check services are active
-        interesting_services = self.MANAGER_SERVICES + self.CONTROLLED_SERVICES + ["postgresql", "rabbitmq-server"]
+        interesting_services = (
+            self.MANAGER_SERVICES
+            + self.CONTROLLED_SERVICES
+            + ["postgresql", "rabbitmq-server", "influxdb", "grafana-server"]
+        )
 
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
@@ -865,8 +986,18 @@ def register_profile(profile_file):
         kwargs["name"] = data["name"]
         profile = ServerProfile.objects.create(**kwargs)
 
+    # Remove absent repos
+    for repo in profile.repolist.all():
+        if repo.repo_name not in data["repolist"]:
+            profile.repolist.remove(repo)
+
     for name in data["repolist"]:
         profile.repolist.add(Repo.objects.get(repo_name=name))
+
+    # Remove absent packages
+    for package_name in profile.packages:
+        if package_name not in data["packages"]:
+            ServerProfilePackage.objects.filter(server_profile=profile, package_name=package_name).delete()
 
     for package_name in data["packages"]:
         ServerProfilePackage.objects.get_or_create(server_profile=profile, package_name=package_name)
@@ -998,6 +1129,7 @@ def chroma_config():
         else:
             log.info("\nContainer setup complete.")
             sys.exit(0)
+
     elif command == "dbsetup":
         if "--no-dbspace-check" in sys.argv:
             check_db_space = False
@@ -1006,6 +1138,7 @@ def chroma_config():
             check_db_space = True
 
         service_config._setup_database(check_db_space)
+
     elif command == "validate":
         errors = service_config.validate()
         print_errors(errors)
@@ -1013,41 +1146,77 @@ def chroma_config():
             sys.exit(1)
         else:
             sys.exit(0)
+
     elif command == "stop":
         service_config.stop()
+
     elif command == "start":
         service_config.start()
+
     elif command == "restart":
         service_config.stop()
         service_config.start()
+
     elif command == "repos":
+
+        def repos_usage():
+            print("usage: repos [scan|help|register REPOFILE|delete REPONAME|install REPONAME TARBALL]")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            repos_usage()
+
         operation = sys.argv[2]
-        if operation == "scan":
+        if operation == "help":
+            repos_usage()
+
+        elif operation == "scan":
             service_config.scan_repos()
+
         elif operation == "register":
             register_repo(sys.argv[3])
+
         elif operation == "delete":
             service_config.delete_repo(sys.argv[3])
+
         elif operation == "install":
             service_config.install_repo(sys.argv[3], sys.argv[4])
+
         else:
             raise NotImplementedError(operation)
+
     elif command == "profile":
+
+        def profile_usage():
+            print("usage: profile [register|delete|default] PROFILE")
+            sys.exit(0)
+
+        if len(sys.argv) < 3:
+            profile_usage()
+
         operation = sys.argv[2]
-        if operation == "register":
+        if operation == "help":
+            profile_usage()
+
+        elif operation == "register":
             try:
                 register_profile(open(sys.argv[3]))
             except IOError:
-                print("Error opening %s" % sys.argv[3])
+                log.error("Error opening %s" % sys.argv[3])
                 sys.exit(-1)
+
         elif operation == "delete":
             delete_profile(sys.argv[3])
+
         elif operation == "default":
             default_profile(sys.argv[3])
+
         else:
             raise NotImplementedError(operation)
+
     elif command == "clearsessions":
         service_config.clear_sessions()
+
     else:
         log.error("Invalid command '%s'" % command)
         sys.exit(-1)

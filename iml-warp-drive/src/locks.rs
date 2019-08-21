@@ -2,15 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::future::Future;
-use std::collections::{HashMap, HashSet};
-
 use crate::request::Request;
+use futures::future::Future;
 use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, create_channel, declare_transient_exchange,
     declare_transient_queue, purge_queue, TcpChannel, TcpChannelFuture, TcpClient,
 };
+use iml_wire_types::{LockAction, LockChange, ToCompositeId};
 use lapin_futures::{channel::BasicConsumeOptions, queue::Queue};
+use std::collections::{HashMap, HashSet};
 
 /// Declares the exchange for rpc comms
 fn declare_rpc_exchange(c: TcpChannel) -> impl TcpChannelFuture {
@@ -63,42 +63,9 @@ pub fn create_locks_consumer(
         .map_err(failure::Error::from)
 }
 
-/// The type of lock
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-#[serde(rename_all = "lowercase")]
-enum LockType {
-    Read,
-    Write,
-}
-
-/// The Action associated with a `LockChange`
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-#[serde(rename_all = "lowercase")]
-enum Action {
-    Add,
-    Remove,
-}
-
-/// A change to be applied to `Locks`
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct LockChange {
-    job_id: u64,
-    content_type_id: u64,
-    item_id: u64,
-    description: String,
-    lock_type: LockType,
-    action: Action,
-}
-
-impl LockChange {
-    fn id(&self) -> String {
-        format!("{}:{}", self.content_type_id, self.item_id)
-    }
-}
-
 /// Need to wrap `LockChange` with this, because it's how
 /// the RPC layer in IML returns RPC calls.
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq)]
 pub struct Response {
     pub exception: Option<String>,
     pub result: Locks,
@@ -108,7 +75,7 @@ pub struct Response {
 /// Variants that can appear over the locks queue
 /// Currently can either reset the `Locks` state as
 /// a whole, or add / remove locks from it.
-#[derive(serde_derive::Deserialize, serde_derive::Serialize, Debug, Eq, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum Changes {
     Locks(Response),
@@ -121,7 +88,7 @@ pub type Locks = HashMap<String, HashSet<LockChange>>;
 /// Add a new lock to `Locks`
 pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
     locks
-        .entry(lock_change.id())
+        .entry(lock_change.composite_id().to_string())
         .or_insert_with(HashSet::new)
         .insert(lock_change);
 
@@ -131,7 +98,7 @@ pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
 /// Remove a lock from `Locks` if it exists
 pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
     locks
-        .entry(lock_change.id())
+        .entry(lock_change.composite_id().to_string())
         .and_modify(|xs: &mut HashSet<LockChange>| {
             xs.retain(|x| x.description != lock_change.description)
         });
@@ -144,7 +111,7 @@ pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
 /// Update `Locks` based on a change. Will either attempt an add or remove.
 pub fn update_locks(locks: &mut Locks, lock_change: LockChange) {
     match lock_change.action {
-        Action::Add => add_lock(locks, lock_change),
-        Action::Remove => remove_lock(locks, &lock_change),
+        LockAction::Add => add_lock(locks, lock_change),
+        LockAction::Remove => remove_lock(locks, &lock_change),
     };
 }

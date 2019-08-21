@@ -23,6 +23,8 @@ APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
 
+MAILBOX_PATH = "/var/spool/iml/mailbox"
+
 HTTP_FRONTEND_PORT = 80
 
 HTTPS_FRONTEND_PORT = os.getenv("HTTPS_FRONTEND_PORT", 443)
@@ -53,13 +55,21 @@ WARP_DRIVE_PORT = 8890
 
 WARP_DRIVE_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, WARP_DRIVE_PORT)
 
+MAILBOX_PORT = 8891
+
+INFLUXDB_IML_DB = "iml"
+
+INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
+
+MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
+
 SSL_PATH = "/var/lib/chroma"
 
 DEVICE_AGGREGATOR_PORT = 8008
 
-UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
+DEVICE_AGGREGATOR_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
 
-DEVICE_AGGREGATOR_PROXY_PASS = "http://unix:/var/run/device-aggregator.sock"
+UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
 
 SRCMAP_REVERSE_PROXY_PASS = "http://unix:/var/run/iml-srcmap-reverse.sock"
 
@@ -314,10 +324,6 @@ SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
-
-DEVICE_AGGREGATOR_URL = os.getenv(
-    "DEVICE_AGGREGATOR_URL", "http://{}:{}/device-aggregator".format(PROXY_HOST, DEVICE_AGGREGATOR_PORT)
-)
 
 # Supported power control agents
 SUPPORTED_FENCE_AGENTS = ["fence_apc", "fence_apc_snmp", "fence_ipmilan", "fence_virsh", "fence_vbox"]

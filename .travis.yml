@@ -53,6 +53,8 @@ jobs:
       name: "Service tests"
       script:
         - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
+        - docker exec -i systemd yum -y install make sed
+        - docker exec -i systemd make -C ./integrated-manager-for-lustre/ substs
         - docker exec -i systemd bash -c "./integrated-manager-for-lustre/tests/framework/services/runner.sh"
     - stage: test
       name: "Format Check"
@@ -77,9 +79,7 @@ jobs:
         - export SPEC=python-iml-manager.spec
         - export SRPM_TASK=iml-srpm
         - docker run -it -e OWNER="$OWNER" -e PROJECT="$PROJECT" -e PACKAGE="$PACKAGE" -e SPEC="$SPEC" -e SRPM_TASK="$SRPM_TASK" -e KEY="$encrypted_253525cedcf6_key" -e IV="$encrypted_253525cedcf6_iv" -v $(pwd):/build:rw imlteam/copr
-    - stage: cd
-      git:
-        depth: 999999
+    - stage: docker-publish
       name: "Continuous Deployment (Docker)"
       script:
         - sudo rm /usr/local/bin/docker-compose
@@ -109,5 +109,7 @@ stages:
   - test
   - name: cd
     if: branch = master AND type = push AND fork = false
+  - name: docker-publish
+    if: env(DOCKER_BUILD) IS present AND branch = master
   - name: deploy-copr-r5.0
     if: branch =~ ^v\d+\.\d+\.\d+-.+-r5\.0$

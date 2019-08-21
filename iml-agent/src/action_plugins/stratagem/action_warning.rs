@@ -2,82 +2,110 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::ImlAgentError;
-use csv;
-use libc;
-use std::ffi::CStr;
-use std::io;
+use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
 
-#[derive(Debug, serde::Serialize)]
-#[serde(rename_all = "SCREAMING-KEBAB-CASE")]
-struct Record<'a> {
-    path: String,
-    user: String,
-    uid: u32,
-    gid: u32,
-    atime: i64,
-    mtime: i64,
-    ctime: i64,
-    fid: &'a str,
+use futures::{
+    future::{self, join_all, poll_fn},
+    Future, Sink, Stream,
+};
+use liblustreapi::LlapiFid;
+use std::{io, path::PathBuf};
+use tokio_threadpool::blocking;
+
+/// Runs `fid2path` on the incoming `String`.
+/// Any error during `fid2path` is logged but does not return the associated Error
+fn fid2path(
+    llapi: LlapiFid,
+    fid: String,
+) -> impl Future<Item = Option<String>, Error = ImlAgentError> {
+    poll_fn(move || {
+        blocking(|| llapi.fid2path(&fid)).map_err(|_| panic!("the threadpool shut down"))
+    })
+    .and_then(std::convert::identity)
+    .then(|r| match r {
+        Ok(x) => future::ok(Some(x)),
+        Err(e) => {
+            log::error!("Could not resolve fid: {}", e);
+            future::ok(None)
+        }
+    })
 }
 
-fn fid2record<'a>(mntpt: &String, fid: &'a String) -> Result<Record<'a>, ImlAgentError> {
-    let path = match liblustreapi::fid2path(&mntpt, &fid) {
-        Ok(p) => p,
-        Err(e) => {
-            log::error!("Failed to fid2path: {}: {}", fid, e);
-            return Err(e.into());
-        }
-    };
-
-    let pb: std::path::PathBuf = [&mntpt, &path].iter().collect();
-    let fullpath = pb.to_str().unwrap();
-    let stat = liblustreapi::mdc_stat(&fullpath).map_err(|e| {
-        log::error!("Failed to mdc_stat({}) => {:?}", fullpath, e);
-        e
-    })?;
-    let user = unsafe {
-        let pwent = libc::getpwuid(stat.st_uid);
-        if pwent.is_null() {
-            log::error!("Failed to getpwuid({})", stat.st_uid);
-
-            return Err(io::Error::from(io::ErrorKind::NotFound).into());
-        }
-        CStr::from_ptr((*pwent).pw_name).to_str()?
-    };
-    Ok(Record {
-        path: path.to_string(),
-        user: user.to_string(),
-        uid: stat.st_uid,
-        gid: stat.st_gid,
-        atime: stat.st_atime,
-        mtime: stat.st_mtime,
-        ctime: stat.st_ctime,
-        fid: &fid,
+fn search_rootpath(device: String) -> impl Future<Item = LlapiFid, Error = ImlAgentError> {
+    poll_fn(move || {
+        blocking(|| LlapiFid::create(&device)).map_err(|_| panic!("the threadpool shut down"))
     })
+    .and_then(std::convert::identity)
+    .from_err()
 }
 
 pub fn write_records(
     device: &str,
     args: impl IntoIterator<Item = String>,
-    out: impl io::Write,
+    mut wtr: impl io::Write,
 ) -> Result<(), ImlAgentError> {
-    let mntpt = liblustreapi::search_rootpath(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {:?}", device, e);
+    let llapi = LlapiFid::create(&device).map_err(|e| {
+        log::error!("Failed to find rootpath({}) -> {}", device, e);
         e
     })?;
 
-    let mut wtr = csv::Writer::from_writer(out);
-
     for fid in args {
-        let rec = match fid2record(&mntpt, &fid) {
-            Ok(r) => r,
-            Err(_e) => continue,
-        };
-        wtr.serialize(rec)?;
+        let rec = llapi.fid2path(&fid)?;
+        wtr.write_all(rec.as_bytes())?;
     }
 
     wtr.flush()?;
 
     Ok(())
+}
+
+/// Read mailbox and build a file of files. return pathname of generated file
+pub fn read_mailbox(
+    (fsname_or_mntpath, mailbox): (String, String),
+) -> impl Future<Item = PathBuf, Error = ImlAgentError> {
+    let mut txt_path: PathBuf = PathBuf::from(env::get_var_else("REPORT_DIR", "/tmp"));
+    txt_path.push(mailbox.to_string());
+    txt_path.set_extension("txt");
+
+    let s = mailbox_client::get(mailbox)
+        .filter_map(|x| {
+            x.trim()
+                .split(' ')
+                .filter(|x| x != &"")
+                .last()
+                .map(|x| fidlist::FidListItem::new(x.into()))
+        })
+        .chunks(1000);
+
+    iml_fs::file_write_bytes(txt_path.clone())
+        .from_err()
+        .and_then(|f| search_rootpath(fsname_or_mntpath).map(|llapi| (llapi, f)))
+        .and_then(|(llapi, f)| {
+            let mntpt = llapi.mntpt();
+
+            let s2 = s
+                .and_then(move |xs| {
+                    let llapi2 = llapi.clone();
+
+                    join_all(xs.into_iter().map(move |x| fid2path(llapi2.clone(), x.fid)))
+                })
+                .inspect(|_| log::debug!("Resolved 1000 Fids"))
+                .map(move |xs| {
+                    xs.into_iter()
+                        .filter_map(std::convert::identity)
+                        .map(|x| format!("{}/{}", mntpt, x))
+                        .collect()
+                })
+                .map(|xs: Vec<String>| -> bytes::BytesMut { xs.join("\n").into() })
+                .map(|mut x: bytes::BytesMut| {
+                    if !x.is_empty() {
+                        x.extend_from_slice(b"\n");
+                    }
+
+                    x.freeze()
+                });
+
+            f.sink_from_err().send_all(s2).map(drop)
+        })
+        .map(move |_| txt_path)
 }

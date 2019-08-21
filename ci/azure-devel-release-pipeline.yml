@@ -19,6 +19,7 @@ jobs:
       spec: rust-iml.spec
       release: false
       branchref: refs/heads/master
+      image: imlteam/copr-lustre
 
   # Wasm-Components Continuous Release to Devel Copr
   - template: template/azure-release.yml
@@ -31,3 +32,4 @@ jobs:
       crate: iml-wasm-components
       release: false
       branchref: refs/heads/master
+      image: imlteam/copr-wasm

@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 type Kwargs = HashMap<String, String>;
 
-#[derive(serde_derive::Serialize, serde_derive::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Request {
     request_id: String,
     pub response_routing_key: String,

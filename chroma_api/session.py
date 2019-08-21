@@ -9,9 +9,9 @@ from collections import defaultdict
 
 import django.contrib.auth as auth
 
-from chroma_api.authentication import CsrfAuthentication
+from chroma_api.authentication import CsrfAuthentication, AnonymousAuthentication
 from chroma_api.validation_utils import validate
-from tastypie.authorization import Authorization
+from tastypie.authorization import Authorization, ReadOnlyAuthorization
 from tastypie.resources import Resource
 from tastypie import fields
 from tastypie import http
@@ -135,5 +135,52 @@ class SessionResource(Resource):
             # Anonymous user
             user = None
         bundle = self.build_bundle(obj=Session(user), request=request)
+        bundle = self.full_dehydrate(bundle)
+        return self.create_response(request, bundle)
+
+
+class Auth:
+    def __init__(self, user=None):
+        self.user = user
+
+
+class AuthResource(Resource):
+    """
+    Success / failure of current session being existant
+    """
+
+    user = fields.ToOneField("chroma_api.user.UserResource", "user", full=True, null=True, help_text="A user object")
+
+    class Meta:
+        class_object = Auth
+        authentication = AnonymousAuthentication()
+        authorization = ReadOnlyAuthorization()
+        list_allowed_methods = ["get"]
+        detail_allowed_methods = []
+        resource_name = "auth"
+
+    def get_resource_uri(self, bundle=None, url_name=None):
+        return Resource.get_resource_uri(self)
+
+    def get_list(self, request=None, **kwargs):
+        """Dictionary of session objects (esp. any logged in user).
+
+        This method also always includes a session and CSRF cookie,
+        so it can be used by clients to set up a session before
+        authenticating.
+        """
+        # Calling get_token to ensure outgoing responses
+        # get a csrftoken cookie appended by CsrfViewMiddleware
+        import django.middleware.csrf
+
+        django.middleware.csrf.get_token(request)
+
+        user = request.user
+        if not user.is_authenticated():
+            error = {"__all__": "Authentication Failed."}
+            resp = self.create_response(request, error, response_class=http.HttpUnauthorized)
+            raise ImmediateHttpResponse(response=resp)
+
+        bundle = self.build_bundle(obj=Auth(user), request=request)
         bundle = self.full_dehydrate(bundle)
         return self.create_response(request, bundle)

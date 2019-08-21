@@ -4,10 +4,7 @@ DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
 DIST_DEPS     := version $(COPR_REPO_TARGETS)
 
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-5.0
-MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
-MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
-
+# SET MFL_COPR_REPO in .copr/Makefile
 TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
 	          --exclude=chroma-\*/myenv\*              \
 	          --exclude=chroma_test_env                \
@@ -37,13 +34,6 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
-MFL_REPO_NAME := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
-
-COPR_REPO_TARGETS := tests/framework/utils/defaults.sh tests/framework/chroma_support.repo
-
-SUBSTS := $(COPR_REPO_TARGETS)
-
 all: copr-rpms rpms
 
 rpms:
@@ -52,7 +42,7 @@ rpms:
 
 copr-rpms:
 	$(MAKE) -f .copr/Makefile srpm outdir=.
-	rpmbuild -D "_topdir $(pwd)/_topdir" -bb _topdir/SPECS/rust-iml.spec
+	rpmbuild -D "_topdir $(CURDIR)/_topdir" -bb _topdir/SPECS/rust-iml.spec
 
 cleandist:
 	rm -rf dist
@@ -112,15 +102,6 @@ feature_tests:
 
 tests test: unit_tests feature_tests integration_tests service_tests
 
-tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
-
-tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
-
-$(COPR_REPO_TARGETS):
-	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
-	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
-	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
-
 install_requirements: requirements.txt
 	echo "jenkins_fold:start:Install Python requirements"
 	pip install --upgrade pip;                              \
@@ -130,7 +111,8 @@ install_requirements: requirements.txt
 
 download: install_requirements
 
-substs: $(SUBSTS)
+substs:
+	$(MAKE) -f .copr/Makefile substs outdir=.
 
 clean_substs:
 	if [ -n "$(SUBSTS)" ]; then \
@@ -243,18 +225,16 @@ reset_cluster: destroy_cluster create_cluster
 install_production: reset_cluster
 	bash -x scripts/install_dev_cluster
 
-tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in: substs
-
 # To run a specific test:
 # make TESTS=tests/integration/shared_storage_configuration/test_example_api_client.py:TestExampleApiClient.test_login ssi_tests
 # set NOSE_ARGS="-x" to stop on the first failure
-ssi_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+ssi_tests: substs
 	tests/framework/integration/shared_storage_configuration/full_cluster/jenkins_steps/main $@
 
-upgrade_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+upgrade_tests: substs
 	tests/framework/integration/installation_and_upgrade/jenkins_steps/main $@
 
-efs_tests: tests/framework/utils/defaults.sh chroma-bundles/chroma_support.repo.in
+efs_tests: substs
 	tests/framework/integration/existing_filesystem_configuration/jenkins_steps/main $@
 
 chroma_test_env: chroma_test_env/bin/activate

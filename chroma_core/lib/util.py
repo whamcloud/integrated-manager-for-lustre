@@ -9,6 +9,11 @@ import logging
 import time
 import settings
 import re
+import uuid
+import requests_unixsocket
+from threading import Thread
+from threading import Event
+
 
 # We use an integer for time and record microseconds.
 SECONDSTOMICROSECONDS = 1000000
@@ -43,6 +48,17 @@ def sizeof_fmt_detailed(num):
         num /= 1024.0
 
     return int(num)
+
+
+def target_label_split(label):
+    """
+    Split a target label into a tuple of it's parts: (fsname, target type, index)
+    """
+    a = label.rsplit("-", 1)
+    if len(a) == 1:
+        # MGS
+        return (None, a[0][0:3], None)
+    return (a[0], a[1][0:3], int(a[1][3:], 16))
 
 
 class timeit(object):
@@ -207,3 +223,54 @@ def normalize_nid(string):
         string = string[:i] + string[i + 1 :]
 
     return string
+
+
+class RustAgentCancellation(Exception):
+    pass
+
+
+def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
+    """
+    Talks to the iml-action-runner service
+    """
+
+    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+
+    request_id = uuid.uuid4()
+
+    trigger = Event()
+
+    class ActionResult:
+        ok = None
+        error = None
+
+    def start_action(ActionResult, trigger):
+        try:
+            ActionResult.ok = requests_unixsocket.post(
+                SOCKET_PATH,
+                json=(host, {"type": "ACTION_START", "action": command, "args": args, "id": str(request_id)}),
+            ).content
+        except Exception as e:
+            ActionResult.error = e
+        finally:
+            trigger.set()
+
+    t = Thread(target=start_action, args=(ActionResult, trigger))
+
+    t.start()
+
+    # Wait for action completion, waking up every second to
+    # check cancel_event
+    while True:
+        if cancel_event.is_set():
+            requests_unixsocket.post(SOCKET_PATH, json=(host, {"type": "ACTION_CANCEL", "id": str(request_id)})).content
+            raise RustAgentCancellation()
+        else:
+            trigger.wait(timeout=1.0)
+            if trigger.is_set():
+                break
+
+    if ActionResult.error is not None:
+        raise ActionResult.error
+    else:
+        return ActionResult.ok

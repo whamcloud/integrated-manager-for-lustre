@@ -14,6 +14,7 @@ Wants=iml-realtime.service
 Wants=iml-view-server.service
 Wants=iml-agent-comms.service
 Wants=iml-stratagem.service
+Wants=iml-mailbox.service
 Wants=iml-action-runner.service
 Wants=iml-update-handler.socket
 Wants=iml-srcmap-reverse.socket
@@ -21,10 +22,12 @@ Wants=iml-warp-drive.service
 Wants=nginx.service
 Wants=rabbitmq-server.service
 Wants=postgresql.service
-Wants=device-aggregator.socket
+Wants=device-aggregator.service
 After=postgresql.service
 After=rabbitmq-server.service
 After=iml-settings-populator.service
+After=iml-agent-comms.service
+After=iml-action-runner.service
 After=network.target
 
 [Install]

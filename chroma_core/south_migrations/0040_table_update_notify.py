@@ -61,13 +61,13 @@ FOR EACH ROW EXECUTE PROCEDURE table_%(function_name)s_update_notify();
 """)
 
 backward_trigger_template = fill_template("""
-DROP TRIGGER %(name)s_notify_update
+DROP TRIGGER IF EXISTS %(name)s_notify_update
 ON %(name)s;
 
-DROP TRIGGER %(name)s_notify_insert
+DROP TRIGGER IF EXISTS %(name)s_notify_insert
 ON %(name)s;
 
-DROP TRIGGER %(name)s_notify_delete
+DROP TRIGGER IF EXISTS %(name)s_notify_delete
 ON %(name)s;
 
 """)
@@ -153,7 +153,7 @@ class Migration(SchemaMigration):
         db.execute(forward_function_str + forward_trigger_str)
 
     def backwards(self, orm):
-        db.execute(backward_function_str + backward_trigger_str)
+        db.execute(backward_trigger_str + backward_function_str)
 
     models = {
         'auth.group': {

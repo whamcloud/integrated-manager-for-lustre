@@ -5,6 +5,7 @@
 use std::{
     env,
     net::{SocketAddr, ToSocketAddrs},
+    path::PathBuf,
 };
 
 /// Get the environment variable or panic
@@ -26,6 +27,13 @@ fn to_socket_addr(host: &str, port: &str) -> SocketAddr {
     addrs_iter
         .next()
         .expect("Could not convert to a SocketAddr")
+}
+
+fn empty_str_to_none(x: String) -> Option<String> {
+    match x.as_ref() {
+        "" => None,
+        _ => Some(x),
+    }
 }
 
 /// Get the broker user from the env or panic
@@ -72,11 +80,56 @@ pub fn get_addr() -> SocketAddr {
     to_socket_addr(&get_host(), &get_port())
 }
 
-/// Get the server port from the env or panic
+/// Get the warp drive port from the env or panic
 pub fn get_warp_drive_port() -> String {
     get_var("WARP_DRIVE_PORT")
 }
 
+/// Get the warp drive address from the env or panic
 pub fn get_warp_drive_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_warp_drive_port())
+}
+
+/// Get the mailbox port from the env or panic
+pub fn get_mailbox_port() -> String {
+    get_var("MAILBOX_PORT")
+}
+/// Get the mailbox address from the env or panic
+pub fn get_mailbox_addr() -> SocketAddr {
+    to_socket_addr(&get_server_host(), &get_mailbox_port())
+}
+
+/// Get the path to the mailbox from the env or panic
+pub fn get_mailbox_path() -> PathBuf {
+    get_var("MAILBOX_PATH").into()
+}
+
+/// Get the api key from the env or panic
+pub fn get_api_key() -> String {
+    get_var("API_KEY")
+}
+
+/// Get the api user from the env or panic
+pub fn get_api_user() -> String {
+    get_var("API_USER")
+}
+
+pub fn get_manager_url() -> String {
+    get_var("SERVER_HTTP_URL")
+}
+
+pub fn get_db_user() -> String {
+    get_var("DB_USER")
+}
+
+pub fn get_db_host() -> Option<String> {
+    empty_str_to_none(get_var("DB_HOST"))
+}
+
+pub fn get_db_name() -> Option<String> {
+    empty_str_to_none(get_var("DB_NAME"))
+}
+
+pub fn get_db_password() -> Option<String> {
+    empty_str_to_none(get_var("DB_PASSWORD"))
 }
