@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, run_cmd, wait_for_cmd, CmdWrapper},
+    api_utils::{delete, first, get, post, put, run_cmd, wait_for_cmd, CmdWrapper},
     display_utils::{display_cmd_state, display_error, generate_table, start_spinner},
     manager_cli_error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
@@ -33,6 +33,9 @@ pub enum StratagemInterval {
     /// Add a new Stratagem interval
     #[structopt(name = "add")]
     Add(StratagemIntervalConfig),
+    /// Update an existing Stratagem interval
+    #[structopt(name = "update")]
+    Update(StratagemIntervalConfig),
     /// Remove a Stratagem interval
     #[structopt(name = "remove")]
     Remove(StratagemRemoveData),
@@ -92,6 +95,23 @@ fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
         Some('1'..='9') => Err(DurationParseError::NoUnit.into()),
         _ => Err(DurationParseError::InvalidUnit.into()),
     }
+}
+
+/// Given some params, does a fetch for the item in the API
+fn fetch_one<T: EndpointName + std::fmt::Debug + serde::de::DeserializeOwned>(
+    params: impl serde::Serialize,
+) -> impl Future<Item = T, Error = ImlManagerCliError> {
+    get(T::endpoint_name(), params).and_then(first)
+}
+
+fn get_stratagem_config_by_fs_name(
+    name: &str,
+) -> impl Future<Item = StratagemConfiguration, Error = ImlManagerCliError> {
+    fetch_one(serde_json::json!({
+        "name": name,
+        "dehydrate__mgt": false
+    }))
+    .and_then(|fs: Filesystem| fetch_one(serde_json::json!({ "filesystem": fs.id })))
 }
 
 fn handle_cmd_resp(
@@ -215,29 +235,47 @@ pub fn stratagem_cli(command: StratagemCommand) {
                     }
                 }
             }
+            StratagemInterval::Update(c) => {
+                let fut = get_stratagem_config_by_fs_name(&c.filesystem)
+                    .and_then(|x| {
+                        put(
+                            &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                            c,
+                        )
+                    })
+                    .and_then(handle_cmd_resp);
+
+                let command: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
+
+                match command {
+                    Ok(CmdWrapper { command }) => {
+                        let stop_spinner = start_spinner(&command.message);
+
+                        let command =
+                            run_cmd(wait_for_cmd(command)).expect("Could not poll command");
+
+                        stop_spinner(None);
+
+                        display_cmd_state(&command);
+
+                        exit(exitcode::OK)
+                    }
+                    Err(validation_error) => {
+                        display_error(validation_error);
+
+                        exit(exitcode::CANTCREAT)
+                    }
+                }
+            }
             StratagemInterval::Remove(StratagemRemoveData { name }) => {
-                let fut = get(
-                    Filesystem::endpoint_name(),
-                    serde_json::json!({
-                        "name": name,
-                        "dehydrate__mgt": false
-                    }),
-                )
-                .and_then(first)
-                .and_then(|fs: Filesystem| {
-                    get(
-                        StratagemConfiguration::endpoint_name(),
-                        serde_json::json!({ "filesystem": fs.id }),
-                    )
-                })
-                .and_then(first)
-                .and_then(|x: StratagemConfiguration| {
-                    delete(
-                        &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                        Vec::<(String, String)>::new(),
-                    )
-                })
-                .and_then(handle_cmd_resp);
+                let fut = get_stratagem_config_by_fs_name(&name)
+                    .and_then(|x: StratagemConfiguration| {
+                        delete(
+                            &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                            Vec::<(String, String)>::new(),
+                        )
+                    })
+                    .and_then(handle_cmd_resp);
 
                 let x: Result<CmdWrapper, ImlManagerCliError> = run_cmd(fut);
 

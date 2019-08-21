@@ -171,6 +171,17 @@ pub fn post(
         .and_then(move |url| client.post(url).json(&body).send().from_err())
 }
 
+/// Performs a PUT to the given API path
+pub fn put(
+    client: Client,
+    path: &str,
+    body: impl serde::Serialize,
+) -> impl Future<Item = Response, Error = ImlManagerClientError> {
+    create_api_url(path)
+        .into_future()
+        .and_then(move |url| client.put(url).json(&body).send().from_err())
+}
+
 /// Performs a DELETE to the given API path
 pub fn delete(
     client: Client,

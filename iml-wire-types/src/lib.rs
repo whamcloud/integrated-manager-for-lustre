@@ -789,10 +789,12 @@ impl EndpointName for Alert {
 /// A `StratagemConfiguration` record from `api/stratagem_configuration`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct StratagemConfiguration {
+    pub content_type_id: u32,
     pub filesystem: String,
     pub id: u32,
     pub immutable_state: bool,
     pub interval: u64,
+    pub label: String,
     pub not_deleted: Option<bool>,
     pub purge_duration: Option<u64>,
     pub report_duration: Option<u64>,
