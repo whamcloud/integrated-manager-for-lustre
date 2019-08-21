@@ -20,26 +20,26 @@ pub enum StratagemCommand {
     /// Kickoff a Stratagem scan
     #[structopt(name = "scan")]
     Scan(StratagemScanData),
-    /// Configure Stratagem scanning
-    #[structopt(name = "configure")]
-    StratagemConfig(StratagemConfig),
+    /// Configure Stratagem scanning interval
+    #[structopt(name = "interval")]
+    StratagemInterval(StratagemInterval),
 }
 
 #[derive(Debug, StructOpt)]
-pub enum StratagemConfig {
-    /// List all Stratagem configurations
+pub enum StratagemInterval {
+    /// List all existing Stratagem intervals
     #[structopt(name = "list")]
     List,
-    /// Add a new Stratagem configuration
+    /// Add a new Stratagem interval
     #[structopt(name = "add")]
-    Add(StratagemAddData),
-    /// Remove a Stratagem configuration
+    Add(StratagemIntervalConfig),
+    /// Remove a Stratagem interval
     #[structopt(name = "remove")]
     Remove(StratagemRemoveData),
 }
 
 #[derive(Debug, StructOpt, serde::Serialize)]
-pub struct StratagemAddData {
+pub struct StratagemIntervalConfig {
     /// Filesystem to configure
     #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
@@ -89,7 +89,7 @@ fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
         Some('d') => Ok(val * 86_400_000),
         Some('m') => Ok(val * 60_000),
         Some('s') => Ok(val * 1_000),
-        Some('1'...'9') => Err(DurationParseError::NoUnit.into()),
+        Some('1'..='9') => Err(DurationParseError::NoUnit.into()),
         _ => Err(DurationParseError::InvalidUnit.into()),
     }
 }
@@ -146,9 +146,9 @@ pub fn stratagem_cli(command: StratagemCommand) {
                 }
             }
         }
-        StratagemCommand::StratagemConfig(x) => match x {
-            StratagemConfig::List => {
-                let stop_spinner = start_spinner("Finding config...");
+        StratagemCommand::StratagemInterval(x) => match x {
+            StratagemInterval::List => {
+                let stop_spinner = start_spinner("Finding existing intervals...");
 
                 let fut = get(
                     StratagemConfiguration::endpoint_name(),
@@ -161,7 +161,7 @@ pub fn stratagem_cli(command: StratagemCommand) {
                 match result {
                     Ok(r) => {
                         if r.objects.is_empty() {
-                            return println!("0 Stratagem configuration records found");
+                            return println!("No Stratagem intervals found");
                         }
 
                         let table = generate_table(
@@ -189,7 +189,7 @@ pub fn stratagem_cli(command: StratagemCommand) {
                     }
                 }
             }
-            StratagemConfig::Add(c) => {
+            StratagemInterval::Add(c) => {
                 let fut =
                     post(StratagemConfiguration::endpoint_name(), c).and_then(handle_cmd_resp);
 
@@ -215,7 +215,7 @@ pub fn stratagem_cli(command: StratagemCommand) {
                     }
                 }
             }
-            StratagemConfig::Remove(StratagemRemoveData { name }) => {
+            StratagemInterval::Remove(StratagemRemoveData { name }) => {
                 let fut = get(
                     Filesystem::endpoint_name(),
                     serde_json::json!({
