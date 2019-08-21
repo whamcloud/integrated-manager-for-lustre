@@ -42,8 +42,6 @@
         "alignAsTable": false,
         "avg": false,
         "current": false,
-        "hideEmpty": false,
-        "hideZero": false,
         "max": false,
         "min": false,
         "rightSide": false,
