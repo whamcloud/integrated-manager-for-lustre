@@ -87,18 +87,31 @@ struct Model {
 
 impl Model {
     fn stratagem_ready(&self) -> bool {
-        !self.mdts.is_empty()
-            && !self.hosts.is_empty()
-            && self.fs.is_some()
-            && self
+        if !self.mdts.is_empty() && !self.hosts.is_empty() && self.fs.is_some() {
+            let filtered_hosts: Vec<&Host> = self
                 .hosts
                 .values()
                 .filter(|x| {
-                    self.mdts
-                        .iter()
-                        .any(|mdt| mdt.active_host_name == x.address)
+                    self.mdts.iter().any(|mdt| {
+                        if let Some(active_host) = mdt.clone().active_host {
+                            active_host == x.resource_uri
+                        } else {
+                            false
+                        }
+                    })
                 })
-                .all(|x| x.server_profile.name == "stratagem_server")
+                .collect();
+
+            if filtered_hosts.len() > 0 {
+                filtered_hosts
+                    .iter()
+                    .all(|x| x.server_profile.name == "stratagem_server")
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 }
 
@@ -675,4 +688,213 @@ pub fn render_fs_detail_page(el: Element) -> FsDetailPageCallbacks {
         .run();
 
     FsDetailPageCallbacks { app: app.clone() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iml_wire_types::{FilesystemConfParams, ServerProfile, VolumeOrResourceUri};
+
+    pub fn create_host() -> Host {
+        Host {
+            address: "mds1".into(),
+            boot_time: None,
+            client_mounts: None,
+            content_type_id: 1,
+            corosync_configuration: None,
+            corosync_ring0: "x".into(),
+            fqdn: "mds1.local".into(),
+            id: 6,
+            immutable_state: false,
+            install_method: "existing_keys_choice".into(),
+            label: "mds1".into(),
+            lnet_configuration: "".into(),
+            member_of_active_filesystem: true,
+            needs_update: false,
+            nids: None,
+            nodename: "mds1.local".into(),
+            pacemaker_configuration: None,
+            private_key: None,
+            private_key_passphrase: None,
+            properties: r#"{"python_patchlevel": 5, "kernel_version": "3.10.0-957.5.1.el7.x86_64", "zfs_installed": true, "distro_version": 7.6, "python_version_major_minor": 2.7, "distro": "CentOS Linux"}"#.into(),
+            resource_uri: "/api/host/6/".into(),
+            root_pw: None,
+            server_profile: ServerProfile {
+                corosync: false,
+                corosync2: false,
+                default: true,
+                initial_state: "monitored".into(),
+                managed: false,
+                name: "base_managed_patchless".into(),
+                ntp: false,
+                pacemaker: false,
+                repolist: vec![],
+                resource_uri: "/api/profile/1".into(),
+                ui_description: "description".into(),
+                ui_name: "server profile name".into(),
+                user_selectable: true,
+                worker: false,
+            },
+            state: "monitored".into(),
+            state_modified_at: "2019-08-20 22:09:09.976167+00".into(),
+        }
+    }
+
+    pub fn create_fs() -> Filesystem {
+        Filesystem {
+            bytes_free: None,
+            bytes_total: None,
+            cdt_mdt: None,
+            cdt_status: None,
+            client_count: None,
+            conf_params: FilesystemConfParams {
+                llite_max_cached_mb: None,
+                llite_max_read_ahead_mb: None,
+                llite_max_read_ahead_whole_mb: None,
+                llite_statahead_max: None,
+                sys_at_early_margin: None,
+                sys_at_extra: None,
+                sys_at_history: None,
+                sys_at_max: None,
+                sys_at_min: None,
+                sys_ldlm_timeout: None,
+                sys_timeout: None,
+            },
+            content_type_id: 2,
+            files_free: None,
+            files_total: None,
+            hsm_control_params: vec![],
+            id: 1,
+            immutable_state: true,
+            label: "fs".into(),
+            mdts: vec![],
+            mgt: "mgt".into(),
+            mount_command: "mount -t lustre 10.73.20.11@tcp0:/fs /mnt/fs".into(),
+            mount_path: "10.73.20.11@tcp0:/fs".into(),
+            name: "fs".into(),
+            osts: vec![],
+            resource_uri: "/api/filesystem/1/".into(),
+            state: "available".into(),
+            state_modified_at: "2019-08-20 21:26:46.911457+00".into(),
+        }
+    }
+
+    pub fn create_mdt() -> Target<TargetConfParam> {
+        Target {
+            active_host: Some("/api/host/6/".into()),
+            active_host_name: "mds1.local".into(),
+            conf_params: None,
+            content_type_id: 16,
+            failover_server_name: "---".into(),
+            failover_servers: vec![],
+            filesystem: Some("/api/filesystem/1/".into()),
+            filesystem_id: Some(1),
+            filesystem_name: Some("fs".into()),
+            filesystems: None,
+            ha_label: Some("fs-MDT0000_166e6".into()),
+            id: 10,
+            immutable_state: false,
+            index: Some(0),
+            inode_count: Some("2621440".into()),
+            inode_size: Some(9999999),
+            kind: "MDT".into(),
+            label: "fs-MDT0000".into(),
+            name: "fs-MDT0000".into(),
+            primary_server: "/api/host/6/".into(),
+            primary_server_name: "mds1.local".into(),
+            resource_uri: "/api/target/10/".into(),
+            state: "mounted".into(),
+            state_modified_at: "2019-08-20T23:10:45.787714".into(),
+            uuid: Some("fd693460-5fc3-4249-851c-eb9d4064153a".into()),
+            volume: VolumeOrResourceUri::ResourceUri("/api/volume/45/".into()),
+            volume_name: "360014054fb57a33a36941c1b10d09243".into(),
+        }
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_correct_configuration() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.stratagem_ready(), true);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_empty_mdts() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        assert_eq!(m.stratagem_ready(), false);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_empty_hosts() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.stratagem_ready(), false);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_no_filesystem() {
+        let mut m = Model::default();
+        m.fs = None;
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.stratagem_ready(), false);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_non_matching_resource_uri() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "stratagem_server".into();
+        m.hosts.insert(1, host);
+
+        let mut mdt = create_mdt();
+        mdt.active_host = Some("/api/target/999/".into());
+        m.mdts.push(mdt);
+
+        assert_eq!(m.stratagem_ready(), false);
+    }
+
+    #[test]
+    pub fn test_stratagem_ready_with_non_matching_profile() {
+        let mut m = Model::default();
+        m.fs = Some(create_fs());
+
+        m.hosts = HashMap::new();
+        let mut host = create_host();
+        host.server_profile.name = "nonmatching-profile-name".into();
+        m.hosts.insert(1, host);
+
+        m.mdts.push(create_mdt());
+
+        assert_eq!(m.stratagem_ready(), false);
+    }
 }

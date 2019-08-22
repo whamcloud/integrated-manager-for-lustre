@@ -275,7 +275,6 @@ class TargetResource(MetricResource, ConfParamResource):
             "failover_server_name",
             "volume_name",
             "primary_server_name",
-            "active_host_name",
             "filesystems",
             "name",
             "uuid",
