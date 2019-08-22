@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, env, fidlist, http_comms::mailbox_client};
-
 use futures::{
     future::{self, join_all, poll_fn},
     Future, Sink, Stream,
@@ -11,6 +10,8 @@ use futures::{
 use liblustreapi::LlapiFid;
 use std::{io, path::PathBuf};
 use tokio_threadpool::blocking;
+use tracing::{debug, error, info, span, Level};
+use tracing_futures::Instrument;
 
 /// Runs `fid2path` on the incoming `String`.
 /// Any error during `fid2path` is logged but does not return the associated Error
@@ -25,7 +26,7 @@ fn fid2path(
     .then(|r| match r {
         Ok(x) => future::ok(Some(x)),
         Err(e) => {
-            log::error!("Could not resolve fid: {}", e);
+            error!("Could not resolve fid: {}", e);
             future::ok(None)
         }
     })
@@ -45,7 +46,7 @@ pub fn write_records(
     mut wtr: impl io::Write,
 ) -> Result<(), ImlAgentError> {
     let llapi = LlapiFid::create(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {}", device, e);
+        error!("Failed to find rootpath({}) -> {}", device, e);
         e
     })?;
 
@@ -75,7 +76,8 @@ pub fn read_mailbox(
                 .last()
                 .map(|x| fidlist::FidListItem::new(x.into()))
         })
-        .chunks(1000);
+        .chunks(1000)
+        .instrument(span!(Level::INFO, "Incoming fids"));
 
     iml_fs::file_write_bytes(txt_path.clone())
         .from_err()
@@ -89,7 +91,7 @@ pub fn read_mailbox(
 
                     join_all(xs.into_iter().map(move |x| fid2path(llapi2.clone(), x.fid)))
                 })
-                .inspect(|_| log::debug!("Resolved 1000 Fids"))
+                .inspect(|_| debug!("Resolved 1000 Fids"))
                 .map(move |xs| {
                     xs.into_iter()
                         .filter_map(std::convert::identity)
@@ -103,9 +105,11 @@ pub fn read_mailbox(
                     }
 
                     x.freeze()
-                });
+                })
+                .instrument(span!(Level::INFO, "Fid writer"));
 
             f.sink_from_err().send_all(s2).map(drop)
         })
         .map(move |_| txt_path)
+        .instrument(span!(Level::INFO, "Finished writing"))
 }

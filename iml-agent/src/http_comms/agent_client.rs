@@ -11,6 +11,7 @@ use futures::{future::Either, Future, IntoFuture};
 use iml_wire_types;
 use reqwest::r#async::{Chunk, Client};
 use std::convert::Into;
+use tracing::{debug, info};
 
 /// A wrapper around `CryptoClient`.
 ///
@@ -56,7 +57,7 @@ impl AgentClient {
         &self,
         plugin: iml_wire_types::PluginName,
     ) -> impl Future<Item = (), Error = ImlAgentError> {
-        log::info!("Requesting new session for: {:?}.", plugin);
+        info!("Requesting new session for: {:?}.", plugin);
 
         let m: iml_wire_types::Message = iml_wire_types::Message::SessionCreateRequest {
             fqdn: iml_wire_types::Fqdn(server_properties::FQDN.to_string()),
@@ -75,11 +76,9 @@ impl AgentClient {
         info: session::SessionInfo,
         body: impl serde::Serialize + std::fmt::Debug,
     ) -> impl Future<Item = (), Error = ImlAgentError> {
-        log::debug!(
+        debug!(
             "Sending session data for {:?}({:?}): {:?}",
-            info.name,
-            info.id,
-            body
+            info.name, info.id, body
         );
 
         let value = serde_json::to_value(body);
@@ -113,7 +112,7 @@ impl AgentClient {
             ("client_start_time".into(), self.start_time.clone()),
         ];
 
-        log::debug!("Sending get {:?}", get_params);
+        debug!("Sending get {:?}", get_params);
 
         crypto_client::get_buffered(&self.client, self.message_endpoint.clone(), &get_params)
             .and_then(|x| serde_json::from_slice(&x).map_err(Into::into))

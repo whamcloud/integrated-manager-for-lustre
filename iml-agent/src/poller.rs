@@ -13,12 +13,13 @@ use crate::{
 use futures::{future, Future, Stream};
 use iml_wire_types::PluginName;
 use std::time::{Duration, Instant};
+use tracing::{error, info, trace};
 
 fn send_if_data(
     agent_client: AgentClient,
 ) -> impl FnOnce(
     Option<(SessionInfo, OutputValue)>,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
     move |x| match x {
         Some((info, output)) => Box::new(agent_client.send_data(info, output)),
         None => Box::new(future::ok(())),
@@ -34,8 +35,8 @@ fn handle_state(
     mut sessions: Sessions,
     name: PluginName,
     now: Instant,
-) -> Box<Future<Item = (), Error = ImlAgentError> + Send> {
-    log::trace!("handling state for {:?}: {:?}, ", name, state);
+) -> Box<dyn Future<Item = (), Error = ImlAgentError> + Send> {
+    trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
         State::Active(a) if a.instant <= now => Box::new(
@@ -65,7 +66,7 @@ pub fn create_poller(
     tokio::timer::Interval::new_interval(Duration::from_secs(1))
         .from_err()
         .for_each(move |now| {
-            log::trace!("interval triggered for {:?}", now);
+            trace!("interval triggered for {:?}", now);
 
             for (name, state) in sessions.clone().write().iter_mut() {
                 match state {
@@ -75,10 +76,10 @@ pub fn create_poller(
                         let mut sessions = sessions.clone();
                         let name = name.clone();
 
-                        log::info!("sending session create request for {}", name);
+                        info!("sending session create request for {}", name);
 
                         let fut = agent_client.create_session(name.clone()).map_err(move |e| {
-                            log::info!("session create request for {} failed: {:?}", name, e);
+                            info!("session create request for {} failed: {:?}", name, e);
                             sessions.reset_empty(&name)
                         });
 
@@ -98,7 +99,7 @@ pub fn create_poller(
                 );
 
                 tokio::spawn(fut.map_err(|e| {
-                    log::error!("{}", e);
+                    error!("{}", e);
                 }));
             }
 

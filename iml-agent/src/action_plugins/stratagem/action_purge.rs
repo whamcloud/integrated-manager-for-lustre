@@ -3,14 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{agent_error::ImlAgentError, http_comms::mailbox_client};
-use futures::future::poll_fn;
-use futures::{Future, Stream};
+use futures::{future::poll_fn, Future, Stream};
 use liblustreapi::LlapiFid;
 use tokio_threadpool::blocking;
+use tracing::{error, warn};
 
 pub fn purge_files(device: &str, fids: Vec<String>) -> Result<(), ImlAgentError> {
     let llapi = LlapiFid::create(&device).map_err(|e| {
-        log::error!("Failed to find rootpath({}) -> {}", device, e);
+        error!("Failed to find rootpath({}) -> {}", device, e);
         ImlAgentError::LiblustreError(e)
     })?;
     llapi.rmfids(fids).map_err(ImlAgentError::LiblustreError)
@@ -48,8 +48,7 @@ pub fn read_mailbox(
             .chunks(llapi.rmfids_size())
             .for_each(move |fids| {
                 tokio::spawn(
-                    rm_fids(llapi.clone(), fids)
-                        .map_err(|e| log::warn!("Error removing fid {:?}", e)),
+                    rm_fids(llapi.clone(), fids).map_err(|e| warn!("Error removing fid {:?}", e)),
                 );
                 Ok(())
             })
