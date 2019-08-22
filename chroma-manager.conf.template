@@ -203,6 +203,19 @@ server {
         proxy_pass {{WARP_DRIVE_PROXY_PASS}};
     }
 
+    location ~ /mailbox/(.+)$ {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        sendfile_max_chunk 1m;
+
+        alias {{MAILBOX_PATH}}/$1;
+    }
+
     location /mailbox {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
