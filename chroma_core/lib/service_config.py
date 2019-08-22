@@ -720,6 +720,7 @@ class ServiceConfig(CommandLine):
             "REALTIME_PROXY_PASS",
             "VIEW_SERVER_PROXY_PASS",
             "WARP_DRIVE_PROXY_PASS",
+            "MAILBOX_PATH",
             "MAILBOX_PROXY_PASS",
             "SSL_PATH",
             "DEVICE_AGGREGATOR_PORT",
