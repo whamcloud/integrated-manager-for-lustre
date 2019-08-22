@@ -9,6 +9,8 @@ use crate::{
 };
 use futures::{Future, IntoFuture, Stream};
 use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
+use iml_fs::read_lines;
+use std::io::{Error, ErrorKind};
 use tracing::debug;
 
 /// Streams the given data to the manager mailbox.
@@ -59,7 +61,7 @@ pub fn get(message_name: String) -> impl Stream<Item = String, Error = ImlAgentE
             Ok((client, message_endpoint))
         })
         .map(move |(client, message_endpoint)| {
-            stream_lines::strings(crypto_client::get_stream(&client, message_endpoint, &q))
+            read_lines(crypto_client::get_stream(&client, message_endpoint, &q)).from_err()
         })
         .flatten_stream()
 }
