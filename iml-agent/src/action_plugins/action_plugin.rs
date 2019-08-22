@@ -9,9 +9,10 @@ use crate::{
 use futures::{future::IntoFuture, Future};
 use iml_wire_types::{ActionName, ToJsonValue};
 use std::collections::HashMap;
+use tracing::info;
 
 type BoxedFuture = Box<
-    Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
+    dyn Future<Item = std::result::Result<serde_json::value::Value, String>, Error = ()>
         + 'static
         + Send,
 >;
@@ -73,10 +74,10 @@ pub fn create_registry() -> HashMap<ActionName, Callback> {
         mk_callback(action_purge::read_mailbox),
     );
 
-    log::info!("Loaded the following ActionPlugins:");
+    info!("Loaded the following ActionPlugins:");
 
     for ActionName(key) in map.keys() {
-        log::info!("{}", key)
+        info!("{}", key)
     }
 
     map

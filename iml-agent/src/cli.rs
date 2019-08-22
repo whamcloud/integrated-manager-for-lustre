@@ -130,7 +130,7 @@ fn run_cmd<R: Send + 'static, E: Send + 'static>(
     tokio::runtime::Runtime::new().unwrap().block_on_all(fut)
 }
 
-fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<Item = String>> {
+fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<dyn Iterator<Item = String>> {
     match input {
         None => {
             if fidlist.is_empty() {
@@ -144,7 +144,7 @@ fn input_to_iter(input: Option<String>, fidlist: Vec<String>) -> Box<Iterator<It
             }
         }
         Some(name) => {
-            let buf: Box<BufRead> = match name.as_ref() {
+            let buf: Box<dyn BufRead> = match name.as_ref() {
                 "-" => Box::new(BufReader::new(io::stdin())),
                 _ => {
                     let f = match File::open(&name) {

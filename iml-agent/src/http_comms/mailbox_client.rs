@@ -9,6 +9,7 @@ use crate::{
 };
 use futures::{Future, IntoFuture, Stream};
 use hyper::{header::HeaderValue, Body, Method, Request, StatusCode};
+use tracing::debug;
 
 /// Streams the given data to the manager mailbox.
 pub fn send(
@@ -19,7 +20,7 @@ pub fn send(
     let mut req = Request::new(body);
     *req.method_mut() = Method::POST;
 
-    log::debug!("Sending mailbox message to {}", message_name);
+    debug!("Sending mailbox message to {}", message_name);
 
     hyper_client::build_https_client(&env::PFX)
         .into_future()
@@ -37,7 +38,7 @@ pub fn send(
             if resp.status() != StatusCode::CREATED {
                 Err(ImlAgentError::UnexpectedStatusError)
             } else {
-                log::debug!("Mailbox message sent");
+                debug!("Mailbox message sent");
                 Ok(())
             }
         })
