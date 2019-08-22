@@ -449,6 +449,15 @@ class RunStratagemJob(Job):
     def description(self):
         return self.long_description(self)
 
+    def create_locks(self):
+        from chroma_core.models import ManagedFilesystem;
+        locks = super(RunStratagemJob, self).create_locks()
+
+        fs = ManagedFilesystem.objects.get(name=self.fs_name)
+        locks.append(StateLock(job=self, locked_item=fs, write=True))
+
+        return locks
+
     def get_steps(self):
 
         if self.filesystem_type.lower() == "zfs":

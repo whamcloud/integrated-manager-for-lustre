@@ -200,7 +200,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::Locks(locks) => {
             if let Some(fs) = &model.fs {
-                model.fs_detail.dropdown.is_locked = has_lock(&locks, fs);
+                let has_fs_locks = has_lock(&locks, fs);
+                model.fs_detail.dropdown.is_locked = has_fs_locks;
+                model.stratagem.is_locked = has_fs_locks;
+                model.scan_now.is_locked = has_fs_locks;
             }
 
             model.locks = locks;

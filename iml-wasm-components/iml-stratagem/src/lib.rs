@@ -64,6 +64,7 @@ pub struct Model {
     pub purge_config: iml_duration_picker::Model,
     pub inode_table: inode_table::Model,
     pub disabled: bool,
+    pub is_locked: bool,
 }
 
 pub fn max_value_validation(ms: u64, unit: iml_duration_picker::Unit) -> Option<String> {
@@ -328,19 +329,19 @@ pub fn view(model: &Model) -> Node<Msg> {
 
     if model.id.is_some() {
         configuration_component.push(
-            update_stratagem_button::view(model.config_valid(), model.disabled)
+            update_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::SendCommand),
         );
 
         configuration_component.push(
-            delete_stratagem_button::view(model.config_valid(), model.disabled)
+            delete_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::SendCommand),
         );
     } else {
         configuration_component.push(
-            enable_stratagem_button::view(model.config_valid(), model.disabled)
+            enable_stratagem_button::view(model.config_valid(), model.disabled || model.is_locked)
                 .add_style("grid-column", "1 /span 12")
                 .map_message(Msg::SendCommand),
         )
