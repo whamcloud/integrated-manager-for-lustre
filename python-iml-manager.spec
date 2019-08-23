@@ -215,6 +215,8 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
 cp -r grafana $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/grafana-iml.ini $RPM_BUILD_ROOT%{_sysconfdir}/grafana/
 mv $RPM_BUILD_ROOT%{manager_root}/grafana/dashboards/iml-dashboards.yaml $RPM_BUILD_ROOT%{_sysconfdir}/grafana/provisioning/dashboards
+mkdir -p $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/
+mv $RPM_BUILD_ROOT%{manager_root}/grafana/dropin-iml.conf $RPM_BUILD_ROOT%{_unitdir}/grafana-server.service.d/90-iml.conf
 cp iml-manager-redirect.conf $RPM_BUILD_ROOT%{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 cp rabbitmq-env.conf $RPM_BUILD_ROOT%{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 cp chroma-host-discover-init.sh $RPM_BUILD_ROOT%{_sysconfdir}/init.d/chroma-host-discover
@@ -333,6 +335,7 @@ fi
 %{_sysconfdir}/nginx/default.d/iml-manager-redirect.conf
 %{_sysconfdir}/rabbitmq/rabbitmq-env.conf
 %{_sysconfdir}/grafana/grafana-iml.ini
+%{_unitdir}/grafana-server.service.d/90-iml.conf
 %attr(0755,root,root)%{_sysconfdir}/init.d/chroma-host-discover
 %attr(0755,root,root)%{_mandir}/man1/chroma-config.1.gz
 %attr(0644,root,root)%{_sysconfdir}/logrotate.d/chroma-manager

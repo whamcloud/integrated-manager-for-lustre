@@ -322,13 +322,6 @@ class ServiceConfig(CommandLine):
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
 
     def _setup_grafana(self):
-        cfg_file = "/etc/sysconfig/grafana-server"
-        if os.path.exists("%s.dist" % cfg_file):
-            return
-        shutil.copy2(cfg_file, "%s.dist" % cfg_file)
-        with open(cfg_file, "a") as fn:
-            fn.write("CONF_FILE=/etc/grafana/grafana-iml.ini")
-
         # grafana needs daemon-reload before enable and start
         ServiceControlEL7.daemon_reload()
         service = ServiceControl.create("grafana-server")
