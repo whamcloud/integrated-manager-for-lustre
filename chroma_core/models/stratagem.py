@@ -409,6 +409,7 @@ class StreamFidlistStep(Step):
 
 
 class RunStratagemJob(Job):
+    filesystem = models.ForeignKey("ManagedFilesystem", null=False)
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
@@ -418,7 +419,6 @@ class RunStratagemJob(Job):
     filesystem_type = models.CharField(max_length=32, null=False, default="")
     target_mount_point = models.CharField(max_length=512, null=False, default="")
     device_path = models.CharField(max_length=512, null=False, default="")
-    fs_name = models.CharField(max_length=8, null=False)
 
     def __init__(self, *args, **kwargs):
         if "mdt_id" not in kwargs or "uuid" not in kwargs:
@@ -450,11 +450,8 @@ class RunStratagemJob(Job):
         return self.long_description(self)
 
     def create_locks(self):
-        from chroma_core.models import ManagedFilesystem;
         locks = super(RunStratagemJob, self).create_locks()
-
-        fs = ManagedFilesystem.objects.get(name=self.fs_name)
-        locks.append(StateLock(job=self, locked_item=fs, write=True))
+        locks.append(StateLock(job=self, locked_item=self.filesystem, write=True))
 
         return locks
 
@@ -477,7 +474,7 @@ class RunStratagemJob(Job):
                     "purge_duration": self.purge_duration,
                 },
             ),
-            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.fs_name}),
+            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.filesystem.name}),
         ]
 
 
