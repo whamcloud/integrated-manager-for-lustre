@@ -22,6 +22,7 @@ pub struct Model {
     pub data: Option<StratagemScan>,
     pub open: bool,
     pub disabled: bool,
+    pub is_locked: bool,
     pub report_config: iml_duration_picker::Model,
     pub purge_config: iml_duration_picker::Model,
 }
@@ -118,7 +119,7 @@ pub fn view(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
     )
     .add_style("margin-left", px(15));
 
-    if !model.disabled {
+    if !model.disabled && !model.is_locked {
         scan_now_button = scan_now_button.add_listener(simple_ev(Ev::Click, Msg::OpenModal));
     } else {
         scan_now_button = scan_now_button.add_attr(At::Disabled.as_str(), "disabled");
@@ -138,13 +139,15 @@ fn scan_modal(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
         class![bs_button::BTN_SUCCESS],
         vec![Node::new_text(if model.disabled {
             "Scanning..."
+        } else if model.is_locked {
+            "Locked 🔒"
         } else {
             "Scan Now"
         })],
     )
     .add_listener(mouse_ev(Ev::Click, move |_| Msg::ScanStratagem(fs_id)));
 
-    if model.disabled {
+    if model.disabled || model.is_locked {
         scan_button = scan_button.add_attr("disabled", true);
     }
 

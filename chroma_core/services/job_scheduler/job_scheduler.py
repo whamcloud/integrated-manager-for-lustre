@@ -1823,7 +1823,7 @@ class JobScheduler(object):
                     "uuid": unique_id,
                     "report_duration": stratagem_data.get("report_duration"),
                     "purge_duration": stratagem_data.get("purge_duration"),
-                    "fs_name": filesystem.name,
+                    "filesystem": filesystem,
                 },
             },
             mdts,
@@ -1843,7 +1843,7 @@ class JobScheduler(object):
         if not client_mount_exists:
             self._create_client_mount(client_host, filesystem, mountpoint)
 
-        client_mount = LustreClientMount.objects.get(host_id=client_host.id)
+        client_mount = LustreClientMount.objects.get(host_id=client_host.id, filesystem_id=fs_id)
         client_mount.state = "unmounted"
         client_mount.mountpoint = mountpoint
         client_mount.filesystem_id = filesystem.id

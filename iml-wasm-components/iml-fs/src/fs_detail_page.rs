@@ -12,7 +12,9 @@ use iml_lock_indicator::{lock_indicator, LockIndicatorState};
 use iml_paging::{paging, update_paging, Paging, PagingMsg};
 use iml_utils::{IntoSerdeOpt as _, Locks, WatchState};
 use iml_wire_types::{Alert, Filesystem, Host, Target, TargetConfParam, ToCompositeId};
-use seed::{class, div, dom_types::Attrs, h4, h5, i, prelude::*, style, tbody, td, th, thead, tr};
+use seed::{
+    class, div, dom_types::Attrs, h4, h5, i, prelude::*, span, style, tbody, td, th, thead, tr,
+};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -44,6 +46,7 @@ struct TableRow {
 struct FsDetail {
     pub dropdown: dad::Model,
     pub alert_indicator: WatchState,
+    pub lock_indicator: WatchState,
 }
 
 impl Default for FsDetail {
@@ -57,6 +60,7 @@ impl Default for FsDetail {
                 },
                 ..Default::default()
             },
+            lock_indicator: Default::default(),
         }
     }
 }
@@ -106,6 +110,7 @@ enum Msg {
     Filesystem(Option<Filesystem>),
     FsDetailDropdown(dad::IdMsg<Filesystem>),
     FsDetailPopoverState(AlertIndicatorPopoverState),
+    FsDetailPopoverLockState(LockIndicatorState),
     FsRowDropdown(dad::IdMsg<Target<TargetConfParam>>),
     FsRowIndicatorState(AlertIndicatorPopoverState),
     FsRowLockIndicatorState(LockIndicatorState),
@@ -131,6 +136,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::WindowClick => {
             if model.fs_detail.alert_indicator.should_update() {
                 model.fs_detail.alert_indicator.update();
+            }
+
+            if model.fs_detail.lock_indicator.should_update() {
+                model.fs_detail.lock_indicator.update();
             }
 
             if model.fs_detail.dropdown.watching.should_update() {
@@ -200,7 +209,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::Locks(locks) => {
             if let Some(fs) = &model.fs {
-                model.fs_detail.dropdown.is_locked = has_lock(&locks, fs);
+                let has_fs_locks = has_lock(&locks, fs);
+                model.fs_detail.dropdown.is_locked = has_fs_locks;
+                model.stratagem.is_locked = has_fs_locks;
+                model.scan_now.is_locked = has_fs_locks;
             }
 
             model.locks = locks;
@@ -268,6 +280,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::FsDetailPopoverState(AlertIndicatorPopoverState((_, state))) => {
             model.fs_detail.alert_indicator = state;
+        }
+        Msg::FsDetailPopoverLockState(LockIndicatorState(_, state)) => {
+            model.fs_detail.lock_indicator = state;
         }
         Msg::FsRowIndicatorState(AlertIndicatorPopoverState((id, state))) => {
             if let Some(row) = model.table_rows.get_mut(&id) {
@@ -360,6 +375,7 @@ fn filesystem(
     alerts: &[Alert],
     fs_detail: &FsDetail,
     mgt_el: Node<Msg>,
+    locks: &Locks,
 ) -> Node<Msg> {
     detail_panel(vec![
         detail_header(&format!("{} Details", fs.name)),
@@ -384,13 +400,23 @@ fn filesystem(
         detail_label("Mounted Clients"),
         div![client_count(fs.client_count)],
         detail_label("Alerts"),
-        div![alert_indicator(
-            &alerts,
-            0,
-            &fs.resource_uri,
-            fs_detail.alert_indicator.is_open()
-        )
-        .map_message(Msg::FsDetailPopoverState)],
+        div![
+            span![lock_indicator(
+                fs.id,
+                fs_detail.lock_indicator.is_open(),
+                fs.composite_id(),
+                &locks
+            )
+            .add_style("padding-right", px(10))]
+            .map_message(Msg::FsDetailPopoverLockState),
+            span![alert_indicator(
+                &alerts,
+                0,
+                &fs.resource_uri,
+                fs_detail.alert_indicator.is_open()
+            )]
+            .map_message(Msg::FsDetailPopoverState),
+        ],
         div![
             class!["full-width"],
             style! { "grid-column" => "1 / span 2" },
@@ -521,6 +547,7 @@ fn view(model: &Model) -> Node<Msg> {
                 &model.alerts,
                 &model.fs_detail,
                 mgt_link(model.mgt.first()),
+                &model.locks,
             ),
             mnt_info_btn,
             if model.stratagem_ready {
