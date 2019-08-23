@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use bytes::IntoBuf;
 use futures::{future::poll_fn, stream, Future, Stream};
 use std::{
     io::{self, Write},
@@ -10,6 +11,20 @@ use std::{
 use tempfile::NamedTempFile;
 use tokio::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec};
 use tokio_threadpool::blocking;
+
+/// Given a `Stream` of items that implement `IntoBuf`, returns a stream
+/// that reads line by line.
+pub fn read_lines<S>(s: S) -> impl Stream<Item = String, Error = io::Error>
+where
+    S: Stream,
+    S::Error: std::error::Error + Send + Sync + 'static,
+    S::Item: IntoBuf,
+{
+    FramedRead::new(
+        rw_stream_sink::RwStreamSink::new(s.map_err(|e| io::Error::new(io::ErrorKind::Other, e))),
+        LinesCodec::new(),
+    )
+}
 
 /// Given a path, attempts to do an async read to the end of the file.
 ///

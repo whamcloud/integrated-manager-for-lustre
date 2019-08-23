@@ -29,7 +29,7 @@ pub fn create_client(id: Identity) -> Result<Client> {
     Client::builder()
         .danger_accept_invalid_certs(true)
         .identity(id)
-        .timeout(Duration::from_secs(60))
+        .timeout(Duration::from_secs(900))
         .build()
         .map_err(ImlAgentError::Reqwest)
 }
@@ -124,6 +124,7 @@ mod tests {
     use super::{get_buffered, get_stream, post};
     use crate::agent_error::Result;
     use futures::stream::Stream as _;
+    use iml_fs::read_lines;
     use mockito::mock;
     use pretty_assertions::assert_eq;
     use reqwest::r#async::Client;
@@ -204,7 +205,7 @@ mod tests {
             ("client_start_time", "2019-02-14T02:04:33.057646+00:00Z"),
         ];
 
-        let fut = stream_lines::strings(get_stream(&Client::new(), url, query)).collect();
+        let fut = read_lines(get_stream(&Client::new(), url, query)).collect();
 
         let r = Runtime::new().unwrap().block_on_all(fut)?;
 
