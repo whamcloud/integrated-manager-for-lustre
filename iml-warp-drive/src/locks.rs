@@ -99,9 +99,7 @@ pub fn add_lock(locks: &mut Locks, lock_change: LockChange) {
 pub fn remove_lock(locks: &mut Locks, lock_change: &LockChange) {
     locks
         .entry(lock_change.composite_id().to_string())
-        .and_modify(|xs: &mut HashSet<LockChange>| {
-            xs.retain(|x| x.description != lock_change.description)
-        });
+        .and_modify(|xs: &mut HashSet<LockChange>| xs.retain(|x| x.uuid != lock_change.uuid));
 
     locks.retain(|_, xs| !xs.is_empty());
 
