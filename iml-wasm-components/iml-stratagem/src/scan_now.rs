@@ -8,7 +8,7 @@ use futures::Future;
 use iml_duration_picker::duration_picker;
 use iml_environment::csrf_token;
 use iml_utils::dispatch_custom_event;
-use seed::{attrs, class, div, dom_types::At, fetch, form, h4, i, input, label, prelude::*};
+use seed::{attrs, class, div, dom_types::At, fetch, form, h4, i, input, label, prelude::*, span};
 
 #[derive(Debug, serde::Serialize)]
 pub struct StratagemScan {
@@ -137,13 +137,13 @@ pub fn view(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
 fn scan_modal(fs_id: u32, model: &Model) -> Vec<Node<Msg>> {
     let mut scan_button = bs_button::btn(
         class![bs_button::BTN_SUCCESS],
-        vec![Node::new_text(if model.disabled {
-            "Scanning..."
+        vec![if model.disabled {
+            Node::new_text("Scanning...")
         } else if model.is_locked {
-            "Locked 🔒"
+            span!["Locked", i![class!["fas fa-lock"]]]
         } else {
-            "Scan Now"
-        })],
+            Node::new_text("Scan Now")
+        }],
     )
     .add_listener(mouse_ev(Ev::Click, move |_| Msg::ScanStratagem(fs_id)));
 
